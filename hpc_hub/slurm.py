@@ -24,6 +24,18 @@ class SlurmError(Exception):
 class Allocation:
     job_id: str
     node: str
+    owned: bool = True  # False: your own job we borrowed; never scancel it
+
+
+@dataclass
+class Job:
+    job_id: str
+    name: str
+    node: str
+    partition: str
+
+
+JOBS_FORMAT = "%i|%j|%N|%P"
 
 
 def validate(p: ComputeProfile) -> list[str]:
@@ -122,3 +134,22 @@ def allocate(
             raise SlurmError("Cancelled")
         raise SlurmError(last or "salloc failed")
     return Allocation(job_id, node_of(ssh, job_id))
+
+
+def running_jobs(ssh: SshMaster) -> list[Job]:
+    res = ssh.run(f'squeue -h -u "$USER" -t RUNNING -o {shlex.quote(JOBS_FORMAT)}')
+    jobs = []
+    for line in res.stdout.splitlines():
+        parts = line.strip().split("|")
+        if len(parts) == 4 and parts[0].isdigit() and parts[2]:
+            jobs.append(Job(parts[0], parts[1], parts[2].split(",")[0], parts[3]))
+    return jobs
+
+
+def pick_reusable(jobs: list[Job], partition: str = "") -> Job | None:
+    """Prefer a Claude job, then one on our partition, then one we started, then newest."""
+    def score(j: Job):
+        name = j.name.lower()
+        return ("claude" in name, bool(partition) and j.partition == partition,
+                name.startswith("hpc-hub"), int(j.job_id))
+    return max(jobs, key=score, default=None)

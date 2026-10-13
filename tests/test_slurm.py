@@ -21,3 +21,11 @@ def test_job_regex():
     m = slurm.JOB_RE.search("salloc: Granted job allocation 123456")
     assert m.group(1) == "Granted" and m.group(2) == "123456"
     assert slurm.JOB_RE.search("salloc: Pending job allocation 9").group(2) == "9"
+
+
+def test_pick_reusable():
+    J = slurm.Job
+    jobs = [J("10", "hpc-hub", "n1", "devel"), J("12", "bash", "n2", "devel"), J("11", "claude", "n3", "devel")]
+    assert slurm.pick_reusable(jobs, "devel").job_id == "11"
+    assert slurm.pick_reusable(jobs[:2], "devel").job_id == "10"
+    assert slurm.pick_reusable([], "devel") is None
