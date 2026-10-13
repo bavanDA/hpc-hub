@@ -1,0 +1,187 @@
+"""Per-cluster settings: login (keyring), server & VPN, compute profile."""
+
+from collections.abc import Callable
+
+from gi.repository import Adw, Gtk
+
+from .. import credentials
+from ..config import VPN_PROTOCOLS, ClusterConfig
+from ..credentials import Login
+from ..slurm import validate
+
+
+def _entry(title: str, text: str = "") -> Adw.EntryRow:
+    row = Adw.EntryRow(title=title)
+    row.set_text(text)
+    return row
+
+
+def _spin(title: str, value: int, low: int, high: int) -> Adw.SpinRow:
+    row = Adw.SpinRow.new_with_range(low, high, 1)
+    row.set_title(title)
+    row.set_value(value)
+    return row
+
+
+def _switch(title: str, active: bool, subtitle: str = "") -> Adw.SwitchRow:
+    row = Adw.SwitchRow(title=title, subtitle=subtitle)
+    row.set_active(active)
+    return row
+
+
+class ClusterSettingsDialog(Adw.PreferencesDialog):
+    def __init__(self, cfg: ClusterConfig, on_saved: Callable[[ClusterConfig], None]):
+        super().__init__(title=f"{cfg.name} settings", search_enabled=False)
+        self.cfg = cfg
+        self.on_saved = on_saved
+        self.ssh_saved = credentials.load(cfg.id, credentials.SSH)
+        self.vpn_saved = credentials.load(cfg.id, credentials.VPN)
+        self.add(self._login_page())
+        self.add(self._server_page())
+        self.add(self._compute_page())
+        self.set_can_close(False)
+        self.connect("close-attempt", self._on_close_attempt)
+
+    # -- pages -----------------------------------------------------------------
+    def _password_row(self, saved: Login | None) -> Adw.PasswordEntryRow:
+        title = "Password (saved, leave empty to keep)" if saved and saved.password else "Password"
+        return Adw.PasswordEntryRow(title=title)
+
+    def _login_page(self) -> Adw.PreferencesPage:
+        page = Adw.PreferencesPage(name="login", title="Login", icon_name="dialog-password-symbolic")
+        group = Adw.PreferencesGroup(
+            title="Cluster login",
+            description="Stored only in GNOME Keyring. Leave the password empty if you log in with an SSH key.",
+        )
+        self.user = _entry("Username", self.ssh_saved.username if self.ssh_saved else "")
+        self.password = self._password_row(self.ssh_saved)
+        self.duo = _entry("Duo answer (push, push2, phone, 1)", self.cfg.duo_answer)
+        for row in (self.user, self.password, self.duo):
+            group.add(row)
+        page.add(group)
+
+        forget_group = Adw.PreferencesGroup()
+        forget = Adw.ButtonRow(title="Forget saved logins")
+        forget.add_css_class("destructive-action")
+        forget.connect("activated", self._forget)
+        forget_group.add(forget)
+        page.add(forget_group)
+        return page
+
+    def _server_page(self) -> Adw.PreferencesPage:
+        page = Adw.PreferencesPage(name="server", title="Server & VPN", icon_name="network-server-symbolic")
+        server = Adw.PreferencesGroup(title="Server")
+        self.host = _entry("Login host", self.cfg.host)
+        self.port = _spin("SSH port", self.cfg.port, 1, 65535)
+        server.add(self.host)
+        server.add(self.port)
+        page.add(server)
+
+        v = self.cfg.vpn
+        vpn = Adw.PreferencesGroup(title="VPN", description="Browser sign-in (SSO) opens inside the app.")
+        self.vpn_on = _switch("Use VPN", v.enabled)
+        self.gateway = _entry("Gateway", v.gateway)
+        self.protocol = Adw.ComboRow(title="Protocol", model=Gtk.StringList.new(VPN_PROTOCOLS))
+        self.protocol.set_selected(VPN_PROTOCOLS.index(v.protocol) if v.protocol in VPN_PROTOCOLS else 0)
+        self.useragent = _entry("User agent (optional)", v.useragent)
+        self.authgroup = _entry("Group (optional)", v.authgroup)
+        self.same_login = _switch("Same login as cluster", v.same_login_as_ssh)
+        self.vpn_user = _entry("VPN username", self.vpn_saved.username if self.vpn_saved else "")
+        self.vpn_password = self._password_row(self.vpn_saved)
+        self.vpn_password.set_title("VPN " + self.vpn_password.get_title().lower())
+        for row in (self.vpn_on, self.gateway, self.protocol, self.useragent, self.authgroup,
+                    self.same_login, self.vpn_user, self.vpn_password):
+            vpn.add(row)
+        page.add(vpn)
+
+        self.vpn_on.connect("notify::active", lambda *_: self._sync_vpn())
+        self.same_login.connect("notify::active", lambda *_: self._sync_vpn())
+        self._sync_vpn()
+        return page
+
+    def _compute_page(self) -> Adw.PreferencesPage:
+        p = self.cfg.profile
+        page = Adw.PreferencesPage(name="compute", title="Compute", icon_name="system-run-symbolic")
+        group = Adw.PreferencesGroup(title="Compute node", description="Requested with salloc after you connect.")
+        self.on_connect = _switch("Request node on connect", self.cfg.request_node_on_connect)
+        self.cpus = _spin("CPU cores", p.cpus, 1, 512)
+        self.mem = _spin("Memory (GB)", p.mem_gb, 1, 4096)
+        self.time = _entry("Wall time (HH:MM:SS or D-HH:MM:SS)", p.time)
+        self.gpus = _spin("GPUs", p.gpus, 0, 16)
+        self.partition = _entry("Partition", p.partition)
+        self.account = _entry("Account", p.account)
+        self.qos = _entry("QOS", p.qos)
+        self.extra = _entry("Extra salloc arguments", p.extra_args)
+        for row in (self.on_connect, self.cpus, self.mem, self.time, self.gpus,
+                    self.partition, self.account, self.qos, self.extra):
+            group.add(row)
+        page.add(group)
+        return page
+
+    # -- behaviour ---------------------------------------------------------------
+    def _sync_vpn(self) -> None:
+        on = self.vpn_on.get_active()
+        for row in (self.gateway, self.protocol, self.useragent, self.authgroup, self.same_login):
+            row.set_sensitive(on)
+        own = on and not self.same_login.get_active()
+        self.vpn_user.set_visible(own)
+        self.vpn_password.set_visible(own)
+
+    def _forget(self, *_):
+        credentials.clear(self.cfg.id, credentials.SSH)
+        credentials.clear(self.cfg.id, credentials.VPN)
+        self.ssh_saved = self.vpn_saved = None
+        self.user.set_text("")
+        self.vpn_user.set_text("")
+        self.password.set_title("Password")
+        self.vpn_password.set_title("VPN password")
+        self.add_toast(Adw.Toast(title="Saved logins removed"))
+
+    def _apply(self) -> list[str]:
+        c, p, v = self.cfg, self.cfg.profile, self.cfg.vpn
+        new = {
+            "cpus": int(self.cpus.get_value()), "mem_gb": int(self.mem.get_value()),
+            "time": self.time.get_text().strip(), "gpus": int(self.gpus.get_value()),
+            "partition": self.partition.get_text().strip(), "account": self.account.get_text().strip(),
+            "qos": self.qos.get_text().strip(), "extra_args": self.extra.get_text().strip(),
+        }
+        trial = type(p)(**new)
+        errors = validate(trial)
+        if self.vpn_on.get_active() and not self.gateway.get_text().strip():
+            errors.append("VPN gateway is empty")
+        if errors:
+            return errors
+
+        c.profile = trial
+        c.request_node_on_connect = self.on_connect.get_active()
+        c.host = self.host.get_text().strip()
+        c.port = int(self.port.get_value())
+        c.duo_answer = self.duo.get_text().strip() or "push"
+        v.enabled = self.vpn_on.get_active()
+        v.gateway = self.gateway.get_text().strip()
+        v.protocol = VPN_PROTOCOLS[self.protocol.get_selected()]
+        v.useragent = self.useragent.get_text().strip()
+        v.authgroup = self.authgroup.get_text().strip()
+        v.same_login_as_ssh = self.same_login.get_active()
+
+        self._store(credentials.SSH, self.user, self.password, self.ssh_saved)
+        if v.enabled and not v.same_login_as_ssh:
+            self._store(credentials.VPN, self.vpn_user, self.vpn_password, self.vpn_saved)
+        return []
+
+    def _store(self, kind: str, user_row, pass_row, saved: Login | None) -> None:
+        username = user_row.get_text().strip()
+        password = pass_row.get_text() or (saved.password if saved else "")
+        if not username:
+            return
+        if saved and saved.username == username and saved.password == password:
+            return
+        credentials.save(self.cfg.id, kind, Login(username, password))
+
+    def _on_close_attempt(self, *_):
+        errors = self._apply()
+        if errors:
+            self.add_toast(Adw.Toast(title=errors[0], timeout=4))
+            return
+        self.on_saved(self.cfg)
+        self.force_close()
