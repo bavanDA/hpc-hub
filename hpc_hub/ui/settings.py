@@ -154,7 +154,7 @@ class ClusterSettingsDialog(Adw.PreferencesDialog):
 
         c.profile = trial
         c.request_node_on_connect = self.on_connect.get_active()
-        c.host = self.host.get_text().strip()
+        c.host = self.host.get_text().strip().rpartition("@")[2]  # username lives in Login
         c.port = int(self.port.get_value())
         c.duo_answer = self.duo.get_text().strip() or "push"
         v.enabled = self.vpn_on.get_active()
