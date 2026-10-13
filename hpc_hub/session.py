@@ -5,6 +5,7 @@ import subprocess
 import threading
 from enum import Enum
 from typing import Protocol
+from urllib.parse import urlsplit
 
 from . import prompts, slurm
 from .askpass_server import AskpassServer
@@ -185,6 +186,9 @@ class ClusterSession:
             self._log("VPN already up")
             return
         self._set(State.VPN, self.cfg.vpn.gateway)
+        gw = urlsplit(self.cfg.vpn.gateway if "//" in self.cfg.vpn.gateway else "//" + self.cfg.vpn.gateway)
+        if gw.hostname and not reachable(gw.hostname, gw.port or 443, timeout=8):
+            raise VpnError(f"Can't reach VPN server {gw.hostname} or {self.cfg.host}. Check your network.")
         vpn.ensure_profile()
         auth = vpn.authenticate(
             login.username, login.password,
