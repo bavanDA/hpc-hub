@@ -87,3 +87,6 @@ def test_skips_vpn_when_reachable(env, monkeypatch):
         assert rec.done.wait(20)
     assert s.state == State.CONNECTED, rec.lines
     assert not s.vpn_used
+    rec.done.clear()
+    s.disconnect()
+    assert rec.done.wait(20)
