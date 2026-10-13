@@ -34,3 +34,15 @@ def group_choice(prompt: str, wanted: str) -> str:
     if wanted and (not options or wanted in options):
         return wanted
     return options[0] if options else wanted
+
+
+def duo_reply(prompt: str, answer: str) -> str:
+    """Turn 'push'/'phone' into the menu number when Duo lists numbered options."""
+    want = answer.strip().lower()
+    kind = "push" if want.startswith("push") else "phone" if want.startswith("phone") else ""
+    if not kind:
+        return answer
+    nth = int(want[len(kind):] or 1)
+    label = r"duo push" if kind == "push" else r"phone call"
+    found = re.findall(rf"^\s*(\d+)\.\s*{label}", prompt, re.I | re.M)
+    return found[nth - 1] if len(found) >= nth else answer
