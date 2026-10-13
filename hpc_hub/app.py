@@ -62,7 +62,8 @@ class HpcHubApp(Adw.Application):
         if not self.window:
             self.window = MainWindow(
                 self, list(self.sessions.values()),
-                self.connect_session, self.disconnect_session, self.open_settings, self.open_tool)
+                self.connect_session, self.disconnect_session, self.open_settings, self.open_tool,
+                lambda: config.save(self.clusters))
             self.window.connect("close-request", self._on_close_request)
             self.tools = Tools(self.window, self.window.terminals,
                                lambda: self.window.stack.set_visible_child_name("terminals"),

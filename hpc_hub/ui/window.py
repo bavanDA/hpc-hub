@@ -4,11 +4,12 @@ from .. import APP_NAME
 from .cluster_card import ClusterCard
 from .files import FilesPage
 from .jobs import JobsPage
+from .latex import LatexPage
 from .terminals import TerminalsPage
 
 
 class MainWindow(Adw.ApplicationWindow):
-    def __init__(self, app, sessions, on_connect, on_disconnect, on_settings, on_tool, on_latex=None):
+    def __init__(self, app, sessions, on_connect, on_disconnect, on_settings, on_tool, save_config=lambda: None):
         super().__init__(application=app, title=APP_NAME, default_width=1000, default_height=760)
         self.cards: dict[str, ClusterCard] = {}
 
@@ -29,8 +30,10 @@ class MainWindow(Adw.ApplicationWindow):
             Gtk.ScrolledWindow(child=clamp, vexpand=True), "clusters", "Clusters", "network-server-symbolic")
         self.jobs = JobsPage(sessions, self.toast)
         self.stack.add_titled_with_icon(self.jobs, "jobs", "Jobs", "view-list-symbolic")
-        self.files = FilesPage(sessions, self.toast, on_latex or (lambda s, p: None))
+        self.files = FilesPage(sessions, self.toast, self.open_latex)
         self.stack.add_titled_with_icon(self.files, "files", "Files", "folder-symbolic")
+        self.latex = LatexPage(sessions, self.toast, save_config)
+        self.stack.add_titled_with_icon(self.latex, "latex", "LaTeX", "x-office-document-symbolic")
         self.terminals = TerminalsPage()
         self.stack.add_titled_with_icon(self.terminals, "terminals", "Terminals", "utilities-terminal-symbolic")
         header.set_title_widget(Adw.ViewSwitcher(stack=self.stack, policy=Adw.ViewSwitcherPolicy.WIDE))
@@ -46,6 +49,10 @@ class MainWindow(Adw.ApplicationWindow):
         menu.append("About HPC Hub", "app.about")
         menu.append("Quit", "app.quit")
         return menu
+
+    def open_latex(self, session, path: str) -> None:
+        self.latex.open(session, path)
+        self.stack.set_visible_child_name("latex")
 
     def toast(self, text: str) -> None:
         self.toasts.add_toast(Adw.Toast(title=text, timeout=4))
