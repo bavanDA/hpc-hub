@@ -24,3 +24,36 @@ def test_remove_guard():
         remote_fs.remove(None, "/")
     with pytest.raises(remote_fs.FsError):
         remote_fs.remove(None, "/home")
+
+
+class LocalShell:
+    """Stands in for SshMaster: runs the 'remote' commands locally."""
+
+    def argv(self, command, tty=False):
+        return ["bash", "-c", command]
+
+    def run(self, command, timeout=60):
+        import subprocess
+        return subprocess.run(self.argv(command), capture_output=True, text=True, timeout=timeout)
+
+    def copy_argv(self, src, dst):
+        return ["cp", "-r", src.lstrip(":"), dst.lstrip(":")]
+
+
+def test_roundtrip_on_local_shell(tmp_path):
+    sh, d = LocalShell(), tmp_path / "proj dir"
+    remote_fs.mkdir(sh, str(d / "sub"))
+    remote_fs.write_bytes(sh, str(d / "a.tex"), b"\\documentclass{article}")
+    assert remote_fs.read_bytes(sh, str(d / "a.tex")) == b"\\documentclass{article}"
+    assert [e.name for e in remote_fs.list_dir(sh, str(d))] == ["sub", "a.tex"]
+    remote_fs.rename(sh, str(d / "a.tex"), str(d / "b.tex"))
+    with pytest.raises(remote_fs.FsError):
+        remote_fs.rename(sh, str(d / "b.tex"), str(d / "sub"))
+    remote_fs.make_zip(sh, str(d))
+    archive = next(p for p in tmp_path.iterdir() if p.name.startswith("proj dir."))
+    remote_fs.remove(sh, str(d))
+    assert not d.exists()
+    remote_fs.extract(sh, str(archive))
+    assert (d / "b.tex").read_bytes() == b"\\documentclass{article}"
+    with pytest.raises(remote_fs.FsError):
+        remote_fs.read_bytes(sh, str(d / "b.tex"), limit=4)
