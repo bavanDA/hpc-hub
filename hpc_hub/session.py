@@ -108,6 +108,32 @@ class ClusterSession:
         self._thread = threading.Thread(target=self._allocate_safely, daemon=True)
         self._thread.start()
 
+    def ensure_node(self, on_done) -> None:
+        """Get a node if we have none; on_done(Allocation | None) runs on a worker thread."""
+        if self.allocation or self.state != State.CONNECTED:
+            on_done(self.allocation)
+            return
+
+        def run():
+            self._cancel.clear()
+            self._allocate_safely()
+            on_done(self.allocation)
+
+        threading.Thread(target=run, daemon=True).start()
+
+    def extra_node(self, job_name: str, on_done) -> None:
+        """Separate allocation (e.g. Claude on a new node). Kept when you disconnect."""
+        def run():
+            try:
+                a = slurm.allocate(self.ssh, self.cfg.profile, self._log, job_name=job_name)
+                a.owned = False
+                self._log(f"Extra node {a.node} (job {a.job_id}) for {job_name}")
+                on_done(a, "")
+            except (SlurmError, OSError, subprocess.SubprocessError) as e:
+                on_done(None, str(e))
+
+        threading.Thread(target=run, daemon=True).start()
+
     def healthy(self) -> bool:
         """Blocking check; run off the UI thread."""
         if self.vpn_used and not self.vpn.is_active():

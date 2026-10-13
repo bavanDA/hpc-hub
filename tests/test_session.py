@@ -108,3 +108,17 @@ def test_borrows_running_job(env, monkeypatch):
     assert rec.done.wait(20)
     cmds = (tmp / "cmds.log").read_text()
     assert "salloc" not in cmds and "scancel" not in cmds
+
+
+def test_extra_node(env):
+    server, tmp = env
+    s, rec = connect(server, "pw")
+    got = {}
+    done = threading.Event()
+    s.extra_node("hpc-hub-claude", lambda a, err: (got.update(a=a, err=err), done.set()))
+    assert done.wait(20)
+    assert got["a"].job_id == "42" and not got["a"].owned
+    assert "--job-name=hpc-hub-claude" in (tmp / "cmds.log").read_text()
+    rec.done.clear()
+    s.disconnect()
+    assert rec.done.wait(20)
