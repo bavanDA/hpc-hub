@@ -2,11 +2,12 @@ from gi.repository import Adw, Gtk
 
 from .. import APP_NAME
 from .cluster_card import ClusterCard
+from .jobs import JobsPage
 
 
 class MainWindow(Adw.ApplicationWindow):
     def __init__(self, app, sessions, on_connect, on_disconnect, on_settings):
-        super().__init__(application=app, title=APP_NAME, default_width=820, default_height=760)
+        super().__init__(application=app, title=APP_NAME, default_width=1000, default_height=760)
         self.cards: dict[str, ClusterCard] = {}
 
         menu = Gtk.PopoverMenu.new_from_model(self._menu())
@@ -21,7 +22,13 @@ class MainWindow(Adw.ApplicationWindow):
             column.append(card)
 
         clamp = Adw.Clamp(maximum_size=760, child=column)
-        self.toasts = Adw.ToastOverlay(child=Gtk.ScrolledWindow(child=clamp, vexpand=True))
+        self.stack = Adw.ViewStack()
+        self.stack.add_titled_with_icon(
+            Gtk.ScrolledWindow(child=clamp, vexpand=True), "clusters", "Clusters", "network-server-symbolic")
+        self.jobs = JobsPage(sessions, self.toast)
+        self.stack.add_titled_with_icon(self.jobs, "jobs", "Jobs", "view-list-symbolic")
+        header.set_title_widget(Adw.ViewSwitcher(stack=self.stack, policy=Adw.ViewSwitcherPolicy.WIDE))
+        self.toasts = Adw.ToastOverlay(child=self.stack)
 
         view = Adw.ToolbarView(content=self.toasts)
         view.add_top_bar(header)

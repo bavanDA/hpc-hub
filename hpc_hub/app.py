@@ -87,6 +87,7 @@ class HpcHubApp(Adw.Application):
     def _on_state(self, session: ClusterSession) -> bool:
         if self.window:
             self.window.cards[session.cfg.id].refresh()
+            self.window.jobs.session_changed(session)
         name = session.cfg.name
         self._sync_duo(session)
         if session.state == State.DUO:
