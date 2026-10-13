@@ -69,11 +69,13 @@ def default_clusters() -> list[ClusterConfig]:
         ),
         ClusterConfig(
             id="yale",
-            name="Yale",
+            name="Yale Bouchet",
+            host="bouchet.ycrc.yale.edu",
             vpn=VpnSettings(
                 enabled=True,
                 gateway="access.yale.edu",
                 useragent="AnyConnect Linux_64 4.10.07061",
+                authgroup="Default",
             ),
             profile=ComputeProfile(cpus=2, mem_gb=16),
         ),
