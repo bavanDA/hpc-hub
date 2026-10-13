@@ -61,7 +61,10 @@ class PdfView(Gtk.Box):
         except GLib.Error as e:
             self.show_message("Could not open PDF", e.message)
             return
+        first = not self.pages.get_first_child()
         self._render()
+        if first:
+            GLib.timeout_add(100, lambda: self.fit_width() and False)
         GLib.idle_add(lambda: self.scroller.get_vadjustment().set_value(pos) and False)
 
     def show_message(self, title: str, text: str = "") -> None:
