@@ -123,7 +123,7 @@ class ClusterCard(Gtk.Box):
         a = s.allocation
         self.node.set_visible(bool(a) and s.state == State.CONNECTED)
         if a:
-            self.node.set_label(f"Node {a.node} · Job {a.job_id}")
+            self.node.set_label(f"Node {a.node} · Job {a.job_id}" + ("" if a.owned else " (your job)"))
 
         for c in ("suggested-action", "destructive-action"):
             self.action.remove_css_class(c)

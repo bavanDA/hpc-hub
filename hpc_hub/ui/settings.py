@@ -104,6 +104,8 @@ class ClusterSettingsDialog(Adw.PreferencesDialog):
         page = Adw.PreferencesPage(name="compute", title="Compute", icon_name="system-run-symbolic")
         group = Adw.PreferencesGroup(title="Compute node", description="Requested with salloc after you connect.")
         self.on_connect = _switch("Request node on connect", self.cfg.request_node_on_connect)
+        self.reuse = _switch("Use my running job", self.cfg.reuse_running_job,
+                             "If you already have a node (e.g. for Claude), use it instead of a new one")
         self.cpus = _spin("CPU cores", p.cpus, 1, 512)
         self.mem = _spin("Memory (GB)", p.mem_gb, 1, 4096)
         self.time = _entry("Wall time (HH:MM:SS or D-HH:MM:SS)", p.time)
@@ -112,7 +114,7 @@ class ClusterSettingsDialog(Adw.PreferencesDialog):
         self.account = _entry("Account", p.account)
         self.qos = _entry("QOS", p.qos)
         self.extra = _entry("Extra salloc arguments", p.extra_args)
-        for row in (self.on_connect, self.cpus, self.mem, self.time, self.gpus,
+        for row in (self.on_connect, self.reuse, self.cpus, self.mem, self.time, self.gpus,
                     self.partition, self.account, self.qos, self.extra):
             group.add(row)
         page.add(group)
@@ -154,6 +156,7 @@ class ClusterSettingsDialog(Adw.PreferencesDialog):
 
         c.profile = trial
         c.request_node_on_connect = self.on_connect.get_active()
+        c.reuse_running_job = self.reuse.get_active()
         c.host = self.host.get_text().strip().rpartition("@")[2]  # username lives in Login
         c.port = int(self.port.get_value())
         c.duo_answer = self.duo.get_text().strip() or "push"
