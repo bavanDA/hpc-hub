@@ -16,24 +16,31 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("WebKit", "6.0")
 from gi.repository import GLib, Gtk, WebKit  # noqa: E402
 
-FILL_JS = """
-(function (u, p, submit) {
-  const pw = document.querySelector('input[type=password]');
-  if (!pw) return false;
-  const user = document.querySelector(
-    'input[name=username], input#username, input[name=j_username], input[type=email], input[name=loginfmt]');
+# One step per call: email page -> Next, password page -> Sign in. Returns what it did.
+STEP_JS = """
+(function (u, p, doneUser, donePass) {
+  const shown = el => el && el.offsetParent !== null && !el.disabled;
+  const pick = sel => [...document.querySelectorAll(sel)].find(shown);
   const set = (el, v) => {
-    if (!el || !v) return;
     el.focus(); el.value = v;
     el.dispatchEvent(new Event('input', {bubbles: true}));
     el.dispatchEvent(new Event('change', {bubbles: true}));
   };
-  set(user, u); set(pw, p);
-  if (submit && pw.form) {
-    pw.form.requestSubmit ? pw.form.requestSubmit() : pw.form.submit();
+  const submit = el => {
+    const btn = pick('#idSIButton9, button[type=submit], input[type=submit]');
+    if (btn) btn.click();
+    else if (el.form) el.form.requestSubmit ? el.form.requestSubmit() : el.form.submit();
+  };
+  const user = pick('input[name=loginfmt], input[type=email], input[name=username], ' +
+                    'input#username, input[name=j_username]');
+  const pw = pick('input[type=password]');
+  if (pw && p && !donePass) {
+    if (user && u && !user.value) set(user, u);
+    set(pw, p); submit(pw); return 'pass';
   }
-  return true;
-})(%s, %s, %s);
+  if (!pw && user && u && !doneUser) { set(user, u); submit(user); return 'user'; }
+  return '';
+})(%s, %s, %s, %s);
 """
 
 
@@ -58,7 +65,8 @@ class SsoWindow(Gtk.ApplicationWindow):
         super().__init__(application=app, title="VPN sign-in", default_width=520, default_height=720)
         self.username = ask_app("hpc-hub:sso-username") or ""
         self.password = ask_app("hpc-hub:sso-password") or ""
-        self.submitted = False
+        self.done = {"user": False, "pass": False}  # each submitted at most once
+        self.timer = 0
 
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         self.status = Gtk.Label(label="Signing in… approve the Duo push on your phone when it arrives.")
@@ -82,19 +90,27 @@ class SsoWindow(Gtk.ApplicationWindow):
             self.status.set_label("Signed in. Connecting…")
             GLib.timeout_add(1500, self.close)
             return
-        if not self.password:
-            return
-        script = FILL_JS % (json.dumps(self.username), json.dumps(self.password),
-                            "false" if self.submitted else "true")
-        view.evaluate_javascript(script, -1, None, None, None, self.on_filled, None)
+        if self.password and not self.timer:
+            self.timer = GLib.timeout_add(800, self.step)
 
-    def on_filled(self, view, result, _data) -> None:
+    def step(self) -> bool:
+        if self.done["pass"]:
+            self.timer = 0
+            return False
+        script = STEP_JS % (json.dumps(self.username), json.dumps(self.password),
+                            json.dumps(self.done["user"]), json.dumps(self.done["pass"]))
+        self.view.evaluate_javascript(script, -1, None, None, None, self.on_step, None)
+        return True
+
+    def on_step(self, view, result, _data) -> None:
         try:
-            value = view.evaluate_javascript_finish(result)
+            did = view.evaluate_javascript_finish(result).to_string()
         except GLib.Error:
             return
-        if value.to_boolean():
-            self.submitted = True
+        if did in self.done:
+            self.done[did] = True
+            if did == "pass":
+                self.status.set_label("Password sent. Approve Duo on your phone.")
 
 
 def main() -> int:
