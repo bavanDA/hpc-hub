@@ -137,7 +137,7 @@ class ClusterSession:
                 if kind == prompts.PASSWORD:
                     return ssh_login.password or None
                 self._set(State.DUO, "Approve the Duo push on your phone")
-                return self.cfg.duo_answer
+                return prompts.duo_reply(prompt, self.cfg.duo_answer)
             return self.listener.ask(self, prompt)
 
         if self.ssh:

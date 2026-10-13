@@ -189,7 +189,7 @@ class Vpn:
                 if kind == prompts.PASSWORD:
                     return password
                 on_duo()
-                return self.cfg.duo_answer
+                return prompts.duo_reply(prompt, self.cfg.duo_answer)
             return ask(prompt)
 
         code, out, err = run_interactive(argv, answer, self.log, timeout=300, cancelled=cancelled, env=env)
