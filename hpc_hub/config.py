@@ -10,6 +10,7 @@ CONFIG_DIR = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config")) / 
 CONFIG_FILE = CONFIG_DIR / "clusters.toml"
 APP_FILE = CONFIG_DIR / "app.toml"
 
+LATEX_ENGINES = ["pdf", "xelatex", "lualatex"]
 VPN_PROTOCOLS = ["anyconnect", "gp", "nc", "pulse", "f5", "fortinet", "array"]
 
 
@@ -59,6 +60,13 @@ class ClaudeSettings:
 
 
 @dataclass
+class LatexSettings:
+    setup: str = ""  # e.g. "module load TeXLive" before building
+    engine: str = "pdf"  # pdf, xelatex, lualatex
+    on_node: bool = True
+
+
+@dataclass
 class GlobusSettings:
     collection_id: str = ""
     collection_name: str = ""
@@ -78,6 +86,7 @@ class ClusterConfig:
     vscode: VsCodeSettings = field(default_factory=VsCodeSettings)
     claude: ClaudeSettings = field(default_factory=ClaudeSettings)
     globus: GlobusSettings = field(default_factory=GlobusSettings)
+    latex: LatexSettings = field(default_factory=LatexSettings)
 
     @property
     def vpn_connection_name(self) -> str:
