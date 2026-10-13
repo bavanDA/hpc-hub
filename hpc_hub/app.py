@@ -11,6 +11,7 @@ from gi.repository import Adw, Gdk, Gio, GLib, Gtk  # noqa: E402
 from . import APP_ID, APP_NAME, __version__, config, credentials  # noqa: E402
 from .askpass_server import AskpassServer  # noqa: E402
 from .session import ClusterSession, State  # noqa: E402
+from .ui.duo import DuoDialog  # noqa: E402
 from .ui.settings import ClusterSettingsDialog  # noqa: E402
 from .ui.window import MainWindow  # noqa: E402
 
@@ -31,6 +32,7 @@ class HpcHubApp(Adw.Application):
         self.sessions: dict[str, ClusterSession] = {}
         self.askpass = AskpassServer()
         self._quitting = False
+        self.duo_dialogs: dict[str, DuoDialog] = {}
 
     # -- lifecycle -----------------------------------------------------------------
     def do_startup(self):
@@ -86,6 +88,7 @@ class HpcHubApp(Adw.Application):
         if self.window:
             self.window.cards[session.cfg.id].refresh()
         name = session.cfg.name
+        self._sync_duo(session)
         if session.state == State.DUO:
             self._notify(f"duo-{session.cfg.id}", f"{name}: approve Duo", session.detail)
         elif session.state == State.CONNECTED:
@@ -98,6 +101,17 @@ class HpcHubApp(Adw.Application):
             if self.window:
                 self.window.toast(f"{name}: {session.detail}")
         return False
+
+    def _sync_duo(self, session: ClusterSession) -> None:
+        cid = session.cfg.id
+        dialog = self.duo_dialogs.get(cid)
+        if session.state == State.DUO and not dialog and self.window:
+            dialog = DuoDialog(session.cfg.name, session.cancel)
+            self.duo_dialogs[cid] = dialog
+            dialog.present(self.window)
+        elif session.state != State.DUO and dialog:
+            del self.duo_dialogs[cid]
+            dialog.done()
 
     def _on_log(self, session: ClusterSession, line: str) -> bool:
         if self.window:
