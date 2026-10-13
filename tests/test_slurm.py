@@ -29,3 +29,20 @@ def test_pick_reusable():
     assert slurm.pick_reusable(jobs, "devel").job_id == "11"
     assert slurm.pick_reusable(jobs[:2], "devel").job_id == "10"
     assert slurm.pick_reusable([], "devel") is None
+
+
+def test_parse_jobs():
+    text = ("101|hpc-hub|jdoe|devel|RUNNING|1:02|4:00:00|2|16G|r101u05\n"
+            "99|train|jdoe|gpu|PENDING|0:00|1-00:00:00|8|64G|(Priority)\n"
+            "98|old|jdoe|devel|CANCELLED by 1|0:10|4:00:00|2|16G|r1\n"
+            "garbage line\n")
+    jobs = slurm.parse_jobs(text)
+    assert [j.job_id for j in jobs] == ["101", "99", "98"]
+    assert jobs[0].from_app and not jobs[1].from_app
+    assert jobs[1].where == "(Priority)" and jobs[2].state == "CANCELLED"
+
+
+def test_jobs_command():
+    assert '-u "$USER"' in slurm.jobs_command(slurm.MINE)
+    assert "-u" not in slurm.jobs_command(slurm.ALL)
+    assert slurm.jobs_command(slurm.HISTORY, 3).startswith('sacct -n -P -X -u "$USER" -S now-3days')

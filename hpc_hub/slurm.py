@@ -153,3 +153,76 @@ def pick_reusable(jobs: list[Job], partition: str = "") -> Job | None:
         return ("claude" in name, bool(partition) and j.partition == partition,
                 name.startswith("hpc-hub"), int(j.job_id))
     return max(jobs, key=score, default=None)
+
+
+# -- job list ------------------------------------------------------------------
+
+MINE, HISTORY, ALL = "mine", "history", "all"
+SQUEUE_FORMAT = "%i|%j|%u|%P|%T|%M|%l|%C|%m|%R"
+SACCT_FIELDS = "JobID,JobName,User,Partition,State,Elapsed,Timelimit,AllocCPUS,ReqMem,NodeList"
+MAX_ROWS = 5000
+
+
+@dataclass
+class JobInfo:
+    job_id: str
+    name: str
+    user: str
+    partition: str
+    state: str
+    elapsed: str
+    limit: str
+    cpus: str
+    mem: str
+    where: str  # node list, or pending reason
+
+    @property
+    def from_app(self) -> bool:
+        return self.name.startswith("hpc-hub")
+
+
+def jobs_command(scope: str, days: int = 7) -> str:
+    if scope == HISTORY:
+        return (f'sacct -n -P -X -u "$USER" -S now-{int(days)}days '
+                f"-o {SACCT_FIELDS} | tail -n {MAX_ROWS}")
+    who = "" if scope == ALL else ' -u "$USER"'
+    return f"squeue -h{who} -o {shlex.quote(SQUEUE_FORMAT)} | head -n {MAX_ROWS}"
+
+
+def parse_jobs(text: str) -> list[JobInfo]:
+    jobs = []
+    for line in text.splitlines():
+        parts = line.strip().split("|")
+        if len(parts) != 10 or not parts[0]:
+            continue
+        parts[4] = parts[4].split()[0] if parts[4] else ""  # "CANCELLED by 123" -> CANCELLED
+        jobs.append(JobInfo(*parts))
+    return jobs
+
+
+def list_jobs(ssh: SshMaster, scope: str, days: int = 7) -> list[JobInfo]:
+    res = ssh.run(jobs_command(scope, days), timeout=60)
+    if res.returncode != 0 and not res.stdout.strip():
+        raise SlurmError(res.stderr.strip() or "Could not list jobs")
+    jobs = parse_jobs(res.stdout)
+    return sorted(jobs, key=lambda j: _id_key(j.job_id), reverse=True)
+
+
+def _id_key(job_id: str) -> tuple[int, str]:
+    head = re.match(r"\d+", job_id)
+    return (int(head.group()) if head else 0, job_id)
+
+
+def job_details(ssh: SshMaster, job_id: str) -> str:
+    if not re.fullmatch(r"[\d_\[\]-]+", job_id):
+        raise SlurmError("Bad job id")
+    res = ssh.run(f"scontrol show job {job_id} 2>/dev/null || sacct -P -j {job_id} -o ALL", timeout=30)
+    return res.stdout.strip() or res.stderr.strip()
+
+
+def cancel_job(ssh: SshMaster, job_id: str) -> None:
+    if not re.fullmatch(r"[\d_\[\]-]+", job_id):
+        raise SlurmError("Bad job id")
+    res = ssh.run(f"scancel {job_id}")
+    if res.returncode != 0:
+        raise SlurmError(res.stderr.strip() or "scancel failed")
