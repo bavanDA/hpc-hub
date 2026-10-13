@@ -78,6 +78,7 @@ def default_clusters() -> list[ClusterConfig]:
                 gateway="access.yale.edu",
                 useragent="AnyConnect Linux_64 4.10.07061",
                 authgroup="Default",
+                same_login_as_ssh=False,  # Microsoft sign-in wants first.last@yale.edu
             ),
             profile=ComputeProfile(cpus=2, mem_gb=16, partition="devel"),
         ),
