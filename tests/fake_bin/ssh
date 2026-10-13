@@ -1,0 +1,44 @@
+#!/usr/bin/env python3
+"""Fake ssh for tests: password + Duo via askpass, then a tiny Slurm."""
+import os, signal, subprocess, sys, time
+
+args = sys.argv[1:]
+ctl = args[args.index("-S") + 1]
+rest = args[args.index("--") + 2:]
+
+if "-O" in args:
+    op = args[args.index("-O") + 1]
+    if op == "check":
+        sys.exit(0 if os.path.exists(ctl) else 1)
+    if op == "exit" and os.path.exists(ctl):
+        pid = int(open(ctl).read())
+        os.unlink(ctl)
+        os.kill(pid, signal.SIGTERM)
+    sys.exit(0)
+
+def ask(prompt):
+    return subprocess.run([os.environ["SSH_ASKPASS"], prompt], capture_output=True, text=True).stdout.strip()
+
+if "-M" in args:
+    if ask("(u@fake) Password: ") != "pw":
+        print("Permission denied", file=sys.stderr); sys.exit(255)
+    if ask("Passcode or option (1-2): ") != "push":
+        print("Duo denied", file=sys.stderr); sys.exit(255)
+    open(ctl, "w").write(str(os.getpid()))
+    signal.signal(signal.SIGTERM, lambda *a: sys.exit(0))
+    while True:
+        time.sleep(1)
+
+if not os.path.exists(ctl):
+    sys.exit(255)
+cmd = rest[0] if rest else ""
+log = os.environ.get("FAKE_SSH_LOG")
+if log:
+    open(log, "a").write(cmd + "\n")
+if cmd.startswith("salloc"):
+    print("salloc: Pending job allocation 42")
+    print("salloc: Granted job allocation 42")
+elif "%N" in cmd:
+    print("n0001")
+elif "%T" in cmd:
+    print("RUNNING")

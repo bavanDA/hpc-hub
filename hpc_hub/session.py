@@ -1,0 +1,223 @@
+"""Connect flow for one cluster: VPN → SSH (+ Duo) → compute node. UI-agnostic."""
+
+import subprocess
+import threading
+from enum import Enum
+from typing import Protocol
+
+from . import prompts, slurm
+from .askpass_server import AskpassServer
+from .config import ClusterConfig
+from .credentials import Login
+from .slurm import Allocation, SlurmError
+from .ssh import SshError, SshMaster
+from .vpn import Vpn, VpnError
+
+
+class State(Enum):
+    DISCONNECTED = "Disconnected"
+    VPN = "Connecting VPN"
+    SIGNING_IN = "Signing in"
+    DUO = "Approve Duo on your phone"
+    ALLOCATING = "Requesting compute node"
+    CONNECTED = "Connected"
+    DISCONNECTING = "Disconnecting"
+    ERROR = "Error"
+
+    @property
+    def busy(self) -> bool:
+        return self in (State.VPN, State.SIGNING_IN, State.DUO, State.ALLOCATING, State.DISCONNECTING)
+
+
+class Listener(Protocol):
+    """Called from worker threads; the UI must hop to its main loop."""
+
+    def state_changed(self, session: "ClusterSession") -> None: ...
+    def log(self, session: "ClusterSession", line: str) -> None: ...
+    def ask(self, session: "ClusterSession", prompt: str) -> str | None: ...
+
+
+SSO_USER = "hpc-hub:sso-username"
+SSO_PASS = "hpc-hub:sso-password"
+
+
+class ClusterSession:
+    def __init__(self, cfg: ClusterConfig, askpass: AskpassServer, listener: Listener):
+        self.cfg = cfg
+        self.askpass = askpass
+        self.listener = listener
+        self.state = State.DISCONNECTED
+        self.detail = ""
+        self.allocation: Allocation | None = None
+        self.ssh: SshMaster | None = None
+        self._cancel = threading.Event()
+        self._thread: threading.Thread | None = None
+
+    # -- state -------------------------------------------------------------
+    def _set(self, state: State, detail: str = "") -> None:
+        self.state, self.detail = state, detail
+        self.listener.state_changed(self)
+
+    def _log(self, line: str) -> None:
+        self.listener.log(self, line)
+
+    @property
+    def vpn(self) -> Vpn:
+        return Vpn(self.cfg, self._log)
+
+    # -- public API (call from UI thread) -----------------------------------
+    def connect(self, ssh_login: Login, vpn_login: Login | None) -> None:
+        if self.state.busy:
+            return
+        self._cancel.clear()
+        self._thread = threading.Thread(
+            target=self._connect, args=(ssh_login, vpn_login), daemon=True)
+        self._thread.start()
+
+    def cancel(self) -> None:
+        self._cancel.set()
+
+    def disconnect(self, on_done=None) -> None:
+        self._cancel.set()
+
+        def run():
+            if self._thread and self._thread is not threading.current_thread():
+                self._thread.join(timeout=30)
+            self._disconnect()
+            if on_done:
+                on_done()
+
+        threading.Thread(target=run, daemon=True).start()
+
+    def request_node(self) -> None:
+        """Ask for a node on an already connected session."""
+        if self.state != State.CONNECTED or self.allocation:
+            return
+        self._cancel.clear()
+        self._thread = threading.Thread(target=self._allocate_safely, daemon=True)
+        self._thread.start()
+
+    def healthy(self) -> bool:
+        """Blocking check; run off the UI thread."""
+        if self.cfg.vpn.enabled and not self.vpn.is_active():
+            return False
+        return bool(self.ssh and self.ssh.alive())
+
+    def mark_lost(self) -> None:
+        if self.state == State.CONNECTED:
+            self._set(State.ERROR, "Connection lost")
+
+    # -- workers -------------------------------------------------------------
+    def _connect(self, ssh_login: Login, vpn_login: Login | None) -> None:
+        handler_state = {prompts.PASSWORD: 0, prompts.DUO: 0}
+
+        def on_prompt(prompt: str) -> str | None:
+            if prompt == SSO_USER:
+                return vpn_login.username if vpn_login else None
+            if prompt == SSO_PASS:
+                self._set(State.DUO, "Sign in to the VPN, then approve Duo on your phone")
+                return vpn_login.password if vpn_login else None
+            kind = prompts.classify(prompt)
+            if kind in handler_state:
+                handler_state[kind] += 1
+                if handler_state[kind] > 1:
+                    self._log(f"{kind} asked again; stopping to avoid lockout")
+                    return None
+                if kind == prompts.PASSWORD:
+                    return ssh_login.password or None
+                self._set(State.DUO, "Approve the Duo push on your phone")
+                return self.cfg.duo_answer
+            return self.listener.ask(self, prompt)
+
+        token = self.askpass.register(on_prompt)
+        try:
+            if self.cfg.vpn.enabled:
+                self._bring_up_vpn(vpn_login or ssh_login, token)
+            self._set(State.SIGNING_IN, f"{ssh_login.username}@{self.cfg.host}")
+            if not self.cfg.host:
+                raise SshError("Login host is empty. Set it in Settings → Server & VPN.")
+            self.ssh = SshMaster(self.cfg, ssh_login.username, self.askpass.env(token), self._log)
+            self.ssh.start(cancelled=self._cancel.is_set)
+            self._log("SSH session ready")
+        except (VpnError, SshError, OSError) as e:
+            self._fail(str(e))
+            return
+        finally:
+            self.askpass.unregister(token)
+
+        if self.allocation and self._job_running(self.allocation.job_id):
+            self._log(f"Reusing job {self.allocation.job_id} on {self.allocation.node}")
+            self._set(State.CONNECTED)
+        elif self.cfg.request_node_on_connect:
+            self.allocation = None
+            self._allocate_safely()
+        else:
+            self.allocation = None
+            self._set(State.CONNECTED)
+
+    def _job_running(self, job_id: str) -> bool:
+        try:
+            return slurm.job_state(self.ssh, job_id) == "RUNNING"
+        except (OSError, subprocess.SubprocessError):
+            return False
+
+    def _bring_up_vpn(self, login: Login, token: str) -> None:
+        vpn = self.vpn
+        if vpn.is_active():
+            self._log("VPN already up")
+            return
+        self._set(State.VPN, self.cfg.vpn.gateway)
+        vpn.ensure_profile()
+        auth = vpn.authenticate(
+            login.username, login.password,
+            ask=lambda prompt: self.listener.ask(self, prompt),
+            on_duo=lambda: self._set(State.DUO, "Approve the Duo push on your phone"),
+            cancelled=self._cancel.is_set,
+            env=self.askpass.env(token),
+        )
+        self._set(State.VPN, "Starting tunnel")
+        vpn.up(auth)
+        self._log("VPN connected")
+
+    def _allocate_safely(self) -> None:
+        self._set(State.ALLOCATING, self.cfg.profile.summary())
+        try:
+            self.allocation = slurm.allocate(
+                self.ssh, self.cfg.profile, self._log,
+                on_pending=lambda job: self._set(State.ALLOCATING, f"Job {job} waiting in queue"),
+                cancelled=self._cancel.is_set,
+            )
+        except (SlurmError, OSError, subprocess.SubprocessError) as e:
+            self._log(f"Node request failed: {e}")
+            self._set(State.CONNECTED, f"No compute node: {e}")
+            return
+        self._set(State.CONNECTED)
+
+    def _fail(self, message: str) -> None:
+        self._log(message)
+        if self.ssh:
+            self.ssh.stop()
+            self.ssh = None
+        if self._cancel.is_set():
+            self._set(State.DISCONNECTED)
+        else:
+            self._set(State.ERROR, message)
+
+    def _disconnect(self) -> None:
+        self._set(State.DISCONNECTING)
+        if self.ssh:
+            if self.allocation:
+                try:
+                    slurm.cancel(self.ssh, self.allocation.job_id)
+                    self._log(f"Released job {self.allocation.job_id}")
+                except (OSError, ValueError, subprocess.SubprocessError) as e:
+                    self._log(f"Could not cancel job: {e}")
+            self.ssh.stop()
+            self.ssh = None
+        self.allocation = None
+        if self.cfg.vpn.enabled:
+            try:
+                self.vpn.down()
+            except OSError as e:
+                self._log(f"VPN down failed: {e}")
+        self._set(State.DISCONNECTED)
