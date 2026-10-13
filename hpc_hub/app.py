@@ -12,6 +12,7 @@ from . import APP_ID, APP_NAME, __version__, config, credentials  # noqa: E402
 from .askpass_server import AskpassServer  # noqa: E402
 from .session import ClusterSession, State  # noqa: E402
 from .ui.duo import DuoDialog  # noqa: E402
+from .ui.globus_ui import GlobusCopier, GlobusSettingsDialog  # noqa: E402
 from .ui.settings import ClusterSettingsDialog  # noqa: E402
 from .ui.tools import Tools  # noqa: E402
 from .ui.window import MainWindow  # noqa: E402
@@ -45,11 +46,13 @@ class HpcHubApp(Adw.Application):
 
         self.askpass.start()
         self.clusters = config.load()
+        self.app_settings = config.load_app()
         self.sessions = {c.id: ClusterSession(c, self.askpass, self) for c in self.clusters}
 
         for name, handler, accels in (
             ("quit", lambda *_: self._request_quit(), ["<primary>q"]),
             ("about", lambda *_: self._about(), []),
+            ("globus", lambda *_: self._globus(), []),
         ):
             action = Gio.SimpleAction.new(name, None)
             action.connect("activate", handler)
@@ -68,6 +71,7 @@ class HpcHubApp(Adw.Application):
             self.tools = Tools(self.window, self.window.terminals,
                                lambda: self.window.stack.set_visible_child_name("terminals"),
                                self.window.toast, lambda: config.save(self.clusters))
+            self.window.files.globus_copy = GlobusCopier(self.app_settings, self.window.files, self.window)
         self.window.present()
 
     def do_shutdown(self):
@@ -265,6 +269,10 @@ class HpcHubApp(Adw.Application):
 
         dialog.connect("response", on_response)
         dialog.present(self.window)
+
+    def _globus(self) -> None:
+        GlobusSettingsDialog(self.app_settings, self.clusters, lambda: config.save_app(self.app_settings),
+                             lambda: config.save(self.clusters)).present(self.window)
 
     def _about(self) -> None:
         about = Adw.AboutDialog(

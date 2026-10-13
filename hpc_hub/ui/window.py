@@ -46,6 +46,7 @@ class MainWindow(Adw.ApplicationWindow):
     def _menu(self):
         from gi.repository import Gio
         menu = Gio.Menu()
+        menu.append("Globus…", "app.globus")
         menu.append("About HPC Hub", "app.about")
         menu.append("Quit", "app.quit")
         return menu
