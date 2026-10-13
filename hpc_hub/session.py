@@ -167,12 +167,28 @@ class ClusterSession:
         if self.allocation and self._job_running(self.allocation.job_id):
             self._log(f"Reusing job {self.allocation.job_id} on {self.allocation.node}")
             self._set(State.CONNECTED)
+        elif self._borrow_running_job():
+            self._set(State.CONNECTED)
         elif self.cfg.request_node_on_connect:
             self.allocation = None
             self._allocate_safely()
         else:
             self.allocation = None
             self._set(State.CONNECTED)
+
+    def _borrow_running_job(self) -> bool:
+        if not self.cfg.reuse_running_job:
+            return False
+        try:
+            job = slurm.pick_reusable(slurm.running_jobs(self.ssh), self.cfg.profile.partition)
+        except (OSError, subprocess.SubprocessError) as e:
+            self._log(f"Could not list jobs: {e}")
+            return False
+        if not job:
+            return False
+        self.allocation = Allocation(job.job_id, job.node, owned=False)
+        self._log(f"Using your running job {job.job_id} ({job.name}) on {job.node}")
+        return True
 
     def _job_running(self, job_id: str) -> bool:
         try:
@@ -202,6 +218,9 @@ class ClusterSession:
         self._log("VPN connected")
 
     def _allocate_safely(self) -> None:
+        if self._borrow_running_job():
+            self._set(State.CONNECTED)
+            return
         self._set(State.ALLOCATING, self.cfg.profile.summary())
         try:
             self.allocation = slurm.allocate(
@@ -228,7 +247,9 @@ class ClusterSession:
     def _disconnect(self) -> None:
         self._set(State.DISCONNECTING)
         if self.ssh:
-            if self.allocation:
+            if self.allocation and not self.allocation.owned:
+                self._log(f"Leaving your job {self.allocation.job_id} running")
+            elif self.allocation:
                 try:
                     slurm.cancel(self.ssh, self.allocation.job_id)
                     self._log(f"Released job {self.allocation.job_id}")

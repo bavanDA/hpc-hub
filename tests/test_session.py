@@ -90,3 +90,21 @@ def test_skips_vpn_when_reachable(env, monkeypatch):
     rec.done.clear()
     s.disconnect()
     assert rec.done.wait(20)
+
+
+def test_borrows_running_job(env, monkeypatch):
+    server, tmp = env
+    monkeypatch.setenv("FAKE_JOBS", "77|claude|r05|devel;78|bash|r06|devel")
+    cfg = ClusterConfig(id="t", name="Test", host="fake", reuse_running_job=True)
+    rec = Recorder()
+    s = ClusterSession(cfg, server, rec)
+    s.connect(Login("u", "pw"), None)
+    assert rec.done.wait(20)
+    assert s.state == State.CONNECTED, rec.lines
+    assert (s.allocation.job_id, s.allocation.node, s.allocation.owned) == ("77", "r05", False)
+
+    rec.done.clear()
+    s.disconnect()
+    assert rec.done.wait(20)
+    cmds = (tmp / "cmds.log").read_text()
+    assert "salloc" not in cmds and "scancel" not in cmds
