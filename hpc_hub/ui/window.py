@@ -2,12 +2,13 @@ from gi.repository import Adw, Gtk
 
 from .. import APP_NAME
 from .cluster_card import ClusterCard
+from .files import FilesPage
 from .jobs import JobsPage
 from .terminals import TerminalsPage
 
 
 class MainWindow(Adw.ApplicationWindow):
-    def __init__(self, app, sessions, on_connect, on_disconnect, on_settings, on_tool):
+    def __init__(self, app, sessions, on_connect, on_disconnect, on_settings, on_tool, on_latex=None):
         super().__init__(application=app, title=APP_NAME, default_width=1000, default_height=760)
         self.cards: dict[str, ClusterCard] = {}
 
@@ -28,6 +29,8 @@ class MainWindow(Adw.ApplicationWindow):
             Gtk.ScrolledWindow(child=clamp, vexpand=True), "clusters", "Clusters", "network-server-symbolic")
         self.jobs = JobsPage(sessions, self.toast)
         self.stack.add_titled_with_icon(self.jobs, "jobs", "Jobs", "view-list-symbolic")
+        self.files = FilesPage(sessions, self.toast, on_latex or (lambda s, p: None))
+        self.stack.add_titled_with_icon(self.files, "files", "Files", "folder-symbolic")
         self.terminals = TerminalsPage()
         self.stack.add_titled_with_icon(self.terminals, "terminals", "Terminals", "utilities-terminal-symbolic")
         header.set_title_widget(Adw.ViewSwitcher(stack=self.stack, policy=Adw.ViewSwitcherPolicy.WIDE))

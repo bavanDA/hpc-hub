@@ -92,6 +92,7 @@ class HpcHubApp(Adw.Application):
         if self.window:
             self.window.cards[session.cfg.id].refresh()
             self.window.jobs.session_changed(session)
+            self.window.files.session_changed(session)
         name = session.cfg.name
         self._sync_duo(session)
         if session.state == State.DUO:
@@ -167,7 +168,7 @@ class HpcHubApp(Adw.Application):
             self.tools.vscode_settings(session)
         elif tool == "claude":
             self.tools.claude(session)
-        elif tool == "files" and hasattr(self.window, "files"):
+        elif tool == "files":
             self.window.files.show_cluster(session)
             self.window.stack.set_visible_child_name("files")
 
