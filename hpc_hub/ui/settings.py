@@ -86,9 +86,12 @@ class ClusterSettingsDialog(Adw.PreferencesDialog):
         self.useragent = _entry("User agent (optional)", v.useragent)
         self.authgroup = _entry("Group (optional)", v.authgroup)
         self.same_login = _switch("Same login as cluster", v.same_login_as_ssh)
-        self.vpn_user = _entry("VPN username", self.vpn_saved.username if self.vpn_saved else "")
+        self.vpn_user = _entry("VPN username (e.g. first.last@yale.edu)", self.vpn_saved.username if self.vpn_saved else "")
         self.vpn_password = self._password_row(self.vpn_saved)
-        self.vpn_password.set_title("VPN " + self.vpn_password.get_title().lower())
+        if not (self.vpn_saved and self.vpn_saved.password):
+            self.vpn_password.set_title("VPN password (empty = cluster password)")
+        else:
+            self.vpn_password.set_title("VPN " + self.vpn_password.get_title().lower())
         for row in (self.vpn_on, self.gateway, self.protocol, self.useragent, self.authgroup,
                     self.same_login, self.vpn_user, self.vpn_password):
             vpn.add(row)
@@ -136,7 +139,7 @@ class ClusterSettingsDialog(Adw.PreferencesDialog):
         self.user.set_text("")
         self.vpn_user.set_text("")
         self.password.set_title("Password")
-        self.vpn_password.set_title("VPN password")
+        self.vpn_password.set_title("VPN password (empty = cluster password)")
         self.add_toast(Adw.Toast(title="Saved logins removed"))
 
     def _apply(self) -> list[str]:

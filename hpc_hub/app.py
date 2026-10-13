@@ -150,6 +150,8 @@ class HpcHubApp(Adw.Application):
         vpn_login = None
         if cfg.vpn.enabled:
             vpn_login = ssh_login if cfg.vpn.same_login_as_ssh else credentials.load(cfg.id, credentials.VPN)
+            if vpn_login and not vpn_login.password:
+                vpn_login = credentials.Login(vpn_login.username, ssh_login.password)
             if not vpn_login or not vpn_login.username:
                 self.open_settings(session, "Enter your VPN login first")
                 return
