@@ -20,9 +20,14 @@ class LatexIssue:
 
 def build_command(main_tex: str, s: LatexSettings, job_id: str | None = None) -> str:
     folder, name = posixpath.split(main_tex)
-    engine = {"pdf": "-pdf", "xelatex": "-pdfxe", "lualatex": "-pdflua"}.get(s.engine, "-pdf")
-    tool = (f"latexmk {engine} -interaction=nonstopmode -file-line-error -synctex=1 -halt-on-error "
-            f"{shlex.quote(name)}")
+    flag, binary = {"xelatex": ("-pdfxe", "xelatex"), "lualatex": ("-pdflua", "lualatex")}.get(
+        s.engine, ("-pdf", "pdflatex"))
+    q, base = shlex.quote(name), shlex.quote(posixpath.splitext(name)[0])
+    once = f"{binary} -interaction=nonstopmode -file-line-error -synctex=1 -halt-on-error {q}"
+    tool = (f"if command -v latexmk >/dev/null 2>&1; then "
+            f"latexmk {flag} -interaction=nonstopmode -file-line-error -synctex=1 -halt-on-error {q}; "
+            f"else {once} && {{ ! grep -q '\\\\citation' {base}.aux 2>/dev/null || bibtex {base}; }} "
+            f"&& {once} && {once}; fi")
     steps = f"{s.setup.strip()} && {tool}" if s.setup.strip() else tool
     script = f"{remote.cd_part(folder or '.')} && {steps}"
     if job_id and s.on_node:

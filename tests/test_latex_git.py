@@ -15,7 +15,7 @@ def test_build_command():
     s = LatexSettings(setup="module load TeXLive")
     cmd = latex.build_command("/home/u/paper/main.tex", s, job_id="42")
     assert cmd.startswith("srun --jobid=42 --overlap bash -lc")
-    assert "module load TeXLive && latexmk -pdf" in cmd
+    assert "module load TeXLive && if command -v latexmk" in cmd and "latexmk -pdf " in cmd
     assert latex.build_command("/p/main.tex", LatexSettings(on_node=False), "42").startswith("bash -lc")
     assert latex.pdf_path("/p/main.tex") == "/p/main.pdf"
 
