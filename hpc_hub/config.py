@@ -50,6 +50,7 @@ class ClusterConfig:
     port: int = 22
     duo_answer: str = "push"
     request_node_on_connect: bool = True
+    reuse_running_job: bool = False
     vpn: VpnSettings = field(default_factory=VpnSettings)
     profile: ComputeProfile = field(default_factory=ComputeProfile)
 

@@ -36,3 +36,11 @@ def test_load_strips_user_from_host(tmp_path):
     path = tmp_path / "c.toml"
     path.write_text('[clusters.wulver]\nhost = "bd1@wulver.njit.edu"\n')
     assert config.load(path)[0].host == "wulver.njit.edu"
+
+
+def test_reuse_running_job_roundtrip(tmp_path):
+    clusters = config.default_clusters()
+    clusters[0].reuse_running_job = True
+    path = tmp_path / "c.toml"
+    config.save(clusters, path)
+    assert config.load(path)[0].reuse_running_job is True
