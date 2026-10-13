@@ -8,6 +8,7 @@ from pathlib import Path
 
 CONFIG_DIR = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config")) / "hpc-hub"
 CONFIG_FILE = CONFIG_DIR / "clusters.toml"
+APP_FILE = CONFIG_DIR / "app.toml"
 
 VPN_PROTOCOLS = ["anyconnect", "gp", "nc", "pulse", "f5", "fortinet", "array"]
 
@@ -43,6 +44,27 @@ class ComputeProfile:
 
 
 @dataclass
+class VsCodeSettings:
+    command: str = ""  # alias from ~/.bashrc, picked on first run
+    workdir: str = "~"
+    open_links: bool = True
+
+
+@dataclass
+class ClaudeSettings:
+    command: str = "claude"
+    workdir: str = "~"
+    skip_permissions: bool = False
+    new_node: bool = False
+
+
+@dataclass
+class GlobusSettings:
+    collection_id: str = ""
+    collection_name: str = ""
+
+
+@dataclass
 class ClusterConfig:
     id: str
     name: str
@@ -53,6 +75,9 @@ class ClusterConfig:
     reuse_running_job: bool = False
     vpn: VpnSettings = field(default_factory=VpnSettings)
     profile: ComputeProfile = field(default_factory=ComputeProfile)
+    vscode: VsCodeSettings = field(default_factory=VsCodeSettings)
+    claude: ClaudeSettings = field(default_factory=ClaudeSettings)
+    globus: GlobusSettings = field(default_factory=GlobusSettings)
 
     @property
     def vpn_connection_name(self) -> str:
@@ -148,4 +173,25 @@ def save(clusters: list[ClusterConfig], path: Path = CONFIG_FILE) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_suffix(".tmp")
     tmp.write_text(dumps(clusters), encoding="utf-8")
+    tmp.replace(path)
+
+
+@dataclass
+class AppSettings:
+    globus_client_id: str = ""  # your Globus native app id (app.globus.org/settings/developers)
+
+
+def load_app(path: Path = APP_FILE) -> AppSettings:
+    app = AppSettings()
+    if path.exists():
+        with open(path, "rb") as fh:
+            _merge(app, tomllib.load(fh).get("app", {}))
+    return app
+
+
+def save_app(app: AppSettings, path: Path = APP_FILE) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    lines = ["[app]"] + [f"{k} = {_toml_value(v)}" for k, v in asdict(app).items()]
+    tmp = path.with_suffix(".tmp")
+    tmp.write_text("\n".join(lines) + "\n", encoding="utf-8")
     tmp.replace(path)

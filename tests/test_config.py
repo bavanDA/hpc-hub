@@ -44,3 +44,20 @@ def test_reuse_running_job_roundtrip(tmp_path):
     path = tmp_path / "c.toml"
     config.save(clusters, path)
     assert config.load(path)[0].reuse_running_job is True
+
+
+def test_tool_settings_roundtrip(tmp_path):
+    clusters = config.default_clusters()
+    clusters[1].vscode.command = "vscode"
+    clusters[1].claude.skip_permissions = True
+    clusters[1].globus.collection_id = "abc"
+    path = tmp_path / "c.toml"
+    config.save(clusters, path)
+    y = config.load(path)[1]
+    assert (y.vscode.command, y.claude.skip_permissions, y.globus.collection_id) == ("vscode", True, "abc")
+
+
+def test_app_settings(tmp_path):
+    path = tmp_path / "app.toml"
+    config.save_app(config.AppSettings(globus_client_id="cid"), path)
+    assert config.load_app(path).globus_client_id == "cid"
