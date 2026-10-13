@@ -1,0 +1,3 @@
+#!/bin/sh
+here="$(dirname "$(readlink -f "$0")")"
+cd "$here/.." && exec /usr/bin/python3 -m hpc_hub "$@"

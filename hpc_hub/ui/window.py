@@ -1,0 +1,38 @@
+from gi.repository import Adw, Gtk
+
+from .. import APP_NAME
+from .cluster_card import ClusterCard
+
+
+class MainWindow(Adw.ApplicationWindow):
+    def __init__(self, app, sessions, on_connect, on_disconnect, on_settings):
+        super().__init__(application=app, title=APP_NAME, default_width=820, default_height=760)
+        self.cards: dict[str, ClusterCard] = {}
+
+        menu = Gtk.PopoverMenu.new_from_model(self._menu())
+        header = Adw.HeaderBar()
+        header.pack_end(Gtk.MenuButton(icon_name="open-menu-symbolic", popover=menu, tooltip_text="Menu"))
+
+        column = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=18,
+                         margin_top=24, margin_bottom=24, margin_start=16, margin_end=16)
+        for s in sessions:
+            card = ClusterCard(s, on_connect, on_disconnect, on_settings)
+            self.cards[s.cfg.id] = card
+            column.append(card)
+
+        clamp = Adw.Clamp(maximum_size=760, child=column)
+        self.toasts = Adw.ToastOverlay(child=Gtk.ScrolledWindow(child=clamp, vexpand=True))
+
+        view = Adw.ToolbarView(content=self.toasts)
+        view.add_top_bar(header)
+        self.set_content(view)
+
+    def _menu(self):
+        from gi.repository import Gio
+        menu = Gio.Menu()
+        menu.append("About HPC Hub", "app.about")
+        menu.append("Quit", "app.quit")
+        return menu
+
+    def toast(self, text: str) -> None:
+        self.toasts.add_toast(Adw.Toast(title=text, timeout=4))
