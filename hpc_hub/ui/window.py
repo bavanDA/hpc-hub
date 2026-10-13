@@ -3,10 +3,11 @@ from gi.repository import Adw, Gtk
 from .. import APP_NAME
 from .cluster_card import ClusterCard
 from .jobs import JobsPage
+from .terminals import TerminalsPage
 
 
 class MainWindow(Adw.ApplicationWindow):
-    def __init__(self, app, sessions, on_connect, on_disconnect, on_settings):
+    def __init__(self, app, sessions, on_connect, on_disconnect, on_settings, on_tool):
         super().__init__(application=app, title=APP_NAME, default_width=1000, default_height=760)
         self.cards: dict[str, ClusterCard] = {}
 
@@ -17,7 +18,7 @@ class MainWindow(Adw.ApplicationWindow):
         column = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=18,
                          margin_top=24, margin_bottom=24, margin_start=16, margin_end=16)
         for s in sessions:
-            card = ClusterCard(s, on_connect, on_disconnect, on_settings)
+            card = ClusterCard(s, on_connect, on_disconnect, on_settings, on_tool)
             self.cards[s.cfg.id] = card
             column.append(card)
 
@@ -27,6 +28,8 @@ class MainWindow(Adw.ApplicationWindow):
             Gtk.ScrolledWindow(child=clamp, vexpand=True), "clusters", "Clusters", "network-server-symbolic")
         self.jobs = JobsPage(sessions, self.toast)
         self.stack.add_titled_with_icon(self.jobs, "jobs", "Jobs", "view-list-symbolic")
+        self.terminals = TerminalsPage()
+        self.stack.add_titled_with_icon(self.terminals, "terminals", "Terminals", "utilities-terminal-symbolic")
         header.set_title_widget(Adw.ViewSwitcher(stack=self.stack, policy=Adw.ViewSwitcherPolicy.WIDE))
         self.toasts = Adw.ToastOverlay(child=self.stack)
 
