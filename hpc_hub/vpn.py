@@ -1,0 +1,219 @@
+"""VPN: openconnect logs in as you (password + Duo), NetworkManager runs the tunnel.
+
+No root helper needed: the NM profile is private to your user.
+"""
+
+import getpass
+import os
+import queue
+import re
+import shlex
+import subprocess
+import tempfile
+import threading
+import time
+from collections.abc import Callable
+
+from . import prompts
+from .config import ClusterConfig
+from .paths import runtime_dir
+
+PROMPT_END = re.compile(r"[:?\]]\s*$")
+NM_ENV = {**os.environ, "LC_ALL": "C"}
+
+
+class VpnError(Exception):
+    pass
+
+
+def run_interactive(
+    argv: list[str],
+    answer: Callable[[str], str | None],
+    log: Callable[[str], None],
+    timeout: float = 180,
+    cancelled: Callable[[], bool] = lambda: False,
+) -> tuple[int, list[str], list[str]]:
+    """Run a prompting program, answering prompts. Returns (code, stdout lines, stderr lines).
+
+    Stdout is not logged: openconnect prints the session cookie there.
+    """
+    proc = subprocess.Popen(
+        argv, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+        start_new_session=True,
+    )
+    chunks: queue.Queue = queue.Queue()
+
+    def pump(stream, name):
+        while data := os.read(stream.fileno(), 4096):
+            chunks.put((name, data.decode(errors="replace")))
+        chunks.put((name, None))
+
+    for stream, name in ((proc.stdout, "out"), (proc.stderr, "err")):
+        threading.Thread(target=pump, args=(stream, name), daemon=True).start()
+
+    lines = {"out": [], "err": []}
+    partial = {"out": "", "err": ""}
+    open_streams = 2
+    deadline = time.monotonic() + timeout
+
+    def stop(reason: str):
+        proc.kill()
+        proc.wait()
+        raise VpnError(reason)
+
+    while open_streams:
+        if cancelled():
+            stop("Cancelled")
+        if time.monotonic() > deadline:
+            stop("VPN login timed out")
+        try:
+            name, data = chunks.get(timeout=0.3)
+        except queue.Empty:
+            for name in ("err", "out"):
+                text = partial[name]
+                if text.strip() and PROMPT_END.search(text) and "=" not in text.split(":")[0]:
+                    partial[name] = ""
+                    reply = answer(text.strip())
+                    if reply is None:
+                        stop("VPN login cancelled")
+                    try:
+                        proc.stdin.write((reply + "\n").encode())
+                        proc.stdin.flush()
+                    except BrokenPipeError:
+                        pass
+                    break
+            continue
+        if data is None:
+            open_streams -= 1
+            continue
+        *done, partial[name] = (partial[name] + data).split("\n")
+        for line in done:
+            lines[name].append(line)
+            if name == "err" and line.strip():
+                log(f"vpn: {line.strip()}")
+    for name in ("out", "err"):
+        if partial[name]:
+            lines[name].append(partial[name])
+    return proc.wait(), lines["out"], lines["err"]
+
+
+def parse_auth_output(lines: list[str]) -> dict[str, str]:
+    result = {}
+    for line in lines:
+        key, sep, value = line.strip().partition("=")
+        if sep and key.isupper():
+            parts = shlex.split(value) if value else [""]
+            result[key] = parts[0] if parts else ""
+    return result
+
+
+def nm_vpn_data(cfg: ClusterConfig) -> str:
+    v = cfg.vpn
+    data = {
+        "gateway": v.gateway,
+        "protocol": v.protocol,
+        "authtype": "password",
+        "cookie-flags": "2",
+        "gateway-flags": "2",
+        "gwcert-flags": "2",
+        "resolve-flags": "2",
+    }
+    if v.useragent:
+        data["useragent"] = v.useragent
+    return ", ".join(f"{k} = {val.replace(',', '\\,')}" for k, val in data.items())
+
+
+class Vpn:
+    def __init__(self, cfg: ClusterConfig, log: Callable[[str], None]):
+        self.cfg = cfg
+        self.log = log
+        self.name = cfg.vpn_connection_name
+
+    def _nmcli(self, *args: str, timeout: float = 60) -> subprocess.CompletedProcess:
+        return subprocess.run(["nmcli", *args], capture_output=True, text=True, timeout=timeout, env=NM_ENV)
+
+    def ensure_profile(self) -> None:
+        if not self.cfg.vpn.gateway:
+            raise VpnError("VPN gateway is empty. Set it in Settings → Server & VPN.")
+        data = nm_vpn_data(self.cfg)
+        names = self._nmcli("-t", "-g", "NAME", "connection", "show").stdout.splitlines()
+        if self.name in names:
+            res = self._nmcli("connection", "modify", "id", self.name, "vpn.data", data)
+        else:
+            res = self._nmcli(
+                "connection", "add", "type", "vpn", "con-name", self.name,
+                "vpn-type", "openconnect", "connection.autoconnect", "no",
+                "connection.permissions", f"user:{getpass.getuser()}", "vpn.data", data,
+            )
+        if res.returncode != 0:
+            raise VpnError(res.stderr.strip() or "Could not set up NetworkManager VPN profile")
+
+    def is_active(self) -> bool:
+        res = self._nmcli("-t", "-g", "NAME", "connection", "show", "--active")
+        return self.name in res.stdout.splitlines()
+
+    def authenticate(
+        self,
+        username: str,
+        password: str,
+        ask: Callable[[str], str | None],
+        on_duo: Callable[[], None],
+        cancelled: Callable[[], bool] = lambda: False,
+    ) -> dict[str, str]:
+        v = self.cfg.vpn
+        argv = ["openconnect", "--authenticate", "--protocol", v.protocol, "--user", username]
+        if v.useragent:
+            argv += ["--useragent", v.useragent]
+        if v.authgroup:
+            argv += ["--authgroup", v.authgroup]
+        argv.append(v.gateway)
+
+        asked = {prompts.PASSWORD: 0, prompts.DUO: 0}
+
+        def answer(prompt: str) -> str | None:
+            kind = prompts.classify(prompt)
+            if kind == prompts.USERNAME:
+                return username
+            if kind == prompts.GROUP:
+                return prompts.group_choice(prompt, v.authgroup)
+            if kind in asked:
+                asked[kind] += 1
+                if asked[kind] > 1:
+                    return None  # rejected once; don't hammer the account
+                if kind == prompts.PASSWORD:
+                    return password
+                on_duo()
+                return self.cfg.duo_answer
+            return ask(prompt)
+
+        code, out, err = run_interactive(argv, answer, self.log, cancelled=cancelled)
+        result = parse_auth_output(out)
+        if code != 0 or "COOKIE" not in result:
+            if asked[prompts.PASSWORD] > 1:
+                raise VpnError("VPN rejected the password")
+            tail = next((l for l in reversed(err) if l.strip()), "")
+            raise VpnError(f"VPN login failed: {tail}" if tail else "VPN login failed")
+        return result
+
+    def up(self, auth: dict[str, str]) -> None:
+        secrets = {
+            "cookie": auth["COOKIE"],
+            "gateway": auth.get("CONNECT_URL") or auth.get("HOST") or self.cfg.vpn.gateway,
+            "gwcert": auth.get("FINGERPRINT", ""),
+        }
+        if auth.get("RESOLVE"):
+            secrets["resolve"] = auth["RESOLVE"]
+        body = "".join(f"vpn.secrets.{k}:{v}\n" for k, v in secrets.items())
+        fd, path = tempfile.mkstemp(dir=runtime_dir(), prefix="nm-")
+        try:
+            with os.fdopen(fd, "w") as fh:
+                fh.write(body)
+            res = self._nmcli("connection", "up", "id", self.name, "passwd-file", path, timeout=120)
+        finally:
+            os.unlink(path)
+        if res.returncode != 0:
+            raise VpnError(res.stderr.strip() or "VPN tunnel did not come up")
+
+    def down(self) -> None:
+        if self.is_active():
+            self._nmcli("connection", "down", "id", self.name)
