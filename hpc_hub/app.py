@@ -13,6 +13,7 @@ from .askpass_server import AskpassServer  # noqa: E402
 from .session import ClusterSession, State  # noqa: E402
 from .ui.duo import DuoDialog  # noqa: E402
 from .ui.settings import ClusterSettingsDialog  # noqa: E402
+from .ui.tools import Tools  # noqa: E402
 from .ui.window import MainWindow  # noqa: E402
 
 CSS = """
@@ -61,8 +62,11 @@ class HpcHubApp(Adw.Application):
         if not self.window:
             self.window = MainWindow(
                 self, list(self.sessions.values()),
-                self.connect_session, self.disconnect_session, self.open_settings)
+                self.connect_session, self.disconnect_session, self.open_settings, self.open_tool)
             self.window.connect("close-request", self._on_close_request)
+            self.tools = Tools(self.window, self.window.terminals,
+                               lambda: self.window.stack.set_visible_child_name("terminals"),
+                               self.window.toast, lambda: config.save(self.clusters))
         self.window.present()
 
     def do_shutdown(self):
@@ -155,6 +159,17 @@ class HpcHubApp(Adw.Application):
         dialog.present(self.window)
         if hint:
             dialog.add_toast(Adw.Toast(title=hint, timeout=5))
+
+    def open_tool(self, session: ClusterSession, tool: str) -> None:
+        if tool == "vscode":
+            self.tools.vscode(session)
+        elif tool == "vscode-settings":
+            self.tools.vscode_settings(session)
+        elif tool == "claude":
+            self.tools.claude(session)
+        elif tool == "files" and hasattr(self.window, "files"):
+            self.window.files.show_cluster(session)
+            self.window.stack.set_visible_child_name("files")
 
     def connect_session(self, session: ClusterSession) -> None:
         cfg = session.cfg
