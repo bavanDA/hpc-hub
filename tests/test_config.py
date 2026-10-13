@@ -30,3 +30,9 @@ def test_unknown_keys_ignored(tmp_path):
     loaded = config.load(path)
     assert loaded[0].port == 22
     assert len(loaded) == 3
+
+
+def test_load_strips_user_from_host(tmp_path):
+    path = tmp_path / "c.toml"
+    path.write_text('[clusters.wulver]\nhost = "bd1@wulver.njit.edu"\n')
+    assert config.load(path)[0].host == "wulver.njit.edu"

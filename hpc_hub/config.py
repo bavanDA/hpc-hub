@@ -112,6 +112,7 @@ def load(path: Path = CONFIG_FILE) -> list[ClusterConfig]:
     for c in clusters:
         if isinstance(saved.get(c.id), dict):
             _merge(c, saved[c.id])
+        c.host = c.host.strip().rpartition("@")[2]  # user@ belongs in the login
     return clusters
 
 
