@@ -87,11 +87,10 @@ class ClusterCard(Gtk.Box):
                                   ("vscode-settings", "", "emblem-system-symbolic"),
                                   ("claude", "Claude", "user-available-symbolic"),
                                   ("files", "Files", "folder-symbolic")):
-            btn = Gtk.Button(child=Adw.ButtonContent(label=label, icon_name=icon) if label else None,
-                             icon_name=None if label else icon,
-                             tooltip_text="VS Code settings" if not label else f"Open {label}")
-            if not label:
-                btn.add_css_class("flat")
+            if label:
+                btn = Gtk.Button(child=Adw.ButtonContent(label=label, icon_name=icon), tooltip_text=f"Open {label}")
+            else:
+                btn = Gtk.Button(icon_name=icon, tooltip_text="VS Code settings", css_classes=["flat"])
             btn.connect("clicked", lambda _b, n=name: on_tool(session, n))
             self.tools.append(btn)
         self.append(self.tools)
