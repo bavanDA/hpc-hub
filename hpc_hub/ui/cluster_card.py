@@ -30,6 +30,7 @@ class ClusterCard(Gtk.Box):
         on_connect: Callable[[ClusterSession], None],
         on_disconnect: Callable[[ClusterSession], None],
         on_settings: Callable[[ClusterSession], None],
+        on_tool: Callable[[ClusterSession, str], None] = lambda s, t: None,
     ):
         super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=6)
         self.session = session
@@ -81,6 +82,20 @@ class ClusterCard(Gtk.Box):
         self.node.set_selectable(True)
         self.append(self.node)
 
+        self.tools = Gtk.Box(spacing=6, margin_top=4)
+        for name, label, icon in (("vscode", "VS Code", "text-editor-symbolic"),
+                                  ("vscode-settings", "", "emblem-system-symbolic"),
+                                  ("claude", "Claude", "user-available-symbolic"),
+                                  ("files", "Files", "folder-symbolic")):
+            btn = Gtk.Button(child=Adw.ButtonContent(label=label, icon_name=icon) if label else None,
+                             icon_name=None if label else icon,
+                             tooltip_text="VS Code settings" if not label else f"Open {label}")
+            if not label:
+                btn.add_css_class("flat")
+            btn.connect("clicked", lambda _b, n=name: on_tool(session, n))
+            self.tools.append(btn)
+        self.append(self.tools)
+
         self.log_view = Gtk.TextView(editable=False, monospace=True, cursor_visible=False,
                                      wrap_mode=Gtk.WrapMode.WORD_CHAR)
         self.log_view.add_css_class("log-view")
@@ -120,6 +135,7 @@ class ClusterCard(Gtk.Box):
         else:
             self.detail.remove_css_class("accent")
 
+        self.tools.set_visible(s.state == State.CONNECTED)
         a = s.allocation
         self.node.set_visible(bool(a) and s.state == State.CONNECTED)
         if a:
