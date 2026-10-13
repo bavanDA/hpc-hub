@@ -1,5 +1,6 @@
 """One SSH ControlMaster per cluster. Login (and Duo) happens once; later commands reuse it."""
 
+import socket
 import subprocess
 import threading
 import time
@@ -92,6 +93,23 @@ class SshMaster:
 
     def popen(self, command: str, **kwargs) -> subprocess.Popen:
         return subprocess.Popen(self.argv(command), stdin=subprocess.DEVNULL, text=True, **kwargs)
+
+    def forward(self, remote_host: str, remote_port: int) -> int:
+        """Forward a free local port to remote_host:remote_port through the master."""
+        with socket.socket() as probe:
+            probe.bind(("127.0.0.1", 0))
+            local = probe.getsockname()[1]
+        spec = f"127.0.0.1:{local}:{remote_host}:{int(remote_port)}"
+        res = subprocess.run(["ssh", "-O", "forward", "-L", spec, *self._target()], capture_output=True, text=True)
+        if res.returncode != 0:
+            raise SshError(res.stderr.strip() or "Port forward failed")
+        return local
+
+    def copy_argv(self, src: str, dst: str) -> list[str]:
+        """scp argv riding the master. Remote paths are written as ':path'."""
+        fix = lambda p: f"{self.cfg.host}:{p[1:]}" if p.startswith(":") else p  # noqa: E731
+        return ["scp", "-r", "-q", "-o", "ControlMaster=no", "-o", "BatchMode=yes", "-o", f"ControlPath={self.control_path}",
+                "-o", f"User={self.username}", "-P", str(self.cfg.port), "--", fix(src), fix(dst)]
 
     def stop(self) -> None:
         if self.control_path.exists():
