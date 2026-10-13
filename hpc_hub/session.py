@@ -129,6 +129,9 @@ class ClusterSession:
                 return self.cfg.duo_answer
             return self.listener.ask(self, prompt)
 
+        if self.ssh:
+            self.ssh.stop()
+            self.ssh = None
         token = self.askpass.register(on_prompt)
         try:
             if self.cfg.vpn.enabled:
