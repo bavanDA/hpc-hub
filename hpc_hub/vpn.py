@@ -16,7 +16,7 @@ from collections.abc import Callable
 
 from . import prompts
 from .config import ClusterConfig
-from .paths import runtime_dir
+from .paths import SSO_BIN, runtime_dir
 
 PROMPT_END = re.compile(r"[:?\]]\s*$")
 NM_ENV = {**os.environ, "LC_ALL": "C"}
@@ -32,6 +32,7 @@ def run_interactive(
     log: Callable[[str], None],
     timeout: float = 180,
     cancelled: Callable[[], bool] = lambda: False,
+    env: dict | None = None,
 ) -> tuple[int, list[str], list[str]]:
     """Run a prompting program, answering prompts. Returns (code, stdout lines, stderr lines).
 
@@ -39,7 +40,7 @@ def run_interactive(
     """
     proc = subprocess.Popen(
         argv, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-        start_new_session=True,
+        start_new_session=True, env=env,
     )
     chunks: queue.Queue = queue.Queue()
 
@@ -159,9 +160,14 @@ class Vpn:
         ask: Callable[[str], str | None],
         on_duo: Callable[[], None],
         cancelled: Callable[[], bool] = lambda: False,
+        env: dict | None = None,
     ) -> dict[str, str]:
+        """Log in. Browser (SAML) gateways open the in-app sign-in window via env's askpass."""
         v = self.cfg.vpn
-        argv = ["openconnect", "--authenticate", "--protocol", v.protocol, "--user", username]
+        argv = [
+            "openconnect", "--authenticate", "--protocol", v.protocol, "--user", username,
+            "--external-browser", str(SSO_BIN),
+        ]
         if v.useragent:
             argv += ["--useragent", v.useragent]
         if v.authgroup:
@@ -186,7 +192,7 @@ class Vpn:
                 return self.cfg.duo_answer
             return ask(prompt)
 
-        code, out, err = run_interactive(argv, answer, self.log, cancelled=cancelled)
+        code, out, err = run_interactive(argv, answer, self.log, timeout=300, cancelled=cancelled, env=env)
         result = parse_auth_output(out)
         if code != 0 or "COOKIE" not in result:
             if asked[prompts.PASSWORD] > 1:

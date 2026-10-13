@@ -3,6 +3,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 ASKPASS_BIN = ROOT / "bin" / "hpc-hub-askpass"
+SSO_BIN = ROOT / "bin" / "hpc-hub-sso"
 
 
 def runtime_dir() -> Path:
