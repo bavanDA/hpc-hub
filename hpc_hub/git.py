@@ -67,8 +67,13 @@ def info(ssh: SshMaster, folder: str) -> RepoInfo:
                     changes=[l for l in parts[3].splitlines() if l.strip()], history=parse_log(parts[4]))
 
 
+BUILD_FILES = ("aux", "log", "out", "toc", "fls", "fdb_latexmk", "synctex.gz", "bbl", "blg", "lof", "lot", "nav", "snm")
+
+
 def commit_all(ssh: SshMaster, folder: str, message: str) -> str:
-    return _git(ssh, folder, f"add -A && git -C {shlex.quote(folder)} commit -m {shlex.quote(message)}")
+    """Stage everything except LaTeX build files, then commit."""
+    skip = " ".join(shlex.quote(f":!*.{ext}") for ext in BUILD_FILES)
+    return _git(ssh, folder, f"add -A -- . {skip} && {ENV} git -C {shlex.quote(folder)} commit -m {shlex.quote(message)}")
 
 
 def pull(ssh: SshMaster, folder: str) -> str:

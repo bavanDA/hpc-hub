@@ -40,3 +40,8 @@ def test_git_on_local_repo(tmp_path):
     assert i.changes == [" M main.tex"] and i.history[0].subject == "first"
     assert "first" in git.show(sh, str(repo), i.history[0].hash)
     assert git.info(sh, str(tmp_path)).root == ""
+    (repo / "main.aux").write_text("junk")
+    sh.run(f"git -C {repo} config user.name T && git -C {repo} config user.email t@x")
+    git.commit_all(sh, str(repo), "second")
+    after = git.info(sh, str(repo))
+    assert after.history[0].subject == "second" and after.changes == ["?? main.aux"]
