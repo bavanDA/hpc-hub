@@ -1,5 +1,6 @@
 """Connect flow for one cluster: VPN → SSH (+ Duo) → compute node. UI-agnostic."""
 
+import socket
 import subprocess
 import threading
 from enum import Enum
@@ -37,6 +38,14 @@ class Listener(Protocol):
     def ask(self, session: "ClusterSession", prompt: str) -> str | None: ...
 
 
+def reachable(host: str, port: int, timeout: float = 3.0) -> bool:
+    try:
+        with socket.create_connection((host, port), timeout=timeout):
+            return True
+    except OSError:
+        return False
+
+
 SSO_USER = "hpc-hub:sso-username"
 SSO_PASS = "hpc-hub:sso-password"
 
@@ -50,6 +59,7 @@ class ClusterSession:
         self.detail = ""
         self.allocation: Allocation | None = None
         self.ssh: SshMaster | None = None
+        self.vpn_used = False
         self._cancel = threading.Event()
         self._thread: threading.Thread | None = None
 
@@ -99,7 +109,7 @@ class ClusterSession:
 
     def healthy(self) -> bool:
         """Blocking check; run off the UI thread."""
-        if self.cfg.vpn.enabled and not self.vpn.is_active():
+        if self.vpn_used and not self.vpn.is_active():
             return False
         return bool(self.ssh and self.ssh.alive())
 
@@ -134,8 +144,13 @@ class ClusterSession:
             self.ssh = None
         token = self.askpass.register(on_prompt)
         try:
+            self.vpn_used = False
             if self.cfg.vpn.enabled:
-                self._bring_up_vpn(vpn_login or ssh_login, token)
+                if self.cfg.host and not self.vpn.is_active() and reachable(self.cfg.host, self.cfg.port):
+                    self._log("Cluster reachable directly (campus network), skipping VPN")
+                else:
+                    self._bring_up_vpn(vpn_login or ssh_login, token)
+                    self.vpn_used = True
             self._set(State.SIGNING_IN, f"{ssh_login.username}@{self.cfg.host}")
             if not self.cfg.host:
                 raise SshError("Login host is empty. Set it in Settings → Server & VPN.")
@@ -218,7 +233,8 @@ class ClusterSession:
             self.ssh.stop()
             self.ssh = None
         self.allocation = None
-        if self.cfg.vpn.enabled:
+        if self.vpn_used:
+            self.vpn_used = False
             try:
                 self.vpn.down()
             except OSError as e:

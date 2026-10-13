@@ -66,3 +66,24 @@ def test_wrong_password(env):
     s, rec = connect(server, "nope")
     assert s.state == State.ERROR
     assert "Permission denied" in s.detail
+
+
+def test_skips_vpn_when_reachable(env, monkeypatch):
+    import socket
+    from hpc_hub import session as session_mod
+
+    def no_vpn(*_a, **_k):
+        raise AssertionError("VPN should be skipped")
+
+    monkeypatch.setattr(session_mod.Vpn, "is_active", lambda self: False)
+    monkeypatch.setattr(session_mod.Vpn, "ensure_profile", no_vpn)
+    server, _ = env
+    with socket.create_server(("127.0.0.1", 0)) as listener:
+        cfg = ClusterConfig(id="t", name="Test", host="127.0.0.1", port=listener.getsockname()[1])
+        cfg.vpn.enabled = True
+        rec = Recorder()
+        s = ClusterSession(cfg, server, rec)
+        s.connect(Login("u", "pw"), Login("u", "pw"))
+        assert rec.done.wait(20)
+    assert s.state == State.CONNECTED, rec.lines
+    assert not s.vpn_used
