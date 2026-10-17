@@ -177,7 +177,7 @@ class HpcHubApp(Adw.Application):
             self.window.files.show_cluster(session)
             self.window.stack.set_visible_child_name("files")
 
-    def connect_session(self, session: ClusterSession) -> None:
+    def connect_session(self, session: ClusterSession, vpn_only: bool = False) -> None:
         cfg = session.cfg
         ssh_login = credentials.load(cfg.id, credentials.SSH)
         if not ssh_login or not ssh_login.username:
@@ -196,7 +196,7 @@ class HpcHubApp(Adw.Application):
                     if s is not session and s.cfg.vpn.enabled and cfg.vpn.enabled
                     and s.state not in (State.DISCONNECTED, State.ERROR)]
         if not blockers:
-            session.connect(ssh_login, vpn_login)
+            session.connect(ssh_login, vpn_login, vpn_only)
             return
 
         other = blockers[0]
@@ -211,7 +211,7 @@ class HpcHubApp(Adw.Application):
         def on_response(_d, response):
             if response == "switch":
                 other.disconnect(on_done=lambda: GLib.idle_add(
-                    lambda: session.connect(ssh_login, vpn_login) and False))
+                    lambda: session.connect(ssh_login, vpn_login, vpn_only) and False))
 
         dialog.connect("response", on_response)
         dialog.present(self.window)
