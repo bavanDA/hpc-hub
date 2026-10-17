@@ -7,13 +7,13 @@ from enum import Enum
 from typing import Protocol
 from urllib.parse import urlsplit
 
-from . import prompts, slurm
+from . import prompts, slurm, vpn_sso
 from .askpass_server import AskpassServer
 from .config import ClusterConfig
 from .credentials import Login
 from .slurm import Allocation, SlurmError
 from .ssh import SshError, SshMaster
-from .vpn import Vpn, VpnError
+from .vpn import NeedsWebLogin, Vpn, VpnError
 
 
 class State(Enum):
@@ -37,6 +37,7 @@ class Listener(Protocol):
     def state_changed(self, session: "ClusterSession") -> None: ...
     def log(self, session: "ClusterSession", line: str) -> None: ...
     def ask(self, session: "ClusterSession", prompt: str) -> str | None: ...
+    def web_login(self, session: "ClusterSession", start: vpn_sso.SsoStart, login: Login) -> tuple[str, str]: ...
 
 
 def reachable(host: str, port: int, timeout: float = 3.0) -> bool:
@@ -240,16 +241,35 @@ class ClusterSession:
         if gw.hostname and not reachable(gw.hostname, gw.port or 443, timeout=8):
             raise VpnError(f"Can't reach VPN server {gw.hostname} or {self.cfg.host}. Check your network.")
         vpn.ensure_profile()
-        auth = vpn.authenticate(
-            login.username, login.password,
-            ask=lambda prompt: self.listener.ask(self, prompt),
-            on_duo=lambda: self._set(State.DUO, "Approve the Duo push on your phone"),
-            cancelled=self._cancel.is_set,
-            env=self.askpass.env(token),
-        )
+        try:
+            auth = vpn.authenticate(
+                login.username, login.password,
+                ask=lambda prompt: self.listener.ask(self, prompt),
+                on_duo=lambda: self._set(State.DUO, "Approve the Duo push on your phone"),
+                cancelled=self._cancel.is_set,
+                env=self.askpass.env(token),
+            )
+        except NeedsWebLogin:
+            auth = self._web_vpn_login(login)
         self._set(State.VPN, "Starting tunnel")
         vpn.up(auth)
         self._log("VPN connected")
+
+    def _web_vpn_login(self, login: Login) -> dict[str, str]:
+        ua = self.cfg.vpn.useragent or "AnyConnect Linux_64 4.10.07061"
+        try:
+            start = vpn_sso.start(self.cfg.vpn.gateway, ua)
+            if not start:
+                raise VpnError("VPN server did not offer web sign-in")
+            self._log("vpn: web sign-in")
+            self._set(State.DUO, "Sign in on the page, then approve Duo on your phone")
+            token, err = self.listener.web_login(self, start, login)
+            if not token:
+                raise VpnError(err or "Sign-in cancelled")
+            cookie, host = vpn_sso.finish(start, token, ua)
+        except vpn_sso.SsoError as e:
+            raise VpnError(str(e)) from e
+        return {"COOKIE": cookie, "HOST": host}
 
     def _allocate_safely(self) -> None:
         if self._borrow_running_job():

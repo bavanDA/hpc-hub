@@ -26,6 +26,10 @@ class VpnError(Exception):
     pass
 
 
+class NeedsWebLogin(VpnError):
+    """Server wants the embedded-browser SAML flow, which openconnect's CLI can't do."""
+
+
 def run_interactive(
     argv: list[str],
     answer: Callable[[str], str | None],
@@ -195,6 +199,8 @@ class Vpn:
         code, out, err = run_interactive(argv, answer, self.log, timeout=300, cancelled=cancelled, env=env)
         result = parse_auth_output(out)
         if code != 0 or "COOKIE" not in result:
+            if any("No SSO handler" in line for line in err):
+                raise NeedsWebLogin("VPN wants web sign-in")
             if asked[prompts.PASSWORD] > 1:
                 raise VpnError("VPN rejected the password")
             tail = next((l for l in reversed(err) if l.strip()), "")
