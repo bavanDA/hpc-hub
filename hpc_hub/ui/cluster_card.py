@@ -61,6 +61,11 @@ class ClusterCard(Gtk.Box):
         gear.connect("clicked", lambda *_: on_settings(session))
         head.append(gear)
 
+        self.vpn_btn = Gtk.Button(label="VPN only", valign=Gtk.Align.CENTER, css_classes=["pill"],
+                                  tooltip_text="Just the VPN tunnel, no SSH or compute node")
+        self.vpn_btn.connect("clicked", lambda *_: on_connect(session, True))
+        head.append(self.vpn_btn)
+
         self.action = Gtk.Button(valign=Gtk.Align.CENTER, width_request=120)
         self.action.add_css_class("pill")
         self.action.connect("clicked", self._on_action)
@@ -134,7 +139,8 @@ class ClusterCard(Gtk.Box):
         else:
             self.detail.remove_css_class("accent")
 
-        self.tools.set_visible(s.state == State.CONNECTED)
+        self.tools.set_visible(s.state == State.CONNECTED and s.ssh is not None)
+        self.vpn_btn.set_visible(cfg.vpn.enabled and (s.state in (State.DISCONNECTED, State.ERROR)))
         a = s.allocation
         self.node.set_visible(bool(a) and s.state == State.CONNECTED)
         if a:
