@@ -61,6 +61,7 @@ class ClusterSession:
         self.allocation: Allocation | None = None
         self.ssh: SshMaster | None = None
         self.vpn_used = False
+        self.vpn_only = False
         self._cancel = threading.Event()
         self._thread: threading.Thread | None = None
 
@@ -77,10 +78,11 @@ class ClusterSession:
         return Vpn(self.cfg, self._log)
 
     # -- public API (call from UI thread) -----------------------------------
-    def connect(self, ssh_login: Login, vpn_login: Login | None) -> None:
+    def connect(self, ssh_login: Login, vpn_login: Login | None, vpn_only: bool = False) -> None:
         if self.state.busy:
             return
         self._cancel.clear()
+        self.vpn_only = vpn_only
         self._thread = threading.Thread(
             target=self._connect, args=(ssh_login, vpn_login), daemon=True)
         self._thread.start()
@@ -138,6 +140,8 @@ class ClusterSession:
         """Blocking check; run off the UI thread."""
         if self.vpn_used and not self.vpn.is_active():
             return False
+        if self.vpn_only:
+            return self.vpn_used
         return bool(self.ssh and self.ssh.alive())
 
     def mark_lost(self) -> None:
@@ -173,11 +177,15 @@ class ClusterSession:
         try:
             self.vpn_used = False
             if self.cfg.vpn.enabled:
-                if self.cfg.host and not self.vpn.is_active() and reachable(self.cfg.host, self.cfg.port):
+                if (not self.vpn_only and self.cfg.host and not self.vpn.is_active()
+                        and reachable(self.cfg.host, self.cfg.port)):
                     self._log("Cluster reachable directly (campus network), skipping VPN")
                 else:
                     self._bring_up_vpn(vpn_login or ssh_login, token)
                     self.vpn_used = True
+            if self.vpn_only:
+                self._set(State.CONNECTED, "VPN only")
+                return
             self._set(State.SIGNING_IN, f"{ssh_login.username}@{self.cfg.host}")
             if not self.cfg.host:
                 raise SshError("Login host is empty. Set it in Settings → Server & VPN.")

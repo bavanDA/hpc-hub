@@ -122,3 +122,27 @@ def test_extra_node(env):
     rec.done.clear()
     s.disconnect()
     assert rec.done.wait(20)
+
+
+def test_vpn_only(env, monkeypatch):
+    from hpc_hub import session as session_mod
+    calls = []
+    monkeypatch.setattr(session_mod.Vpn, "is_active", lambda self: "up" in calls and "down" not in calls)
+    monkeypatch.setattr(session_mod.Vpn, "ensure_profile", lambda self: None)
+    monkeypatch.setattr(session_mod.Vpn, "authenticate", lambda self, *a, **k: {"COOKIE": "c"})
+    monkeypatch.setattr(session_mod.Vpn, "up", lambda self, auth: calls.append("up"))
+    monkeypatch.setattr(session_mod.Vpn, "down", lambda self: calls.append("down"))
+    monkeypatch.setattr(session_mod, "reachable", lambda *a, **k: True)
+    server, _ = env
+    cfg = ClusterConfig(id="t", name="Test", host="fake")
+    cfg.vpn.enabled, cfg.vpn.gateway = True, "vpn.example"
+    rec = Recorder()
+    s = ClusterSession(cfg, server, rec)
+    s.connect(Login("u", "pw"), Login("u", "pw"), vpn_only=True)
+    assert rec.done.wait(20)
+    assert s.state == State.CONNECTED and s.detail == "VPN only" and s.ssh is None, rec.lines
+    assert calls == ["up"] and s.healthy()
+    rec.done.clear()
+    s.disconnect()
+    assert rec.done.wait(20)
+    assert calls == ["up", "down"]
