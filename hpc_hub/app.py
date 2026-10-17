@@ -15,6 +15,7 @@ from .ui.duo import DuoDialog  # noqa: E402
 from .ui.globus_ui import GlobusCopier, GlobusSettingsDialog  # noqa: E402
 from .ui.settings import ClusterSettingsDialog  # noqa: E402
 from .ui.tools import Tools  # noqa: E402
+from .ui.web_login import WebLoginDialog  # noqa: E402
 from .ui.window import MainWindow  # noqa: E402
 
 CSS = """
@@ -91,6 +92,26 @@ class HpcHubApp(Adw.Application):
         GLib.idle_add(self._ask_dialog, session, prompt, result, done)
         done.wait()
         return result["answer"]
+
+    def web_login(self, session: ClusterSession, start, login) -> tuple[str, str]:
+        done = threading.Event()
+        result = {"token": "", "err": "Sign-in cancelled"}
+
+        def finished(token, err):
+            result.update(token=token, err=err)
+            done.set()
+
+        def show():
+            if not self.window:
+                done.set()
+                return False
+            WebLoginDialog(f"{session.cfg.name} VPN sign-in", start, login.username, login.password,
+                           finished).present(self.window)
+            return False
+
+        GLib.idle_add(show)
+        done.wait()
+        return result["token"], result["err"]
 
     # -- main-thread handlers ---------------------------------------------------------
     def _on_state(self, session: ClusterSession) -> bool:
