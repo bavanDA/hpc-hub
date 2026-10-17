@@ -62,14 +62,41 @@ def ask_app(prompt: str) -> str | None:
     return reply.get("answer") if reply.get("ok") else None
 
 
+class AutoFill:
+    """Fills username, then password, once each, on whatever sign-in page the view shows."""
+
+    def __init__(self, view: WebKit.WebView, username: str, password: str, on_sent=lambda: None):
+        self.view, self.username, self.password, self.on_sent = view, username, password, on_sent
+        self.done = {"user": False, "pass": False}
+        self.timer = 0
+
+    def page_loaded(self) -> None:
+        if self.password and not self.timer and not self.done["pass"]:
+            self.timer = GLib.timeout_add(800, self._step)
+
+    def _step(self) -> bool:
+        if self.done["pass"]:
+            self.timer = 0
+            return False
+        script = STEP_JS % (json.dumps(self.username), json.dumps(self.password),
+                            json.dumps(self.done["user"]), json.dumps(self.done["pass"]))
+        self.view.evaluate_javascript(script, -1, None, None, None, self._stepped, None)
+        return True
+
+    def _stepped(self, view, result, _data) -> None:
+        try:
+            did = view.evaluate_javascript_finish(result).to_string()
+        except GLib.Error:
+            return
+        if did in self.done:
+            self.done[did] = True
+            if did == "pass":
+                self.on_sent()
+
+
 class SsoWindow(Gtk.ApplicationWindow):
     def __init__(self, app: Gtk.Application, url: str):
         super().__init__(application=app, title="VPN sign-in", default_width=520, default_height=720)
-        self.username = ask_app("hpc-hub:sso-username") or ""
-        self.password = ask_app("hpc-hub:sso-password") or ""
-        self.done = {"user": False, "pass": False}  # each submitted at most once
-        self.timer = 0
-
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         self.status = Gtk.Label(label="Signing in… approve the Duo push on your phone when it arrives.")
         self.status.set_wrap(True)
@@ -82,6 +109,8 @@ class SsoWindow(Gtk.ApplicationWindow):
         self.view.connect("load-changed", self.on_load)
         box.append(self.view)
         self.set_child(box)
+        self.fill = AutoFill(self.view, ask_app("hpc-hub:sso-username") or "", ask_app("hpc-hub:sso-password") or "",
+                             lambda: self.status.set_label("Password sent. Approve Duo on your phone."))
         self.view.load_uri(url)
 
     def on_load(self, view: WebKit.WebView, event: WebKit.LoadEvent) -> None:
@@ -92,27 +121,7 @@ class SsoWindow(Gtk.ApplicationWindow):
             self.status.set_label("Signed in. Connecting…")
             GLib.timeout_add(1500, self.close)
             return
-        if self.password and not self.timer:
-            self.timer = GLib.timeout_add(800, self.step)
-
-    def step(self) -> bool:
-        if self.done["pass"]:
-            self.timer = 0
-            return False
-        script = STEP_JS % (json.dumps(self.username), json.dumps(self.password),
-                            json.dumps(self.done["user"]), json.dumps(self.done["pass"]))
-        self.view.evaluate_javascript(script, -1, None, None, None, self.on_step, None)
-        return True
-
-    def on_step(self, view, result, _data) -> None:
-        try:
-            did = view.evaluate_javascript_finish(result).to_string()
-        except GLib.Error:
-            return
-        if did in self.done:
-            self.done[did] = True
-            if did == "pass":
-                self.status.set_label("Password sent. Approve Duo on your phone.")
+        self.fill.page_loaded()
 
 
 def main() -> int:
