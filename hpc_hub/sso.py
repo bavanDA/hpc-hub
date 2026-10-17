@@ -22,7 +22,9 @@ STEP_JS = """
   const shown = el => el && el.offsetParent !== null && !el.disabled;
   const pick = sel => [...document.querySelectorAll(sel)].find(shown);
   const set = (el, v) => {
-    el.focus(); el.value = v;
+    el.focus();
+    // native setter, so React/Knockout pages (Okta, Microsoft) see the value
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(el, v);
     el.dispatchEvent(new Event('input', {bubbles: true}));
     el.dispatchEvent(new Event('change', {bubbles: true}));
   };
@@ -32,7 +34,7 @@ STEP_JS = """
     else if (el.form) el.form.requestSubmit ? el.form.requestSubmit() : el.form.submit();
   };
   const user = pick('input[name=loginfmt], input[type=email], input[name=username], ' +
-                    'input#username, input[name=j_username]');
+                    'input#username, input[name=j_username], input[name=identifier]');
   const pw = pick('input[type=password]');
   if (pw && p && !donePass) {
     if (user && u && !user.value) set(user, u);
