@@ -99,7 +99,7 @@ def default_clusters() -> list[ClusterConfig]:
             id="wulver",
             name="Wulver (NJIT)",
             host="wulver.njit.edu",
-            vpn=VpnSettings(enabled=True, gateway="vpn.njit.edu"),
+            vpn=VpnSettings(enabled=True, gateway="vpn.njit.edu", useragent="AnyConnect Linux_64 4.10.07061"),
             profile=ComputeProfile(cpus=4, mem_gb=16),
         ),
         ClusterConfig(
