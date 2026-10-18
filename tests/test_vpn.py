@@ -54,3 +54,21 @@ def test_nm_vpn_data():
     assert "gateway = access.yale.edu" in data
     assert "protocol = anyconnect" in data
     assert "cookie-flags = 2" in data
+
+
+def test_nm_ip_args_split():
+    wulver = config.default_clusters()[0]
+    args = dict(zip(vpn.nm_ip_args(wulver)[::2], vpn.nm_ip_args(wulver)[1::2]))
+    assert args["ipv4.never-default"] == "yes"
+    assert args["ipv4.dns-search"] == "~njit.edu"
+    assert args["ipv4.routes"] == "128.235.0.0/16" and args["ipv6.routes"] == ""
+    wulver.vpn.split_tunnel = False
+    args = dict(zip(vpn.nm_ip_args(wulver)[::2], vpn.nm_ip_args(wulver)[1::2]))
+    assert args["ipv4.never-default"] == "no" and args["ipv4.dns-search"] == ""
+
+
+def test_split_errors():
+    yale = config.default_clusters()[1]
+    assert vpn.split_errors(yale) == []
+    yale.vpn.routes, yale.vpn.domains = "10.0.0.0/8 nope", "yale.edu bad;x"
+    assert len(vpn.split_errors(yale)) == 2

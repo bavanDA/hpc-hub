@@ -4,6 +4,7 @@ No root helper needed: the NM profile is private to your user.
 """
 
 import getpass
+import ipaddress
 import os
 import queue
 import re
@@ -128,6 +129,33 @@ def nm_vpn_data(cfg: ClusterConfig) -> str:
     return ", ".join(f"{k} = {val.replace(',', '\\,')}" for k, val in data.items())
 
 
+def split_errors(cfg: ClusterConfig) -> list[str]:
+    errors = []
+    for net in cfg.vpn.routes.split():
+        try:
+            ipaddress.ip_network(net, strict=False)
+        except ValueError:
+            errors.append(f"Not a network: {net}")
+    for dom in cfg.vpn.domains.split():
+        if not re.fullmatch(r"~?[A-Za-z0-9.-]+", dom):
+            errors.append(f"Not a domain: {dom}")
+    return errors
+
+
+def nm_ip_args(cfg: ClusterConfig) -> list[str]:
+    """Split tunnel: no default route, DNS only for its domains, explicit routes."""
+    v = cfg.vpn
+    if not v.split_tunnel:
+        return ["ipv4.never-default", "no", "ipv6.never-default", "no",
+                "ipv4.dns-search", "", "ipv4.routes", "", "ipv6.routes", ""]
+    nets = [ipaddress.ip_network(n, strict=False) for n in v.routes.split()]
+    domains = ",".join("~" + d.lstrip("~") for d in v.domains.split())
+    return ["ipv4.never-default", "yes", "ipv6.never-default", "yes",
+            "ipv4.dns-search", domains,
+            "ipv4.routes", ",".join(str(n) for n in nets if n.version == 4),
+            "ipv6.routes", ",".join(str(n) for n in nets if n.version == 6)]
+
+
 class Vpn:
     def __init__(self, cfg: ClusterConfig, log: Callable[[str], None]):
         self.cfg = cfg
@@ -142,13 +170,17 @@ class Vpn:
             raise VpnError("VPN gateway is empty. Set it in Settings → Server & VPN.")
         data = nm_vpn_data(self.cfg)
         names = self._nmcli("-t", "-g", "NAME", "connection", "show").stdout.splitlines()
+        errors = split_errors(self.cfg)
+        if errors:
+            raise VpnError("; ".join(errors))
+        ip = nm_ip_args(self.cfg)
         if self.name in names:
-            res = self._nmcli("connection", "modify", "id", self.name, "vpn.data", data)
+            res = self._nmcli("connection", "modify", "id", self.name, "vpn.data", data, *ip)
         else:
             res = self._nmcli(
                 "connection", "add", "type", "vpn", "con-name", self.name,
                 "vpn-type", "openconnect", "connection.autoconnect", "no",
-                "connection.permissions", f"user:{getpass.getuser()}", "vpn.data", data,
+                "connection.permissions", f"user:{getpass.getuser()}", "vpn.data", data, *ip,
             )
         if res.returncode != 0:
             raise VpnError(res.stderr.strip() or "Could not set up NetworkManager VPN profile")
