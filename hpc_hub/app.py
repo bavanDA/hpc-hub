@@ -10,6 +10,7 @@ from gi.repository import Adw, Gdk, Gio, GLib, Gtk  # noqa: E402
 
 from . import APP_ID, APP_NAME, __version__, config, credentials  # noqa: E402
 from .askpass_server import AskpassServer  # noqa: E402
+from .paths import runtime_dir  # noqa: E402
 from .session import ClusterSession, State  # noqa: E402
 from .ui.duo import DuoDialog  # noqa: E402
 from .ui.globus_ui import GlobusCopier, GlobusSettingsDialog  # noqa: E402
@@ -49,6 +50,9 @@ class HpcHubApp(Adw.Application):
         self.clusters = config.load()
         self.app_settings = config.load_app()
         self.sessions = {c.id: ClusterSession(c, self.askpass, self) for c in self.clusters}
+        for leftover in runtime_dir().glob("nm-*"):  # VPN cookie files from a killed run
+            leftover.unlink(missing_ok=True)
+        threading.Thread(target=self._adopt_all, daemon=True).start()
 
         for name, handler, accels in (
             ("quit", lambda *_: self._request_quit(), ["<primary>q"]),
@@ -61,6 +65,14 @@ class HpcHubApp(Adw.Application):
             if accels:
                 self.set_accels_for_action(f"app.{name}", accels)
         GLib.timeout_add_seconds(HEALTH_SECONDS, self._health_check)
+
+    def _adopt_all(self) -> None:
+        for s in self.sessions.values():
+            login = credentials.load(s.cfg.id, credentials.SSH)
+            try:
+                s.adopt(login.username if login else "")
+            except Exception:  # noqa: BLE001
+                pass
 
     def do_activate(self):
         if not self.window:
