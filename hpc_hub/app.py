@@ -213,8 +213,10 @@ class HpcHubApp(Adw.Application):
                 self.open_settings(session, "Enter your VPN login first")
                 return
 
+        # split-tunnel VPNs can run side by side; a full tunnel takes over all traffic
         blockers = [s for s in self.sessions.values()
                     if s is not session and s.cfg.vpn.enabled and cfg.vpn.enabled
+                    and not (s.cfg.vpn.split_tunnel and cfg.vpn.split_tunnel)
                     and s.state not in (State.DISCONNECTED, State.ERROR)]
         if not blockers:
             session.connect(ssh_login, vpn_login, vpn_only)
@@ -223,7 +225,7 @@ class HpcHubApp(Adw.Application):
         other = blockers[0]
         dialog = Adw.AlertDialog(
             heading=f"Disconnect {other.cfg.name}?",
-            body=f"Only one VPN can run at a time. {other.cfg.name} will be disconnected "
+            body=f"Split tunnel is off, so only one VPN can run. {other.cfg.name} will be disconnected "
                  f"and its compute node released.")
         dialog.add_response("cancel", "Cancel")
         dialog.add_response("switch", f"Switch to {cfg.name}")
