@@ -3,6 +3,8 @@
 import socket
 import subprocess
 import threading
+import time
+import traceback
 from enum import Enum
 from typing import Protocol
 from urllib.parse import urlsplit
@@ -10,6 +12,7 @@ from urllib.parse import urlsplit
 from . import prompts, slurm, vpn_sso
 from .askpass_server import AskpassServer
 from .config import ClusterConfig
+from .paths import log_dir
 from .credentials import Login
 from .slurm import Allocation, SlurmError
 from .ssh import SshError, SshMaster
@@ -73,6 +76,14 @@ class ClusterSession:
 
     def _log(self, line: str) -> None:
         self.listener.log(self, line)
+        try:
+            path = log_dir() / f"{self.cfg.id}.log"
+            if path.exists() and path.stat().st_size > 2_000_000:
+                path.replace(path.with_suffix(".log.old"))
+            with open(path, "a", encoding="utf-8") as fh:
+                fh.write(f"{time.strftime('%Y-%m-%d %H:%M:%S')} {line}\n")
+        except OSError:
+            pass
 
     @property
     def vpn(self) -> Vpn:
@@ -85,8 +96,37 @@ class ClusterSession:
         self._cancel.clear()
         self.vpn_only = vpn_only
         self._thread = threading.Thread(
-            target=self._connect, args=(ssh_login, vpn_login), daemon=True)
+            target=self._guarded, args=(self._connect, ssh_login, vpn_login), daemon=True)
         self._thread.start()
+
+    def _guarded(self, fn, *args) -> None:
+        """Worker wrapper: an unexpected error shows on the card instead of hanging it."""
+        try:
+            fn(*args)
+        except Exception as e:  # noqa: BLE001
+            for line in traceback.format_exc().splitlines():
+                self._log(line)
+            self._fail(f"Unexpected error: {e}")
+
+    def adopt(self, username: str) -> None:
+        """App restarted: pick up a VPN / SSH session that is still running. Blocking."""
+        vpn_up = self.cfg.vpn.enabled and self.vpn.is_active()
+        ssh = SshMaster(self.cfg, username, {}, self._log) if username and self.cfg.host else None
+        alive = bool(ssh and ssh.alive())
+        if not (vpn_up or alive) or self.state != State.DISCONNECTED:
+            return
+        self.vpn_used, self.vpn_only = vpn_up, not alive
+        self.ssh = ssh if alive else None
+        if alive:
+            try:
+                mine = [j for j in slurm.running_jobs(ssh) if j.name.startswith("hpc-hub")]
+                job = slurm.pick_reusable(mine, self.cfg.profile.partition)
+                if job:
+                    self.allocation = Allocation(job.job_id, job.node, owned=job.name == "hpc-hub")
+            except (OSError, subprocess.SubprocessError):
+                pass
+        self._log("Picked up running " + ("SSH session" if alive else "VPN"))
+        self._set(State.CONNECTED, "" if alive else "VPN only")
 
     def cancel(self) -> None:
         self._cancel.set()

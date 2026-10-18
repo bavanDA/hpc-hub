@@ -31,6 +31,7 @@ class Recorder:
 @pytest.fixture
 def env(tmp_path, monkeypatch):
     monkeypatch.setenv("XDG_RUNTIME_DIR", str(tmp_path))
+    monkeypatch.setenv("XDG_CACHE_HOME", str(tmp_path / "cache"))
     monkeypatch.setenv("PATH", f"{FAKE_BIN}:" + __import__("os").environ["PATH"])
     monkeypatch.setenv("FAKE_SSH_LOG", str(tmp_path / "cmds.log"))
     server = AskpassServer()
@@ -146,3 +147,27 @@ def test_vpn_only(env, monkeypatch):
     s.disconnect()
     assert rec.done.wait(20)
     assert calls == ["up", "down"]
+
+
+def test_adopt_after_restart(env, monkeypatch):
+    server, _ = env
+    monkeypatch.setenv("FAKE_JOBS", "42|hpc-hub|n0001|")
+    first, rec = connect(server, "pw")
+    assert first.state == State.CONNECTED
+    again = ClusterSession(first.cfg, server, Recorder())
+    again.adopt("u")
+    assert again.state == State.CONNECTED and again.ssh and not again.vpn_only
+    assert (again.allocation.job_id, again.allocation.owned) == ("42", True)
+    rec.done.clear()
+    first.disconnect()
+    assert rec.done.wait(20)
+
+
+def test_unexpected_error_shows(env, monkeypatch):
+    server, _ = env
+    rec = Recorder()
+    s = ClusterSession(ClusterConfig(id="t", name="Test", host="fake"), server, rec)
+    monkeypatch.setattr(s, "_connect", lambda *a: 1 / 0)
+    s.connect(Login("u", "pw"), None)
+    assert rec.done.wait(10)
+    assert s.state == State.ERROR and "Unexpected error" in s.detail
