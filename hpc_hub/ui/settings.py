@@ -8,6 +8,7 @@ from .. import credentials
 from ..config import VPN_PROTOCOLS, ClusterConfig
 from ..credentials import Login
 from ..slurm import validate
+from ..vpn import split_errors
 
 
 def _entry(title: str, text: str = "") -> Adw.EntryRow:
@@ -85,6 +86,10 @@ class ClusterSettingsDialog(Adw.PreferencesDialog):
         self.protocol.set_selected(VPN_PROTOCOLS.index(v.protocol) if v.protocol in VPN_PROTOCOLS else 0)
         self.useragent = _entry("User agent (optional)", v.useragent)
         self.authgroup = _entry("Group (optional)", v.authgroup)
+        self.split = _switch("Split tunnel", v.split_tunnel,
+                             "Only these networks and domains use this VPN, so other VPNs can run too")
+        self.domains = _entry("VPN domains (its DNS answers these)", v.domains)
+        self.routes = _entry("VPN networks (CIDR, space separated)", v.routes)
         self.same_login = _switch("Same login as cluster", v.same_login_as_ssh)
         self.vpn_user = _entry("VPN username (e.g. first.last@yale.edu)", self.vpn_saved.username if self.vpn_saved else "")
         self.vpn_password = self._password_row(self.vpn_saved)
@@ -93,12 +98,13 @@ class ClusterSettingsDialog(Adw.PreferencesDialog):
         else:
             self.vpn_password.set_title("VPN " + self.vpn_password.get_title().lower())
         for row in (self.vpn_on, self.gateway, self.protocol, self.useragent, self.authgroup,
-                    self.same_login, self.vpn_user, self.vpn_password):
+                    self.split, self.domains, self.routes, self.same_login, self.vpn_user, self.vpn_password):
             vpn.add(row)
         page.add(vpn)
 
         self.vpn_on.connect("notify::active", lambda *_: self._sync_vpn())
         self.same_login.connect("notify::active", lambda *_: self._sync_vpn())
+        self.split.connect("notify::active", lambda *_: self._sync_vpn())
         self._sync_vpn()
         return page
 
@@ -126,8 +132,10 @@ class ClusterSettingsDialog(Adw.PreferencesDialog):
     # -- behaviour ---------------------------------------------------------------
     def _sync_vpn(self) -> None:
         on = self.vpn_on.get_active()
-        for row in (self.gateway, self.protocol, self.useragent, self.authgroup, self.same_login):
+        for row in (self.gateway, self.protocol, self.useragent, self.authgroup, self.same_login, self.split):
             row.set_sensitive(on)
+        for row in (self.domains, self.routes):
+            row.set_sensitive(on and self.split.get_active())
         own = on and not self.same_login.get_active()
         self.vpn_user.set_visible(own)
         self.vpn_password.set_visible(own)
@@ -154,6 +162,9 @@ class ClusterSettingsDialog(Adw.PreferencesDialog):
         errors = validate(trial)
         if self.vpn_on.get_active() and not self.gateway.get_text().strip():
             errors.append("VPN gateway is empty")
+        probe = type(self.cfg)(id=self.cfg.id, name=self.cfg.name)
+        probe.vpn.routes, probe.vpn.domains = self.routes.get_text(), self.domains.get_text()
+        errors += split_errors(probe)
         if errors:
             return errors
 
@@ -169,6 +180,9 @@ class ClusterSettingsDialog(Adw.PreferencesDialog):
         v.useragent = self.useragent.get_text().strip()
         v.authgroup = self.authgroup.get_text().strip()
         v.same_login_as_ssh = self.same_login.get_active()
+        v.split_tunnel = self.split.get_active()
+        v.domains = " ".join(self.domains.get_text().split())
+        v.routes = " ".join(self.routes.get_text().split())
 
         self._store(credentials.SSH, self.user, self.password, self.ssh_saved)
         if v.enabled and not v.same_login_as_ssh:
