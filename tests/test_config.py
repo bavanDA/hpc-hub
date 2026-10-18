@@ -61,3 +61,9 @@ def test_app_settings(tmp_path):
     path = tmp_path / "app.toml"
     config.save_app(config.AppSettings(globus_client_id="cid"), path)
     assert config.load_app(path).globus_client_id == "cid"
+
+
+def test_split_tunnel_defaults():
+    by_id = {c.id: c for c in config.default_clusters()}
+    assert by_id["wulver"].vpn.split_tunnel and by_id["wulver"].vpn.domains == "njit.edu"
+    assert "128.36.0.0/16" in by_id["yale"].vpn.routes

@@ -22,6 +22,9 @@ class VpnSettings:
     useragent: str = ""
     authgroup: str = ""
     same_login_as_ssh: bool = True
+    split_tunnel: bool = True  # only the networks/domains below use the VPN
+    domains: str = ""  # DNS domains answered by the VPN's DNS, space separated
+    routes: str = ""  # networks sent through the VPN, space separated CIDRs
 
 
 @dataclass
@@ -99,7 +102,8 @@ def default_clusters() -> list[ClusterConfig]:
             id="wulver",
             name="Wulver (NJIT)",
             host="wulver.njit.edu",
-            vpn=VpnSettings(enabled=True, gateway="vpn.njit.edu", useragent="AnyConnect Linux_64 4.10.07061"),
+            vpn=VpnSettings(enabled=True, gateway="vpn.njit.edu", useragent="AnyConnect Linux_64 4.10.07061",
+                             domains="njit.edu", routes="128.235.0.0/16"),
             profile=ComputeProfile(cpus=4, mem_gb=16),
         ),
         ClusterConfig(
@@ -113,6 +117,8 @@ def default_clusters() -> list[ClusterConfig]:
                 useragent="AnyConnect Linux_64 4.10.07061",
                 authgroup="Default",
                 same_login_as_ssh=False,  # Microsoft sign-in wants first.last@yale.edu
+                domains="yale.edu",
+                routes="130.132.0.0/16 128.36.0.0/16",
             ),
             profile=ComputeProfile(cpus=2, mem_gb=16, partition="devel"),
         ),
