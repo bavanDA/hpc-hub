@@ -95,6 +95,7 @@ class ClusterSession:
             return
         self._cancel.clear()
         self.vpn_only = vpn_only
+        self._set(State.VPN if self.cfg.vpn.enabled else State.SIGNING_IN)  # busy now, so a double-click is ignored
         self._thread = threading.Thread(
             target=self._guarded, args=(self._connect, ssh_login, vpn_login), daemon=True)
         self._thread.start()

@@ -171,3 +171,17 @@ def test_unexpected_error_shows(env, monkeypatch):
     s.connect(Login("u", "pw"), None)
     assert rec.done.wait(10)
     assert s.state == State.ERROR and "Unexpected error" in s.detail
+
+
+def test_double_click_starts_once(env):
+    server, _ = env
+    rec = Recorder()
+    s = ClusterSession(ClusterConfig(id="t", name="Test", host="fake"), server, rec)
+    s.connect(Login("u", "pw"), None)
+    first = s._thread
+    s.connect(Login("u", "pw"), None)
+    assert s._thread is first
+    rec.done.wait(20)
+    rec.done.clear()
+    s.disconnect()
+    assert rec.done.wait(20)
