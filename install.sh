@@ -4,7 +4,7 @@ set -e
 repo="$(cd "$(dirname "$0")" && pwd)"
 app_id="local.hpchub.HpcHub"
 
-need="python3-gobject python3-cairo gtk4 libadwaita libsecret webkitgtk6.0 vte291-gtk4 gtksourceview5 poppler-glib openconnect NetworkManager-openconnect openssh-clients"
+need="python3-gobject python3-cairo python3-cryptography gtk4 libadwaita libsecret webkitgtk6.0 vte291-gtk4 gtksourceview5 poppler-glib openconnect NetworkManager-openconnect openssh-clients"
 missing=""
 for p in $need; do rpm -q "$p" >/dev/null 2>&1 || missing="$missing $p"; done
 if [ -n "$missing" ]; then
