@@ -72,3 +72,12 @@ def test_split_errors():
     assert vpn.split_errors(yale) == []
     yale.vpn.routes, yale.vpn.domains = "10.0.0.0/8 nope", "yale.edu bad;x"
     assert len(vpn.split_errors(yale)) == 2
+
+
+def test_nm_secrets_fill_resolve():
+    sec = vpn.nm_secrets({"COOKIE": "c", "HOST": "vpn.njit.edu", "FINGERPRINT": "pin-sha256:x"}, "vpn.njit.edu",
+                         lookup=lambda h: "128.235.249.36")
+    assert sec == {"cookie": "c", "gateway": "vpn.njit.edu", "gwcert": "pin-sha256:x",
+                   "resolve": "vpn.njit.edu:128.235.249.36"}
+    sec = vpn.nm_secrets({"COOKIE": "c", "RESOLVE": "a:1.2.3.4"}, "a", lookup=lambda h: 1 / 0)
+    assert sec["resolve"] == "a:1.2.3.4" and sec["gateway"] == "a"

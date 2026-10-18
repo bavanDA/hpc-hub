@@ -9,11 +9,13 @@ import os
 import queue
 import re
 import shlex
+import socket
 import subprocess
 import tempfile
 import threading
 import time
 from collections.abc import Callable
+from urllib.parse import urlsplit
 
 from . import prompts
 from .config import ClusterConfig
@@ -129,6 +131,19 @@ def nm_vpn_data(cfg: ClusterConfig) -> str:
     return ", ".join(f"{k} = {val.replace(',', '\\,')}" for k, val in data.items())
 
 
+def nm_secrets(auth: dict[str, str], gateway: str, lookup=socket.gethostbyname) -> dict[str, str]:
+    """Secrets NetworkManager's openconnect plugin needs; it asks for all four."""
+    gw = auth.get("CONNECT_URL") or auth.get("HOST") or gateway
+    host = urlsplit(gw if "://" in gw else f"//{gw}").hostname or ""
+    resolve = auth.get("RESOLVE", "")
+    if not resolve and host:
+        try:
+            resolve = f"{host}:{lookup(host)}"
+        except OSError:
+            resolve = ""
+    return {"cookie": auth["COOKIE"], "gateway": gw, "gwcert": auth.get("FINGERPRINT", ""), "resolve": resolve}
+
+
 def split_errors(cfg: ClusterConfig) -> list[str]:
     errors = []
     for net in cfg.vpn.routes.split():
@@ -240,13 +255,7 @@ class Vpn:
         return result
 
     def up(self, auth: dict[str, str]) -> None:
-        secrets = {
-            "cookie": auth["COOKIE"],
-            "gateway": auth.get("CONNECT_URL") or auth.get("HOST") or self.cfg.vpn.gateway,
-            "gwcert": auth.get("FINGERPRINT", ""),
-        }
-        if auth.get("RESOLVE"):
-            secrets["resolve"] = auth["RESOLVE"]
+        secrets = nm_secrets(auth, self.cfg.vpn.gateway)
         body = "".join(f"vpn.secrets.{k}:{v}\n" for k, v in secrets.items())
         fd, path = tempfile.mkstemp(dir=runtime_dir(), prefix="nm-")
         try:
