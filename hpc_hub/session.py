@@ -267,9 +267,10 @@ class ClusterSession:
             if not token:
                 raise VpnError(err or "Sign-in cancelled")
             cookie, host = vpn_sso.finish(start, token, ua)
+            pin = vpn_sso.server_pin(host)
         except vpn_sso.SsoError as e:
             raise VpnError(str(e)) from e
-        return {"COOKIE": cookie, "HOST": host}
+        return {"COOKIE": cookie, "HOST": host, "FINGERPRINT": pin}
 
     def _allocate_safely(self) -> None:
         if self._borrow_running_job():

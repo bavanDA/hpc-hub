@@ -5,7 +5,11 @@
 3. finish: trade the token for the VPN session cookie
 """
 
+import base64
+import hashlib
 import re
+import socket
+import ssl
 import urllib.parse
 import urllib.request
 from dataclasses import dataclass
@@ -83,6 +87,20 @@ def start(gateway: str, useragent: str) -> SsoStart | None:
     url = gateway if "://" in gateway else f"https://{gateway}/"
     final_url, xml = _post(url, init_body(url.rstrip("/")), useragent)
     return parse_start(xml, final_url)
+
+
+def server_pin(host: str, port: int = 443) -> str:
+    """openconnect-style pin-sha256 of the server's public key (NetworkManager needs it)."""
+    from cryptography import x509
+    from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
+    ctx = ssl.create_default_context()
+    try:
+        with socket.create_connection((host, port), timeout=20) as raw, ctx.wrap_socket(raw, server_hostname=host) as tls:
+            der = tls.getpeercert(binary_form=True)
+    except OSError as e:
+        raise SsoError(f"Cannot check VPN server certificate: {e}") from e
+    spki = x509.load_der_x509_certificate(der).public_key().public_bytes(Encoding.DER, PublicFormat.SubjectPublicKeyInfo)
+    return "pin-sha256:" + base64.b64encode(hashlib.sha256(spki).digest()).decode()
 
 
 def finish(s: SsoStart, token: str, useragent: str) -> tuple[str, str]:
