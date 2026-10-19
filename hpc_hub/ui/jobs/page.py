@@ -6,19 +6,19 @@ from collections.abc import Callable
 
 from gi.repository import Adw, Gio, GLib, Gtk, Pango
 
-from ... import slurm
+from ...jobs import ALL, HISTORY, MINE, JobInfo, list_jobs
 from ...session import ClusterSession, State
-from ...slurm import JobInfo
+from ...usage import AccountUsage, account_usage
 from .cancel import CancelMixin
 from .columns import JobItem, add_columns
 from .details import DetailsMixin
 
 REFRESH_SECONDS = 15
-SCOPES = [(slurm.MINE, "My jobs"), (slurm.HISTORY, "My history (7 days)"), (slurm.ALL, "All jobs")]
+SCOPES = [(MINE, "My jobs"), (HISTORY, "My history (7 days)"), (ALL, "All jobs")]
 STATES = ["Any state", "RUNNING", "PENDING", "COMPLETED", "FAILED", "CANCELLED", "TIMEOUT"]
 
 
-def usage_text(accounts: list[slurm.AccountUsage]) -> str:
+def usage_text(accounts: list[AccountUsage]) -> str:
     used = [a for a in accounts if a.used or a.mine] or accounts[:1]
     return " · ".join(f"{a.account}: {a.used:,} of {a.quota:,} SU used ({100 * a.used // max(a.quota, 1)}%), "
                       f"yours {a.mine:,}" for a in used)
@@ -66,7 +66,7 @@ class JobsPage(DetailsMixin, CancelMixin, Gtk.Box):
         self.usage = Gtk.Label(css_classes=["caption"], ellipsize=Pango.EllipsizeMode.END,
                                tooltip_text="Service units (core hours) of your Slurm accounts. A QoS that charges 0 (like low on "
                                             "Wulver) is free.")
-        self.usage_of: dict[str, tuple[float, list[slurm.AccountUsage]]] = {}  # cluster -> (when, accounts)
+        self.usage_of: dict[str, tuple[float, list[AccountUsage]]] = {}  # cluster -> (when, accounts)
         actions.set_center_widget(self.usage)
         self.cancel_btn = Gtk.Button(label="Cancel job", css_classes=["destructive-action"], sensitive=False)
         self.details_btn = Gtk.Button(label="Details", sensitive=False)
@@ -117,11 +117,11 @@ class JobsPage(DetailsMixin, CancelMixin, Gtk.Box):
         if not quiet:
             self.updated.set_label("Loading…")
         scope = SCOPES[self.scope.get_selected()][0]
-        self.user_col.set_visible(scope == slurm.ALL)
+        self.user_col.set_visible(scope == ALL)
 
         def work():
             try:
-                jobs, err = slurm.list_jobs(s.ssh, scope), None
+                jobs, err = list_jobs(s.ssh, scope), None
                 self._fetch_usage(s)
             except Exception as e:  # noqa: BLE001 - show any failure
                 jobs, err = [], str(e)
@@ -161,7 +161,7 @@ class JobsPage(DetailsMixin, CancelMixin, Gtk.Box):
         if time.monotonic() - when < 300 and when:
             return
         try:
-            self.usage_of[s.cfg.id] = (time.monotonic(), slurm.account_usage(s.ssh))
+            self.usage_of[s.cfg.id] = (time.monotonic(), account_usage(s.ssh))
         except Exception:  # noqa: BLE001 - totals are a nice to have
             pass
 

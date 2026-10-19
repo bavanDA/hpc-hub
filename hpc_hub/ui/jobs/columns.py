@@ -2,7 +2,7 @@
 
 from gi.repository import GObject, Gtk, Pango
 
-from ...slurm import JobInfo
+from ...jobs import JobInfo
 
 STATE_CLASS = {"RUNNING": "success", "PENDING": "warning", "COMPLETING": "accent",
                "FAILED": "error", "TIMEOUT": "error", "OUT_OF_MEMORY": "error", "NODE_FAIL": "error"}

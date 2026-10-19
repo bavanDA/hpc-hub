@@ -4,8 +4,7 @@ import re
 
 from gi.repository import Adw, GLib, Gtk, Pango
 
-from ... import slurm
-from ...slurm import JobInfo
+from ...jobs import JobInfo, job_details, parse_details
 from ..widgets import bg
 from .columns import su_text
 
@@ -30,12 +29,12 @@ class DetailsMixin:
                             child=toolbar)
         dialog.present(self.get_root())
 
-        bg(lambda: slurm.job_details(s.ssh, j.job_id),
+        bg(lambda: job_details(s.ssh, j.job_id),
            lambda text, err: self._fill_details(dialog, toolbar, j, text or err))
 
     def _fill_details(self, dialog: Adw.Dialog, toolbar: Adw.ToolbarView, j: JobInfo, text: str) -> None:
         """The few fields people look at, grouped; everything else behind "All fields"."""
-        d = slurm.parse_details(text)
+        d = parse_details(text)
 
         def get(*keys: str) -> str:
             for k in keys:

@@ -2,9 +2,9 @@
 
 from gi.repository import Adw
 
-from ... import slurm, tmux
+from ... import tmux
+from ...jobs import JobInfo, cancel_job, wait_gone
 from ...session import ClusterSession
-from ...slurm import JobInfo
 from ..widgets import bg
 
 
@@ -46,11 +46,11 @@ class CancelMixin:
             self.toast(f"Cancelling job {j.job_id}…")
 
             def work():
-                slurm.cancel_job(s.ssh, j.job_id)
+                cancel_job(s.ssh, j.job_id)
                 if app_node:
                     s.allocation = None
                     s.listener.state_changed(s)
-                return slurm.wait_gone(s.ssh, j.job_id)
+                return wait_gone(s.ssh, j.job_id)
 
             def done(gone, err):
                 self.toast(f"Could not cancel job {j.job_id}: {err}" if err

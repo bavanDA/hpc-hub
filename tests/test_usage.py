@@ -29,3 +29,9 @@ def test_load():
     g, gpu = usage.parse_load(text)
     assert (g.name, g.cpus_used, g.cpus_total, g.pending, g.running, g.gpus_total) == ("general", 11682, 12416, 102, 211, 0)
     assert (gpu.gpus_used, gpu.gpus_total, gpu.pending) == (1, 12, 0)
+
+
+def test_parse_usage():
+    got = usage.parse_usage("mygroup|181080000|16076854|962138433\nnew|1500||\njunk\n")
+    assert [(u.account, u.quota, u.used, u.mine) for u in got] == [
+        ("mygroup", 3018000, 267947, 267260), ("new", 25, 0, 0)]
