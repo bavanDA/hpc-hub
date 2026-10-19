@@ -82,7 +82,7 @@ class JobsPage(Gtk.Box):
         stop = Gtk.SignalListItemFactory()
         stop.connect("setup", self._stop_setup)
         stop.connect("bind", self._stop_bind)
-        self.view.append_column(Gtk.ColumnViewColumn(title="", factory=stop, fixed_width=48))
+        self.view.append_column(Gtk.ColumnViewColumn(title="", factory=stop, fixed_width=96))
         self.view.connect("activate", lambda _v, pos: self._details(self._job_at(pos)))
 
         self.empty = Adw.StatusPage(icon_name="view-list-symbolic")
@@ -217,15 +217,17 @@ class JobsPage(Gtk.Box):
         return mine and j.state in ("RUNNING", "PENDING", "SUSPENDED", "REQUEUED")
 
     def _stop_setup(self, _f, item) -> None:
-        b = Gtk.Button(icon_name="process-stop-symbolic", css_classes=["flat", "circular", "error"],
-                       tooltip_text="Cancel this job…", halign=Gtk.Align.CENTER)
+        b = Gtk.Button(label="Cancel", css_classes=["error"], tooltip_text="Cancel this job…",
+                       halign=Gtk.Align.CENTER, valign=Gtk.Align.CENTER)
         b.connect("clicked", lambda btn: self._confirm_cancel(btn.job))
         item.set_child(b)
 
     def _stop_bind(self, _f, item) -> None:
         b, job = item.get_child(), item.get_item().job
         b.job = job
-        b.set_visible(self._cancellable(job))
+        ok = self._cancellable(job)
+        b.set_opacity(1 if ok else 0)  # keep its space so every row is the same height
+        b.set_can_target(ok)
 
     def _sync_buttons(self) -> None:
         j = self._selected()
