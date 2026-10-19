@@ -12,6 +12,7 @@ import gi
 gi.require_version("WebKit", "6.0")
 from gi.repository import Adw, GLib, Gtk, WebKit  # noqa: E402
 
+SPEAK = (Path(__file__).parent / "readaloud.js").read_text(encoding="utf-8")
 BRIDGE = r"""
 document.addEventListener("webviewerloaded", () => {
   const o = PDFViewerApplicationOptions;
@@ -70,12 +71,15 @@ class PdfJsView(Gtk.Box):
     def __init__(self, viewer_html: Path):
         super().__init__(orientation=Gtk.Orientation.VERTICAL)
         self.on_double_click = None  # (page 1-based, x, y in PDF points from the top) -> None
+        self.on_speak_state = None  # ("playing" | "paused" | "ended") -> None
         self.filename = "document.pdf"  # name used when you save a copy
         self.ready = False
         self.pending: list[str] = []
 
         ucm = WebKit.UserContentManager()
         ucm.add_script(WebKit.UserScript.new(BRIDGE, WebKit.UserContentInjectedFrames.TOP_FRAME,
+                                             WebKit.UserScriptInjectionTime.START, None, None))
+        ucm.add_script(WebKit.UserScript.new(SPEAK, WebKit.UserContentInjectedFrames.TOP_FRAME,
                                              WebKit.UserScriptInjectionTime.START, None, None))
         ucm.register_script_message_handler("hpchub", None)
         ucm.connect("script-message-received::hpchub", self._message)
@@ -113,7 +117,10 @@ class PdfJsView(Gtk.Box):
             msg = json.loads(value.to_string())
         except (ValueError, TypeError):
             return
-        if self.on_double_click:
+        if msg.get("kind") == "speak":
+            if self.on_speak_state:
+                self.on_speak_state(msg.get("state", ""))
+        elif self.on_double_click:
             self.on_double_click(int(msg["page"]), float(msg["x"]), float(msg["y"]))
 
     def _download(self, _session, download) -> None:
@@ -144,6 +151,23 @@ class PdfJsView(Gtk.Box):
 
     def scroll_to(self, page: int, y: float) -> None:
         self._js(f"hpchub.scrollTo({int(page)}, {float(y)})")
+
+    # -- read aloud (readaloud.js) -------------------------------------------------------------
+    def speak_load(self, audio: Path, words: list, timings: list) -> None:
+        self._js(f"hpchubSpeak.load({json.dumps(audio.as_uri())}, {json.dumps(words)}, {json.dumps(timings)})"
+                 ".then(() => hpchubSpeak.play(true))")
+
+    def speak_play(self) -> None:
+        self._js("hpchubSpeak.play(true)")
+
+    def speak_pause(self) -> None:
+        self._js("hpchubSpeak.pause()")
+
+    def speak_rate(self, rate: float) -> None:
+        self._js(f"hpchubSpeak.rate({float(rate)})")
+
+    def speak_stop(self) -> None:
+        self._js("hpchubSpeak.stop()")
 
     def fit_width(self) -> None:
         self._js("PDFViewerApplication.pdfViewer.currentScaleValue = 'page-width'")
