@@ -56,3 +56,11 @@ def test_option_choices_are_known_values():
         for o in agent.options:
             assert o.choices[0][0] == "", (agent.id, o.key)
             assert hasattr(AgentSettings(), o.key)
+
+
+def test_task_is_the_first_prompt():
+    s = AgentSettings(command="")
+    assert agents.command(agents.CLAUDE, s, task="fix it's tests") == "claude 'fix it'\"'\"'s tests'"
+    assert agents.command(agents.CODEX, s, "abc", task="go") == "codex resume --no-daemon abc go"
+    assert agents.command(agents.AGY, s, task="go on") == "agy -i 'go on'"
+    assert agents.command(agents.AGY, s, task="  ") == "agy"

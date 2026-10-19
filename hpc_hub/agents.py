@@ -36,6 +36,7 @@ class Agent:
     remote_label: str
     remote_hint: str
     options: tuple[Option, ...] = ()
+    task_flag: str = ""  # how to give a first prompt in interactive mode ("" = as the last argument)
 
 
 CLAUDE = Agent("claude", "Claude", "hpc-claude", "--dangerously-skip-permissions",
@@ -60,7 +61,8 @@ AGY = Agent("agy", "Antigravity", "hpc-antigravity", "--dangerously-skip-permiss
                 Option("mode", "Mode", "--mode", (DEFAULT, ("accept-edits", "Accept edits"), ("auto", "Auto"),
                                                   ("plan", "Plan only")), unless_skip=True),
                 Option("effort", "Effort", "--effort", EFFORT),
-                Option("sandbox", "Sandbox the terminal", "--sandbox", (("", "Off"), ("on", "On")), switch=True)))
+                Option("sandbox", "Sandbox the terminal", "--sandbox", (("", "Off"), ("on", "On")), switch=True)),
+            task_flag="-i")
 CURSOR = Agent("cursor", "Cursor", "hpc-cursor-symbolic", "--force", "", "", (
     Option("model", "Model", "--model", (DEFAULT, ("auto", "Auto"), ("composer-2.5", "Composer 2.5"),
                                          ("claude-opus-5-thinking-high", "Claude Opus 5"),
@@ -74,8 +76,8 @@ BY_ID = {a.id: a for a in AGENTS}
 PAIR_NOTE = "Pairing code below. In the ChatGPT app open Codex, then connect a machine and enter it."
 
 
-def command(agent: Agent, s: AgentSettings, chat_id: str = "") -> str:
-    """Shell line that starts (or resumes) the agent."""
+def command(agent: Agent, s: AgentSettings, chat_id: str = "", task: str = "") -> str:
+    """Shell line that starts (or resumes) the agent; task is a first prompt it starts working on."""
     base = s.command.strip() or agent.id
     skip = [agent.skip_flag] if s.skip_permissions else []
     skip += [a for o in agent.options for a in o.args(getattr(s, o.key), s.skip_permissions)]
@@ -84,7 +86,7 @@ def command(agent: Agent, s: AgentSettings, chat_id: str = "") -> str:
         # --no-daemon: Codex's shared background server keeps its socket in the job's private /tmp,
         # so from any other job it is unreachable ("app server did not become ready").
         args = ["resume", "--no-daemon", chat, *skip] if chat else ["--no-daemon", *skip]
-        line = " ".join([base, *args])
+        line = " ".join([base, *args, *_task(agent, task)])
         if s.remote:
             # one remote server per account: stop the old one, start it in this job (tmux keeps it alive)
             line = (f"{base} remote-control stop >/dev/null 2>&1; "
@@ -96,4 +98,11 @@ def command(agent: Agent, s: AgentSettings, chat_id: str = "") -> str:
         args.append("--remote-control")
     if chat:
         args += ["--conversation", chat] if agent is AGY else ["--resume", chat]
-    return " ".join([base, *args])
+    return " ".join([base, *args, *_task(agent, task)])
+
+
+def _task(agent: Agent, task: str) -> list[str]:
+    task = task.strip()
+    if not task:
+        return []
+    return [agent.task_flag, shlex.quote(task)] if agent.task_flag else [shlex.quote(task)]
