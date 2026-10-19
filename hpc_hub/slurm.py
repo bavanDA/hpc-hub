@@ -219,9 +219,13 @@ def pick_reusable(jobs: list[Job], partition: str = "") -> Job | None:
 # -- job list ------------------------------------------------------------------
 
 MINE, HISTORY, ALL = "mine", "history", "all"
-SQUEUE_FORMAT = "%i|%j|%u|%P|%T|%M|%l|%C|%m|%R"
-SACCT_FIELDS = "JobID,JobName,User,Partition,State,Elapsed,Timelimit,AllocCPUS,ReqMem,NodeList"
+SQUEUE_FORMAT = "%i|%j|%u|%P|%T|%M|%l|%C|%m|%R|%q"
+SACCT_FIELDS = "JobID,JobName,User,Partition,State,Elapsed,Timelimit,AllocCPUS,ReqMem,NodeList,QOS,AllocTRES"
 MAX_ROWS = 5000
+BILLING, QOS_LIST = "HPCHUB_BILLING", "HPCHUB_QOS"
+# billing of my queued jobs (squeue -o has no field for it), and what each QoS charges
+BILLING_PART = f"echo {BILLING}; squeue -h -u \"$USER\" -O 'JobID:|,tres-alloc:|' 2>/dev/null"
+QOS_PART = f"echo {QOS_LIST}; sacctmgr -n -P show qos format=name,usagefactor 2>/dev/null"
 
 
 @dataclass
@@ -236,28 +240,77 @@ class JobInfo:
     cpus: str
     mem: str
     where: str  # node list, or pending reason
+    qos: str = ""
+    billing: int = 0  # SU charged per hour (Slurm's billing TRES); 0 = unknown
+    factor: float = 1.0  # the QoS usage factor: 0 means free
 
     @property
     def from_app(self) -> bool:
         return self.name.startswith("hpc-hub")
 
+    def _rate(self) -> float:
+        return (self.billing or (int(self.cpus) if self.cpus.isdigit() else 0)) * self.factor / 3600
+
+    @property
+    def su_spent(self) -> float:
+        return self._rate() * seconds(self.elapsed)
+
+    @property
+    def su_max(self) -> float:
+        """What the job costs if it runs to its time limit."""
+        return self._rate() * seconds(self.limit)
+
+
+def seconds(text: str) -> int:
+    """Slurm durations: 1-02:03:04, 02:03:04, 03:04 (min:sec). Anything else is 0."""
+    m = re.fullmatch(r"(?:(\d+)-)?(\d+)(?::(\d+))?(?::(\d+))?", text.strip())
+    if not m:
+        return 0
+    days, a, b, c = (int(x) if x else 0 for x in m.groups())
+    if m.group(4) is not None:
+        return days * 86400 + a * 3600 + b * 60 + c
+    if m.group(3) is not None:
+        return days * 86400 + (a * 3600 + b * 60 if m.group(1) else a * 60 + b)
+    return days * 86400 + (a * 3600 if m.group(1) else a * 60)
+
 
 def jobs_command(scope: str, days: int = 7) -> str:
     if scope == HISTORY:
         return (f'sacct -n -P -X -u "$USER" -S now-{int(days)}days '
-                f"-o {SACCT_FIELDS} | tail -n {MAX_ROWS}")
+                f"-o {SACCT_FIELDS} | tail -n {MAX_ROWS}; {QOS_PART}")
     who = "" if scope == ALL else ' -u "$USER"'
-    return f"squeue -h{who} -o {shlex.quote(SQUEUE_FORMAT)} | head -n {MAX_ROWS}"
+    return f"squeue -h{who} -o {shlex.quote(SQUEUE_FORMAT)} | head -n {MAX_ROWS}; {BILLING_PART}; {QOS_PART}"
+
+
+def _billing(tres: str) -> int:
+    m = re.search(r"billing=(\d+)", tres)
+    return int(m.group(1)) if m else 0
 
 
 def parse_jobs(text: str) -> list[JobInfo]:
-    jobs = []
+    jobs, billing, factors, part = [], {}, {}, ""
     for line in text.splitlines():
-        parts = line.strip().split("|")
-        if len(parts) != 10 or not parts[0]:
+        line = line.strip()
+        if line in (BILLING, QOS_LIST):
+            part = line
             continue
-        parts[4] = parts[4].split()[0] if parts[4] else ""  # "CANCELLED by 123" -> CANCELLED
-        jobs.append(JobInfo(*parts))
+        parts = line.split("|")
+        if part == BILLING and len(parts) >= 2:
+            billing[parts[0]] = _billing(parts[1])
+        elif part == QOS_LIST and len(parts) >= 2:
+            try:
+                factors[parts[0]] = float(parts[1])
+            except ValueError:
+                pass
+        elif not part and len(parts) in (10, 11, 12) and parts[0]:
+            parts[4] = parts[4].split()[0] if parts[4] else ""  # "CANCELLED by 123" -> CANCELLED
+            job = JobInfo(*parts[:11])
+            if len(parts) == 12:
+                job.billing = _billing(parts[11])
+            jobs.append(job)
+    for j in jobs:
+        j.billing = j.billing or billing.get(j.job_id, 0)
+        j.factor = factors.get(j.qos, 1.0)
     return jobs
 
 
@@ -290,6 +343,37 @@ def wait_gone(ssh: SshMaster, job_id: str, seconds: float = 15) -> bool:
             return True
         time.sleep(1.5)
     return False
+
+
+@dataclass
+class AccountUsage:
+    account: str
+    quota: int  # SU (core hours) the account may use
+    used: int  # SU the whole account used
+    mine: int  # SU you used in it
+
+
+USAGE = r"""for a in $(sacctmgr -n -P show assoc where user="$USER" format=account 2>/dev/null | sort -u); do
+q=$(sacctmgr -n -P show assoc where account="$a" user="" format=GrpTRESMins 2>/dev/null | grep -o 'billing=[0-9]*' | head -1)
+[ -n "$q" ] || continue
+u=$(sshare -n -P -A "$a" --users=" " -o GrpTRESRaw 2>/dev/null | grep -o 'billing=[0-9]*' | head -1)
+m=$(sshare -n -P -A "$a" --users="$USER" -o User,RawUsage 2>/dev/null | grep "^$USER|" | cut -d'|' -f2)
+echo "$a|${q#billing=}|${u#billing=}|$m"
+done"""
+
+
+def parse_usage(text: str) -> list[AccountUsage]:
+    out = []
+    for line in text.splitlines():
+        p = line.strip().split("|")
+        if len(p) == 4 and p[1].isdigit():
+            num = [int(x) if x.isdigit() else 0 for x in p[1:]]
+            out.append(AccountUsage(p[0], num[0] // 60, num[1] // 60, num[2] // 3600))  # minutes, minutes, seconds
+    return out
+
+
+def account_usage(ssh: SshMaster) -> list[AccountUsage]:
+    return parse_usage(ssh.run(USAGE, timeout=30).stdout)
 
 
 def cancel_job(ssh: SshMaster, job_id: str) -> None:

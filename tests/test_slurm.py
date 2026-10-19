@@ -42,9 +42,34 @@ def test_parse_jobs():
     assert jobs[1].where == "(Priority)" and jobs[2].state == "CANCELLED"
 
 
+def test_job_su():
+    text = ("7|vs|me|general|RUNNING|1:30:00|4:00:00|4|16G|n1|standard\n"
+            "8|free|me|general|RUNNING|1:00:00|4:00:00|4|16G|n2|low\n"
+            "9|wait|me|general|PENDING|0:00|1-00:00:00|8|32G|(Priority)|standard\n"
+            f"{slurm.BILLING}\n7|cpu=4,mem=16G,node=1,billing=6|\n8|cpu=4,billing=4|\n"
+            f"{slurm.QOS_LIST}\nlow|0.000000\nstandard|1.000000\n")
+    a, b, c = slurm.parse_jobs(text)
+    assert (a.qos, a.billing, a.su_spent, a.su_max) == ("standard", 6, 9.0, 24.0)
+    assert b.factor == 0 and b.su_max == 0
+    assert c.billing == 0 and c.su_max == 192.0  # no billing yet: count cores
+    old = slurm.parse_jobs("5|x|me|p|COMPLETED|01:00:00|02:00:00|2|8G|n1|standard|billing=2,cpu=2\n")[0]
+    assert (old.billing, old.su_spent) == (2, 2.0)
+
+
+def test_seconds():
+    assert [slurm.seconds(t) for t in ("1-02:03:04", "02:03:04", "03:04", "5", "1-02", "UNLIMITED")] == [
+        93784, 7384, 184, 300, 93600, 0]
+
+
+def test_parse_usage():
+    got = slurm.parse_usage("mygroup|181080000|16076854|962138433\nnew|1500||\njunk\n")
+    assert [(u.account, u.quota, u.used, u.mine) for u in got] == [
+        ("mygroup", 3018000, 267947, 267260), ("new", 25, 0, 0)]
+
+
 def test_jobs_command():
     assert '-u "$USER"' in slurm.jobs_command(slurm.MINE)
-    assert "-u" not in slurm.jobs_command(slurm.ALL)
+    assert "-u" not in slurm.jobs_command(slurm.ALL).split(";")[0]
     assert slurm.jobs_command(slurm.HISTORY, 3).startswith('sacct -n -P -X -u "$USER" -S now-3days')
 
 
