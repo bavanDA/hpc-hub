@@ -1,4 +1,4 @@
-"""Claude, ChatGPT or Antigravity: pick a past chat to resume, or start a new one in a folder."""
+"""Claude, ChatGPT, Antigravity or Cursor: pick a past chat to resume, or start a new one in a folder."""
 
 import datetime
 import posixpath
@@ -53,7 +53,8 @@ class AgentDialog(Adw.Dialog):
                                  subtitle=f"Off: same node as now ({a.node}, job {a.job_id})" if a
                                  else "Off: same node (requested if needed)")
         opts.add(self.skip)
-        opts.add(self.remote)
+        if agent.remote_label:  # Cursor has no remote control
+            opts.add(self.remote)
         opts.add(self.new)
         page.add(opts)
 

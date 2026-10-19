@@ -27,10 +27,16 @@ def test_agy():
     assert agents.command(agents.AGY, s, "c1") == "agy --remote-control --conversation c1"
 
 
+def test_cursor():
+    s = AgentSettings(command="cursor-agent", skip_permissions=True, model="auto", remote=True)
+    assert agents.command(agents.CURSOR, s, "id9") == "cursor-agent --force --model auto --resume id9"
+
+
 def test_cluster_has_all_agents():
     from hpc_hub.config import ClusterConfig
     c = ClusterConfig(id="x", name="X")
-    assert (c.claude.command, c.codex.command, c.agy.command) == ("claude", "codex", "agy")
+    assert (c.claude.command, c.codex.command, c.agy.command, c.cursor.command) == (
+        "claude", "codex", "agy", "cursor-agent")
 
 
 def test_options_add_flags():

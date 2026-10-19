@@ -69,7 +69,7 @@ class VsCodeSettings:
 
 @dataclass
 class AgentSettings:
-    """Claude, ChatGPT (codex) or Antigravity (agy) on a compute node."""
+    """Claude, ChatGPT (codex), Antigravity (agy) or Cursor (cursor-agent) on a compute node."""
     command: str = "claude"
     workdir: str = "~"
     skip_permissions: bool = False
@@ -111,6 +111,7 @@ class ClusterConfig:
     claude: AgentSettings = field(default_factory=AgentSettings)
     codex: AgentSettings = field(default_factory=lambda: AgentSettings(command="codex"))
     agy: AgentSettings = field(default_factory=lambda: AgentSettings(command="agy"))
+    cursor: AgentSettings = field(default_factory=lambda: AgentSettings(command="cursor-agent"))
     globus: GlobusSettings = field(default_factory=GlobusSettings)
     latex: LatexSettings = field(default_factory=LatexSettings)
 
