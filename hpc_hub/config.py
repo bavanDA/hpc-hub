@@ -73,6 +73,12 @@ class AgentSettings:
     skip_permissions: bool = False
     new_node: bool = False
     remote: bool = False
+    # per-agent choices, "" = the agent's default (see agents.py for which agent uses which)
+    model: str = ""
+    mode: str = ""
+    effort: str = ""
+    sandbox: str = ""
+    approval: str = ""
 
 
 @dataclass

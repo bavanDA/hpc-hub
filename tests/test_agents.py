@@ -31,3 +31,22 @@ def test_cluster_has_all_agents():
     from hpc_hub.config import ClusterConfig
     c = ClusterConfig(id="x", name="X")
     assert (c.claude.command, c.codex.command, c.agy.command) == ("claude", "codex", "agy")
+
+
+def test_options_add_flags():
+    s = AgentSettings(command="claude", model="opus", mode="plan", effort="high")
+    assert agents.command(agents.CLAUDE, s) == "claude --model opus --permission-mode plan --effort high"
+    s.skip_permissions = True  # permission mode makes no sense when prompts are skipped
+    assert agents.command(agents.CLAUDE, s) == "claude --dangerously-skip-permissions --model opus --effort high"
+    c = AgentSettings(command="codex", sandbox="workspace-write", approval="never", effort="xhigh")
+    assert agents.command(agents.CODEX, c) == \
+        "codex --no-daemon -s workspace-write -a never -c model_reasoning_effort=xhigh"
+    a = AgentSettings(command="agy", mode="auto", sandbox="on")
+    assert agents.command(agents.AGY, a) == "agy --mode auto --sandbox"
+
+
+def test_option_choices_are_known_values():
+    for agent in agents.AGENTS:
+        for o in agent.options:
+            assert o.choices[0][0] == "", (agent.id, o.key)
+            assert hasattr(AgentSettings(), o.key)
