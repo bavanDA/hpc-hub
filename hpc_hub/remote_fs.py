@@ -60,14 +60,20 @@ def list_dir(ssh: SshMaster, path: str) -> list[Entry]:
     return parse_listing(_run(ssh, f"find {q(path)} -mindepth 1 -maxdepth 1 -printf {q(LIST_FORMAT)}", timeout=60))
 
 
-def read_bytes(ssh: SshMaster, path: str, limit: int = MAX_READ) -> bytes:
-    res = subprocess.run(ssh.argv(f"head -c {int(limit) + 1} -- {q(path)}"), capture_output=True, timeout=300,
+def head_bytes(ssh: SshMaster, path: str, n: int) -> bytes:
+    """Up to the first n bytes (plus one, so callers can tell it was cut)."""
+    res = subprocess.run(ssh.argv(f"head -c {int(n) + 1} -- {q(path)}"), capture_output=True, timeout=300,
                          stdin=subprocess.DEVNULL)
     if res.returncode != 0:
         raise FsError(res.stderr.decode(errors="replace").strip() or "Could not read file")
-    if len(res.stdout) > limit:
-        raise FsError(f"File is larger than {limit // (1024 * 1024)} MB")
     return res.stdout
+
+
+def read_bytes(ssh: SshMaster, path: str, limit: int = MAX_READ) -> bytes:
+    data = head_bytes(ssh, path, limit)
+    if len(data) > limit:
+        raise FsError(f"File is larger than {limit // (1024 * 1024)} MB")
+    return data
 
 
 def write_bytes(ssh: SshMaster, path: str, data: bytes) -> None:

@@ -13,6 +13,7 @@ from ..remote_fs import Entry
 from ..session import ClusterSession, State
 from .editor import EditorDialog
 from .pdf import PdfDialog
+from .preview import Preview
 
 DOWNLOADS = Path(GLib.get_user_special_dir(GLib.UserDirectory.DIRECTORY_DOWNLOAD) or Path.home()) / "HPC Hub"
 IMAGES = (".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".bmp")
@@ -64,7 +65,7 @@ class FilePane(Gtk.Box):
         self.location = Gtk.Entry(hexpand=True, placeholder_text="/path", width_chars=8)
         top.append(self.cluster)
         top.append(self.location)
-        nav = Gtk.Box(spacing=4, margin_start=8, margin_end=8, margin_bottom=6)
+        nav = self.nav = Gtk.Box(spacing=4, margin_start=8, margin_end=8, margin_bottom=6)
         for icon, tip, fn in (("go-up-symbolic", "Up", self.go_up), ("go-home-symbolic", "Home", self.go_home),
                               ("view-refresh-symbolic", "Refresh", self.refresh),
                               ("folder-new-symbolic", "New folder", self.new_folder),
@@ -115,7 +116,9 @@ class FilePane(Gtk.Box):
 
         self.cluster.connect("notify::selected", lambda *_: self.go(self.paths.get(self.session.cfg.id, "")))
         self.location.connect("activate", lambda *_: self.go(self.location.get_text().strip()))
-        self.selection.connect("notify::selected-item", lambda *_: self._sync())
+        self.on_select: Callable[[Entry | None], None] | None = None
+        self.selection.connect("notify::selected-item", lambda *_: (self._sync(), self.on_select and
+                                                                     self.on_select(self.selected())))
         self._sync()
 
     # -- columns ----------------------------------------------------------------------
@@ -396,8 +399,16 @@ class FilesPage(Gtk.Box):
         self.banner.connect("button-clicked", lambda *_: self.paste())
         self.append(self.banner)
         self.pane = FilePane(sessions, toast, 0, self.copy, on_latex)
-        self.pane.set_vexpand(True)
-        self.append(self.pane)
+        self.preview = Preview(TEXT)
+        self.pane.on_select = lambda e: self.preview.show(self.pane.session, self.pane.child(e) if e else "", e) \
+            if self.split.get_end_child() else None
+        self.split = Gtk.Paned(start_child=self.pane, end_child=self.preview, vexpand=True, wide_handle=True,
+                               resize_start_child=True, resize_end_child=True, shrink_end_child=False, position=560)
+        self.append(self.split)
+        toggle = Gtk.ToggleButton(icon_name="view-dual-symbolic", tooltip_text="Preview panel", active=True,
+                                  css_classes=["flat"])
+        toggle.connect("toggled", lambda b: self.split.set_end_child(self.preview if b.get_active() else None))
+        self.pane.nav.append(toggle)
 
         self.transfers = Gtk.ListBox(selection_mode=Gtk.SelectionMode.NONE, css_classes=["boxed-list"])
         self.revealer = Gtk.Revealer(child=Gtk.ScrolledWindow(child=self.transfers, max_content_height=180,
@@ -409,6 +420,13 @@ class FilesPage(Gtk.Box):
     def show_cluster(self, session: ClusterSession) -> None:
         if self.pane.session is session:
             self.pane.refresh()
+        else:
+            self.pane.set_session(session)
+
+    def open_at(self, session: ClusterSession, folder: str) -> None:
+        self.pane.paths[session.cfg.id] = folder
+        if self.pane.session is session:
+            self.pane.go(folder)
         else:
             self.pane.set_session(session)
 
