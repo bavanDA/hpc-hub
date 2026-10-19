@@ -32,3 +32,13 @@ def test_tunnel_name_and_urls():
     assert links.tunnel_urls("yale", "/nfs/MC/") == ("vscode-remote://tunnel+yale/nfs/MC",
                                                     "https://vscode.dev/tunnel/yale/nfs/MC")
     assert links.tunnel_urls("w", "")[1] == "https://vscode.dev/tunnel/w"
+
+
+def test_remote_and_pair():
+    text = ("Remote Control: https://claude.ai/code/session_01abc\n"
+            "manual pairing code: XWVK-VU8N\nhelp at https://claude.ai/settings\n")
+    kinds = [(l.kind, l.url, l.code) for l in links.find_links(text)]
+    assert (links.PAIR, "", "XWVK-VU8N") in kinds
+    assert (links.REMOTE, "https://claude.ai/code/session_01abc", "") in kinds
+    assert not any(u.endswith("/settings") for _, u, _ in kinds)
+    assert links.find_links('{"manualPairingCode":"AB12-CD34"}')[0].code == "AB12-CD34"
