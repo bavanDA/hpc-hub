@@ -159,12 +159,11 @@ class ClusterCard(Gtk.Box):
         else:
             self.detail.remove_css_class("accent")
 
-        self.tools.set_visible(s.state == State.CONNECTED and s.ssh is not None)
+        self.tools.set_visible(s.connected)
         self.vpn_btn.set_visible(cfg.vpn.enabled and (s.state in (State.DISCONNECTED, State.ERROR)))
         a = s.allocation
-        has_ssh = s.state == State.CONNECTED and s.ssh is not None
-        self.node.set_visible(has_ssh)
-        self.node_btn.set_visible(has_ssh)
+        self.node.set_visible(s.connected)
+        self.node_btn.set_visible(s.connected)
         if a:
             self.node.set_label(f"Node {a.node} · Job {a.job_id}" + ("" if a.owned else " (your job)"))
             self.node_btn.set_label("Release node" if a.owned else "Stop using")

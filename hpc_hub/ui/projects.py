@@ -143,7 +143,7 @@ class ProjectsPage(Gtk.Box):
             self.store.touch(p)
             fn()
 
-        if s.state == State.CONNECTED and s.ssh:
+        if s.connected:
             go()
         elif s.state.busy:
             self.after_connect[s.cfg.id] = go
@@ -157,7 +157,7 @@ class ProjectsPage(Gtk.Box):
         fn = self.after_connect.get(s.cfg.id)
         if not fn:
             return
-        if s.state == State.CONNECTED and s.ssh:
+        if s.connected:
             del self.after_connect[s.cfg.id]
             fn()
         elif s.state in (State.ERROR, State.DISCONNECTED):
@@ -251,7 +251,7 @@ class ProjectDialog(Adw.Dialog):
 
     def _browse(self) -> None:
         s = self.session
-        if s.state == State.CONNECTED and s.ssh:
+        if s.connected:
             mine = [Place(p.name, p.path) for p in self.store.recent() if p.cluster == s.cfg.id]
             FolderPicker(s, self.path or "~", self._picked, mine).present(self)
             return
@@ -264,7 +264,7 @@ class ProjectDialog(Adw.Dialog):
         def check():
             if token != self.waiting or not self.get_root():
                 return False
-            if s.state == State.CONNECTED and s.ssh:
+            if s.connected:
                 self._fail("")
                 self._browse()
                 return False
@@ -283,8 +283,7 @@ class ProjectDialog(Adw.Dialog):
         if not path:
             self._fail("Choose a folder")
             return
-        connected = s.state == State.CONNECTED and s.ssh
-        if not connected:
+        if not s.connected:
             if self.create:
                 self._fail(f"Connect to {s.cfg.name} first to create the folder")
                 return

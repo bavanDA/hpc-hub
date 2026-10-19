@@ -14,7 +14,7 @@ from gi.repository import Adw, Gdk, GLib, Gtk
 from .. import agents, ask_all, links, remote, remote_fs, slurm, tmux
 from ..agents import Agent
 from ..links import Link
-from ..session import ClusterSession, State
+from ..session import ClusterSession
 from ..slurm import Allocation
 from .agent_dialog import AgentDialog
 from .ask_all import AskAllDialog
@@ -44,7 +44,7 @@ class Tools:
         self.vs_tabs: dict[str, tuple[str, TerminalTab]] = {}
 
     def _ready(self, s: ClusterSession) -> bool:
-        if s.state != State.CONNECTED or not s.ssh:
+        if not s.connected:
             self.toast(f"Connect to {s.cfg.name} first")
             return False
         return True

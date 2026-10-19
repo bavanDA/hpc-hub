@@ -13,7 +13,7 @@ from .. import git, latex, projects, remote_fs, synctex
 from ..config import LATEX_ENGINES
 from ..latex import LatexIssue
 from ..projects import Project, ProjectStore
-from ..session import ClusterSession, State
+from ..session import ClusterSession
 from .editor import source_view
 from .pdf import PdfDialog, PdfView
 from .widgets import bg, remember_size
@@ -136,7 +136,7 @@ class LatexPage(Gtk.Box):
 
     # -- papers found by searching the cluster ---------------------------------------------
     def scan(self, force: bool = False) -> None:
-        live = [x for x in self.sessions if x.state == State.CONNECTED and x.ssh]
+        live = [x for x in self.sessions if x.connected]
         if not live or self.scan_spin.get_visible():
             if not live:
                 self.paper_note.set_label("Connect a cluster, then press Search to find your papers.")
@@ -196,7 +196,7 @@ class LatexPage(Gtk.Box):
 
     def open_project(self, session: ClusterSession, p: Project) -> None:
         """Open the project's main .tex (found once and remembered)."""
-        if session.state != State.CONNECTED or not session.ssh:
+        if not session.connected:
             self.toast(f"Connect to {session.cfg.name} first")
             return
         if p.main_tex:
@@ -328,7 +328,7 @@ class LatexPage(Gtk.Box):
 
     # -- project -----------------------------------------------------------------------------
     def open(self, session: ClusterSession, path: str) -> None:
-        if session.state != State.CONNECTED or not session.ssh:
+        if not session.connected:
             self.toast(f"Connect to {session.cfg.name} first")
             return
         if not path.endswith(".tex"):

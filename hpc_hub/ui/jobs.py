@@ -157,7 +157,7 @@ class JobsPage(Gtk.Box):
 
     def refresh(self, quiet: bool = False) -> None:
         s = self.session
-        if s.state != State.CONNECTED or not s.ssh:
+        if not s.connected:
             self.store.remove_all()
             if s.state == State.ERROR and s.detail == "Connection lost":
                 self._show_empty("Connection lost", f"{s.cfg.name} dropped, for example after the laptop slept. "

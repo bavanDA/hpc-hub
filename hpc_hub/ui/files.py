@@ -142,7 +142,7 @@ class FilePane(Gtk.Box):
 
     def _connected(self) -> bool:
         s = self.session
-        if s.state == State.CONNECTED and s.ssh:
+        if s.connected:
             return True
         self.store.remove_all()
         self.empty.set_title("Not connected")
@@ -452,7 +452,7 @@ class FilesPage(Gtk.Box):
         if dst.state != State.CONNECTED or not dest_dir:
             self.toast("Open a folder to paste into first")
             return
-        if src.state != State.CONNECTED or not src.ssh:
+        if not src.connected:
             self.toast(f"Connect to {src.cfg.name} first, the copy comes from there")
             return
         self.clip = None

@@ -5,7 +5,7 @@ from collections.abc import Callable
 from gi.repository import Adw, GLib, Gtk
 
 from .. import slurm, usage
-from ..session import ClusterSession, State
+from ..session import ClusterSession
 from .widgets import bg
 
 
@@ -115,7 +115,7 @@ class UsagePage(Gtk.Box):
 
     def refresh(self, accounts: bool = False) -> None:
         s = self.session
-        if s.state != State.CONNECTED or not s.ssh:
+        if not s.connected:
             self.status.set_title("Not connected")
             self.status.set_description(f"Connect to {s.cfg.name} to see its usage.")
             self.outer.set_visible_child_name("status")

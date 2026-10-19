@@ -229,7 +229,7 @@ class HpcHubApp(Adw.Application):
             self.window.toast(f"{session.cfg.name} settings saved")
 
         def edit_remote(path, template):
-            if session.state == State.CONNECTED and session.ssh:
+            if session.connected:
                 self.tools.edit_remote(session, path, template)
             else:
                 dialog.add_toast(Adw.Toast(title=f"Connect to {session.cfg.name} first"))

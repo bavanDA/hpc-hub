@@ -13,7 +13,7 @@ from gi.repository import Adw, Gdk, Gio, GLib, Gtk, Pango, Vte  # noqa: E402
 
 from .. import links, remote, tmux  # noqa: E402
 from ..links import Link  # noqa: E402
-from ..session import ClusterSession, State  # noqa: E402
+from ..session import ClusterSession  # noqa: E402
 from .widgets import bg, open_uri, remember_size  # noqa: E402
 
 
@@ -331,7 +331,7 @@ class TerminalsPage(Gtk.Box):
     def _fill_launch(self) -> None:
         while c := self.launch.get_first_child():
             self.launch.remove(c)
-        live = [s for s in self.sessions if s.state == State.CONNECTED and s.ssh]
+        live = [s for s in self.sessions if s.connected]
         if not live:
             self.launch.append(Gtk.Label(label="Connect a cluster to start VS Code or an agent here.", wrap=True,
                                          xalign=0, css_classes=["dim-label"], margin_top=12))
@@ -449,7 +449,7 @@ class TerminalsPage(Gtk.Box):
 
     # -- session list ------------------------------------------------------------------------------
     def refresh(self) -> None:
-        live = [s for s in self.sessions if s.state == State.CONNECTED and s.ssh]
+        live = [s for s in self.sessions if s.connected]
         for s in self.sessions:
             if s not in live:
                 self.listings.pop(s.cfg.id, None)
@@ -479,7 +479,7 @@ class TerminalsPage(Gtk.Box):
         self.logs_badge.set_label(str(len(self.logs)))
         self.logs_badge.set_visible(bool(self.logs))
         self._fill_launch()
-        live = [s for s in self.sessions if s.state == State.CONNECTED and s.ssh]
+        live = [s for s in self.sessions if s.connected]
         if not live:
             self.list.append(self._note("Connect a cluster to see its sessions."))
         for s in live:
@@ -626,7 +626,7 @@ class TerminalsPage(Gtk.Box):
         d.present(self.get_root())
 
     def new_terminal(self) -> None:
-        live = [s for s in self.sessions if s.state == State.CONNECTED and s.ssh]
+        live = [s for s in self.sessions if s.connected]
         if not live:
             self.toast("Connect a cluster first")
             return

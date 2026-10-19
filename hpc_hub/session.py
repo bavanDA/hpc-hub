@@ -119,6 +119,10 @@ class ClusterSession:
             pass
 
     @property
+    def connected(self) -> bool:
+        return self.state == State.CONNECTED and self.ssh is not None
+
+    @property
     def vpn(self) -> Vpn:
         return Vpn(self.cfg, self._log)
 
@@ -182,7 +186,7 @@ class ClusterSession:
     def release_node(self) -> None:
         """Give the node back (scancel) but stay connected. Your own borrowed job keeps running."""
         a = self.allocation
-        if self.state != State.CONNECTED or not a or not self.ssh:
+        if not self.connected or not a:
             return
 
         def run():
@@ -248,7 +252,7 @@ class ClusterSession:
     def check_node(self) -> None:
         """Blocking. Our job can end under us (time limit, scancel): switch to another running one."""
         a = self.allocation
-        if not a or not self.ssh or self.state != State.CONNECTED:
+        if not a or not self.connected:
             return
         try:
             running = {j.job_id for j in slurm.running_jobs(self.ssh)}
