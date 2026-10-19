@@ -397,7 +397,6 @@ class FilesPage(Gtk.Box):
         super().__init__(orientation=Gtk.Orientation.VERTICAL)
         self.sessions = sessions
         self.toast = toast
-        self.globus_copy: Callable[[ClusterSession, str, ClusterSession, str], bool] | None = None
         self.left = FilePane(sessions, toast, 0, self.copy, on_latex)
         self.right = FilePane(sessions, toast, min(1, len(sessions) - 1), self.copy, on_latex)
         self.left.other, self.right.other = self.right, self.left
@@ -443,8 +442,6 @@ class FilesPage(Gtk.Box):
             self.toast(f"Copying {e.name}…")
             cmd = f"cp -r -- {remote_fs.q(src_path)} {remote_fs.q(dest_dir)}/"
             _bg(lambda: remote_fs._run(src.ssh, cmd, timeout=3600), dst_pane._done(f"Copied {e.name}"))
-            return
-        if self.globus_copy and self.globus_copy(src, src_path, dst, dest_dir):
             return
         self.direct_copy(src, src_path, dst, dest_dir, dst_pane)
 
