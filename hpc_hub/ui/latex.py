@@ -16,7 +16,7 @@ from ..projects import Project, ProjectStore
 from ..session import ClusterSession
 from .editor import source_view
 from .pdf import PdfDialog, PdfView
-from .widgets import bg, remember_size
+from .widgets import bg, remember_size, shortcuts
 
 PROJECT_EXT = (".tex", ".bib", ".sty", ".cls", ".bst")
 TEXT_EXT = PROJECT_EXT + (".txt", ".md", ".csv", ".dat", ".py", ".sh")
@@ -288,12 +288,8 @@ class LatexPage(Gtk.Box):
         self.log_expander = Gtk.Expander(label="Build log", child=log_box, margin_start=8)
         page.append(self.log_expander)
 
-        keys = Gtk.ShortcutController(scope=Gtk.ShortcutScope.MANAGED)
-        for trigger, fn in (("<Control>s", lambda: self.save()), ("<Control>b", lambda: self.save(then=self.build)),
-                            ("<Control>j", lambda: self.show_in_pdf())):
-            keys.add_shortcut(Gtk.Shortcut(trigger=Gtk.ShortcutTrigger.parse_string(trigger),
-                                           action=Gtk.CallbackAction.new(lambda *_, f=fn: f() or True)))
-        page.add_controller(keys)
+        shortcuts(page, ("<Control>s", self.save), ("<Control>b", lambda: self.save(then=self.build)),
+                  ("<Control>j", self.show_in_pdf))
         return page
 
     def _settings_popover(self) -> Gtk.Popover:

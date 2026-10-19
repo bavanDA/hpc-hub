@@ -9,7 +9,7 @@ from gi.repository import Adw, Gio, GLib, GObject, Gtk, Pango
 from .. import remote_fs
 from ..remote_fs import Entry, Place
 from ..session import ClusterSession
-from .widgets import ask_name, bg
+from .widgets import ask_name, bg, shortcuts
 
 _places: dict[str, list[Place]] = {}  # per cluster, found once per app run
 
@@ -101,13 +101,9 @@ class FolderPicker(Adw.Dialog):
         tv.add_bottom_bar(bottom)
         self.set_child(tv)
 
-        keys = Gtk.ShortcutController(scope=Gtk.ShortcutScope.MANAGED)
-        for trigger, fn in (("<Control>l", lambda: self.type_btn.set_active(True)),
-                            ("<Control>h", lambda: self.hidden.set_active(not self.hidden.get_active())),
-                            ("<Alt>Up", self.go_up)):
-            keys.add_shortcut(Gtk.Shortcut(trigger=Gtk.ShortcutTrigger.parse_string(trigger),
-                                           action=Gtk.CallbackAction.new(lambda *_, f=fn: f() or True)))
-        self.add_controller(keys)
+        shortcuts(self, ("<Control>l", lambda: self.type_btn.set_active(True)),
+                  ("<Control>h", lambda: self.hidden.set_active(not self.hidden.get_active())),
+                  ("<Alt>Up", self.go_up))
 
         self._load_places()
         self.go(start or "~")

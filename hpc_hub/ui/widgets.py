@@ -33,6 +33,15 @@ def ask_name(parent: Gtk.Widget, heading: str, confirm: str, then: Callable[[str
     d.present(parent)
 
 
+def shortcuts(widget: Gtk.Widget, *keys: tuple[str, Callable[[], object]]) -> None:
+    """Keyboard shortcuts while widget is shown, e.g. ("<Control>s", save)."""
+    ctl = Gtk.ShortcutController(scope=Gtk.ShortcutScope.MANAGED)
+    for trigger, fn in keys:
+        ctl.add_shortcut(Gtk.Shortcut(trigger=Gtk.ShortcutTrigger.parse_string(trigger),
+                                      action=Gtk.CallbackAction.new(lambda *_, f=fn: f() or True)))
+    widget.add_controller(ctl)
+
+
 def bg(work: Callable[[], object], done: Callable[[object, str], None]) -> None:
     """Run work() on a thread, then done(result, error) on the main loop."""
     def run():
