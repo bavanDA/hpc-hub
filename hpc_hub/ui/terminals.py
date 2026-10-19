@@ -5,6 +5,7 @@ import shlex
 import threading
 import time
 from collections.abc import Callable
+from dataclasses import dataclass
 
 import gi
 
@@ -72,12 +73,6 @@ class TerminalTab(Gtk.Box):
             pty.close()
 
 
-def color_icon(color: str) -> Gio.Icon:
-    """A colored dot, used as the tab icon."""
-    svg = f'<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"><circle cx="8" cy="8" r="6" fill="{color}"/></svg>'
-    return Gio.BytesIcon.new(GLib.Bytes.new(svg.encode()))
-
-
 def color_dot(color: str, size: int = 12) -> Gtk.DrawingArea:
     rgba = Gdk.RGBA()
     rgba.parse(color or "#77767b")
@@ -112,17 +107,30 @@ AGENT_NAMES = {"claude": "Claude", "codex": "ChatGPT", "agy": "Antigravity", "te
 REFRESH_SECONDS = 15
 
 
+@dataclass
+class View:
+    """What the right side shows: an attached tmux session, or a log (VS Code job)."""
+    key: tuple[str, str]
+    tab: TerminalTab
+    title: str
+    color: str = ""
+    icon: str = "utilities-terminal-symbolic"
+    session: ClusterSession | None = None  # set for tmux views
+    tmux_session: tmux.Session | None = None
+
+
 class TerminalsPage(Gtk.Box):
-    """Left: tmux/screen sessions on each connected cluster (they keep running when you close a tab).
-    Right: open tabs."""
+    """The session list works like tabs: click one to open it on the right. Switching away detaches it,
+    and it keeps running in tmux on the cluster. VS Code logs stay open until you close them."""
 
     def __init__(self, sessions: list[ClusterSession] | None = None, toast: Callable[[str], None] = lambda t: None):
         super().__init__(orientation=Gtk.Orientation.HORIZONTAL)
         self.sessions = sessions or []
         self.toast = toast
-        self.open_tabs: dict[tuple[str, str], Adw.TabPage] = {}  # (cluster, tmux name) -> tab
+        self.current: View | None = None
+        self.logs: list[View] = []
         self.listings: dict[str, tmux.Listing] = {}
-        self.told_detach = False
+        self.starting: dict[tuple[str, str], tuple[str, str]] = {}  # just created, not listed yet: title, color
 
         side = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, width_request=290)
         head = Gtk.Box(spacing=6, margin_top=8, margin_bottom=8, margin_start=10, margin_end=8)
@@ -135,72 +143,112 @@ class TerminalsPage(Gtk.Box):
         head.append(refresh)
         head.append(new)
         side.append(head)
-        self.list = Gtk.ListBox(css_classes=["navigation-sidebar"], selection_mode=Gtk.SelectionMode.NONE)
+        self.list = Gtk.ListBox(css_classes=["navigation-sidebar"], selection_mode=Gtk.SelectionMode.SINGLE)
         self.list.connect("row-activated", lambda _l, row: getattr(row, "open", None) and row.open())
         side.append(Gtk.ScrolledWindow(child=self.list, vexpand=True, hscrollbar_policy=Gtk.PolicyType.NEVER))
-        side.append(Gtk.Label(label="Closing a tab only detaches. The session keeps running on the cluster.",
+        side.append(Gtk.Label(label="Switching or closing only detaches. Sessions keep running on the cluster.",
                               wrap=True, xalign=0, css_classes=["dim-label", "caption"], margin_start=10,
                               margin_end=10, margin_bottom=10))
         self.append(side)
         self.append(Gtk.Separator(orientation=Gtk.Orientation.VERTICAL))
 
-        self.view = Adw.TabView(vexpand=True, hexpand=True)
-        self.bar = Adw.TabBar(view=self.view, autohide=False)
+        # right: a small header for the open session, then the terminal
+        right = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, hexpand=True)
+        self.header = Gtk.Box(spacing=8, margin_top=6, margin_bottom=6, margin_start=10, margin_end=6)
+        self.dot = Gtk.Box(valign=Gtk.Align.CENTER)
+        self.title = Gtk.Label(xalign=0, hexpand=True, ellipsize=Pango.EllipsizeMode.END, css_classes=["heading"])
+        self.header.append(self.dot)
+        self.header.append(self.title)
+        self.actions = Gtk.MenuButton(icon_name="view-more-symbolic", css_classes=["flat"], tooltip_text="Session")
+        close = Gtk.Button(icon_name="window-close-symbolic", css_classes=["flat"], tooltip_text="Close (keeps running)")
+        close.connect("clicked", lambda *_: self.close_current())
+        self.header.append(self.actions)
+        self.header.append(close)
+        right.append(self.header)
+        self.views = Gtk.Stack(vexpand=True, hexpand=True)
         self.empty = Adw.StatusPage(
-            icon_name="utilities-terminal-symbolic", title="No open terminals",
-            description="Pick a session on the left, start a new terminal, or run VS Code, Claude, ChatGPT or "
+            icon_name="utilities-terminal-symbolic", title="Nothing open",
+            description="Click a session on the left, start a new terminal, or run VS Code, Claude, ChatGPT or "
                         "Antigravity from a cluster card.")
-        self.stack = Gtk.Stack(vexpand=True, hexpand=True)
-        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-        box.append(self.bar)
-        box.append(self.view)
-        self.stack.add_named(box, "tabs")
-        self.stack.add_named(self.empty, "empty")
-        self.append(self.stack)
-        self.view.connect("notify::n-pages", lambda *_: self._sync())
-        self.view.connect("close-page", self._close_page)
+        self.views.add_named(self.empty, "empty")
+        right.append(self.views)
+        self.append(right)
+
         self.connect("map", lambda *_: self.refresh())
         GLib.timeout_add_seconds(REFRESH_SECONDS, lambda: (self.get_mapped() and self.refresh(), True)[1])
-        self._sync()
+        self._show(None)
 
-    def _sync(self) -> None:
-        self.stack.set_visible_child_name("tabs" if self.view.get_n_pages() else "empty")
+    # -- right side --------------------------------------------------------------------------
+    def _show(self, view: View | None) -> None:
+        """Make view the visible one. A tmux view we leave is detached (its ssh closes)."""
+        old = self.current
+        if old and old is not view and old not in self.logs:
+            old.tab.kill()
+            self.views.remove(old.tab)
+        self.current = view
+        self.header.set_visible(view is not None)
+        if not view:
+            self.views.set_visible_child_name("empty")
+            self._select()
+            return
+        if view.tab.get_parent() is None:
+            self.views.add_child(view.tab)
+        self.views.set_visible_child(view.tab)
+        self._header(view)
+        view.tab.term.grab_focus()
+        self._select()
 
-    def _close_page(self, view, page) -> bool:
-        page.get_child().kill()
-        for key, p in list(self.open_tabs.items()):
-            if p is page:
-                del self.open_tabs[key]
-                if not self.told_detach:
-                    self.told_detach = True
-                    self.toast("Detached. It keeps running, reopen it from Sessions.")
-        view.close_page_finish(page, True)
-        GLib.timeout_add(800, lambda: self.refresh() and False)
-        return Gdk.EVENT_STOP
+    def _header(self, view: View) -> None:
+        while c := self.dot.get_first_child():
+            self.dot.remove(c)
+        self.dot.append(color_dot(view.color) if view.color else Gtk.Image(icon_name=view.icon))
+        self.title.set_label(view.title)
+        if view.session and view.tmux_session:
+            self.actions.set_popover(self._menu(view.session, view.tmux_session))
+            self.actions.set_visible(True)
+        else:
+            self.actions.set_visible(False)
 
-    # -- tabs ---------------------------------------------------------------------------------
+    def close_current(self) -> None:
+        view = self.current
+        if not view:
+            return
+        if view in self.logs:
+            self.logs.remove(view)
+            view.tab.kill()
+            self.views.remove(view.tab)
+            self.current = None
+        self._show(None)
+        self._fill()
+
     def open(self, title: str, argv: list[str], icon: str, node: str = "",
              on_link: Callable[[TerminalTab, Link], None] | None = None, key: tuple[str, str] | None = None,
              color: str = "") -> TerminalTab:
-        if key and key in self.open_tabs:
-            page = self.open_tabs[key]
-            self.view.set_selected_page(page)
-            return page.get_child()
+        """key = (cluster id, tmux session) for sessions; no key = a log that stays open until closed."""
+        if key and self.current and self.current.key == key:
+            return self.current.tab
         tab = TerminalTab(argv, node, on_link)
-        page = self.view.append(tab)
-        page.set_title(title)
-        page.set_tooltip(title)
-        page.set_icon(color_icon(color) if color else Gio.ThemedIcon.new(icon))
         if key:
-            self.open_tabs[key] = page
-            GLib.timeout_add(1500, lambda: self.refresh() and False)
-        self.view.set_selected_page(page)
-        tab.term.grab_focus()
+            s = next((x for x in self.sessions if x.cfg.id == key[0]), None)
+            listed = self._listed(key)
+            view = View(key, tab, title, color, icon, s, listed or tmux.Session(key[1], label=title, color=color))
+            if not listed:
+                self.starting[key] = (title, color)
+                GLib.timeout_add(2000, lambda: self.refresh() and False)
+        else:
+            view = View(("log", str(id(tab))), tab, title, color, icon)
+            self.logs.append(view)
+        self._show(view)
+        self._fill()
         return tab
 
     def attach(self, s: ClusterSession, t: tmux.Session) -> None:
         self.open(t.title, s.ssh.argv(tmux.attach(t), tty=True), "utilities-terminal-symbolic",
                   key=(s.cfg.id, t.name), color=t.color or tmux.AGENT_COLORS.get(t.agent, ""))
+
+    def _listed(self, key: tuple[str, str]) -> tmux.Session | None:
+        listing = self.listings.get(key[0])
+        return next((t for t in listing.sessions if t.name == key[1]), None) if listing else None
 
     # -- session list ------------------------------------------------------------------------------
     def refresh(self) -> None:
@@ -210,34 +258,77 @@ class TerminalsPage(Gtk.Box):
                 self.listings.pop(s.cfg.id, None)
         self._fill()
         for s in live:
-            _bg(lambda s=s: tmux.list_sessions(s.ssh),
-                lambda listing, err, s=s: (self.listings.__setitem__(s.cfg.id, listing) if listing else None,
-                                           self._fill()))
+            _bg(lambda s=s: tmux.list_sessions(s.ssh), lambda listing, err, s=s: self._listed_in(s, listing))
+
+    def _listed_in(self, s: ClusterSession, listing: tmux.Listing | None) -> None:
+        if not listing:
+            return
+        self.listings[s.cfg.id] = listing
+        for t in listing.sessions:
+            self.starting.pop((s.cfg.id, t.name), None)
+        if self.current and self.current.session is s:  # keep the header in step with renames
+            t = self._listed(self.current.key)
+            if t:
+                self.current.tmux_session, self.current.title = t, t.title
+                self.current.color = t.color or tmux.AGENT_COLORS.get(t.agent, "") or self.current.color
+                self._header(self.current)
+        self._fill()
 
     def _fill(self) -> None:
         self.list.remove_all()
+        if self.logs:
+            self.list.append(self._note("Logs", heading=True))
+            for v in self.logs:
+                self.list.append(self._log_row(v))
         live = [s for s in self.sessions if s.state == State.CONNECTED and s.ssh]
         if not live:
             self.list.append(self._note("Connect a cluster to see its sessions."))
-            return
         for s in live:
             listing = self.listings.get(s.cfg.id)
             where = f" · {listing.host}" if listing and listing.host else ""
             self.list.append(self._note(f"{s.cfg.name}{where}", heading=True))
-            if listing is None:
+            items = list(listing.sessions) if listing else []
+            for (cid, name), (title, color) in self.starting.items():
+                if cid == s.cfg.id and not any(t.name == name for t in items):
+                    items.insert(0, tmux.Session(name, created=int(time.time()), label=title, color=color))
+            if listing is None and not items:
                 self.list.append(self._note("Loading…"))
-            elif not listing.has_tmux and not listing.sessions:
+            elif listing and not listing.has_tmux and not items:
                 self.list.append(self._note("tmux is not installed here."))
-            elif not listing.sessions:
+            elif not items:
                 self.list.append(self._note("No sessions yet."))
-            else:
-                for t in listing.sessions:
-                    self.list.append(self._row(s, t))
+            for t in items:
+                self.list.append(self._row(s, t))
+        self._select()
+
+    def _select(self) -> None:
+        key = self.current.key if self.current else None
+        row = self.list.get_first_child()
+        while row:
+            if key and getattr(row, "key", None) == key:
+                self.list.select_row(row)
+                return
+            row = row.get_next_sibling()
+        self.list.unselect_all()
 
     def _note(self, text: str, heading: bool = False) -> Gtk.ListBoxRow:
         row = Gtk.ListBoxRow(activatable=False, selectable=False)
         row.set_child(Gtk.Label(label=text, xalign=0, wrap=True, margin_start=6, margin_top=10 if heading else 2,
                                 css_classes=["heading"] if heading else ["dim-label", "caption"]))
+        return row
+
+    def _log_row(self, v: View) -> Gtk.ListBoxRow:
+        row = Gtk.ListBoxRow()
+        box = Gtk.Box(spacing=8, margin_top=4, margin_bottom=4)
+        box.append(Gtk.Image(icon_name=v.icon))
+        box.append(Gtk.Label(label=v.title, xalign=0, hexpand=True, ellipsize=Pango.EllipsizeMode.END))
+        x = Gtk.Button(icon_name="window-close-symbolic", css_classes=["flat", "circular"], valign=Gtk.Align.CENTER,
+                       tooltip_text="Close log")
+        x.connect("clicked", lambda *_: (self._show(v), self.close_current()))
+        box.append(x)
+        row.set_child(box)
+        row.key = v.key
+        row.open = lambda: self._show(v)
         return row
 
     def _row(self, s: ClusterSession, t: tmux.Session) -> Gtk.ListBoxRow:
@@ -246,8 +337,8 @@ class TerminalsPage(Gtk.Box):
         box.append(color_dot(t.color or tmux.AGENT_COLORS.get(t.agent, "")))
         text = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, hexpand=True)
         text.append(Gtk.Label(label=t.title, xalign=0, ellipsize=Pango.EllipsizeMode.END))
-        here = (s.cfg.id, t.name) in self.open_tabs
-        state = "open here" if here else "in use elsewhere" if t.attached else "running"
+        here = self.current is not None and self.current.key == (s.cfg.id, t.name)
+        state = "open" if here else "in use elsewhere" if t.attached else "running"
         what = AGENT_NAMES.get(t.agent, "screen" if t.kind == "screen" else t.command or "tmux")
         bits = [what, _ago(t.created), state]
         text.append(Gtk.Label(label=" · ".join(b for b in bits if b), xalign=0, ellipsize=Pango.EllipsizeMode.END,
@@ -258,6 +349,7 @@ class TerminalsPage(Gtk.Box):
         box.append(menu)
         row.set_child(box)
         row.set_tooltip_text(f"{t.name} ({t.kind}){' in ' + t.path if t.path else ''}")
+        row.key = (s.cfg.id, t.name)
         row.open = lambda: self.attach(s, t)
         return row
 
@@ -265,12 +357,10 @@ class TerminalsPage(Gtk.Box):
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2, margin_top=4, margin_bottom=4,
                       margin_start=4, margin_end=4)
         pop = Gtk.Popover(child=box)
-        items = [("Open", lambda: self.attach(s, t)), ("Rename…", lambda: self.rename(s, t))]
-        for label, fn in items:
-            b = Gtk.Button(label=label, css_classes=["flat"])
-            b.get_child().set_xalign(0)
-            b.connect("clicked", lambda *_, f=fn: (pop.popdown(), f()))
-            box.append(b)
+        b = Gtk.Button(label="Rename…", css_classes=["flat"])
+        b.get_child().set_xalign(0)
+        b.connect("clicked", lambda *_: (pop.popdown(), self.rename(s, t)))
+        box.append(b)
         if t.kind == "tmux":
             colors = Gtk.Box(spacing=4, margin_top=4, margin_bottom=4, margin_start=6)
             for c in tmux.COLORS:
@@ -285,14 +375,15 @@ class TerminalsPage(Gtk.Box):
         return pop
 
     def _do(self, s: ClusterSession, line: str, t: tmux.Session, color: str = "", title: str = "") -> None:
+        key = (s.cfg.id, t.name)
+
         def done(_r, err):
             if err:
                 self.toast(f"Failed: {err}")
-            page = self.open_tabs.get((s.cfg.id, t.name))
-            if page and color:
-                page.set_icon(color_icon(color))
-            if page and title:
-                page.set_title(title)
+            v = self.current
+            if v and v.key == key:
+                v.color, v.title = color or v.color, title or v.title
+                self._header(v)
             self.refresh()
         _bg(lambda: tmux.run(s.ssh, line), done)
 
@@ -321,9 +412,8 @@ class TerminalsPage(Gtk.Box):
         def on_response(_d, r):
             if r != "stop":
                 return
-            page = self.open_tabs.pop((s.cfg.id, t.name), None)
-            if page:
-                self.view.close_page(page)
+            if self.current and self.current.key == (s.cfg.id, t.name):
+                self._show(None)
             self._do(s, tmux.kill(t), t)
         d.connect("response", on_response)
         d.present(self.get_root())
