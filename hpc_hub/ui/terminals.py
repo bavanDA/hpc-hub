@@ -15,6 +15,7 @@ from gi.repository import Adw, Gdk, Gio, GLib, Gtk, Pango, Vte  # noqa: E402
 from .. import links, remote, tmux  # noqa: E402
 from ..links import Link  # noqa: E402
 from ..session import ClusterSession, State  # noqa: E402
+from .widgets import remember_size  # noqa: E402
 
 
 class TerminalTab(Gtk.Box):
@@ -152,14 +153,12 @@ class TerminalsPage(Gtk.Box):
         self.append(bar)
         self.append(Gtk.Separator(orientation=Gtk.Orientation.VERTICAL))
 
-        self.panels = Gtk.Stack(width_request=290, transition_type=Gtk.StackTransitionType.CROSSFADE)
+        self.panels = Gtk.Stack(width_request=200, transition_type=Gtk.StackTransitionType.CROSSFADE)
         self.panels.add_named(self._sessions_panel(), "sessions")
         self.panels.add_named(self._logs_panel(), "logs")
         self.panels.add_named(self._new_panel(), "new")
-        self.panel = Gtk.Box(visible=False)
-        self.panel.append(self.panels)
-        self.panel.append(Gtk.Separator(orientation=Gtk.Orientation.VERTICAL))
-        self.append(self.panel)
+        self.panel = self.panels
+        self.panel.set_visible(False)
 
         # right: a small header for the open session, then the terminal
         right = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, hexpand=True)
@@ -181,7 +180,10 @@ class TerminalsPage(Gtk.Box):
                         "Antigravity from a cluster card.")
         self.views.add_named(self.empty, "empty")
         right.append(self.views)
-        self.append(right)
+        # drag the line between the panel and the terminal to make the panel wider or narrower
+        self.append(remember_size(Gtk.Paned(start_child=self.panel, end_child=right, hexpand=True,
+                                            resize_start_child=False, shrink_start_child=False,
+                                            shrink_end_child=False), "terminals.panel", 290))
 
         self.connect("map", lambda *_: self.refresh())
         GLib.timeout_add_seconds(REFRESH_SECONDS, lambda: (self.get_mapped() and self.refresh(), True)[1])

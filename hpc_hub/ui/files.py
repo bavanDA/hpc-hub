@@ -14,6 +14,7 @@ from ..session import ClusterSession, State
 from .editor import EditorDialog
 from .pdf import PdfDialog
 from .preview import Preview
+from .widgets import remember_size
 
 DOWNLOADS = Path(GLib.get_user_special_dir(GLib.UserDirectory.DIRECTORY_DOWNLOAD) or Path.home()) / "HPC Hub"
 IMAGES = (".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".bmp")
@@ -400,8 +401,9 @@ class FilesPage(Gtk.Box):
         self.append(self.banner)
         self.pane = FilePane(sessions, toast, 0, self.copy, on_latex)
         self.preview = Preview(TEXT)
-        self.split = Gtk.Paned(start_child=self.pane, vexpand=True, wide_handle=True,
-                               resize_start_child=True, resize_end_child=True, shrink_end_child=False, position=560)
+        self.split = remember_size(Gtk.Paned(start_child=self.pane, vexpand=True, wide_handle=True,
+                                             resize_start_child=True, resize_end_child=True,
+                                             shrink_end_child=False), "files.preview", 560)
         self.append(self.split)
         self.preview_on = Gtk.ToggleButton(icon_name="view-dual-symbolic", active=True, css_classes=["flat"],
                                            tooltip_text="Preview a file when you select it")

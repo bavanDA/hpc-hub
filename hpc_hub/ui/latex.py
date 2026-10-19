@@ -14,6 +14,7 @@ from ..projects import Project, ProjectStore
 from ..session import ClusterSession, State
 from .editor import source_view
 from .pdf import PdfView
+from .widgets import remember_size
 
 PROJECT_EXT = (".tex", ".bib", ".sty", ".cls", ".bst")
 
@@ -165,8 +166,8 @@ class LatexPage(Gtk.Box):
         self.buf = self.view.get_buffer()
         self.buf.connect("changed", self._changed)
         self.pdf = PdfView()
-        paned = Gtk.Paned(start_child=Gtk.ScrolledWindow(child=self.view), end_child=self.pdf, vexpand=True,
-                          wide_handle=True, position=620)
+        paned = remember_size(Gtk.Paned(start_child=Gtk.ScrolledWindow(child=self.view), end_child=self.pdf,
+                                        vexpand=True, wide_handle=True), "latex.editor", 620)
         page.append(paned)
 
         self.issues = Gtk.ListBox(selection_mode=Gtk.SelectionMode.NONE, css_classes=["boxed-list"])
