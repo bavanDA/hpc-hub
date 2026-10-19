@@ -44,10 +44,6 @@ class Project:
         """LaTeX papers live in the LaTeX tab, code in Projects. Old entries: a main .tex at the top."""
         return self.kind == "latex" or not self.kind and bool(self.main_tex) and "/" not in self.main_tex
 
-    @property
-    def folder_name(self) -> str:
-        return posixpath.basename(self.path.rstrip("/")) or self.path
-
 
 def load(path: Path = PROJECTS_FILE) -> list[Project]:
     if not path.exists():

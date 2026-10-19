@@ -476,7 +476,7 @@ class LatexPage(Gtk.Box):
         for label, icon, fn in (("Pull", "go-down-symbolic", lambda: self._git("Pulled", git.pull)),
                                 ("Push", "go-up-symbolic", lambda: self._git("Pushed", git.push)),
                                 ("Commit, history and remote…", "vcs-branch-symbolic",
-                                 lambda: GitDialog(self.session, self.folder, self.toast).present(self.get_root()))):
+                                 lambda: GitDialog(self.session, self.folder).present(self.get_root()))):
             b = Gtk.Button(child=Adw.ButtonContent(label=label, icon_name=icon), css_classes=["flat"])
             b.connect("clicked", lambda *_, f=fn: (pop.popdown(), self.session and f()))
             box.append(b)
@@ -668,9 +668,9 @@ class LatexPage(Gtk.Box):
 
 
 class GitDialog(Adw.Dialog):
-    def __init__(self, session: ClusterSession, folder: str, toast: Callable[[str], None]):
+    def __init__(self, session: ClusterSession, folder: str):
         super().__init__(title="Git", content_width=720, content_height=680)
-        self.session, self.folder, self.app_toast = session, folder, toast
+        self.session, self.folder = session, folder
         self.page = Adw.PreferencesPage()
         self.toasts = Adw.ToastOverlay(child=self.page)
         tv = Adw.ToolbarView(content=self.toasts)

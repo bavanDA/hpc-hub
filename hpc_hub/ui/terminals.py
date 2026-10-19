@@ -281,9 +281,6 @@ class TerminalsPage(Gtk.Box):
         elif not any(b.get_active() for b in self.tabs.values()):
             self.panel.set_visible(False)  # clicked the open tab again: close the panel
 
-    def show_tab(self, name: str) -> None:
-        self.tabs[name].set_active(True)
-
     def _panel_head(self, title: str, *widgets: Gtk.Widget) -> Gtk.Box:
         head = Gtk.Box(spacing=6, margin_top=8, margin_bottom=8, margin_start=10, margin_end=8)
         head.append(Gtk.Label(label=title, xalign=0, hexpand=True, css_classes=["heading"]))

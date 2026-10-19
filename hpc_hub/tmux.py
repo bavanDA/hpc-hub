@@ -21,7 +21,6 @@ SCREEN_RE = re.compile(r"^\s+(\d+)\.(\S+)\s+\((?:\d.*?\)\s+\()?(Attached|Detache
 COLORS = ["#3584e4", "#2ec27e", "#e5a50a", "#ff7800", "#e01b24", "#9141ac", "#986a44", "#77767b"]
 AGENT_COLORS = {"claude": "#d97757", "codex": "#10a37f", "agy": "#4285f4", "cursor": "#8b8b8b",
                 "ask": "#9141ac", "vscode": "#3584e4"}
-NAME_RE = re.compile(r"^[\w.-]+$")
 
 
 @dataclass

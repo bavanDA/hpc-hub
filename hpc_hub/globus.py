@@ -176,8 +176,5 @@ class Globus:
         q = urllib.parse.urlencode({"limit": limit, "orderby": "request_time desc", "filter": "type:TRANSFER"})
         return _http("GET", f"{TRANSFER}/task_list?{q}", self._token()).get("DATA", [])
 
-    def task(self, task_id: str) -> dict:
-        return _http("GET", f"{TRANSFER}/task/{urllib.parse.quote(task_id)}", self._token())
-
     def cancel(self, task_id: str) -> None:
         _http("POST", f"{TRANSFER}/task/{urllib.parse.quote(task_id)}/cancel", self._token(), body={})

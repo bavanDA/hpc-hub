@@ -1,7 +1,6 @@
 """VS Code and Claude on the compute node: dialogs + launch into a terminal tab."""
 
 import posixpath
-import shlex
 import shutil
 import subprocess
 import threading

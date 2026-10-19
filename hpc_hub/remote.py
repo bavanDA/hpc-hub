@@ -54,7 +54,3 @@ def on_node(job_id: str, workdir: str, command: str) -> str:
     """Interactive shell on the job's node (bash -i so ~/.bashrc aliases work)."""
     inner = f"{cd_part(workdir)} && {command}; exec bash -i"
     return f"srun --jobid={int(job_id)} --overlap --pty bash -ic {shlex.quote(inner)}"
-
-
-def on_login(workdir: str, command: str) -> str:
-    return f"bash -ic {shlex.quote(f'{cd_part(workdir)} && {command}; exec bash -i')}"
