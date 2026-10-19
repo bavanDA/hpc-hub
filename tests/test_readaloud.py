@@ -25,3 +25,24 @@ def test_align_handles_splits_merges_and_drift():
     filled = align.fill_gaps(ws, t, 2.4)
     assert [w for w, _, _ in filled] == list(range(9))  # every word, dash included
     assert all(a[1] <= b[1] for a, b in zip(filled, filled[1:]))
+
+
+def test_dictionary_parsing():
+    from hpc_hub.readaloud import dictionary as d
+    assert d.term("“Census,”") == "census" and "study" in d.base_forms("studies")
+    assert d.base_forms("running")[:3] == ["runn", "runne", "run"]
+    free = [{"word": "algorithm", "phonetic": "/ˈælɡəɹɪðm̩/", "phonetics": [{"audio": "https://x/a.mp3"}],
+             "meanings": [{"partOfSpeech": "noun", "definitions": [{"definition": "Steps.", "example": "An example.",
+                                                                   "synonyms": ["procedure"]}]}]}]
+    e = d.parse_free("algorithm", free)
+    assert (e.respelling, e.audio, e.meanings[0][0]) == ("AL-guh-ri-thuhm", "https://x/a.mp3", "noun")
+    assert e.meanings[0][1][0].synonyms == ["procedure"]
+    wik = {"en": [{"partOfSpeech": "Noun", "definitions": [{"definition": "A <a href='x'>polygon</a> &amp; more",
+                                                            "examples": ["<i>A</i> triangle."]}]}]}
+    w = d.parse_wiktionary("triangle", wik)
+    assert w.meanings[0][1][0].definition == "A polygon & more" and w.meanings[0][1][0].example == "A triangle."
+    import pytest
+    with pytest.raises(d.NotFound):
+        d.parse_wiktionary("triangles", {"en": [{"definitions": [{"definition": "plural of triangle"}]}]})
+    with pytest.raises(d.NotFound):
+        d.term("3.5")
