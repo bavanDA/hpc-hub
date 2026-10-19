@@ -66,11 +66,13 @@ class VsCodeSettings:
 
 
 @dataclass
-class ClaudeSettings:
+class AgentSettings:
+    """Claude, ChatGPT (codex) or Antigravity (agy) on a compute node."""
     command: str = "claude"
     workdir: str = "~"
     skip_permissions: bool = False
     new_node: bool = False
+    remote: bool = False
 
 
 @dataclass
@@ -98,7 +100,9 @@ class ClusterConfig:
     vpn: VpnSettings = field(default_factory=VpnSettings)
     profile: ComputeProfile = field(default_factory=ComputeProfile)
     vscode: VsCodeSettings = field(default_factory=VsCodeSettings)
-    claude: ClaudeSettings = field(default_factory=ClaudeSettings)
+    claude: AgentSettings = field(default_factory=AgentSettings)
+    codex: AgentSettings = field(default_factory=lambda: AgentSettings(command="codex"))
+    agy: AgentSettings = field(default_factory=lambda: AgentSettings(command="agy"))
     globus: GlobusSettings = field(default_factory=GlobusSettings)
     latex: LatexSettings = field(default_factory=LatexSettings)
 
