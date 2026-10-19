@@ -22,6 +22,7 @@ class Actions:
     files: Callable[[ClusterSession, str], None]
     latex: Callable[[ClusterSession, Project], None]
     connect: Callable[[ClusterSession], None]
+    ask: Callable[[ClusterSession, str], None] = lambda s, folder: None  # Ask all agents in a folder
 
 
 def slug(name: str) -> str:
@@ -95,7 +96,9 @@ class ProjectsPage(Gtk.Box):
         box.append(vscode_button(lambda t: self.run(p, lambda: self.act.vscode(s, p.path, t)), label=""))
         for b in agent_buttons(lambda agent: self.run(p, lambda: self.act.agent(s, agent, p.path)), labels=False):
             box.append(b)
-        for icon, tip, fn in (("folder-symbolic", "Files", lambda: self.act.files(s, p.path)),
+        for icon, tip, fn in (("system-users-symbolic", "Ask all agents in this project",
+                               lambda: self.act.ask(s, p.path)),
+                              ("folder-symbolic", "Files", lambda: self.act.files(s, p.path)),
                               ("x-office-document-symbolic", "LaTeX", lambda: self.act.latex(s, p))):
             b = Gtk.Button(icon_name=icon, tooltip_text=tip)
             b.connect("clicked", lambda *_, f=fn: self.run(p, f))

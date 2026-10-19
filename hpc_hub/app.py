@@ -109,7 +109,8 @@ class HpcHubApp(Adw.Application):
                     agent=lambda s, agent, folder: self.tools.agent(s, agent, folder),
                     files=self._open_files,
                     latex=self._open_latex_project,
-                    connect=self.connect_session)),
+                    connect=self.connect_session,
+                    ask=lambda s, folder: self.tools.ask_all(s, folder))),
                 self.projects)
             self.window.connect("close-request", self._on_close_request)
             self.window.terminals.on_tool = self.open_tool
