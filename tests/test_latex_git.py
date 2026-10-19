@@ -11,13 +11,25 @@ l.12 \\foo
 """
 
 
-def test_build_command():
-    s = LatexSettings(setup="module load TeXLive")
-    cmd = latex.build_command("/home/u/paper/main.tex", s, job_id="42")
-    assert cmd.startswith("srun --jobid=42 --overlap bash -lc")
-    assert "module load TeXLive && if command -v latexmk" in cmd and "latexmk -pdf " in cmd
-    assert latex.build_command("/p/main.tex", LatexSettings(on_node=False), "42").startswith("bash -lc")
+def test_build_script():
+    cmd = latex.build_script("/home/u/paper/main.tex", LatexSettings(setup="module load TeXLive"))
+    assert cmd.startswith("bash -lc")  # module needs a login shell
+    assert "module load TeXLive && cd /home/u/paper && if command -v latexmk" in cmd and "latexmk -pdf " in cmd
+    plain = latex.build_script("/p/main.tex", LatexSettings())
+    assert plain.startswith("cd /p && if command -v latexmk") and "\\\\citation" in plain
     assert latex.pdf_path("/p/main.tex") == "/p/main.pdf"
+
+
+def test_build_runs_on_node_or_login():
+    class Ssh:
+        def run(self, cmd, timeout=60, fast=None):
+            return ("login", fast)
+
+        def run_on_node(self, job, cmd, timeout=900):
+            return ("node", job)
+    assert latex.build(Ssh(), "/p/main.tex", LatexSettings(on_node=True), "42") == ("node", "42")
+    assert latex.build(Ssh(), "/p/main.tex", LatexSettings(on_node=False), "42") == ("login", True)
+    assert latex.build(Ssh(), "/p/main.tex", LatexSettings(on_node=True), None) == ("login", True)
 
 
 def test_parse_issues():

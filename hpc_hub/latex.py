@@ -7,6 +7,7 @@ from dataclasses import dataclass
 
 from . import remote
 from .config import LatexSettings
+from .ssh import SshMaster
 
 ERROR_RE = re.compile(r"^(?:\./)?([^:\s][^:]*\.(?:tex|sty|cls|bib|bbl)):(\d+): (.+)$", re.M)
 
@@ -18,7 +19,8 @@ class LatexIssue:
     message: str
 
 
-def build_command(main_tex: str, s: LatexSettings, job_id: str | None = None) -> str:
+def build_script(main_tex: str, s: LatexSettings) -> str:
+    """Shell text that builds main_tex: latexmk if there is one, else pdflatex/bibtex by hand."""
     folder, name = posixpath.split(main_tex)
     flag, binary = {"xelatex": ("-pdfxe", "xelatex"), "lualatex": ("-pdflua", "lualatex")}.get(
         s.engine, ("-pdf", "pdflatex"))
@@ -28,11 +30,18 @@ def build_command(main_tex: str, s: LatexSettings, job_id: str | None = None) ->
             f"latexmk {flag} -interaction=nonstopmode -file-line-error -synctex=1 -halt-on-error {q}; "
             f"else {once} && {{ ! grep -q '\\\\citation' {base}.aux 2>/dev/null || bibtex {base}; }} "
             f"&& {once} && {once}; fi")
-    steps = f"{s.setup.strip()} && {tool}" if s.setup.strip() else tool
-    script = f"{remote.cd_part(folder or '.')} && {steps}"
+    script = f"{remote.cd_part(folder or '.')} && {tool}"
+    if s.setup.strip():  # "module load ..." needs a login shell
+        return f"bash -lc {shlex.quote(f'{s.setup.strip()} && {script}')}"
+    return script
+
+
+def build(ssh: SshMaster, main_tex: str, s: LatexSettings, job_id: str | None = None):
+    """Build on the job's node (if set) or the login node, through shells kept open: no start-up cost."""
+    script = build_script(main_tex, s)
     if job_id and s.on_node:
-        return f"srun --jobid={int(job_id)} --overlap bash -lc {shlex.quote(script)}"
-    return f"bash -lc {shlex.quote(script)}"
+        return ssh.run_on_node(job_id, script, timeout=900)
+    return ssh.run(script, timeout=900, fast=True)
 
 
 def pdf_path(main_tex: str) -> str:

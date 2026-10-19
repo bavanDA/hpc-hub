@@ -422,13 +422,12 @@ class LatexPage(Gtk.Box):
             return
         s = self.session
         a = s.allocation
-        cmd = latex.build_command(self.main, s.cfg.latex, a.job_id if a else None)
         self.building = True
         self.spinner.set_visible(True)
         self.build_btn.set_sensitive(False)
 
         def work():
-            res = s.ssh.run(cmd, timeout=900)
+            res = latex.build(s.ssh, self.main, s.cfg.latex, a.job_id if a else None)
             log = (res.stdout or "") + (res.stderr or "")
             pdf = None
             if res.returncode == 0:
