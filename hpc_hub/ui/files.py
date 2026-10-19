@@ -10,6 +10,7 @@ from gi.repository import Adw, Gdk, Gio, GLib, GObject, Gtk, Pango
 from .. import remote_fs, transfer
 from ..remote_fs import Entry
 from ..session import ClusterSession, State
+from . import file_menu
 from .editor import EditorDialog
 from .pdf import PdfDialog
 from .preview import IMAGES, Preview
@@ -19,15 +20,6 @@ DOWNLOADS = Path(GLib.get_user_special_dir(GLib.UserDirectory.DIRECTORY_DOWNLOAD
 TEXT = (".txt", ".md", ".py", ".sh", ".tex", ".bib", ".sty", ".cls", ".json", ".yaml", ".yml", ".toml", ".cfg",
         ".ini", ".csv", ".tsv", ".log", ".out", ".err", ".c", ".h", ".cpp", ".hpp", ".cu", ".java", ".js", ".ts",
         ".r", ".jl", ".m", ".slurm", ".sbatch", ".bashrc", ".conf", ".xml", ".html", ".css", ".rs", ".go", "")
-ARCHIVES = (".zip", ".tar.gz", ".tgz", ".tar", ".tar.bz2", ".tar.xz")
-
-
-def _ext(name: str) -> str:
-    low = name.lower()
-    for multi in (".tar.gz", ".tar.bz2", ".tar.xz"):
-        if low.endswith(multi):
-            return multi
-    return posixpath.splitext(low)[1]
 
 
 class EntryItem(GObject.Object):
@@ -44,6 +36,10 @@ class FilePane(Gtk.Box):
         self.toast = toast
         self.on_copy = on_copy
         self.on_latex = on_latex
+        self.on_tool: Callable[[ClusterSession, str, str], None] | None = None  # VS Code / agents in a folder
+        self.on_paste: Callable[[], None] | None = None
+        self.can_paste: Callable[[], bool] | None = None
+        self.text_ext = TEXT
         self.paths: dict[str, str] = {}
         self.path = ""
 
@@ -76,6 +72,7 @@ class FilePane(Gtk.Box):
             f.connect("bind", self._bind, attr)
             self.view.append_column(Gtk.ColumnViewColumn(title=title, factory=f, expand=expand, resizable=True))
         self.view.connect("activate", lambda _v, pos: self.open_entry(self.store.get_item(pos).entry))
+        file_menu.install(self)
 
         self.empty = Adw.StatusPage(icon_name="folder-symbolic")
         self.stack = Gtk.Stack(vexpand=True)
@@ -121,10 +118,11 @@ class FilePane(Gtk.Box):
 
     def _bind(self, _f, item, attr):
         e: Entry = item.get_item().entry
+        item.get_child().row_pos = item.get_position()  # for the right-click menu
         if attr == "name":
             icon, label = item.get_child().get_first_child(), item.get_child().get_last_child()
             icon.set_from_icon_name("folder-symbolic" if e.is_dir else
-                                    "x-office-document-symbolic" if _ext(e.name) == ".pdf" else "text-x-generic-symbolic")
+                                    "x-office-document-symbolic" if remote_fs.ext(e.name) == ".pdf" else "text-x-generic-symbolic")
             label.set_label(e.name)
         elif attr == "size":
             item.get_child().set_label("" if e.is_dir else GLib.format_size(e.size))
@@ -213,10 +211,10 @@ class FilePane(Gtk.Box):
         for b in self.actions.values():
             b.set_sensitive(ok)
         if e:
-            is_archive = _ext(e.name) in ARCHIVES
+            is_archive = remote_fs.ext(e.name) in remote_fs.ARCHIVES
             self.actions["zip"].set_tooltip_text("Extract here" if is_archive else "Zip on the cluster")
             self.actions["zip"].set_icon_name("extract-archive-symbolic" if is_archive else "package-x-generic-symbolic")
-            self.actions["latex"].set_visible(_ext(e.name) == ".tex")
+            self.actions["latex"].set_visible(remote_fs.ext(e.name) == ".tex")
         else:
             self.actions["latex"].set_visible(False)
 
@@ -239,7 +237,7 @@ class FilePane(Gtk.Box):
         if e.is_dir:
             self.go(self.child(e))
             return
-        s, path, ext = self.session, self.child(e), _ext(e.name)
+        s, path, ext = self.session, self.child(e), remote_fs.ext(e.name)
         root = self.get_root()
         if ext == ".pdf":
             bg(lambda: remote_fs.read_bytes(s.ssh, path),
@@ -258,6 +256,9 @@ class FilePane(Gtk.Box):
             EditorDialog(s, path).present(root)
         else:
             self.download(e, open_after=True)
+
+    def edit(self, e: Entry) -> None:
+        EditorDialog(self.session, self.child(e)).present(self.get_root())
 
     def download(self, e: Entry, open_after: bool = False) -> None:
         s = self.session
@@ -320,7 +321,7 @@ class FilePane(Gtk.Box):
 
     def zip_or_extract(self, e: Entry) -> None:
         s, path = self.session, self.child(e)
-        if _ext(e.name) in ARCHIVES:
+        if remote_fs.ext(e.name) in remote_fs.ARCHIVES:
             self.toast(f"Extracting {e.name}…")
             bg(lambda: remote_fs.extract(s.ssh, path), self._done(f"Extracted {e.name}"))
         else:
@@ -368,7 +369,7 @@ class FilesPage(Gtk.Box):
         self.banner.connect("button-clicked", lambda *_: self.paste())
         self.append(self.banner)
         self.pane = FilePane(sessions, toast, 0, self.copy, on_latex)
-        self.preview = Preview(TEXT)
+        self.preview = Preview(TEXT, toast)
         self.split = remember_size(Gtk.Paned(start_child=self.pane, vexpand=True, wide_handle=True,
                                              resize_start_child=True, resize_end_child=True,
                                              shrink_end_child=False), "files.preview", 560)
@@ -378,6 +379,8 @@ class FilesPage(Gtk.Box):
         self.preview_on.connect("toggled", lambda *_: self._preview(self.pane.selected()))
         self.pane.nav.append(self.preview_on)
         self.pane.on_select = self._preview
+        self.pane.on_paste = self.paste
+        self.pane.can_paste = lambda: self.clip is not None
 
         self.transfers = Gtk.ListBox(selection_mode=Gtk.SelectionMode.NONE, css_classes=["boxed-list"])
         self.revealer = Gtk.Revealer(child=Gtk.ScrolledWindow(child=self.transfers, max_content_height=180,
@@ -393,7 +396,10 @@ class FilesPage(Gtk.Box):
             self.pane.set_session(session)
 
     def _preview(self, e: Entry | None) -> None:
-        """The preview panel only shows while a file is selected."""
+        """The preview panel only shows while a file is selected. Unsaved edits are asked about first."""
+        self.preview.leave(lambda: self._show_preview(e))
+
+    def _show_preview(self, e: Entry | None) -> None:
         show = e is not None and not e.is_dir and self.preview_on.get_active()
         if show:
             if self.split.get_end_child() is None:

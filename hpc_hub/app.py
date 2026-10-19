@@ -113,6 +113,7 @@ class HpcHubApp(Adw.Application):
                 self.projects)
             self.window.connect("close-request", self._on_close_request)
             self.window.terminals.on_tool = self.open_tool
+            self.window.files.pane.on_tool = self._tool_in_folder
             self.tools = Tools(self.window, self.window.terminals,
                                lambda: self.window.stack.set_visible_child_name("terminals"),
                                self.window.toast, lambda: config.save(self.clusters))
@@ -253,6 +254,12 @@ class HpcHubApp(Adw.Application):
         elif tool == "files":
             self.window.files.show_cluster(session)
             self.window.stack.set_visible_child_name("files")
+
+    def _tool_in_folder(self, session: ClusterSession, tool: str, folder: str) -> None:
+        if tool == "vscode":
+            self.tools.vscode(session, folder)
+        elif tool.startswith("agent:"):
+            self.tools.agent(session, tool.partition(":")[2], folder)
 
     def _open_files(self, session: ClusterSession, folder: str) -> None:
         self.window.files.open_at(session, folder)
