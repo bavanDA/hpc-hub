@@ -39,7 +39,7 @@ def command(agent: Agent, s: AgentSettings, chat_id: str = "") -> str:
         if s.remote:
             # the remote-control daemon lives as long as this job step (tmux keeps the step alive)
             line = (f"{base} remote-control start >/dev/null && echo {shlex.quote(PAIR_NOTE)} && "
-                    f"{base} remote-control pair; {line}")
+                    f"{base} remote-control pair --json; {line}")
         return line
     args = list(skip)
     if s.remote:

@@ -18,7 +18,7 @@ def test_codex():
     s.remote, s.skip_permissions = True, False
     line = agents.command(agents.CODEX, s)
     assert line.startswith("codex remote-control start >/dev/null && echo ")
-    assert line.endswith("&& codex remote-control pair; codex")
+    assert line.endswith("&& codex remote-control pair --json; codex")
 
 
 def test_agy():
