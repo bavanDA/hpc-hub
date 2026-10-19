@@ -6,12 +6,14 @@ from .files import FilesPage
 from .jobs import JobsPage
 from .latex import LatexPage
 from .terminals import TerminalsPage
+from .schedules_page import SchedulesPage
 from .usage_page import UsagePage
 
 
 GROUPS = [  # sidebar sections: (heading, [(page, title, icon)])
     ("Work", [("projects", "Projects", "view-grid-symbolic"), ("latex", "LaTeX", "x-office-document-symbolic"),
-              ("terminals", "Terminals", "utilities-terminal-symbolic")]),
+              ("terminals", "Terminals", "utilities-terminal-symbolic"),
+              ("schedules", "Scheduled agents", "alarm-symbolic")]),
     ("Cluster", [("clusters", "Clusters", "network-server-symbolic"), ("jobs", "Jobs", "view-list-symbolic"),
                  ("usage", "Usage", "power-profile-performance-symbolic")]),
     ("Data", [("files", "Files", "folder-symbolic"), ("globus", "Globus", "network-transmit-receive-symbolic")]),
@@ -45,6 +47,7 @@ class MainWindow(Adw.ApplicationWindow):
         self.latex = pages["latex"] = LatexPage(sessions, self.toast, save_config, store,
                                                 lambda: self.projects.edit(None, create=True) if make_projects else None)
         self.terminals = pages["terminals"] = TerminalsPage(sessions, self.toast)
+        self.schedules = pages["schedules"] = SchedulesPage(sessions, self.toast, save_config)
 
         # left sidebar, grouped like GNOME Settings / Builder
         self.sidebar = Gtk.ListBox(css_classes=["navigation-sidebar"])
