@@ -150,11 +150,7 @@ class ClusterSession:
 
         def run():
             if a.owned:
-                try:
-                    slurm.cancel(self.ssh, a.job_id)
-                    self._log(f"Released job {a.job_id}")
-                except (OSError, ValueError, subprocess.SubprocessError) as e:
-                    self._log(f"Could not cancel job: {e}")
+                self._release(a.job_id)
             else:
                 self._log(f"Stopped using your job {a.job_id}, it keeps running")
             self.allocation = None
@@ -396,6 +392,14 @@ class ClusterSession:
             return
         self._set(State.CONNECTED)
 
+    def _release(self, job_id: str) -> None:
+        """scancel a node the app asked for. Blocking."""
+        try:
+            slurm.cancel(self.ssh, job_id)
+            self._log(f"Released job {job_id}")
+        except (OSError, ValueError, subprocess.SubprocessError) as e:
+            self._log(f"Could not cancel job: {e}")
+
     def _fail(self, message: str) -> None:
         self._log(message)
         if self.ssh:
@@ -412,11 +416,7 @@ class ClusterSession:
             if self.allocation and not self.allocation.owned:
                 self._log(f"Leaving your job {self.allocation.job_id} running")
             elif self.allocation:
-                try:
-                    slurm.cancel(self.ssh, self.allocation.job_id)
-                    self._log(f"Released job {self.allocation.job_id}")
-                except (OSError, ValueError, subprocess.SubprocessError) as e:
-                    self._log(f"Could not cancel job: {e}")
+                self._release(self.allocation.job_id)
             self.ssh.stop()
             self.ssh = None
         self.allocation = None
