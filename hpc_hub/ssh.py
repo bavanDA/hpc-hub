@@ -1,5 +1,6 @@
 """One SSH ControlMaster per cluster. Login (and Duo) happens once; later commands reuse it."""
 
+import shlex
 import socket
 import subprocess
 import threading
@@ -38,6 +39,7 @@ class SshMaster:
         self._shells = 0
         self._shell_lock = threading.Lock()
         self._fast_off_until = 0.0  # after a failed start, use plain ssh for a while
+        self._node_shells: dict[str, tuple[FastShell | None, threading.Lock]] = {}  # job id -> shell on its node
 
     def _target(self) -> list[str]:
         return ["-p", str(self.cfg.port), "-l", self.username, "-S", str(self.control_path), "--", self.cfg.host]
@@ -93,9 +95,10 @@ class SshMaster:
         check = ["ssh", "-O", "check", *self._target()]
         return subprocess.run(check, capture_output=True).returncode == 0
 
-    def run(self, command: str, timeout: float = 60) -> subprocess.CompletedProcess:
-        """Quick commands go through a shell kept open on the login node; the rest through plain ssh."""
-        shell = self._take_shell() if timeout <= 60 else None
+    def run(self, command: str, timeout: float = 60, fast: bool | None = None) -> subprocess.CompletedProcess:
+        """Quick commands (or fast=True) go through a shell kept open on the login node; the rest through
+        plain ssh."""
+        shell = self._take_shell() if (timeout <= 60 if fast is None else fast) else None
         if shell:
             try:
                 res = shell.run(command, timeout)
@@ -144,8 +147,34 @@ class SshMaster:
         with self._shell_lock:
             idle, self._idle = self._idle, []
             self._shells -= len(idle)
-        for shell in idle:
+            nodes, self._node_shells = self._node_shells, {}
+        for shell in idle + [sh for sh, _ in nodes.values()]:
             shell.close()
+
+    def run_on_node(self, job_id: str, command: str, timeout: float = 900) -> subprocess.CompletedProcess:
+        """Run on the job's node through a shell kept open there (no srun start-up each time)."""
+        job = str(int(job_id))
+        with self._shell_lock:
+            shell, lock = self._node_shells.get(job, (None, None))
+            if lock is None:
+                lock = threading.Lock()
+                self._node_shells[job] = (None, lock)
+        with lock:
+            if shell is None or not shell.alive:
+                try:
+                    shell = FastShell(self.argv(), timeout=60,
+                                      launcher=f"exec srun --jobid={job} --overlap bash --norc --noprofile")
+                except FastShellError:
+                    shell = None
+                with self._shell_lock:
+                    self._node_shells[job] = (shell, lock)
+            if shell:
+                try:
+                    return shell.run(command, timeout)
+                except FastShellError as e:
+                    if e.sent:
+                        return subprocess.CompletedProcess(command, 255, "", f"connection to the node broke: {e}")
+        return self.run(f"srun --jobid={job} --overlap bash -c {shlex.quote(command)}", timeout, fast=True)
 
     def popen(self, command: str, **kwargs) -> subprocess.Popen:
         return subprocess.Popen(self.argv(command), stdin=subprocess.DEVNULL, text=True, **kwargs)

@@ -27,9 +27,10 @@ def wrap(command: str, token: str) -> str:
 
 
 class FastShell:
-    def __init__(self, argv: list[str], timeout: float = 20):
+    def __init__(self, argv: list[str], timeout: float = 20, launcher: str = "exec bash --norc --noprofile"):
+        """launcher starts the shell; e.g. "exec srun --jobid=1 --overlap bash --norc --noprofile" for a node."""
         ready = f"HPCHUB_READY_{uuid.uuid4().hex}"
-        script = "exec bash --norc --noprofile -s " + ready  # stdin is the script; $1 is the ready word
+        script = f"{launcher} -s {ready}"  # stdin is the script; $1 is the ready word
         self.proc = subprocess.Popen([*argv, script], stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                                      stderr=subprocess.DEVNULL)
         self.sel = selectors.DefaultSelector()
