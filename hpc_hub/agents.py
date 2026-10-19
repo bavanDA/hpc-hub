@@ -19,7 +19,7 @@ class Agent:
 CLAUDE = Agent("claude", "Claude", "hpc-claude", "--dangerously-skip-permissions",
                "Remote control", "Use this session from claude.ai/code or the Claude app")
 CODEX = Agent("codex", "ChatGPT", "hpc-openai-symbolic", "--dangerously-bypass-approvals-and-sandbox",
-              "ChatGPT remote", "Pair this node with the ChatGPT app (Codex), it keeps running in the job")
+              "ChatGPT remote", "Use it from the ChatGPT app. One at a time: this stops the previous one")
 AGY = Agent("agy", "Antigravity", "hpc-antigravity", "--dangerously-skip-permissions",
             "Remote control", "Use this session from Antigravity on another device")
 AGENTS = [CLAUDE, CODEX, AGY]
@@ -34,11 +34,14 @@ def command(agent: Agent, s: AgentSettings, chat_id: str = "") -> str:
     skip = [agent.skip_flag] if s.skip_permissions else []
     chat = shlex.quote(chat_id) if chat_id else ""
     if agent is CODEX:
-        args = ["resume", chat, *skip] if chat else skip
+        # --no-daemon: Codex's shared background server keeps its socket in the job's private /tmp,
+        # so from any other job it is unreachable ("app server did not become ready").
+        args = ["resume", "--no-daemon", chat, *skip] if chat else ["--no-daemon", *skip]
         line = " ".join([base, *args])
         if s.remote:
-            # the remote-control daemon lives as long as this job step (tmux keeps the step alive)
-            line = (f"{base} remote-control start >/dev/null && echo {shlex.quote(PAIR_NOTE)} && "
+            # one remote server per account: stop the old one, start it in this job (tmux keeps it alive)
+            line = (f"{base} remote-control stop >/dev/null 2>&1; "
+                    f"{base} remote-control start >/dev/null && echo {shlex.quote(PAIR_NOTE)} && "
                     f"{base} remote-control pair --json; {line}")
         return line
     args = list(skip)

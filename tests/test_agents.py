@@ -12,13 +12,14 @@ def test_claude():
 
 def test_codex():
     s = AgentSettings(command="codex")
-    assert agents.command(agents.CODEX, s) == "codex"
+    assert agents.command(agents.CODEX, s) == "codex --no-daemon"
     s.skip_permissions = True
-    assert agents.command(agents.CODEX, s, "01a1") == "codex resume 01a1 --dangerously-bypass-approvals-and-sandbox"
+    assert agents.command(agents.CODEX, s, "01a1") == \
+        "codex resume --no-daemon 01a1 --dangerously-bypass-approvals-and-sandbox"
     s.remote, s.skip_permissions = True, False
     line = agents.command(agents.CODEX, s)
-    assert line.startswith("codex remote-control start >/dev/null && echo ")
-    assert line.endswith("&& codex remote-control pair --json; codex")
+    assert line.startswith("codex remote-control stop >/dev/null 2>&1; codex remote-control start >/dev/null && echo ")
+    assert line.endswith("&& codex remote-control pair --json; codex --no-daemon")
 
 
 def test_agy():
