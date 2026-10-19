@@ -68,10 +68,7 @@ class FilesMixin:
             self._show_figure(path)
             return
         if path != self.current:
-            if self.dirty:
-                self.save(then=lambda: self._load_file(path))
-            else:
-                self._load_file(path)
+            self._switch_to(path)
 
     def _show_figure(self, path: str) -> None:
         s = self.session

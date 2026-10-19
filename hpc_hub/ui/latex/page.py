@@ -23,9 +23,6 @@ class LatexPage(FilesMixin, SyncMixin, GitMixin, BuildMixin, Gtk.Box):
                  save_config: Callable[[], None], store: ProjectStore | None = None,
                  on_new_project: Callable[[], None] = lambda: None):
         super().__init__(orientation=Gtk.Orientation.VERTICAL)
-        self.sessions = sessions
-        self.store = store
-        self.on_new_project = on_new_project
         self.toast = toast
         self.save_config = save_config
         self.session: ClusterSession | None = None
@@ -180,6 +177,13 @@ class LatexPage(FilesMixin, SyncMixin, GitMixin, BuildMixin, Gtk.Box):
             self.buf.place_cursor(it)
             GLib.idle_add(lambda: self.view.scroll_to_iter(it, 0.2, True, 0, 0.3) and False)
             self.view.grab_focus()
+
+    def _switch_to(self, path: str, line: int = 0) -> None:
+        """Open another file, saving this one first if it changed."""
+        if self.dirty:
+            self.save(then=lambda: self._load_file(path, line))
+        else:
+            self._load_file(path, line)
 
     def _changed(self, *_):
         self.dirty = True

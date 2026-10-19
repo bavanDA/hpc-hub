@@ -39,7 +39,5 @@ class SyncMixin:
         target = posixpath.join(self.folder, rel) if rel else path
         if target == self.current:
             self._jump(line)
-        elif self.dirty:
-            self.save(then=lambda: self._load_file(target, line))
         else:
-            self._load_file(target, line)
+            self._switch_to(target, line)
