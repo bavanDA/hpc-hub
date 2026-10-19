@@ -61,6 +61,46 @@ def list_dir(ssh: SshMaster, path: str) -> list[Entry]:
     return parse_listing(_run(ssh, f"find -H {q(path)} -mindepth 1 -maxdepth 1 -printf {q(LIST_FORMAT)}", timeout=60))
 
 
+# Where people keep work on clusters: $HOME, $SCRATCH/$PROJECT/$WORK, site scratch/project trees, links in ~.
+PLACES = r"""
+emit() { [ -d "$2" ] && printf '%s	%s	%s
+' "$1" "$2" "$(readlink -f "$2")"; }
+emit Home "$HOME"
+for v in SCRATCH PROJECT WORK; do eval "p=\${$v:-}"; [ -n "$p" ] && emit "$(printf %s "$v" | tr A-Z a-z)" "$p"; done
+for p in /scratch/$USER /scratch/*/$USER /mmfs1/scratch/*/$USER /project/*/$USER /mmfs1/project/*/$USER          /nfs/*/project/*/$USER /nfs/*/scratch/*/$USER /expanse/lustre/projects/*/$USER          /expanse/lustre/scratch/$USER/temp_project /gpfs/*/$USER /work/$USER; do
+  [ -d "$p" ] || continue
+  d=$(dirname "$p"); emit "$(basename "$(dirname "$d")")/$(basename "$d")" "$p"
+done 2>/dev/null
+find "$HOME" -mindepth 1 -maxdepth 1 -type l -xtype d -printf '%f
+' 2>/dev/null | sort | while read -r n; do
+  emit "$n" "$HOME/$n"; done
+"""
+
+
+@dataclass
+class Place:
+    label: str
+    path: str
+
+
+def parse_places(text: str) -> list[Place]:
+    """One place per real folder, first label wins."""
+    seen, out = set(), []
+    for line in text.splitlines():
+        parts = line.split("\t")
+        if len(parts) != 3 or not parts[1]:
+            continue
+        label, path, real = parts
+        if real in seen:
+            continue
+        seen.add(real or path)
+        out.append(Place(label.strip("/") or path, path))
+    return out
+
+
+def places(ssh: SshMaster) -> list[Place]:
+    return parse_places(ssh.run(f"bash -c {q(PLACES)}", timeout=30).stdout)
+
 
 def head_bytes(ssh: SshMaster, path: str, n: int) -> bytes:
     """Up to the first n bytes (plus one, so callers can tell it was cut)."""

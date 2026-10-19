@@ -65,3 +65,24 @@ def test_list_dir_follows_link(tmp_path):
     (tmp_path / "link").symlink_to(real)
     assert [e.name for e in remote_fs.list_dir(LocalShell(), str(tmp_path / "link"))] == ["inside"]
 
+
+def test_places(tmp_path, monkeypatch):
+    home = tmp_path / "home"
+    (home / "work").mkdir(parents=True)
+    proj = tmp_path / "proj"
+    proj.mkdir()
+    (home / "project_pi").symlink_to(proj)
+    (home / "dup").symlink_to(home / "work")
+    monkeypatch.setenv("HOME", str(home))
+    monkeypatch.setenv("SCRATCH", str(home / "work"))
+    monkeypatch.delenv("PROJECT", raising=False)
+    monkeypatch.delenv("WORK", raising=False)
+    got = [(p.label, p.path) for p in remote_fs.places(LocalShell())]
+    assert got[0] == ("Home", str(home))
+    assert ("scratch", str(home / "work")) in got and ("project_pi", str(home / "project_pi")) in got
+    assert not any(label == "dup" for label, _ in got)  # same folder as scratch
+
+
+def test_parse_places_skips_junk():
+    text = "Home\t/h\t/h\nbad line\nx\t/h2\t/h\n"
+    assert [(p.label, p.path) for p in remote_fs.parse_places(text)] == [("Home", "/h")]
