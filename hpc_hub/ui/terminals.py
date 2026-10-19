@@ -376,8 +376,11 @@ class TerminalsPage(Gtk.Box):
             self.list.append(self._note("Connect a cluster to see its sessions."))
         for s in live:
             listing = self.listings.get(s.cfg.id)
-            where = f" · {listing.host}" if listing and listing.host else ""
-            self.list.append(self._note(f"{s.cfg.name}{where}", heading=True))
+            head = self._note(s.cfg.name, heading=True)
+            if listing and listing.host:  # tmux lives on the login node, the programs on compute nodes
+                head.set_tooltip_text(f"Sessions are kept by tmux on {listing.host}, so they survive closing the "
+                                      "app. Each row shows the compute node its program runs on.")
+            self.list.append(head)
             items = list(listing.sessions) if listing else []
             for (cid, name), (title, color) in self.starting.items():
                 if cid == s.cfg.id and not any(t.name == name for t in items):
@@ -389,7 +392,7 @@ class TerminalsPage(Gtk.Box):
             elif not items:
                 self.list.append(self._note("No sessions yet."))
             for t in items:
-                self.list.append(self._row(s, t))
+                self.list.append(self._row(s, t, listing.nodes if listing else None))
         self._select()
 
     def _select(self) -> None:
@@ -422,7 +425,7 @@ class TerminalsPage(Gtk.Box):
         row.open = lambda: self._show(v)
         return row
 
-    def _row(self, s: ClusterSession, t: tmux.Session) -> Gtk.ListBoxRow:
+    def _row(self, s: ClusterSession, t: tmux.Session, nodes: dict[str, str] | None = None) -> Gtk.ListBoxRow:
         row = Gtk.ListBoxRow()
         box = Gtk.Box(spacing=8, margin_top=4, margin_bottom=4)
         box.append(color_dot(t.color or tmux.AGENT_COLORS.get(t.agent, "")))
@@ -431,7 +434,12 @@ class TerminalsPage(Gtk.Box):
         here = self.current is not None and self.current.key == (s.cfg.id, t.name)
         state = "open" if here else "in use elsewhere" if t.attached else "running"
         what = AGENT_NAMES.get(t.agent, "screen" if t.kind == "screen" else t.command or "tmux")
-        bits = [what, _ago(t.created), state]
+        if t.job and nodes is not None:
+            node = nodes.get(t.job, "node ended")
+            state = "" if node == "node ended" and state == "running" else state
+        else:
+            node = ""
+        bits = [what, node, _ago(t.created), state]
         text.append(Gtk.Label(label=" · ".join(b for b in bits if b), xalign=0, ellipsize=Pango.EllipsizeMode.END,
                               css_classes=["dim-label", "caption"]))
         box.append(text)
