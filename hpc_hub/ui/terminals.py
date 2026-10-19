@@ -14,7 +14,7 @@ from gi.repository import Adw, Gdk, Gio, GLib, Gtk, Pango, Vte  # noqa: E402
 from .. import links, remote, tmux  # noqa: E402
 from ..links import Link  # noqa: E402
 from ..session import ClusterSession  # noqa: E402
-from .widgets import bg, open_uri, remember_size  # noqa: E402
+from .widgets import ask_name, bg, open_uri, remember_size  # noqa: E402
 
 
 class TerminalTab(Gtk.Box):
@@ -595,20 +595,9 @@ class TerminalsPage(Gtk.Box):
         bg(lambda: tmux.run(s.ssh, line), done)
 
     def rename(self, s: ClusterSession, t: tmux.Session) -> None:
-        d = Adw.AlertDialog(heading="Rename session", body=t.name)
-        entry = Gtk.Entry(text=t.title, activates_default=True)
-        d.set_extra_child(entry)
-        d.add_response("cancel", "Cancel")
-        d.add_response("ok", "Rename")
-        d.set_response_appearance("ok", Adw.ResponseAppearance.SUGGESTED)
-        d.set_default_response("ok")
-
-        def on_response(_d, r):
-            name = entry.get_text().strip()
-            if r == "ok" and name:
-                self._do(s, tmux.set_label(t, name), t, title=name)
-        d.connect("response", on_response)
-        d.present(self.get_root())
+        ask_name(self.get_root(), "Rename session", "Rename",
+                 lambda name: self._do(s, tmux.set_label(t, name), t, title=name),
+                 text=t.title, body=t.name, allow_slash=True)
 
     def stop(self, s: ClusterSession, t: tmux.Session) -> None:
         d = Adw.AlertDialog(heading=f"Stop {t.title}?", body="Everything running in it ends (Claude, a build…).")

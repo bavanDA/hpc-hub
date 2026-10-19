@@ -10,7 +10,7 @@ from gi.repository import Adw, Gio, GLib, GObject, Gtk, Pango, WebKit  # noqa: E
 
 from .. import globus  # noqa: E402
 from ..config import AppSettings, ClusterConfig  # noqa: E402
-from .widgets import bg  # noqa: E402
+from .widgets import ask_name, bg  # noqa: E402
 
 POLL_SECONDS = 10
 ACTIVE = ("ACTIVE", "INACTIVE")
@@ -331,22 +331,9 @@ class GlobusPane(Gtk.Box):
         cfg, client = self.cfg, self.page.client
         if not (client and cfg.globus.collection_id and self.path):
             return
-        d = Adw.AlertDialog(heading="New folder")
-        entry = Gtk.Entry(activates_default=True)
-        d.set_extra_child(entry)
-        d.add_response("cancel", "Cancel")
-        d.add_response("ok", "Create")
-        d.set_response_appearance("ok", Adw.ResponseAppearance.SUGGESTED)
-        d.set_default_response("ok")
-
-        def on_response(_d, r):
-            name = entry.get_text().strip()
-            if r != "ok" or not name or "/" in name:
-                return
-            bg(lambda: client.mkdir(cfg.globus.collection_id, posixpath.join(self.path, name)),
-               lambda _r, err: (self.page.toast(f"Failed: {err}") if err else self.go(self.path)))
-        d.connect("response", on_response)
-        d.present(self.get_root())
+        ask_name(self.get_root(), "New folder", "Create", lambda name: bg(
+            lambda: client.mkdir(cfg.globus.collection_id, posixpath.join(self.path, name)),
+            lambda _r, err: (self.page.toast(f"Failed: {err}") if err else self.go(self.path))))
 
 
 class TaskRow(Adw.ActionRow):

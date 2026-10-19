@@ -13,7 +13,7 @@ from ..session import ClusterSession, State
 from .editor import EditorDialog
 from .pdf import PdfDialog
 from .preview import Preview
-from .widgets import bg, remember_size
+from .widgets import ask_name, bg, remember_size
 
 DOWNLOADS = Path(GLib.get_user_special_dir(GLib.UserDirectory.DIRECTORY_DOWNLOAD) or Path.home()) / "HPC Hub"
 IMAGES = (".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".bmp")
@@ -294,35 +294,18 @@ class FilePane(Gtk.Box):
 
         dialog.open_multiple(self.get_root(), None, picked)
 
-    def _ask_name(self, heading: str, initial: str, confirm: str, then: Callable[[str], None]) -> None:
-        d = Adw.AlertDialog(heading=heading)
-        entry = Gtk.Entry(text=initial, activates_default=True)
-        d.set_extra_child(entry)
-        d.add_response("cancel", "Cancel")
-        d.add_response("ok", confirm)
-        d.set_response_appearance("ok", Adw.ResponseAppearance.SUGGESTED)
-        d.set_default_response("ok")
-
-        def on_response(_d, r):
-            name = entry.get_text().strip()
-            if r == "ok" and name and "/" not in name:
-                then(name)
-
-        d.connect("response", on_response)
-        d.present(self.get_root())
-
     def new_folder(self) -> None:
         if not self._connected() or not self.path:
             return
         s = self.session
-        self._ask_name("New folder", "", "Create", lambda name: bg(
+        ask_name(self.get_root(), "New folder", "Create", lambda name: bg(
             lambda: remote_fs.mkdir(s.ssh, posixpath.join(self.path, name)), self._done(f"Created {name}")))
 
     def rename(self, e: Entry) -> None:
         s = self.session
-        self._ask_name(f"Rename {e.name}", e.name, "Rename", lambda name: bg(
+        ask_name(self.get_root(), f"Rename {e.name}", "Rename", lambda name: bg(
             lambda: remote_fs.rename(s.ssh, self.child(e), posixpath.join(self.path, name)),
-            self._done(f"Renamed to {name}")))
+            self._done(f"Renamed to {name}")), text=e.name)
 
     def delete(self, e: Entry) -> None:
         s = self.session

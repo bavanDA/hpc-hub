@@ -9,7 +9,7 @@ from gi.repository import Adw, Gio, GLib, GObject, Gtk, Pango
 from .. import remote_fs
 from ..remote_fs import Entry, Place
 from ..session import ClusterSession
-from .widgets import bg
+from .widgets import ask_name, bg
 
 _places: dict[str, list[Place]] = {}  # per cluster, found once per app run
 
@@ -286,23 +286,12 @@ class FolderPicker(Adw.Dialog):
     def new_folder(self) -> None:
         if not self.path:
             return
-        d = Adw.AlertDialog(heading="New folder", body=f"Inside {self.path}")
-        entry = Gtk.Entry(activates_default=True)
-        d.set_extra_child(entry)
-        d.add_response("cancel", "Cancel")
-        d.add_response("ok", "Create")
-        d.set_response_appearance("ok", Adw.ResponseAppearance.SUGGESTED)
-        d.set_default_response("ok")
 
-        def on_response(_d, r):
-            name = entry.get_text().strip()
-            if r != "ok" or not name or "/" in name:
-                return
+        def create(name: str) -> None:
             path = posixpath.join(self.path, name)
             bg(lambda: remote_fs.mkdir(self.s.ssh, path),
                lambda _r, err: self._error(err) if err else self.go(path))
-        d.connect("response", on_response)
-        d.present(self)
+        ask_name(self, "New folder", "Create", create, body=f"Inside {self.path}")
 
     def _error(self, err: str) -> None:
         self.error.set_label(err)

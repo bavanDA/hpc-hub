@@ -14,6 +14,25 @@ def open_uri(widget: Gtk.Widget, uri: str) -> None:
         Gtk.UriLauncher.new(uri).launch(widget.get_root(), None, None, None)
 
 
+def ask_name(parent: Gtk.Widget, heading: str, confirm: str, then: Callable[[str], None], text: str = "",
+             body: str = "", allow_slash: bool = False) -> None:
+    """Ask for a name; then(name) gets a non-empty one (without "/" unless allowed)."""
+    d = Adw.AlertDialog(heading=heading, body=body)
+    entry = Gtk.Entry(text=text, activates_default=True)
+    d.set_extra_child(entry)
+    d.add_response("cancel", "Cancel")
+    d.add_response("ok", confirm)
+    d.set_response_appearance("ok", Adw.ResponseAppearance.SUGGESTED)
+    d.set_default_response("ok")
+
+    def on_response(_d, r):
+        name = entry.get_text().strip()
+        if r == "ok" and name and (allow_slash or "/" not in name):
+            then(name)
+    d.connect("response", on_response)
+    d.present(parent)
+
+
 def bg(work: Callable[[], object], done: Callable[[object, str], None]) -> None:
     """Run work() on a thread, then done(result, error) on the main loop."""
     def run():
