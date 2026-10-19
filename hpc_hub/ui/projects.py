@@ -10,6 +10,7 @@ from gi.repository import Adw, GLib, Gtk
 
 from .. import projects, remote_fs
 from ..projects import Project, ProjectStore
+from ..remote_fs import Place
 from ..session import ClusterSession, State
 from .folder_picker import FolderPicker
 from .widgets import vscode_button
@@ -176,25 +177,30 @@ class ProjectsPage(Gtk.Box):
             del self.after_connect[s.cfg.id]
 
     def edit(self, p: Project | None, create: bool) -> None:
-        ProjectDialog(list(self.sessions.values()), self.store, p, create, self.toast).present(self.get_root())
+        ProjectDialog(list(self.sessions.values()), self.store, p, create, self.toast,
+                      self.act.connect).present(self.get_root())
 
 
 class ProjectDialog(Adw.Dialog):
     """Add an existing folder, create a new project, or edit one."""
 
     def __init__(self, sessions: list[ClusterSession], store: ProjectStore, p: Project | None, create: bool,
-                 toast: Callable[[str], None]):
+                 toast: Callable[[str], None], connect: Callable[[ClusterSession], None]):
         title = "New project" if create else ("Edit project" if p else "Add folder as project")
         super().__init__(title=title, content_width=560)
         self.sessions, self.store, self.p, self.create, self.toast = sessions, store, p, create, toast
+        self.connect_cluster = connect
+        self.path = "~" if create else ""
+        self.waiting = 0
         page = Adw.PreferencesPage()
         group = Adw.PreferencesGroup()
         self.name = Adw.EntryRow(title="Name (e.g. myproject, MC)")
         self.cluster = Adw.ComboRow(title="Cluster", model=Gtk.StringList.new([s.cfg.name for s in sessions]))
-        self.folder = Adw.EntryRow(title="Create inside folder" if create else "Folder on the cluster")
-        browse = Gtk.Button(icon_name="folder-open-symbolic", tooltip_text="Browse", valign=Gtk.Align.CENTER,
-                            css_classes=["flat"])
+        self.folder = Adw.ActionRow(title="Create inside" if create else "Folder", activatable=True,
+                                    subtitle_selectable=True)
+        browse = Gtk.Button(label="Choose…", valign=Gtk.Align.CENTER)
         browse.connect("clicked", lambda *_: self._browse())
+        self.folder.connect("activated", lambda *_: self._browse())
         self.folder.add_suffix(browse)
         for row in (self.name, self.cluster, self.folder):
             group.add(row)
@@ -208,14 +214,13 @@ class ProjectDialog(Adw.Dialog):
             for row in (self.template, self.git, self.result):
                 extra.add(row)
             page.add(extra)
-            self.folder.set_text("~")
         if p:
             self.name.set_text(p.name)
-            self.folder.set_text(p.path)
+            self.path = p.path
             ids = [s.cfg.id for s in sessions]
             self.cluster.set_selected(ids.index(p.cluster) if p.cluster in ids else 0)
-        for w in (self.name, self.folder):
-            w.connect("changed", lambda *_: self._sync())
+        self.name.connect("changed", lambda *_: self._sync())
+        self.cluster.connect("notify::selected", lambda *_: (setattr(self, "path", "~" if create else ""), self._sync()))
 
         self.error = Gtk.Label(wrap=True, visible=False, css_classes=["error"], margin_start=12, margin_end=12)
         self.save_btn = Gtk.Button(label="Create" if create else "Save", css_classes=["suggested-action", "pill"],
@@ -237,11 +242,19 @@ class ProjectDialog(Adw.Dialog):
         return self.sessions[self.cluster.get_selected()]
 
     def _target(self) -> str:
-        base = self.folder.get_text().strip() or "~"
-        return posixpath.join(base, slug(self.name.get_text())) if self.create else base
+        base = self.path or "~"
+        return posixpath.join(base, slug(self.name.get_text())) if self.create else self.path
 
     def _sync(self) -> None:
+        self.folder.set_subtitle(GLib.markup_escape_text(self.path or "Not chosen yet"))
         self.result.set_subtitle(GLib.markup_escape_text(self._target()))
+
+    def _picked(self, path: str) -> None:
+        self.path = path
+        if not self.create and not self.name.get_text().strip():
+            self.name.set_text(posixpath.basename(path.rstrip("/")))
+        self._fail("")
+        self._sync()
 
     def _fail(self, msg: str) -> None:
         self.error.set_label(msg)
@@ -251,10 +264,28 @@ class ProjectDialog(Adw.Dialog):
 
     def _browse(self) -> None:
         s = self.session
-        if s.state != State.CONNECTED or not s.ssh:
-            self._fail(f"Connect to {s.cfg.name} to browse its folders")
+        if s.state == State.CONNECTED and s.ssh:
+            mine = [Place(p.name, p.path) for p in self.store.recent() if p.cluster == s.cfg.id]
+            FolderPicker(s, self.path or "~", self._picked, mine).present(self)
             return
-        FolderPicker(s, self.folder.get_text().strip() or "~", self.folder.set_text).present(self)
+        if not s.state.busy:
+            self.connect_cluster(s)
+        self._fail(f"Connecting to {s.cfg.name}, approve Duo on your phone. The folder chooser opens next.")
+        self.waiting += 1
+        token = self.waiting
+
+        def check():
+            if token != self.waiting or not self.get_root():
+                return False
+            if s.state == State.CONNECTED and s.ssh:
+                self._fail("")
+                self._browse()
+                return False
+            if s.state in (State.ERROR, State.DISCONNECTED):
+                self._fail(f"Could not connect to {s.cfg.name}: {s.detail or 'see the Clusters tab'}")
+                return False
+            return True
+        GLib.timeout_add_seconds(1, check)
 
     def _save(self) -> None:
         name, s = self.name.get_text().strip(), self.session
@@ -262,8 +293,8 @@ class ProjectDialog(Adw.Dialog):
         if not name:
             self._fail("Give the project a name")
             return
-        if not path.startswith(("/", "~")):
-            self._fail("Folder must start with / or ~")
+        if not path:
+            self._fail("Choose a folder")
             return
         connected = s.state == State.CONNECTED and s.ssh
         if not connected:
