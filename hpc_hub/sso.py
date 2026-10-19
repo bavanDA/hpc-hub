@@ -16,6 +16,12 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("WebKit", "6.0")
 from gi.repository import GLib, Gtk, WebKit  # noqa: E402
 
+if __package__:
+    from .paths import web_dir  # noqa: E402
+else:  # run as a script by openconnect (bin/hpc-hub-sso)
+    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    from hpc_hub.paths import web_dir  # noqa: E402
+
 # One step per call: email page -> Next, password page -> Sign in. Returns what it did.
 STEP_JS = """
 (function (u, p, doneUser, donePass) {
@@ -94,6 +100,20 @@ class AutoFill:
                 self.on_sent()
 
 
+_session = None
+
+
+def web_session() -> "WebKit.NetworkSession":
+    """One saved browser profile for VPN sign-ins (cookies kept between runs)."""
+    global _session
+    if _session is None:
+        d = web_dir()
+        _session = WebKit.NetworkSession.new(str(d / "data"), str(d / "cache"))
+        _session.get_cookie_manager().set_persistent_storage(str(d / "cookies.sqlite"),
+                                                             WebKit.CookiePersistentStorage.SQLITE)
+    return _session
+
+
 class SsoWindow(Gtk.ApplicationWindow):
     def __init__(self, app: Gtk.Application, url: str):
         super().__init__(application=app, title="VPN sign-in", default_width=520, default_height=720)
@@ -104,7 +124,7 @@ class SsoWindow(Gtk.ApplicationWindow):
         self.status.set_margin_bottom(8)
         box.append(self.status)
 
-        self.view = WebKit.WebView()
+        self.view = WebKit.WebView(network_session=web_session())
         self.view.set_vexpand(True)
         self.view.connect("load-changed", self.on_load)
         box.append(self.view)

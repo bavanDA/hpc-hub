@@ -7,7 +7,7 @@ import gi
 gi.require_version("WebKit", "6.0")
 from gi.repository import Adw, GLib, Gtk, WebKit  # noqa: E402
 
-from ..sso import AutoFill  # noqa: E402
+from ..sso import AutoFill, web_session  # noqa: E402
 from ..vpn_sso import SsoStart  # noqa: E402
 
 
@@ -18,7 +18,7 @@ class WebLoginDialog(Adw.Dialog):
         self.start, self.on_done, self.finished = start, on_done, False
         self.status = Gtk.Label(label="Signing in… approve Duo on your phone when it asks.", wrap=True,
                                 margin_top=8, margin_bottom=8, css_classes=["dim-label"])
-        self.view = WebKit.WebView(vexpand=True)
+        self.view = WebKit.WebView(vexpand=True, network_session=web_session())
         self.view.connect("load-changed", self._loaded)
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         box.append(self.status)
