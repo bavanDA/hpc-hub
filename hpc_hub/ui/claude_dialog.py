@@ -1,6 +1,7 @@
 """Claude: pick a past chat to resume, or start a new one in a folder."""
 
 import datetime
+import posixpath
 import threading
 import time
 from collections.abc import Callable
@@ -33,9 +34,11 @@ def short(path: str, home: str = "") -> str:
 class ClaudeDialog(Adw.Dialog):
     """on_run(folder, chat id or "") after saving the two options on cfg.claude."""
 
-    def __init__(self, s: ClusterSession, on_run: Callable[[str, str], None], save: Callable[[], None]):
-        super().__init__(title=f"Claude on {s.cfg.name}", content_width=600, content_height=720)
-        self.s, self.on_run, self.save = s, on_run, save
+    def __init__(self, s: ClusterSession, on_run: Callable[[str, str], None], save: Callable[[], None],
+                 project: str = ""):
+        title = f"Claude in {posixpath.basename(project.rstrip('/'))}" if project else f"Claude on {s.cfg.name}"
+        super().__init__(title=title, content_width=600, content_height=720)
+        self.s, self.on_run, self.save, self.project = s, on_run, save, project.rstrip("/")
         c = s.cfg.claude
         page = Adw.PreferencesPage()
 
@@ -52,7 +55,7 @@ class ClaudeDialog(Adw.Dialog):
 
         new_chat = Adw.PreferencesGroup(title="New chat")
         self.folder = Adw.EntryRow(title="Folder")
-        self.folder.set_text(c.workdir)
+        self.folder.set_text(project or c.workdir)
         browse = Gtk.Button(icon_name="folder-open-symbolic", tooltip_text="Choose folder", valign=Gtk.Align.CENTER,
                             css_classes=["flat"])
         browse.connect("clicked", lambda *_: FolderPicker(s, self.folder.get_text().strip(),
@@ -65,7 +68,8 @@ class ClaudeDialog(Adw.Dialog):
         new_chat.add(start)
         page.add(new_chat)
 
-        self.chats = Adw.PreferencesGroup(title="Recent chats", description="Loading…")
+        self.chats = Adw.PreferencesGroup(title="Chats in this project" if project else "Recent chats",
+                                          description="Loading…")
         self.search = Gtk.SearchEntry(placeholder_text="Search", valign=Gtk.Align.CENTER, visible=False)
         self.search.connect("search-changed", lambda *_: self._filter())
         self.chats.set_header_suffix(self.search)
@@ -82,7 +86,8 @@ class ClaudeDialog(Adw.Dialog):
 
         def work():
             try:
-                result = (claude_chats.list_chats(s.ssh), remote_fs.home(s.ssh), "")
+                result = (claude_chats.list_chats(s.ssh, 400 if self.project else claude_chats.LIMIT),
+                          remote_fs.home(s.ssh), "")
             except Exception as e:  # noqa: BLE001
                 result = ([], "", str(e))
             GLib.idle_add(lambda: self._show(*result) and False)
@@ -93,7 +98,10 @@ class ClaudeDialog(Adw.Dialog):
         if err:
             self.chats.set_description(GLib.markup_escape_text(f"Could not read chats: {err}"))
             return
-        self.chats.set_description("Pick one to continue it." if chats else "No chats yet on this cluster.")
+        if self.project:
+            chats = [c for c in chats if c.cwd == self.project or c.cwd.startswith(self.project + "/")]
+        self.chats.set_description("Pick one to continue it." if chats
+                                   else "No chats here yet." if self.project else "No chats yet on this cluster.")
         self.search.set_visible(len(chats) > 6)
         for chat in chats:
             row = Adw.ActionRow(title=GLib.markup_escape_text(chat.name), activatable=True, title_lines=1,

@@ -148,10 +148,12 @@ class Tools:
             threading.Thread(target=work, daemon=True).start()
 
     # -- Claude --------------------------------------------------------------------------
-    def claude(self, s: ClusterSession) -> None:
+    def claude(self, s: ClusterSession, folder: str = "") -> None:
+        """folder: a project; its chats are listed and a new chat starts there."""
         if not self._ready(s):
             return
-        ClaudeDialog(s, lambda folder, chat_id: self._check_claude(s, folder, chat_id), self.save_config).present(self.window)
+        ClaudeDialog(s, lambda where, chat_id: self._check_claude(s, where, chat_id), self.save_config,
+                     folder).present(self.window)
 
     def _check_claude(self, s: ClusterSession, folder: str, chat_id: str) -> None:
         self.toast(f"Checking claude on {s.cfg.name}…")
