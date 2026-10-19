@@ -61,6 +61,7 @@ class VsCodeSettings:
     setup: str = ""  # runs first, e.g. "module load VSCode"
     workdir: str = "~"
     open_links: bool = True
+    open_in: str = "desktop"  # desktop (VS Code app) or browser (vscode.dev)
     compute: ComputeProfile = field(default_factory=_vscode_compute)
 
 

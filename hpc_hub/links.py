@@ -48,3 +48,15 @@ def local_url(link: Link, local_port: int) -> str:
     """Rewrite a node-local URL to the forwarded laptop port."""
     p = urlsplit(link.url)
     return urlunsplit((p.scheme, f"127.0.0.1:{local_port}", p.path, p.query, p.fragment))
+
+
+def tunnel_name(url: str) -> str:
+    """https://vscode.dev/tunnel/<name>/<path> -> name."""
+    parts = urlsplit(url).path.split("/")
+    return parts[2] if len(parts) > 2 and parts[1] == "tunnel" else ""
+
+
+def tunnel_urls(name: str, folder: str) -> tuple[str, str]:
+    """(desktop folder-uri, browser url) for a folder on that tunnel."""
+    folder = "/" + folder.strip("/") if folder.strip("/") else ""
+    return f"vscode-remote://tunnel+{name}{folder}", f"https://vscode.dev/tunnel/{name}{folder}"
