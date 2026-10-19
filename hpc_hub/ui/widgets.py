@@ -2,10 +2,23 @@
 
 from collections.abc import Callable
 
+import threading
+
 from gi.repository import Adw, GLib, Gtk
 
 from .. import layout
 from ..agents import AGENTS
+
+def bg(work: Callable[[], object], done: Callable[[object, str], None]) -> None:
+    """Run work() on a thread, then done(result, error) on the main loop."""
+    def run():
+        try:
+            result, err = work(), ""
+        except Exception as e:  # noqa: BLE001
+            result, err = None, str(e)
+        GLib.idle_add(lambda: done(result, err) and False)
+    threading.Thread(target=run, daemon=True).start()
+
 
 _sizes: dict[str, int] | None = None
 _pending = 0
