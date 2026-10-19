@@ -56,11 +56,8 @@ def validate(p: ComputeProfile) -> list[str]:
     return errors
 
 
-def salloc_command(p: ComputeProfile, job_name: str = "hpc-hub") -> str:
-    args = [
-        "salloc", "--no-shell", f"--job-name={job_name}",
-        f"--cpus-per-task={p.cpus}", f"--mem={p.mem_gb}G", f"--time={p.time}",
-    ]
+def resource_args(p: ComputeProfile) -> list[str]:
+    args = [f"--cpus-per-task={p.cpus}", f"--mem={p.mem_gb}G", f"--time={p.time}"]
     if p.partition:
         args.append(f"--partition={p.partition}")
     if p.account:
@@ -69,8 +66,58 @@ def salloc_command(p: ComputeProfile, job_name: str = "hpc-hub") -> str:
         args.append(f"--qos={p.qos}")
     if p.gpus:
         args.append(f"--gres=gpu:{p.gpus}")
-    args += shlex.split(p.extra_args)
+    return args + shlex.split(p.extra_args)
+
+
+def salloc_command(p: ComputeProfile, job_name: str = "hpc-hub") -> str:
+    args = ["salloc", "--no-shell", f"--job-name={job_name}", *resource_args(p)]
     return " ".join(shlex.quote(a) for a in args)
+
+
+# -- batch jobs (VS Code) -------------------------------------------------------------
+
+BATCH_DIR = ".hpc-hub"  # under $HOME on the cluster
+
+
+def batch_script(p: ComputeProfile, job_name: str, body: str) -> str:
+    """Script for sbatch; the log lands in ~/.hpc-hub/<name>-<job>.out."""
+    lines = ["#!/bin/bash -l", f"#SBATCH --job-name={job_name}", f"#SBATCH --output={job_name}-%j.out"]
+    lines += [f"#SBATCH {a}" for a in resource_args(p)]
+    return "\n".join(lines + ["", body, ""])
+
+
+def submit(ssh: SshMaster, p: ComputeProfile, job_name: str, body: str) -> str:
+    """sbatch the script (sent on stdin, no temp file), return the job id."""
+    errors = validate(p)
+    if errors:
+        raise SlurmError("; ".join(errors))
+    script = batch_script(p, job_name, body)
+    cmd = (f'mkdir -p "$HOME/{BATCH_DIR}" && cd "$HOME/{BATCH_DIR}" && '
+           f"printf %s {shlex.quote(script)} | sbatch --parsable")
+    res = ssh.run(cmd, timeout=60)
+    job_id = res.stdout.strip().split(";")[0]
+    if res.returncode != 0 or not job_id.isdigit():
+        raise SlurmError(res.stderr.strip() or res.stdout.strip() or "sbatch failed")
+    return job_id
+
+
+def find_job(ssh: SshMaster, names: list[str]) -> Job | None:
+    """Your newest pending or running job with one of these names."""
+    fmt = "%i|%j|%N|%P"
+    res = ssh.run(f'squeue -h -u "$USER" -t PENDING,RUNNING -n {shlex.quote(",".join(names))} -o {shlex.quote(fmt)}')
+    jobs = [Job(*parts) for line in res.stdout.splitlines()
+            if len(parts := line.strip().split("|")) == 4 and parts[0].isdigit()]
+    return max(jobs, key=lambda j: int(j.job_id), default=None)
+
+
+def follow_log(job_id: str) -> str:
+    """Shell line: report the job state until it runs, then stream its log."""
+    j = int(job_id)
+    return (f'j={j}; s=; while :; do t=$(squeue -h -j $j -o %T 2>/dev/null); '
+            f'[ "$t" != "$s" ] && echo "Job $j: ${{t:-finished}}"; s=$t; '
+            f'case "$t" in PENDING|CONFIGURING) sleep 3;; *) break;; esac; done; '
+            f'f=$(scontrol show job -o $j 2>/dev/null | grep -o "StdOut=[^ ]*" | cut -d= -f2-); '
+            f'[ -n "$f" ] && exec tail -n +1 -F "$f"; echo "No log found for job $j"; exec bash -l')
 
 
 def cancel(ssh: SshMaster, job_id: str) -> None:

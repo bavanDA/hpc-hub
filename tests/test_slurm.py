@@ -46,3 +46,20 @@ def test_jobs_command():
     assert '-u "$USER"' in slurm.jobs_command(slurm.MINE)
     assert "-u" not in slurm.jobs_command(slurm.ALL)
     assert slurm.jobs_command(slurm.HISTORY, 3).startswith('sacct -n -P -X -u "$USER" -S now-3days')
+
+
+def test_batch_script():
+    p = ComputeProfile(cpus=16, mem_gb=64, time="12:00:00", partition="general", qos="standard", gpus=1)
+    s = slurm.batch_script(p, "hpc-hub-vscode", "code tunnel")
+    lines = s.splitlines()
+    assert lines[0] == "#!/bin/bash -l"
+    for want in ("#SBATCH --job-name=hpc-hub-vscode", "#SBATCH --output=hpc-hub-vscode-%j.out",
+                 "#SBATCH --cpus-per-task=16", "#SBATCH --mem=64G", "#SBATCH --time=12:00:00",
+                 "#SBATCH --partition=general", "#SBATCH --qos=standard", "#SBATCH --gres=gpu:1"):
+        assert want in lines
+    assert lines[-1] == "code tunnel"
+
+
+def test_follow_log_is_valid_shell():
+    import subprocess
+    assert subprocess.run(["bash", "-n", "-c", slurm.follow_log("123")]).returncode == 0
