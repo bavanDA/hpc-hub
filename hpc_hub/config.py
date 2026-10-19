@@ -81,6 +81,7 @@ class AgentSettings:
     effort: str = ""
     sandbox: str = ""
     approval: str = ""
+    hours: int = 0  # time on a new node; 0 = the cluster's usual time limit
 
 
 @dataclass

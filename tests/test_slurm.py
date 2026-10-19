@@ -130,3 +130,9 @@ def test_parse_details():
     assert d["UserId"] == "jdoe(12345)" and d["StdOut"] == "/home/x/out-1.out" and d["StdErr"] == ""
     assert d["AllocNode:Sid"] == "login02:3010257"
     assert slurm.parse_details("JobID|State\n5|COMPLETED\n") == {"JobID": "5", "State": "COMPLETED"}
+
+
+def test_hours_time():
+    assert [slurm.hours_time(h) for h in (1, 5, 24, 30, 72)] == [
+        "01:00:00", "05:00:00", "1-00:00:00", "1-06:00:00", "3-00:00:00"]
+    assert all(slurm.TIME.match(slurm.hours_time(h)) for h in (1, 30))

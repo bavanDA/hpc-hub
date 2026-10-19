@@ -5,6 +5,7 @@ import subprocess
 import threading
 import time
 import traceback
+from dataclasses import replace
 from enum import Enum
 from typing import Protocol
 from urllib.parse import urlsplit
@@ -218,11 +219,13 @@ class ClusterSession:
 
         threading.Thread(target=run, daemon=True).start()
 
-    def extra_node(self, job_name: str, on_done) -> None:
-        """Separate allocation (e.g. Claude on a new node). Kept when you disconnect."""
+    def extra_node(self, job_name: str, on_done, hours: int = 0) -> None:
+        """Separate allocation (e.g. Claude on a new node), for hours if given. Kept when you disconnect."""
+        profile = replace(self.cfg.profile, time=slurm.hours_time(hours)) if hours else self.cfg.profile
+
         def run():
             try:
-                a = slurm.allocate(self.ssh, self.cfg.profile, self._log, job_name=job_name)
+                a = slurm.allocate(self.ssh, profile, self._log, job_name=job_name)
                 a.owned = False
                 self._log(f"Extra node {a.node} (job {a.job_id}) for {job_name}")
                 on_done(a, "")
