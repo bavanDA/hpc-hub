@@ -55,3 +55,11 @@ def test_store(tmp_path):
     assert [p.name for p in store.recent()] == ["a", "b"] and len(calls) == 3
     store.remove(b)
     assert projects.ProjectStore(path).items == [a]
+
+
+def test_parse_papers():
+    text = ("1700000300|/s/MC/paper/main.tex\n1700000400|/s/MC/paper/draft.tex\n"
+            "1700000100|/home/me/old/thesis.tex\nnoise\n")
+    a, b = projects.parse_papers(text)
+    assert (a.folder, a.main, a.mtime, a.others) == ("/s/MC/paper", "main.tex", 1700000400, 1)
+    assert (b.folder, b.main, b.others) == ("/home/me/old", "thesis.tex", 0)

@@ -76,6 +76,45 @@ def find_main_tex(ssh: SshMaster, folder: str) -> list[str]:
     return sorted((f for f in found if f), key=lambda f: (f.count("/"), f != "main.tex", f))
 
 
+# .tex files that start a document, in home, project and scratch; newest first
+PAPERS = r"""R="$HOME"
+for d in /mmfs1/project/*/"$USER" /mmfs1/scratch/*/"$USER" "$SCRATCH" "$PROJECT"; do
+  [ -d "$d" ] && R="$R $d"
+done
+timeout 60 find $R -maxdepth 6 \( -name '.*' -o -name node_modules -o -name '*conda*' -o -name '*venv*' \
+  -o -name __pycache__ \) -prune -o -name '*.tex' -type f -print 2>/dev/null | head -5000 |
+while IFS= read -r f; do
+  grep -qs '^[^%]*\\documentclass' "$f" && printf '%s|%s\n' "$(stat -c %Y "$f")" "$f"
+done"""
+
+
+@dataclass
+class Paper:
+    folder: str
+    main: str  # file name inside folder
+    mtime: int
+    others: int = 0  # more .tex files with \documentclass in the same folder
+
+
+def parse_papers(text: str) -> list[Paper]:
+    """One paper per folder: main.tex if there is one, else its newest file."""
+    by_folder: dict[str, list[tuple[int, str]]] = {}
+    for line in text.splitlines():
+        t, _, path = line.partition("|")
+        if t.isdigit() and path.endswith(".tex"):
+            by_folder.setdefault(posixpath.dirname(path), []).append((int(t), posixpath.basename(path)))
+    out = []
+    for folder, files in by_folder.items():
+        files.sort(reverse=True)
+        main = next((f for f in files if f[1] == "main.tex"), files[0])
+        out.append(Paper(folder, main[1], max(t for t, _ in files), len(files) - 1))
+    return sorted(out, key=lambda p: -p.mtime)
+
+
+def find_papers(ssh: SshMaster) -> list[Paper]:
+    return parse_papers(ssh.run(PAPERS, timeout=90).stdout)
+
+
 def create_command(folder: str, template: str, title: str, git_init: bool) -> str:
     """Shell line that makes the project folder (fails if it already exists)."""
     q = shlex.quote(folder)
@@ -117,6 +156,10 @@ class ProjectStore:
     def touch(self, p: Project) -> None:
         p.opened = int(time.time())
         self.changed()
+
+    def find(self, cluster: str, path: str) -> Project | None:
+        path = path.rstrip("/")
+        return next((p for p in self.items if p.cluster == cluster and p.path.rstrip("/") == path), None)
 
     def recent(self) -> list[Project]:
         return sorted(self.items, key=lambda p: (-p.opened, p.name.lower()))
