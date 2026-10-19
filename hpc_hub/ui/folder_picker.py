@@ -1,7 +1,6 @@
 """Choose a folder on a cluster, like the desktop file chooser: places, path bar, browse by clicking."""
 
 import posixpath
-import threading
 import time
 from collections.abc import Callable
 
@@ -10,6 +9,7 @@ from gi.repository import Adw, Gio, GLib, GObject, Gtk, Pango
 from .. import remote_fs
 from ..remote_fs import Entry, Place
 from ..session import ClusterSession
+from .widgets import bg
 
 _places: dict[str, list[Place]] = {}  # per cluster, found once per app run
 
@@ -18,16 +18,6 @@ class Item(GObject.Object):
     def __init__(self, entry: Entry):
         super().__init__()
         self.entry = entry
-
-
-def _bg(work, done) -> None:
-    def run():
-        try:
-            result, err = work(), ""
-        except Exception as e:  # noqa: BLE001
-            result, err = None, str(e)
-        GLib.idle_add(lambda: done(result, err) and False)
-    threading.Thread(target=run, daemon=True).start()
 
 
 class FolderPicker(Adw.Dialog):
@@ -134,7 +124,7 @@ class FolderPicker(Adw.Dialog):
             if found:
                 _places[cid] = found
                 self._fill_places(found)
-        _bg(lambda: remote_fs.places(self.s.ssh), done)
+        bg(lambda: remote_fs.places(self.s.ssh), done)
 
     def _fill_places(self, found: list[Place]) -> None:
         self.sidebar.remove_all()
@@ -187,7 +177,7 @@ class FolderPicker(Adw.Dialog):
             self._refresh_empty()
             self._sync()
 
-        _bg(work, done)
+        bg(work, done)
 
     def _refilter(self) -> None:
         self.filter.changed(Gtk.FilterChange.DIFFERENT)
@@ -309,8 +299,8 @@ class FolderPicker(Adw.Dialog):
             if r != "ok" or not name or "/" in name:
                 return
             path = posixpath.join(self.path, name)
-            _bg(lambda: remote_fs.mkdir(self.s.ssh, path),
-                lambda _r, err: self._error(err) if err else self.go(path))
+            bg(lambda: remote_fs.mkdir(self.s.ssh, path),
+               lambda _r, err: self._error(err) if err else self.go(path))
         d.connect("response", on_response)
         d.present(self)
 

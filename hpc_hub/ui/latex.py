@@ -4,7 +4,6 @@ import os
 import posixpath
 import re
 import shlex
-import threading
 import time
 from collections.abc import Callable
 
@@ -17,22 +16,12 @@ from ..projects import Project, ProjectStore
 from ..session import ClusterSession, State
 from .editor import source_view
 from .pdf import PdfDialog, PdfView
-from .widgets import remember_size
+from .widgets import bg, remember_size
 
 PROJECT_EXT = (".tex", ".bib", ".sty", ".cls", ".bst")
 TEXT_EXT = PROJECT_EXT + (".txt", ".md", ".csv", ".dat", ".py", ".sh")
 FIG_EXT = (".png", ".jpg", ".jpeg", ".pdf", ".eps", ".svg")
 LIST_EXT = TEXT_EXT + FIG_EXT
-
-
-def _bg(work, done) -> None:
-    def run():
-        try:
-            result, err = work(), ""
-        except Exception as e:  # noqa: BLE001
-            result, err = None, str(e)
-        GLib.idle_add(lambda: done(result, err) and False)
-    threading.Thread(target=run, daemon=True).start()
 
 
 def _file_row(name: str, icon: str, depth: int, bold: bool = False, dim: bool = False) -> Gtk.Box:
@@ -170,7 +159,7 @@ class LatexPage(Gtk.Box):
                 if err:
                     self.toast(f"{x.cfg.name}: search failed: {err}")
                 self._fill_papers()
-            _bg(lambda x=x: projects.find_papers(x.ssh), done)
+            bg(lambda x=x: projects.find_papers(x.ssh), done)
 
     def _fill_papers(self) -> None:
         self.paper_list.remove_all()
@@ -230,7 +219,7 @@ class LatexPage(Gtk.Box):
             d.connect("response", lambda _d, r: r == "open" and self._set_main(session, p, found[pick.get_selected()]))
             d.present(self.get_root())
 
-        _bg(lambda: projects.find_main_tex(session.ssh, p.path), done)
+        bg(lambda: projects.find_main_tex(session.ssh, p.path), done)
 
     def _set_main(self, session: ClusterSession, p: Project, rel: str) -> None:
         p.main_tex = rel
@@ -363,7 +352,7 @@ class LatexPage(Gtk.Box):
             self._load_pdf()
             self._load_sync()
 
-        _bg(work, done)
+        bg(work, done)
 
     def _close(self) -> None:
         def go():
@@ -434,7 +423,7 @@ class LatexPage(Gtk.Box):
                                   margin_start=12, margin_end=12)
                 Adw.Dialog(title=posixpath.basename(path), content_width=800, content_height=600,
                            child=pic).present(self.get_root())
-        _bg(lambda: remote_fs.read_bytes(s.ssh, path), done)
+        bg(lambda: remote_fs.read_bytes(s.ssh, path), done)
 
     def _refresh_files(self) -> None:
         s, folder = self.session, self.folder
@@ -443,7 +432,7 @@ class LatexPage(Gtk.Box):
             if files is not None and folder == self.folder:
                 self.files = files
                 self._fill_files()
-        _bg(lambda: self._list_files(s, folder), done)
+        bg(lambda: self._list_files(s, folder), done)
 
     # -- drag and drop ----------------------------------------------------------------------
     def _drop_target(self, widget: Gtk.Widget, into_editor: bool) -> None:
@@ -481,7 +470,7 @@ class LatexPage(Gtk.Box):
                     if line:
                         self.buf.insert_at_cursor(line)
             self._refresh_files()
-        _bg(work, done)
+        bg(work, done)
 
     # -- git --------------------------------------------------------------------------------
     def _git_popover(self) -> Gtk.Popover:
@@ -514,7 +503,7 @@ class LatexPage(Gtk.Box):
                 self._refresh_files()
                 if self.current:
                     self._load_file(self.current, self._cursor_line())
-        _bg(work, done)
+        bg(work, done)
 
     # -- jump between PDF and source (SyncTeX) ----------------------------------------------
     def _load_sync(self) -> None:
@@ -524,7 +513,7 @@ class LatexPage(Gtk.Box):
         def done(st, err):
             if main == self.main:
                 self.sync = st
-        _bg(lambda: synctex.SyncTex.from_gz(remote_fs.read_bytes(s.ssh, path)), done)
+        bg(lambda: synctex.SyncTex.from_gz(remote_fs.read_bytes(s.ssh, path)), done)
 
     def _cursor_line(self) -> int:
         return self.buf.get_iter_at_mark(self.buf.get_insert()).get_line() + 1
@@ -573,7 +562,7 @@ class LatexPage(Gtk.Box):
             self._jump(line)
             self._fill_files()
 
-        _bg(lambda: remote_fs.read_bytes(s.ssh, path, limit=8 * 1024 * 1024), done)
+        bg(lambda: remote_fs.read_bytes(s.ssh, path, limit=8 * 1024 * 1024), done)
 
     def _jump(self, line: int) -> None:
         if line <= 0:
@@ -611,7 +600,7 @@ class LatexPage(Gtk.Box):
             elif self.auto.get_active():
                 self.build()
 
-        _bg(lambda: remote_fs.write_bytes(s.ssh, path, text.encode()), done)
+        bg(lambda: remote_fs.write_bytes(s.ssh, path, text.encode()), done)
 
     # -- build -----------------------------------------------------------------------------
     def build(self) -> None:
@@ -650,7 +639,7 @@ class LatexPage(Gtk.Box):
                 self.log_expander.set_expanded(True)
                 self.toast(f"Build failed ({len(issues)} errors)" if issues else "Build failed, see log")
 
-        _bg(work, done)
+        bg(work, done)
 
     def _load_pdf(self) -> None:
         s, main = self.session, self.main
@@ -660,7 +649,7 @@ class LatexPage(Gtk.Box):
                 self.pdf.load_bytes(data, keep_position=False)
             else:
                 self.pdf.show_message("No PDF yet", "Press Build.")
-        _bg(lambda: remote_fs.read_bytes(s.ssh, latex.pdf_path(main)), done)
+        bg(lambda: remote_fs.read_bytes(s.ssh, latex.pdf_path(main)), done)
 
     def _show_issues(self, issues: list[LatexIssue]) -> None:
         while row := self.issues.get_row_at_index(0):
@@ -711,7 +700,7 @@ class GitDialog(Adw.Dialog):
 
     def load(self) -> None:
         s = self.session
-        _bg(lambda: git.info(s.ssh, self.folder), self._show)
+        bg(lambda: git.info(s.ssh, self.folder), self._show)
 
     def _show(self, info: git.RepoInfo | None, err: str) -> None:
         self._clear()
@@ -773,12 +762,12 @@ class GitDialog(Adw.Dialog):
         def done(_r, err):
             self.toasts.add_toast(Adw.Toast(title=err.splitlines()[-1] if err else ok, timeout=5))
             self.load()
-        _bg(fn, done)
+        bg(fn, done)
 
     def _show_commit(self, commit: str, title: str) -> None:
         view = Gtk.TextView(editable=False, monospace=True, top_margin=8, left_margin=8)
         tv = Adw.ToolbarView(content=Gtk.ScrolledWindow(child=view, vexpand=True))
         tv.add_top_bar(Adw.HeaderBar())
         Adw.Dialog(title=f"{commit} · {title}", content_width=860, content_height=700, child=tv).present(self)
-        _bg(lambda: git.show(self.session.ssh, self.folder, commit),
-            lambda text, err: view.get_buffer().set_text(err or text))
+        bg(lambda: git.show(self.session.ssh, self.folder, commit),
+           lambda text, err: view.get_buffer().set_text(err or text))

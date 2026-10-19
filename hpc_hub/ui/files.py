@@ -1,7 +1,6 @@
 """Files tab: browse a cluster, open/zip/rename/delete, copy here and paste on any cluster."""
 
 import posixpath
-import threading
 import time
 from collections.abc import Callable
 from pathlib import Path
@@ -14,7 +13,7 @@ from ..session import ClusterSession, State
 from .editor import EditorDialog
 from .pdf import PdfDialog
 from .preview import Preview
-from .widgets import remember_size
+from .widgets import bg, remember_size
 
 DOWNLOADS = Path(GLib.get_user_special_dir(GLib.UserDirectory.DIRECTORY_DOWNLOAD) or Path.home()) / "HPC Hub"
 IMAGES = (".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".bmp")
@@ -30,17 +29,6 @@ def _ext(name: str) -> str:
         if low.endswith(multi):
             return multi
     return posixpath.splitext(low)[1]
-
-
-def _bg(work: Callable[[], object], done: Callable[[object, str], None]) -> None:
-    """Run work() on a thread, then done(result, error) on the main loop."""
-    def run():
-        try:
-            result, err = work(), ""
-        except Exception as e:  # noqa: BLE001
-            result, err = None, str(e)
-        GLib.idle_add(lambda: done(result, err) and False)
-    threading.Thread(target=run, daemon=True).start()
 
 
 class EntryItem(GObject.Object):
@@ -202,7 +190,7 @@ class FilePane(Gtk.Box):
             self._sync()
 
         self.location.set_text(path)
-        _bg(work, done)
+        bg(work, done)
 
     def refresh(self) -> None:
         self.go(self.path)
@@ -257,8 +245,8 @@ class FilePane(Gtk.Box):
         s, path, ext = self.session, self.child(e), _ext(e.name)
         root = self.get_root()
         if ext == ".pdf":
-            _bg(lambda: remote_fs.read_bytes(s.ssh, path),
-                lambda data, err: self.toast(err) if err else PdfDialog(e.name, data).present(root))
+            bg(lambda: remote_fs.read_bytes(s.ssh, path),
+               lambda data, err: self.toast(err) if err else PdfDialog(e.name, data).present(root))
         elif ext in IMAGES:
             def show(data, err):
                 if err:
@@ -268,7 +256,7 @@ class FilePane(Gtk.Box):
                 tv = Adw.ToolbarView(content=Gtk.ScrolledWindow(child=pic))
                 tv.add_top_bar(Adw.HeaderBar())
                 Adw.Dialog(title=e.name, content_width=900, content_height=700, child=tv).present(root)
-            _bg(lambda: remote_fs.read_bytes(s.ssh, path), show)
+            bg(lambda: remote_fs.read_bytes(s.ssh, path), show)
         elif ext in TEXT and e.size < 8 * 1024 * 1024:
             EditorDialog(s, path).present(root)
         else:
@@ -289,7 +277,7 @@ class FilePane(Gtk.Box):
                 Gtk.FileLauncher.new(target).launch(self.get_root(), None, None, None)
             else:
                 self.toast(f"Saved to {dest / e.name}")
-        _bg(lambda: remote_fs.download(s.ssh, self.child(e), str(dest)), done)
+        bg(lambda: remote_fs.download(s.ssh, self.child(e), str(dest)), done)
 
     def upload(self) -> None:
         if not self._connected() or not self.path:
@@ -304,7 +292,7 @@ class FilePane(Gtk.Box):
                 return
             paths = [files.get_item(i).get_path() for i in range(files.get_n_items())]
             self.toast(f"Uploading {len(paths)} item(s)…")
-            _bg(lambda: [remote_fs.upload(s.ssh, p, here) for p in paths], self._done("Upload finished"))
+            bg(lambda: [remote_fs.upload(s.ssh, p, here) for p in paths], self._done("Upload finished"))
 
         dialog.open_multiple(self.get_root(), None, picked)
 
@@ -329,12 +317,12 @@ class FilePane(Gtk.Box):
         if not self._connected() or not self.path:
             return
         s = self.session
-        self._ask_name("New folder", "", "Create", lambda name: _bg(
+        self._ask_name("New folder", "", "Create", lambda name: bg(
             lambda: remote_fs.mkdir(s.ssh, posixpath.join(self.path, name)), self._done(f"Created {name}")))
 
     def rename(self, e: Entry) -> None:
         s = self.session
-        self._ask_name(f"Rename {e.name}", e.name, "Rename", lambda name: _bg(
+        self._ask_name(f"Rename {e.name}", e.name, "Rename", lambda name: bg(
             lambda: remote_fs.rename(s.ssh, self.child(e), posixpath.join(self.path, name)),
             self._done(f"Renamed to {name}")))
 
@@ -346,7 +334,7 @@ class FilePane(Gtk.Box):
         d.add_response("delete", "Delete")
         d.set_response_appearance("delete", Adw.ResponseAppearance.DESTRUCTIVE)
         d.set_close_response("cancel")
-        d.connect("response", lambda _d, r: r == "delete" and _bg(
+        d.connect("response", lambda _d, r: r == "delete" and bg(
             lambda: remote_fs.remove(s.ssh, self.child(e)), self._done(f"Deleted {e.name}")))
         d.present(self.get_root())
 
@@ -354,10 +342,10 @@ class FilePane(Gtk.Box):
         s, path = self.session, self.child(e)
         if _ext(e.name) in ARCHIVES:
             self.toast(f"Extracting {e.name}…")
-            _bg(lambda: remote_fs.extract(s.ssh, path), self._done(f"Extracted {e.name}"))
+            bg(lambda: remote_fs.extract(s.ssh, path), self._done(f"Extracted {e.name}"))
         else:
             self.toast(f"Zipping {e.name} on {s.cfg.name}…")
-            _bg(lambda: remote_fs.make_zip(s.ssh, path), self._done(f"Zipped {e.name}"))
+            bg(lambda: remote_fs.make_zip(s.ssh, path), self._done(f"Zipped {e.name}"))
 
 
 class TransferRow(Gtk.ListBoxRow):
@@ -475,7 +463,7 @@ class FilesPage(Gtk.Box):
         if src is dst:
             self.toast(f"Copying {name}…")
             cmd = f"cp -r -- {remote_fs.q(src_path)} {remote_fs.q(dest_dir)}/"
-            _bg(lambda: remote_fs._run(src.ssh, cmd, timeout=3600), pane._done(f"Copied {name}"))
+            bg(lambda: remote_fs._run(src.ssh, cmd, timeout=3600), pane._done(f"Copied {name}"))
             return
         self.direct_copy(src, src_path, dst, dest_dir, pane)
 
@@ -501,4 +489,4 @@ class FilesPage(Gtk.Box):
                 dst_pane.refresh()
             self.toast(f"Copy failed: {err}" if err else f"Copied {name} to {dst.cfg.name}")
 
-        _bg(lambda: transfer.copy(src.ssh, src_path, dst.ssh, dest_dir, progress, on_update), done)
+        bg(lambda: transfer.copy(src.ssh, src_path, dst.ssh, dest_dir, progress, on_update), done)

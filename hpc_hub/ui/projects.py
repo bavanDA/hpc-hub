@@ -2,7 +2,6 @@
 
 import posixpath
 import re
-import threading
 from collections.abc import Callable
 from dataclasses import dataclass
 
@@ -13,7 +12,7 @@ from ..projects import Project, ProjectStore
 from ..remote_fs import Place
 from ..session import ClusterSession, State
 from .folder_picker import FolderPicker
-from .widgets import agent_buttons, vscode_button
+from .widgets import agent_buttons, bg, vscode_button
 
 
 @dataclass
@@ -23,16 +22,6 @@ class Actions:
     files: Callable[[ClusterSession, str], None]
     latex: Callable[[ClusterSession, Project], None]
     connect: Callable[[ClusterSession], None]
-
-
-def _bg(work, done) -> None:
-    def run():
-        try:
-            result, err = work(), ""
-        except Exception as e:  # noqa: BLE001
-            result, err = None, str(e)
-        GLib.idle_add(lambda: done(result, err) and False)
-    threading.Thread(target=run, daemon=True).start()
 
 
 def slug(name: str) -> str:
@@ -152,7 +141,7 @@ class ProjectsPage(Gtk.Box):
                     p.path = path
                     self.store.changed()
                     go()
-                _bg(resolve, done)
+                bg(resolve, done)
                 return
             self.store.touch(p)
             fn()
@@ -329,7 +318,7 @@ class ProjectDialog(Adw.Dialog):
         self._fail("")
         self.spinner.set_visible(True)
         self.save_btn.set_sensitive(False)
-        _bg(work, done)
+        bg(work, done)
 
     def _store(self, project: Project) -> None:
         if self.p:

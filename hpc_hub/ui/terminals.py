@@ -2,7 +2,6 @@
 
 import os
 import shlex
-import threading
 import time
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -15,7 +14,7 @@ from gi.repository import Adw, Gdk, Gio, GLib, Gtk, Pango, Vte  # noqa: E402
 from .. import links, remote, tmux  # noqa: E402
 from ..links import Link  # noqa: E402
 from ..session import ClusterSession, State  # noqa: E402
-from .widgets import open_uri, remember_size  # noqa: E402
+from .widgets import bg, open_uri, remember_size  # noqa: E402
 
 
 class TerminalTab(Gtk.Box):
@@ -121,7 +120,7 @@ class TerminalTab(Gtk.Box):
             if text:
                 self.get_clipboard().set(text.rstrip("\n"))
                 self.toast("Copied")
-        _bg(lambda: fetch() if fetch else "", done)
+        bg(lambda: fetch() if fetch else "", done)
 
     def _changed(self, *_):
         if not self._scan_pending:
@@ -172,16 +171,6 @@ def color_dot(color: str, size: int = 12) -> Gtk.DrawingArea:
     area = Gtk.DrawingArea(content_width=size, content_height=size, valign=Gtk.Align.CENTER)
     area.set_draw_func(draw)
     return area
-
-
-def _bg(work, done) -> None:
-    def run():
-        try:
-            result, err = work(), ""
-        except Exception as e:  # noqa: BLE001
-            result, err = None, str(e)
-        GLib.idle_add(lambda: done(result, err) and False)
-    threading.Thread(target=run, daemon=True).start()
 
 
 def _ago(ts: int) -> str:
@@ -466,7 +455,7 @@ class TerminalsPage(Gtk.Box):
                 self.listings.pop(s.cfg.id, None)
         self._fill()
         for s in live:
-            _bg(lambda s=s: tmux.list_sessions(s.ssh), lambda listing, err, s=s: self._listed_in(s, listing))
+            bg(lambda s=s: tmux.list_sessions(s.ssh), lambda listing, err, s=s: self._listed_in(s, listing))
 
     def _listed_in(self, s: ClusterSession, listing: tmux.Listing | None) -> None:
         if not listing:
@@ -603,7 +592,7 @@ class TerminalsPage(Gtk.Box):
                 v.color, v.title = color or v.color, title or v.title
                 self._header(v)
             self.refresh()
-        _bg(lambda: tmux.run(s.ssh, line), done)
+        bg(lambda: tmux.run(s.ssh, line), done)
 
     def rename(self, s: ClusterSession, t: tmux.Session) -> None:
         d = Adw.AlertDialog(heading="Rename session", body=t.name)

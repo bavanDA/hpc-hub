@@ -1,7 +1,6 @@
 """Globus tab: browse collections, send transfers, watch tasks. Plus settings and sign-in."""
 
 import posixpath
-import threading
 from collections.abc import Callable
 
 import gi
@@ -11,6 +10,7 @@ from gi.repository import Adw, Gio, GLib, GObject, Gtk, Pango, WebKit  # noqa: E
 
 from .. import globus  # noqa: E402
 from ..config import AppSettings, ClusterConfig  # noqa: E402
+from .widgets import bg  # noqa: E402
 
 POLL_SECONDS = 10
 ACTIVE = ("ACTIVE", "INACTIVE")
@@ -19,15 +19,14 @@ HELP = ("Register a free app at app.globus.org → Settings → Developers → "
         "Paste its Client ID here.")
 
 
-def _bg(work, done) -> None:
-    """done(result, error) on the main loop; error is the exception or None."""
+def _or_consent(work: Callable[[], object]) -> Callable[[], object]:
+    """Return a ConsentRequired instead of raising it, so done() can spot it."""
     def run():
         try:
-            result, err = work(), None
-        except Exception as e:  # noqa: BLE001
-            result, err = None, e
-        GLib.idle_add(lambda: done(result, err) and False)
-    threading.Thread(target=run, daemon=True).start()
+            return work()
+        except globus.ConsentRequired as e:
+            return e
+    return run
 
 
 class LoginDialog(Adw.Dialog):
@@ -51,8 +50,8 @@ class LoginDialog(Adw.Dialog):
 
         def done(_r, err):
             self.close()
-            self.on_done(str(err) if err else "")
-        _bg(lambda: self.client.finish_login(code, self.verifier), done)
+            self.on_done(err)
+        bg(lambda: self.client.finish_login(code, self.verifier), done)
 
 
 class CollectionPicker(Adw.Dialog):
@@ -83,14 +82,14 @@ class CollectionPicker(Adw.Dialog):
             while row := self.results.get_row_at_index(0):
                 self.results.remove(row)
             if err:
-                self.results.append(Adw.ActionRow(title="Search failed", subtitle=GLib.markup_escape_text(str(err))))
+                self.results.append(Adw.ActionRow(title="Search failed", subtitle=GLib.markup_escape_text(err)))
                 return
             for c in found:
                 row = Adw.ActionRow(title=GLib.markup_escape_text(c.name),
                                     subtitle=GLib.markup_escape_text(f"{c.owner} · {c.id}"), activatable=True)
                 row.collection = c
                 self.results.append(row)
-        _bg(lambda: self.client.search(text), done)
+        bg(lambda: self.client.search(text), done)
 
 
 class GlobusSettingsDialog(Adw.PreferencesDialog):
@@ -293,7 +292,7 @@ class GlobusPane(Gtk.Box):
         def done(result, err):
             if cfg is not self.cfg:
                 return
-            if isinstance(err, globus.ConsentRequired):
+            if isinstance(result, globus.ConsentRequired):
                 self._show_empty("Globus needs your permission", f"Allow HPC Hub to use {cfg.globus.collection_name}.",
                                  "dialog-password-symbolic", "Allow", self.page.consent)
                 return
@@ -303,7 +302,7 @@ class GlobusPane(Gtk.Box):
                     self.location.set_text(self.path)
                     self.count.set_label("")
                 else:
-                    self._show_empty("Could not open folder", str(err), "dialog-error-symbolic", "Try again",
+                    self._show_empty("Could not open folder", err, "dialog-error-symbolic", "Try again",
                                      lambda: self.go(path))
                 return
             target, items = result
@@ -318,7 +317,7 @@ class GlobusPane(Gtk.Box):
                 self.count.set_label("0 items")
             self._sync()
 
-        _bg(lambda: client.ls(cfg.globus.collection_id, path), done)
+        bg(_or_consent(lambda: client.ls(cfg.globus.collection_id, path)), done)
 
     def go_up(self) -> None:
         if self.path:
@@ -344,8 +343,8 @@ class GlobusPane(Gtk.Box):
             name = entry.get_text().strip()
             if r != "ok" or not name or "/" in name:
                 return
-            _bg(lambda: client.mkdir(cfg.globus.collection_id, posixpath.join(self.path, name)),
-                lambda _r, err: (self.page.toast(f"Failed: {err}") if err else self.go(self.path)))
+            bg(lambda: client.mkdir(cfg.globus.collection_id, posixpath.join(self.path, name)),
+               lambda _r, err: (self.page.toast(f"Failed: {err}") if err else self.go(self.path)))
         d.connect("response", on_response)
         d.present(self.get_root())
 
@@ -485,14 +484,14 @@ class GlobusPage(Gtk.Box):
         a, b = src.cfg, dst.cfg
         src_path, dst_path = posixpath.join(src.path, it.name), posixpath.join(dst.path, it.name)
 
-        def done(_task, err):
-            if isinstance(err, globus.ConsentRequired):
+        def done(task, err):
+            if isinstance(task, globus.ConsentRequired):
                 self.consent()
                 return
             self.toast(f"Transfer failed: {err}" if err else f"Sent {it.name} to Globus")
             self.refresh_tasks()
-        _bg(lambda: client.submit(a.globus.collection_id, src_path, b.globus.collection_id, dst_path,
-                                  f"HPC Hub {it.name}", it.is_dir), done)
+        bg(_or_consent(lambda: client.submit(a.globus.collection_id, src_path, b.globus.collection_id, dst_path,
+                                             f"HPC Hub {it.name}", it.is_dir)), done)
 
     def refresh_tasks(self) -> None:
         client = self.client
@@ -510,12 +509,12 @@ class GlobusPage(Gtk.Box):
                 for pane in (self.left, self.right):
                     pane.go(pane.path)
             self._seen_active = {t.get("task_id") for t in tasks if t.get("status") in ACTIVE}
-        _bg(client.tasks, done)
+        bg(client.tasks, done)
 
     def cancel(self, task_id: str) -> None:
         client = self.client
-        _bg(lambda: client.cancel(task_id),
-            lambda _r, err: (self.toast(f"Cancel failed: {err}" if err else "Transfer cancelled"), self.refresh_tasks()))
+        bg(lambda: client.cancel(task_id),
+           lambda _r, err: (self.toast(f"Cancel failed: {err}" if err else "Transfer cancelled"), self.refresh_tasks()))
 
     def _start_poll(self) -> None:
         if not self.poll_id:
