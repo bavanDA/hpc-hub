@@ -64,6 +64,7 @@ class HpcHubApp(Adw.Application):
             if accels:
                 self.set_accels_for_action(f"app.{name}", accels)
         GLib.timeout_add_seconds(HEALTH_SECONDS, self._health_check)
+        self._watch_sleep()
 
     def _adopt_all(self) -> None:
         for s in self.sessions.values():
@@ -264,6 +265,18 @@ class HpcHubApp(Adw.Application):
             if s.state == State.CONNECTED:
                 threading.Thread(target=self._check_one, args=(s,), daemon=True).start()
         return True
+
+    def _watch_sleep(self) -> None:
+        """Check every connection right after the laptop wakes up (VPN and SSH rarely survive sleep)."""
+        def on_signal(_bus, _sender, _path, _iface, _signal, params):
+            if not params.unpack()[0]:  # False = resumed
+                GLib.timeout_add_seconds(5, lambda: self._health_check() and False)
+        try:
+            bus = Gio.bus_get_sync(Gio.BusType.SYSTEM, None)
+            bus.signal_subscribe("org.freedesktop.login1", "org.freedesktop.login1.Manager", "PrepareForSleep",
+                                 "/org/freedesktop/login1", None, Gio.DBusSignalFlags.NONE, on_signal)
+        except GLib.Error:
+            pass
 
     def _check_one(self, session: ClusterSession) -> None:
         if not session.healthy():
