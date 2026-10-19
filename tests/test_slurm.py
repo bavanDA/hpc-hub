@@ -118,3 +118,15 @@ def test_tunnel_link(tmp_path):
             cmd = cmd.replace(slurm.log_path("7"), f"echo {log}")
             return subprocess.run(["bash", "-c", cmd], capture_output=True, text=True)
     assert slurm.tunnel_link(Ssh(), "7") == "https://vscode.dev/tunnel/n0018/mmfs1/home/jdoe"
+
+
+def test_parse_details():
+    text = ("JobId=1430555 JobName=hpc-hub-vscode\n   UserId=jdoe(12345) GroupId=jdoe(12345) MCS_label=N/A\n"
+            "   JobState=RUNNING Reason=None Dependency=(null)\n   RunTime=00:07:39 TimeLimit=02:00:00 TimeMin=N/A\n"
+            "   AllocNode:Sid=login02:3010257\n   AllocTRES=cpu=16,mem=64G,node=1,billing=16\n"
+            "   StdOut=/home/x/out-1.out\n   StdErr=\n")
+    d = slurm.parse_details(text)
+    assert d["JobState"] == "RUNNING" and d["AllocTRES"] == "cpu=16,mem=64G,node=1,billing=16"
+    assert d["UserId"] == "jdoe(12345)" and d["StdOut"] == "/home/x/out-1.out" and d["StdErr"] == ""
+    assert d["AllocNode:Sid"] == "login02:3010257"
+    assert slurm.parse_details("JobID|State\n5|COMPLETED\n") == {"JobID": "5", "State": "COMPLETED"}

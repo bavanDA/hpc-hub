@@ -334,6 +334,21 @@ def job_details(ssh: SshMaster, job_id: str) -> str:
     return res.stdout.strip() or res.stderr.strip()
 
 
+FIELD_RE = re.compile(r"([\w/:]+)=(.*?)(?=\s+[\w/:]+=|$)")
+
+
+def parse_details(text: str) -> dict[str, str]:
+    """scontrol show job (Key=Value ...) or sacct -P (header row, value row) into one dict."""
+    lines = [x for x in text.splitlines() if x.strip()]
+    if len(lines) >= 2 and "|" in lines[0] and "=" not in lines[0]:
+        return dict(zip(lines[0].split("|"), lines[1].split("|")))
+    out = {}
+    for line in lines:
+        for key, value in FIELD_RE.findall(line.strip()):
+            out[key] = value.strip()
+    return out
+
+
 def wait_gone(ssh: SshMaster, job_id: str, seconds: float = 15) -> bool:
     """After scancel: True once the job no longer runs or waits."""
     end = time.monotonic() + seconds
