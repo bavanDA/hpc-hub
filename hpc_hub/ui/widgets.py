@@ -57,21 +57,31 @@ _sizes: dict[str, int] | None = None
 _pending = 0
 
 
-def remember_size(paned: Gtk.Paned, key: str, default: int) -> Gtk.Paned:
-    """Drag the divider to resize; the size you leave it at is used next time too."""
+def remembered(key: str, default: int) -> int:
+    """A small number kept between runs (panel sizes, which view you picked)."""
     global _sizes
     if _sizes is None:
         _sizes = layout.load()
-    paned.set_position(_sizes.get(key, default))
+    return _sizes.get(key, default)
+
+
+def remember(key: str, value: int) -> None:
+    global _pending
+    remembered(key, value)
+    _sizes[key] = int(value)
+    if _pending:
+        GLib.source_remove(_pending)
+    _pending = GLib.timeout_add(600, _flush)
+
+
+def remember_size(paned: Gtk.Paned, key: str, default: int) -> Gtk.Paned:
+    """Drag the divider to resize; the size you leave it at is used next time too."""
+    paned.set_position(remembered(key, default))
 
     def moved(*_):
-        global _pending
         if paned.get_start_child() is None or not paned.get_start_child().get_visible():
             return  # hidden panel: its position means nothing
-        _sizes[key] = paned.get_position()
-        if _pending:
-            GLib.source_remove(_pending)
-        _pending = GLib.timeout_add(600, _flush)
+        remember(key, paned.get_position())
 
     paned.connect("notify::position", moved)
     return paned
