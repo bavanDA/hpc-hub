@@ -42,7 +42,7 @@ class MainWindow(Adw.ApplicationWindow):
         self.latex = LatexPage(sessions, self.toast, save_config, store,
                                lambda: self.projects.edit(None, create=True) if make_projects else None)
         self.stack.add_titled_with_icon(self.latex, "latex", "LaTeX", "x-office-document-symbolic")
-        self.terminals = TerminalsPage()
+        self.terminals = TerminalsPage(sessions, self.toast)
         self.stack.add_titled_with_icon(self.terminals, "terminals", "Terminals", "utilities-terminal-symbolic")
         header.set_title_widget(Adw.ViewSwitcher(stack=self.stack, policy=Adw.ViewSwitcherPolicy.WIDE))
         self.toasts = Adw.ToastOverlay(child=self.stack)
