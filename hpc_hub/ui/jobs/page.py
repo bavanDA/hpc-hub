@@ -10,7 +10,7 @@ from ... import slurm
 from ...session import ClusterSession, State
 from ...slurm import JobInfo
 from .cancel import CancelMixin
-from .columns import COLUMNS, JobItem, _binder, _setup
+from .columns import JobItem, add_columns
 from .details import DetailsMixin
 
 REFRESH_SECONDS = 15
@@ -47,14 +47,7 @@ class JobsPage(DetailsMixin, CancelMixin, Gtk.Box):
         self.selection = Gtk.SingleSelection(model=filtered, autoselect=False, can_unselect=True)
         self.view = Gtk.ColumnView(model=self.selection, show_row_separators=True, reorderable=False)
         self.view.add_css_class("data-table")
-        for title, attr, expand in COLUMNS:
-            factory = Gtk.SignalListItemFactory()
-            factory.connect("setup", _setup, expand)
-            factory.connect("bind", _binder(attr))
-            col = Gtk.ColumnViewColumn(title=title, factory=factory, expand=expand, resizable=True)
-            self.view.append_column(col)
-            if attr == "user":
-                self.user_col = col  # only "All jobs" needs it; the rest are yours
+        self.user_col = add_columns(self.view)
         stop = Gtk.SignalListItemFactory()
         stop.connect("setup", self._stop_setup)
         stop.connect("bind", self._stop_bind)

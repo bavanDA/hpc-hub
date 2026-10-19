@@ -53,3 +53,17 @@ def _binder(attr: str):
         if attr == "state" and text in STATE_CLASS:
             label.add_css_class(STATE_CLASS[text])
     return bind
+
+
+def add_columns(view: Gtk.ColumnView) -> Gtk.ColumnViewColumn:
+    """Append the job columns; returns User, which only "All jobs" needs (the rest are yours)."""
+    user_col = None
+    for title, attr, expand in COLUMNS:
+        factory = Gtk.SignalListItemFactory()
+        factory.connect("setup", _setup, expand)
+        factory.connect("bind", _binder(attr))
+        col = Gtk.ColumnViewColumn(title=title, factory=factory, expand=expand, resizable=True)
+        view.append_column(col)
+        if attr == "user":
+            user_col = col
+    return user_col
