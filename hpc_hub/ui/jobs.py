@@ -6,7 +6,7 @@ from collections.abc import Callable
 
 from gi.repository import Adw, Gio, GLib, GObject, Gtk, Pango
 
-from .. import slurm
+from .. import slurm, tmux
 from ..session import ClusterSession, State
 from ..slurm import JobInfo
 
@@ -79,6 +79,10 @@ class JobsPage(Gtk.Box):
             factory.connect("bind", _binder(attr))
             col = Gtk.ColumnViewColumn(title=title, factory=factory, expand=expand, resizable=True)
             self.view.append_column(col)
+        stop = Gtk.SignalListItemFactory()
+        stop.connect("setup", self._stop_setup)
+        stop.connect("bind", self._stop_bind)
+        self.view.append_column(Gtk.ColumnViewColumn(title="", factory=stop, fixed_width=48))
         self.view.connect("activate", lambda _v, pos: self._details(self._job_at(pos)))
 
         self.empty = Adw.StatusPage(icon_name="view-list-symbolic")
@@ -212,6 +216,17 @@ class JobsPage(Gtk.Box):
         mine = bool(s.ssh) and j is not None and j.user == s.ssh.username
         return mine and j.state in ("RUNNING", "PENDING", "SUSPENDED", "REQUEUED")
 
+    def _stop_setup(self, _f, item) -> None:
+        b = Gtk.Button(icon_name="process-stop-symbolic", css_classes=["flat", "circular", "error"],
+                       tooltip_text="Cancel this job…", halign=Gtk.Align.CENTER)
+        b.connect("clicked", lambda btn: self._confirm_cancel(btn.job))
+        item.set_child(b)
+
+    def _stop_bind(self, _f, item) -> None:
+        b, job = item.get_child(), item.get_item().job
+        b.job = job
+        b.set_visible(self._cancellable(job))
+
     def _sync_buttons(self) -> None:
         j = self._selected()
         self.details_btn.set_sensitive(j is not None)
@@ -245,31 +260,54 @@ class JobsPage(Gtk.Box):
         threading.Thread(target=work, daemon=True).start()
 
     def _confirm_cancel(self, j: JobInfo | None) -> None:
-        if not j:
+        """Say exactly what stops (node, time used, sessions on it), default to keeping it."""
+        if not j or not self.session.ssh:
             return
         s = self.session
-        borrowed = s.allocation and s.allocation.job_id == j.job_id
-        body = f"{j.name} on {j.where or j.partition} will be stopped."
-        if borrowed:
-            body += " This is the node HPC Hub is using."
-        dialog = Adw.AlertDialog(heading=f"Cancel job {j.job_id}?", body=body)
-        dialog.add_response("keep", "Keep running")
-        dialog.add_response("cancel", "Cancel job")
+
+        def look():  # sessions the app started on this job are named hpchub-<agent>-<job>-...
+            try:
+                inside = [t.title for t in tmux.list_sessions(s.ssh).sessions if f"-{j.job_id}-" in t.name]
+            except Exception:  # noqa: BLE001
+                inside = []
+            GLib.idle_add(lambda: self._ask_cancel(s, j, inside) and False)
+        threading.Thread(target=look, daemon=True).start()
+
+    def _ask_cancel(self, s: ClusterSession, j: JobInfo, inside: list[str]) -> None:
+        app_node = s.allocation is not None and s.allocation.job_id == j.job_id
+        lines = [f"{j.name} · {j.partition}",
+                 f"Node: {j.where}" if j.state == "RUNNING" else f"Waiting: {j.where}",
+                 f"Running for {j.elapsed} of {j.limit}" if j.state == "RUNNING" else None]
+        if inside:
+            lines.append("Running in it: " + ", ".join(inside))
+        if app_node:
+            lines.append("HPC Hub is using this node.")
+        lines.append("")
+        lines.append("Everything running in this job stops right away and can't be brought back."
+                     if j.state == "RUNNING" else "It leaves the queue. Nothing has started yet.")
+        dialog = Adw.AlertDialog(heading=f"Cancel job {j.job_id}?", body="\n".join(l for l in lines if l is not None))
+        dialog.add_response("cancel", "Cancel job")  # stacked buttons show the last one on top
+        dialog.add_response("keep", "Keep running" if j.state == "RUNNING" else "Keep waiting")
         dialog.set_response_appearance("cancel", Adw.ResponseAppearance.DESTRUCTIVE)
+        dialog.set_default_response("keep")
         dialog.set_close_response("keep")
 
         def on_response(_d, response):
             if response != "cancel":
                 return
+            self.toast(f"Cancelling job {j.job_id}…")
 
             def work():
                 try:
                     slurm.cancel_job(s.ssh, j.job_id)
-                    msg = f"Cancelled job {j.job_id}"
-                    if borrowed:
+                    if app_node:
                         s.allocation = None
+                        s.listener.state_changed(s)
+                    gone = slurm.wait_gone(s.ssh, j.job_id)
+                    msg = (f"Job {j.job_id} is cancelled and gone from the queue" if gone
+                           else f"Cancel sent. Slurm is still stopping job {j.job_id}")
                 except Exception as e:  # noqa: BLE001
-                    msg = f"Cancel failed: {e}"
+                    msg = f"Could not cancel job {j.job_id}: {e}"
                 GLib.idle_add(lambda: (self.toast(msg), self.refresh(quiet=True)) and False)
 
             threading.Thread(target=work, daemon=True).start()
