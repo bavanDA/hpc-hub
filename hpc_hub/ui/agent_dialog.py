@@ -127,15 +127,24 @@ class AgentDialog(Adw.Dialog):
 
     def _load(self) -> None:
         s, limit = self.s, 400 if self.project else chat_store.LIMIT
-        bg(lambda: (chat_store.list_chats(s.ssh, self.agent.id, limit), remote_fs.home(s.ssh)), self._show)
+        bg(lambda: (chat_store.list_chats(s.ssh, self.agent.id, limit), remote_fs.home(s.ssh), self._real(s)),
+           self._show)
+
+    def _real(self, s: ClusterSession) -> str:
+        """The project folder with links resolved (/scratch is a link to /mmfs1/scratch on Wulver)."""
+        if not self.project:
+            return ""
+        res = s.ssh.run(f"readlink -f {remote_fs.q(remote_fs.expand(s.ssh, self.project))}", timeout=30)
+        return res.stdout.strip().rstrip("/")
 
     def _show(self, got: tuple[list[Chat], str] | None, err: str) -> None:
         if err or not got:
             self.chats.set_description(GLib.markup_escape_text(f"Could not read chats: {err}"))
             return
-        chats, home = got
+        chats, home, real = got
         if self.project:
-            chats = [c for c in chats if c.cwd == self.project or c.cwd.startswith(self.project + "/")]
+            roots = {self.project, real} - {""}
+            chats = [c for c in chats if any(c.cwd == r or c.cwd.startswith(r + "/") for r in roots)]
         self.chats.set_description("Pick one to continue it." if chats
                                    else "No chats here yet." if self.project else "No chats yet on this cluster.")
         self.search.set_visible(len(chats) > 6)
