@@ -400,15 +400,14 @@ class FilesPage(Gtk.Box):
         self.append(self.banner)
         self.pane = FilePane(sessions, toast, 0, self.copy, on_latex)
         self.preview = Preview(TEXT)
-        self.pane.on_select = lambda e: self.preview.show(self.pane.session, self.pane.child(e) if e else "", e) \
-            if self.split.get_end_child() else None
-        self.split = Gtk.Paned(start_child=self.pane, end_child=self.preview, vexpand=True, wide_handle=True,
+        self.split = Gtk.Paned(start_child=self.pane, vexpand=True, wide_handle=True,
                                resize_start_child=True, resize_end_child=True, shrink_end_child=False, position=560)
         self.append(self.split)
-        toggle = Gtk.ToggleButton(icon_name="view-dual-symbolic", tooltip_text="Preview panel", active=True,
-                                  css_classes=["flat"])
-        toggle.connect("toggled", lambda b: self.split.set_end_child(self.preview if b.get_active() else None))
-        self.pane.nav.append(toggle)
+        self.preview_on = Gtk.ToggleButton(icon_name="view-dual-symbolic", active=True, css_classes=["flat"],
+                                           tooltip_text="Preview a file when you select it")
+        self.preview_on.connect("toggled", lambda *_: self._preview(self.pane.selected()))
+        self.pane.nav.append(self.preview_on)
+        self.pane.on_select = self._preview
 
         self.transfers = Gtk.ListBox(selection_mode=Gtk.SelectionMode.NONE, css_classes=["boxed-list"])
         self.revealer = Gtk.Revealer(child=Gtk.ScrolledWindow(child=self.transfers, max_content_height=180,
@@ -422,6 +421,17 @@ class FilesPage(Gtk.Box):
             self.pane.refresh()
         else:
             self.pane.set_session(session)
+
+    def _preview(self, e: Entry | None) -> None:
+        """The preview panel only shows while a file is selected."""
+        show = e is not None and not e.is_dir and self.preview_on.get_active()
+        if show:
+            if self.split.get_end_child() is None:
+                self.split.set_end_child(self.preview)
+            self.preview.show(self.pane.session, self.pane.child(e), e)
+        elif self.split.get_end_child() is not None:
+            self.preview.message("Preview")  # also drops any load still running
+            self.split.set_end_child(None)
 
     def open_at(self, session: ClusterSession, folder: str) -> None:
         self.pane.paths[session.cfg.id] = folder
