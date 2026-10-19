@@ -1,5 +1,7 @@
 """Projects: a named folder on a cluster (myproject, mc, paper...). Saved in projects.toml."""
 
+import json
+import os
 import posixpath
 import time
 import shlex
@@ -114,7 +116,28 @@ def parse_papers(text: str) -> list[Paper]:
 
 
 def find_papers(ssh: SshMaster) -> list[Paper]:
-    return parse_papers(ssh.run(PAPERS, timeout=90).stdout)
+    return parse_papers(ssh.run(PAPERS, timeout=90, fast=True).stdout)
+
+
+def _papers_file(cluster: str) -> Path:
+    base = os.environ.get("XDG_CACHE_HOME") or str(Path.home() / ".cache")
+    return Path(base) / "hpc-hub" / f"papers-{cluster}.json"
+
+
+def save_papers(cluster: str, papers: list[Paper]) -> None:
+    """Remember what the last search found, so the list shows at once next time."""
+    f = _papers_file(cluster)
+    f.parent.mkdir(parents=True, exist_ok=True)
+    f.write_text(json.dumps({"at": int(time.time()), "papers": [asdict(x) for x in papers]}))
+
+
+def load_papers(cluster: str) -> tuple[list[Paper], int]:
+    """(papers, when they were found) from the last search; ([], 0) if none."""
+    try:
+        raw = json.loads(_papers_file(cluster).read_text())
+        return [Paper(**x) for x in raw["papers"]], int(raw["at"])
+    except (OSError, ValueError, KeyError, TypeError):
+        return [], 0
 
 
 def create_command(folder: str, template: str, title: str, git_init: bool) -> str:

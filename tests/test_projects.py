@@ -70,3 +70,12 @@ def test_is_latex():
     assert not Project("mc", "w", "/x", "papers/final/main.tex").is_latex  # a repo with a paper inside
     assert not Project("k", "w", "/x").is_latex
     assert Project("p", "w", "/x", kind="latex").is_latex and not Project("c", "w", "/x", "main.tex", kind="code").is_latex
+
+
+def test_papers_are_remembered(tmp_path, monkeypatch):
+    monkeypatch.setenv("XDG_CACHE_HOME", str(tmp_path))
+    assert projects.load_papers("wulver") == ([], 0)
+    found = [projects.Paper("/s/MC/paper", "main.tex", 1700000400, 1)]
+    projects.save_papers("wulver", found)
+    papers, at = projects.load_papers("wulver")
+    assert papers == found and at > 0
