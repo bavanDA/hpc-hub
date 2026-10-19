@@ -55,7 +55,8 @@ class MainWindow(Adw.ApplicationWindow):
         from gi.repository import Gio
         menu = Gio.Menu()
         menu.append("About HPC Hub", "app.about")
-        menu.append("Quit", "app.quit")
+        menu.append("Disconnect all and quit…", "app.disconnect-quit")
+        menu.append("Quit (keep everything running)", "app.quit")
         return menu
 
     def open_latex(self, session, path: str) -> None:
