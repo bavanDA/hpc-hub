@@ -1,14 +1,16 @@
 """VS Code and Claude on the compute node: dialogs + launch into a terminal tab."""
 
 import shlex
+import shutil
 import subprocess
 import threading
 import time
 from collections.abc import Callable
+from urllib.parse import urlsplit
 
 from gi.repository import Adw, Gdk, GLib, Gtk
 
-from .. import links, remote, slurm
+from .. import links, remote, remote_fs, slurm
 from ..links import Link
 from ..session import ClusterSession, State
 from ..slurm import Allocation
@@ -36,6 +38,9 @@ class Tools:
         self.show_terminals = show_terminals
         self.toast = toast
         self.save_config = save_config
+        self.tunnels: dict[str, tuple[str, str]] = {}  # cluster -> (job id, tunnel name)
+        self.pending: dict[str, tuple[str, str]] = {}  # cluster -> (folder, target) to open once the tunnel is up
+        self.vs_tabs: dict[str, tuple[str, TerminalTab]] = {}
 
     def _ready(self, s: ClusterSession) -> bool:
         if s.state != State.CONNECTED or not s.ssh:
@@ -49,24 +54,33 @@ class Tools:
         d.present(self.window)
 
     # -- VS Code -------------------------------------------------------------------
-    def vscode(self, s: ClusterSession) -> None:
-        """Submit the VS Code batch job (or find the running one) and follow its log."""
+    def vscode(self, s: ClusterSession, folder: str = "", target: str = "") -> None:
+        """Open folder in VS Code (desktop app or browser) through the tunnel of the VS Code batch job.
+        Submits the job if none is running and follows its log."""
         if not self._ready(s):
             return
-        self.toast(f"Starting VS Code on {s.cfg.name}…")
-        v = s.cfg.vscode
+        v, cid = s.cfg.vscode, s.cfg.id
+        target = target or v.open_in
+        self.toast(f"Opening VS Code on {s.cfg.name}…")
 
         def work():
             try:
+                where = folder or v.workdir
+                if where.startswith("~"):
+                    where = remote_fs.home(s.ssh) + where[1:]
                 job = slurm.find_job(s.ssh, VSCODE_JOBS)
+                known = self.tunnels.get(cid)
+                if job and known and known[0] == job.job_id:
+                    _idle(self._open_tunnel, known[1], where, target)
+                    return
+                self.pending[cid] = (where, target)
                 if job:
-                    _idle(self.toast, f"VS Code job {job.job_id} is already there, opening it")
                     job_id = job.job_id
                 else:
                     body = "\n".join(x for x in (remote.cd_part(v.workdir), v.setup, v.command) if x.strip())
                     job_id = slurm.submit(s.ssh, v.compute, VSCODE_JOB, body)
-                    _idle(self.toast, f"Submitted VS Code job {job_id}")
-            except (slurm.SlurmError, OSError, subprocess.SubprocessError) as e:
+                    _idle(self.toast, f"Submitted VS Code job {job_id}, it opens when the job starts")
+            except (slurm.SlurmError, OSError, subprocess.SubprocessError, remote_fs.FsError) as e:
                 _idle(self._error, "VS Code job failed", str(e))
                 return
             _idle(self._follow_vscode, s, job_id)
@@ -74,24 +88,51 @@ class Tools:
         threading.Thread(target=work, daemon=True).start()
 
     def _follow_vscode(self, s: ClusterSession, job_id: str) -> None:
+        tab = self.vs_tabs.get(s.cfg.id)
+        if tab and tab[0] == job_id and tab[1].get_root():
+            self.show_terminals()  # already following it; the link opens the pending folder
+            return
         a = Allocation(job_id, "", owned=False)
-        self.terminals.open(f"VS Code · {s.cfg.name} · job {job_id}", s.ssh.argv(slurm.follow_log(job_id), tty=True),
-                            "text-editor-symbolic", on_link=lambda tab, link: self._vscode_link(s, a, tab, link))
+        t = self.terminals.open(f"VS Code · {s.cfg.name} · job {job_id}", s.ssh.argv(slurm.follow_log(job_id), tty=True),
+                                "text-editor-symbolic", on_link=lambda tab, link: self._vscode_link(s, a, tab, link))
+        self.vs_tabs[s.cfg.id] = (job_id, t)
         self.show_terminals()
 
+    def _open_tunnel(self, name: str, folder: str, target: str) -> None:
+        desktop, browser = links.tunnel_urls(name, folder)
+        if target == "desktop" and shutil.which("code"):
+            subprocess.Popen(["code", "--folder-uri", desktop], stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                             stderr=subprocess.DEVNULL, start_new_session=True)
+            self.toast("Opening in VS Code. First time, sign in with GitHub in VS Code.")
+        else:
+            if target == "desktop":
+                self.toast("VS Code app not found, opening in the browser")
+            _open_uri(self.window, browser)
+
     def _vscode_link(self, s: ClusterSession, a: Allocation, tab: TerminalTab, link: Link) -> None:
-        auto = s.cfg.vscode.open_links
+        v = s.cfg.vscode
         if link.kind == links.DEVICE_LOGIN:
             if link.code:
                 Gdk.Display.get_default().get_clipboard().set(link.code)
             tab.add_banner(f"Sign in with code {link.code} (copied)", "Open sign-in page",
                            lambda: _open_uri(tab, link.url))
-            if auto:
+            if v.open_links:
                 _open_uri(tab, link.url)
         elif link.kind == links.TUNNEL:
-            tab.add_banner("VS Code is ready", "Open VS Code", lambda: _open_uri(tab, link.url))
-            if auto:
-                _open_uri(tab, link.url)
+            name = links.tunnel_name(link.url)
+            if not name:
+                return
+            self.tunnels[s.cfg.id] = (a.job_id, name)
+            where = urlsplit(link.url).path.split("/", 3)[3:] or [""]
+            home = "/" + where[0]
+            tab.add_banner(f"VS Code is ready (tunnel {name})", "Open in browser",
+                           lambda: self._open_tunnel(name, home, "browser"))
+            tab.add_banner("Open in the VS Code app", "Open app", lambda: self._open_tunnel(name, home, "desktop"))
+            pending = self.pending.pop(s.cfg.id, None)
+            if pending:
+                self._open_tunnel(name, *pending)
+            elif v.open_links:
+                self._open_tunnel(name, home, v.open_in)
         elif link.kind == links.LOCAL_WEB:
             def work():
                 try:
