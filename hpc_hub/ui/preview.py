@@ -2,14 +2,17 @@
 
 import posixpath
 
-from gi.repository import Adw, Gdk, GLib, Gtk, GtkSource, Pango
+import gi
 
-from .. import remote_fs
-from ..remote_fs import Entry
-from ..session import ClusterSession
-from .editor import source_view
-from .pdf import PdfView
-from .widgets import bg, shortcuts
+gi.require_version("GtkSource", "5")
+from gi.repository import Adw, Gdk, GLib, Gtk, GtkSource, Pango  # noqa: E402
+
+from .. import remote_fs  # noqa: E402
+from ..remote_fs import Entry  # noqa: E402
+from ..session import ClusterSession  # noqa: E402
+from .editor import source_view  # noqa: E402
+from .pdf import PdfView  # noqa: E402
+from .widgets import bg, shortcuts  # noqa: E402
 
 IMAGES = (".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".bmp")
 TEXT_LIMIT = 512 * 1024
