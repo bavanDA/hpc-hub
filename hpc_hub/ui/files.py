@@ -159,9 +159,7 @@ class FilePane(Gtk.Box):
         s = self.session
 
         def work():
-            target = path or remote_fs.home(s.ssh)
-            if target.startswith("~"):
-                target = remote_fs.home(s.ssh) + target[1:]
+            target = remote_fs.expand(s.ssh, path or "~")
             return target, remote_fs.list_dir(s.ssh, target)
 
         def done(result, err):

@@ -66,9 +66,7 @@ class Tools:
 
         def work():
             try:
-                where = folder or v.workdir
-                if where.startswith("~"):
-                    where = remote_fs.home(s.ssh) + where[1:]
+                where = remote_fs.expand(s.ssh, folder or v.workdir)
                 job = slurm.find_job(s.ssh, VSCODE_JOBS)
                 known = self.tunnels.get(cid)
                 if job and not (known and known[0] == job.job_id):

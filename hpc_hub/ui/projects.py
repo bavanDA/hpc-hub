@@ -131,9 +131,6 @@ class ProjectsPage(Gtk.Box):
 
         def go():
             if p.path.startswith("~"):
-                def resolve():
-                    return remote_fs.home(s.ssh) + p.path[1:]
-
                 def done(path, err):
                     if err:
                         self.toast(err)
@@ -141,7 +138,7 @@ class ProjectsPage(Gtk.Box):
                     p.path = path
                     self.store.changed()
                     go()
-                bg(resolve, done)
+                bg(lambda: remote_fs.expand(s.ssh, p.path), done)
                 return
             self.store.touch(p)
             fn()
@@ -297,7 +294,7 @@ class ProjectDialog(Adw.Dialog):
         git_init = self.git.get_active()
 
         def work():
-            target = remote_fs.home(s.ssh) + path[1:] if path.startswith("~") else path
+            target = remote_fs.expand(s.ssh, path)
             if self.create:
                 res = s.ssh.run(projects.create_command(target, template, name, git_init), timeout=60)
                 if res.returncode != 0:

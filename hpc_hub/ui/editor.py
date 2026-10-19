@@ -32,10 +32,6 @@ def source_view(filename: str) -> GtkSource.View:
     return view
 
 
-def expand_home(session: ClusterSession, path: str, home: str) -> str:
-    return home + path[1:] if path.startswith("~") else path
-
-
 class EditorDialog(Adw.Dialog):
     def __init__(self, session: ClusterSession, path: str, template: str = ""):
         super().__init__(title=posixpath.basename(path), content_width=860, content_height=680)
@@ -70,8 +66,7 @@ class EditorDialog(Adw.Dialog):
         s = self.session
 
         def work():
-            if self.path.startswith("~"):
-                self.path = expand_home(s, self.path, remote_fs.home(s.ssh))
+            self.path = remote_fs.expand(s.ssh, self.path)
             try:
                 return remote_fs.read_bytes(s.ssh, self.path, limit=8 * 1024 * 1024).decode("utf-8", "replace")
             except remote_fs.FsError:

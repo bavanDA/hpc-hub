@@ -336,7 +336,7 @@ class LatexPage(Gtk.Box):
             return
 
         def work():
-            p = remote_fs.home(session.ssh) + path[1:] if path.startswith("~") else path
+            p = remote_fs.expand(session.ssh, path)
             folder = posixpath.dirname(p)
             return p, folder, self._list_files(session, folder)
 

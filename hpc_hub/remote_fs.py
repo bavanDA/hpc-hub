@@ -57,6 +57,11 @@ def home(ssh: SshMaster) -> str:
     return _run(ssh, 'printf %s "$HOME"').strip() or "/"
 
 
+def expand(ssh: SshMaster, path: str) -> str:
+    """~/x -> /home/you/x (asks the cluster only when needed)."""
+    return home(ssh) + path[1:] if path.startswith("~") else path
+
+
 def list_dir(ssh: SshMaster, path: str) -> list[Entry]:
     # -H: if path is a link to a folder (Yale's ~/project_pi_xyz), list the folder it points to
     return parse_listing(_run(ssh, f"find -H {q(path)} -mindepth 1 -maxdepth 1 -printf {q(LIST_FORMAT)}", timeout=60))
