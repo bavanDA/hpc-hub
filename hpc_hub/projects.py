@@ -1,6 +1,7 @@
 """Projects: a named folder on a cluster (myproject, mc, paper...). Saved in projects.toml."""
 
 import posixpath
+import time
 import shlex
 import tomllib
 from dataclasses import asdict, dataclass, fields
@@ -90,3 +91,32 @@ def create_command(folder: str, template: str, title: str, git_init: bool) -> st
     if git_init:
         steps.append("git init -q")
     return " && ".join(steps)
+
+
+class ProjectStore:
+    """The project list plus change listeners (Projects tab, LaTeX tab)."""
+
+    def __init__(self, path: Path = PROJECTS_FILE):
+        self.path = path
+        self.items = load(path)
+        self.listeners: list = []
+
+    def changed(self) -> None:
+        save(self.items, self.path)
+        for fn in self.listeners:
+            fn()
+
+    def add(self, p: Project) -> None:
+        self.items.append(p)
+        self.changed()
+
+    def remove(self, p: Project) -> None:
+        self.items.remove(p)
+        self.changed()
+
+    def touch(self, p: Project) -> None:
+        p.opened = int(time.time())
+        self.changed()
+
+    def recent(self) -> list[Project]:
+        return sorted(self.items, key=lambda p: (-p.opened, p.name.lower()))

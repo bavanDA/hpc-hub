@@ -41,3 +41,17 @@ def test_find_main_tex(tmp_path):
     (tmp_path / "main.tex").write_text("% comment\n\\documentclass{article}\n")
     (tmp_path / "old.tex").write_text("% \\documentclass{article}\n")
     assert projects.find_main_tex(LocalSsh(), str(tmp_path)) == ["main.tex", "sec/draft.tex"]
+
+
+def test_store(tmp_path):
+    path = tmp_path / "p.toml"
+    store = projects.ProjectStore(path)
+    calls = []
+    store.listeners.append(lambda: calls.append(1))
+    a, b = Project("a", "wulver", "/a"), Project("b", "yale", "/b")
+    store.add(a)
+    store.add(b)
+    store.touch(a)
+    assert [p.name for p in store.recent()] == ["a", "b"] and len(calls) == 3
+    store.remove(b)
+    assert projects.ProjectStore(path).items == [a]
