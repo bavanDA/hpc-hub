@@ -8,11 +8,14 @@ import re
 import shlex
 from dataclasses import dataclass
 
+from . import links
 from .ssh import SshMaster
+
+MARK = "@@HPCHUB_PANE "
 
 SEP = "\x1f"
 FIELDS = ["session_name", "session_created", "session_attached", "@hpchub_label", "@hpchub_color",
-          "pane_current_command", "session_windows", "pane_current_path"]
+          "pane_current_command", "session_windows", "pane_current_path", "@hpchub_remote"]
 LIST = ("hostname; command -v tmux >/dev/null && echo TMUX_OK; "
         f"tmux list-sessions -F {shlex.quote(SEP.join('#{' + f + '}' for f in FIELDS))} 2>/dev/null; "
         "echo SCREEN_LIST; screen -ls 2>/dev/null; "
@@ -34,6 +37,7 @@ class Session:
     command: str = ""
     windows: int = 1
     path: str = ""
+    remote: str = ""  # remote control link, or "code:XXXX-XXXX" (ChatGPT pairing), found in its output
 
     @property
     def title(self) -> str:
@@ -72,7 +76,7 @@ def parse(text: str) -> Listing:
             continue
         if not in_screen and SEP in line:
             p = (line.split(SEP) + [""] * len(FIELDS))[:len(FIELDS)]
-            out.append(Session(p[0], "tmux", _int(p[1]), _int(p[2]), p[3], p[4], p[5], _int(p[6]) or 1, p[7]))
+            out.append(Session(p[0], "tmux", _int(p[1]), _int(p[2]), p[3], p[4], p[5], _int(p[6]) or 1, p[7], p[8]))
     text, found, job_part = text.partition("JOB_LIST\n")
     nodes = dict(line.split()[:2] for line in job_part.splitlines() if len(line.split()) >= 2) if found else None
     screen_part = text.split("SCREEN_LIST", 1)[1] if "SCREEN_LIST" in text else ""
@@ -135,6 +139,38 @@ def kill(s: Session) -> str:
     if s.kind == "screen":
         return f"screen -S {shlex.quote(s.name)} -X quit"
     return f"tmux kill-session -t {_t(s.name)}"
+
+
+def capture_command(names: list[str]) -> str:
+    return "; ".join(f"echo {shlex.quote(MARK + n)}; tmux capture-pane -p -J -t {_opt(n)} -S -3000 2>/dev/null"
+                     for n in names)
+
+
+def parse_remotes(text: str) -> dict[str, str]:
+    """Newest remote link (or pairing code) per captured session."""
+    out, name, chunk = {}, "", []
+
+    def flush():
+        found = [x for x in links.find_links("\n".join(chunk)) if x.kind in (links.REMOTE, links.PAIR)]
+        if name and found:
+            last = found[-1]
+            out[name] = last.url if last.kind == links.REMOTE else f"code:{last.code}"
+    for line in text.splitlines():
+        if line.startswith(MARK):
+            flush()
+            name, chunk = line[len(MARK):], []
+        else:
+            chunk.append(line)
+    flush()
+    return out
+
+
+def find_remotes(ssh: SshMaster, names: list[str]) -> dict[str, str]:
+    return parse_remotes(ssh.run(capture_command(names), timeout=30).stdout) if names else {}
+
+
+def set_remote(name: str, value: str) -> str:
+    return f"tmux set-option -t {_opt(name)} @hpchub_remote {shlex.quote(value)}"
 
 
 def list_sessions(ssh: SshMaster) -> Listing:

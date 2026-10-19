@@ -63,3 +63,14 @@ def test_open_line_is_valid_shell():
     line = tmux.open_line("hpchub-claude-1-x", "srun --pty bash -ic 'cd ~ && claude'", "Claude · MC", "#d97757")
     assert subprocess.run(["bash", "-n", "-c", line]).returncode == 0
     assert "exec tmux attach-session -t =hpchub-claude-1-x" in line
+
+
+def test_remote_links():
+    text = (f"{tmux.MARK}hpchub-agy-1-2\n  Open\n  https://antigravity.google.com/r/\n  abc-v2\n"
+            f"{tmux.MARK}hpchub-codex-1-3\n{{\"manualPairingCode\":\"AB12-CD34\"}}\n{{\"manualPairingCode\":\"ZZ99-YY88\"}}\n"
+            f"{tmux.MARK}hpchub-term-4\nplain output\n")
+    assert tmux.parse_remotes(text) == {"hpchub-agy-1-2": "https://antigravity.google.com/r/abc-v2",
+                                        "hpchub-codex-1-3": "code:ZZ99-YY88"}
+    assert "capture-pane -p -J -t =a: -S -3000" in tmux.capture_command(["a"])
+    row = tmux.SEP.join(["hpchub-claude-1-2", "1", "0", "", "", "srun", "1", "/h", "https://claude.ai/code/x"])
+    assert tmux.parse(f"login02\nTMUX_OK\n{row}\n").sessions[0].remote == "https://claude.ai/code/x"
