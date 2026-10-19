@@ -320,6 +320,8 @@ class HpcHubApp(Adw.Application):
     def _check_one(self, session: ClusterSession) -> None:
         if not session.healthy():
             GLib.idle_add(lambda: session.mark_lost() and False)
+        else:
+            session.check_node()
 
     # -- quitting -------------------------------------------------------------------------
     def _active(self) -> list[ClusterSession]:

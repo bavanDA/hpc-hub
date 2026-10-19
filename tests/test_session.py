@@ -262,6 +262,21 @@ def test_reuses_agent_node_but_not_strangers(env, monkeypatch):
     assert rec.done.wait(20)
 
 
+def test_switches_when_node_ends(env, monkeypatch):
+    server, tmp = env
+    s, rec = _connect_with_jobs(server, monkeypatch, "55|hpc-hub|n0055|general;70|hpc-hub-codex|n0070|general")
+    assert s.allocation.job_id == "55"
+    monkeypatch.setenv("FAKE_JOBS", "70|hpc-hub-codex|n0070|general")  # 55 hit its time limit
+    s.check_node()
+    assert (s.allocation.job_id, s.allocation.owned) == ("70", False)
+    assert "Job 55 on n0055 has ended" in rec.lines
+    s.check_node()
+    assert s.allocation.job_id == "70"
+    rec.done.clear()
+    s.disconnect()
+    assert rec.done.wait(20)
+
+
 def test_reconnect_reuses_live_login(env):
     server, tmp = env
     s, rec = connect(server, "pw")

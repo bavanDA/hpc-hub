@@ -200,14 +200,16 @@ class ClusterSession:
         threading.Thread(target=run, daemon=True).start()
 
     def ensure_node(self, on_done) -> None:
-        """Get a node if we have none; on_done(Allocation | None) runs on a worker thread."""
-        if self.allocation or self.state != State.CONNECTED:
+        """Get a node if we have none (or ours ended); on_done(Allocation | None) runs on a worker thread."""
+        if self.state != State.CONNECTED:
             on_done(self.allocation)
             return
 
         def run():
-            self._cancel.clear()
-            self._allocate_safely()
+            self.check_node()
+            if not self.allocation:
+                self._cancel.clear()
+                self._allocate_safely()
             on_done(self.allocation)
 
         threading.Thread(target=run, daemon=True).start()
@@ -242,6 +244,22 @@ class ClusterSession:
             if attempt == 0:
                 time.sleep(5)
         return False
+
+    def check_node(self) -> None:
+        """Blocking. Our job can end under us (time limit, scancel): switch to another running one."""
+        a = self.allocation
+        if not a or not self.ssh or self.state != State.CONNECTED:
+            return
+        try:
+            running = {j.job_id for j in slurm.running_jobs(self.ssh)}
+        except (OSError, subprocess.SubprocessError):
+            return  # can't tell, keep it
+        if a.job_id in running or self.allocation is not a:
+            return
+        self._log(f"Job {a.job_id} on {a.node} has ended")
+        self.allocation = None
+        self._reuse_running_job()
+        self._set(State.CONNECTED)
 
     def mark_lost(self) -> None:
         if self.state == State.CONNECTED:
