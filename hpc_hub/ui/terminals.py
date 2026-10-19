@@ -135,21 +135,20 @@ class TerminalsPage(Gtk.Box):
         self.on_tool: Callable[[ClusterSession, str], None] | None = None  # set by the app: VS Code, agents
 
         # far left: tabs. Click one to open its panel, click it again to close the panel.
-        bar = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4, margin_top=6, margin_bottom=6,
-                      margin_start=4, margin_end=4)
+        bar = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, css_classes=["activity-bar"])
         self.tabs: dict[str, Gtk.ToggleButton] = {}
-        self.tab_labels: dict[str, Gtk.Label] = {}
+        self.logs_badge = Gtk.Label(css_classes=["activity-badge"], halign=Gtk.Align.END, valign=Gtk.Align.END,
+                                    visible=False, can_target=False)
         for name, label, icon in (("sessions", "Sessions", "utilities-terminal-symbolic"),
                                   ("logs", "Logs", "text-x-generic-symbolic"),
                                   ("new", "New", "list-add-symbolic")):
-            content = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2, margin_top=4, margin_bottom=4)
-            content.append(Gtk.Image(icon_name=icon, pixel_size=20))
-            text = Gtk.Label(label=label, css_classes=["caption"])
-            content.append(text)
-            b = Gtk.ToggleButton(child=content, css_classes=["flat"], tooltip_text=label, width_request=64)
+            content = Gtk.Overlay(child=Gtk.Image(icon_name=icon, pixel_size=22))
+            if name == "logs":
+                content.add_overlay(self.logs_badge)
+            b = Gtk.ToggleButton(child=content, css_classes=["activity-tab"], tooltip_text=label)
             b.connect("toggled", self._tab_toggled, name)
             bar.append(b)
-            self.tabs[name], self.tab_labels[name] = b, text
+            self.tabs[name] = b
         self.append(bar)
         self.append(Gtk.Separator(orientation=Gtk.Orientation.VERTICAL))
 
@@ -367,7 +366,8 @@ class TerminalsPage(Gtk.Box):
         self.log_list.remove_all()
         for v in self.logs:
             self.log_list.append(self._log_row(v))
-        self.tab_labels["logs"].set_label(f"Logs ({len(self.logs)})" if self.logs else "Logs")
+        self.logs_badge.set_label(str(len(self.logs)))
+        self.logs_badge.set_visible(bool(self.logs))
         self._fill_launch()
         live = [s for s in self.sessions if s.state == State.CONNECTED and s.ssh]
         if not live:
