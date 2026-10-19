@@ -35,3 +35,14 @@ def test_transfer_tokens():
     assert tok["access_token"] == "t" and tok["refresh_token"] == "r"
     with pytest.raises(globus.GlobusError):
         globus.transfer_tokens({"resource_server": "auth.globus.org", "access_token": "a"})
+
+
+def test_parse_ls():
+    resp = {"path": "/home/bd/", "DATA": [
+        {"name": "b.txt", "type": "file", "size": 5, "last_modified": "2026-10-18 12:30:00+00:00"},
+        {"name": "Zed", "type": "dir", "size": 4096, "last_modified": "2026-10-17 09:00:00+00:00"},
+        {"name": "a", "type": "dir"}]}
+    path, items = globus.parse_ls(resp)
+    assert path == "/home/bd/"
+    assert [i.name for i in items] == ["a", "Zed", "b.txt"]
+    assert items[2].size == 5 and not items[2].is_dir and items[2].modified == "2026-10-18 12:30"

@@ -36,6 +36,22 @@ class Collection:
     owner: str
 
 
+@dataclass
+class Item:
+    name: str
+    is_dir: bool
+    size: int
+    modified: str
+
+
+def parse_ls(resp: dict) -> tuple[str, list[Item]]:
+    """(absolute path, folders first then files) from an ls response."""
+    items = [Item(d["name"], d.get("type") == "dir", int(d.get("size") or 0), (d.get("last_modified") or "")[:16])
+             for d in resp.get("DATA", [])]
+    items.sort(key=lambda i: (not i.is_dir, i.name.lower()))
+    return resp.get("path", ""), items
+
+
 def pkce() -> tuple[str, str]:
     verifier = secrets.token_urlsafe(48)
     challenge = base64.urlsafe_b64encode(hashlib.sha256(verifier.encode()).digest()).rstrip(b"=").decode()
@@ -147,6 +163,18 @@ class Globus:
                 "DATA": [{"DATA_TYPE": "transfer_item", "source_path": src_path,
                           "destination_path": dst_path, "recursive": recursive}]}
         return _http("POST", f"{TRANSFER}/transfer", token, body=body)["task_id"]
+
+    def ls(self, collection: str, path: str) -> tuple[str, list[Item]]:
+        q = urllib.parse.urlencode({"path": path or "/~/"})
+        return parse_ls(_http("GET", f"{TRANSFER}/operation/endpoint/{collection}/ls?{q}", self._token()))
+
+    def mkdir(self, collection: str, path: str) -> None:
+        _http("POST", f"{TRANSFER}/operation/endpoint/{collection}/mkdir", self._token(),
+              body={"DATA_TYPE": "mkdir", "path": path})
+
+    def tasks(self, limit: int = 20) -> list[dict]:
+        q = urllib.parse.urlencode({"limit": limit, "orderby": "request_time desc", "filter": "type:TRANSFER"})
+        return _http("GET", f"{TRANSFER}/task_list?{q}", self._token()).get("DATA", [])
 
     def task(self, task_id: str) -> dict:
         return _http("GET", f"{TRANSFER}/task/{urllib.parse.quote(task_id)}", self._token())
