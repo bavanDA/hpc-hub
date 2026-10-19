@@ -1,0 +1,97 @@
+"""Agent skills on a cluster: list them, add them from a git repository, remove the ones you added.
+
+Claude reads ~/.claude/skills, ChatGPT (Codex) reads ~/.codex/skills. Folders that the tools manage
+themselves (Claude's synced/, Codex's .system/) are shown but never removed.
+"""
+
+import re
+import shlex
+from dataclasses import dataclass
+
+from .ssh import SshMaster
+
+TARGETS = {"claude": ("Claude", ".claude/skills"), "codex": ("ChatGPT", ".codex/skills")}
+MANAGED = ("/synced/", "/.system/")
+REPOS = ".hpc-hub/skill-repos"
+DEFAULT_REPO = "https://github.com/mattpocock/skills.git"
+
+# prints: path|name|description for every SKILL.md under the given folders
+SCAN = r"""for base in "$@"; do
+  [ -d "$base" ] || continue
+  find -L "$base" -maxdepth 6 -name SKILL.md -not -path '*/.git/*' 2>/dev/null | sort | while IFS= read -r f; do
+    awk -v path="$(dirname "$f")" 'NR==1 && $0!="---" {bad=1; exit} /^---/ {n++; if (n==2) exit; next}
+      /^name:/ {sub(/^name: */, ""); name=$0} /^description:/ {sub(/^description: */, ""); desc=$0}
+      END {if (!bad) {gsub(/^"|"$/, "", desc); print path "|" name "|" desc}}' "$f"
+  done
+done"""
+
+
+@dataclass
+class Skill:
+    path: str  # its folder
+    name: str
+    description: str = ""
+    target: str = ""  # claude / codex for installed ones
+    managed: bool = False  # synced or built in: leave it alone
+
+    @property
+    def folder(self) -> str:
+        return self.path.rstrip("/").rsplit("/", 1)[-1]
+
+
+def parse(text: str, target: str = "") -> list[Skill]:
+    out = []
+    for line in text.splitlines():
+        parts = line.split("|", 2)
+        if len(parts) == 3 and parts[0].startswith("/"):
+            path, name, desc = parts
+            out.append(Skill(path, name or path.rsplit("/", 1)[-1], desc.strip(), target,
+                             any(m in path + "/" for m in MANAGED)))
+    return out
+
+
+def _scan(ssh: SshMaster, folders: list[str]) -> str:
+    return ssh.run(f"bash -c {shlex.quote(SCAN)} _ " + " ".join(folders), timeout=60).stdout
+
+
+def installed(ssh: SshMaster) -> list[Skill]:
+    out = []
+    for target, (_, rel) in TARGETS.items():
+        out += parse(_scan(ssh, [f'"$HOME"/{rel}']), target)
+    return out
+
+
+def repo_folder(url: str) -> str:
+    slug = re.sub(r"[^A-Za-z0-9_.-]+", "-", re.sub(r"^https?://|\.git$", "", url.strip())).strip("-")
+    return f'"$HOME"/{REPOS}/{shlex.quote(slug or "repo")}'
+
+
+def browse(ssh: SshMaster, url: str) -> list[Skill]:
+    """Clone (or update) the repository on the cluster and list the skills in it."""
+    if not re.match(r"^(https://|git@)[\w.@:/~-]+$", url.strip()):
+        raise ValueError("Use an https:// or git@ address of a git repository")
+    d = repo_folder(url)
+    get = (f"if [ -d {d}/.git ]; then git -C {d} pull -q --ff-only; "
+           f"else mkdir -p \"$HOME\"/{REPOS} && git clone -q --depth 1 {shlex.quote(url.strip())} {d}; fi")
+    res = ssh.run(f"timeout 120 bash -c {shlex.quote(get)}", timeout=150, fast=True)
+    if res.returncode != 0:
+        raise ValueError(res.stderr.strip() or "Could not get the repository")
+    return parse(_scan(ssh, [d]))
+
+
+def install_command(skills: list[Skill], targets: list[str]) -> str:
+    """Copy each skill folder into each agent's skills folder (replacing an older copy)."""
+    steps = []
+    for t in targets:
+        dest = f'"$HOME"/{TARGETS[t][1]}'
+        steps.append(f"mkdir -p {dest}")
+        for sk in skills:
+            name = shlex.quote(sk.folder)
+            steps.append(f"rm -rf {dest}/{name} && cp -r {shlex.quote(sk.path)} {dest}/{name}")
+    return " && ".join(steps)
+
+
+def remove_command(skill: Skill) -> str:
+    if skill.managed or not skill.target:
+        raise ValueError(f"{skill.name} is managed by the agent itself")
+    return f'rm -rf "$HOME"/{TARGETS[skill.target][1]}/{shlex.quote(skill.folder)}'
