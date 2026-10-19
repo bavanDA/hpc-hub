@@ -15,7 +15,7 @@ from gi.repository import Adw, Gdk, Gio, GLib, Gtk, Pango, Vte  # noqa: E402
 from .. import links, remote, tmux  # noqa: E402
 from ..links import Link  # noqa: E402
 from ..session import ClusterSession, State  # noqa: E402
-from .widgets import remember_size  # noqa: E402
+from .widgets import open_uri, remember_size  # noqa: E402
 
 
 class TerminalTab(Gtk.Box):
@@ -29,16 +29,99 @@ class TerminalTab(Gtk.Box):
         self.banners = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         self.append(self.banners)
 
+        self.remote: Link | None = None  # remote control link or pairing code the session printed
+        self.on_remote: Callable[["TerminalTab"], None] | None = None
+        self.toast: Callable[[str], None] = lambda text: None
+        self.tmux_buffer: Callable[[], str] | None = None  # reads tmux's copy buffer (mouse drag in tmux)
+
         self.term = Vte.Terminal(vexpand=True, hexpand=True, scrollback_lines=20000)
         self.term.set_font(Pango.FontDescription.from_string("Monospace 11"))
         self.term.connect("contents-changed", self._changed)
         self.term.connect("child-exited", self._exited)
+        self.term.connect("selection-changed", self._selected)
+        self._clipboard_keys()
+        self._clipboard_mouse()
         self.append(self.term)
         self._scan_pending = False
 
         env = [f"{k}={v}" for k, v in os.environ.items()] + ["TERM=xterm-256color"]
         self.term.spawn_async(Vte.PtyFlags.DEFAULT, None, argv, env, GLib.SpawnFlags.SEARCH_PATH,
                               None, None, -1, None, None)
+
+    # -- copy and paste ------------------------------------------------------------------
+    def _clipboard_keys(self) -> None:
+        """Ctrl+Shift+C / Ctrl+Shift+V, and Ctrl+C copies when text is selected (else it interrupts)."""
+        keys = Gtk.EventControllerKey(propagation_phase=Gtk.PropagationPhase.CAPTURE)
+
+        def pressed(_c, keyval, _code, state):
+            ctrl = state & Gdk.ModifierType.CONTROL_MASK
+            shift = state & Gdk.ModifierType.SHIFT_MASK
+            key = Gdk.keyval_to_lower(keyval)
+            if ctrl and shift and key == Gdk.KEY_c or ctrl and key == Gdk.KEY_c and self.term.get_has_selection():
+                self.copy()
+                return True
+            if ctrl and shift and key == Gdk.KEY_v:
+                self.term.paste_clipboard()
+                return True
+            return False
+        keys.connect("key-pressed", pressed)
+        self.term.add_controller(keys)
+
+    def _clipboard_mouse(self) -> None:
+        """Right click: our Copy/Paste menu. A drag inside tmux (mouse on) copies through tmux's buffer."""
+        menu = Gio.Menu()
+        menu.append("Copy", "term.copy")
+        menu.append("Paste", "term.paste")
+        menu.append("Select all", "term.select-all")
+        group = Gio.SimpleActionGroup()
+        for name, fn in (("copy", self.copy), ("paste", self.term.paste_clipboard),
+                         ("select-all", self.term.select_all)):
+            act = Gio.SimpleAction(name=name)
+            act.connect("activate", lambda *_, f=fn: f())
+            group.add_action(act)
+        self.insert_action_group("term", group)
+        self.menu = Gtk.PopoverMenu(menu_model=menu, has_arrow=False, halign=Gtk.Align.START)
+        self.menu.set_parent(self.term)
+
+        right = Gtk.GestureClick(button=3, propagation_phase=Gtk.PropagationPhase.CAPTURE)
+
+        def on_right(g, _n, x, y):
+            g.set_state(Gtk.EventSequenceState.CLAIMED)  # don't let tmux open its own menu
+            rect = Gdk.Rectangle()
+            rect.x, rect.y, rect.width, rect.height = int(x), int(y), 1, 1
+            self.menu.set_pointing_to(rect)
+            self.menu.popup()
+        right.connect("pressed", on_right)
+        self.term.add_controller(right)
+
+        drag = Gtk.GestureDrag(button=1, propagation_phase=Gtk.PropagationPhase.CAPTURE)
+
+        def on_end(g, dx, dy):
+            shift = g.get_current_event_state() & Gdk.ModifierType.SHIFT_MASK
+            if self.tmux_buffer and not shift and abs(dx) + abs(dy) > 6:
+                GLib.timeout_add(250, lambda: self._copy_tmux() and False)
+        drag.connect("drag-end", on_end)
+        self.term.add_controller(drag)
+
+    def copy(self) -> None:
+        if self.term.get_has_selection():
+            self.term.copy_clipboard_format(Vte.Format.TEXT)
+            self.toast("Copied")
+        elif self.tmux_buffer:
+            self._copy_tmux()
+
+    def _selected(self, *_):
+        if self.term.get_has_selection():  # Shift+drag selects here: copy right away, like most terminals
+            self.term.copy_clipboard_format(Vte.Format.TEXT)
+
+    def _copy_tmux(self) -> None:
+        fetch = self.tmux_buffer
+
+        def done(text, err):
+            if text:
+                self.get_clipboard().set(text.rstrip("\n"))
+                self.toast("Copied")
+        _bg(lambda: fetch() if fetch else "", done)
 
     def _changed(self, *_):
         if not self._scan_pending:
@@ -52,6 +135,10 @@ class TerminalTab(Gtk.Box):
             key = link.url + link.code
             if key not in self.seen:
                 self.seen.add(key)
+                if link.kind in (links.REMOTE, links.PAIR):
+                    self.remote = link
+                    if self.on_remote:
+                        self.on_remote(self)
                 if self.on_link:
                     self.on_link(self, link)
         return False
@@ -167,6 +254,9 @@ class TerminalsPage(Gtk.Box):
         self.title = Gtk.Label(xalign=0, hexpand=True, ellipsize=Pango.EllipsizeMode.END, css_classes=["heading"])
         self.header.append(self.dot)
         self.header.append(self.title)
+        self.remote_btn = Gtk.Button(css_classes=["suggested-action"], visible=False, valign=Gtk.Align.CENTER)
+        self.remote_btn.connect("clicked", lambda *_: self._use_remote())
+        self.header.append(self.remote_btn)
         self.actions = Gtk.MenuButton(icon_name="view-more-symbolic", css_classes=["flat"], tooltip_text="Session")
         close = Gtk.Button(icon_name="window-close-symbolic", css_classes=["flat"], tooltip_text="Close (keeps running)")
         close.connect("clicked", lambda *_: self.close_current())
@@ -221,7 +311,8 @@ class TerminalsPage(Gtk.Box):
         self.list = Gtk.ListBox(css_classes=["navigation-sidebar"], selection_mode=Gtk.SelectionMode.SINGLE)
         self.list.connect("row-activated", lambda _l, row: getattr(row, "open", None) and row.open())
         box.append(Gtk.ScrolledWindow(child=self.list, vexpand=True, hscrollbar_policy=Gtk.PolicyType.NEVER))
-        box.append(Gtk.Label(label="Switching or closing only detaches. Sessions keep running on the cluster.",
+        box.append(Gtk.Label(label="Switching or closing only detaches. Sessions keep running on the cluster.\n"
+                                   "Select text with the mouse to copy it. Paste: Ctrl+Shift+V or right click.",
                              wrap=True, xalign=0, css_classes=["dim-label", "caption"], margin_start=10,
                              margin_end=10, margin_bottom=10))
         return box
@@ -292,11 +383,32 @@ class TerminalsPage(Gtk.Box):
             self.dot.remove(c)
         self.dot.append(color_dot(view.color) if view.color else Gtk.Image(icon_name=view.icon))
         self.title.set_label(view.title)
+        self._remote_button(view.tab)
         if view.session and view.tmux_session:
             self.actions.set_popover(self._menu(view.session, view.tmux_session))
             self.actions.set_visible(True)
         else:
             self.actions.set_visible(False)
+
+    def _remote_button(self, tab: TerminalTab) -> None:
+        link = tab.remote
+        self.remote_btn.set_visible(link is not None)
+        if link and link.kind == links.PAIR:
+            self.remote_btn.set_label(f"Copy pairing code {link.code}")
+            self.remote_btn.set_tooltip_text("In the ChatGPT app: Codex, connect a machine, enter this code")
+        elif link:
+            self.remote_btn.set_label("Open remote")
+            self.remote_btn.set_tooltip_text(link.url)
+
+    def _use_remote(self) -> None:
+        link = self.current.tab.remote if self.current else None
+        if not link:
+            return
+        if link.kind == links.PAIR:
+            self.get_clipboard().set(link.code)
+            self.toast(f"Pairing code {link.code} copied")
+        else:
+            open_uri(self, link.url)
 
     def close_current(self) -> None:
         view = self.current
@@ -317,10 +429,14 @@ class TerminalsPage(Gtk.Box):
         if key and self.current and self.current.key == key:
             return self.current.tab
         tab = TerminalTab(argv, node, on_link)
+        tab.toast = self.toast
+        tab.on_remote = lambda t: self.current and self.current.tab is t and self._remote_button(t)
         if key:
             s = next((x for x in self.sessions if x.cfg.id == key[0]), None)
             listed = self._listed(key)
             view = View(key, tab, title, color, icon, s, listed or tmux.Session(key[1], label=title, color=color))
+            if s and s.ssh:
+                tab.tmux_buffer = lambda ssh=s.ssh: ssh.run("tmux save-buffer - 2>/dev/null", timeout=15).stdout
             if not listed:
                 self.starting[key] = (title, color)
                 GLib.timeout_add(2000, lambda: self.refresh() and False)
