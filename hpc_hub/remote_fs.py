@@ -28,6 +28,18 @@ class Entry:
         return self.kind == "d"
 
 
+ARCHIVES = (".zip", ".tar.gz", ".tgz", ".tar", ".tar.bz2", ".tar.xz")
+
+
+def ext(name: str) -> str:
+    """Lower-case extension, keeping .tar.gz and friends whole."""
+    low = name.lower()
+    for multi in (".tar.gz", ".tar.bz2", ".tar.xz"):
+        if low.endswith(multi):
+            return multi
+    return posixpath.splitext(low)[1]
+
+
 def q(path: str) -> str:
     return shlex.quote(path)
 
