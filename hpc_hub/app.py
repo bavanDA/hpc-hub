@@ -35,6 +35,9 @@ CSS = """
 .activity-tab:checked { opacity: 1; border-left-color: @accent_bg_color; background: none; }
 .activity-badge { background: @accent_bg_color; color: @accent_fg_color; border-radius: 999px;
                   font-size: 9px; font-weight: bold; padding: 0 4px; min-width: 8px; margin: 6px 4px; }
+levelbar block.ok { background: @accent_bg_color; }
+levelbar block.warn { background: @warning_bg_color; }
+levelbar block.over { background: @error_bg_color; }
 """
 
 HEALTH_SECONDS = 30
@@ -157,6 +160,7 @@ class HpcHubApp(Adw.Application):
         if self.window:
             self.window.cards[session.cfg.id].refresh()
             self.window.jobs.session_changed(session)
+            self.window.usage.session_changed(session)
             self.window.files.session_changed(session)
             self.window.projects.session_changed(session)
         name = session.cfg.name

@@ -6,12 +6,14 @@ from .files import FilesPage
 from .jobs import JobsPage
 from .latex import LatexPage
 from .terminals import TerminalsPage
+from .usage_page import UsagePage
 
 
 GROUPS = [  # sidebar sections: (heading, [(page, title, icon)])
     ("Work", [("projects", "Projects", "view-grid-symbolic"), ("latex", "LaTeX", "x-office-document-symbolic"),
               ("terminals", "Terminals", "utilities-terminal-symbolic")]),
-    ("Cluster", [("clusters", "Clusters", "network-server-symbolic"), ("jobs", "Jobs", "view-list-symbolic")]),
+    ("Cluster", [("clusters", "Clusters", "network-server-symbolic"), ("jobs", "Jobs", "view-list-symbolic"),
+                 ("usage", "Usage", "power-profile-performance-symbolic")]),
     ("Data", [("files", "Files", "folder-symbolic"), ("globus", "Globus", "network-transmit-receive-symbolic")]),
 ]
 
@@ -36,6 +38,7 @@ class MainWindow(Adw.ApplicationWindow):
             self.projects = pages["projects"] = make_projects(self.toast)
         pages["clusters"] = Gtk.ScrolledWindow(child=clamp, vexpand=True)
         self.jobs = pages["jobs"] = JobsPage(sessions, self.toast)
+        self.usage = pages["usage"] = UsagePage(sessions, self.toast)
         self.files = pages["files"] = FilesPage(sessions, self.toast, self.open_latex)
         if make_globus:
             self.globus = pages["globus"] = make_globus(self.toast)
