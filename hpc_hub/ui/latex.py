@@ -7,9 +7,10 @@ from collections.abc import Callable
 
 from gi.repository import Adw, GLib, Gtk, Pango
 
-from .. import git, latex, remote_fs
+from .. import git, latex, projects, remote_fs
 from ..config import LATEX_ENGINES
 from ..latex import LatexIssue
+from ..projects import Project, ProjectStore
 from ..session import ClusterSession, State
 from .editor import source_view
 from .pdf import PdfView
@@ -29,9 +30,12 @@ def _bg(work, done) -> None:
 
 class LatexPage(Gtk.Box):
     def __init__(self, sessions: list[ClusterSession], toast: Callable[[str], None],
-                 save_config: Callable[[], None]):
+                 save_config: Callable[[], None], store: ProjectStore | None = None,
+                 on_new_project: Callable[[], None] = lambda: None):
         super().__init__(orientation=Gtk.Orientation.VERTICAL)
         self.sessions = sessions
+        self.store = store
+        self.on_new_project = on_new_project
         self.toast = toast
         self.save_config = save_config
         self.session: ClusterSession | None = None
@@ -49,19 +53,86 @@ class LatexPage(Gtk.Box):
 
     # -- layout ------------------------------------------------------------------------
     def _empty_page(self) -> Gtk.Widget:
-        page = Adw.StatusPage(icon_name="x-office-document-symbolic", title="No LaTeX project",
-                              description="In Files, select a .tex file and press the LaTeX button, or open one by path.")
-        box = Gtk.Box(spacing=6, halign=Gtk.Align.CENTER)
+        """Pick a project, like Overleaf's project list."""
+        col = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12, margin_top=18, margin_bottom=24,
+                      margin_start=16, margin_end=16)
+        top = Gtk.Box(spacing=8)
+        top.append(Gtk.Label(label="LaTeX projects", xalign=0, hexpand=True, css_classes=["title-1"]))
+        new = Gtk.Button(child=Adw.ButtonContent(label="New project", icon_name="list-add-symbolic"),
+                         css_classes=["suggested-action"])
+        new.connect("clicked", lambda *_: self.on_new_project())
+        top.append(new)
+        col.append(top)
+        self.project_list = Gtk.ListBox(selection_mode=Gtk.SelectionMode.NONE, css_classes=["boxed-list"])
+        self.project_list.set_placeholder(Gtk.Label(
+            label="No projects yet. Add one in the Projects tab, or make a new LaTeX project.",
+            wrap=True, margin_top=18, margin_bottom=18, margin_start=12, margin_end=12, css_classes=["dim-label"]))
+        col.append(self.project_list)
+
+        col.append(Gtk.Label(label="Or open a .tex file by path", xalign=0, css_classes=["heading"], margin_top=12))
+        box = Gtk.Box(spacing=6)
         self.open_cluster = Gtk.DropDown.new_from_strings([s.cfg.name for s in self.sessions])
-        self.open_path = Gtk.Entry(placeholder_text="~/paper/main.tex", width_chars=30)
-        go = Gtk.Button(label="Open", css_classes=["suggested-action"])
+        self.open_path = Gtk.Entry(placeholder_text="~/paper/main.tex", hexpand=True)
+        go = Gtk.Button(label="Open")
         go.connect("clicked", lambda *_: self.open(self.sessions[self.open_cluster.get_selected()],
                                                      self.open_path.get_text().strip()))
         self.open_path.connect("activate", lambda *_: go.emit("clicked"))
         for w in (self.open_cluster, self.open_path, go):
             box.append(w)
-        page.set_child(box)
-        return page
+        col.append(box)
+        if self.store:
+            self.store.listeners.append(self._fill_projects)
+            self._fill_projects()
+        return Gtk.ScrolledWindow(child=Adw.Clamp(maximum_size=800, child=col))
+
+    def _fill_projects(self) -> None:
+        self.project_list.remove_all()
+        by_id = {s.cfg.id: s for s in self.sessions}
+        items = sorted(self.store.recent(), key=lambda p: not p.main_tex)  # LaTeX ones first, newest first
+        for p in items:
+            s = by_id.get(p.cluster)
+            if not s:
+                continue
+            sub = f"{s.cfg.name} · {p.path}" + (f" · {p.main_tex}" if p.main_tex else "")
+            row = Adw.ActionRow(title=GLib.markup_escape_text(p.name), subtitle=GLib.markup_escape_text(sub),
+                                activatable=True, subtitle_lines=1)
+            row.add_prefix(Gtk.Image(icon_name="x-office-document-symbolic" if p.main_tex else "folder-symbolic"))
+            row.add_suffix(Gtk.Image(icon_name="go-next-symbolic"))
+            row.connect("activated", lambda _r, p=p, s=s: self.open_project(s, p))
+            self.project_list.append(row)
+
+    def open_project(self, session: ClusterSession, p: Project) -> None:
+        """Open the project's main .tex (found once and remembered)."""
+        if session.state != State.CONNECTED or not session.ssh:
+            self.toast(f"Connect to {session.cfg.name} first")
+            return
+        if p.main_tex:
+            self.open(session, posixpath.join(p.path, p.main_tex))
+            return
+
+        def done(found, err):
+            if err or not found:
+                self.toast(err or f"No .tex file with \\documentclass in {p.name}")
+                return
+            if len(found) == 1:
+                self._set_main(session, p, found[0])
+                return
+            d = Adw.AlertDialog(heading=f"Main file for {p.name}", body="Which .tex file builds the PDF?")
+            pick = Gtk.DropDown.new_from_strings(found)
+            d.set_extra_child(pick)
+            d.add_response("cancel", "Cancel")
+            d.add_response("open", "Open")
+            d.set_response_appearance("open", Adw.ResponseAppearance.SUGGESTED)
+            d.connect("response", lambda _d, r: r == "open" and self._set_main(session, p, found[pick.get_selected()]))
+            d.present(self.get_root())
+
+        _bg(lambda: projects.find_main_tex(session.ssh, p.path), done)
+
+    def _set_main(self, session: ClusterSession, p: Project, rel: str) -> None:
+        p.main_tex = rel
+        if self.store:
+            self.store.changed()
+        self.open(session, posixpath.join(p.path, rel))
 
     def _project_page(self) -> Gtk.Widget:
         page = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
