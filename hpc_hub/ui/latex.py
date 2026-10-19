@@ -1,8 +1,10 @@
 """LaTeX tab: edit on the cluster, build there, see the PDF, git history."""
 
 import posixpath
+import re
 import shlex
 import threading
+import time
 from collections.abc import Callable
 
 from gi.repository import Adw, GLib, Gtk, Pango
@@ -27,6 +29,14 @@ def _bg(work, done) -> None:
             result, err = None, str(e)
         GLib.idle_add(lambda: done(result, err) and False)
     threading.Thread(target=run, daemon=True).start()
+
+
+def _short(folder: str) -> str:
+    """/mmfs1/scratch/mygroup/jdoe/MC/paper -> scratch/MC/paper; home becomes ~."""
+    m = re.match(r"^(?:/mmfs1)?/(scratch|project)/[^/]+/[^/]+(/.*)?$", folder)
+    if m:
+        return m.group(1) + (m.group(2) or "")
+    return re.sub(r"^(?:/mmfs1)?/home/[^/]+", "~", folder)
 
 
 class LatexPage(Gtk.Box):
@@ -70,6 +80,23 @@ class LatexPage(Gtk.Box):
             wrap=True, margin_top=18, margin_bottom=18, margin_start=12, margin_end=12, css_classes=["dim-label"]))
         col.append(self.project_list)
 
+        found = Gtk.Box(spacing=8, margin_top=12)
+        found.append(Gtk.Label(label="Papers found on the cluster", xalign=0, hexpand=True, css_classes=["heading"]))
+        self.scan_spin = Adw.Spinner(visible=False)
+        self.scan_btn = Gtk.Button(child=Adw.ButtonContent(label="Search", icon_name="system-search-symbolic"),
+                                   tooltip_text="Look for .tex files with \\documentclass in home, project and scratch")
+        self.scan_btn.connect("clicked", lambda *_: self.scan(force=True))
+        found.append(self.scan_spin)
+        found.append(self.scan_btn)
+        col.append(found)
+        self.paper_list = Gtk.ListBox(selection_mode=Gtk.SelectionMode.NONE, css_classes=["boxed-list"])
+        self.paper_note = Gtk.Label(xalign=0, wrap=True, css_classes=["dim-label", "caption"],
+                                    label="Press Search to find your papers.")
+        col.append(self.paper_note)
+        col.append(self.paper_list)
+        self.papers: dict[str, list[projects.Paper]] = {}  # cluster id -> found papers
+        self.connect("map", lambda *_: self.scan())
+
         col.append(Gtk.Label(label="Or open a .tex file by path", xalign=0, css_classes=["heading"], margin_top=12))
         box = Gtk.Box(spacing=6)
         self.open_cluster = Gtk.DropDown.new_from_strings([s.cfg.name for s in self.sessions])
@@ -101,6 +128,66 @@ class LatexPage(Gtk.Box):
             row.add_suffix(Gtk.Image(icon_name="go-next-symbolic"))
             row.connect("activated", lambda _r, p=p, s=s: self.open_project(s, p))
             self.project_list.append(row)
+
+    # -- papers found by searching the cluster ---------------------------------------------
+    def scan(self, force: bool = False) -> None:
+        live = [x for x in self.sessions if x.state == State.CONNECTED and x.ssh]
+        if not live or self.scan_spin.get_visible():
+            if not live:
+                self.paper_note.set_label("Connect a cluster, then press Search to find your papers.")
+            return
+        todo = [x for x in live if force or x.cfg.id not in self.papers]
+        self._fill_papers()
+        if not todo:
+            return
+        self.scan_spin.set_visible(True)
+        self.scan_btn.set_sensitive(False)
+        self.paper_note.set_label("Searching home, project and scratch for .tex files… (takes a few seconds)")
+        left = [len(todo)]
+        for x in todo:
+            def done(found, err, x=x):
+                self.papers[x.cfg.id] = found or []
+                left[0] -= 1
+                if left[0] == 0:
+                    self.scan_spin.set_visible(False)
+                    self.scan_btn.set_sensitive(True)
+                if err:
+                    self.toast(f"{x.cfg.name}: search failed: {err}")
+                self._fill_papers()
+            _bg(lambda x=x: projects.find_papers(x.ssh), done)
+
+    def _fill_papers(self) -> None:
+        self.paper_list.remove_all()
+        by_id = {x.cfg.id: x for x in self.sessions}
+        rows = [(by_id[cid], p) for cid, found in self.papers.items() if cid in by_id for p in found]
+        rows.sort(key=lambda r: -r[1].mtime)
+        for x, p in rows[:40]:
+            parent, name = posixpath.split(p.folder)
+            title = f"{posixpath.basename(parent)} / {name}" if parent else name
+            when = time.strftime("%b %d, %Y", time.localtime(p.mtime))
+            more = f" (+{p.others} more)" if p.others else ""
+            sub = f"{x.cfg.name} · {_short(p.folder)} · {p.main}{more} · {when}"
+            row = Adw.ActionRow(title=GLib.markup_escape_text(title), subtitle=GLib.markup_escape_text(sub),
+                                activatable=True, subtitle_lines=1, tooltip_text=f"{p.folder}/{p.main}")
+            row.add_prefix(Gtk.Image(icon_name="x-office-document-symbolic"))
+            row.add_suffix(Gtk.Image(icon_name="go-next-symbolic"))
+            row.connect("activated", lambda _r, x=x, p=p: self._open_paper(x, p))
+            self.paper_list.append(row)
+        if self.papers and not self.scan_spin.get_visible():
+            self.paper_note.set_label(f"{len(rows)} folders with a main .tex file, newest first. "
+                                      "Click one to open it; it is also saved to your projects."
+                                      if rows else "No .tex files with \\documentclass found.")
+        self.paper_list.set_visible(bool(rows))
+
+    def _open_paper(self, session: ClusterSession, paper: projects.Paper) -> None:
+        p = self.store.find(session.cfg.id, paper.folder) if self.store else None
+        if not p:
+            p = Project(posixpath.basename(paper.folder), session.cfg.id, paper.folder, paper.main)
+            if self.store:
+                self.store.add(p)
+        if self.store:
+            self.store.touch(p)
+        self.open_project(session, p)
 
     def open_project(self, session: ClusterSession, p: Project) -> None:
         """Open the project's main .tex (found once and remembered)."""
