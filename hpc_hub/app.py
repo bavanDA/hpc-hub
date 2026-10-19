@@ -13,7 +13,7 @@ from .askpass_server import AskpassServer  # noqa: E402
 from .paths import runtime_dir  # noqa: E402
 from .session import ClusterSession, State  # noqa: E402
 from .ui.duo import DuoDialog  # noqa: E402
-from .ui.globus_ui import GlobusCopier, GlobusSettingsDialog  # noqa: E402
+from .ui.globus_ui import GlobusPage  # noqa: E402
 from .ui.settings import ClusterSettingsDialog  # noqa: E402
 from .ui.tools import Tools  # noqa: E402
 from .ui.web_login import WebLoginDialog  # noqa: E402
@@ -57,7 +57,6 @@ class HpcHubApp(Adw.Application):
         for name, handler, accels in (
             ("quit", lambda *_: self._request_quit(), ["<primary>q"]),
             ("about", lambda *_: self._about(), []),
-            ("globus", lambda *_: self._globus(), []),
         ):
             action = Gio.SimpleAction.new(name, None)
             action.connect("activate", handler)
@@ -79,12 +78,13 @@ class HpcHubApp(Adw.Application):
             self.window = MainWindow(
                 self, list(self.sessions.values()),
                 self.connect_session, self.disconnect_session, self.open_settings, self.open_tool,
-                lambda: config.save(self.clusters))
+                lambda: config.save(self.clusters),
+                lambda toast: GlobusPage(self.app_settings, self.clusters, lambda: config.save_app(self.app_settings),
+                                         lambda: config.save(self.clusters), toast))
             self.window.connect("close-request", self._on_close_request)
             self.tools = Tools(self.window, self.window.terminals,
                                lambda: self.window.stack.set_visible_child_name("terminals"),
                                self.window.toast, lambda: config.save(self.clusters))
-            self.window.files.globus_copy = GlobusCopier(self.app_settings, self.window.files, self.window)
         self.window.present()
 
     def do_shutdown(self):
@@ -304,10 +304,6 @@ class HpcHubApp(Adw.Application):
 
         dialog.connect("response", on_response)
         dialog.present(self.window)
-
-    def _globus(self) -> None:
-        GlobusSettingsDialog(self.app_settings, self.clusters, lambda: config.save_app(self.app_settings),
-                             lambda: config.save(self.clusters)).present(self.window)
 
     def _about(self) -> None:
         about = Adw.AboutDialog(

@@ -9,7 +9,8 @@ from .terminals import TerminalsPage
 
 
 class MainWindow(Adw.ApplicationWindow):
-    def __init__(self, app, sessions, on_connect, on_disconnect, on_settings, on_tool, save_config=lambda: None):
+    def __init__(self, app, sessions, on_connect, on_disconnect, on_settings, on_tool, save_config=lambda: None,
+                 make_globus=None):
         super().__init__(application=app, title=APP_NAME, default_width=1000, default_height=760)
         self.cards: dict[str, ClusterCard] = {}
 
@@ -32,6 +33,9 @@ class MainWindow(Adw.ApplicationWindow):
         self.stack.add_titled_with_icon(self.jobs, "jobs", "Jobs", "view-list-symbolic")
         self.files = FilesPage(sessions, self.toast, self.open_latex)
         self.stack.add_titled_with_icon(self.files, "files", "Files", "folder-symbolic")
+        if make_globus:
+            self.globus = make_globus(self.toast)
+            self.stack.add_titled_with_icon(self.globus, "globus", "Globus", "network-transmit-receive-symbolic")
         self.latex = LatexPage(sessions, self.toast, save_config)
         self.stack.add_titled_with_icon(self.latex, "latex", "LaTeX", "x-office-document-symbolic")
         self.terminals = TerminalsPage()
@@ -46,7 +50,6 @@ class MainWindow(Adw.ApplicationWindow):
     def _menu(self):
         from gi.repository import Gio
         menu = Gio.Menu()
-        menu.append("Globus…", "app.globus")
         menu.append("About HPC Hub", "app.about")
         menu.append("Quit", "app.quit")
         return menu
