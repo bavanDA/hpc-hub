@@ -1,4 +1,4 @@
-"""Files tab: two cluster panes side by side, open/zip/rename/delete, copy across."""
+"""Files tab: browse a cluster, open/zip/rename/delete, copy here and paste on any cluster."""
 
 import posixpath
 import threading
@@ -57,7 +57,6 @@ class FilePane(Gtk.Box):
         self.on_latex = on_latex
         self.paths: dict[str, str] = {}
         self.path = ""
-        self.other: FilePane | None = None
 
         top = Gtk.Box(spacing=6, margin_top=8, margin_bottom=8, margin_start=8, margin_end=8)
         self.cluster = Gtk.DropDown.new_from_strings([s.cfg.name for s in sessions])
@@ -103,7 +102,7 @@ class FilePane(Gtk.Box):
                                  ("zip", "Zip", "package-x-generic-symbolic"),
                                  ("latex", "LaTeX", "x-office-document-symbolic"),
                                  ("delete", "Delete", "user-trash-symbolic"),
-                                 ("copy", "Copy to other side", "edit-copy-symbolic")):
+                                 ("copy", "Copy, then paste it on any cluster", "edit-copy-symbolic")):
             if key == "copy":
                 b = Gtk.Button(child=Adw.ButtonContent(label="Copy", icon_name=icon),
                                tooltip_text=label, hexpand=True, halign=Gtk.Align.END)
@@ -228,14 +227,9 @@ class FilePane(Gtk.Box):
             is_archive = _ext(e.name) in ARCHIVES
             self.actions["zip"].set_tooltip_text("Extract here" if is_archive else "Zip on the cluster")
             self.actions["zip"].set_icon_name("extract-archive-symbolic" if is_archive else "package-x-generic-symbolic")
-            self.actions["copy"].get_child().set_label("Copy →" if self._is_left() else "← Copy")
             self.actions["latex"].set_visible(_ext(e.name) == ".tex")
         else:
             self.actions["latex"].set_visible(False)
-
-    def _is_left(self) -> bool:
-        paned = self.get_parent()
-        return isinstance(paned, Gtk.Paned) and paned.get_start_child() is self
 
     def _action(self, key: str) -> None:
         e = self.selected()
@@ -397,53 +391,63 @@ class FilesPage(Gtk.Box):
         super().__init__(orientation=Gtk.Orientation.VERTICAL)
         self.sessions = sessions
         self.toast = toast
-        self.left = FilePane(sessions, toast, 0, self.copy, on_latex)
-        self.right = FilePane(sessions, toast, min(1, len(sessions) - 1), self.copy, on_latex)
-        self.left.other, self.right.other = self.right, self.left
-        paned = Gtk.Paned(start_child=self.left, end_child=self.right, vexpand=True, wide_handle=True,
-                          resize_start_child=True, resize_end_child=True)
-        self.append(paned)
+        self.clip: tuple[ClusterSession, str] | None = None  # (cluster, path) waiting to be pasted
+        self.banner = Adw.Banner(button_label="Paste here")
+        self.banner.connect("button-clicked", lambda *_: self.paste())
+        self.append(self.banner)
+        self.pane = FilePane(sessions, toast, 0, self.copy, on_latex)
+        self.pane.set_vexpand(True)
+        self.append(self.pane)
 
         self.transfers = Gtk.ListBox(selection_mode=Gtk.SelectionMode.NONE, css_classes=["boxed-list"])
         self.revealer = Gtk.Revealer(child=Gtk.ScrolledWindow(child=self.transfers, max_content_height=180,
                                                              propagate_natural_height=True,
                                                              margin_start=8, margin_end=8, margin_bottom=8))
         self.append(self.revealer)
-        self.connect("map", lambda *_: self._first_load())
-
-    def _first_load(self) -> None:
-        for pane in (self.left, self.right):
-            if not pane.path:
-                pane.go("")
+        self.connect("map", lambda *_: self.pane.path or self.pane.go(""))
 
     def show_cluster(self, session: ClusterSession) -> None:
-        if self.right.session is session and self.left.session is not session:
-            self.right.refresh()
-            return
-        self.left.set_session(session)
+        if self.pane.session is session:
+            self.pane.refresh()
+        else:
+            self.pane.set_session(session)
 
     def session_changed(self, session: ClusterSession) -> None:
-        for pane in (self.left, self.right):
-            if pane.session is session:
-                if session.state == State.CONNECTED:
-                    if pane.get_mapped():
-                        pane.go(pane.paths.get(session.cfg.id, ""))
-                else:
-                    pane._connected()
+        if self.pane.session is not session:
+            return
+        if session.state == State.CONNECTED:
+            if self.pane.get_mapped():
+                self.pane.go(self.pane.paths.get(session.cfg.id, ""))
+        else:
+            self.pane._connected()
 
     def copy(self, pane: FilePane, e: Entry) -> None:
-        dst_pane = pane.other
-        src, dst = pane.session, dst_pane.session
-        src_path, dest_dir = pane.child(e), dst_pane.path
+        self.clip = (pane.session, pane.child(e))
+        self.banner.set_title(GLib.markup_escape_text(
+            f"Copied {e.name} from {pane.session.cfg.name}. Open any folder on any cluster, then paste."))
+        self.banner.set_revealed(True)
+
+    def paste(self) -> None:
+        if not self.clip:
+            return
+        pane = self.pane
+        src, src_path = self.clip
+        dst, dest_dir = pane.session, pane.path
         if dst.state != State.CONNECTED or not dest_dir:
-            self.toast(f"Open a folder on the other side first")
+            self.toast("Open a folder to paste into first")
             return
+        if src.state != State.CONNECTED or not src.ssh:
+            self.toast(f"Connect to {src.cfg.name} first, the copy comes from there")
+            return
+        self.clip = None
+        self.banner.set_revealed(False)
+        name = posixpath.basename(src_path.rstrip("/"))
         if src is dst:
-            self.toast(f"Copying {e.name}…")
+            self.toast(f"Copying {name}…")
             cmd = f"cp -r -- {remote_fs.q(src_path)} {remote_fs.q(dest_dir)}/"
-            _bg(lambda: remote_fs._run(src.ssh, cmd, timeout=3600), dst_pane._done(f"Copied {e.name}"))
+            _bg(lambda: remote_fs._run(src.ssh, cmd, timeout=3600), pane._done(f"Copied {name}"))
             return
-        self.direct_copy(src, src_path, dst, dest_dir, dst_pane)
+        self.direct_copy(src, src_path, dst, dest_dir, pane)
 
     def direct_copy(self, src: ClusterSession, src_path: str, dst: ClusterSession, dest_dir: str,
                     dst_pane: FilePane | None = None) -> None:
