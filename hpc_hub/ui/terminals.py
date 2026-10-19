@@ -212,7 +212,7 @@ class TerminalsPage(Gtk.Box):
 
         self.on_tool: Callable[[ClusterSession, str], None] | None = None  # set by the app: VS Code, agents
 
-        # far left: tabs. Click one to open its panel, click it again to close the panel.
+        # far left: tabs that open and close the panels
         bar = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, css_classes=["activity-bar"])
         self.tabs: dict[str, Gtk.ToggleButton] = {}
         self.logs_badge = Gtk.Label(css_classes=["activity-badge"], halign=Gtk.Align.END, valign=Gtk.Align.END,
@@ -259,7 +259,6 @@ class TerminalsPage(Gtk.Box):
                         "Antigravity or Cursor from a cluster card.")
         self.views.add_named(self.empty, "empty")
         right.append(self.views)
-        # drag the line between the panel and the terminal to make the panel wider or narrower
         self.append(remember_size(Gtk.Paned(start_child=self.panels, end_child=right, hexpand=True,
                                             resize_start_child=False, shrink_start_child=False,
                                             shrink_end_child=False), "terminals.panel", 290))
