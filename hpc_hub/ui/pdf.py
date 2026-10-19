@@ -6,7 +6,7 @@ import cairo
 import gi
 
 gi.require_version("Poppler", "0.18")
-from gi.repository import Adw, Gdk, GLib, Gtk, Poppler  # noqa: E402
+from gi.repository import Adw, Gdk, GLib, Graphene, Gtk, Poppler  # noqa: E402
 
 ZOOMS = [0.5, 0.67, 0.8, 1.0, 1.25, 1.5, 2.0, 3.0]
 
@@ -30,6 +30,8 @@ class PdfView(Gtk.Box):
         super().__init__(orientation=Gtk.Orientation.VERTICAL)
         self.doc: Poppler.Document | None = None
         self.zoom = 1.0
+        self.on_double_click = None  # (page 1-based, x, y in PDF points from top left) -> None
+        self.marker: Gtk.Widget | None = None
 
         bar = Gtk.Box(spacing=6, margin_top=6, margin_bottom=6, margin_start=6, margin_end=6)
         self.info = Gtk.Label(hexpand=True, xalign=0, css_classes=["dim-label", "caption"])
@@ -82,10 +84,42 @@ class PdfView(Gtk.Box):
             pic = Gtk.Picture.new_for_paintable(render_page(page, self.zoom * self._dpi()))
             pic.set_can_shrink(False)
             pic.add_css_class("card")
-            self.pages.append(pic)
+            click = Gtk.GestureClick()
+            click.connect("pressed", self._clicked, i)
+            pic.add_controller(click)
+            overlay = Gtk.Overlay(child=pic)
+            self.pages.append(overlay)
         self.info.set_label(f"{self.doc.get_n_pages()} pages")
         self.zoom_label.set_label(f"{round(self.zoom * 100)}%")
         self.stack.set_visible_child_name("pdf")
+
+    def _clicked(self, gesture: Gtk.GestureClick, n: int, x: float, y: float, index: int) -> None:
+        if n != 2 or not self.on_double_click or not self.doc:
+            return
+        pic = gesture.get_widget()
+        w, h = self.doc.get_page(index).get_size()
+        self.on_double_click(index + 1, x * w / max(pic.get_width(), 1), y * h / max(pic.get_height(), 1))
+
+    def scroll_to(self, page: int, y: float) -> None:
+        """Bring a spot (PDF points from the page top) into view and mark it for a moment."""
+        overlay = self.pages.get_first_child()
+        for _ in range(page - 1):
+            overlay = overlay.get_next_sibling() if overlay else None
+        if not overlay or not self.doc:
+            return
+        _, h = self.doc.get_page(page - 1).get_size()
+        ok, point = overlay.compute_point(self.pages, Graphene.Point().init(0, 0))
+        top = point.y if ok else 0
+        px = y * overlay.get_height() / h
+        adj = self.scroller.get_vadjustment()
+        adj.set_value(max(0, top + px - adj.get_page_size() / 3))
+        if self.marker and self.marker.get_parent():
+            self.marker.get_parent().remove_overlay(self.marker)
+        self.marker = Gtk.Box(css_classes=["synctex-mark"], height_request=4, valign=Gtk.Align.START,
+                              margin_top=max(0, int(px) - 12), can_target=False)
+        overlay.add_overlay(self.marker)
+        mark = self.marker
+        GLib.timeout_add(1500, lambda: mark.get_parent() and mark.get_parent().remove_overlay(mark) and False)
 
     def _dpi(self) -> float:
         return self.get_scale_factor() or 1

@@ -35,6 +35,7 @@ CSS = """
 .activity-tab:checked { opacity: 1; border-left-color: @accent_bg_color; background: none; }
 .activity-badge { background: @accent_bg_color; color: @accent_fg_color; border-radius: 999px;
                   font-size: 9px; font-weight: bold; padding: 0 4px; min-width: 8px; margin: 6px 4px; }
+.synctex-mark { background: alpha(@accent_bg_color, 0.55); border-radius: 2px; }
 levelbar block.ok { background: @accent_bg_color; }
 levelbar block.warn { background: @warning_bg_color; }
 levelbar block.over { background: @error_bg_color; }
