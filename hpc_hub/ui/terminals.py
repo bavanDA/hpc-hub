@@ -132,25 +132,35 @@ class TerminalsPage(Gtk.Box):
         self.listings: dict[str, tmux.Listing] = {}
         self.starting: dict[tuple[str, str], tuple[str, str]] = {}  # just created, not listed yet: title, color
 
-        side = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, width_request=290)
-        head = Gtk.Box(spacing=6, margin_top=8, margin_bottom=8, margin_start=10, margin_end=8)
-        head.append(Gtk.Label(label="Sessions", xalign=0, hexpand=True, css_classes=["heading"]))
-        refresh = Gtk.Button(icon_name="view-refresh-symbolic", tooltip_text="Refresh", css_classes=["flat"])
-        refresh.connect("clicked", lambda *_: self.refresh())
-        new = Gtk.Button(child=Adw.ButtonContent(label="New", icon_name="list-add-symbolic"),
-                         css_classes=["suggested-action"], tooltip_text="New terminal that keeps running")
-        new.connect("clicked", lambda *_: self.new_terminal())
-        head.append(refresh)
-        head.append(new)
-        side.append(head)
-        self.list = Gtk.ListBox(css_classes=["navigation-sidebar"], selection_mode=Gtk.SelectionMode.SINGLE)
-        self.list.connect("row-activated", lambda _l, row: getattr(row, "open", None) and row.open())
-        side.append(Gtk.ScrolledWindow(child=self.list, vexpand=True, hscrollbar_policy=Gtk.PolicyType.NEVER))
-        side.append(Gtk.Label(label="Switching or closing only detaches. Sessions keep running on the cluster.",
-                              wrap=True, xalign=0, css_classes=["dim-label", "caption"], margin_start=10,
-                              margin_end=10, margin_bottom=10))
-        self.append(side)
+        self.on_tool: Callable[[ClusterSession, str], None] | None = None  # set by the app: VS Code, agents
+
+        # far left: tabs. Click one to open its panel, click it again to close the panel.
+        bar = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4, margin_top=6, margin_bottom=6,
+                      margin_start=4, margin_end=4)
+        self.tabs: dict[str, Gtk.ToggleButton] = {}
+        self.tab_labels: dict[str, Gtk.Label] = {}
+        for name, label, icon in (("sessions", "Sessions", "utilities-terminal-symbolic"),
+                                  ("logs", "Logs", "text-x-generic-symbolic"),
+                                  ("new", "New", "list-add-symbolic")):
+            content = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2, margin_top=4, margin_bottom=4)
+            content.append(Gtk.Image(icon_name=icon, pixel_size=20))
+            text = Gtk.Label(label=label, css_classes=["caption"])
+            content.append(text)
+            b = Gtk.ToggleButton(child=content, css_classes=["flat"], tooltip_text=label, width_request=64)
+            b.connect("toggled", self._tab_toggled, name)
+            bar.append(b)
+            self.tabs[name], self.tab_labels[name] = b, text
+        self.append(bar)
         self.append(Gtk.Separator(orientation=Gtk.Orientation.VERTICAL))
+
+        self.panels = Gtk.Stack(width_request=290, transition_type=Gtk.StackTransitionType.CROSSFADE)
+        self.panels.add_named(self._sessions_panel(), "sessions")
+        self.panels.add_named(self._logs_panel(), "logs")
+        self.panels.add_named(self._new_panel(), "new")
+        self.panel = Gtk.Box(visible=False)
+        self.panel.append(self.panels)
+        self.panel.append(Gtk.Separator(orientation=Gtk.Orientation.VERTICAL))
+        self.append(self.panel)
 
         # right: a small header for the open session, then the terminal
         right = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, hexpand=True)
@@ -177,6 +187,84 @@ class TerminalsPage(Gtk.Box):
         self.connect("map", lambda *_: self.refresh())
         GLib.timeout_add_seconds(REFRESH_SECONDS, lambda: (self.get_mapped() and self.refresh(), True)[1])
         self._show(None)
+        self.tabs["sessions"].set_active(True)
+
+    # -- left tabs and panels ------------------------------------------------------------------
+    def _tab_toggled(self, btn: Gtk.ToggleButton, name: str) -> None:
+        if btn.get_active():
+            for other, b in self.tabs.items():
+                if other != name and b.get_active():
+                    b.set_active(False)
+            self.panels.set_visible_child_name(name)
+            self.panel.set_visible(True)
+        elif not any(b.get_active() for b in self.tabs.values()):
+            self.panel.set_visible(False)  # clicked the open tab again: close the panel
+
+    def show_tab(self, name: str) -> None:
+        self.tabs[name].set_active(True)
+
+    def _panel_head(self, title: str, *widgets: Gtk.Widget) -> Gtk.Box:
+        head = Gtk.Box(spacing=6, margin_top=8, margin_bottom=8, margin_start=10, margin_end=8)
+        head.append(Gtk.Label(label=title, xalign=0, hexpand=True, css_classes=["heading"]))
+        for w in widgets:
+            head.append(w)
+        return head
+
+    def _sessions_panel(self) -> Gtk.Widget:
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        refresh = Gtk.Button(icon_name="view-refresh-symbolic", tooltip_text="Refresh", css_classes=["flat"])
+        refresh.connect("clicked", lambda *_: self.refresh())
+        new = Gtk.Button(icon_name="list-add-symbolic", tooltip_text="New terminal", css_classes=["flat"])
+        new.connect("clicked", lambda *_: self.new_terminal())
+        box.append(self._panel_head("Sessions", refresh, new))
+        self.list = Gtk.ListBox(css_classes=["navigation-sidebar"], selection_mode=Gtk.SelectionMode.SINGLE)
+        self.list.connect("row-activated", lambda _l, row: getattr(row, "open", None) and row.open())
+        box.append(Gtk.ScrolledWindow(child=self.list, vexpand=True, hscrollbar_policy=Gtk.PolicyType.NEVER))
+        box.append(Gtk.Label(label="Switching or closing only detaches. Sessions keep running on the cluster.",
+                             wrap=True, xalign=0, css_classes=["dim-label", "caption"], margin_start=10,
+                             margin_end=10, margin_bottom=10))
+        return box
+
+    def _logs_panel(self) -> Gtk.Widget:
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        box.append(self._panel_head("Logs"))
+        self.log_list = Gtk.ListBox(css_classes=["navigation-sidebar"], selection_mode=Gtk.SelectionMode.SINGLE)
+        self.log_list.connect("row-activated", lambda _l, row: getattr(row, "open", None) and row.open())
+        self.log_list.set_placeholder(Gtk.Label(label="VS Code job logs show up here.", wrap=True, margin_top=12,
+                                                margin_start=10, margin_end=10, css_classes=["dim-label"]))
+        box.append(Gtk.ScrolledWindow(child=self.log_list, vexpand=True, hscrollbar_policy=Gtk.PolicyType.NEVER))
+        return box
+
+    def _new_panel(self) -> Gtk.Widget:
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
+        box.append(self._panel_head("New"))
+        term = Gtk.Button(child=Adw.ButtonContent(label="New terminal…", icon_name="utilities-terminal-symbolic"),
+                          css_classes=["suggested-action"], margin_start=10, margin_end=10)
+        term.connect("clicked", lambda *_: self.new_terminal())
+        box.append(term)
+        self.launch = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6, margin_start=10, margin_end=10)
+        box.append(Gtk.ScrolledWindow(child=self.launch, vexpand=True, hscrollbar_policy=Gtk.PolicyType.NEVER))
+        return box
+
+    def _fill_launch(self) -> None:
+        while c := self.launch.get_first_child():
+            self.launch.remove(c)
+        live = [s for s in self.sessions if s.state == State.CONNECTED and s.ssh]
+        if not live:
+            self.launch.append(Gtk.Label(label="Connect a cluster to start VS Code or an agent here.", wrap=True,
+                                         xalign=0, css_classes=["dim-label"], margin_top=12))
+        for s in live:
+            self.launch.append(Gtk.Label(label=s.cfg.name, xalign=0, css_classes=["heading"], margin_top=12))
+            for tool, label, icon in (("vscode:", "VS Code", "text-editor-symbolic"),
+                                      ("agent:claude", "Claude", "hpc-claude"),
+                                      ("agent:codex", "ChatGPT", "hpc-openai-symbolic"),
+                                      ("agent:agy", "Antigravity", "hpc-antigravity")):
+                content = Gtk.Box(spacing=8)
+                content.append(Gtk.Image(icon_name=icon))
+                content.append(Gtk.Label(label=label))
+                b = Gtk.Button(child=content, css_classes=["flat"])
+                b.connect("clicked", lambda *_, s=s, t=tool: self.on_tool and self.on_tool(s, t))
+                self.launch.append(b)
 
     # -- right side --------------------------------------------------------------------------
     def _show(self, view: View | None) -> None:
@@ -276,10 +364,11 @@ class TerminalsPage(Gtk.Box):
 
     def _fill(self) -> None:
         self.list.remove_all()
-        if self.logs:
-            self.list.append(self._note("Logs", heading=True))
-            for v in self.logs:
-                self.list.append(self._log_row(v))
+        self.log_list.remove_all()
+        for v in self.logs:
+            self.log_list.append(self._log_row(v))
+        self.tab_labels["logs"].set_label(f"Logs ({len(self.logs)})" if self.logs else "Logs")
+        self._fill_launch()
         live = [s for s in self.sessions if s.state == State.CONNECTED and s.ssh]
         if not live:
             self.list.append(self._note("Connect a cluster to see its sessions."))
@@ -303,13 +392,13 @@ class TerminalsPage(Gtk.Box):
 
     def _select(self) -> None:
         key = self.current.key if self.current else None
-        row = self.list.get_first_child()
-        while row:
-            if key and getattr(row, "key", None) == key:
-                self.list.select_row(row)
-                return
-            row = row.get_next_sibling()
-        self.list.unselect_all()
+        for lst in (self.list, self.log_list):
+            lst.unselect_all()
+            row = lst.get_first_child()
+            while row:
+                if key and getattr(row, "key", None) == key:
+                    lst.select_row(row)
+                row = row.get_next_sibling()
 
     def _note(self, text: str, heading: bool = False) -> Gtk.ListBoxRow:
         row = Gtk.ListBoxRow(activatable=False, selectable=False)

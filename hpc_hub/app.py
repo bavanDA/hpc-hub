@@ -97,6 +97,7 @@ class HpcHubApp(Adw.Application):
                     connect=self.connect_session)),
                 self.projects)
             self.window.connect("close-request", self._on_close_request)
+            self.window.terminals.on_tool = self.open_tool
             self.tools = Tools(self.window, self.window.terminals,
                                lambda: self.window.stack.set_visible_child_name("terminals"),
                                self.window.toast, lambda: config.save(self.clusters))
