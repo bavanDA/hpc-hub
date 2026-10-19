@@ -18,9 +18,25 @@ STATE_CLASS = {"RUNNING": "success", "PENDING": "warning", "COMPLETING": "accent
 COLUMNS = [  # (title, attribute, expand)
     ("ID", "job_id", False), ("Name", "name", True), ("User", "user", False),
     ("Partition", "partition", False), ("State", "state", False), ("Time", "elapsed", False),
-    ("Limit", "limit", False), ("CPUs", "cpus", False), ("Mem", "mem", False),
-    ("Node / reason", "where", True),
+    ("Limit", "limit", False), ("CPUs", "cpus", False), ("Mem", "mem", False), ("QoS", "qos", False),
+    ("SU used / max", "su", False), ("Node / reason", "where", True),
 ]
+ACTIVE = ("RUNNING", "PENDING", "SUSPENDED", "REQUEUED", "COMPLETING")
+
+
+def su_text(j: JobInfo) -> str:
+    """SU = core hours charged. Free QoS (usage factor 0) costs nothing."""
+    if j.factor == 0:
+        return "free"
+    if j.state in ACTIVE:
+        return f"{j.su_spent:,.1f} / {j.su_max:,.0f}"
+    return f"{j.su_spent:,.1f}"
+
+
+def usage_text(accounts: list[slurm.AccountUsage]) -> str:
+    used = [a for a in accounts if a.used or a.mine] or accounts[:1]
+    return " · ".join(f"{a.account}: {a.used:,} of {a.quota:,} SU used ({100 * a.used // max(a.quota, 1)}%), "
+                      f"yours {a.mine:,}" for a in used)
 
 
 class JobItem(GObject.Object):
@@ -38,7 +54,7 @@ def _binder(attr: str):
     def bind(_f, item):
         label: Gtk.Label = item.get_child()
         job: JobInfo = item.get_item().job
-        text = getattr(job, attr)
+        text = su_text(job) if attr == "su" else getattr(job, attr)
         if attr == "name" and job.from_app:
             text = f"{text}  (started by HPC Hub)"
         label.set_label(text)
@@ -94,6 +110,11 @@ class JobsPage(Gtk.Box):
         actions = Gtk.ActionBar()
         self.updated = Gtk.Label(css_classes=["dim-label", "caption"])
         actions.pack_start(self.updated)
+        self.usage = Gtk.Label(css_classes=["caption"], ellipsize=Pango.EllipsizeMode.END,
+                               tooltip_text="Service units (core hours) of your Slurm accounts. A QoS that charges 0 (like low on "
+                                            "Wulver) is free.")
+        self.usage_of: dict[str, tuple[float, list[slurm.AccountUsage]]] = {}  # cluster -> (when, accounts)
+        actions.set_center_widget(self.usage)
         self.cancel_btn = Gtk.Button(label="Cancel job", css_classes=["destructive-action"], sensitive=False)
         self.details_btn = Gtk.Button(label="Details", sensitive=False)
         actions.pack_end(self.cancel_btn)
@@ -147,6 +168,7 @@ class JobsPage(Gtk.Box):
         def work():
             try:
                 jobs, err = slurm.list_jobs(s.ssh, scope), None
+                self._fetch_usage(s)
             except Exception as e:  # noqa: BLE001 - show any failure
                 jobs, err = [], str(e)
                 try:
@@ -171,6 +193,7 @@ class JobsPage(Gtk.Box):
         keep = self._selected().job_id if self._selected() else None
         self.store.splice(0, self.store.get_n_items(), [JobItem(j) for j in jobs])
         self.updated.set_label(f"{len(jobs)} jobs · updated {time.strftime('%H:%M:%S')}")
+        self.usage.set_label(usage_text(self.usage_of.get(s.cfg.id, (0, []))[1]))
         if not jobs:
             self._show_empty("No jobs", "Nothing to show for this view.", "view-list-symbolic")
         else:
@@ -178,12 +201,23 @@ class JobsPage(Gtk.Box):
             self._reselect(keep)
         return False
 
+    def _fetch_usage(self, s: ClusterSession) -> None:
+        """Account totals change slowly: ask at most every 5 minutes. Worker thread."""
+        when, _ = self.usage_of.get(s.cfg.id, (0, []))
+        if time.monotonic() - when < 300 and when:
+            return
+        try:
+            self.usage_of[s.cfg.id] = (time.monotonic(), slurm.account_usage(s.ssh))
+        except Exception:  # noqa: BLE001 - totals are a nice to have
+            pass
+
     def _show_empty(self, title: str, text: str, icon: str) -> None:
         self.empty.set_title(title)
         self.empty.set_description(GLib.markup_escape_text(text))
         self.empty.set_icon_name(icon)
         self.stack.set_visible_child_name("empty")
         self.updated.set_label("")
+        self.usage.set_label("")
         self._sync_buttons()
 
     def _match(self, item: JobItem) -> bool:
