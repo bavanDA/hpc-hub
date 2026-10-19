@@ -1,50 +1,33 @@
 """Application: owns sessions, bridges worker threads to the GTK main loop."""
 
 import threading
-from pathlib import Path
 
 import gi
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
-from gi.repository import Adw, Gdk, Gio, GLib, Gtk  # noqa: E402
+from gi.repository import Adw, Gio, GLib, Gtk  # noqa: E402
 
 from . import APP_ID, APP_NAME, __version__, browser, config, credentials  # noqa: E402
 from .askpass_server import AskpassServer  # noqa: E402
 from .paths import runtime_dir  # noqa: E402
-from .session import ClusterSession, State  # noqa: E402
-from .ui.duo import DuoDialog  # noqa: E402
 from .projects import ProjectStore  # noqa: E402
+from .session import ClusterSession, State  # noqa: E402
+from .ui import style  # noqa: E402
+from .ui.duo import DuoDialog  # noqa: E402
 from .ui.globus_ui import GlobusPage  # noqa: E402
 from .ui.preferences import PreferencesDialog  # noqa: E402
 from .ui.projects import Actions, ProjectsPage  # noqa: E402
+from .ui.quit import QuitMixin  # noqa: E402
 from .ui.settings import ClusterSettingsDialog  # noqa: E402
 from .ui.tools import Tools  # noqa: E402
 from .ui.web_login import WebLoginDialog  # noqa: E402
 from .ui.window import MainWindow  # noqa: E402
 
-CSS = """
-.cluster-card { padding: 18px; }
-.status-pill { padding: 2px 10px; border-radius: 999px; font-weight: bold; font-size: smaller;
-               background: alpha(currentColor, 0.1); }
-.log-view { font-size: smaller; padding: 6px; }
-.activity-bar { padding-top: 4px; }
-.activity-tab { min-width: 46px; min-height: 46px; padding: 0; border-radius: 0; background: none;
-                box-shadow: none; border-left: 2px solid transparent; opacity: 0.55; }
-.activity-tab:hover { opacity: 0.9; background: none; }
-.activity-tab:checked { opacity: 1; border-left-color: @accent_bg_color; background: none; }
-.activity-badge { background: @accent_bg_color; color: @accent_fg_color; border-radius: 999px;
-                  font-size: 9px; font-weight: bold; padding: 0 4px; min-width: 8px; margin: 6px 4px; }
-.synctex-mark { background: alpha(@accent_bg_color, 0.55); border-radius: 2px; }
-levelbar block.ok { background: @accent_bg_color; }
-levelbar block.warn { background: @warning_bg_color; }
-levelbar block.over { background: @error_bg_color; }
-"""
-
 HEALTH_SECONDS = 30
 
 
-class HpcHubApp(Adw.Application):
+class HpcHubApp(QuitMixin, Adw.Application):
     def __init__(self):
         super().__init__(application_id=APP_ID, flags=Gio.ApplicationFlags.DEFAULT_FLAGS)
         self.window: MainWindow | None = None
@@ -56,12 +39,7 @@ class HpcHubApp(Adw.Application):
     # -- lifecycle -----------------------------------------------------------------
     def do_startup(self):
         Adw.Application.do_startup(self)
-        Gtk.IconTheme.get_for_display(Gdk.Display.get_default()).add_search_path(
-            str(Path(__file__).parent / "icons"))  # Claude, ChatGPT, Antigravity logos
-        css = Gtk.CssProvider()
-        css.load_from_string(CSS)
-        Gtk.StyleContext.add_provider_for_display(
-            Gdk.Display.get_default(), css, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
+        style.install()
 
         self.askpass.start()
         self.clusters = config.load()
@@ -337,74 +315,6 @@ class HpcHubApp(Adw.Application):
             GLib.idle_add(lambda: session.mark_lost() and False)
         else:
             session.check_node()
-
-    # -- quitting -------------------------------------------------------------------------
-    def _active(self) -> list[ClusterSession]:
-        return [s for s in self.sessions.values() if s.state not in (State.DISCONNECTED, State.ERROR)]
-
-    def _on_close_request(self, *_):
-        """Closing keeps everything running (VPN, logins, nodes); the next start picks it all up."""
-        if self._quitting or not any(s.state.busy for s in self.sessions.values()):
-            self._quitting = True
-            return False
-        self._request_quit()
-        return True
-
-    def _request_quit(self) -> None:
-        busy = [s for s in self.sessions.values() if s.state.busy]
-        if not busy:
-            self._quitting = True
-            self.quit()
-            return
-        dialog = Adw.AlertDialog(
-            heading="Still connecting",
-            body=f"{', '.join(s.cfg.name for s in busy)} is still signing in. Quit anyway? "
-                 "Everything already connected keeps running.")
-        dialog.add_response("cancel", "Cancel")
-        dialog.add_response("quit", "Quit")
-
-        def on_response(_d, response):
-            if response == "quit":
-                for s in busy:
-                    s.cancel()
-                self._quitting = True
-                self.quit()
-
-        dialog.connect("response", on_response)
-        dialog.present(self.window)
-
-    def _disconnect_and_quit(self) -> None:
-        active = self._active()
-        if not active:
-            self._quitting = True
-            self.quit()
-            return
-        names = ", ".join(s.cfg.name for s in active)
-        dialog = Adw.AlertDialog(
-            heading="Disconnect everything and quit?",
-            body=f"{names}: the VPN goes down and compute nodes the app requested are released, which ends "
-                 "anything running on them (Claude remote, ChatGPT remote…). Jobs you started yourself and "
-                 "VS Code jobs keep running.")
-        dialog.add_response("cancel", "Cancel")
-        dialog.add_response("quit", "Disconnect and Quit")
-        dialog.set_response_appearance("quit", Adw.ResponseAppearance.DESTRUCTIVE)
-
-        def on_response(_d, response):
-            if response != "quit":
-                return
-            self._quitting = True
-            pending = {"n": len(active)}
-
-            def one_done():
-                pending["n"] -= 1
-                if pending["n"] == 0:
-                    GLib.idle_add(lambda: self.quit() and False)
-
-            for s in active:
-                s.disconnect(on_done=one_done)
-
-        dialog.connect("response", on_response)
-        dialog.present(self.window)
 
     def _about(self) -> None:
         about = Adw.AboutDialog(
