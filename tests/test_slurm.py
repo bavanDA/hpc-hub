@@ -63,3 +63,21 @@ def test_batch_script():
 def test_follow_log_is_valid_shell():
     import subprocess
     assert subprocess.run(["bash", "-n", "-c", slurm.follow_log("123")]).returncode == 0
+
+
+def test_wait_gone(monkeypatch):
+    import subprocess
+    states = iter(["RUNNING", "COMPLETING", ""])
+
+    class Ssh:
+        def run(self, cmd, timeout=60):
+            return subprocess.CompletedProcess(cmd, 0, next(states) + "\n", "")
+    monkeypatch.setattr(slurm.time, "sleep", lambda _s: None)
+    assert slurm.wait_gone(Ssh(), "42")
+
+    class Stuck:
+        def run(self, cmd, timeout=60):
+            return subprocess.CompletedProcess(cmd, 0, "RUNNING\n", "")
+    clock = iter(range(0, 100, 5))
+    monkeypatch.setattr(slurm.time, "monotonic", lambda: next(clock))
+    assert not slurm.wait_gone(Stuck(), "42", seconds=12)

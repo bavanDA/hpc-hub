@@ -268,6 +268,17 @@ def job_details(ssh: SshMaster, job_id: str) -> str:
     return res.stdout.strip() or res.stderr.strip()
 
 
+def wait_gone(ssh: SshMaster, job_id: str, seconds: float = 15) -> bool:
+    """After scancel: True once the job no longer runs or waits."""
+    end = time.monotonic() + seconds
+    while time.monotonic() < end:
+        state = ssh.run(f"squeue -h -j {shlex.quote(job_id)} -o %T 2>/dev/null").stdout.strip()
+        if state in ("", "CANCELLED", "COMPLETED"):
+            return True
+        time.sleep(1.5)
+    return False
+
+
 def cancel_job(ssh: SshMaster, job_id: str) -> None:
     if not re.fullmatch(r"[\d_\[\]-]+", job_id):
         raise SlurmError("Bad job id")
