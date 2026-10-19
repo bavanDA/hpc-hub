@@ -1,4 +1,4 @@
-"""Claude: pick a past chat to resume, or start a new one in a folder."""
+"""Claude, ChatGPT or Antigravity: pick a past chat to resume, or start a new one in a folder."""
 
 import datetime
 import posixpath
@@ -8,8 +8,10 @@ from collections.abc import Callable
 
 from gi.repository import Adw, GLib, Gtk
 
-from .. import claude_chats, remote_fs
-from ..claude_chats import Chat
+from .. import chats as chat_store
+from .. import remote_fs
+from ..agents import Agent
+from ..chats import Chat
 from ..session import ClusterSession
 from .folder_picker import FolderPicker
 
@@ -31,25 +33,27 @@ def short(path: str, home: str = "") -> str:
     return path
 
 
-class ClaudeDialog(Adw.Dialog):
-    """on_run(folder, chat id or "") after saving the two options on cfg.claude."""
+class AgentDialog(Adw.Dialog):
+    """on_run(folder, chat id or "") after saving the options on the cluster's agent settings."""
 
-    def __init__(self, s: ClusterSession, on_run: Callable[[str, str], None], save: Callable[[], None],
-                 project: str = ""):
-        title = f"Claude in {posixpath.basename(project.rstrip('/'))}" if project else f"Claude on {s.cfg.name}"
-        super().__init__(title=title, content_width=600, content_height=720)
-        self.s, self.on_run, self.save, self.project = s, on_run, save, project.rstrip("/")
-        c = s.cfg.claude
+    def __init__(self, agent: Agent, s: ClusterSession, on_run: Callable[[str, str], None],
+                 save: Callable[[], None], project: str = ""):
+        where = f"in {posixpath.basename(project.rstrip('/'))}" if project else f"on {s.cfg.name}"
+        super().__init__(title=f"{agent.name} {where}", content_width=600, content_height=760)
+        self.agent, self.s, self.on_run, self.save, self.project = agent, s, on_run, save, project.rstrip("/")
+        c = self.settings = getattr(s.cfg, agent.id)
         page = Adw.PreferencesPage()
 
         opts = Adw.PreferencesGroup()
-        self.skip = Adw.SwitchRow(title="Skip permission prompts", subtitle="--dangerously-skip-permissions",
+        self.skip = Adw.SwitchRow(title="Skip permission prompts", subtitle=agent.skip_flag,
                                   active=c.skip_permissions)
+        self.remote = Adw.SwitchRow(title=agent.remote_label, subtitle=agent.remote_hint, active=c.remote)
         a = s.allocation
         self.new = Adw.SwitchRow(title="Use a new compute node", active=c.new_node,
                                  subtitle=f"Off: same node as now ({a.node}, job {a.job_id})" if a
                                  else "Off: same node (requested if needed)")
         opts.add(self.skip)
+        opts.add(self.remote)
         opts.add(self.new)
         page.add(opts)
 
@@ -58,7 +62,7 @@ class ClaudeDialog(Adw.Dialog):
         self.folder.set_text(project or c.workdir)
         browse = Gtk.Button(icon_name="folder-open-symbolic", tooltip_text="Choose folder", valign=Gtk.Align.CENTER,
                             css_classes=["flat"])
-        browse.connect("clicked", lambda *_: FolderPicker(s, self.folder.get_text().strip(),
+        browse.connect("clicked", lambda *_: FolderPicker(s, self.folder.get_text().strip() or "~",
                                                          self.folder.set_text).present(self))
         self.folder.add_suffix(browse)
         start = Adw.ButtonRow(title="Start new chat", start_icon_name="list-add-symbolic")
@@ -76,8 +80,11 @@ class ClaudeDialog(Adw.Dialog):
         page.add(self.chats)
         self.rows: list[Adw.ActionRow] = []
 
+        head = Gtk.Box(spacing=8)
+        head.append(Gtk.Image(icon_name=agent.icon, pixel_size=20))
+        head.append(Gtk.Label(label=self.get_title(), css_classes=["title"]))
         tv = Adw.ToolbarView(content=page)
-        tv.add_top_bar(Adw.HeaderBar())
+        tv.add_top_bar(Adw.HeaderBar(title_widget=head))
         self.set_child(tv)
         self._load()
 
@@ -86,7 +93,7 @@ class ClaudeDialog(Adw.Dialog):
 
         def work():
             try:
-                result = (claude_chats.list_chats(s.ssh, 400 if self.project else claude_chats.LIMIT),
+                result = (chat_store.list_chats(s.ssh, self.agent.id, 400 if self.project else chat_store.LIMIT),
                           remote_fs.home(s.ssh), "")
             except Exception as e:  # noqa: BLE001
                 result = ([], "", str(e))
@@ -118,8 +125,8 @@ class ClaudeDialog(Adw.Dialog):
             row.set_visible(not q or all(w in row.haystack for w in q.split()))
 
     def _run(self, folder: str, chat_id: str) -> None:
-        c = self.s.cfg.claude
-        c.skip_permissions, c.new_node = self.skip.get_active(), self.new.get_active()
+        c = self.settings
+        c.skip_permissions, c.new_node, c.remote = self.skip.get_active(), self.new.get_active(), self.remote.get_active()
         if not chat_id:
             c.workdir = folder
         self.save()

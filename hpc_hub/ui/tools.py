@@ -10,11 +10,12 @@ from urllib.parse import urlsplit
 
 from gi.repository import Adw, Gdk, GLib, Gtk
 
-from .. import links, remote, remote_fs, slurm
+from .. import agents, links, remote, remote_fs, slurm
+from ..agents import Agent
 from ..links import Link
 from ..session import ClusterSession, State
 from ..slurm import Allocation
-from .claude_dialog import ClaudeDialog
+from .agent_dialog import AgentDialog
 from .terminals import TerminalsPage, TerminalTab
 
 
@@ -147,51 +148,66 @@ class Tools:
                     _idle(_open_uri, tab, url)
             threading.Thread(target=work, daemon=True).start()
 
-    # -- Claude --------------------------------------------------------------------------
-    def claude(self, s: ClusterSession, folder: str = "") -> None:
+    # -- Claude, ChatGPT, Antigravity ------------------------------------------------------
+    def agent(self, s: ClusterSession, agent_id: str, folder: str = "") -> None:
         """folder: a project; its chats are listed and a new chat starts there."""
         if not self._ready(s):
             return
-        ClaudeDialog(s, lambda where, chat_id: self._check_claude(s, where, chat_id), self.save_config,
-                     folder).present(self.window)
+        agent = agents.BY_ID[agent_id]
+        AgentDialog(agent, s, lambda where, chat_id: self._check_agent(s, agent, where, chat_id), self.save_config,
+                    folder).present(self.window)
 
-    def _check_claude(self, s: ClusterSession, folder: str, chat_id: str) -> None:
-        self.toast(f"Checking claude on {s.cfg.name}…")
+    def _check_agent(self, s: ClusterSession, agent: Agent, folder: str, chat_id: str) -> None:
+        c = getattr(s.cfg, agent.id)
+        self.toast(f"Checking {agent.name} on {s.cfg.name}…")
 
         def work():
             try:
-                kind = remote.command_type(s.ssh, s.cfg.claude.command)
+                kind = remote.command_type(s.ssh, c.command)
             except Exception:  # noqa: BLE001
                 kind = ""
-            _idle(self._claude_checked, s, kind, folder, chat_id)
+            _idle(self._agent_checked, s, agent, kind, folder, chat_id)
 
         threading.Thread(target=work, daemon=True).start()
 
-    def _claude_checked(self, s: ClusterSession, kind: str, folder: str, chat_id: str) -> None:
+    def _agent_checked(self, s: ClusterSession, agent: Agent, kind: str, folder: str, chat_id: str) -> None:
+        c = getattr(s.cfg, agent.id)
         if not kind:
-            self._error("Claude not found",
-                        f"'{s.cfg.claude.command}' is not on PATH or in ~/.bashrc on {s.cfg.name}.")
+            self._error(f"{agent.name} not found",
+                        f"'{c.command}' is not on PATH or in ~/.bashrc on {s.cfg.name}.")
             return
-        start = lambda a, err: _idle(self._start_claude, s, a, err, folder, chat_id)  # noqa: E731
-        if s.cfg.claude.new_node:
-            self.toast("Requesting a new node for Claude…")
-            s.extra_node("hpc-hub-claude", start)
+        start = lambda a, err: _idle(self._start_agent, s, agent, a, err, folder, chat_id)  # noqa: E731
+        if c.new_node:
+            self.toast(f"Requesting a new node for {agent.name}…")
+            s.extra_node(f"hpc-hub-{agent.id}", start)
         else:
             s.ensure_node(lambda a: start(a, ""))
 
-    def _start_claude(self, s: ClusterSession, a: Allocation | None, err: str, folder: str, chat_id: str) -> None:
+    def _start_agent(self, s: ClusterSession, agent: Agent, a: Allocation | None, err: str, folder: str,
+                     chat_id: str) -> None:
         if not a:
             self._error("No compute node", err or f"Could not get a node on {s.cfg.name}.")
             return
-        c = s.cfg.claude
-        cmd = c.command + (" --dangerously-skip-permissions" if c.skip_permissions else "")
-        if chat_id:
-            cmd += f" --resume {shlex.quote(chat_id)}"
+        cmd = agents.command(agent, getattr(s.cfg, agent.id), chat_id)
         tag = chat_id[:8] if chat_id else time.strftime("%H%M%S")  # one tmux session per chat
-        line = remote.in_tmux(f"hpchub-claude-{a.job_id}-{tag}", remote.on_node(a.job_id, folder, cmd))
-        title = "Claude · " + (s.cfg.name if chat_id else f"{s.cfg.name} · new") + f" · {a.node}"
-        self.terminals.open(title, s.ssh.argv(line, tty=True), "user-available-symbolic", node=a.node)
+        line = remote.in_tmux(f"hpchub-{agent.id}-{a.job_id}-{tag}", remote.on_node(a.job_id, folder, cmd))
+        title = f"{agent.name} · {s.cfg.name}" + ("" if chat_id else " · new") + f" · {a.node}"
+        self.terminals.open(title, s.ssh.argv(line, tty=True), agent.icon, node=a.node,
+                            on_link=lambda tab, link: self._agent_link(agent, tab, link))
         self.show_terminals()
+
+    def _agent_link(self, agent: Agent, tab: TerminalTab, link: Link) -> None:
+        if link.kind == links.REMOTE:
+            tab.add_banner(f"{agent.name} remote control is on", "Open", lambda: _open_uri(tab, link.url))
+        elif link.kind == links.PAIR:
+            Gdk.Display.get_default().get_clipboard().set(link.code)
+            tab.add_banner(f"ChatGPT pairing code {link.code} (copied). In the ChatGPT app: Codex, connect a "
+                           "machine, enter the code. It expires in about 10 minutes.")
+        elif link.kind == links.DEVICE_LOGIN:
+            if link.code:
+                Gdk.Display.get_default().get_clipboard().set(link.code)
+            tab.add_banner(f"Sign in with code {link.code} (copied)", "Open sign-in page",
+                           lambda: _open_uri(tab, link.url))
 
     # -- remote text edit (used by VS Code settings) -----------------------------------------
     def edit_remote(self, s: ClusterSession, path: str, template: str = "") -> None:
