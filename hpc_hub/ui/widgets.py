@@ -2,9 +2,44 @@
 
 from collections.abc import Callable
 
-from gi.repository import Adw, Gtk
+from gi.repository import Adw, GLib, Gtk
 
+from .. import layout
 from ..agents import AGENTS
+
+_sizes: dict[str, int] | None = None
+_pending = 0
+
+
+def remember_size(paned: Gtk.Paned, key: str, default: int) -> Gtk.Paned:
+    """Drag the divider to resize; the size you leave it at is used next time too."""
+    global _sizes
+    if _sizes is None:
+        _sizes = layout.load()
+    paned.set_position(_sizes.get(key, default))
+
+    def moved(*_):
+        global _pending
+        if paned.get_start_child() is None or not paned.get_start_child().get_visible():
+            return  # hidden panel: its position means nothing
+        _sizes[key] = paned.get_position()
+        if _pending:
+            GLib.source_remove(_pending)
+        _pending = GLib.timeout_add(600, _flush)
+
+    paned.connect("notify::position", moved)
+    return paned
+
+
+def _flush() -> bool:
+    global _pending
+    _pending = 0
+    try:
+        layout.save(_sizes or {})
+    except OSError:
+        pass
+    return False
+
 
 TARGETS = (("desktop", "VS Code app", "text-editor-symbolic"), ("browser", "Browser (vscode.dev)", "web-browser-symbolic"))
 
