@@ -11,13 +11,14 @@ from urllib.parse import urlsplit
 
 from gi.repository import Adw, Gdk, GLib, Gtk
 
-from .. import agents, browser, links, remote, remote_fs, slurm, tmux
+from .. import agents, links, remote, remote_fs, slurm, tmux
 from ..agents import Agent
 from ..links import Link
 from ..session import ClusterSession, State
 from ..slurm import Allocation
 from .agent_dialog import AgentDialog
 from .terminals import TerminalsPage, TerminalTab
+from .widgets import open_uri
 
 
 VSCODE_JOB = "hpc-hub-vscode"
@@ -26,11 +27,6 @@ VSCODE_JOBS = [VSCODE_JOB, "vscode", "vs-code", "vscode_slurm.sh"]  # also your 
 
 def _idle(fn, *args):
     GLib.idle_add(lambda: fn(*args) and False)
-
-
-def _open_uri(widget: Gtk.Widget, uri: str) -> None:
-    if not browser.open_url(uri, browser.preferred):  # your chosen Chrome profile, else the system browser
-        Gtk.UriLauncher.new(uri).launch(widget.get_root(), None, None, None)
 
 
 class Tools:
@@ -113,7 +109,7 @@ class Tools:
         else:
             if target == "desktop":
                 self.toast("VS Code app not found, opening in the browser")
-            _open_uri(self.window, browser)
+            open_uri(self.window, browser)
 
     def _vscode_link(self, s: ClusterSession, a: Allocation, tab: TerminalTab, link: Link) -> None:
         v = s.cfg.vscode
@@ -121,9 +117,9 @@ class Tools:
             if link.code:
                 Gdk.Display.get_default().get_clipboard().set(link.code)
             tab.add_banner(f"Sign in with code {link.code} (copied)", "Open sign-in page",
-                           lambda: _open_uri(tab, link.url))
+                           lambda: open_uri(tab, link.url))
             if v.open_links:
-                _open_uri(tab, link.url)
+                open_uri(tab, link.url)
         elif link.kind == links.TUNNEL:
             name = links.tunnel_name(link.url)
             if not name:
@@ -148,7 +144,7 @@ class Tools:
                 except Exception as e:  # noqa: BLE001
                     _idle(tab.add_banner, f"Port forward failed: {e}")
                     return
-                _idle(tab.add_banner, f"VS Code web is at {url}", "Open", lambda: _open_uri(tab, url))
+                _idle(tab.add_banner, f"VS Code web is at {url}", "Open", lambda: open_uri(tab, url))
                 if auto:
                     _idle(_open_uri, tab, url)
             threading.Thread(target=work, daemon=True).start()
@@ -206,7 +202,7 @@ class Tools:
 
     def _agent_link(self, agent: Agent, tab: TerminalTab, link: Link) -> None:
         if link.kind == links.REMOTE:
-            tab.add_banner(f"{agent.name} remote control is on", "Open", lambda: _open_uri(tab, link.url))
+            tab.add_banner(f"{agent.name} remote control is on", "Open", lambda: open_uri(tab, link.url))
         elif link.kind == links.PAIR:
             Gdk.Display.get_default().get_clipboard().set(link.code)
             tab.add_banner(f"ChatGPT pairing code {link.code} (copied). In the ChatGPT app: Codex, connect a "
@@ -215,7 +211,7 @@ class Tools:
             if link.code:
                 Gdk.Display.get_default().get_clipboard().set(link.code)
             tab.add_banner(f"Sign in with code {link.code} (copied)", "Open sign-in page",
-                           lambda: _open_uri(tab, link.url))
+                           lambda: open_uri(tab, link.url))
 
     # -- remote text edit (used by VS Code settings) -----------------------------------------
     def edit_remote(self, s: ClusterSession, path: str, template: str = "") -> None:

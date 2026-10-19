@@ -6,8 +6,13 @@ import threading
 
 from gi.repository import Adw, GLib, Gtk
 
-from .. import layout
+from .. import browser, layout
 from ..agents import AGENTS
+
+def open_uri(widget: Gtk.Widget, uri: str) -> None:
+    if not browser.open_url(uri, browser.preferred):  # your chosen Chrome profile, else the system browser
+        Gtk.UriLauncher.new(uri).launch(widget.get_root(), None, None, None)
+
 
 def bg(work: Callable[[], object], done: Callable[[object, str], None]) -> None:
     """Run work() on a thread, then done(result, error) on the main loop."""
