@@ -63,3 +63,10 @@ def test_parse_papers():
     a, b = projects.parse_papers(text)
     assert (a.folder, a.main, a.mtime, a.others) == ("/s/MC/paper", "main.tex", 1700000400, 1)
     assert (b.folder, b.main, b.others) == ("/home/me/old", "thesis.tex", 0)
+
+
+def test_is_latex():
+    assert Project("p", "w", "/x", "main.tex").is_latex
+    assert not Project("mc", "w", "/x", "papers/final/main.tex").is_latex  # a repo with a paper inside
+    assert not Project("k", "w", "/x").is_latex
+    assert Project("p", "w", "/x", kind="latex").is_latex and not Project("c", "w", "/x", "main.tex", kind="code").is_latex

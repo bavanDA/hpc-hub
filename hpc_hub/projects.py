@@ -37,6 +37,12 @@ class Project:
     path: str  # absolute folder on the cluster
     main_tex: str = ""  # relative to path, for the LaTeX tab
     opened: int = 0  # last opened, unix time
+    kind: str = ""  # "code" or "latex"; empty in old files
+
+    @property
+    def is_latex(self) -> bool:
+        """LaTeX papers live in the LaTeX tab, code in Projects. Old entries: a main .tex at the top."""
+        return self.kind == "latex" or not self.kind and bool(self.main_tex) and "/" not in self.main_tex
 
     @property
     def folder_name(self) -> str:
