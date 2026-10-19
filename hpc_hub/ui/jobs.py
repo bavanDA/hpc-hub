@@ -145,7 +145,11 @@ class JobsPage(Gtk.Box):
                 jobs, err = slurm.list_jobs(s.ssh, scope), None
             except Exception as e:  # noqa: BLE001 - show any failure
                 jobs, err = [], str(e)
-                if not s.healthy():  # the link died, not Slurm: let the card say so
+                try:
+                    lost = not s.healthy()  # the link died, not Slurm: let the card say so
+                except Exception:  # noqa: BLE001
+                    lost = False
+                if lost:
                     GLib.idle_add(lambda: s.mark_lost() and False)
             GLib.idle_add(self._loaded, s, scope, jobs, err)
 
