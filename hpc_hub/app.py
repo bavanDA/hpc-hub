@@ -207,8 +207,12 @@ class HpcHubApp(Adw.Application):
             dialog.add_toast(Adw.Toast(title=hint, timeout=5))
 
     def open_tool(self, session: ClusterSession, tool: str) -> None:
-        if tool == "vscode":
-            self.tools.vscode(session)
+        if tool.startswith("vscode"):
+            target = tool.partition(":")[2]
+            if target:
+                session.cfg.vscode.open_in = target  # remember the choice
+                config.save(self.clusters)
+            self.tools.vscode(session, target=target)
         elif tool == "claude":
             self.tools.claude(session)
         elif tool == "files":

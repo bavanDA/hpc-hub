@@ -6,6 +6,7 @@ from collections.abc import Callable
 from gi.repository import Adw, Gtk, Pango
 
 from ..session import ClusterSession, State
+from .widgets import vscode_button
 
 MAX_LOG_LINES = 1000
 
@@ -98,8 +99,8 @@ class ClusterCard(Gtk.Box):
         self.append(node_row)
 
         self.tools = Gtk.Box(spacing=6, margin_top=4)
-        for name, label, icon in (("vscode", "VS Code", "text-editor-symbolic"),
-                                  ("claude", "Claude", "user-available-symbolic"),
+        self.tools.append(vscode_button(lambda target: on_tool(session, f"vscode:{target}")))
+        for name, label, icon in (("claude", "Claude", "user-available-symbolic"),
                                   ("files", "Files", "folder-symbolic")):
             btn = Gtk.Button(child=Adw.ButtonContent(label=label, icon_name=icon), tooltip_text=f"Open {label}")
             btn.connect("clicked", lambda _b, n=name: on_tool(session, n))

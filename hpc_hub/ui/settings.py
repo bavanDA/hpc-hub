@@ -9,6 +9,7 @@ from ..config import VPN_PROTOCOLS, ClusterConfig, ComputeProfile
 from ..credentials import Login
 from ..slurm import validate
 from ..vpn import split_errors
+from .widgets import TARGETS
 
 
 def _entry(title: str, text: str = "") -> Adw.EntryRow:
@@ -156,8 +157,10 @@ class ClusterSettingsDialog(Adw.PreferencesDialog):
         self.vs_setup = _entry("Run first (e.g. module load VSCode)", v.setup)
         self.vs_command = _entry("Command", v.command)
         self.vs_workdir = _entry("Start in folder", v.workdir)
-        self.vs_links = _switch("Open links automatically", v.open_links, "Tunnel and sign-in pages open in your browser")
-        for row in (self.vs_setup, self.vs_command, self.vs_workdir, self.vs_links):
+        self.vs_links = _switch("Open automatically", v.open_links, "When the tunnel is ready, and the GitHub sign-in page")
+        self.vs_open_in = Adw.ComboRow(title="Open in", model=Gtk.StringList.new([t[1] for t in TARGETS]))
+        self.vs_open_in.set_selected(next((i for i, t in enumerate(TARGETS) if t[0] == v.open_in), 0))
+        for row in (self.vs_setup, self.vs_command, self.vs_workdir, self.vs_open_in, self.vs_links):
             start.add(row)
         page.add(start)
 
@@ -217,6 +220,7 @@ class ClusterSettingsDialog(Adw.PreferencesDialog):
         c.vscode.command = self.vs_command.get_text().strip()
         c.vscode.workdir = self.vs_workdir.get_text().strip() or "~"
         c.vscode.open_links = self.vs_links.get_active()
+        c.vscode.open_in = TARGETS[self.vs_open_in.get_selected()][0]
         c.request_node_on_connect = self.on_connect.get_active()
         c.reuse_running_job = self.reuse.get_active()
         c.host = self.host.get_text().strip().rpartition("@")[2]  # username lives in Login
