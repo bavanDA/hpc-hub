@@ -147,7 +147,7 @@ class Tools:
                     _idle(tab.add_banner, f"Port forward failed: {e}")
                     return
                 _idle(tab.add_banner, f"VS Code web is at {url}", "Open", lambda: open_uri(tab, url))
-                if auto:
+                if v.open_links:
                     _idle(open_uri, tab, url)
             threading.Thread(target=work, daemon=True).start()
 
