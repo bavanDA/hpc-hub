@@ -57,6 +57,21 @@ class AgentDialog(Adw.Dialog):
         opts.add(self.new)
         page.add(opts)
 
+        more = Adw.PreferencesGroup(title=f"{agent.name} options")
+        self.option_rows: list[tuple] = []
+        for o in agent.options:
+            row = Adw.ComboRow(title=o.label, model=Gtk.StringList.new([label for _, label in o.choices]))
+            values = [v for v, _ in o.choices]
+            current = getattr(c, o.key)
+            row.set_selected(values.index(current) if current in values else 0)
+            if o.unless_skip:
+                self.skip.connect("notify::active", lambda sw, r=row: r.set_sensitive(not sw.get_active()))
+                row.set_sensitive(not c.skip_permissions)
+            more.add(row)
+            self.option_rows.append((o, row))
+        if agent.options:
+            page.add(more)
+
         new_chat = Adw.PreferencesGroup(title="New chat")
         self.folder = Adw.EntryRow(title="Folder")
         self.folder.set_text(project or c.workdir)
@@ -127,6 +142,8 @@ class AgentDialog(Adw.Dialog):
     def _run(self, folder: str, chat_id: str, label: str = "") -> None:
         c = self.settings
         c.skip_permissions, c.new_node, c.remote = self.skip.get_active(), self.new.get_active(), self.remote.get_active()
+        for o, row in self.option_rows:
+            setattr(c, o.key, o.choices[row.get_selected()][0])
         if not chat_id:
             c.workdir = folder
         self.save()
