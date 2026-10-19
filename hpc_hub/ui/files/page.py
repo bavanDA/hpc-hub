@@ -106,8 +106,7 @@ class FilesPage(Gtk.Box):
         name = posixpath.basename(src_path.rstrip("/"))
         if src is dst:
             self.toast(f"Copying {name}…")
-            cmd = f"cp -r -- {remote_fs.q(src_path)} {remote_fs.q(dest_dir)}/"
-            bg(lambda: remote_fs._run(src.ssh, cmd, timeout=3600), pane._done(f"Copied {name}"))
+            bg(lambda: remote_fs.copy(src.ssh, src_path, dest_dir), pane._done(f"Copied {name}"))
             return
         self.direct_copy(src, src_path, dst, dest_dir, pane)
 
