@@ -10,12 +10,16 @@ from ...projects import Project, ProjectStore
 from ...session import ClusterSession
 from ..editor import source_view
 from ..pdf_pane import PdfPane
-from ..widgets import bg, remember_size, shortcuts
+from ..widgets import bg, remember, remembered, remember_size, shortcuts
 from .build import BuildMixin
+from .file_tree import FileTree, list_tree
 from .files_pane import FilesMixin
 from .git_menu import GitMixin
 from .picker import ProjectPicker
 from .sync import SyncMixin
+
+
+VIEWS = ["editor", "split", "pdf"]
 
 
 class LatexPage(FilesMixin, SyncMixin, GitMixin, BuildMixin, Gtk.Box):
@@ -25,6 +29,7 @@ class LatexPage(FilesMixin, SyncMixin, GitMixin, BuildMixin, Gtk.Box):
         super().__init__(orientation=Gtk.Orientation.VERTICAL)
         self.toast = toast
         self.save_config = save_config
+        self.store = store
         self.session: ClusterSession | None = None
         self.main = ""
         self.folder = ""
@@ -40,6 +45,12 @@ class LatexPage(FilesMixin, SyncMixin, GitMixin, BuildMixin, Gtk.Box):
         self.stack.add_named(self._project_page(), "project")
         self.append(self.stack)
 
+    def _layout(self) -> None:
+        view = self.layout.get_active_name() or "split"
+        self.editor_box.set_visible(view != "pdf")
+        self.pdf.set_visible(view != "editor")
+        remember("latex.view", VIEWS.index(view))
+
     def open_project(self, session: ClusterSession, p: Project) -> None:
         self.picker.open_project(session, p)
 
@@ -50,6 +61,11 @@ class LatexPage(FilesMixin, SyncMixin, GitMixin, BuildMixin, Gtk.Box):
         self.title = Gtk.Label(xalign=0, ellipsize=Pango.EllipsizeMode.START, css_classes=["heading"])
         self.files_btn = Gtk.ToggleButton(icon_name="sidebar-show-symbolic", active=True,
                                           tooltip_text="Show or hide project files")
+        self.layout = Adw.ToggleGroup(css_classes=["round"], tooltip_text="Editor, both side by side, or PDF")
+        for name, icon, tip in (("editor", "text-editor-symbolic", "Editor only"),
+                                ("split", "view-dual-symbolic", "Editor and PDF"),
+                                ("pdf", "x-office-document-symbolic", "PDF only")):
+            self.layout.add(Adw.Toggle(name=name, icon_name=icon, tooltip=tip))
         self.to_pdf = Gtk.Button(icon_name="go-next-symbolic", tooltip_text="Show this line in the PDF (Ctrl+J)")
         self.to_pdf.connect("clicked", lambda *_: self.show_in_pdf())
         self.save_btn = Gtk.Button(icon_name="document-save-symbolic", tooltip_text="Save (Ctrl+S)", sensitive=False)
@@ -66,8 +82,8 @@ class LatexPage(FilesMixin, SyncMixin, GitMixin, BuildMixin, Gtk.Box):
         self.build_btn.connect("clicked", lambda *_: self.save(then=self.build))
         close.connect("clicked", lambda *_: self._close())
         self.title.set_hexpand(True)
-        for w in (self.files_btn, self.title, self.save_btn, self.auto, self.spinner, self.build_btn, self.to_pdf,
-                  self.git_btn, settings, close):
+        for w in (self.files_btn, self.title, self.layout, self.save_btn, self.auto, self.spinner, self.build_btn,
+                  self.to_pdf, self.git_btn, settings, close):
             bar.append(w)
         page.append(bar)
 
@@ -77,21 +93,16 @@ class LatexPage(FilesMixin, SyncMixin, GitMixin, BuildMixin, Gtk.Box):
         self.pdf = PdfPane(self.toast)
         self.pdf.on_double_click = self.show_in_source
         self.sync: synctex.SyncTex | None = None
-        paned = remember_size(Gtk.Paned(start_child=Gtk.ScrolledWindow(child=self.view), end_child=self.pdf,
+        self.editor_box = Gtk.ScrolledWindow(child=self.view)
+        paned = remember_size(Gtk.Paned(start_child=self.editor_box, end_child=self.pdf,
                                         vexpand=True, wide_handle=True), "latex.editor", 620)
-        self.file_list = Gtk.ListBox(css_classes=["navigation-sidebar"])
-        self.file_list.connect("row-activated", lambda _l, row: self._open_listed(row.rel))
-        side = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-        side.append(Gtk.Label(label="Files", xalign=0, css_classes=["heading"], margin_start=12, margin_top=8,
-                              margin_bottom=4))
-        side.append(Gtk.ScrolledWindow(child=self.file_list, vexpand=True, hscrollbar_policy=Gtk.PolicyType.NEVER))
-        side.append(Gtk.Label(label="Drop files here to upload them.", wrap=True, xalign=0,
-                              css_classes=["dim-label", "caption"], margin_start=12, margin_end=8, margin_bottom=8))
+        self.layout.connect("notify::active-name", lambda *_: self._layout())
+        self.layout.set_active_name(VIEWS[remembered("latex.view", 1) % len(VIEWS)])
+        self.tree = side = FileTree(self, self._open_listed)
         self.files_btn.bind_property("active", side, "visible", GObject.BindingFlags.SYNC_CREATE)
         outer = remember_size(Gtk.Paned(start_child=side, end_child=paned, vexpand=True, shrink_start_child=False,
                                         resize_start_child=False), "latex.files", 200)
         page.append(outer)
-        self._drop_target(side, into_editor=False)
         self._drop_target(self.view, into_editor=True)
 
         self.issues = Gtk.ListBox(selection_mode=Gtk.SelectionMode.NONE, css_classes=["boxed-list"])
@@ -121,13 +132,14 @@ class LatexPage(FilesMixin, SyncMixin, GitMixin, BuildMixin, Gtk.Box):
         def work():
             p = remote_fs.expand(session.ssh, path)
             folder = posixpath.dirname(p)
-            return p, folder, self._list_files(session, folder)
+            return p, folder, list_tree(session.ssh, folder)
 
         def done(result, err):
             if err:
                 self.toast(err)
                 return
-            self.session, (self.main, self.folder, self.files) = session, result
+            self.session, (self.main, self.folder, entries) = session, result
+            self.tree.show(entries)
             self.sync = None
             self.pdf.set_filename(latex.pdf_path(posixpath.basename(self.main)))
             self.title.set_label(f"{session.cfg.name}: {self.main}")

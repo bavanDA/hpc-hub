@@ -30,37 +30,28 @@ def _file_row(name: str, icon: str, depth: int, bold: bool = False, dim: bool = 
 
 
 class FilesMixin:
-    """LatexPage's file list (self.file_list, self.files) and drops onto it or the editor."""
+    """LatexPage's files: the tree (self.tree), opening files and figures, and drops onto the editor."""
 
-    @staticmethod
-    def _list_files(session: ClusterSession, folder: str) -> list[str]:
-        """Sources and figures, without hidden folders or build output."""
-        find = (f"cd {shlex.quote(folder)} && find . -maxdepth 4 \\( -name '.?*' -o -name _minted\\* \\) -prune -o "
-                "-type f \\( " + " -o ".join(f"-iname '*{e}'" for e in LIST_EXT) + " \\) -print "
-                "| sed 's|^./||' | sort | head -500")
-        return [f for f in session.ssh.run(find, timeout=60).stdout.split("\n") if f]
+    def current_rel(self) -> str:
+        return posixpath.relpath(self.current, self.folder) if self.current and self.folder else ""
 
     def _fill_files(self) -> None:
-        self.file_list.remove_all()
-        current = posixpath.relpath(self.current, self.folder) if self.current and self.folder else ""
-        shown_dirs: set[str] = set()
-        for rel in self.files:
-            parts = rel.split("/")
-            for depth in range(len(parts) - 1):  # folder headings, once each
-                d = "/".join(parts[:depth + 1])
-                if d not in shown_dirs:
-                    shown_dirs.add(d)
-                    head = Gtk.ListBoxRow(activatable=False, selectable=False)
-                    head.set_child(_file_row(parts[depth], "folder-symbolic", depth, dim=True))
-                    self.file_list.append(head)
-            icon = ("x-office-document-symbolic" if rel.endswith(".tex") else "image-x-generic-symbolic"
-                    if rel.lower().endswith(FIG_EXT) else "text-x-generic-symbolic")
-            row = Gtk.ListBoxRow()
-            row.set_child(_file_row(parts[-1], icon, len(parts) - 1, bold=rel == posixpath.relpath(self.main, self.folder)))
-            row.rel = rel
-            self.file_list.append(row)
-            if rel == current:
-                self.file_list.select_row(row)
+        self.tree.mark_current()
+
+    def _refresh_files(self) -> None:
+        self.tree.refresh()
+
+    def set_main(self, path: str) -> None:
+        """The .tex file that Build compiles (remembered for the project)."""
+        self.main = path
+        self.title.set_label(f"{self.session.cfg.name}: {self.main}")
+        p = self.store.find(self.session.cfg.id, self.folder) if self.store else None
+        if p:
+            p.main_tex = posixpath.relpath(path, self.folder)
+            self.store.changed()
+        self.toast(f"Main file: {posixpath.basename(path)}")
+        self.sync = None
+        self.tree.refresh()
 
     def _open_listed(self, rel: str) -> None:
         path = posixpath.join(self.folder, rel)
