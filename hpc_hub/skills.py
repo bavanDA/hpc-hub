@@ -1,16 +1,20 @@
-"""Agent skills on a cluster: list them, add them from a git repository, remove the ones you added.
+"""Agent skills on a cluster: list them, add HPC Hub's own or any from a git repository, remove yours.
 
-Claude reads ~/.claude/skills, ChatGPT (Codex) reads ~/.codex/skills. Folders that the tools manage
-themselves (Claude's synced/, Codex's .system/) are shown but never removed.
+Each agent reads its own folder (TARGETS). Folders the tools manage themselves (Claude's synced/,
+Codex's .system/) are shown but never removed. HPC Hub ships a few skills in skill_catalog/.
 """
 
 import re
 import shlex
 from dataclasses import dataclass
+from pathlib import Path
 
+from . import remote_fs
 from .ssh import SshMaster
 
-TARGETS = {"claude": ("Claude", ".claude/skills"), "codex": ("ChatGPT", ".codex/skills")}
+TARGETS = {"claude": ("Claude", ".claude/skills"), "codex": ("ChatGPT", ".codex/skills"),
+           "cursor": ("Cursor", ".cursor/skills"), "agy": ("Antigravity", ".gemini/config/skills")}
+CATALOG = Path(__file__).parent / "skill_catalog"
 MANAGED = ("/synced/", "/.system/")
 REPOS = ".hpc-hub/skill-repos"
 DEFAULT_REPO = "https://github.com/mattpocock/skills.git"
@@ -89,6 +93,42 @@ def install_command(skills: list[Skill], targets: list[str]) -> str:
             name = shlex.quote(sk.folder)
             steps.append(f"rm -rf {dest}/{name} && cp -r {shlex.quote(sk.path)} {dest}/{name}")
     return " && ".join(steps)
+
+
+def front_matter(text: str) -> dict[str, str]:
+    """name/description from a SKILL.md header (the part between the first two --- lines)."""
+    lines = text.splitlines()
+    if not lines or lines[0].strip() != "---":
+        return {}
+    out = {}
+    for line in lines[1:]:
+        if line.strip() == "---":
+            break
+        key, sep, value = line.partition(":")
+        if sep and key.strip() in ("name", "description"):
+            out[key.strip()] = value.strip().strip('"')
+    return out
+
+
+def catalog(folder: Path = CATALOG) -> list[Skill]:
+    """The skills that come with HPC Hub (local folders)."""
+    out = []
+    for f in sorted(folder.glob("*/SKILL.md")):
+        meta = front_matter(f.read_text(encoding="utf-8", errors="replace"))
+        out.append(Skill(str(f.parent), meta.get("name") or f.parent.name, meta.get("description", "")))
+    return out
+
+
+def install_local(ssh: SshMaster, picked: list[Skill], targets: list[str]) -> None:
+    """Copy local skill folders (the catalog) to each agent's folder on the cluster."""
+    for t in targets:
+        dest = f"{ssh.run('echo $HOME').stdout.strip()}/{TARGETS[t][1]}"
+        names = " ".join(shlex.quote(f"{dest}/{Path(sk.path).name}") for sk in picked)
+        res = ssh.run(f"mkdir -p {shlex.quote(dest)} && rm -rf {names}")
+        if res.returncode != 0:
+            raise ValueError(res.stderr.strip() or f"Could not prepare {dest}")
+        for sk in picked:
+            remote_fs.upload(ssh, sk.path, dest)
 
 
 def remove_command(skill: Skill) -> str:

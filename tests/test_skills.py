@@ -30,3 +30,11 @@ def test_commands():
     with pytest.raises(ValueError):
         skills.remove_command(skills.Skill("/h/.claude/skills/synced/x", "x", target="claude", managed=True))
     assert skills.repo_folder("https://github.com/mattpocock/skills.git").endswith("github.com-mattpocock-skills")
+
+
+def test_catalog_ships_with_the_app():
+    got = {sk.name: sk for sk in skills.catalog()}
+    assert {"tdd", "diagnosing-bugs", "code-review"} <= set(got)
+    assert all(sk.description for sk in got.values())
+    assert skills.front_matter('---\nname: x\ndescription: "Do y."\n---\nbody') == {"name": "x", "description": "Do y."}
+    assert skills.front_matter("no header") == {}
