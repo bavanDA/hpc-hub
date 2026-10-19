@@ -14,7 +14,7 @@ if TYPE_CHECKING:
     from .page import GlobusPage
 
 
-def _or_consent(work: Callable[[], object]) -> Callable[[], object]:
+def or_consent(work: Callable[[], object]) -> Callable[[], object]:
     """Return a ConsentRequired instead of raising it, so done() can spot it."""
     def run():
         try:
@@ -177,7 +177,7 @@ class GlobusPane(Gtk.Box):
                 self.count.set_label("0 items")
             self._sync()
 
-        bg(_or_consent(lambda: client.ls(cfg.globus.collection_id, path)), done)
+        bg(or_consent(lambda: client.ls(cfg.globus.collection_id, path)), done)
 
     def go_up(self) -> None:
         if self.path:

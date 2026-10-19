@@ -8,7 +8,7 @@ from ... import globus
 from ...config import AppSettings, ClusterConfig
 from ..widgets import bg
 from .dialogs import CollectionPicker, LoginDialog
-from .pane import GlobusPane, _or_consent
+from .pane import GlobusPane, or_consent
 from .settings import HELP, GlobusSettingsDialog
 
 POLL_SECONDS = 10
@@ -156,8 +156,8 @@ class GlobusPage(Gtk.Box):
                 return
             self.toast(f"Transfer failed: {err}" if err else f"Sent {it.name} to Globus")
             self.refresh_tasks()
-        bg(_or_consent(lambda: client.submit(a.globus.collection_id, src_path, b.globus.collection_id, dst_path,
-                                             f"HPC Hub {it.name}", it.is_dir)), done)
+        bg(or_consent(lambda: client.submit(a.globus.collection_id, src_path, b.globus.collection_id, dst_path,
+                                            f"HPC Hub {it.name}", it.is_dir)), done)
 
     def refresh_tasks(self) -> None:
         client = self.client
