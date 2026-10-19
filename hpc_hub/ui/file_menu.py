@@ -100,11 +100,14 @@ def install(pane) -> None:
 
 
 def _row_at(view: Gtk.Widget, x: float, y: float) -> int | None:
-    """The list position under the pointer; cells carry it as `row_pos` (set when bound)."""
+    """The list position under the pointer. Cells carry it as `row_pos` (set when bound); a click on a
+    cell's padding lands on the cell or row widget, so look one or two levels down as well."""
     w = view.pick(x, y, Gtk.PickFlags.DEFAULT)
     while w is not None and w is not view:
-        pos = getattr(w, "row_pos", None)
-        if pos is not None:
-            return pos
+        child = w.get_first_child()
+        for c in (w, child, child.get_first_child() if child else None):
+            pos = getattr(c, "row_pos", None) if c is not None else None
+            if pos is not None:
+                return pos
         w = w.get_parent()
     return None
