@@ -8,6 +8,7 @@ from collections import deque
 from collections.abc import Callable
 
 from .config import ClusterConfig
+from .fastshell import FastShell, FastShellError
 from .paths import runtime_dir
 
 COMMON = [
@@ -15,6 +16,9 @@ COMMON = [
     "-o", "ServerAliveInterval=30",
     "-o", "ServerAliveCountMax=3",
 ]
+
+
+FAST_SHELLS = 3  # quick commands share these; more at once (or long ones) use plain ssh
 
 
 class SshError(Exception):
@@ -30,6 +34,10 @@ class SshMaster:
         self.control_path = runtime_dir() / f"cm-{cfg.id}"
         self.proc: subprocess.Popen | None = None
         self._errors: deque[str] = deque(maxlen=8)
+        self._idle: list[FastShell] = []
+        self._shells = 0
+        self._shell_lock = threading.Lock()
+        self._fast_off_until = 0.0  # after a failed start, use plain ssh for a while
 
     def _target(self) -> list[str]:
         return ["-p", str(self.cfg.port), "-l", self.username, "-S", str(self.control_path), "--", self.cfg.host]
@@ -86,10 +94,58 @@ class SshMaster:
         return subprocess.run(check, capture_output=True).returncode == 0
 
     def run(self, command: str, timeout: float = 60) -> subprocess.CompletedProcess:
+        """Quick commands go through a shell kept open on the login node; the rest through plain ssh."""
+        shell = self._take_shell() if timeout <= 60 else None
+        if shell:
+            try:
+                res = shell.run(command, timeout)
+            except subprocess.TimeoutExpired:
+                self._drop_shell()
+                raise
+            except FastShellError as e:
+                self._drop_shell()
+                if e.sent:  # it may have run: don't run it twice (think sbatch)
+                    return subprocess.CompletedProcess(command, 255, "", f"connection to the cluster broke: {e}")
+            else:
+                self._return_shell(shell)
+                return res
         return subprocess.run(
             self.argv(command), capture_output=True, text=True, timeout=timeout,
             stdin=subprocess.DEVNULL,
         )
+
+    def _take_shell(self) -> FastShell | None:
+        with self._shell_lock:
+            if self._idle:
+                return self._idle.pop()
+            if self._shells >= FAST_SHELLS or time.monotonic() < self._fast_off_until:
+                return None
+            self._shells += 1
+        try:
+            return FastShell(self.argv())
+        except FastShellError:
+            with self._shell_lock:
+                self._shells -= 1
+                self._fast_off_until = time.monotonic() + 120
+            return None
+
+    def _return_shell(self, shell: FastShell) -> None:
+        with self._shell_lock:
+            if shell.alive:
+                self._idle.append(shell)
+            else:
+                self._shells -= 1
+
+    def _drop_shell(self) -> None:
+        with self._shell_lock:
+            self._shells -= 1
+
+    def close_shells(self) -> None:
+        with self._shell_lock:
+            idle, self._idle = self._idle, []
+            self._shells -= len(idle)
+        for shell in idle:
+            shell.close()
 
     def popen(self, command: str, **kwargs) -> subprocess.Popen:
         return subprocess.Popen(self.argv(command), stdin=subprocess.DEVNULL, text=True, **kwargs)
@@ -112,6 +168,7 @@ class SshMaster:
                 "-o", f"User={self.username}", "-P", str(self.cfg.port), "--", fix(src), fix(dst)]
 
     def stop(self) -> None:
+        self.close_shells()
         if self.control_path.exists():
             subprocess.run(["ssh", "-O", "exit", *self._target()], capture_output=True)
         if self.proc and self.proc.poll() is None:
