@@ -15,7 +15,8 @@ FIELDS = ["session_name", "session_created", "session_attached", "@hpchub_label"
           "pane_current_command", "session_windows", "pane_current_path"]
 LIST = ("hostname; command -v tmux >/dev/null && echo TMUX_OK; "
         f"tmux list-sessions -F {shlex.quote(SEP.join('#{' + f + '}' for f in FIELDS))} 2>/dev/null; "
-        "echo SCREEN_LIST; screen -ls 2>/dev/null")
+        "echo SCREEN_LIST; screen -ls 2>/dev/null; "
+        'echo JOB_LIST; squeue -h -u "$USER" -t RUNNING -o "%i %N" 2>/dev/null')
 SCREEN_RE = re.compile(r"^\s+(\d+)\.(\S+)\s+\((?:\d.*?\)\s+\()?(Attached|Detached)\)", re.M)
 COLORS = ["#3584e4", "#2ec27e", "#e5a50a", "#ff7800", "#e01b24", "#9141ac", "#986a44", "#77767b"]
 AGENT_COLORS = {"claude": "#d97757", "codex": "#10a37f", "agy": "#4285f4", "vscode": "#3584e4"}
@@ -44,12 +45,19 @@ class Session:
         m = re.match(r"hpchub-([a-z]+)-", self.name)
         return m.group(1) if m else ""
 
+    @property
+    def job(self) -> str:
+        """Slurm job the agent runs in, from hpchub-<agent>-<job>-<tag>."""
+        m = re.match(r"hpchub-[a-z]+-(\d+)-", self.name)
+        return m.group(1) if m else ""
+
 
 @dataclass
 class Listing:
     host: str
     has_tmux: bool
     sessions: list[Session]
+    nodes: dict[str, str] | None = None  # running job id -> node; None if squeue gave nothing
 
 
 def parse(text: str) -> Listing:
@@ -65,12 +73,14 @@ def parse(text: str) -> Listing:
         if not in_screen and SEP in line:
             p = (line.split(SEP) + [""] * len(FIELDS))[:len(FIELDS)]
             out.append(Session(p[0], "tmux", _int(p[1]), _int(p[2]), p[3], p[4], p[5], _int(p[6]) or 1, p[7]))
+    text, found, job_part = text.partition("JOB_LIST\n")
+    nodes = dict(line.split()[:2] for line in job_part.splitlines() if len(line.split()) >= 2) if found else None
     screen_part = text.split("SCREEN_LIST", 1)[1] if "SCREEN_LIST" in text else ""
     for m in SCREEN_RE.finditer(screen_part):
         out.append(Session(f"{m.group(1)}.{m.group(2)}", "screen", attached=int(m.group(3) == "Attached"),
                            label=m.group(2)))
     out.sort(key=lambda s: (s.kind != "tmux", -s.created, s.name))
-    return Listing(host, has_tmux, out)
+    return Listing(host, has_tmux, out, nodes)
 
 
 def _int(v: str) -> int:

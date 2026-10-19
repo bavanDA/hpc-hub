@@ -24,6 +24,15 @@ def test_parse():
                                                                      ("678.work", "screen", 1)]
 
 
+def test_job_nodes():
+    row = tmux.SEP.join(["hpchub-codex-1429952-170139", "1", "0", "", "", "srun", "1", "/h"])
+    got = tmux.parse(f"login02\nTMUX_OK\n{row}\nSCREEN_LIST\nJOB_LIST\n1429952 n0093\n1429907 n0052\n")
+    assert got.sessions[0].job == "1429952" and got.nodes == {"1429952": "n0093", "1429907": "n0052"}
+    assert tmux.parse("login02\nTMUX_OK\nSCREEN_LIST\nJOB_LIST\n").nodes == {}
+    assert tmux.parse("login02\nTMUX_OK\nSCREEN_LIST\n").nodes is None
+    assert tmux.Session("hpchub-term-170139").job == ""
+
+
 def test_no_tmux():
     got = tmux.parse("login01\nSCREEN_LIST\nNo Sockets found in /run/screen/S-me.\n")
     assert not got.has_tmux and got.sessions == []
