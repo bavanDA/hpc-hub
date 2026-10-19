@@ -72,7 +72,10 @@ class Tools:
                     where = remote_fs.home(s.ssh) + where[1:]
                 job = slurm.find_job(s.ssh, VSCODE_JOBS)
                 known = self.tunnels.get(cid)
-                if job and known and known[0] == job.job_id:
+                if job and not (known and known[0] == job.job_id):
+                    name = links.tunnel_name(slurm.tunnel_link(s.ssh, job.job_id))  # e.g. after an app restart
+                    known = self.tunnels[cid] = (job.job_id, name) if name else None
+                if job and known:
                     _idle(self._open_tunnel, known[1], where, target)
                     return
                 self.pending[cid] = (where, target)

@@ -81,3 +81,15 @@ def test_wait_gone(monkeypatch):
     clock = iter(range(0, 100, 5))
     monkeypatch.setattr(slurm.time, "monotonic", lambda: next(clock))
     assert not slurm.wait_gone(Stuck(), "42", seconds=12)
+
+
+def test_tunnel_link(tmp_path):
+    import subprocess
+    log = tmp_path / "vs.out"
+    log.write_text("x\n  Open:  https://vscode.dev/tunnel/n0018/mmfs1/home/jdoe\nmore\n")
+
+    class Ssh:
+        def run(self, cmd, timeout=60):
+            cmd = cmd.replace(slurm.log_path("7"), f"echo {log}")
+            return subprocess.run(["bash", "-c", cmd], capture_output=True, text=True)
+    assert slurm.tunnel_link(Ssh(), "7") == "https://vscode.dev/tunnel/n0018/mmfs1/home/jdoe"
