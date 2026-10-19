@@ -1,5 +1,6 @@
 """LaTeX tab: edit on the cluster, build there, see the PDF, git history."""
 
+import os
 import posixpath
 import re
 import shlex
@@ -7,18 +8,21 @@ import threading
 import time
 from collections.abc import Callable
 
-from gi.repository import Adw, GLib, Gtk, Pango
+from gi.repository import Adw, Gdk, GLib, GObject, Gtk, Pango
 
-from .. import git, latex, projects, remote_fs
+from .. import git, latex, projects, remote_fs, synctex
 from ..config import LATEX_ENGINES
 from ..latex import LatexIssue
 from ..projects import Project, ProjectStore
 from ..session import ClusterSession, State
 from .editor import source_view
-from .pdf import PdfView
+from .pdf import PdfDialog, PdfView
 from .widgets import remember_size
 
 PROJECT_EXT = (".tex", ".bib", ".sty", ".cls", ".bst")
+TEXT_EXT = PROJECT_EXT + (".txt", ".md", ".csv", ".dat", ".py", ".sh")
+FIG_EXT = (".png", ".jpg", ".jpeg", ".pdf", ".eps", ".svg")
+LIST_EXT = TEXT_EXT + FIG_EXT
 
 
 def _bg(work, done) -> None:
@@ -29,6 +33,18 @@ def _bg(work, done) -> None:
             result, err = None, str(e)
         GLib.idle_add(lambda: done(result, err) and False)
     threading.Thread(target=run, daemon=True).start()
+
+
+def _file_row(name: str, icon: str, depth: int, bold: bool = False, dim: bool = False) -> Gtk.Box:
+    box = Gtk.Box(spacing=6, margin_start=6 + 14 * depth)
+    box.append(Gtk.Image(icon_name=icon))
+    label = Gtk.Label(label=name, xalign=0, ellipsize=Pango.EllipsizeMode.MIDDLE)
+    if bold:
+        label.add_css_class("heading")
+    if dim:
+        label.add_css_class("dim-label")
+    box.append(label)
+    return box
 
 
 def _short(folder: str) -> str:
@@ -226,25 +242,25 @@ class LatexPage(Gtk.Box):
         page = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         bar = Gtk.Box(spacing=6, margin_top=8, margin_bottom=8, margin_start=8, margin_end=8)
         self.title = Gtk.Label(xalign=0, ellipsize=Pango.EllipsizeMode.START, css_classes=["heading"])
-        self.file_pick = Gtk.DropDown.new_from_strings([])
-        self.file_pick.set_tooltip_text("Project files")
-        self.file_pick.connect("notify::selected", self._pick_file)
+        self.files_btn = Gtk.ToggleButton(icon_name="sidebar-show-symbolic", active=True,
+                                          tooltip_text="Show or hide project files")
+        self.to_pdf = Gtk.Button(icon_name="go-next-symbolic", tooltip_text="Show this line in the PDF (Ctrl+J)")
+        self.to_pdf.connect("clicked", lambda *_: self.show_in_pdf())
         self.save_btn = Gtk.Button(icon_name="document-save-symbolic", tooltip_text="Save (Ctrl+S)", sensitive=False)
         self.build_btn = Gtk.Button(child=Adw.ButtonContent(label="Build", icon_name="media-playback-start-symbolic"),
                                     css_classes=["suggested-action"], tooltip_text="Save and build (Ctrl+B)")
         self.spinner = Adw.Spinner(visible=False)
         self.auto = Gtk.ToggleButton(icon_name="emblem-synchronizing-symbolic", tooltip_text="Build on save")
-        self.git_btn = Gtk.Button(child=Adw.ButtonContent(label="Git", icon_name="vcs-branch-symbolic"),
-                                  tooltip_text="Git remote, history, commit")
+        self.git_btn = Gtk.MenuButton(child=Adw.ButtonContent(label="Git", icon_name="vcs-branch-symbolic"),
+                                      tooltip_text="Pull, push, commit, history", popover=self._git_popover())
         settings = Gtk.MenuButton(icon_name="emblem-system-symbolic", tooltip_text="Build settings",
                                   popover=self._settings_popover())
         close = Gtk.Button(icon_name="window-close-symbolic", tooltip_text="Close project", css_classes=["flat"])
         self.save_btn.connect("clicked", lambda *_: self.save())
         self.build_btn.connect("clicked", lambda *_: self.save(then=self.build))
-        self.git_btn.connect("clicked", lambda *_: GitDialog(self.session, self.folder, self.toast).present(self.get_root()))
         close.connect("clicked", lambda *_: self._close())
         self.title.set_hexpand(True)
-        for w in (self.title, self.file_pick, self.save_btn, self.auto, self.spinner, self.build_btn,
+        for w in (self.files_btn, self.title, self.save_btn, self.auto, self.spinner, self.build_btn, self.to_pdf,
                   self.git_btn, settings, close):
             bar.append(w)
         page.append(bar)
@@ -253,9 +269,24 @@ class LatexPage(Gtk.Box):
         self.buf = self.view.get_buffer()
         self.buf.connect("changed", self._changed)
         self.pdf = PdfView()
+        self.pdf.on_double_click = self.show_in_source
+        self.sync: synctex.SyncTex | None = None
         paned = remember_size(Gtk.Paned(start_child=Gtk.ScrolledWindow(child=self.view), end_child=self.pdf,
                                         vexpand=True, wide_handle=True), "latex.editor", 620)
-        page.append(paned)
+        self.file_list = Gtk.ListBox(css_classes=["navigation-sidebar"])
+        self.file_list.connect("row-activated", lambda _l, row: self._open_listed(row.rel))
+        side = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        side.append(Gtk.Label(label="Files", xalign=0, css_classes=["heading"], margin_start=12, margin_top=8,
+                              margin_bottom=4))
+        side.append(Gtk.ScrolledWindow(child=self.file_list, vexpand=True, hscrollbar_policy=Gtk.PolicyType.NEVER))
+        side.append(Gtk.Label(label="Drop files here to upload them.", wrap=True, xalign=0,
+                              css_classes=["dim-label", "caption"], margin_start=12, margin_end=8, margin_bottom=8))
+        self.files_btn.bind_property("active", side, "visible", GObject.BindingFlags.SYNC_CREATE)
+        outer = remember_size(Gtk.Paned(start_child=side, end_child=paned, vexpand=True, shrink_start_child=False,
+                                        resize_start_child=False), "latex.files", 200)
+        page.append(outer)
+        self._drop_target(side, into_editor=False)
+        self._drop_target(self.view, into_editor=True)
 
         self.issues = Gtk.ListBox(selection_mode=Gtk.SelectionMode.NONE, css_classes=["boxed-list"])
         self.issues.connect("row-activated", lambda _l, row: self._goto(row.issue))
@@ -269,7 +300,8 @@ class LatexPage(Gtk.Box):
         page.append(self.log_expander)
 
         keys = Gtk.ShortcutController(scope=Gtk.ShortcutScope.MANAGED)
-        for trigger, fn in (("<Control>s", lambda: self.save()), ("<Control>b", lambda: self.save(then=self.build))):
+        for trigger, fn in (("<Control>s", lambda: self.save()), ("<Control>b", lambda: self.save(then=self.build)),
+                            ("<Control>j", lambda: self.show_in_pdf())):
             keys.add_shortcut(Gtk.Shortcut(trigger=Gtk.ShortcutTrigger.parse_string(trigger),
                                            action=Gtk.CallbackAction.new(lambda *_, f=fn: f() or True)))
         page.add_controller(keys)
@@ -317,25 +349,19 @@ class LatexPage(Gtk.Box):
         def work():
             p = remote_fs.home(session.ssh) + path[1:] if path.startswith("~") else path
             folder = posixpath.dirname(p)
-            find = (f"cd {shlex.quote(folder)} && find . -maxdepth 3 -type f \\( "
-                    + " -o ".join(f"-name '*{e}'" for e in PROJECT_EXT) + " \\) | sed 's|^./||' | sort | head -300")
-            files = session.ssh.run(find, timeout=60).stdout.split()
-            return p, folder, files
+            return p, folder, self._list_files(session, folder)
 
         def done(result, err):
             if err:
                 self.toast(err)
                 return
             self.session, (self.main, self.folder, self.files) = session, result
-            names = self.files or [posixpath.basename(self.main)]
-            self.file_pick.set_model(Gtk.StringList.new(names))
+            self.sync = None
             self.title.set_label(f"{session.cfg.name}: {self.main}")
             self.stack.set_visible_child_name("project")
-            rel = posixpath.relpath(self.main, self.folder)
             self._load_file(self.main)
-            if rel in names:
-                self.file_pick.set_selected(names.index(rel))
             self._load_pdf()
+            self._load_sync()
 
         _bg(work, done)
 
@@ -348,16 +374,186 @@ class LatexPage(Gtk.Box):
         else:
             go()
 
-    def _pick_file(self, *_):
-        item = self.file_pick.get_selected_item()
-        if not item or not self.folder:
+    # -- project files --------------------------------------------------------------------
+    @staticmethod
+    def _list_files(session: ClusterSession, folder: str) -> list[str]:
+        """Sources and figures, without hidden folders or build output."""
+        find = (f"cd {shlex.quote(folder)} && find . -maxdepth 4 \\( -name '.?*' -o -name _minted\\* \\) -prune -o "
+                "-type f \\( " + " -o ".join(f"-iname '*{e}'" for e in LIST_EXT) + " \\) -print "
+                "| sed 's|^./||' | sort | head -500")
+        return [f for f in session.ssh.run(find, timeout=60).stdout.split("\n") if f]
+
+    def _fill_files(self) -> None:
+        self.file_list.remove_all()
+        current = posixpath.relpath(self.current, self.folder) if self.current and self.folder else ""
+        shown_dirs: set[str] = set()
+        for rel in self.files:
+            parts = rel.split("/")
+            for depth in range(len(parts) - 1):  # folder headings, once each
+                d = "/".join(parts[:depth + 1])
+                if d not in shown_dirs:
+                    shown_dirs.add(d)
+                    head = Gtk.ListBoxRow(activatable=False, selectable=False)
+                    head.set_child(_file_row(parts[depth], "folder-symbolic", depth, dim=True))
+                    self.file_list.append(head)
+            icon = ("x-office-document-symbolic" if rel.endswith(".tex") else "image-x-generic-symbolic"
+                    if rel.lower().endswith(FIG_EXT) else "text-x-generic-symbolic")
+            row = Gtk.ListBoxRow()
+            row.set_child(_file_row(parts[-1], icon, len(parts) - 1, bold=rel == posixpath.relpath(self.main, self.folder)))
+            row.rel = rel
+            self.file_list.append(row)
+            if rel == current:
+                self.file_list.select_row(row)
+
+    def _open_listed(self, rel: str) -> None:
+        path = posixpath.join(self.folder, rel)
+        if rel.lower().endswith(FIG_EXT):
+            self._show_figure(path)
             return
-        path = posixpath.join(self.folder, item.get_string())
         if path != self.current:
             if self.dirty:
                 self.save(then=lambda: self._load_file(path))
             else:
                 self._load_file(path)
+
+    def _show_figure(self, path: str) -> None:
+        s = self.session
+
+        def done(data, err):
+            if err or not data:
+                self.toast(err or "Could not read the file")
+            elif path.lower().endswith(".pdf"):
+                PdfDialog(posixpath.basename(path), data).present(self.get_root())
+            else:
+                try:
+                    tex = Gdk.Texture.new_from_bytes(GLib.Bytes.new(data))
+                except GLib.Error:
+                    self.toast("This image type can't be shown here")
+                    return
+                pic = Gtk.Picture(paintable=tex, can_shrink=True, margin_top=12, margin_bottom=12,
+                                  margin_start=12, margin_end=12)
+                Adw.Dialog(title=posixpath.basename(path), content_width=800, content_height=600,
+                           child=pic).present(self.get_root())
+        _bg(lambda: remote_fs.read_bytes(s.ssh, path), done)
+
+    def _refresh_files(self) -> None:
+        s, folder = self.session, self.folder
+
+        def done(files, err):
+            if files is not None and folder == self.folder:
+                self.files = files
+                self._fill_files()
+        _bg(lambda: self._list_files(s, folder), done)
+
+    # -- drag and drop ----------------------------------------------------------------------
+    def _drop_target(self, widget: Gtk.Widget, into_editor: bool) -> None:
+        """Drop files from your computer: they are copied to the project (figures/ for images dropped on
+        the text, which also gets an includegraphics line)."""
+        target = Gtk.DropTarget.new(Gdk.FileList, Gdk.DragAction.COPY)
+        target.connect("drop", lambda _t, value, _x, _y: self._dropped(value.get_files(), into_editor) or True)
+        widget.add_controller(target)
+
+    def _dropped(self, files, into_editor: bool) -> None:
+        if not self.session or not self.folder:
+            return
+        local = [f.get_path() for f in files if f.get_path()]
+        figs_dir = "figures" if any(f.startswith("figures/") for f in self.files) else ""
+        dest = posixpath.join(self.folder, figs_dir) if into_editor and figs_dir else self.folder
+        s = self.session
+        self.toast(f"Uploading {len(local)} file(s)…")
+
+        def work():
+            for path in local:
+                remote_fs.upload(s.ssh, path, dest)
+            return local
+
+        def done(_r, err):
+            if err:
+                self.toast(f"Upload failed: {err}")
+                return
+            self.toast(f"Uploaded to {posixpath.relpath(dest, self.folder) if dest != self.folder else 'the project'}")
+            if into_editor:
+                for path in local:
+                    name = posixpath.join(figs_dir, os.path.basename(path)) if figs_dir else os.path.basename(path)
+                    stem, ext = posixpath.splitext(name)
+                    line = (f"\\includegraphics[width=\\linewidth]{{{stem if ext.lower() != '.svg' else name}}}\n"
+                            if ext.lower() in FIG_EXT else f"\\input{{{stem}}}\n" if ext == ".tex" else "")
+                    if line:
+                        self.buf.insert_at_cursor(line)
+            self._refresh_files()
+        _bg(work, done)
+
+    # -- git --------------------------------------------------------------------------------
+    def _git_popover(self) -> Gtk.Popover:
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2, margin_top=6, margin_bottom=6,
+                      margin_start=6, margin_end=6)
+        pop = Gtk.Popover(child=box)
+        for label, icon, fn in (("Pull", "go-down-symbolic", lambda: self._git("Pulled", git.pull)),
+                                ("Push", "go-up-symbolic", lambda: self._git("Pushed", git.push)),
+                                ("Commit, history and remote…", "vcs-branch-symbolic",
+                                 lambda: GitDialog(self.session, self.folder, self.toast).present(self.get_root()))):
+            b = Gtk.Button(child=Adw.ButtonContent(label=label, icon_name=icon), css_classes=["flat"])
+            b.connect("clicked", lambda *_, f=fn: (pop.popdown(), self.session and f()))
+            box.append(b)
+        return pop
+
+    def _git(self, ok: str, fn) -> None:
+        s, folder = self.session, self.folder
+
+        def work():
+            if self.dirty:
+                raise git.GitError("Save first")
+            return fn(s.ssh, folder)
+
+        def done(out, err):
+            if err:
+                self.toast(f"Git: {err.splitlines()[-1] if err.strip() else err}")
+                return
+            self.toast(ok)
+            if ok == "Pulled":  # files may have changed under us
+                self._refresh_files()
+                if self.current:
+                    self._load_file(self.current, self._cursor_line())
+        _bg(work, done)
+
+    # -- jump between PDF and source (SyncTeX) ----------------------------------------------
+    def _load_sync(self) -> None:
+        s, main = self.session, self.main
+        path = posixpath.splitext(main)[0] + ".synctex.gz"
+
+        def done(st, err):
+            if main == self.main:
+                self.sync = st
+        _bg(lambda: synctex.SyncTex.from_gz(remote_fs.read_bytes(s.ssh, path)), done)
+
+    def _cursor_line(self) -> int:
+        return self.buf.get_iter_at_mark(self.buf.get_insert()).get_line() + 1
+
+    def show_in_pdf(self) -> None:
+        if not self.sync:
+            self.toast("Build once to link the PDF and the source")
+            return
+        spot = self.sync.view(self.current, self._cursor_line(), self.folder)
+        if spot:
+            self.pdf.scroll_to(spot.page, spot.y)
+        else:
+            self.toast("This line is not in the PDF")
+
+    def show_in_source(self, page: int, x: float, y: float) -> None:
+        """Double-click in the PDF: open the file and line that made that spot."""
+        hit = self.sync.edit(page, x, y) if self.sync else None
+        if not hit:
+            self.toast("Build once to link the PDF and the source")
+            return
+        path, line = hit
+        rel = next((f for f in self.files if path == posixpath.join(self.folder, f) or path.endswith("/" + f)), None)
+        target = posixpath.join(self.folder, rel) if rel else path
+        if target == self.current:
+            self._jump(line)
+        elif self.dirty:
+            self.save(then=lambda: self._load_file(target, line))
+        else:
+            self._load_file(target, line)
 
     def _load_file(self, path: str, line: int = 0) -> None:
         s = self.session
@@ -375,6 +571,7 @@ class LatexPage(Gtk.Box):
             self.dirty = False
             self.save_btn.set_sensitive(False)
             self._jump(line)
+            self._fill_files()
 
         _bg(lambda: remote_fs.read_bytes(s.ssh, path, limit=8 * 1024 * 1024), done)
 
@@ -448,6 +645,7 @@ class LatexPage(Gtk.Box):
             if pdf:
                 self.pdf.load_bytes(pdf)
                 self.toast("Built" + (f" with {len(issues)} warnings" if issues else ""))
+                self._load_sync()
             else:
                 self.log_expander.set_expanded(True)
                 self.toast(f"Build failed ({len(issues)} errors)" if issues else "Build failed, see log")
