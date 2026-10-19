@@ -146,7 +146,7 @@ class Tools:
                     return
                 _idle(tab.add_banner, f"VS Code web is at {url}", "Open", lambda: open_uri(tab, url))
                 if auto:
-                    _idle(_open_uri, tab, url)
+                    _idle(open_uri, tab, url)
             threading.Thread(target=work, daemon=True).start()
 
     # -- Claude, ChatGPT, Antigravity ------------------------------------------------------
