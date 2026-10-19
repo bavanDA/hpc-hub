@@ -54,6 +54,7 @@ class MainWindow(Adw.ApplicationWindow):
     def _menu(self):
         from gi.repository import Gio
         menu = Gio.Menu()
+        menu.append("Preferences…", "app.preferences")
         menu.append("About HPC Hub", "app.about")
         menu.append("Disconnect all and quit…", "app.disconnect-quit")
         menu.append("Quit (keep everything running)", "app.quit")

@@ -232,6 +232,7 @@ def save(clusters: list[ClusterConfig], path: Path = CONFIG_FILE) -> None:
 @dataclass
 class AppSettings:
     globus_client_id: str = ""  # your Globus native app id (app.globus.org/settings/developers)
+    browser_profile: str = ""  # Chrome profile name for links (e.g. "Uni"); empty = system browser
 
 
 def load_app(path: Path = APP_FILE) -> AppSettings:

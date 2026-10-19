@@ -9,13 +9,14 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Adw, Gdk, Gio, GLib, Gtk  # noqa: E402
 
-from . import APP_ID, APP_NAME, __version__, config, credentials  # noqa: E402
+from . import APP_ID, APP_NAME, __version__, browser, config, credentials  # noqa: E402
 from .askpass_server import AskpassServer  # noqa: E402
 from .paths import runtime_dir  # noqa: E402
 from .session import ClusterSession, State  # noqa: E402
 from .ui.duo import DuoDialog  # noqa: E402
 from .projects import ProjectStore  # noqa: E402
 from .ui.globus_ui import GlobusPage  # noqa: E402
+from .ui.preferences import PreferencesDialog  # noqa: E402
 from .ui.projects import Actions, ProjectsPage  # noqa: E402
 from .ui.settings import ClusterSettingsDialog  # noqa: E402
 from .ui.tools import Tools  # noqa: E402
@@ -62,6 +63,7 @@ class HpcHubApp(Adw.Application):
         self.clusters = config.load()
         self.projects = ProjectStore()
         self.app_settings = config.load_app()
+        browser.preferred = self.app_settings.browser_profile
         self.sessions = {c.id: ClusterSession(c, self.askpass, self) for c in self.clusters}
         for leftover in runtime_dir().glob("nm-*"):  # VPN cookie files from a killed run
             leftover.unlink(missing_ok=True)
@@ -71,6 +73,8 @@ class HpcHubApp(Adw.Application):
             ("quit", lambda *_: self._request_quit(), ["<primary>q"]),
             ("about", lambda *_: self._about(), []),
             ("disconnect-quit", lambda *_: self._disconnect_and_quit(), []),
+            ("preferences", lambda *_: PreferencesDialog(
+                self.app_settings, lambda: config.save_app(self.app_settings)).present(self.window), ["<primary>comma"]),
         ):
             action = Gio.SimpleAction.new(name, None)
             action.connect("activate", handler)

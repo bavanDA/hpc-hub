@@ -11,7 +11,7 @@ from urllib.parse import urlsplit
 
 from gi.repository import Adw, Gdk, GLib, Gtk
 
-from .. import agents, links, remote, remote_fs, slurm, tmux
+from .. import agents, browser, links, remote, remote_fs, slurm, tmux
 from ..agents import Agent
 from ..links import Link
 from ..session import ClusterSession, State
@@ -29,7 +29,8 @@ def _idle(fn, *args):
 
 
 def _open_uri(widget: Gtk.Widget, uri: str) -> None:
-    Gtk.UriLauncher.new(uri).launch(widget.get_root(), None, None, None)
+    if not browser.open_url(uri, browser.preferred):  # your chosen Chrome profile, else the system browser
+        Gtk.UriLauncher.new(uri).launch(widget.get_root(), None, None, None)
 
 
 class Tools:
