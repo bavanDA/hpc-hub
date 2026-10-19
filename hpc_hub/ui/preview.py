@@ -1,7 +1,6 @@
 """Files side panel: preview the selected file (PDF, image, text)."""
 
 import posixpath
-import threading
 
 from gi.repository import Adw, Gdk, GLib, Gtk, GtkSource
 
@@ -10,6 +9,7 @@ from ..remote_fs import Entry
 from ..session import ClusterSession
 from .editor import source_view
 from .pdf import PdfView
+from .widgets import bg
 
 IMAGES = (".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".bmp")
 TEXT_LIMIT = 512 * 1024
@@ -64,14 +64,8 @@ class Preview(Gtk.Stack):
         token = self.token
         self.set_visible_child_name("loading")
 
-        def work():
-            try:
-                data, err = remote_fs.head_bytes(s.ssh, path, limit), ""
-            except Exception as ex:  # noqa: BLE001
-                data, err = b"", str(ex)
-            GLib.idle_add(lambda: self._loaded(token, kind, e, data, err) and False)
-
-        threading.Thread(target=work, daemon=True).start()
+        bg(lambda: remote_fs.head_bytes(s.ssh, path, limit),
+           lambda data, err: self._loaded(token, kind, e, data, err))
 
     def _loaded(self, token: int, kind: str, e: Entry, data: bytes, err: str) -> None:
         if token != self.token:

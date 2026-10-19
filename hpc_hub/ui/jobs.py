@@ -10,6 +10,7 @@ from gi.repository import Adw, Gio, GLib, GObject, Gtk, Pango
 from .. import slurm, tmux
 from ..session import ClusterSession, State
 from ..slurm import JobInfo
+from .widgets import bg
 
 REFRESH_SECONDS = 15
 SCOPES = [(slurm.MINE, "My jobs"), (slurm.HISTORY, "My history (7 days)"), (slurm.ALL, "All jobs")]
@@ -293,14 +294,8 @@ class JobsPage(Gtk.Box):
                             child=toolbar)
         dialog.present(self.get_root())
 
-        def work():
-            try:
-                text = slurm.job_details(s.ssh, j.job_id)
-            except Exception as e:  # noqa: BLE001
-                text = str(e)
-            GLib.idle_add(lambda: self._fill_details(dialog, toolbar, j, text) and False)
-
-        threading.Thread(target=work, daemon=True).start()
+        bg(lambda: slurm.job_details(s.ssh, j.job_id),
+           lambda text, err: self._fill_details(dialog, toolbar, j, text or err))
 
     def _fill_details(self, dialog: Adw.Dialog, toolbar: Adw.ToolbarView, j: JobInfo, text: str) -> None:
         """The few fields people look at, grouped; everything else behind "All fields"."""
@@ -376,12 +371,8 @@ class JobsPage(Gtk.Box):
         s = self.session
 
         def look():  # sessions the app started on this job are named hpchub-<agent>-<job>-...
-            try:
-                inside = [t.title for t in tmux.list_sessions(s.ssh).sessions if f"-{j.job_id}-" in t.name]
-            except Exception:  # noqa: BLE001
-                inside = []
-            GLib.idle_add(lambda: self._ask_cancel(s, j, inside) and False)
-        threading.Thread(target=look, daemon=True).start()
+            return [t.title for t in tmux.list_sessions(s.ssh).sessions if f"-{j.job_id}-" in t.name]
+        bg(look, lambda inside, _err: self._ask_cancel(s, j, inside or []))
 
     def _ask_cancel(self, s: ClusterSession, j: JobInfo, inside: list[str]) -> None:
         app_node = s.allocation is not None and s.allocation.job_id == j.job_id
@@ -408,19 +399,18 @@ class JobsPage(Gtk.Box):
             self.toast(f"Cancelling job {j.job_id}…")
 
             def work():
-                try:
-                    slurm.cancel_job(s.ssh, j.job_id)
-                    if app_node:
-                        s.allocation = None
-                        s.listener.state_changed(s)
-                    gone = slurm.wait_gone(s.ssh, j.job_id)
-                    msg = (f"Job {j.job_id} is cancelled and gone from the queue" if gone
-                           else f"Cancel sent. Slurm is still stopping job {j.job_id}")
-                except Exception as e:  # noqa: BLE001
-                    msg = f"Could not cancel job {j.job_id}: {e}"
-                GLib.idle_add(lambda: (self.toast(msg), self.refresh(quiet=True)) and False)
+                slurm.cancel_job(s.ssh, j.job_id)
+                if app_node:
+                    s.allocation = None
+                    s.listener.state_changed(s)
+                return slurm.wait_gone(s.ssh, j.job_id)
 
-            threading.Thread(target=work, daemon=True).start()
+            def done(gone, err):
+                self.toast(f"Could not cancel job {j.job_id}: {err}" if err
+                           else f"Job {j.job_id} is cancelled and gone from the queue" if gone
+                           else f"Cancel sent. Slurm is still stopping job {j.job_id}")
+                self.refresh(quiet=True)
+            bg(work, done)
 
         dialog.connect("response", on_response)
         dialog.present(self.get_root())

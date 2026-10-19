@@ -2,7 +2,6 @@
 
 import datetime
 import posixpath
-import threading
 import time
 from collections.abc import Callable
 
@@ -14,6 +13,7 @@ from ..agents import Agent
 from ..chats import Chat
 from ..session import ClusterSession
 from .folder_picker import FolderPicker
+from .widgets import bg
 
 
 def when(ts: int) -> str:
@@ -105,22 +105,14 @@ class AgentDialog(Adw.Dialog):
         self._load()
 
     def _load(self) -> None:
-        s = self.s
+        s, limit = self.s, 400 if self.project else chat_store.LIMIT
+        bg(lambda: (chat_store.list_chats(s.ssh, self.agent.id, limit), remote_fs.home(s.ssh)), self._show)
 
-        def work():
-            try:
-                result = (chat_store.list_chats(s.ssh, self.agent.id, 400 if self.project else chat_store.LIMIT),
-                          remote_fs.home(s.ssh), "")
-            except Exception as e:  # noqa: BLE001
-                result = ([], "", str(e))
-            GLib.idle_add(lambda: self._show(*result) and False)
-
-        threading.Thread(target=work, daemon=True).start()
-
-    def _show(self, chats: list[Chat], home: str, err: str) -> None:
-        if err:
+    def _show(self, got: tuple[list[Chat], str] | None, err: str) -> None:
+        if err or not got:
             self.chats.set_description(GLib.markup_escape_text(f"Could not read chats: {err}"))
             return
+        chats, home = got
         if self.project:
             chats = [c for c in chats if c.cwd == self.project or c.cwd.startswith(self.project + "/")]
         self.chats.set_description("Pick one to continue it." if chats

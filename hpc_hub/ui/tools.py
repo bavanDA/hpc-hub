@@ -19,7 +19,7 @@ from ..slurm import Allocation
 from .agent_dialog import AgentDialog
 from .ask_all import AskAllDialog
 from .terminals import TerminalsPage, TerminalTab
-from .widgets import open_uri
+from .widgets import bg, open_uri
 
 
 VSCODE_JOB = "hpc-hub-vscode"
@@ -139,17 +139,18 @@ class Tools:
                 self._open_tunnel(name, home, v.open_in)
         elif link.kind == links.LOCAL_WEB:
             def work():
-                try:
-                    a.node = a.node or slurm.node_of(s.ssh, a.job_id)
-                    host = a.node if link.host in links.LOCAL_HOSTS else link.host
-                    url = links.local_url(link, s.ssh.forward(host, link.port))
-                except Exception as e:  # noqa: BLE001
-                    _idle(tab.add_banner, f"Port forward failed: {e}")
+                a.node = a.node or slurm.node_of(s.ssh, a.job_id)
+                host = a.node if link.host in links.LOCAL_HOSTS else link.host
+                return links.local_url(link, s.ssh.forward(host, link.port))
+
+            def done(url, err):
+                if err:
+                    tab.add_banner(f"Port forward failed: {err}")
                     return
-                _idle(tab.add_banner, f"VS Code web is at {url}", "Open", lambda: open_uri(tab, url))
+                tab.add_banner(f"VS Code web is at {url}", "Open", lambda: open_uri(tab, url))
                 if v.open_links:
-                    _idle(open_uri, tab, url)
-            threading.Thread(target=work, daemon=True).start()
+                    open_uri(tab, url)
+            bg(work, done)
 
     # -- Claude, ChatGPT, Antigravity ------------------------------------------------------
     def agent(self, s: ClusterSession, agent_id: str, folder: str = "") -> None:
@@ -163,15 +164,8 @@ class Tools:
     def _check_agent(self, s: ClusterSession, agent: Agent, folder: str, chat_id: str, label: str = "") -> None:
         c = getattr(s.cfg, agent.id)
         self.toast(f"Checking {agent.name} on {s.cfg.name}…")
-
-        def work():
-            try:
-                kind = remote.command_type(s.ssh, c.command)
-            except Exception:  # noqa: BLE001
-                kind = ""
-            _idle(self._agent_checked, s, agent, kind, folder, chat_id, label)
-
-        threading.Thread(target=work, daemon=True).start()
+        bg(lambda: remote.command_type(s.ssh, c.command),
+           lambda kind, _err: self._agent_checked(s, agent, kind or "", folder, chat_id, label))
 
     def _agent_checked(self, s: ClusterSession, agent: Agent, kind: str, folder: str, chat_id: str,
                        label: str) -> None:

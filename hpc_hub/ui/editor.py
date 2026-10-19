@@ -1,15 +1,15 @@
 """Edit a text file that lives on a cluster (GtkSourceView)."""
 
 import posixpath
-import threading
 
 import gi
 
 gi.require_version("GtkSource", "5")
-from gi.repository import Adw, GLib, Gtk, GtkSource  # noqa: E402
+from gi.repository import Adw, Gtk, GtkSource  # noqa: E402
 
 from .. import remote_fs  # noqa: E402
 from ..session import ClusterSession  # noqa: E402
+from .widgets import bg  # noqa: E402
 
 
 def source_view(filename: str) -> GtkSource.View:
@@ -70,27 +70,21 @@ class EditorDialog(Adw.Dialog):
         s = self.session
 
         def work():
+            if self.path.startswith("~"):
+                self.path = expand_home(s, self.path, remote_fs.home(s.ssh))
             try:
-                path = self.path
-                if path.startswith("~"):
-                    path = expand_home(s, path, remote_fs.home(s.ssh))
-                    self.path = path
-                try:
-                    text = remote_fs.read_bytes(s.ssh, path, limit=8 * 1024 * 1024).decode("utf-8", "replace")
-                except remote_fs.FsError:
-                    if not self.template:
-                        raise
-                    text = self.template
-                GLib.idle_add(self._loaded, text, "")
-            except Exception as e:  # noqa: BLE001
-                GLib.idle_add(self._loaded, "", str(e))
+                return remote_fs.read_bytes(s.ssh, self.path, limit=8 * 1024 * 1024).decode("utf-8", "replace")
+            except remote_fs.FsError:
+                if not self.template:
+                    raise
+                return self.template
 
-        threading.Thread(target=work, daemon=True).start()
+        bg(work, self._loaded)
 
-    def _loaded(self, text: str, err: str) -> bool:
+    def _loaded(self, text: str | None, err: str) -> None:
         if err:
             self.toasts.add_toast(Adw.Toast(title=err, timeout=6))
-            return False
+            return
         self.buf.begin_irreversible_action()
         self.buf.set_text(text)
         self.buf.end_irreversible_action()
@@ -99,7 +93,6 @@ class EditorDialog(Adw.Dialog):
         self.save_btn.set_sensitive(False)
         self.view.set_sensitive(True)
         self.view.grab_focus()
-        return False
 
     def _changed(self, *_):
         self.dirty = True
@@ -111,26 +104,20 @@ class EditorDialog(Adw.Dialog):
         s = self.session
 
         def work():
-            try:
-                remote_fs.mkdir(s.ssh, posixpath.dirname(self.path) or "/")
-                remote_fs.write_bytes(s.ssh, self.path, text.encode())
-                err = ""
-            except Exception as e:  # noqa: BLE001
-                err = str(e)
-            GLib.idle_add(self._saved, err, then)
+            remote_fs.mkdir(s.ssh, posixpath.dirname(self.path) or "/")
+            remote_fs.write_bytes(s.ssh, self.path, text.encode())
 
-        threading.Thread(target=work, daemon=True).start()
+        bg(work, lambda _r, err: self._saved(err, then))
 
-    def _saved(self, err: str, then) -> bool:
+    def _saved(self, err: str, then) -> None:
         if err:
             self.save_btn.set_sensitive(True)
             self.toasts.add_toast(Adw.Toast(title=f"Save failed: {err}", timeout=6))
-            return False
+            return
         self.dirty = False
         self.toasts.add_toast(Adw.Toast(title="Saved", timeout=2))
         if then:
             then()
-        return False
 
     def _close_attempt(self, *_):
         if not self.dirty:
