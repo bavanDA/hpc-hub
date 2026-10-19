@@ -1,5 +1,6 @@
 """Files on a cluster, through the SSH master: list, read, write, zip, copy."""
 
+import base64
 import posixpath
 import shlex
 import subprocess
@@ -104,11 +105,10 @@ def places(ssh: SshMaster) -> list[Place]:
 
 def head_bytes(ssh: SshMaster, path: str, n: int) -> bytes:
     """Up to the first n bytes (plus one, so callers can tell it was cut)."""
-    res = subprocess.run(ssh.argv(f"head -c {int(n) + 1} -- {q(path)}"), capture_output=True, timeout=300,
-                         stdin=subprocess.DEVNULL)
+    res = ssh.run(f"set -o pipefail; head -c {int(n) + 1} -- {q(path)} | base64 -w0", timeout=300, fast=True)
     if res.returncode != 0:
-        raise FsError(res.stderr.decode(errors="replace").strip() or "Could not read file")
-    return res.stdout
+        raise FsError(res.stderr.strip() or "Could not read file")
+    return base64.b64decode(res.stdout)
 
 
 def read_bytes(ssh: SshMaster, path: str, limit: int = MAX_READ) -> bytes:

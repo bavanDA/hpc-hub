@@ -32,7 +32,7 @@ class LocalShell:
     def argv(self, command, tty=False):
         return ["bash", "-c", command]
 
-    def run(self, command, timeout=60):
+    def run(self, command, timeout=60, fast=None):
         import subprocess
         return subprocess.run(self.argv(command), capture_output=True, text=True, timeout=timeout)
 
