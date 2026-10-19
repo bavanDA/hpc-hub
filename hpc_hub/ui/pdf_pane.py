@@ -5,6 +5,7 @@ from gi.repository import Adw, GLib, Gtk, Pango
 
 from .. import pdfjs
 from ..readaloud import narration
+from .dictionary_panel import DictionaryPanel
 from .pdf import PdfView
 from .widgets import bg
 
@@ -39,7 +40,11 @@ class PdfPane(Gtk.Box):
         self.append(self.reader)
 
         self.stack = Gtk.Stack(vexpand=True, hexpand=True)
-        self.append(self.stack)
+        self.words = DictionaryPanel(self._say, self._read_from)
+        middle = Gtk.Box(vexpand=True)
+        middle.append(self.stack)
+        middle.append(self.words)
+        self.append(middle)
         self.view = PdfView()
         self.stack.add_named(self.view, "simple")
         html = pdfjs.viewer()
@@ -54,6 +59,7 @@ class PdfPane(Gtk.Box):
         view = PdfJsView(html)
         view.on_double_click = self._on_double_click
         view.on_speak_state = self._speak_state
+        view.on_word = self.words.show_word
         view.filename = self.filename
         self.stack.add_named(view, "pdfjs")
         self.stack.set_visible_child(view)
@@ -127,6 +133,19 @@ class PdfPane(Gtk.Box):
             self.view.speak_load(n.audio, n.words, n.timings)  # starts playing once loaded
             GLib.timeout_add(1500, lambda: self._rate() and False)
         bg(lambda: narration.build(pdf, voice, progress), done)
+
+    def _say(self, entry) -> None:
+        """Play the word: the dictionary's recording, or the reader voice saying it."""
+        if entry.audio:
+            self.view.say(entry.audio)
+            return
+        voice = narration.VOICES[self.voice.get_selected()][0]
+        bg(lambda: narration.say(entry.word, voice),
+           lambda path, err: self.toast(f"Could not say it: {err}") if err else self.view.say(path.as_uri()))
+
+    def _read_from(self, word_id: int) -> None:
+        if self.narrated is not None and self.last and self.narrated is self.last[0]:
+            self.view.speak_from(word_id)
 
     def _speak_state(self, state: str) -> None:
         self.speaking = state == "playing"
