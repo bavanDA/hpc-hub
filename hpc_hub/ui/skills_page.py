@@ -68,6 +68,7 @@ class SkillsPage(Gtk.Box):
         if err:
             self._group(description=f"Could not read skills: {err}")
             return
+        self._catalog(s, got)
         for target, (label, rel) in TARGETS.items():
             mine = [k for k in got if k.target == target and not k.managed]
             built_in = [k for k in got if k.target == target and k.managed]
@@ -87,6 +88,43 @@ class SkillsPage(Gtk.Box):
                 for sk in built_in:
                     more.add_row(_row(sk))
                 g.add(more)
+
+    def _catalog(self, s: ClusterSession, installed: list[Skill]) -> None:
+        """HPC Hub's own skills: add any of them to the agents you use."""
+        g = self._group(title="HPC Hub skills", description="Ready to use. Add them to your favourite agents.")
+        have: dict[str, set[str]] = {}
+        for k in installed:
+            have.setdefault(k.folder, set()).add(k.target)
+        for sk in skills.catalog():
+            name = sk.path.rstrip("/").rsplit("/", 1)[-1]
+            row = _row(sk)
+            on = [TARGETS[t][0] for t in TARGETS if t in have.get(name, set())]
+            if on:
+                row.set_subtitle(GLib.markup_escape_text(f"In {', '.join(on)} · {sk.description}"))
+            row.add_suffix(self._add_button(s, sk, have.get(name, set())))
+            g.add(row)
+
+    def _add_button(self, s: ClusterSession, sk: Skill, has: set[str]) -> Gtk.MenuButton:
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4, margin_top=8, margin_bottom=8,
+                      margin_start=8, margin_end=8)
+        checks = {}
+        for t, (label, _) in TARGETS.items():
+            checks[t] = Gtk.CheckButton(label=label, active=t not in has)
+            box.append(checks[t])
+        go = Gtk.Button(label="Add", css_classes=["suggested-action"], margin_top=4)
+        box.append(go)
+        pop = Gtk.Popover(child=box)
+        go.connect("clicked", lambda *_: (pop.popdown(),
+                                          self._install(s, sk, [t for t, c in checks.items() if c.get_active()])))
+        return Gtk.MenuButton(label="Add to…", popover=pop, valign=Gtk.Align.CENTER, css_classes=["flat"])
+
+    def _install(self, s: ClusterSession, sk: Skill, targets: list[str]) -> None:
+        if not targets:
+            return
+        names = ", ".join(TARGETS[t][0] for t in targets)
+        bg(lambda: skills.install_local(s.ssh, [sk], targets),
+           lambda _r, err: (self.toast(f"Could not add {sk.name}: {err}" if err else f"Added {sk.name} to {names}"),
+                            self.refresh()))
 
     def _remove(self, s: ClusterSession, sk: Skill) -> None:
         bg(lambda: s.ssh.run(skills.remove_command(sk), timeout=30),
