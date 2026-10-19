@@ -1,6 +1,7 @@
 """Application: owns sessions, bridges worker threads to the GTK main loop."""
 
 import threading
+from pathlib import Path
 
 import gi
 
@@ -43,6 +44,8 @@ class HpcHubApp(Adw.Application):
     # -- lifecycle -----------------------------------------------------------------
     def do_startup(self):
         Adw.Application.do_startup(self)
+        Gtk.IconTheme.get_for_display(Gdk.Display.get_default()).add_search_path(
+            str(Path(__file__).parent / "icons"))  # Claude, ChatGPT, Antigravity logos
         css = Gtk.CssProvider()
         css.load_from_string(CSS)
         Gtk.StyleContext.add_provider_for_display(
@@ -87,7 +90,7 @@ class HpcHubApp(Adw.Application):
                                          lambda: config.save(self.clusters), toast),
                 lambda toast: ProjectsPage(list(self.sessions.values()), self.projects, toast, Actions(
                     vscode=lambda s, folder, target: self.tools.vscode(s, folder, target),
-                    claude=lambda s, folder: self.tools.claude(s, folder),
+                    agent=lambda s, agent, folder: self.tools.agent(s, agent, folder),
                     files=self._open_files,
                     latex=self._open_latex_project,
                     connect=self.connect_session)),
@@ -224,8 +227,8 @@ class HpcHubApp(Adw.Application):
                 session.cfg.vscode.open_in = target  # remember the choice
                 config.save(self.clusters)
             self.tools.vscode(session, target=target)
-        elif tool == "claude":
-            self.tools.claude(session)
+        elif tool.startswith("agent:"):
+            self.tools.agent(session, tool.partition(":")[2])
         elif tool == "files":
             self.window.files.show_cluster(session)
             self.window.stack.set_visible_child_name("files")

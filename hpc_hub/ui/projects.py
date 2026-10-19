@@ -13,13 +13,13 @@ from ..projects import Project, ProjectStore
 from ..remote_fs import Place
 from ..session import ClusterSession, State
 from .folder_picker import FolderPicker
-from .widgets import vscode_button
+from .widgets import agent_buttons, vscode_button
 
 
 @dataclass
 class Actions:
     vscode: Callable[[ClusterSession, str, str], None]  # session, folder, target
-    claude: Callable[[ClusterSession, str], None]
+    agent: Callable[[ClusterSession, str, str], None]  # session, agent id, folder
     files: Callable[[ClusterSession, str], None]
     latex: Callable[[ClusterSession, Project], None]
     connect: Callable[[ClusterSession], None]
@@ -104,8 +104,9 @@ class ProjectsPage(Gtk.Box):
             return row
         box = Gtk.Box(spacing=4, valign=Gtk.Align.CENTER)
         box.append(vscode_button(lambda t: self.run(p, lambda: self.act.vscode(s, p.path, t)), label=""))
-        for icon, tip, fn in (("user-available-symbolic", "Claude", lambda: self.act.claude(s, p.path)),
-                              ("folder-symbolic", "Files", lambda: self.act.files(s, p.path)),
+        for b in agent_buttons(lambda agent: self.run(p, lambda: self.act.agent(s, agent, p.path)), labels=False):
+            box.append(b)
+        for icon, tip, fn in (("folder-symbolic", "Files", lambda: self.act.files(s, p.path)),
                               ("x-office-document-symbolic", "LaTeX", lambda: self.act.latex(s, p))):
             b = Gtk.Button(icon_name=icon, tooltip_text=tip)
             b.connect("clicked", lambda *_, f=fn: self.run(p, f))
