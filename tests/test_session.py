@@ -51,7 +51,7 @@ def connect(server, password):
 def test_full_flow(env):
     server, tmp = env
     s, rec = connect(server, "pw")
-    assert s.state == State.CONNECTED, rec.lines
+    assert s.state == State.CONNECTED, "\n".join(rec.lines)
     assert State.DUO in rec.states and State.ALLOCATING in rec.states
     assert s.allocation.job_id == "42" and s.allocation.node == "n0001"
 
@@ -86,7 +86,7 @@ def test_skips_vpn_when_reachable(env, monkeypatch):
         s = ClusterSession(cfg, server, rec)
         s.connect(Login("u", "pw"), Login("u", "pw"))
         assert rec.done.wait(20)
-    assert s.state == State.CONNECTED, rec.lines
+    assert s.state == State.CONNECTED, "\n".join(rec.lines)
     assert not s.vpn_used
     rec.done.clear()
     s.disconnect()
@@ -101,7 +101,7 @@ def test_borrows_running_job(env, monkeypatch):
     s = ClusterSession(cfg, server, rec)
     s.connect(Login("u", "pw"), None)
     assert rec.done.wait(20)
-    assert s.state == State.CONNECTED, rec.lines
+    assert s.state == State.CONNECTED, "\n".join(rec.lines)
     assert (s.allocation.job_id, s.allocation.node, s.allocation.owned) == ("77", "r05", False)
 
     rec.done.clear()
@@ -224,3 +224,62 @@ def test_healthy_needs_working_link(env, monkeypatch):
     rec.done.clear()
     s.disconnect()
     assert rec.done.wait(20)
+
+
+def _connect_with_jobs(server, monkeypatch, jobs, **cfg):
+    monkeypatch.setenv("FAKE_JOBS", jobs)
+    rec = Recorder()
+    s = ClusterSession(ClusterConfig(id="t", name="Test", host="fake", **cfg), server, rec)
+    s.connect(Login("u", "pw"), None)
+    assert rec.done.wait(20)
+    assert s.state == State.CONNECTED, "\n".join(rec.lines)
+    return s, rec
+
+
+def test_reuses_own_node_without_salloc(env, monkeypatch):
+    server, tmp = env
+    s, rec = _connect_with_jobs(server, monkeypatch, "55|hpc-hub|n0055|general;56|bash|n0099|general")
+    assert (s.allocation.job_id, s.allocation.node, s.allocation.owned) == ("55", "n0055", True)
+    assert "salloc" not in (tmp / "cmds.log").read_text()
+    rec.done.clear()
+    s.disconnect()
+    assert rec.done.wait(20)
+
+
+def test_reuses_agent_node_but_not_strangers(env, monkeypatch):
+    server, tmp = env
+    s, rec = _connect_with_jobs(server, monkeypatch, "70|hpc-hub-claude|n0070|general;71|bash|n0071|general")
+    assert (s.allocation.job_id, s.allocation.owned) == ("70", False)
+    rec.done.clear()
+    s.disconnect()
+    assert rec.done.wait(20)
+    assert "scancel" not in (tmp / "cmds.log").read_text()  # not ours to cancel
+
+    s, rec = _connect_with_jobs(server, monkeypatch, "71|bash|n0071|general;72|hpc-hub-vscode|n0072|general")
+    assert s.allocation.job_id == "42"  # a fresh node: your own jobs and VS Code are left alone
+    rec.done.clear()
+    s.disconnect()
+    assert rec.done.wait(20)
+
+
+def test_reconnect_reuses_live_login(env):
+    server, tmp = env
+    s, rec = connect(server, "pw")
+    s.state = State.ERROR  # e.g. marked lost, but the login still works
+    rec.done.clear()
+    s.connect(Login("u", "wrong password"), None)  # would fail if it logged in again
+    assert rec.done.wait(20)
+    assert s.state == State.CONNECTED, "\n".join(rec.lines)
+    assert any("reusing that login" in line for line in rec.lines)
+    rec.done.clear()
+    s.disconnect()
+    assert rec.done.wait(20)
+
+
+def test_route_device(monkeypatch):
+    import subprocess
+    from hpc_hub import session
+    monkeypatch.setattr(session.socket, "gethostbyname", lambda h: "128.235.212.9")
+    monkeypatch.setattr(session.subprocess, "run", lambda *a, **k: subprocess.CompletedProcess(
+        a, 0, "128.235.212.9 dev vpn1 src 10.192.144.79 uid 1000 \n    cache \n", ""))
+    assert session.route_device("wulver.njit.edu") == "vpn1"

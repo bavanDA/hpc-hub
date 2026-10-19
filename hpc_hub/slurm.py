@@ -14,6 +14,7 @@ from .ssh import SshMaster
 SAFE = re.compile(r"^[A-Za-z0-9_.,:=+-]*$")
 TIME = re.compile(r"^(\d+-)?\d{1,2}(:\d{2}){0,2}$")
 JOB_RE = re.compile(r"(Granted|Pending) job allocation (\d+)")
+MAIN_JOB = "hpc-hub"  # the node the app asks for on connect
 
 
 class SlurmError(Exception):

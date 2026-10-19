@@ -51,6 +51,39 @@ def reachable(host: str, port: int, timeout: float = 3.0) -> bool:
         return False
 
 
+def route_device(host: str) -> str:
+    """Network interface the laptop uses to reach host (vpn0, wlp3s0…), or ""."""
+    try:
+        ip = socket.gethostbyname(host)
+        out = subprocess.run(["ip", "route", "get", ip], capture_output=True, text=True, timeout=5).stdout
+    except (OSError, subprocess.SubprocessError):
+        return ""
+    words = out.split()
+    return words[words.index("dev") + 1] if "dev" in words[:-1] else ""
+
+
+def network_name(dev: str) -> str:
+    """NetworkManager connection on that interface, e.g. NJITsecure."""
+    try:
+        out = subprocess.run(["nmcli", "-t", "-f", "NAME,DEVICE", "connection", "show", "--active"],
+                             capture_output=True, text=True, timeout=5).stdout
+    except (OSError, subprocess.SubprocessError):
+        return ""
+    for line in out.splitlines():
+        name, _, device = line.rpartition(":")
+        if dev and device == dev:
+            return name.replace("\\:", ":")
+    return ""
+
+
+def link_works(ssh: SshMaster) -> bool:
+    """The login is alive and a command really gets through (not just a stale socket)."""
+    try:
+        return ssh.alive() and ssh.run("true", timeout=15).returncode == 0
+    except (OSError, subprocess.SubprocessError):
+        return False
+
+
 SSO_USER = "hpc-hub:sso-username"
 SSO_PASS = "hpc-hub:sso-password"
 
@@ -119,13 +152,7 @@ class ClusterSession:
         self.vpn_used, self.vpn_only = vpn_up, not alive
         self.ssh = ssh if alive else None
         if alive:
-            try:
-                mine = [j for j in slurm.running_jobs(ssh) if j.name.startswith("hpc-hub")]
-                job = slurm.pick_reusable(mine, self.cfg.profile.partition)
-                if job:
-                    self.allocation = Allocation(job.job_id, job.node, owned=job.name == "hpc-hub")
-            except (OSError, subprocess.SubprocessError):
-                pass
+            self._reuse_running_job(quiet=True)
         self._log("Picked up running " + ("SSH session" if alive else "VPN"))
         self._set(State.CONNECTED, "" if alive else "VPN only")
 
@@ -242,6 +269,14 @@ class ClusterSession:
                 return prompts.duo_reply(prompt, self.cfg.duo_answer)
             return self.listener.ask(self, prompt)
 
+        if not self.vpn_only and self.cfg.host and ssh_login.username:
+            live = self.ssh or SshMaster(self.cfg, ssh_login.username, {}, self._log)
+            if link_works(live):  # still logged in (e.g. after an app restart): no VPN, no Duo
+                self.ssh = live
+                self.vpn_used = self.cfg.vpn.enabled and self.vpn.is_active()
+                self._log("Still logged in to the cluster, reusing that login (no Duo)")
+                self._after_login()
+                return
         if self.ssh:
             self.ssh.stop()
             self.ssh = None
@@ -249,9 +284,17 @@ class ClusterSession:
         try:
             self.vpn_used = False
             if self.cfg.vpn.enabled:
-                if (not self.vpn_only and self.cfg.host and not self.vpn.is_active()
-                        and reachable(self.cfg.host, self.cfg.port)):
-                    self._log("Cluster reachable directly (campus network), skipping VPN")
+                if self.vpn.is_active():
+                    self._log("VPN already up")
+                    self.vpn_used = True
+                elif not self.vpn_only and self.cfg.host and reachable(self.cfg.host, self.cfg.port):
+                    dev = route_device(self.cfg.host)
+                    if dev.startswith(("vpn", "tun", "cscotun", "wg", "ppp")):
+                        self._log(f"Already on a VPN that reaches {self.cfg.host} ({dev}), skipping VPN")
+                    else:
+                        net = network_name(dev)
+                        self._log(f"On {net or 'the campus network'}, {self.cfg.host} is reachable directly, "
+                                  "skipping VPN")
                 else:
                     self._bring_up_vpn(vpn_login or ssh_login, token)
                     self.vpn_used = True
@@ -270,10 +313,14 @@ class ClusterSession:
         finally:
             self.askpass.unregister(token)
 
+        self._after_login()
+
+    def _after_login(self) -> None:
+        """Logged in: use a node that is already running before asking Slurm for a new one."""
         if self.allocation and self._job_running(self.allocation.job_id):
             self._log(f"Reusing job {self.allocation.job_id} on {self.allocation.node}")
             self._set(State.CONNECTED)
-        elif self._borrow_running_job():
+        elif self._reuse_running_job():
             self._set(State.CONNECTED)
         elif self.cfg.request_node_on_connect:
             self.allocation = None
@@ -282,18 +329,26 @@ class ClusterSession:
             self.allocation = None
             self._set(State.CONNECTED)
 
-    def _borrow_running_job(self) -> bool:
-        if not self.cfg.reuse_running_job:
-            return False
+    def _reuse_running_job(self, quiet: bool = False) -> bool:
+        """The app's own node ("hpc-hub") first, then its other nodes (Claude, ChatGPT…).
+        With "Use my running job" on, any job of yours counts too."""
         try:
-            job = slurm.pick_reusable(slurm.running_jobs(self.ssh), self.cfg.profile.partition)
+            jobs = slurm.running_jobs(self.ssh)
         except (OSError, subprocess.SubprocessError) as e:
             self._log(f"Could not list jobs: {e}")
             return False
-        if not job:
-            return False
-        self.allocation = Allocation(job.job_id, job.node, owned=False)
-        self._log(f"Using your running job {job.job_id} ({job.name}) on {job.node}")
+        own = [j for j in jobs if j.name == slurm.MAIN_JOB]
+        if own:
+            job = max(own, key=lambda j: int(j.job_id))
+            self.allocation = Allocation(job.job_id, job.node, owned=True)
+        else:
+            ours = [j for j in jobs if j.name.startswith("hpc-hub") and j.name != "hpc-hub-vscode"]
+            job = slurm.pick_reusable(jobs if self.cfg.reuse_running_job else ours, self.cfg.profile.partition)
+            if not job:
+                return False
+            self.allocation = Allocation(job.job_id, job.node, owned=False)
+        if not quiet:
+            self._log(f"Reusing running job {job.job_id} ({job.name}) on {job.node}")
         return True
 
     def _job_running(self, job_id: str) -> bool:
@@ -344,7 +399,7 @@ class ClusterSession:
         return {"COOKIE": cookie, "HOST": host, "FINGERPRINT": pin}
 
     def _allocate_safely(self) -> None:
-        if self._borrow_running_job():
+        if self._reuse_running_job():
             self._set(State.CONNECTED)
             return
         self._set(State.ALLOCATING, self.cfg.profile.summary())
