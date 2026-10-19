@@ -57,3 +57,11 @@ def test_roundtrip_on_local_shell(tmp_path):
     assert (d / "b.tex").read_bytes() == b"\\documentclass{article}"
     with pytest.raises(remote_fs.FsError):
         remote_fs.read_bytes(sh, str(d / "b.tex"), limit=4)
+
+
+def test_list_dir_follows_link(tmp_path):
+    real = tmp_path / "real"
+    (real / "inside").mkdir(parents=True)
+    (tmp_path / "link").symlink_to(real)
+    assert [e.name for e in remote_fs.list_dir(LocalShell(), str(tmp_path / "link"))] == ["inside"]
+

@@ -57,7 +57,9 @@ def home(ssh: SshMaster) -> str:
 
 
 def list_dir(ssh: SshMaster, path: str) -> list[Entry]:
-    return parse_listing(_run(ssh, f"find {q(path)} -mindepth 1 -maxdepth 1 -printf {q(LIST_FORMAT)}", timeout=60))
+    # -H: if path is a link to a folder (Yale's ~/project_pi_xyz), list the folder it points to
+    return parse_listing(_run(ssh, f"find -H {q(path)} -mindepth 1 -maxdepth 1 -printf {q(LIST_FORMAT)}", timeout=60))
+
 
 
 def head_bytes(ssh: SshMaster, path: str, n: int) -> bytes:
