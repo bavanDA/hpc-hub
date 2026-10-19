@@ -152,6 +152,26 @@ class ClusterSession:
         self._thread = threading.Thread(target=self._allocate_safely, daemon=True)
         self._thread.start()
 
+    def release_node(self) -> None:
+        """Give the node back (scancel) but stay connected. Your own borrowed job keeps running."""
+        a = self.allocation
+        if self.state != State.CONNECTED or not a or not self.ssh:
+            return
+
+        def run():
+            if a.owned:
+                try:
+                    slurm.cancel(self.ssh, a.job_id)
+                    self._log(f"Released job {a.job_id}")
+                except (OSError, ValueError, subprocess.SubprocessError) as e:
+                    self._log(f"Could not cancel job: {e}")
+            else:
+                self._log(f"Stopped using your job {a.job_id}, it keeps running")
+            self.allocation = None
+            self._set(State.CONNECTED)
+
+        threading.Thread(target=run, daemon=True).start()
+
     def ensure_node(self, on_done) -> None:
         """Get a node if we have none; on_done(Allocation | None) runs on a worker thread."""
         if self.allocation or self.state != State.CONNECTED:

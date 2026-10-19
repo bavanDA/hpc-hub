@@ -185,3 +185,28 @@ def test_double_click_starts_once(env):
     rec.done.clear()
     s.disconnect()
     assert rec.done.wait(20)
+
+
+def test_no_node_then_get_and_release(env):
+    server, tmp = env
+    rec = Recorder()
+    s = ClusterSession(ClusterConfig(id="t", name="Test", host="fake", request_node_on_connect=False), server, rec)
+    s.connect(Login("u", "pw"), None)
+    assert rec.done.wait(20)
+    assert s.state == State.CONNECTED and s.allocation is None
+    log = tmp / "cmds.log"
+    assert "salloc" not in (log.read_text() if log.exists() else "")
+
+    rec.done.clear()
+    s.request_node()
+    assert rec.done.wait(20)
+    assert s.allocation.job_id == "42"
+
+    rec.done.clear()
+    s.release_node()
+    assert rec.done.wait(20)
+    assert s.state == State.CONNECTED and s.allocation is None
+    assert "scancel 42" in (tmp / "cmds.log").read_text()
+    rec.done.clear()
+    s.disconnect()
+    assert rec.done.wait(20)
