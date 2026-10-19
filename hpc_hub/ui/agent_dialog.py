@@ -12,7 +12,7 @@ from .. import remote_fs
 from ..agents import Agent
 from ..chats import Chat
 from ..session import ClusterSession
-from .folder_picker import FolderPicker
+from .folder_picker import FolderPicker, short
 from .widgets import bg
 
 
@@ -25,12 +25,6 @@ def when(ts: int) -> str:
     if days == 1:
         return f"Yesterday {clock}"
     return time.strftime("%b %d %H:%M" if days < 300 else "%b %d %Y", t)
-
-
-def short(path: str, home: str = "") -> str:
-    if home and (path == home or path.startswith(home + "/")):
-        return "~" + path[len(home):]
-    return path
 
 
 class AgentDialog(Adw.Dialog):

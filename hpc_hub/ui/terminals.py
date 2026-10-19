@@ -234,8 +234,7 @@ class TerminalsPage(Gtk.Box):
         self.panels.add_named(self._sessions_panel(), "sessions")
         self.panels.add_named(self._logs_panel(), "logs")
         self.panels.add_named(self._new_panel(), "new")
-        self.panel = self.panels
-        self.panel.set_visible(False)
+        self.panels.set_visible(False)
 
         # right: a small header for the open session, then the terminal
         right = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, hexpand=True)
@@ -261,7 +260,7 @@ class TerminalsPage(Gtk.Box):
         self.views.add_named(self.empty, "empty")
         right.append(self.views)
         # drag the line between the panel and the terminal to make the panel wider or narrower
-        self.append(remember_size(Gtk.Paned(start_child=self.panel, end_child=right, hexpand=True,
+        self.append(remember_size(Gtk.Paned(start_child=self.panels, end_child=right, hexpand=True,
                                             resize_start_child=False, shrink_start_child=False,
                                             shrink_end_child=False), "terminals.panel", 290))
 
@@ -277,9 +276,9 @@ class TerminalsPage(Gtk.Box):
                 if other != name and b.get_active():
                     b.set_active(False)
             self.panels.set_visible_child_name(name)
-            self.panel.set_visible(True)
+            self.panels.set_visible(True)
         elif not any(b.get_active() for b in self.tabs.values()):
-            self.panel.set_visible(False)  # clicked the open tab again: close the panel
+            self.panels.set_visible(False)  # clicked the open tab again: close the panel
 
     def _panel_head(self, title: str, *widgets: Gtk.Widget) -> Gtk.Box:
         head = Gtk.Box(spacing=6, margin_top=8, margin_bottom=8, margin_start=10, margin_end=8)

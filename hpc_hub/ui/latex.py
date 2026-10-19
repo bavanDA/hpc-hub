@@ -739,7 +739,7 @@ class GitDialog(Adw.Dialog):
                     "Committed", lambda: git.commit_all(self.session.ssh, self.folder, msg.get_text().strip()))
                     if msg.get_text().strip() else self.toasts.add_toast(Adw.Toast(title="Write a message first")))
             else:
-                b.connect("clicked", lambda *_, f=fn, l=label: self._run(f"{l} done", f))
+                b.connect("clicked", lambda *_, f=fn, name=label: self._run(f"{name} done", f))
             buttons.append(b)
         work.set_header_suffix(buttons)
 

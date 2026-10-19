@@ -1,4 +1,4 @@
-from gi.repository import Adw, GObject, Gtk
+from gi.repository import Adw, Gio, GObject, Gtk
 
 from .. import APP_NAME
 from .cluster_card import ClusterCard
@@ -111,8 +111,7 @@ class MainWindow(Adw.ApplicationWindow):
         page = self.stack.get_page(self.stack.get_visible_child()) if self.stack.get_visible_child() else None
         self.title.set_title(page.get_title() if page else APP_NAME)
 
-    def _menu(self):
-        from gi.repository import Gio
+    def _menu(self) -> Gio.Menu:
         menu = Gio.Menu()
         menu.append("Preferences…", "app.preferences")
         menu.append("About HPC Hub", "app.about")

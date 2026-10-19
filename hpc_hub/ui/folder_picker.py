@@ -14,6 +14,12 @@ from .widgets import ask_name, bg, shortcuts
 _places: dict[str, list[Place]] = {}  # per cluster, found once per app run
 
 
+def short(path: str, home: str = "") -> str:
+    if home and (path == home or path.startswith(home + "/")):
+        return "~" + path[len(home):]
+    return path
+
+
 class Item(GObject.Object):
     def __init__(self, entry: Entry):
         super().__init__()
@@ -159,8 +165,7 @@ class FolderPicker(Adw.Dialog):
             if token != self.token:
                 return
             if err:
-                self.error.set_label(err)
-                self.error.set_visible(True)
+                self._error(err)
                 self.stack.set_visible_child_name("list" if self.store.get_n_items() else "empty")
                 return
             self.error.set_visible(False)
@@ -270,8 +275,7 @@ class FolderPicker(Adw.Dialog):
     def _sync(self) -> None:
         t = self.target()
         self.ok.set_sensitive(bool(t))
-        short = "~" + t[len(self.home):] if self.home and (t == self.home or t.startswith(self.home + "/")) else t
-        self.choice.set_label(f"Choose: {short}" if t else "")
+        self.choice.set_label(f"Choose: {short(t, self.home)}" if t else "")
 
     def _choose(self) -> None:
         t = self.target()

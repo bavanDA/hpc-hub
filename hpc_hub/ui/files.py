@@ -12,11 +12,10 @@ from ..remote_fs import Entry
 from ..session import ClusterSession, State
 from .editor import EditorDialog
 from .pdf import PdfDialog
-from .preview import Preview
+from .preview import IMAGES, Preview
 from .widgets import ask_name, bg, remember_size
 
 DOWNLOADS = Path(GLib.get_user_special_dir(GLib.UserDirectory.DIRECTORY_DOWNLOAD) or Path.home()) / "HPC Hub"
-IMAGES = (".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".bmp")
 TEXT = (".txt", ".md", ".py", ".sh", ".tex", ".bib", ".sty", ".cls", ".json", ".yaml", ".yml", ".toml", ".cfg",
         ".ini", ".csv", ".tsv", ".log", ".out", ".err", ".c", ".h", ".cpp", ".hpp", ".cu", ".java", ".js", ".ts",
         ".r", ".jl", ".m", ".slurm", ".sbatch", ".bashrc", ".conf", ".xml", ".html", ".css", ".rs", ".go", "")
@@ -211,7 +210,7 @@ class FilePane(Gtk.Box):
     def _sync(self) -> None:
         e = self.selected()
         ok = e is not None and self.session.state == State.CONNECTED
-        for key, b in self.actions.items():
+        for b in self.actions.values():
             b.set_sensitive(ok)
         if e:
             is_archive = _ext(e.name) in ARCHIVES

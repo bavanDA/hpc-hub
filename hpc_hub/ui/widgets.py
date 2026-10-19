@@ -1,13 +1,13 @@
 """Small shared widgets."""
 
-from collections.abc import Callable
-
 import threading
+from collections.abc import Callable
 
 from gi.repository import Adw, GLib, Gtk
 
 from .. import browser, layout
 from ..agents import AGENTS
+
 
 def open_uri(widget: Gtk.Widget, uri: str) -> None:
     if not browser.open_url(uri, browser.preferred):  # your chosen Chrome profile, else the system browser

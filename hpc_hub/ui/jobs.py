@@ -386,7 +386,7 @@ class JobsPage(Gtk.Box):
         lines.append("")
         lines.append("Everything running in this job stops right away and can't be brought back."
                      if j.state == "RUNNING" else "It leaves the queue. Nothing has started yet.")
-        dialog = Adw.AlertDialog(heading=f"Cancel job {j.job_id}?", body="\n".join(l for l in lines if l is not None))
+        dialog = Adw.AlertDialog(heading=f"Cancel job {j.job_id}?", body="\n".join(x for x in lines if x is not None))
         dialog.add_response("cancel", "Cancel job")  # stacked buttons show the last one on top
         dialog.add_response("keep", "Keep running" if j.state == "RUNNING" else "Keep waiting")
         dialog.set_response_appearance("cancel", Adw.ResponseAppearance.DESTRUCTIVE)
