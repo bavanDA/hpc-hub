@@ -1,0 +1,43 @@
+import subprocess
+
+from hpc_hub import projects
+from hpc_hub.projects import Project
+
+
+def test_round_trip(tmp_path):
+    path = tmp_path / "p.toml"
+    assert projects.load(path) == []
+    items = [Project("myproject", "wulver", "/scratch/mygroup/jdoe/myproject", opened=5),
+             Project('my "mc"', "yale", "/nfs/x/MC", main_tex="paper/main.tex")]
+    projects.save(items, path)
+    assert projects.load(path) == items
+
+
+def test_create_latex_project(tmp_path):
+    folder = tmp_path / "work" / "paper"
+    cmd = projects.create_command(str(folder), "LaTeX paper", "My 'paper'", git_init=False)
+    subprocess.run(["bash", "-c", cmd], check=True)
+    main = (folder / "main.tex").read_text()
+    assert "\\title{My 'paper'}" in main and "\\documentclass{article}" in main
+    assert "*.aux" in (folder / ".gitignore").read_text()
+    assert subprocess.run(["bash", "-c", cmd]).returncode != 0  # never overwrites
+
+
+def test_create_python_project(tmp_path):
+    folder = tmp_path / "py"
+    subprocess.run(["bash", "-c", projects.create_command(str(folder), "Python", "x", git_init=False)], check=True)
+    assert (folder / "main.py").exists() and (folder / "README.md").read_text() == "# x\n"
+
+
+class LocalSsh:
+    def run(self, cmd, timeout=60):
+        return subprocess.run(["bash", "-c", cmd], capture_output=True, text=True)
+
+
+def test_find_main_tex(tmp_path):
+    (tmp_path / "sec").mkdir()
+    (tmp_path / "sec" / "intro.tex").write_text("\\section{Intro}\n")
+    (tmp_path / "sec" / "draft.tex").write_text("\\documentclass{article}\n")
+    (tmp_path / "main.tex").write_text("% comment\n\\documentclass{article}\n")
+    (tmp_path / "old.tex").write_text("% \\documentclass{article}\n")
+    assert projects.find_main_tex(LocalSsh(), str(tmp_path)) == ["main.tex", "sec/draft.tex"]
