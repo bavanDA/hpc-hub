@@ -106,3 +106,16 @@ def _record(py: Path, voice: str, texts: list[str], keys: list[str], store: Path
     if proc.wait() != 0 or done != len(texts):
         err = proc.stderr.read().strip()
         raise RuntimeError(err.splitlines()[-1] if err else "Text to speech failed")
+
+
+def say(word: str, voice: str) -> Path:
+    """One word spoken by the reader voice (for words the dictionary has no recording of). Cached."""
+    store = cache_dir() / "words"
+    store.mkdir(parents=True, exist_ok=True)
+    out = store / f"{voice}-{hashlib.sha256(word.lower().encode()).hexdigest()[:16]}.mp3"
+    if not out.exists():
+        py = env.python() or env.install()
+        key = out.stem
+        _record(py, voice, [word], [key], store, lambda text: None)
+        (store / f"{key}.json").unlink(missing_ok=True)
+    return out
