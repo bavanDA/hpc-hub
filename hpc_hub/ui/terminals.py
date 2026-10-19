@@ -182,6 +182,7 @@ def _ago(ts: int) -> str:
 
 AGENT_NAMES = {"claude": "Claude", "codex": "ChatGPT", "agy": "Antigravity", "cursor": "Cursor",
                "ask": "Ask all", "term": "Terminal"}
+REMOTE_AGENTS = ("claude", "codex", "agy", "cursor")
 REFRESH_SECONDS = 15
 
 
@@ -209,6 +210,7 @@ class TerminalsPage(Gtk.Box):
         self.logs: list[View] = []
         self.listings: dict[str, tmux.Listing] = {}
         self.starting: dict[tuple[str, str], tuple[str, str]] = {}  # just created, not listed yet: title, color
+        self.remote_checked: dict[tuple[str, str], float] = {}  # when we last looked for a remote link
 
         self.on_tool: Callable[[ClusterSession, str], None] | None = None  # set by the app: VS Code, agents
 
@@ -424,6 +426,11 @@ class TerminalsPage(Gtk.Box):
             view = View(key, tab, title, color, icon, s, listed or tmux.Session(key[1], label=title, color=color))
             if s and s.ssh:
                 tab.tmux_buffer = lambda ssh=s.ssh: ssh.run("tmux save-buffer - 2>/dev/null", timeout=15).stdout
+            if listed and listed.remote:  # known from before: the header button works right away
+                code = listed.remote.startswith("code:")
+                tab.remote = Link(links.PAIR, "", code=listed.remote[5:]) if code else Link(links.REMOTE, listed.remote)
+            tab.on_remote = lambda t, v=view: (self._remember_remote(v, t.remote),
+                                               self.current and self.current.tab is t and self._remote_button(t))
             if not listed:
                 self.starting[key] = (title, color)
                 GLib.timeout_add(2000, lambda: self.refresh() and False)
@@ -456,6 +463,7 @@ class TerminalsPage(Gtk.Box):
         if not listing:
             return
         self.listings[s.cfg.id] = listing
+        self._look_for_remotes(s, listing)
         for t in listing.sessions:
             self.starting.pop((s.cfg.id, t.name), None)
         if self.current and self.current.session is s:  # keep the header in step with renames
@@ -465,6 +473,51 @@ class TerminalsPage(Gtk.Box):
                 self.current.color = t.color or tmux.AGENT_COLORS.get(t.agent, "") or self.current.color
                 self._header(self.current)
         self._fill()
+
+    def _look_for_remotes(self, s: ClusterSession, listing: tmux.Listing) -> None:
+        """Agent sessions print their remote link once; find it in the pane and keep it on the session.
+        Pairing codes change, so those are looked up again (at most once a minute)."""
+        now = time.monotonic()
+        names = [t.name for t in listing.sessions
+                 if t.kind == "tmux" and t.agent in REMOTE_AGENTS and (not t.remote or t.remote.startswith("code:"))
+                 and now - self.remote_checked.get((s.cfg.id, t.name), 0) > 60]
+        if not names:
+            return
+        for n in names:
+            self.remote_checked[(s.cfg.id, n)] = now
+
+        def work():
+            found = tmux.find_remotes(s.ssh, names)
+            changed = {n: v for n, v in found.items()
+                       if v != next((t.remote for t in listing.sessions if t.name == n), "")}
+            if changed:
+                s.ssh.run("; ".join(tmux.set_remote(n, v) for n, v in changed.items()))
+            return changed
+
+        def done(changed, err):
+            if changed and self.listings.get(s.cfg.id) is listing:
+                for t in listing.sessions:
+                    t.remote = changed.get(t.name, t.remote)
+                self._fill()
+        bg(work, done)
+
+    def _remember_remote(self, view: "View", link: Link) -> None:
+        """An open tab saw the link: save it on the tmux session so the list can show it."""
+        if not (view.session and view.session.ssh and view.tmux_session):
+            return
+        value = link.url if link.kind == links.REMOTE else f"code:{link.code}"
+        if view.tmux_session.remote == value:
+            return
+        view.tmux_session.remote = value
+        ssh, name = view.session.ssh, view.tmux_session.name
+        bg(lambda: ssh.run(tmux.set_remote(name, value)), lambda *_: self._fill())
+
+    def _use_link(self, value: str) -> None:
+        if value.startswith("code:"):
+            self.get_clipboard().set(value[5:])
+            self.toast(f"Pairing code {value[5:]} copied. In the ChatGPT app: Codex, connect a machine.")
+        else:
+            open_uri(self, value)
 
     def _fill(self) -> None:
         self.list.remove_all()
@@ -546,6 +599,13 @@ class TerminalsPage(Gtk.Box):
         text.append(Gtk.Label(label=" · ".join(b for b in bits if b), xalign=0, ellipsize=Pango.EllipsizeMode.END,
                               css_classes=["dim-label", "caption"]))
         box.append(text)
+        if t.remote:
+            code = t.remote.startswith("code:")
+            link = Gtk.Button(label="Copy code" if code else "Open", css_classes=["flat", "accent"],
+                              valign=Gtk.Align.CENTER,
+                              tooltip_text=f"Copy pairing code {t.remote[5:]}" if code else f"Open remote: {t.remote}")
+            link.connect("clicked", lambda *_, v=t.remote: self._use_link(v))
+            box.append(link)
         menu = Gtk.MenuButton(icon_name="view-more-symbolic", css_classes=["flat"], valign=Gtk.Align.CENTER)
         menu.set_popover(self._menu(s, t))
         box.append(menu)
