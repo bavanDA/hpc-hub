@@ -15,7 +15,8 @@ from ..latex import LatexIssue
 from ..projects import Project, ProjectStore
 from ..session import ClusterSession
 from .editor import source_view
-from .pdf import PdfDialog, PdfView
+from .pdf import PdfDialog
+from .pdf_pane import PdfPane
 from .widgets import bg, remember_size, shortcuts
 
 PROJECT_EXT = (".tex", ".bib", ".sty", ".cls", ".bst")
@@ -257,7 +258,7 @@ class LatexPage(Gtk.Box):
         self.view = source_view("main.tex")
         self.buf = self.view.get_buffer()
         self.buf.connect("changed", self._changed)
-        self.pdf = PdfView()
+        self.pdf = PdfPane(self.toast)
         self.pdf.on_double_click = self.show_in_source
         self.sync: synctex.SyncTex | None = None
         paned = remember_size(Gtk.Paned(start_child=Gtk.ScrolledWindow(child=self.view), end_child=self.pdf,
@@ -342,6 +343,7 @@ class LatexPage(Gtk.Box):
                 return
             self.session, (self.main, self.folder, self.files) = session, result
             self.sync = None
+            self.pdf.set_filename(latex.pdf_path(posixpath.basename(self.main)))
             self.title.set_label(f"{session.cfg.name}: {self.main}")
             self.stack.set_visible_child_name("project")
             self._load_file(self.main)
