@@ -17,9 +17,9 @@ STATE_CLASS = {"RUNNING": "success", "PENDING": "warning", "COMPLETING": "accent
                "FAILED": "error", "TIMEOUT": "error", "OUT_OF_MEMORY": "error", "NODE_FAIL": "error"}
 COLUMNS = [  # (title, attribute, expand)
     ("ID", "job_id", False), ("Name", "name", True), ("User", "user", False),
-    ("Partition", "partition", False), ("State", "state", False), ("Time", "elapsed", False),
-    ("Limit", "limit", False), ("CPUs", "cpus", False), ("Mem", "mem", False), ("QoS", "qos", False),
-    ("SU used / max", "su", False), ("Node / reason", "where", True),
+    ("Partition · QoS", "queue", False), ("State", "state", False), ("Time / limit", "time", False),
+    ("CPUs · mem", "res", False), ("SU used / max", "su", False),
+    ("Node / reason", "where", False),
 ]
 ACTIVE = ("RUNNING", "PENDING", "SUSPENDED", "REQUEUED", "COMPLETING")
 
@@ -45,8 +45,10 @@ class JobItem(GObject.Object):
         self.job = job
 
 
-def _setup(_f, item):
-    label = Gtk.Label(xalign=0, ellipsize=Pango.EllipsizeMode.END)
+def _setup(_f, item, shorten: bool):
+    """Only the wide text columns (name, node) shorten; ids, times and numbers stay whole."""
+    label = Gtk.Label(xalign=0, ellipsize=Pango.EllipsizeMode.END if shorten else Pango.EllipsizeMode.NONE,
+                      width_chars=12 if shorten else -1)
     item.set_child(label)
 
 
@@ -54,7 +56,9 @@ def _binder(attr: str):
     def bind(_f, item):
         label: Gtk.Label = item.get_child()
         job: JobInfo = item.get_item().job
-        text = su_text(job) if attr == "su" else getattr(job, attr)
+        text = (su_text(job) if attr == "su" else f"{job.elapsed} / {job.limit}" if attr == "time"
+                else f"{job.cpus} · {job.mem}" if attr == "res"
+                else " · ".join(x for x in (job.partition, job.qos) if x) if attr == "queue" else getattr(job, attr))
         if attr == "name" and job.from_app:
             text = f"{text}  (started by HPC Hub)"
         label.set_label(text)
@@ -91,10 +95,12 @@ class JobsPage(Gtk.Box):
         self.view.add_css_class("data-table")
         for title, attr, expand in COLUMNS:
             factory = Gtk.SignalListItemFactory()
-            factory.connect("setup", _setup)
+            factory.connect("setup", _setup, expand)
             factory.connect("bind", _binder(attr))
             col = Gtk.ColumnViewColumn(title=title, factory=factory, expand=expand, resizable=True)
             self.view.append_column(col)
+            if attr == "user":
+                self.user_col = col  # only "All jobs" needs it; the rest are yours
         stop = Gtk.SignalListItemFactory()
         stop.connect("setup", self._stop_setup)
         stop.connect("bind", self._stop_bind)
@@ -164,6 +170,7 @@ class JobsPage(Gtk.Box):
         if not quiet:
             self.updated.set_label("Loading…")
         scope = SCOPES[self.scope.get_selected()][0]
+        self.user_col.set_visible(scope == slurm.ALL)
 
         def work():
             try:
