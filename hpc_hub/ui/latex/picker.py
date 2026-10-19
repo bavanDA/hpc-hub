@@ -63,6 +63,11 @@ class ProjectPicker(Gtk.ScrolledWindow):
         col.append(self.paper_note)
         col.append(self.paper_list)
         self.papers: dict[str, list[projects.Paper]] = {}  # cluster id -> found papers
+        self.found_at: dict[str, int] = {}  # cluster id -> when it was last searched
+        for x in self.sessions:  # the last search's results; Search looks again
+            found, at = projects.load_papers(x.cfg.id)
+            if at:
+                self.papers[x.cfg.id], self.found_at[x.cfg.id] = found, at
         col.append(Gtk.Label(label="Or open a .tex file by path", xalign=0, css_classes=["heading"], margin_top=12))
         box = Gtk.Box(spacing=6)
         self.open_cluster = Gtk.DropDown.new_from_strings([s.cfg.name for s in self.sessions])
@@ -99,10 +104,11 @@ class ProjectPicker(Gtk.ScrolledWindow):
     def scan(self, force: bool = False) -> None:
         live = [x for x in self.sessions if x.connected]
         if not live or self.scan_spin.get_visible():
-            if not live:
+            self._fill_papers()  # saved results show even before you connect
+            if not live and not self.papers:
                 self.paper_note.set_label("Connect a cluster, then press Search to find your papers.")
             return
-        todo = [x for x in live if force or x.cfg.id not in self.papers]
+        todo = [x for x in live if force or x.cfg.id not in self.papers]  # cached ones wait for Search
         self._fill_papers()
         if not todo:
             return
@@ -112,7 +118,10 @@ class ProjectPicker(Gtk.ScrolledWindow):
         left = [len(todo)]
         for x in todo:
             def done(found, err, x=x):
-                self.papers[x.cfg.id] = found or []
+                if not err:
+                    self.papers[x.cfg.id] = found or []
+                    self.found_at[x.cfg.id] = int(time.time())
+                    projects.save_papers(x.cfg.id, found or [])
                 left[0] -= 1
                 if left[0] == 0:
                     self.scan_spin.set_visible(False)
@@ -140,7 +149,10 @@ class ProjectPicker(Gtk.ScrolledWindow):
             row.connect("activated", lambda _r, x=x, p=p: self._open_paper(x, p))
             self.paper_list.append(row)
         if self.papers and not self.scan_spin.get_visible():
-            self.paper_note.set_label(f"{len(rows)} folders with a main .tex file, newest first. "
+            oldest = min(self.found_at.values(), default=0)
+            ago = f"Found {time.strftime('%b %d %H:%M', time.localtime(oldest))}; press Search to look again. " \
+                if oldest else ""
+            self.paper_note.set_label(f"{len(rows)} folders with a main .tex file, newest first. {ago}"
                                       "Click one to open it; it is also saved to your projects."
                                       if rows else "No .tex files with \\documentclass found.")
         self.paper_list.set_visible(bool(rows))
