@@ -76,7 +76,7 @@ class LatexPage(Gtk.Box):
         col.append(top)
         self.project_list = Gtk.ListBox(selection_mode=Gtk.SelectionMode.NONE, css_classes=["boxed-list"])
         self.project_list.set_placeholder(Gtk.Label(
-            label="No projects yet. Add one in the Projects tab, or make a new LaTeX project.",
+            label="No papers yet. Pick one found below, or make a new LaTeX project.",
             wrap=True, margin_top=18, margin_bottom=18, margin_start=12, margin_end=12, css_classes=["dim-label"]))
         col.append(self.project_list)
 
@@ -116,7 +116,7 @@ class LatexPage(Gtk.Box):
     def _fill_projects(self) -> None:
         self.project_list.remove_all()
         by_id = {s.cfg.id: s for s in self.sessions}
-        items = sorted(self.store.recent(), key=lambda p: not p.main_tex)  # LaTeX ones first, newest first
+        items = [p for p in self.store.recent() if p.is_latex]
         for p in items:
             s = by_id.get(p.cluster)
             if not s:
@@ -182,7 +182,7 @@ class LatexPage(Gtk.Box):
     def _open_paper(self, session: ClusterSession, paper: projects.Paper) -> None:
         p = self.store.find(session.cfg.id, paper.folder) if self.store else None
         if not p:
-            p = Project(posixpath.basename(paper.folder), session.cfg.id, paper.folder, paper.main)
+            p = Project(posixpath.basename(paper.folder), session.cfg.id, paper.folder, paper.main, kind="latex")
             if self.store:
                 self.store.add(p)
         if self.store:

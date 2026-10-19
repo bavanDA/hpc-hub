@@ -85,7 +85,7 @@ class ProjectsPage(Gtk.Box):
     # -- list ------------------------------------------------------------------------------
     def reload(self) -> None:
         self.list.remove_all()
-        items = self.store.recent()
+        items = [p for p in self.store.recent() if not p.is_latex]  # papers are in the LaTeX tab
         self.stack.set_visible_child_name("list" if items else "empty")
         q = self.search.get_text().lower().split()
         for p in items:
@@ -316,7 +316,9 @@ class ProjectDialog(Adw.Dialog):
             elif s.ssh.run(f"test -d {remote_fs.q(target)}", timeout=30).returncode != 0:
                 raise RuntimeError(f"No folder {target} on {s.cfg.name}")
             mains = projects.find_main_tex(s.ssh, target)
-            return Project(name, s.cfg.id, target, main_tex=mains[0] if mains else "")
+            latex = template == "LaTeX paper" if self.create else bool(mains) and "/" not in mains[0]
+            return Project(name, s.cfg.id, target, main_tex=mains[0] if mains else "",
+                           kind="latex" if latex else "code")
 
         def done(project, err):
             if err:
