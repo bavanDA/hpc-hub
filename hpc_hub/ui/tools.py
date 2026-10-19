@@ -15,7 +15,7 @@ from ..agents import Agent
 from ..links import Link
 from ..session import ClusterSession
 from ..slurm import Allocation
-from .agent_dialog import AgentDialog
+from .agent_dialog import AgentDialog, Launch
 from .ask_all import AskAllDialog
 from .terminals import TerminalsPage, TerminalTab
 from .widgets import bg, open_uri
@@ -158,38 +158,37 @@ class Tools:
         if not self._ready(s):
             return
         agent = agents.BY_ID[agent_id]
-        AgentDialog(agent, s, lambda where, chat_id, label: self._check_agent(s, agent, where, chat_id, label),
-                    self.save_config, folder).present(self.window)
+        AgentDialog(agent, s, lambda run: self._check_agent(s, agent, run), self.save_config, folder).present(
+            self.window)
 
-    def _check_agent(self, s: ClusterSession, agent: Agent, folder: str, chat_id: str, label: str = "") -> None:
+    def _check_agent(self, s: ClusterSession, agent: Agent, run: Launch) -> None:
         c = getattr(s.cfg, agent.id)
         self.toast(f"Checking {agent.name} on {s.cfg.name}…")
         bg(lambda: remote.command_type(s.ssh, c.command),
-           lambda kind, _err: self._agent_checked(s, agent, kind or "", folder, chat_id, label))
+           lambda kind, _err: self._agent_checked(s, agent, kind or "", run))
 
-    def _agent_checked(self, s: ClusterSession, agent: Agent, kind: str, folder: str, chat_id: str,
-                       label: str) -> None:
+    def _agent_checked(self, s: ClusterSession, agent: Agent, kind: str, run: Launch) -> None:
         c = getattr(s.cfg, agent.id)
         if not kind:
             self._error(f"{agent.name} not found",
                         f"'{c.command}' is not on PATH or in ~/.bashrc on {s.cfg.name}.")
             return
-        start = lambda a, err: _idle(self._start_agent, s, agent, a, err, folder, chat_id, label)  # noqa: E731
+        start = lambda a, err: _idle(self._start_agent, s, agent, a, err, run)  # noqa: E731
         if c.new_node:
-            self.toast(f"Requesting a new node for {agent.name}…")
-            s.extra_node(f"hpc-hub-{agent.id}", start)
+            self.toast(f"Requesting a new node for {agent.name}" + (f" for {run.hours} h…" if run.hours else "…"))
+            s.extra_node(f"hpc-hub-{agent.id}", start, run.hours)
         else:
             s.ensure_node(lambda a: start(a, ""))
 
-    def _start_agent(self, s: ClusterSession, agent: Agent, a: Allocation | None, err: str, folder: str,
-                     chat_id: str, label: str) -> None:
+    def _start_agent(self, s: ClusterSession, agent: Agent, a: Allocation | None, err: str, run: Launch) -> None:
         if not a:
             self._error("No compute node", err or f"Could not get a node on {s.cfg.name}.")
             return
-        cmd = agents.command(agent, getattr(s.cfg, agent.id), chat_id)
+        folder, chat_id = run.folder, run.chat_id
+        cmd = agents.command(agent, getattr(s.cfg, agent.id), chat_id, run.task)
         tag = chat_id[:8] if chat_id else time.strftime("%H%M%S")  # one tmux session per chat
         name = f"hpchub-{agent.id}-{a.job_id}-{tag}"
-        title = f"{agent.name} · {label or posixpath.basename(folder.rstrip('/')) or folder}"
+        title = f"{agent.name} · {run.label or posixpath.basename(folder.rstrip('/')) or folder}"
         color = tmux.AGENT_COLORS.get(agent.id, "")
         line = tmux.open_line(name, remote.on_node(a.job_id, folder, cmd), title, color)
         self.terminals.open(title, s.ssh.argv(line, tty=True), agent.icon, node=a.node, key=(s.cfg.id, name),

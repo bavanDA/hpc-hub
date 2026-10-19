@@ -4,8 +4,9 @@ import datetime
 import posixpath
 import time
 from collections.abc import Callable
+from dataclasses import dataclass
 
-from gi.repository import Adw, GLib, Gtk
+from gi.repository import Adw, GLib, GObject, Gtk
 
 from .. import chats as chat_store
 from .. import remote_fs
@@ -27,10 +28,19 @@ def when(ts: int) -> str:
     return time.strftime("%b %d %H:%M" if days < 300 else "%b %d %Y", t)
 
 
-class AgentDialog(Adw.Dialog):
-    """on_run(folder, chat id or "", label) after saving the options on the cluster's agent settings."""
+@dataclass
+class Launch:
+    folder: str
+    chat_id: str = ""  # "" = a new chat
+    label: str = ""
+    task: str = ""  # first prompt the agent starts working on
+    hours: int = 0  # time on a new node; 0 = the cluster's usual limit
 
-    def __init__(self, agent: Agent, s: ClusterSession, on_run: Callable[[str, str, str], None],
+
+class AgentDialog(Adw.Dialog):
+    """on_run(Launch) after saving the options on the cluster's agent settings."""
+
+    def __init__(self, agent: Agent, s: ClusterSession, on_run: Callable[[Launch], None],
                  save: Callable[[], None], project: str = ""):
         where = f"in {posixpath.basename(project.rstrip('/'))}" if project else f"on {s.cfg.name}"
         super().__init__(title=f"{agent.name} {where}", content_width=600, content_height=760)
@@ -66,6 +76,23 @@ class AgentDialog(Adw.Dialog):
             self.option_rows.append((o, row))
         if agent.options:
             page.add(more)
+
+        work = Adw.PreferencesGroup(title="Task", description="Optional. What it should work on; it starts right "
+                                    "away, in a new chat or one you pick below.")
+        self.task = Gtk.TextView(wrap_mode=Gtk.WrapMode.WORD_CHAR, top_margin=8, bottom_margin=8, left_margin=10,
+                                 right_margin=10, accepts_tab=False)
+        frame = Gtk.Frame(child=Gtk.ScrolledWindow(child=self.task, min_content_height=72, max_content_height=160,
+                                                   propagate_natural_height=True), )
+        work.add(frame)
+        page.add(work)
+        time_group = Adw.PreferencesGroup()
+        default = _hours(s.cfg.profile.time)
+        self.hours = Adw.SpinRow(title="Hours on the new node", digits=0, adjustment=Gtk.Adjustment(
+            lower=1, upper=168, step_increment=1, page_increment=4, value=c.hours or default))
+        self.hours.set_subtitle(f"Your usual limit is {default} h. The longest allowed depends on the QoS.")
+        self.new.bind_property("active", self.hours, "sensitive", GObject.BindingFlags.SYNC_CREATE)
+        time_group.add(self.hours)
+        page.add(time_group)
 
         new_chat = Adw.PreferencesGroup(title="New chat")
         self.folder = Adw.EntryRow(title="Folder")
@@ -129,10 +156,21 @@ class AgentDialog(Adw.Dialog):
     def _run(self, folder: str, chat_id: str, label: str = "") -> None:
         c = self.settings
         c.skip_permissions, c.new_node, c.remote = self.skip.get_active(), self.new.get_active(), self.remote.get_active()
+        c.hours = int(self.hours.get_value()) if self.new.get_active() else c.hours
+        buf = self.task.get_buffer()
+        task = buf.get_text(buf.get_start_iter(), buf.get_end_iter(), False).strip()
         for o, row in self.option_rows:
             setattr(c, o.key, o.choices[row.get_selected()][0])
         if not chat_id:
             c.workdir = folder
         self.save()
         self.close()
-        self.on_run(folder, chat_id, label)
+        self.on_run(Launch(folder, chat_id, label, task, c.hours if c.new_node else 0))
+
+
+def _hours(limit: str) -> int:
+    """'1-06:00:00' -> 30, '04:00:00' -> 4 (rounded up, at least 1)."""
+    days, _, rest = limit.rpartition("-")
+    parts = [int(x) for x in rest.split(":") if x.isdigit()] + [0, 0]
+    total = (int(days) if days.isdigit() else 0) * 24 + parts[0] + (1 if parts[1] or parts[2] else 0)
+    return max(total, 1)
