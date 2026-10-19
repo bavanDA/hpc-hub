@@ -67,3 +67,20 @@ def test_split_tunnel_defaults():
     by_id = {c.id: c for c in config.default_clusters()}
     assert by_id["wulver"].vpn.split_tunnel and by_id["wulver"].vpn.domains == "njit.edu"
     assert "128.36.0.0/16" in by_id["yale"].vpn.routes
+
+
+def test_vscode_job_roundtrip(tmp_path):
+    path = tmp_path / "c.toml"
+    clusters = config.default_clusters()
+    clusters[0].vscode.compute.gpus = 1
+    clusters[0].vscode.compute.qos = "high"
+    config.save(clusters, path)
+    w = config.load(path)[0]
+    assert (w.vscode.compute.gpus, w.vscode.compute.qos, w.vscode.compute.cpus) == (1, "high", 16)
+    assert w.vscode.command.endswith(config.TUNNEL)
+
+
+def test_empty_vscode_command_gets_default(tmp_path):
+    path = tmp_path / "c.toml"
+    path.write_text('[clusters.yale.vscode]\ncommand = ""\n')
+    assert config.load(path)[1].vscode.command == f"{config.TUNNEL} --name yale"

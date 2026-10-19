@@ -47,11 +47,21 @@ class ComputeProfile:
         return " · ".join(parts)
 
 
+TUNNEL = "code tunnel --accept-server-license-terms"
+
+
+def _vscode_compute() -> ComputeProfile:
+    return ComputeProfile(cpus=2, mem_gb=8, time="08:00:00")
+
+
 @dataclass
 class VsCodeSettings:
-    command: str = ""  # alias from ~/.bashrc, picked on first run
+    """VS Code runs as its own batch job (sbatch), separate from the compute node."""
+    command: str = TUNNEL
+    setup: str = ""  # runs first, e.g. "module load VSCode"
     workdir: str = "~"
     open_links: bool = True
+    compute: ComputeProfile = field(default_factory=_vscode_compute)
 
 
 @dataclass
@@ -105,6 +115,9 @@ def default_clusters() -> list[ClusterConfig]:
             vpn=VpnSettings(enabled=True, gateway="vpn.njit.edu", useragent="AnyConnect Linux_64 4.10.07061",
                              domains="njit.edu", routes="128.235.0.0/16"),
             profile=ComputeProfile(cpus=4, mem_gb=16),
+            vscode=VsCodeSettings(
+                command=f"$HOME/vscode_cli/{TUNNEL}", setup="module purge; module load wulver",
+                compute=ComputeProfile(cpus=16, mem_gb=64, time="12:00:00", partition="general", qos="standard")),
         ),
         ClusterConfig(
             id="yale",
@@ -121,12 +134,17 @@ def default_clusters() -> list[ClusterConfig]:
                 routes="130.132.0.0/16 128.36.0.0/16",
             ),
             profile=ComputeProfile(cpus=2, mem_gb=16, partition="devel"),
+            vscode=VsCodeSettings(
+                command=f"{TUNNEL} --name yale",
+                setup="export VSCODE_CLI_USE_FILE_KEYCHAIN=1 VSCODE_CLI_DISABLE_KEYCHAIN_ENCRYPT=1; module load VSCode",
+                compute=ComputeProfile(cpus=2, mem_gb=15, time="06:00:00", partition="devel")),
         ),
         ClusterConfig(
             id="sdsc",
             name="SDSC Expanse",
             host="login.expanse.sdsc.edu",
             profile=ComputeProfile(cpus=2, mem_gb=16, partition="shared"),
+            vscode=VsCodeSettings(compute=ComputeProfile(cpus=2, mem_gb=8, time="08:00:00", partition="shared")),
         ),
     ]
 
@@ -154,10 +172,11 @@ def load(path: Path = CONFIG_FILE) -> list[ClusterConfig]:
         return clusters
     with open(path, "rb") as fh:
         saved = tomllib.load(fh).get("clusters", {})
-    for c in clusters:
+    for c, default in zip(clusters, default_clusters()):
         if isinstance(saved.get(c.id), dict):
             _merge(c, saved[c.id])
         c.host = c.host.strip().rpartition("@")[2]  # user@ belongs in the login
+        c.vscode.command = c.vscode.command or default.vscode.command  # old configs saved an empty alias
     return clusters
 
 
@@ -174,14 +193,19 @@ def dumps(clusters: list[ClusterConfig]) -> str:
     for c in clusters:
         data = asdict(c)
         data.pop("id")
-        tables = {k: data.pop(k) for k in list(data) if isinstance(data[k], dict)}
-        out.append(f"[clusters.{c.id}]")
-        out += [f"{k} = {_toml_value(v)}" for k, v in data.items()]
-        for name, table in tables.items():
-            out += ["", f"[clusters.{c.id}.{name}]"]
-            out += [f"{k} = {_toml_value(v)}" for k, v in table.items()]
+        _table(out, f"clusters.{c.id}", data)
         out.append("")
     return "\n".join(out)
+
+
+def _table(out: list[str], name: str, data: dict) -> None:
+    if out and out[-1]:
+        out.append("")
+    out.append(f"[{name}]")
+    out += [f"{k} = {_toml_value(v)}" for k, v in data.items() if not isinstance(v, dict)]
+    for k, v in data.items():
+        if isinstance(v, dict):
+            _table(out, f"{name}.{k}", v)
 
 
 def save(clusters: list[ClusterConfig], path: Path = CONFIG_FILE) -> None:
