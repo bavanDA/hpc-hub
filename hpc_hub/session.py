@@ -204,7 +204,17 @@ class ClusterSession:
             return False
         if self.vpn_only:
             return self.vpn_used
-        return bool(self.ssh and self.ssh.alive())
+        if not (self.ssh and self.ssh.alive()):
+            return False
+        for attempt in range(2):  # after sleep the master can look alive while its link is dead
+            try:
+                if self.ssh.run("true", timeout=15).returncode == 0:
+                    return True
+            except subprocess.TimeoutExpired:
+                pass
+            if attempt == 0:
+                time.sleep(5)
+        return False
 
     def mark_lost(self) -> None:
         if self.state == State.CONNECTED:

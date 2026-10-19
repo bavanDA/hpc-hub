@@ -210,3 +210,17 @@ def test_no_node_then_get_and_release(env):
     rec.done.clear()
     s.disconnect()
     assert rec.done.wait(20)
+
+
+def test_healthy_needs_working_link(env, monkeypatch):
+    server, tmp = env
+    s, rec = connect(server, "pw")
+    assert s.healthy()
+    run = s.ssh.run
+    s.ssh.run = lambda *a, **k: __import__("subprocess").CompletedProcess([], 255, "", "")
+    monkeypatch.setattr("hpc_hub.session.time.sleep", lambda _s: None)
+    assert not s.healthy()
+    s.ssh.run = run
+    rec.done.clear()
+    s.disconnect()
+    assert rec.done.wait(20)
