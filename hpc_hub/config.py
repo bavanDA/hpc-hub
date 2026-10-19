@@ -48,6 +48,8 @@ class ComputeProfile:
 
 
 TUNNEL = "code tunnel --accept-server-license-terms"
+# keep the GitHub sign-in in $HOME, so a tunnel on a new node does not ask again
+FILE_KEYCHAIN = "export VSCODE_CLI_USE_FILE_KEYCHAIN=1 VSCODE_CLI_DISABLE_KEYCHAIN_ENCRYPT=1"
 
 
 def _vscode_compute() -> ComputeProfile:
@@ -127,7 +129,7 @@ def default_clusters() -> list[ClusterConfig]:
                              domains="njit.edu", routes="128.235.0.0/16"),
             profile=ComputeProfile(cpus=4, mem_gb=16),
             vscode=VsCodeSettings(
-                command=f"$HOME/vscode_cli/{TUNNEL}", setup="module purge; module load wulver",
+                command=f"$HOME/vscode_cli/{TUNNEL}", setup=f"{FILE_KEYCHAIN}; module purge; module load wulver",
                 compute=ComputeProfile(cpus=16, mem_gb=64, time="12:00:00", partition="general", qos="standard")),
         ),
         ClusterConfig(
@@ -147,7 +149,7 @@ def default_clusters() -> list[ClusterConfig]:
             profile=ComputeProfile(cpus=2, mem_gb=16, partition="devel"),
             vscode=VsCodeSettings(
                 command=f"{TUNNEL} --name yale",
-                setup="export VSCODE_CLI_USE_FILE_KEYCHAIN=1 VSCODE_CLI_DISABLE_KEYCHAIN_ENCRYPT=1; module load VSCode",
+                setup=f"{FILE_KEYCHAIN}; module load VSCode",
                 compute=ComputeProfile(cpus=2, mem_gb=15, time="06:00:00", partition="devel")),
         ),
         ClusterConfig(
@@ -155,7 +157,8 @@ def default_clusters() -> list[ClusterConfig]:
             name="SDSC Expanse",
             host="login.expanse.sdsc.edu",
             profile=ComputeProfile(cpus=2, mem_gb=16, partition="shared"),
-            vscode=VsCodeSettings(compute=ComputeProfile(cpus=2, mem_gb=8, time="08:00:00", partition="shared")),
+            vscode=VsCodeSettings(setup=FILE_KEYCHAIN,
+                                  compute=ComputeProfile(cpus=2, mem_gb=8, time="08:00:00", partition="shared")),
         ),
     ]
 
