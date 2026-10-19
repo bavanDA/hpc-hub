@@ -1,4 +1,4 @@
-"""Coding agents you can run on a compute node: Claude, ChatGPT (Codex), Antigravity."""
+"""Coding agents you can run on a compute node: Claude, ChatGPT (Codex), Antigravity, Cursor."""
 
 import shlex
 from dataclasses import dataclass
@@ -61,7 +61,14 @@ AGY = Agent("agy", "Antigravity", "hpc-antigravity", "--dangerously-skip-permiss
                                                   ("plan", "Plan only")), unless_skip=True),
                 Option("effort", "Effort", "--effort", EFFORT),
                 Option("sandbox", "Sandbox the terminal", "--sandbox", (("", "Off"), ("on", "On")), switch=True)))
-AGENTS = [CLAUDE, CODEX, AGY]
+CURSOR = Agent("cursor", "Cursor", "hpc-cursor-symbolic", "--force", "", "", (
+    Option("model", "Model", "--model", (DEFAULT, ("auto", "Auto"), ("composer-2.5", "Composer 2.5"),
+                                         ("claude-opus-5-thinking-high", "Claude Opus 5"),
+                                         ("claude-sonnet-5-thinking-high", "Claude Sonnet 5"),
+                                         ("gpt-5.6-sol-high", "GPT-5.6 Sol"), ("gemini-3.7-flash-high", "Gemini 3.7 Flash"))),
+    Option("mode", "Mode", "--mode", (DEFAULT, ("plan", "Plan only"), ("ask", "Ask (read only)"))),
+    Option("sandbox", "Sandbox", "--sandbox", (DEFAULT, ("enabled", "On"), ("disabled", "Off")))))
+AGENTS = [CLAUDE, CODEX, AGY, CURSOR]
 BY_ID = {a.id: a for a in AGENTS}
 
 PAIR_NOTE = "Pairing code below. In the ChatGPT app open Codex, then connect a machine and enter it."
@@ -85,8 +92,8 @@ def command(agent: Agent, s: AgentSettings, chat_id: str = "") -> str:
                     f"{base} remote-control pair --json; {line}")
         return line
     args = list(skip)
-    if s.remote:
+    if s.remote and agent.remote_label:
         args.append("--remote-control")
     if chat:
-        args += ["--resume", chat] if agent is CLAUDE else ["--conversation", chat]
+        args += ["--conversation", chat] if agent is AGY else ["--resume", chat]
     return " ".join([base, *args])

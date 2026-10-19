@@ -115,6 +115,7 @@ class HpcHubApp(Adw.Application):
             self.tools = Tools(self.window, self.window.terminals,
                                lambda: self.window.stack.set_visible_child_name("terminals"),
                                self.window.toast, lambda: config.save(self.clusters))
+            self.tools.open_files = self._open_files
         self.window.present()
 
     def do_shutdown(self):
@@ -246,6 +247,8 @@ class HpcHubApp(Adw.Application):
             self.tools.vscode(session, target=target)
         elif tool.startswith("agent:"):
             self.tools.agent(session, tool.partition(":")[2])
+        elif tool == "ask":
+            self.tools.ask_all(session)
         elif tool == "files":
             self.window.files.show_cluster(session)
             self.window.stack.set_visible_child_name("files")

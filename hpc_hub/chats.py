@@ -130,7 +130,7 @@ def agy(limit):
                     "title": title or "", "last": ""})
     return out
 try:
-    out = {"claude": claude, "codex": codex, "agy": agy}[sys.argv[1]](int(sys.argv[2]))
+    out = {"claude": claude, "codex": codex, "agy": agy}.get(sys.argv[1], lambda n: [])(int(sys.argv[2]))
 except Exception as e:
     sys.stderr.write("%s\n" % e)
     out = []
