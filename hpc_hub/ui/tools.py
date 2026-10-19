@@ -1,5 +1,6 @@
 """VS Code and Claude on the compute node: dialogs + launch into a terminal tab."""
 
+import posixpath
 import shlex
 import shutil
 import subprocess
@@ -10,7 +11,7 @@ from urllib.parse import urlsplit
 
 from gi.repository import Adw, Gdk, GLib, Gtk
 
-from .. import agents, links, remote, remote_fs, slurm
+from .. import agents, links, remote, remote_fs, slurm, tmux
 from ..agents import Agent
 from ..links import Link
 from ..session import ClusterSession, State
@@ -154,10 +155,10 @@ class Tools:
         if not self._ready(s):
             return
         agent = agents.BY_ID[agent_id]
-        AgentDialog(agent, s, lambda where, chat_id: self._check_agent(s, agent, where, chat_id), self.save_config,
-                    folder).present(self.window)
+        AgentDialog(agent, s, lambda where, chat_id, label: self._check_agent(s, agent, where, chat_id, label),
+                    self.save_config, folder).present(self.window)
 
-    def _check_agent(self, s: ClusterSession, agent: Agent, folder: str, chat_id: str) -> None:
+    def _check_agent(self, s: ClusterSession, agent: Agent, folder: str, chat_id: str, label: str = "") -> None:
         c = getattr(s.cfg, agent.id)
         self.toast(f"Checking {agent.name} on {s.cfg.name}…")
 
@@ -166,17 +167,18 @@ class Tools:
                 kind = remote.command_type(s.ssh, c.command)
             except Exception:  # noqa: BLE001
                 kind = ""
-            _idle(self._agent_checked, s, agent, kind, folder, chat_id)
+            _idle(self._agent_checked, s, agent, kind, folder, chat_id, label)
 
         threading.Thread(target=work, daemon=True).start()
 
-    def _agent_checked(self, s: ClusterSession, agent: Agent, kind: str, folder: str, chat_id: str) -> None:
+    def _agent_checked(self, s: ClusterSession, agent: Agent, kind: str, folder: str, chat_id: str,
+                       label: str) -> None:
         c = getattr(s.cfg, agent.id)
         if not kind:
             self._error(f"{agent.name} not found",
                         f"'{c.command}' is not on PATH or in ~/.bashrc on {s.cfg.name}.")
             return
-        start = lambda a, err: _idle(self._start_agent, s, agent, a, err, folder, chat_id)  # noqa: E731
+        start = lambda a, err: _idle(self._start_agent, s, agent, a, err, folder, chat_id, label)  # noqa: E731
         if c.new_node:
             self.toast(f"Requesting a new node for {agent.name}…")
             s.extra_node(f"hpc-hub-{agent.id}", start)
@@ -184,16 +186,18 @@ class Tools:
             s.ensure_node(lambda a: start(a, ""))
 
     def _start_agent(self, s: ClusterSession, agent: Agent, a: Allocation | None, err: str, folder: str,
-                     chat_id: str) -> None:
+                     chat_id: str, label: str) -> None:
         if not a:
             self._error("No compute node", err or f"Could not get a node on {s.cfg.name}.")
             return
         cmd = agents.command(agent, getattr(s.cfg, agent.id), chat_id)
         tag = chat_id[:8] if chat_id else time.strftime("%H%M%S")  # one tmux session per chat
-        line = remote.in_tmux(f"hpchub-{agent.id}-{a.job_id}-{tag}", remote.on_node(a.job_id, folder, cmd))
-        title = f"{agent.name} · {s.cfg.name}" + ("" if chat_id else " · new") + f" · {a.node}"
-        self.terminals.open(title, s.ssh.argv(line, tty=True), agent.icon, node=a.node,
-                            on_link=lambda tab, link: self._agent_link(agent, tab, link))
+        name = f"hpchub-{agent.id}-{a.job_id}-{tag}"
+        title = f"{agent.name} · {label or posixpath.basename(folder.rstrip('/')) or folder}"
+        color = tmux.AGENT_COLORS.get(agent.id, "")
+        line = tmux.open_line(name, remote.on_node(a.job_id, folder, cmd), title, color)
+        self.terminals.open(title, s.ssh.argv(line, tty=True), agent.icon, node=a.node, key=(s.cfg.id, name),
+                            color=color, on_link=lambda tab, link: self._agent_link(agent, tab, link))
         self.show_terminals()
 
     def _agent_link(self, agent: Agent, tab: TerminalTab, link: Link) -> None:

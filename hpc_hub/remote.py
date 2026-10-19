@@ -58,10 +58,3 @@ def on_node(job_id: str, workdir: str, command: str) -> str:
 
 def on_login(workdir: str, command: str) -> str:
     return f"bash -ic {shlex.quote(f'{cd_part(workdir)} && {command}; exec bash -i')}"
-
-
-def in_tmux(session: str, command: str) -> str:
-    """Keep it running if the app or laptop disconnects; reattach next time."""
-    name = shlex.quote(re.sub(r"[^\w-]", "-", session))
-    return (f"if command -v tmux >/dev/null 2>&1; then exec tmux new-session -A -s {name} {shlex.quote(command)}; "
-            f"else exec {command}; fi")

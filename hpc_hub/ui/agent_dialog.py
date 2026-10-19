@@ -34,9 +34,9 @@ def short(path: str, home: str = "") -> str:
 
 
 class AgentDialog(Adw.Dialog):
-    """on_run(folder, chat id or "") after saving the options on the cluster's agent settings."""
+    """on_run(folder, chat id or "", label) after saving the options on the cluster's agent settings."""
 
-    def __init__(self, agent: Agent, s: ClusterSession, on_run: Callable[[str, str], None],
+    def __init__(self, agent: Agent, s: ClusterSession, on_run: Callable[[str, str, str], None],
                  save: Callable[[], None], project: str = ""):
         where = f"in {posixpath.basename(project.rstrip('/'))}" if project else f"on {s.cfg.name}"
         super().__init__(title=f"{agent.name} {where}", content_width=600, content_height=760)
@@ -114,7 +114,7 @@ class AgentDialog(Adw.Dialog):
             row = Adw.ActionRow(title=GLib.markup_escape_text(chat.name), activatable=True, title_lines=1,
                                 subtitle=GLib.markup_escape_text(f"{when(chat.mtime)} · {short(chat.cwd, home)}"))
             row.add_suffix(Gtk.Image(icon_name="go-next-symbolic"))
-            row.connect("activated", lambda _r, c=chat: self._run(c.cwd or "~", c.id))
+            row.connect("activated", lambda _r, c=chat: self._run(c.cwd or "~", c.id, c.name[:40]))
             row.haystack = f"{chat.name} {chat.first} {chat.last} {chat.cwd}".lower()
             self.chats.add(row)
             self.rows.append(row)
@@ -124,11 +124,11 @@ class AgentDialog(Adw.Dialog):
         for row in self.rows:
             row.set_visible(not q or all(w in row.haystack for w in q.split()))
 
-    def _run(self, folder: str, chat_id: str) -> None:
+    def _run(self, folder: str, chat_id: str, label: str = "") -> None:
         c = self.settings
         c.skip_permissions, c.new_node, c.remote = self.skip.get_active(), self.new.get_active(), self.remote.get_active()
         if not chat_id:
             c.workdir = folder
         self.save()
         self.close()
-        self.on_run(folder, chat_id)
+        self.on_run(folder, chat_id, label)

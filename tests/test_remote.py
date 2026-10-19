@@ -32,10 +32,13 @@ def test_cd_part():
 
 
 def test_on_node_in_tmux():
-    cmd = remote.in_tmux("hpchub-claude-42", remote.on_node("42", "~/proj", "claude"))
+    from hpc_hub import tmux
+    cmd = tmux.open_line("hpchub-claude-42", remote.on_node("42", "~/proj", "claude"))
     assert cmd.startswith("if command -v tmux")
-    assert "new-session -A -s hpchub-claude-42" in cmd
     # the tmux payload is one shell word that runs srun on the job
-    payload = shlex.split(cmd.split("-s hpchub-claude-42 ", 1)[1].split("; else", 1)[0])[0]
+    lex = shlex.shlex(cmd, posix=True, punctuation_chars=True)
+    lex.whitespace_split = True
+    words = list(lex)
+    payload = words[words.index("new-session") + 4]  # new-session -d -s NAME <payload>
     assert payload.startswith("srun --jobid=42 --overlap --pty bash -ic")
     assert "claude; exec bash -i" in shlex.split(payload)[-1]
