@@ -11,12 +11,13 @@ from urllib.parse import urlsplit
 
 from gi.repository import Adw, Gdk, GLib, Gtk
 
-from .. import agents, links, remote, remote_fs, slurm, tmux
+from .. import agents, ask_all, links, remote, remote_fs, slurm, tmux
 from ..agents import Agent
 from ..links import Link
 from ..session import ClusterSession, State
 from ..slurm import Allocation
 from .agent_dialog import AgentDialog
+from .ask_all import AskAllDialog
 from .terminals import TerminalsPage, TerminalTab
 from .widgets import open_uri
 
@@ -37,6 +38,7 @@ class Tools:
         self.show_terminals = show_terminals
         self.toast = toast
         self.save_config = save_config
+        self.open_files: Callable[[ClusterSession, str], None] | None = None  # set by the app
         self.tunnels: dict[str, tuple[str, str]] = {}  # cluster -> (job id, tunnel name)
         self.pending: dict[str, tuple[str, str]] = {}  # cluster -> (folder, target) to open once the tunnel is up
         self.vs_tabs: dict[str, tuple[str, TerminalTab]] = {}
@@ -212,6 +214,34 @@ class Tools:
                 Gdk.Display.get_default().get_clipboard().set(link.code)
             tab.add_banner(f"Sign in with code {link.code} (copied)", "Open sign-in page",
                            lambda: open_uri(tab, link.url))
+
+    # -- Ask all ---------------------------------------------------------------------------
+    def ask_all(self, s: ClusterSession, folder: str = "") -> None:
+        if not self._ready(s):
+            return
+        AskAllDialog(s, lambda *args: self._start_ask(s, *args), folder).present(self.window)
+
+    def _start_ask(self, s: ClusterSession, folder: str, out: str, prompt: str, picked: list[Agent],
+                   discuss: bool) -> None:
+        ask = ask_all.Ask(folder, out, prompt, [(a, getattr(s.cfg, a.id)) for a in picked], discuss)
+        self.toast(f"Asking {len(picked)} agents on {s.cfg.name}…")
+
+        def start(a: Allocation | None) -> None:
+            if not a:
+                self._error("No compute node", f"Could not get a node on {s.cfg.name}.")
+                return
+            name = f"hpchub-ask-{a.job_id}-{time.strftime('%H%M%S')}"
+            title = f"Ask all · {prompt.strip().splitlines()[0][:40]}"
+            color = tmux.AGENT_COLORS["ask"]
+            line = tmux.open_line(name, remote.on_node(a.job_id, folder, ask_all.command(ask)), title, color)
+            tab = self.terminals.open(title, s.ssh.argv(line, tty=True), "system-users-symbolic", node=a.node,
+                                      key=(s.cfg.id, name), color=color)
+            if self.open_files:
+                tab.add_banner(f"Answers go to {out}", "Open folder", lambda: self.open_files(s, out))
+            self.show_terminals()
+            self.toast(f"Answers go to {out}")
+
+        s.ensure_node(lambda a: _idle(start, a))
 
     # -- remote text edit (used by VS Code settings) -----------------------------------------
     def edit_remote(self, s: ClusterSession, path: str, template: str = "") -> None:
