@@ -42,3 +42,12 @@ def test_remote_and_pair():
     assert (links.REMOTE, "https://claude.ai/code/session_01abc", "") in kinds
     assert not any(u.endswith("/settings") for _, u, _ in kinds)
     assert links.find_links('{"manualPairingCode":"AB12-CD34"}')[0].code == "AB12-CD34"
+
+
+def test_link_split_over_lines():
+    text = ("     Open                         \n     https://antigravity.google.com/r/           \n"
+            "     0a7a6826-86ef-4822-807a-f531d8389996-v2      \n     on another device to take over.\n")
+    [link] = links.find_links(text)
+    assert link.kind == links.REMOTE
+    assert link.url == "https://antigravity.google.com/r/0a7a6826-86ef-4822-807a-f531d8389996-v2"
+    assert links.unwrap("see https://x.org/\nnext words here") == "see https://x.org/\nnext words here"

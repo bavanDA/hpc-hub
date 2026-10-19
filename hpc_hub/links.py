@@ -11,7 +11,7 @@ LOCAL_HOSTS = {"localhost", "127.0.0.1", "0.0.0.0", "::1"}
 TUNNEL, DEVICE_LOGIN, LOCAL_WEB, REMOTE, PAIR, OTHER = (
     "tunnel", "device-login", "local-web", "remote", "pair", "other")
 PAIR_RE = re.compile(r"(?:manualPairingCode\W+|pairing code\W+)([A-Z0-9]{4}-[A-Z0-9]{4})", re.I)
-REMOTE_HOSTS = ("claude.ai", "chatgpt.com", "antigravity.google")
+REMOTE_HOSTS = ("claude.ai", "chatgpt.com", "antigravity.google", "antigravity.google.com")
 
 
 @dataclass(frozen=True)
@@ -40,7 +40,26 @@ def classify(url: str, text: str = "", node: str = "") -> Link:
     return Link(OTHER, url)
 
 
+URL_PART_RE = re.compile(r"^[A-Za-z0-9._~:/?#\[\]@!$&*+,;=%-]+$")
+
+
+def unwrap(text: str) -> str:
+    """Join links that a boxed TUI split over lines ("https://x.com/r/" then "abc-v2" on the next line)."""
+    lines = text.splitlines()
+    out: list[str] = []
+    for line in lines:
+        prev = out[-1].rstrip() if out else ""
+        piece = line.strip()
+        if prev and URL_RE.search(prev) and prev.endswith(URL_RE.findall(prev)[-1]) and prev.endswith("/") \
+                and URL_PART_RE.match(piece):
+            out[-1] = prev + piece
+        else:
+            out.append(line)
+    return "\n".join(out)
+
+
 def find_links(text: str, node: str = "") -> list[Link]:
+    text = unwrap(text)
     seen, out = set(), []
     for m in PAIR_RE.finditer(text):
         if m.group(1) not in seen:
