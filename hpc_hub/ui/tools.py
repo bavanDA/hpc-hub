@@ -29,6 +29,12 @@ def _idle(fn, *args):
     GLib.idle_add(lambda: fn(*args) and False)
 
 
+def _device_login(tab: TerminalTab, link: Link) -> None:
+    if link.code:
+        Gdk.Display.get_default().get_clipboard().set(link.code)
+    tab.add_banner(f"Sign in with code {link.code} (copied)", "Open sign-in page", lambda: open_uri(tab, link.url))
+
+
 class Tools:
     def __init__(self, window: Gtk.Window, terminals: TerminalsPage, show_terminals: Callable[[], None],
                  toast: Callable[[str], None], save_config: Callable[[], None]):
@@ -113,10 +119,7 @@ class Tools:
     def _vscode_link(self, s: ClusterSession, a: Allocation, tab: TerminalTab, link: Link) -> None:
         v = s.cfg.vscode
         if link.kind == links.DEVICE_LOGIN:
-            if link.code:
-                Gdk.Display.get_default().get_clipboard().set(link.code)
-            tab.add_banner(f"Sign in with code {link.code} (copied)", "Open sign-in page",
-                           lambda: open_uri(tab, link.url))
+            _device_login(tab, link)
             if v.open_links:
                 open_uri(tab, link.url)
         elif link.kind == links.TUNNEL:
@@ -201,10 +204,7 @@ class Tools:
             tab.add_banner(f"ChatGPT pairing code {link.code} (copied). In the ChatGPT app: Codex, connect a "
                            "machine, enter the code. It expires in about 10 minutes.")
         elif link.kind == links.DEVICE_LOGIN:
-            if link.code:
-                Gdk.Display.get_default().get_clipboard().set(link.code)
-            tab.add_banner(f"Sign in with code {link.code} (copied)", "Open sign-in page",
-                           lambda: open_uri(tab, link.url))
+            _device_login(tab, link)
 
     # -- Ask all ---------------------------------------------------------------------------
     def ask_all(self, s: ClusterSession, folder: str = "") -> None:
