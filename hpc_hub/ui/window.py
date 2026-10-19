@@ -10,7 +10,7 @@ from .terminals import TerminalsPage
 
 class MainWindow(Adw.ApplicationWindow):
     def __init__(self, app, sessions, on_connect, on_disconnect, on_settings, on_tool, save_config=lambda: None,
-                 make_globus=None):
+                 make_globus=None, make_projects=None, store=None):
         super().__init__(application=app, title=APP_NAME, default_width=1000, default_height=760)
         self.cards: dict[str, ClusterCard] = {}
 
@@ -27,6 +27,9 @@ class MainWindow(Adw.ApplicationWindow):
 
         clamp = Adw.Clamp(maximum_size=760, child=column)
         self.stack = Adw.ViewStack()
+        if make_projects:
+            self.projects = make_projects(self.toast)
+            self.stack.add_titled_with_icon(self.projects, "projects", "Projects", "view-grid-symbolic")
         self.stack.add_titled_with_icon(
             Gtk.ScrolledWindow(child=clamp, vexpand=True), "clusters", "Clusters", "network-server-symbolic")
         self.jobs = JobsPage(sessions, self.toast)
@@ -36,7 +39,8 @@ class MainWindow(Adw.ApplicationWindow):
         if make_globus:
             self.globus = make_globus(self.toast)
             self.stack.add_titled_with_icon(self.globus, "globus", "Globus", "network-transmit-receive-symbolic")
-        self.latex = LatexPage(sessions, self.toast, save_config)
+        self.latex = LatexPage(sessions, self.toast, save_config, store,
+                               lambda: self.projects.edit(None, create=True) if make_projects else None)
         self.stack.add_titled_with_icon(self.latex, "latex", "LaTeX", "x-office-document-symbolic")
         self.terminals = TerminalsPage()
         self.stack.add_titled_with_icon(self.terminals, "terminals", "Terminals", "utilities-terminal-symbolic")

@@ -13,7 +13,9 @@ from .askpass_server import AskpassServer  # noqa: E402
 from .paths import runtime_dir  # noqa: E402
 from .session import ClusterSession, State  # noqa: E402
 from .ui.duo import DuoDialog  # noqa: E402
+from .projects import ProjectStore  # noqa: E402
 from .ui.globus_ui import GlobusPage  # noqa: E402
+from .ui.projects import Actions, ProjectsPage  # noqa: E402
 from .ui.settings import ClusterSettingsDialog  # noqa: E402
 from .ui.tools import Tools  # noqa: E402
 from .ui.web_login import WebLoginDialog  # noqa: E402
@@ -48,6 +50,7 @@ class HpcHubApp(Adw.Application):
 
         self.askpass.start()
         self.clusters = config.load()
+        self.projects = ProjectStore()
         self.app_settings = config.load_app()
         self.sessions = {c.id: ClusterSession(c, self.askpass, self) for c in self.clusters}
         for leftover in runtime_dir().glob("nm-*"):  # VPN cookie files from a killed run
@@ -81,7 +84,14 @@ class HpcHubApp(Adw.Application):
                 self.connect_session, self.disconnect_session, self.open_settings, self.open_tool,
                 lambda: config.save(self.clusters),
                 lambda toast: GlobusPage(self.app_settings, self.clusters, lambda: config.save_app(self.app_settings),
-                                         lambda: config.save(self.clusters), toast))
+                                         lambda: config.save(self.clusters), toast),
+                lambda toast: ProjectsPage(list(self.sessions.values()), self.projects, toast, Actions(
+                    vscode=lambda s, folder, target: self.tools.vscode(s, folder, target),
+                    claude=lambda s, folder: self.tools.claude(s, folder),
+                    files=self._open_files,
+                    latex=self._open_latex_project,
+                    connect=self.connect_session)),
+                self.projects)
             self.window.connect("close-request", self._on_close_request)
             self.tools = Tools(self.window, self.window.terminals,
                                lambda: self.window.stack.set_visible_child_name("terminals"),
@@ -132,6 +142,7 @@ class HpcHubApp(Adw.Application):
             self.window.cards[session.cfg.id].refresh()
             self.window.jobs.session_changed(session)
             self.window.files.session_changed(session)
+            self.window.projects.session_changed(session)
         name = session.cfg.name
         self._sync_duo(session)
         if session.state == State.DUO:
@@ -218,6 +229,14 @@ class HpcHubApp(Adw.Application):
         elif tool == "files":
             self.window.files.show_cluster(session)
             self.window.stack.set_visible_child_name("files")
+
+    def _open_files(self, session: ClusterSession, folder: str) -> None:
+        self.window.files.open_at(session, folder)
+        self.window.stack.set_visible_child_name("files")
+
+    def _open_latex_project(self, session: ClusterSession, project) -> None:
+        self.window.latex.open_project(session, project)
+        self.window.stack.set_visible_child_name("latex")
 
     def connect_session(self, session: ClusterSession, vpn_only: bool = False) -> None:
         cfg = session.cfg
