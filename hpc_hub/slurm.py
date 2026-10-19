@@ -197,6 +197,8 @@ def allocate(
 
 def running_jobs(ssh: SshMaster) -> list[Job]:
     res = ssh.run(f'squeue -h -u "$USER" -t RUNNING -o {shlex.quote(JOBS_FORMAT)}')
+    if res.returncode != 0:  # an empty answer must mean "no jobs", not "squeue failed"
+        raise subprocess.CalledProcessError(res.returncode, "squeue", res.stdout, res.stderr)
     jobs = []
     for line in res.stdout.splitlines():
         parts = line.strip().split("|")
