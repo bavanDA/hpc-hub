@@ -31,6 +31,7 @@ class ClusterCard(Gtk.Box):
         on_disconnect: Callable[[ClusterSession], None],
         on_settings: Callable[[ClusterSession], None],
         on_tool: Callable[[ClusterSession, str], None] = lambda s, t: None,
+        save: Callable[[], None] = lambda: None,
     ):
         super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=6)
         self.session = session
@@ -72,8 +73,11 @@ class ClusterCard(Gtk.Box):
         head.append(self.action)
         self.append(head)
 
-        self.profile = _label("", "dim-label")
-        self.append(self.profile)
+        self.save = save
+        self.want_node = Gtk.CheckButton(active=session.cfg.request_node_on_connect,
+                                         tooltip_text="Ask Slurm for a compute node when you connect")
+        self.want_node.connect("toggled", self._on_want_node)
+        self.append(self.want_node)
 
         status = Gtk.Box(spacing=8)
         self.spinner = Adw.Spinner()
@@ -83,9 +87,15 @@ class ClusterCard(Gtk.Box):
         status.append(self.detail)
         self.append(status)
 
+        node_row = Gtk.Box(spacing=8)
         self.node = _label("", "heading")
         self.node.set_selectable(True)
-        self.append(self.node)
+        self.node.set_hexpand(True)
+        self.node_btn = Gtk.Button(valign=Gtk.Align.CENTER, css_classes=["pill", "small"])
+        self.node_btn.connect("clicked", self._on_node_btn)
+        node_row.append(self.node)
+        node_row.append(self.node_btn)
+        self.append(node_row)
 
         self.tools = Gtk.Box(spacing=6, margin_top=4)
         for name, label, icon in (("vscode", "VS Code", "text-editor-symbolic"),
@@ -105,6 +115,16 @@ class ClusterCard(Gtk.Box):
 
         self.refresh()
 
+    def _on_want_node(self, btn) -> None:
+        self.session.cfg.request_node_on_connect = btn.get_active()
+        self.save()
+
+    def _on_node_btn(self, *_):
+        if self.session.allocation:
+            self.session.release_node()
+        else:
+            self.session.request_node()
+
     def _on_action(self, *_):
         state = self.session.state
         if state.busy:
@@ -120,7 +140,9 @@ class ClusterCard(Gtk.Box):
         where = cfg.host or "no host set"
         vpn = f"VPN {cfg.vpn.gateway or '(gateway not set)'}" if cfg.vpn.enabled else "no VPN"
         self.subtitle.set_label(f"{where} · {vpn}")
-        self.profile.set_label(f"Compute: {cfg.profile.summary()}")
+        self.want_node.set_label(f"Compute node on connect: {cfg.profile.summary()}")
+        self.want_node.set_active(cfg.request_node_on_connect)
+        self.want_node.set_visible(s.state in (State.DISCONNECTED, State.ERROR))
 
         self.pill.set_label(s.state.value if s.state != State.DUO else "Duo")
         for c in ("success", "error", "warning", "dim-label"):
@@ -138,9 +160,18 @@ class ClusterCard(Gtk.Box):
         self.tools.set_visible(s.state == State.CONNECTED and s.ssh is not None)
         self.vpn_btn.set_visible(cfg.vpn.enabled and (s.state in (State.DISCONNECTED, State.ERROR)))
         a = s.allocation
-        self.node.set_visible(bool(a) and s.state == State.CONNECTED)
+        has_ssh = s.state == State.CONNECTED and s.ssh is not None
+        self.node.set_visible(has_ssh)
+        self.node_btn.set_visible(has_ssh)
         if a:
             self.node.set_label(f"Node {a.node} · Job {a.job_id}" + ("" if a.owned else " (your job)"))
+            self.node_btn.set_label("Release node" if a.owned else "Stop using")
+            self.node_btn.set_tooltip_text("Cancel this job, stay connected" if a.owned
+                                           else "Keep the job running, just stop using it here")
+        else:
+            self.node.set_label("No compute node")
+            self.node_btn.set_label("Get node")
+            self.node_btn.set_tooltip_text(f"Request {cfg.profile.summary()}")
 
         for c in ("suggested-action", "destructive-action"):
             self.action.remove_css_class(c)

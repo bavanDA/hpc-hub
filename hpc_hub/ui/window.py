@@ -21,7 +21,7 @@ class MainWindow(Adw.ApplicationWindow):
         column = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=18,
                          margin_top=24, margin_bottom=24, margin_start=16, margin_end=16)
         for s in sessions:
-            card = ClusterCard(s, on_connect, on_disconnect, on_settings, on_tool)
+            card = ClusterCard(s, on_connect, on_disconnect, on_settings, on_tool, save_config)
             self.cards[s.cfg.id] = card
             column.append(card)
 
