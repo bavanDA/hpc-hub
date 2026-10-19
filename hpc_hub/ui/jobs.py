@@ -126,7 +126,11 @@ class JobsPage(Gtk.Box):
         s = self.session
         if s.state != State.CONNECTED or not s.ssh:
             self.store.remove_all()
-            self._show_empty("Not connected", f"Connect to {s.cfg.name} to see jobs.", "network-offline-symbolic")
+            if s.state == State.ERROR and s.detail == "Connection lost":
+                self._show_empty("Connection lost", f"{s.cfg.name} dropped, for example after the laptop slept. "
+                                 "Press Reconnect on the Clusters tab.", "network-offline-symbolic")
+            else:
+                self._show_empty("Not connected", f"Connect to {s.cfg.name} to see jobs.", "network-offline-symbolic")
             return
         if self.loading:
             return
@@ -141,6 +145,8 @@ class JobsPage(Gtk.Box):
                 jobs, err = slurm.list_jobs(s.ssh, scope), None
             except Exception as e:  # noqa: BLE001 - show any failure
                 jobs, err = [], str(e)
+                if not s.healthy():  # the link died, not Slurm: let the card say so
+                    GLib.idle_add(lambda: s.mark_lost() and False)
             GLib.idle_add(self._loaded, s, scope, jobs, err)
 
         threading.Thread(target=work, daemon=True).start()
