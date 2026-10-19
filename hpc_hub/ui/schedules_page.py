@@ -9,6 +9,7 @@ from gi.repository import Adw, GLib, Gtk
 
 from .. import schedules
 from ..agents import AGENTS
+from ..projects import Project, ProjectStore
 from ..schedules import PRESETS, Schedule, Status
 from ..session import ClusterSession
 from .folder_picker import FolderPicker
@@ -26,9 +27,10 @@ def _when(stamp: str) -> str:
 
 
 class SchedulesPage(Gtk.Box):
-    def __init__(self, sessions: list[ClusterSession], toast: Callable[[str], None], save_config: Callable[[], None]):
+    def __init__(self, sessions: list[ClusterSession], toast: Callable[[str], None], save_config: Callable[[], None],
+                 store: ProjectStore | None = None):
         super().__init__(orientation=Gtk.Orientation.VERTICAL)
-        self.sessions, self.toast, self.save_config = sessions, toast, save_config
+        self.sessions, self.toast, self.save_config, self.store = sessions, toast, save_config, store
         self.on_open_folder: Callable[[ClusterSession, str], None] | None = None  # set by the app
 
         bar = Gtk.Box(spacing=8, margin_top=12, margin_bottom=6, margin_start=12, margin_end=12)
@@ -151,13 +153,16 @@ class SchedulesPage(Gtk.Box):
             self.toast(f"Connect to {s.cfg.name} first")
             return
         taken = {st.schedule.name for st in self.status if st.schedule is not sc}
-        ScheduleDialog(s, sc, taken, lambda new: self._save(s, new, f"Saved {new.name}")).present(self.get_root())
+        projects = [p for p in self.store.recent() if p.cluster == s.cfg.id] if self.store else []
+        ScheduleDialog(s, sc, taken, lambda new: self._save(s, new, f"Saved {new.name}"), projects).present(
+            self.get_root())
 
 
 class ScheduleDialog(Adw.Dialog):
-    def __init__(self, s: ClusterSession, sc: Schedule | None, taken: set[str], on_save: Callable[[Schedule], None]):
+    def __init__(self, s: ClusterSession, sc: Schedule | None, taken: set[str], on_save: Callable[[Schedule], None],
+                 projects: list[Project] = ()):
         super().__init__(title="Edit schedule" if sc else "New schedule", content_width=600, content_height=760)
-        self.s, self.sc, self.taken, self.on_save = s, sc, taken, on_save
+        self.s, self.sc, self.taken, self.on_save, self.projects = s, sc, taken, on_save, list(projects)
         page = Adw.PreferencesPage()
 
         what = Adw.PreferencesGroup()
@@ -170,8 +175,11 @@ class ScheduleDialog(Adw.Dialog):
         browse.connect("clicked", lambda *_: FolderPicker(s, self.folder.get_text().strip() or "~",
                                                          self.folder.set_text).present(self))
         self.folder.add_suffix(browse)
+        self.project = Adw.ComboRow(title="Project", model=Gtk.StringList.new(
+            ["Pick a folder instead"] + [p.name for p in self.projects]))
+        self.project.connect("notify::selected", lambda *_: self._project())
         self.name = Adw.EntryRow(title="Name")
-        for w in (self.preset, self.agent, self.folder, self.name):
+        for w in (self.preset, self.agent, self.project, self.folder, self.name):
             what.add(w)
         page.add(what)
 
@@ -218,6 +226,8 @@ class ScheduleDialog(Adw.Dialog):
         sc = sc or Schedule("", folder=self.s.cfg.claude.workdir or "~")
         self.agent.set_selected(next((i for i, a in enumerate(AGENTS) if a.id == sc.agent), 0))
         self.folder.set_text(sc.folder)
+        match = next((i for i, p in enumerate(self.projects) if p.path.rstrip("/") == sc.folder.rstrip("/")), -1)
+        self.project.set_selected(match + 1)
         self.name.set_text(sc.name)
         self.task.get_buffer().set_text(sc.task)
         self.time.set_text(sc.time)
@@ -227,6 +237,13 @@ class ScheduleDialog(Adw.Dialog):
         self.skip.set_active(sc.skip)
         if not self.sc:
             self._preset()
+
+    def _project(self) -> None:
+        i = self.project.get_selected()
+        if 0 < i <= len(self.projects):
+            self.folder.set_text(self.projects[i - 1].path)
+            if not self.sc:
+                self._preset()
 
     def _preset(self) -> None:
         label = list(PRESETS)[self.preset.get_selected()]
