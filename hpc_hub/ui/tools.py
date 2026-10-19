@@ -1,7 +1,9 @@
 """VS Code and Claude on the compute node: dialogs + launch into a terminal tab."""
 
+import shlex
 import subprocess
 import threading
+import time
 from collections.abc import Callable
 
 from gi.repository import Adw, Gdk, GLib, Gtk
@@ -10,6 +12,7 @@ from .. import links, remote, slurm
 from ..links import Link
 from ..session import ClusterSession, State
 from ..slurm import Allocation
+from .claude_dialog import ClaudeDialog
 from .terminals import TerminalsPage, TerminalTab
 
 
@@ -107,38 +110,9 @@ class Tools:
     def claude(self, s: ClusterSession) -> None:
         if not self._ready(s):
             return
-        c = s.cfg.claude
-        dialog = Adw.AlertDialog(heading=f"Run Claude on {s.cfg.name}")
-        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
-        skip = Gtk.CheckButton(label="--dangerously-skip-permissions", active=c.skip_permissions)
-        new = Gtk.CheckButton(label="Use a new compute node", active=c.new_node)
-        a = s.allocation
-        same_hint = f"Unchecked: same node as now ({a.node}, job {a.job_id})" if a else "Unchecked: same node (requested if needed)"
-        hint = Gtk.Label(label=same_hint, xalign=0, wrap=True, css_classes=["dim-label", "caption"])
-        folder = Adw.EntryRow(title="Start in folder")
-        folder.set_text(c.workdir)
-        folder_box = Gtk.ListBox(css_classes=["boxed-list"], selection_mode=Gtk.SelectionMode.NONE)
-        folder_box.append(folder)
-        for w in (skip, new, hint, folder_box):
-            box.append(w)
-        dialog.set_extra_child(box)
-        dialog.add_response("cancel", "Cancel")
-        dialog.add_response("run", "Run Claude")
-        dialog.set_response_appearance("run", Adw.ResponseAppearance.SUGGESTED)
-        dialog.set_default_response("run")
+        ClaudeDialog(s, lambda folder, chat_id: self._check_claude(s, folder, chat_id), self.save_config).present(self.window)
 
-        def on_response(_d, response):
-            if response != "run":
-                return
-            c.skip_permissions, c.new_node = skip.get_active(), new.get_active()
-            c.workdir = folder.get_text().strip() or "~"
-            self.save_config()
-            self._check_claude(s)
-
-        dialog.connect("response", on_response)
-        dialog.present(self.window)
-
-    def _check_claude(self, s: ClusterSession) -> None:
+    def _check_claude(self, s: ClusterSession, folder: str, chat_id: str) -> None:
         self.toast(f"Checking claude on {s.cfg.name}…")
 
         def work():
@@ -146,30 +120,34 @@ class Tools:
                 kind = remote.command_type(s.ssh, s.cfg.claude.command)
             except Exception:  # noqa: BLE001
                 kind = ""
-            _idle(self._claude_checked, s, kind)
+            _idle(self._claude_checked, s, kind, folder, chat_id)
 
         threading.Thread(target=work, daemon=True).start()
 
-    def _claude_checked(self, s: ClusterSession, kind: str) -> None:
+    def _claude_checked(self, s: ClusterSession, kind: str, folder: str, chat_id: str) -> None:
         if not kind:
             self._error("Claude not found",
                         f"'{s.cfg.claude.command}' is not on PATH or in ~/.bashrc on {s.cfg.name}.")
             return
+        start = lambda a, err: _idle(self._start_claude, s, a, err, folder, chat_id)  # noqa: E731
         if s.cfg.claude.new_node:
             self.toast("Requesting a new node for Claude…")
-            s.extra_node("hpc-hub-claude", lambda a, err: _idle(self._start_claude, s, a, err))
+            s.extra_node("hpc-hub-claude", start)
         else:
-            s.ensure_node(lambda a: _idle(self._start_claude, s, a, ""))
+            s.ensure_node(lambda a: start(a, ""))
 
-    def _start_claude(self, s: ClusterSession, a: Allocation | None, err: str) -> None:
+    def _start_claude(self, s: ClusterSession, a: Allocation | None, err: str, folder: str, chat_id: str) -> None:
         if not a:
             self._error("No compute node", err or f"Could not get a node on {s.cfg.name}.")
             return
         c = s.cfg.claude
         cmd = c.command + (" --dangerously-skip-permissions" if c.skip_permissions else "")
-        line = remote.in_tmux(f"hpchub-claude-{a.job_id}", remote.on_node(a.job_id, c.workdir, cmd))
-        self.terminals.open(f"Claude · {s.cfg.name} · {a.node}", s.ssh.argv(line, tty=True),
-                            "user-available-symbolic", node=a.node)
+        if chat_id:
+            cmd += f" --resume {shlex.quote(chat_id)}"
+        tag = chat_id[:8] if chat_id else time.strftime("%H%M%S")  # one tmux session per chat
+        line = remote.in_tmux(f"hpchub-claude-{a.job_id}-{tag}", remote.on_node(a.job_id, folder, cmd))
+        title = "Claude · " + (s.cfg.name if chat_id else f"{s.cfg.name} · new") + f" · {a.node}"
+        self.terminals.open(title, s.ssh.argv(line, tty=True), "user-available-symbolic", node=a.node)
         self.show_terminals()
 
     # -- remote text edit (used by VS Code settings) -----------------------------------------
