@@ -1,5 +1,5 @@
 // Read aloud inside the PDF.js viewer: play the narration, highlight each spoken word on the page,
-// follow it down the document, and click a word to read from there.
+// follow it down the document; a click on a word asks the app to look it up.
 (() => {
   const post = (msg) => window.webkit.messageHandlers.hpchub.postMessage(JSON.stringify(msg));
   let audio = null, words = new Map(), times = [], byPage = new Map(), heights = new Map();
@@ -108,24 +108,50 @@
   };
 
   document.addEventListener("wheel", () => { userScrolled = Date.now(); }, {passive: true});
-  let pending = 0;  // a double click jumps to the source instead, so wait a moment before seeking
+  function wordFromPoint(x, y) {  // the word under the pointer, from the PDF's own text layer
+    const r = document.caretRangeFromPoint(x, y);
+    if (!r || r.startContainer.nodeType !== Node.TEXT_NODE || !r.startContainer.parentElement.closest(".textLayer")) return "";
+    const t = r.startContainer.textContent, ok = (ch) => /[\p{L}\p{N}'\u2019-]/u.test(ch);
+    let a = r.startOffset, b = r.startOffset;
+    while (a > 0 && ok(t[a - 1])) a--;
+    while (b < t.length && ok(t[b])) b++;
+    return t.slice(a, b);
+  }
+
+  // click a word: the app shows it in the dictionary (with "Read from here"); a double click jumps to
+  // the source instead, so wait a moment before acting on a single click
+  let pending = 0;
   document.addEventListener("dblclick", () => clearTimeout(pending), true);
-  document.addEventListener("click", (e) => {  // click a word while reading: go on from there
-    if (!audio || e.detail > 1 || !window.getSelection().isCollapsed) return;
+  document.addEventListener("click", (e) => {
+    if (e.detail > 1 || !window.getSelection().isCollapsed) return;
     clearTimeout(pending);
-    pending = setTimeout(() => seekTo(e), 250);
+    pending = setTimeout(() => clicked(e), 250);
   });
 
-  async function seekTo(e) {
+  async function clicked(e) {
     const a = await app();
     if (a.pdfViewer.annotationEditorMode > 0) return;  // drawing or highlighting, not reading
     const div = e.target.closest && e.target.closest(".page");
-    if (!div) return;
-    const page = Number(div.dataset.pageNumber), view = a.pdfViewer.getPageView(page - 1);
-    const r = div.getBoundingClientRect();
-    const [x, y] = view.viewport.convertToPdfPoint(e.clientX - r.left, e.clientY - r.top);
-    const id = wordAt(page, x, (await height(page)) - y);
-    const t = id === null ? null : times.find((s) => s[0] === id);
-    if (t) { audio.currentTime = t[1]; if (audio.paused) audio.play(); }
+    const text = wordFromPoint(e.clientX, e.clientY);
+    if (!div || !text) return;
+    let id = null;
+    if (audio) {
+      const page = Number(div.dataset.pageNumber), view = a.pdfViewer.getPageView(page - 1);
+      const r = div.getBoundingClientRect();
+      const [x, y] = view.viewport.convertToPdfPoint(e.clientX - r.left, e.clientY - r.top);
+      id = wordAt(page, x, (await height(page)) - y);
+    }
+    post({kind: "word", text, id});
   }
+
+  window.hpchubSpeak.seekWord = (id) => {
+    const t = times.find((s) => s[0] === id);
+    if (audio && t) { audio.currentTime = t[1]; audio.play(); }
+  };
+  window.hpchubSpeak.say = async (url) => {  // a short sound (a word's pronunciation)
+    const blob = await (await fetch(url)).blob();
+    const once = new Audio(URL.createObjectURL(blob));
+    once.addEventListener("ended", () => URL.revokeObjectURL(once.src));
+    once.play();
+  };
 })();

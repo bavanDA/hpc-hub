@@ -72,6 +72,7 @@ class PdfJsView(Gtk.Box):
         super().__init__(orientation=Gtk.Orientation.VERTICAL)
         self.on_double_click = None  # (page 1-based, x, y in PDF points from the top) -> None
         self.on_speak_state = None  # ("playing" | "paused" | "ended") -> None
+        self.on_word = None  # (word text, narration word id or None) -> None: you clicked a word
         self.filename = "document.pdf"  # name used when you save a copy
         self.ready = False
         self.pending: list[str] = []
@@ -120,6 +121,9 @@ class PdfJsView(Gtk.Box):
         if msg.get("kind") == "speak":
             if self.on_speak_state:
                 self.on_speak_state(msg.get("state", ""))
+        elif msg.get("kind") == "word":
+            if self.on_word:
+                self.on_word(str(msg.get("text", "")), msg.get("id"))
         elif self.on_double_click:
             self.on_double_click(int(msg["page"]), float(msg["x"]), float(msg["y"]))
 
@@ -165,6 +169,12 @@ class PdfJsView(Gtk.Box):
 
     def speak_rate(self, rate: float) -> None:
         self._js(f"hpchubSpeak.rate({float(rate)})")
+
+    def speak_from(self, word_id: int) -> None:
+        self._js(f"hpchubSpeak.seekWord({int(word_id)})")
+
+    def say(self, url: str) -> None:
+        self._js(f"hpchubSpeak.say({json.dumps(url)})")
 
     def speak_stop(self) -> None:
         self._js("hpchubSpeak.stop()")
