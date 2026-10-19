@@ -98,11 +98,11 @@ class ClusterCard(Gtk.Box):
         node_row.append(self.node_btn)
         self.append(node_row)
 
-        self.tools = Gtk.Box(spacing=6, margin_top=4)
+        self.tools = Adw.WrapBox(child_spacing=6, line_spacing=6, margin_top=4)
         self.tools.append(vscode_button(lambda target: on_tool(session, f"vscode:{target}")))
         for b in agent_buttons(lambda agent: on_tool(session, f"agent:{agent}")):
             self.tools.append(b)
-        for name, label, icon in (("files", "Files", "folder-symbolic"),):
+        for name, label, icon in (("ask", "Ask all", "system-users-symbolic"), ("files", "Files", "folder-symbolic")):
             btn = Gtk.Button(child=Adw.ButtonContent(label=label, icon_name=icon), tooltip_text=f"Open {label}")
             btn.connect("clicked", lambda _b, n=name: on_tool(session, n))
             self.tools.append(btn)

@@ -191,7 +191,8 @@ def _ago(ts: int) -> str:
     return f"{m} min" if m < 60 else f"{m // 60} h" if m < 48 * 60 else f"{m // 1440} days"
 
 
-AGENT_NAMES = {"claude": "Claude", "codex": "ChatGPT", "agy": "Antigravity", "term": "Terminal"}
+AGENT_NAMES = {"claude": "Claude", "codex": "ChatGPT", "agy": "Antigravity", "cursor": "Cursor",
+               "ask": "Ask all", "term": "Terminal"}
 REFRESH_SECONDS = 15
 
 
@@ -266,8 +267,8 @@ class TerminalsPage(Gtk.Box):
         self.views = Gtk.Stack(vexpand=True, hexpand=True)
         self.empty = Adw.StatusPage(
             icon_name="utilities-terminal-symbolic", title="Nothing open",
-            description="Click a session on the left, start a new terminal, or run VS Code, Claude, ChatGPT or "
-                        "Antigravity from a cluster card.")
+            description="Click a session on the left, start a new terminal, or run VS Code, Claude, ChatGPT, "
+                        "Antigravity or Cursor from a cluster card.")
         self.views.add_named(self.empty, "empty")
         right.append(self.views)
         # drag the line between the panel and the terminal to make the panel wider or narrower
@@ -350,7 +351,9 @@ class TerminalsPage(Gtk.Box):
             for tool, label, icon in (("vscode:", "VS Code", "text-editor-symbolic"),
                                       ("agent:claude", "Claude", "hpc-claude"),
                                       ("agent:codex", "ChatGPT", "hpc-openai-symbolic"),
-                                      ("agent:agy", "Antigravity", "hpc-antigravity")):
+                                      ("agent:agy", "Antigravity", "hpc-antigravity"),
+                                      ("agent:cursor", "Cursor", "hpc-cursor-symbolic"),
+                                      ("ask", "Ask all", "system-users-symbolic")):
                 content = Gtk.Box(spacing=8)
                 content.append(Gtk.Image(icon_name=icon))
                 content.append(Gtk.Label(label=label))
