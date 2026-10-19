@@ -187,3 +187,36 @@ def parse_load(text: str) -> list[Partition]:
 
 def load(ssh: SshMaster) -> list[Partition]:
     return parse_load(ssh.run(LOAD, timeout=60).stdout)
+
+
+# -- SU totals of your Slurm accounts ------------------------------------------
+
+@dataclass
+class AccountUsage:
+    account: str
+    quota: int  # SU (core hours) the account may use
+    used: int  # SU the whole account used
+    mine: int  # SU you used in it
+
+
+USAGE = r"""for a in $(sacctmgr -n -P show assoc where user="$USER" format=account 2>/dev/null | sort -u); do
+q=$(sacctmgr -n -P show assoc where account="$a" user="" format=GrpTRESMins 2>/dev/null | grep -o 'billing=[0-9]*' | head -1)
+[ -n "$q" ] || continue
+u=$(sshare -n -P -A "$a" --users=" " -o GrpTRESRaw 2>/dev/null | grep -o 'billing=[0-9]*' | head -1)
+m=$(sshare -n -P -A "$a" --users="$USER" -o User,RawUsage 2>/dev/null | grep "^$USER|" | cut -d'|' -f2)
+echo "$a|${q#billing=}|${u#billing=}|$m"
+done"""
+
+
+def parse_usage(text: str) -> list[AccountUsage]:
+    out = []
+    for line in text.splitlines():
+        p = line.strip().split("|")
+        if len(p) == 4 and p[1].isdigit():
+            num = [int(x) if x.isdigit() else 0 for x in p[1:]]
+            out.append(AccountUsage(p[0], num[0] // 60, num[1] // 60, num[2] // 3600))  # minutes, minutes, seconds
+    return out
+
+
+def account_usage(ssh: SshMaster) -> list[AccountUsage]:
+    return parse_usage(ssh.run(USAGE, timeout=30).stdout)

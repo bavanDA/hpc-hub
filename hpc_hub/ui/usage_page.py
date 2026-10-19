@@ -4,7 +4,7 @@ from collections.abc import Callable
 
 from gi.repository import Adw, GLib, Gtk
 
-from .. import slurm, usage
+from .. import usage
 from ..session import ClusterSession
 from .widgets import bg
 
@@ -49,7 +49,7 @@ class UsagePage(Gtk.Box):
     def __init__(self, sessions: list[ClusterSession], toast: Callable[[str], None]):
         super().__init__(orientation=Gtk.Orientation.VERTICAL)
         self.sessions, self.toast = sessions, toast
-        self.accounts: list[slurm.AccountUsage] = []
+        self.accounts: list[usage.AccountUsage] = []
         self._filling = False  # swapping the account list: don't load for each change
 
         bar = Gtk.Box(spacing=8, margin_top=12, margin_bottom=6, margin_start=12, margin_end=12)
@@ -105,7 +105,7 @@ class UsagePage(Gtk.Box):
     def session(self) -> ClusterSession:
         return self.sessions[self.cluster.get_selected()]
 
-    def _account(self) -> slurm.AccountUsage | None:
+    def _account(self) -> usage.AccountUsage | None:
         i = self.account.get_selected()
         return self.accounts[i] if 0 <= i < len(self.accounts) else None
 
@@ -122,7 +122,7 @@ class UsagePage(Gtk.Box):
             return
         self.outer.set_visible_child_name("main")
         if accounts:
-            bg(lambda: slurm.account_usage(s.ssh), lambda got, err: self._accounts_loaded(s, got or [], err))
+            bg(lambda: usage.account_usage(s.ssh), lambda got, err: self._accounts_loaded(s, got or [], err))
         else:
             self._account_changed()
         self._load_load()
@@ -131,7 +131,7 @@ class UsagePage(Gtk.Box):
         self._load_people()
         self._load_storage()
 
-    def _accounts_loaded(self, s: ClusterSession, got: list[slurm.AccountUsage], err: str) -> None:
+    def _accounts_loaded(self, s: ClusterSession, got: list[usage.AccountUsage], err: str) -> None:
         if s is not self.session:
             return
         busiest = max(range(len(got)), key=lambda i: got[i].used, default=0)

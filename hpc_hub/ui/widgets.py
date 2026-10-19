@@ -3,7 +3,7 @@
 import threading
 from collections.abc import Callable
 
-from gi.repository import Adw, GLib, Gtk
+from gi.repository import Adw, Gdk, GLib, Gtk
 
 from .. import browser, layout
 from ..agents import AGENTS
@@ -119,3 +119,16 @@ def agent_buttons(on_open: Callable[[str], None], labels: bool = True) -> list[G
         b.connect("clicked", lambda *_, i=a.id: on_open(i))
         out.append(b)
     return out
+
+
+def color_dot(color: str, size: int = 12) -> Gtk.DrawingArea:
+    rgba = Gdk.RGBA()
+    rgba.parse(color or "#77767b")
+
+    def draw(_a, cr, w, h):
+        cr.set_source_rgba(rgba.red, rgba.green, rgba.blue, rgba.alpha)
+        cr.arc(w / 2, h / 2, min(w, h) / 2, 0, 6.2832)
+        cr.fill()
+    area = Gtk.DrawingArea(content_width=size, content_height=size, valign=Gtk.Align.CENTER)
+    area.set_draw_func(draw)
+    return area

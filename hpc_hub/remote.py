@@ -30,11 +30,6 @@ def vscode_candidates(aliases: dict[str, str]) -> list[str]:
     return [name for name, _ in sorted(hits, key=score, reverse=True)]
 
 
-def shell_aliases(ssh: SshMaster) -> dict[str, str]:
-    res = ssh.run("bash -ic 'alias; declare -F' 2>/dev/null </dev/null", timeout=45)
-    return parse_aliases(res.stdout)
-
-
 def command_type(ssh: SshMaster, name: str) -> str:
     """alias / function / file / '' as seen by an interactive shell (so ~/.bashrc counts)."""
     res = ssh.run(f"bash -ic {shlex.quote('type -t ' + shlex.quote(name))} 2>/dev/null </dev/null", timeout=45)

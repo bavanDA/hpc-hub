@@ -1,6 +1,5 @@
 """Connect flow for one cluster: VPN → SSH (+ Duo) → compute node. UI-agnostic."""
 
-import socket
 import subprocess
 import threading
 import time
@@ -15,6 +14,7 @@ from .askpass_server import AskpassServer
 from .config import ClusterConfig
 from .paths import log_dir
 from .credentials import Login
+from .network import link_works, network_name, reachable, route_device
 from .slurm import Allocation, SlurmError
 from .ssh import SshError, SshMaster
 from .vpn import NeedsWebLogin, Vpn, VpnError
@@ -42,47 +42,6 @@ class Listener(Protocol):
     def log(self, session: "ClusterSession", line: str) -> None: ...
     def ask(self, session: "ClusterSession", prompt: str) -> str | None: ...
     def web_login(self, session: "ClusterSession", start: vpn_sso.SsoStart, login: Login) -> tuple[str, str]: ...
-
-
-def reachable(host: str, port: int, timeout: float = 3.0) -> bool:
-    try:
-        with socket.create_connection((host, port), timeout=timeout):
-            return True
-    except OSError:
-        return False
-
-
-def route_device(host: str) -> str:
-    """Network interface the laptop uses to reach host (vpn0, wlp3s0…), or ""."""
-    try:
-        ip = socket.gethostbyname(host)
-        out = subprocess.run(["ip", "route", "get", ip], capture_output=True, text=True, timeout=5).stdout
-    except (OSError, subprocess.SubprocessError):
-        return ""
-    words = out.split()
-    return words[words.index("dev") + 1] if "dev" in words[:-1] else ""
-
-
-def network_name(dev: str) -> str:
-    """NetworkManager connection on that interface, e.g. NJITsecure."""
-    try:
-        out = subprocess.run(["nmcli", "-t", "-f", "NAME,DEVICE", "connection", "show", "--active"],
-                             capture_output=True, text=True, timeout=5).stdout
-    except (OSError, subprocess.SubprocessError):
-        return ""
-    for line in out.splitlines():
-        name, _, device = line.rpartition(":")
-        if dev and device == dev:
-            return name.replace("\\:", ":")
-    return ""
-
-
-def link_works(ssh: SshMaster) -> bool:
-    """The login is alive and a command really gets through (not just a stale socket)."""
-    try:
-        return ssh.alive() and ssh.run("true", timeout=15).returncode == 0
-    except (OSError, subprocess.SubprocessError):
-        return False
 
 
 SSO_USER = "hpc-hub:sso-username"
@@ -192,11 +151,7 @@ class ClusterSession:
 
         def run():
             if a.owned:
-                try:
-                    slurm.cancel(self.ssh, a.job_id)
-                    self._log(f"Released job {a.job_id}")
-                except (OSError, ValueError, subprocess.SubprocessError) as e:
-                    self._log(f"Could not cancel job: {e}")
+                self._release(a.job_id)
             else:
                 self._log(f"Stopped using your job {a.job_id}, it keeps running")
             self.allocation = None
@@ -440,6 +395,14 @@ class ClusterSession:
             return
         self._set(State.CONNECTED)
 
+    def _release(self, job_id: str) -> None:
+        """scancel a node the app asked for. Blocking."""
+        try:
+            slurm.cancel(self.ssh, job_id)
+            self._log(f"Released job {job_id}")
+        except (OSError, ValueError, subprocess.SubprocessError) as e:
+            self._log(f"Could not cancel job: {e}")
+
     def _fail(self, message: str) -> None:
         self._log(message)
         if self.ssh:
@@ -456,11 +419,7 @@ class ClusterSession:
             if self.allocation and not self.allocation.owned:
                 self._log(f"Leaving your job {self.allocation.job_id} running")
             elif self.allocation:
-                try:
-                    slurm.cancel(self.ssh, self.allocation.job_id)
-                    self._log(f"Released job {self.allocation.job_id}")
-                except (OSError, ValueError, subprocess.SubprocessError) as e:
-                    self._log(f"Could not cancel job: {e}")
+                self._release(self.allocation.job_id)
             self.ssh.stop()
             self.ssh = None
         self.allocation = None

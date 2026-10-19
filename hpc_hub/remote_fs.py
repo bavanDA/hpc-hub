@@ -151,6 +151,11 @@ def rename(ssh: SshMaster, src: str, dst: str) -> None:
     _run(ssh, f"test ! -e {q(dst)} && mv -- {q(src)} {q(dst)} || {{ echo 'Name already exists' >&2; exit 1; }}")
 
 
+def copy(ssh: SshMaster, src: str, dest_dir: str) -> None:
+    """Copy within one cluster (paste on the cluster it came from)."""
+    _run(ssh, f"cp -r -- {q(src)} {q(dest_dir)}/", timeout=3600)
+
+
 def remove(ssh: SshMaster, path: str) -> None:
     if len([part for part in path.split("/") if part not in ("", ".", "~")]) < 2:
         raise FsError("Refusing to delete that")
