@@ -1,38 +1,21 @@
-"""Jobs tab: my jobs, my history or all jobs, with filters, details and cancel."""
+"""JobsPage: the job table with its filters, refresh and SU totals."""
 
-import re
 import threading
 import time
 from collections.abc import Callable
 
-from gi.repository import Adw, Gio, GLib, GObject, Gtk, Pango
+from gi.repository import Adw, Gio, GLib, Gtk, Pango
 
-from .. import slurm, tmux
-from ..session import ClusterSession, State
-from ..slurm import JobInfo
-from .widgets import bg
+from ... import slurm
+from ...session import ClusterSession, State
+from ...slurm import JobInfo
+from .cancel import CancelMixin
+from .columns import COLUMNS, JobItem, _binder, _setup
+from .details import DetailsMixin
 
 REFRESH_SECONDS = 15
 SCOPES = [(slurm.MINE, "My jobs"), (slurm.HISTORY, "My history (7 days)"), (slurm.ALL, "All jobs")]
 STATES = ["Any state", "RUNNING", "PENDING", "COMPLETED", "FAILED", "CANCELLED", "TIMEOUT"]
-STATE_CLASS = {"RUNNING": "success", "PENDING": "warning", "COMPLETING": "accent",
-               "FAILED": "error", "TIMEOUT": "error", "OUT_OF_MEMORY": "error", "NODE_FAIL": "error"}
-COLUMNS = [  # (title, attribute, expand)
-    ("ID", "job_id", False), ("Name", "name", True), ("User", "user", False),
-    ("Partition · QoS", "queue", False), ("State", "state", False), ("Time / limit", "time", False),
-    ("CPUs · mem", "res", False), ("SU used / max", "su", False),
-    ("Node / reason", "where", False),
-]
-ACTIVE = ("RUNNING", "PENDING", "SUSPENDED", "REQUEUED", "COMPLETING")
-
-
-def su_text(j: JobInfo) -> str:
-    """SU = core hours charged. Free QoS (usage factor 0) costs nothing."""
-    if j.factor == 0:
-        return "free"
-    if j.state in ACTIVE:
-        return f"{j.su_spent:,.1f} / {j.su_max:,.0f}"
-    return f"{j.su_spent:,.1f}"
 
 
 def usage_text(accounts: list[slurm.AccountUsage]) -> str:
@@ -41,38 +24,7 @@ def usage_text(accounts: list[slurm.AccountUsage]) -> str:
                       f"yours {a.mine:,}" for a in used)
 
 
-class JobItem(GObject.Object):
-    def __init__(self, job: JobInfo):
-        super().__init__()
-        self.job = job
-
-
-def _setup(_f, item, shorten: bool):
-    """Only the wide text columns (name, node) shorten; ids, times and numbers stay whole."""
-    label = Gtk.Label(xalign=0, ellipsize=Pango.EllipsizeMode.END if shorten else Pango.EllipsizeMode.NONE,
-                      width_chars=12 if shorten else -1)
-    item.set_child(label)
-
-
-def _binder(attr: str):
-    def bind(_f, item):
-        label: Gtk.Label = item.get_child()
-        job: JobInfo = item.get_item().job
-        text = (su_text(job) if attr == "su" else f"{job.elapsed} / {job.limit}" if attr == "time"
-                else f"{job.cpus} · {job.mem}" if attr == "res"
-                else " · ".join(x for x in (job.partition, job.qos) if x) if attr == "queue" else getattr(job, attr))
-        if attr == "name" and job.from_app:
-            text = f"{text}  (started by HPC Hub)"
-        label.set_label(text)
-        label.set_tooltip_text(text)
-        for c in set(STATE_CLASS.values()):
-            label.remove_css_class(c)
-        if attr == "state" and text in STATE_CLASS:
-            label.add_css_class(STATE_CLASS[text])
-    return bind
-
-
-class JobsPage(Gtk.Box):
+class JobsPage(DetailsMixin, CancelMixin, Gtk.Box):
     def __init__(self, sessions: list[ClusterSession], toast: Callable[[str], None]):
         super().__init__(orientation=Gtk.Orientation.VERTICAL)
         self.sessions = sessions
@@ -276,141 +228,3 @@ class JobsPage(Gtk.Box):
         j = self._selected()
         self.details_btn.set_sensitive(j is not None)
         self.cancel_btn.set_sensitive(self._cancellable(j))
-
-    def _details(self, j: JobInfo | None) -> None:
-        if not j or not self.session.ssh:
-            return
-        s = self.session
-        page = Adw.PreferencesPage()
-        page.add(Adw.PreferencesGroup(description="Loading…"))
-        header = Adw.HeaderBar()
-        toolbar = Adw.ToolbarView(content=page)
-        toolbar.add_top_bar(header)
-        if self._cancellable(j):
-            cancel = Gtk.Button(label="Cancel job", css_classes=["destructive-action"])
-            cancel.connect("clicked", lambda *_: (dialog.close(), self._confirm_cancel(j)))
-            header.pack_start(cancel)
-        dialog = Adw.Dialog(title=f"Job {j.job_id} · {j.name}", content_width=600, content_height=640,
-                            child=toolbar)
-        dialog.present(self.get_root())
-
-        bg(lambda: slurm.job_details(s.ssh, j.job_id),
-           lambda text, err: self._fill_details(dialog, toolbar, j, text or err))
-
-    def _fill_details(self, dialog: Adw.Dialog, toolbar: Adw.ToolbarView, j: JobInfo, text: str) -> None:
-        """The few fields people look at, grouped; everything else behind "All fields"."""
-        d = slurm.parse_details(text)
-
-        def get(*keys: str) -> str:
-            for k in keys:
-                v = d.get(k, "")
-                if v and v not in ("(null)", "None", "N/A", "Unknown"):
-                    return v
-            return ""
-
-        tres = get("AllocTRES", "ReqTRES")
-        gpus = re.findall(r"gres/gpu(?::[^=,]+)?=(\d+)", tres)
-        state, reason = get("JobState", "State"), get("Reason")
-
-        def when(*keys: str) -> str:  # 2026-10-19T17:07:01 -> 2026-10-19 17:07
-            return get(*keys).replace("T", " ")[:16]
-
-        groups = [
-            ("Status", [
-                ("State", f"{state} ({reason})" if reason else state),
-                ("Run time", " of ".join(x for x in (get("RunTime", "Elapsed"), get("TimeLimit", "Timelimit")) if x)),
-                ("Started", when("StartTime", "Start")),
-                ("Ends" if state in ("RUNNING", "PENDING") else "Ended", when("EndTime", "End")),
-                ("Submitted", when("SubmitTime", "Submit")),
-                ("Exit code", get("ExitCode") if state not in ("RUNNING", "PENDING") else ""),
-            ]),
-            ("Resources", [
-                ("Node", get("NodeList")),
-                ("CPUs", get("NumCPUs", "AllocCPUS")),
-                ("Memory", (re.search(r"mem=([^,]+)", tres) or [None, get("ReqMem")])[1]),
-                ("GPUs", str(sum(int(g) for g in gpus)) if gpus else ""),
-                ("Partition · QoS · account", " · ".join(x for x in (get("Partition"), get("QOS"), get("Account")) if x)),
-                ("SU", su_text(j) if j.state else ""),
-            ]),
-            ("Files", [
-                ("Work folder", get("WorkDir")),
-                ("Output", get("StdOut")),
-                ("Errors", get("StdErr") if get("StdErr") != get("StdOut") else ""),
-            ]),
-        ]
-        page = Adw.PreferencesPage()
-        for title, rows in groups:
-            group = Adw.PreferencesGroup(title=title)
-            for label, value in rows:
-                if not value:
-                    continue
-                if title != "Files":  # short values: label left, value right, one line each
-                    row = Adw.ActionRow(title=label)
-                    row.add_suffix(Gtk.Label(label=value, selectable=True, xalign=1))
-                    group.add(row)
-                    continue
-                row = Adw.ActionRow(title=label, subtitle=GLib.markup_escape_text(value), subtitle_selectable=True,
-                                    css_classes=["property"])
-                copy = Gtk.Button(icon_name="edit-copy-symbolic", css_classes=["flat"], valign=Gtk.Align.CENTER,
-                                  tooltip_text="Copy path")
-                copy.connect("clicked", lambda b, v=value: (b.get_clipboard().set(v), self.toast("Path copied")))
-                row.add_suffix(copy)
-                group.add(row)
-            page.add(group)
-        raw = Gtk.Label(label=text, xalign=0, selectable=True, wrap=True, wrap_mode=Pango.WrapMode.WORD_CHAR,
-                        css_classes=["monospace", "caption"], margin_top=6)
-        more = Adw.PreferencesGroup()
-        more.add(Gtk.Expander(label="All fields", child=raw))
-        page.add(more)
-        toolbar.set_content(page)
-
-    def _confirm_cancel(self, j: JobInfo | None) -> None:
-        """Say exactly what stops (node, time used, sessions on it), default to keeping it."""
-        if not j or not self.session.ssh:
-            return
-        s = self.session
-
-        def look():  # sessions the app started on this job are named hpchub-<agent>-<job>-...
-            return [t.title for t in tmux.list_sessions(s.ssh).sessions if f"-{j.job_id}-" in t.name]
-        bg(look, lambda inside, _err: self._ask_cancel(s, j, inside or []))
-
-    def _ask_cancel(self, s: ClusterSession, j: JobInfo, inside: list[str]) -> None:
-        app_node = s.allocation is not None and s.allocation.job_id == j.job_id
-        lines = [f"{j.name} · {j.partition}",
-                 f"Node: {j.where}" if j.state == "RUNNING" else f"Waiting: {j.where}",
-                 f"Running for {j.elapsed} of {j.limit}" if j.state == "RUNNING" else None]
-        if inside:
-            lines.append("Running in it: " + ", ".join(inside))
-        if app_node:
-            lines.append("HPC Hub is using this node.")
-        lines.append("")
-        lines.append("Everything running in this job stops right away and can't be brought back."
-                     if j.state == "RUNNING" else "It leaves the queue. Nothing has started yet.")
-        dialog = Adw.AlertDialog(heading=f"Cancel job {j.job_id}?", body="\n".join(x for x in lines if x is not None))
-        dialog.add_response("cancel", "Cancel job")  # stacked buttons show the last one on top
-        dialog.add_response("keep", "Keep running" if j.state == "RUNNING" else "Keep waiting")
-        dialog.set_response_appearance("cancel", Adw.ResponseAppearance.DESTRUCTIVE)
-        dialog.set_default_response("keep")
-        dialog.set_close_response("keep")
-
-        def on_response(_d, response):
-            if response != "cancel":
-                return
-            self.toast(f"Cancelling job {j.job_id}…")
-
-            def work():
-                slurm.cancel_job(s.ssh, j.job_id)
-                if app_node:
-                    s.allocation = None
-                    s.listener.state_changed(s)
-                return slurm.wait_gone(s.ssh, j.job_id)
-
-            def done(gone, err):
-                self.toast(f"Could not cancel job {j.job_id}: {err}" if err
-                           else f"Job {j.job_id} is cancelled and gone from the queue" if gone
-                           else f"Cancel sent. Slurm is still stopping job {j.job_id}")
-                self.refresh(quiet=True)
-            bg(work, done)
-
-        dialog.connect("response", on_response)
-        dialog.present(self.get_root())
