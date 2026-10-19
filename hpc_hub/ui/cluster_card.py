@@ -89,13 +89,9 @@ class ClusterCard(Gtk.Box):
 
         self.tools = Gtk.Box(spacing=6, margin_top=4)
         for name, label, icon in (("vscode", "VS Code", "text-editor-symbolic"),
-                                  ("vscode-settings", "", "emblem-system-symbolic"),
                                   ("claude", "Claude", "user-available-symbolic"),
                                   ("files", "Files", "folder-symbolic")):
-            if label:
-                btn = Gtk.Button(child=Adw.ButtonContent(label=label, icon_name=icon), tooltip_text=f"Open {label}")
-            else:
-                btn = Gtk.Button(icon_name=icon, tooltip_text="VS Code settings", css_classes=["flat"])
+            btn = Gtk.Button(child=Adw.ButtonContent(label=label, icon_name=icon), tooltip_text=f"Open {label}")
             btn.connect("clicked", lambda _b, n=name: on_tool(session, n))
             self.tools.append(btn)
         self.append(self.tools)

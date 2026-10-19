@@ -1,15 +1,20 @@
 """VS Code and Claude on the compute node: dialogs + launch into a terminal tab."""
 
+import subprocess
 import threading
 from collections.abc import Callable
 
 from gi.repository import Adw, Gdk, GLib, Gtk
 
-from .. import links, remote
+from .. import links, remote, slurm
 from ..links import Link
 from ..session import ClusterSession, State
 from ..slurm import Allocation
 from .terminals import TerminalsPage, TerminalTab
+
+
+VSCODE_JOB = "hpc-hub-vscode"
+VSCODE_JOBS = [VSCODE_JOB, "vscode", "vs-code", "vscode_slurm.sh"]  # also your own scripts' jobs
 
 
 def _idle(fn, *args):
@@ -28,7 +33,6 @@ class Tools:
         self.show_terminals = show_terminals
         self.toast = toast
         self.save_config = save_config
-        self.alias_cache: dict[str, dict[str, str]] = {}
 
     def _ready(self, s: ClusterSession) -> bool:
         if s.state != State.CONNECTED or not s.ssh:
@@ -41,39 +45,35 @@ class Tools:
         d.add_response("ok", "OK")
         d.present(self.window)
 
-    def _aliases(self, s: ClusterSession, then: Callable[[dict[str, str]], None]) -> None:
-        if s.cfg.id in self.alias_cache:
-            then(self.alias_cache[s.cfg.id])
+    # -- VS Code -------------------------------------------------------------------
+    def vscode(self, s: ClusterSession) -> None:
+        """Submit the VS Code batch job (or find the running one) and follow its log."""
+        if not self._ready(s):
             return
+        self.toast(f"Starting VS Code on {s.cfg.name}…")
+        v = s.cfg.vscode
 
         def work():
             try:
-                found = remote.shell_aliases(s.ssh)
-            except Exception:  # noqa: BLE001
-                found = {}
-            self.alias_cache[s.cfg.id] = found
-            _idle(then, found)
+                job = slurm.find_job(s.ssh, VSCODE_JOBS)
+                if job:
+                    _idle(self.toast, f"VS Code job {job.job_id} is already there, opening it")
+                    job_id = job.job_id
+                else:
+                    body = "\n".join(x for x in (remote.cd_part(v.workdir), v.setup, v.command) if x.strip())
+                    job_id = slurm.submit(s.ssh, v.compute, VSCODE_JOB, body)
+                    _idle(self.toast, f"Submitted VS Code job {job_id}")
+            except (slurm.SlurmError, OSError, subprocess.SubprocessError) as e:
+                _idle(self._error, "VS Code job failed", str(e))
+                return
+            _idle(self._follow_vscode, s, job_id)
 
         threading.Thread(target=work, daemon=True).start()
 
-    # -- VS Code -------------------------------------------------------------------
-    def vscode(self, s: ClusterSession) -> None:
-        if not self._ready(s):
-            return
-        if not s.cfg.vscode.command:
-            self.vscode_settings(s, then_start=True)
-            return
-        self.toast(f"Starting VS Code on {s.cfg.name}…")
-        s.ensure_node(lambda a: _idle(self._start_vscode, s, a))
-
-    def _start_vscode(self, s: ClusterSession, a: Allocation | None) -> None:
-        if not a:
-            self._error("No compute node", f"Could not get a node on {s.cfg.name}. See the card's log.")
-            return
-        v = s.cfg.vscode
-        cmd = remote.in_tmux(f"hpchub-vscode-{a.job_id}", remote.on_node(a.job_id, v.workdir, v.command))
-        self.terminals.open(f"VS Code · {s.cfg.name}", s.ssh.argv(cmd, tty=True), "text-editor-symbolic",
-                            node=a.node, on_link=lambda tab, link: self._vscode_link(s, a, tab, link))
+    def _follow_vscode(self, s: ClusterSession, job_id: str) -> None:
+        a = Allocation(job_id, "", owned=False)
+        self.terminals.open(f"VS Code · {s.cfg.name} · job {job_id}", s.ssh.argv(slurm.follow_log(job_id), tty=True),
+                            "text-editor-symbolic", on_link=lambda tab, link: self._vscode_link(s, a, tab, link))
         self.show_terminals()
 
     def _vscode_link(self, s: ClusterSession, a: Allocation, tab: TerminalTab, link: Link) -> None:
@@ -91,8 +91,9 @@ class Tools:
                 _open_uri(tab, link.url)
         elif link.kind == links.LOCAL_WEB:
             def work():
-                host = a.node if link.host in links.LOCAL_HOSTS else link.host
                 try:
+                    a.node = a.node or slurm.node_of(s.ssh, a.job_id)
+                    host = a.node if link.host in links.LOCAL_HOSTS else link.host
                     url = links.local_url(link, s.ssh.forward(host, link.port))
                 except Exception as e:  # noqa: BLE001
                     _idle(tab.add_banner, f"Port forward failed: {e}")
@@ -101,75 +102,6 @@ class Tools:
                 if auto:
                     _idle(_open_uri, tab, url)
             threading.Thread(target=work, daemon=True).start()
-
-    def vscode_settings(self, s: ClusterSession, then_start: bool = False) -> None:
-        if not self._ready(s):
-            return
-        self._aliases(s, lambda found: self._vscode_dialog(s, found, then_start))
-
-    def _vscode_dialog(self, s: ClusterSession, aliases: dict[str, str], then_start: bool) -> None:
-        v = s.cfg.vscode
-        names = remote.vscode_candidates(aliases)
-        if v.command and v.command not in names:
-            names.insert(0, v.command)
-        options = names + ["Custom command…"]
-
-        dialog = Adw.PreferencesDialog(title=f"VS Code on {s.cfg.name}", search_enabled=False)
-        page = Adw.PreferencesPage()
-        group = Adw.PreferencesGroup(
-            title="Start command",
-            description="Found in your ~/.bashrc on the cluster. It runs on the compute node inside tmux."
-            if names else "No VS Code alias found in ~/.bashrc. Type the command to run.")
-        combo = Adw.ComboRow(title="Alias", model=Gtk.StringList.new(options))
-        custom = Adw.EntryRow(title="Command")
-        custom.set_text(v.command if v.command and v.command not in names else "")
-        preview = Adw.ActionRow(title="Runs", subtitle_selectable=True, css_classes=["property"])
-        combo.set_selected(names.index(v.command) if v.command in names else (0 if names else len(options) - 1))
-
-        def chosen() -> str:
-            i = combo.get_selected()
-            return custom.get_text().strip() if i == len(options) - 1 else options[i]
-
-        def sync(*_):
-            is_custom = combo.get_selected() == len(options) - 1
-            custom.set_visible(is_custom)
-            body = aliases.get(chosen(), "")
-            preview.set_subtitle(body if body and body != "(function)" else chosen() or "—")
-
-        combo.connect("notify::selected", sync)
-        custom.connect("changed", sync)
-        sync()
-        for row in (combo, custom, preview):
-            group.add(row)
-
-        more = Adw.PreferencesGroup(title="Options")
-        workdir = Adw.EntryRow(title="Start in folder")
-        workdir.set_text(v.workdir)
-        open_links = Adw.SwitchRow(title="Open links automatically",
-                                   subtitle="Tunnel / sign-in pages open in your browser", active=v.open_links)
-        for row in (workdir, open_links):
-            more.add(row)
-        page.add(group)
-        page.add(more)
-
-        remote_group = Adw.PreferencesGroup(title="VS Code server settings")
-        edit = Adw.ButtonRow(title="Edit remote settings.json", end_icon_name="document-edit-symbolic")
-        edit.connect("activated", lambda *_: self.edit_remote(s, "~/.vscode-server/data/Machine/settings.json", "{\n}\n"))
-        remote_group.add(edit)
-        page.add(remote_group)
-        dialog.add(page)
-
-        def closed(*_):
-            cmd = chosen()
-            if not cmd:
-                return
-            v.command, v.workdir, v.open_links = cmd, workdir.get_text().strip() or "~", open_links.get_active()
-            self.save_config()
-            if then_start:
-                self.vscode(s)
-
-        dialog.connect("closed", closed)
-        dialog.present(self.window)
 
     # -- Claude --------------------------------------------------------------------------
     def claude(self, s: ClusterSession) -> None:

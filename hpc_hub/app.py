@@ -194,7 +194,13 @@ class HpcHubApp(Adw.Application):
             self.window.cards[session.cfg.id].refresh()
             self.window.toast(f"{session.cfg.name} settings saved")
 
-        dialog = ClusterSettingsDialog(session.cfg, saved)
+        def edit_remote(path, template):
+            if session.state == State.CONNECTED and session.ssh:
+                self.tools.edit_remote(session, path, template)
+            else:
+                dialog.add_toast(Adw.Toast(title=f"Connect to {session.cfg.name} first"))
+
+        dialog = ClusterSettingsDialog(session.cfg, saved, edit_remote)
         dialog.present(self.window)
         if hint:
             dialog.add_toast(Adw.Toast(title=hint, timeout=5))
@@ -202,8 +208,6 @@ class HpcHubApp(Adw.Application):
     def open_tool(self, session: ClusterSession, tool: str) -> None:
         if tool == "vscode":
             self.tools.vscode(session)
-        elif tool == "vscode-settings":
-            self.tools.vscode_settings(session)
         elif tool == "claude":
             self.tools.claude(session)
         elif tool == "files":
