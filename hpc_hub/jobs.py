@@ -117,9 +117,13 @@ def _id_key(job_id: str) -> tuple[int, str]:
     return (int(head.group()) if head else 0, job_id)
 
 
-def job_details(ssh: SshMaster, job_id: str) -> str:
+def _check_id(job_id: str) -> None:
     if not re.fullmatch(r"[\d_\[\]-]+", job_id):
         raise SlurmError("Bad job id")
+
+
+def job_details(ssh: SshMaster, job_id: str) -> str:
+    _check_id(job_id)
     res = ssh.run(f"scontrol show job {job_id} 2>/dev/null || sacct -P -j {job_id} -o ALL", timeout=30)
     return res.stdout.strip() or res.stderr.strip()
 
@@ -151,8 +155,7 @@ def wait_gone(ssh: SshMaster, job_id: str, seconds: float = 15) -> bool:
 
 
 def cancel_job(ssh: SshMaster, job_id: str) -> None:
-    if not re.fullmatch(r"[\d_\[\]-]+", job_id):
-        raise SlurmError("Bad job id")
+    _check_id(job_id)
     res = ssh.run(f"scancel {job_id}")
     if res.returncode != 0:
         raise SlurmError(res.stderr.strip() or "scancel failed")

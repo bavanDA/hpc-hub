@@ -70,7 +70,7 @@ def resource_args(p: ComputeProfile) -> list[str]:
     return args + shlex.split(p.extra_args)
 
 
-def salloc_command(p: ComputeProfile, job_name: str = "hpc-hub") -> str:
+def salloc_command(p: ComputeProfile, job_name: str = MAIN_JOB) -> str:
     args = ["salloc", "--no-shell", f"--job-name={job_name}", *resource_args(p)]
     return " ".join(shlex.quote(a) for a in args)
 
@@ -104,8 +104,8 @@ def submit(ssh: SshMaster, p: ComputeProfile, job_name: str, body: str) -> str:
 
 def find_job(ssh: SshMaster, names: list[str]) -> Job | None:
     """Your newest pending or running job with one of these names."""
-    fmt = "%i|%j|%N|%P"
-    res = ssh.run(f'squeue -h -u "$USER" -t PENDING,RUNNING -n {shlex.quote(",".join(names))} -o {shlex.quote(fmt)}')
+    res = ssh.run(f'squeue -h -u "$USER" -t PENDING,RUNNING -n {shlex.quote(",".join(names))} '
+                  f"-o {shlex.quote(JOBS_FORMAT)}")
     jobs = [Job(*parts) for line in res.stdout.splitlines()
             if len(parts := line.strip().split("|")) == 4 and parts[0].isdigit()]
     return max(jobs, key=lambda j: int(j.job_id), default=None)
@@ -156,7 +156,7 @@ def allocate(
     log: Callable[[str], None],
     on_pending: Callable[[str], None] = lambda job_id: None,
     cancelled: Callable[[], bool] = lambda: False,
-    job_name: str = "hpc-hub",
+    job_name: str = MAIN_JOB,
 ) -> Allocation:
     errors = validate(profile)
     if errors:
