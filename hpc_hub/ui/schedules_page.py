@@ -12,6 +12,7 @@ from ..agents import AGENTS
 from ..projects import Project, ProjectStore
 from ..schedules import PRESETS, Schedule, Status
 from ..session import ClusterSession
+from .duration import DurationRow
 from .folder_picker import FolderPicker
 from .widgets import bg
 
@@ -200,11 +201,11 @@ class ScheduleDialog(Adw.Dialog):
             self.days.append(b)
             days_box.append(b)
         days_row.add_suffix(days_box)
-        self.hours = Adw.SpinRow(title="Hours each run may take", digits=0,
-                                 adjustment=Gtk.Adjustment(lower=1, upper=72, step_increment=1, value=2))
+        p = s.cfg.profile
+        self.time_limit = DurationRow("Time each run may take", 120, s.limits, p.partition, p.qos)
         self.skip = Adw.SwitchRow(title="Allow edits without asking", active=True,
                                   subtitle="Nobody is there to approve them. It works on its own git branch.")
-        for w in (self.time, days_row, self.hours, self.skip):
+        for w in (self.time, days_row, self.time_limit, self.skip):
             when.add(w)
         page.add(when)
 
@@ -233,7 +234,7 @@ class ScheduleDialog(Adw.Dialog):
         self.time.set_text(sc.time)
         for i, b in enumerate(self.days):
             b.set_active(i + 1 in sc.days)
-        self.hours.set_value(sc.hours)
+        self.time_limit.set_minutes(sc.minutes)
         self.skip.set_active(sc.skip)
         if not self.sc:
             self._preset()
@@ -267,7 +268,7 @@ class ScheduleDialog(Adw.Dialog):
             return
         days = [i + 1 for i, b in enumerate(self.days) if b.get_active()]
         sc = Schedule(name, AGENTS[self.agent.get_selected()].id, self.folder.get_text().strip() or "~", task, at,
-                      [] if len(days) == 7 else days, int(self.hours.get_value()),
+                      [] if len(days) == 7 else days, self.time_limit.minutes(),
                       self.sc.enabled if self.sc else True, self.skip.get_active())
         if self.sc and self.sc.name != name:  # renamed: the old one goes away
             old = self.sc

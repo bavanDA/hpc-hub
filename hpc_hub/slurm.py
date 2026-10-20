@@ -150,12 +150,6 @@ def node_of(ssh: SshMaster, job_id: str) -> str:
     raise SlurmError(f"Job {job_id} has no node")
 
 
-def hours_time(hours: int) -> str:
-    """Whole hours as a Slurm time limit: 5 -> 05:00:00, 30 -> 1-06:00:00."""
-    days, h = divmod(int(hours), 24)
-    return f"{days}-{h:02d}:00:00" if days else f"{h:02d}:00:00"
-
-
 def allocate(
     ssh: SshMaster,
     profile: ComputeProfile,

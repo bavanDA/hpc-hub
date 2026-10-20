@@ -7,8 +7,10 @@ from gi.repository import Adw, Gtk
 from .. import credentials
 from ..config import VPN_PROTOCOLS, ClusterConfig, ComputeProfile
 from ..credentials import Login
+from ..limits import Limits, minutes, slurm_time
 from ..slurm import validate
 from ..vpn import split_errors
+from .duration import DurationRow
 from .widgets import TARGETS
 
 
@@ -34,20 +36,24 @@ def _switch(title: str, active: bool, subtitle: str = "") -> Adw.SwitchRow:
 class ProfileRows:
     """Cores, memory, time, GPUs, partition, account, QOS, extra args."""
 
-    def __init__(self, p: ComputeProfile, extra_title: str):
+    def __init__(self, p: ComputeProfile, extra_title: str, limits: Limits | None):
         self.cpus = _spin("CPU cores", p.cpus, 1, 512)
         self.mem = _spin("Memory (GB)", p.mem_gb, 1, 4096)
-        self.time = _entry("Time limit (HH:MM:SS or D-HH:MM:SS)", p.time)
+        self.time = DurationRow("Time", minutes(p.time) or 240, limits, p.partition, p.qos)
         self.gpus = _spin("GPUs", p.gpus, 0, 16)
         self.partition = _entry("Partition", p.partition)
         self.account = _entry("Account", p.account)
         self.qos = _entry("QOS", p.qos)
         self.extra = _entry(extra_title, p.extra_args)
         self.rows = [self.cpus, self.mem, self.time, self.gpus, self.partition, self.account, self.qos, self.extra]
+        for row in (self.partition, self.qos):
+            row.connect("changed", lambda *_: self.time.set_queue(self.partition.get_text().strip(),
+                                                                   self.qos.get_text().strip()))
 
     def read(self) -> ComputeProfile:
         return ComputeProfile(
-            cpus=int(self.cpus.get_value()), mem_gb=int(self.mem.get_value()), time=self.time.get_text().strip(),
+            cpus=int(self.cpus.get_value()), mem_gb=int(self.mem.get_value()),
+            time=slurm_time(self.time.minutes()),
             gpus=int(self.gpus.get_value()), partition=self.partition.get_text().strip(),
             account=self.account.get_text().strip(), qos=self.qos.get_text().strip(),
             extra_args=self.extra.get_text().strip())
@@ -55,9 +61,9 @@ class ProfileRows:
 
 class ClusterSettingsDialog(Adw.PreferencesDialog):
     def __init__(self, cfg: ClusterConfig, on_saved: Callable[[ClusterConfig], None],
-                 edit_remote: Callable[[str, str], None] | None = None):
+                 edit_remote: Callable[[str, str], None] | None = None, limits: Limits | None = None):
         super().__init__(title=f"{cfg.name} settings", search_enabled=False)
-        self.cfg = cfg
+        self.cfg, self.limits = cfg, limits
         self.on_saved = on_saved
         self.edit_remote = edit_remote
         self.ssh_saved = credentials.load(cfg.id, credentials.SSH)
@@ -141,7 +147,7 @@ class ClusterSettingsDialog(Adw.PreferencesDialog):
         self.on_connect = _switch("Request node on connect", self.cfg.request_node_on_connect)
         self.reuse = _switch("Use my running job", self.cfg.reuse_running_job,
                              "If you already have a node (e.g. for Claude), use it instead of a new one")
-        self.node = ProfileRows(self.cfg.profile, "Extra salloc arguments")
+        self.node = ProfileRows(self.cfg.profile, "Extra salloc arguments", self.limits)
         for row in (self.on_connect, self.reuse, *self.node.rows):
             group.add(row)
         page.add(group)
@@ -165,7 +171,7 @@ class ClusterSettingsDialog(Adw.PreferencesDialog):
         page.add(start)
 
         res = Adw.PreferencesGroup(title="Job resources")
-        self.vs_job = ProfileRows(v.compute, "Extra sbatch arguments")
+        self.vs_job = ProfileRows(v.compute, "Extra sbatch arguments", self.limits)
         for row in self.vs_job.rows:
             res.add(row)
         page.add(res)

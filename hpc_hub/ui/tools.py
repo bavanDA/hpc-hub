@@ -12,6 +12,7 @@ from gi.repository import Adw, Gdk, GLib, Gtk
 
 from .. import agents, ask_all, links, remote, remote_fs, slurm, tmux
 from ..agents import Agent
+from ..limits import human
 from ..links import Link
 from ..session import ClusterSession
 from ..slurm import Allocation
@@ -85,7 +86,7 @@ class Tools:
                     job_id = job.job_id
                 else:
                     body = "\n".join(x for x in (remote.cd_part(v.workdir), v.setup, v.command) if x.strip())
-                    job_id = slurm.submit(s.ssh, v.compute, VSCODE_JOB, body)
+                    job_id = slurm.submit(s.ssh, s.fit(v.compute), VSCODE_JOB, body)
                     _idle(self.toast, f"Submitted VS Code job {job_id}, it opens when the job starts")
             except (slurm.SlurmError, OSError, subprocess.SubprocessError, remote_fs.FsError) as e:
                 _idle(self._error, "VS Code job failed", str(e))
@@ -175,8 +176,9 @@ class Tools:
             return
         start = lambda a, err: _idle(self._start_agent, s, agent, a, err, run)  # noqa: E731
         if c.new_node:
-            self.toast(f"Requesting a new node for {agent.name}" + (f" for {run.hours} h…" if run.hours else "…"))
-            s.extra_node(f"hpc-hub-{agent.id}", start, run.hours)
+            for_time = f" for {human(run.minutes)}" if run.minutes else ""
+            self.toast(f"Requesting a new node for {agent.name}{for_time}…")
+            s.extra_node(f"hpc-hub-{agent.id}", start, run.minutes)
         else:
             s.ensure_node(lambda a: start(a, ""))
 

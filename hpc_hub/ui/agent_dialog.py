@@ -12,7 +12,9 @@ from .. import chats as chat_store
 from .. import remote_fs
 from ..agents import Agent
 from ..chats import Chat
+from ..limits import minutes
 from ..session import ClusterSession
+from .duration import DurationRow
 from .folder_picker import FolderPicker, short
 from .widgets import bg
 
@@ -34,7 +36,7 @@ class Launch:
     chat_id: str = ""  # "" = a new chat
     label: str = ""
     task: str = ""  # first prompt the agent starts working on
-    hours: int = 0  # time on a new node; 0 = the cluster's usual limit
+    minutes: int = 0  # time on a new node; 0 = the cluster's usual time
 
 
 class AgentDialog(Adw.Dialog):
@@ -86,12 +88,11 @@ class AgentDialog(Adw.Dialog):
         work.add(frame)
         page.add(work)
         time_group = Adw.PreferencesGroup()
-        default = _hours(s.cfg.profile.time)
-        self.hours = Adw.SpinRow(title="Hours on the new node", digits=0, adjustment=Gtk.Adjustment(
-            lower=1, upper=168, step_increment=1, page_increment=4, value=c.hours or default))
-        self.hours.set_subtitle(f"Your usual limit is {default} h. The longest allowed depends on the QoS.")
-        self.new.bind_property("active", self.hours, "sensitive", GObject.BindingFlags.SYNC_CREATE)
-        time_group.add(self.hours)
+        p = s.cfg.profile
+        self.time = DurationRow("Time on the new node", c.minutes or minutes(p.time) or 240, s.limits,
+                                p.partition, p.qos)
+        self.new.bind_property("active", self.time, "sensitive", GObject.BindingFlags.SYNC_CREATE)
+        time_group.add(self.time)
         page.add(time_group)
 
         new_chat = Adw.PreferencesGroup(title="New chat")
@@ -165,7 +166,7 @@ class AgentDialog(Adw.Dialog):
     def _run(self, folder: str, chat_id: str, label: str = "") -> None:
         c = self.settings
         c.skip_permissions, c.new_node, c.remote = self.skip.get_active(), self.new.get_active(), self.remote.get_active()
-        c.hours = int(self.hours.get_value()) if self.new.get_active() else c.hours
+        c.minutes = self.time.minutes() if self.new.get_active() else c.minutes
         buf = self.task.get_buffer()
         task = buf.get_text(buf.get_start_iter(), buf.get_end_iter(), False).strip()
         for o, row in self.option_rows:
@@ -174,12 +175,5 @@ class AgentDialog(Adw.Dialog):
             c.workdir = folder
         self.save()
         self.close()
-        self.on_run(Launch(folder, chat_id, label, task, c.hours if c.new_node else 0))
+        self.on_run(Launch(folder, chat_id, label, task, c.minutes if c.new_node else 0))
 
-
-def _hours(limit: str) -> int:
-    """'1-06:00:00' -> 30, '04:00:00' -> 4 (rounded up, at least 1)."""
-    days, _, rest = limit.rpartition("-")
-    parts = [int(x) for x in rest.split(":") if x.isdigit()] + [0, 0]
-    total = (int(days) if days.isdigit() else 0) * 24 + parts[0] + (1 if parts[1] or parts[2] else 0)
-    return max(total, 1)

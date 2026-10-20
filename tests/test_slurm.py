@@ -58,7 +58,3 @@ def test_tunnel_link(tmp_path):
             cmd = cmd.replace(slurm.log_path("7"), f"echo {log}")
             return subprocess.run(["bash", "-c", cmd], capture_output=True, text=True)
     assert slurm.tunnel_link(Ssh(), "7") == "https://vscode.dev/tunnel/n0018/mmfs1/home/jdoe"
-def test_hours_time():
-    assert [slurm.hours_time(h) for h in (1, 5, 24, 30, 72)] == [
-        "01:00:00", "05:00:00", "1-00:00:00", "1-06:00:00", "3-00:00:00"]
-    assert all(slurm.TIME.match(slurm.hours_time(h)) for h in (1, 30))

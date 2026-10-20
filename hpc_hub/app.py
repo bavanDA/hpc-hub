@@ -215,7 +215,7 @@ class HpcHubApp(QuitMixin, Adw.Application):
             else:
                 dialog.add_toast(Adw.Toast(title=f"Connect to {session.cfg.name} first"))
 
-        dialog = ClusterSettingsDialog(session.cfg, saved, edit_remote)
+        dialog = ClusterSettingsDialog(session.cfg, saved, edit_remote, session.limits)
         dialog.present(self.window)
         if hint:
             dialog.add_toast(Adw.Toast(title=hint, timeout=5))

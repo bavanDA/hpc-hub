@@ -81,7 +81,7 @@ class AgentSettings:
     effort: str = ""
     sandbox: str = ""
     approval: str = ""
-    hours: int = 0  # time on a new node; 0 = the cluster's usual time limit
+    minutes: int = 0  # time on a new node; 0 = the cluster's usual time
 
 
 @dataclass
@@ -167,6 +167,8 @@ def default_clusters() -> list[ClusterConfig]:
 
 def _merge(obj, data: dict):
     """Copy known keys from data onto a dataclass, keeping defaults for the rest."""
+    if isinstance(data.get("hours"), int) and "minutes" not in data:  # older configs kept whole hours
+        data = {**data, "minutes": data["hours"] * 60}
     for f in fields(obj):
         if f.name not in data:
             continue

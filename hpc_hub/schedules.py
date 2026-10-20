@@ -10,7 +10,7 @@ import re
 import shlex
 from dataclasses import asdict, dataclass, field, fields, replace
 
-from . import slurm
+from . import limits, slurm
 from .agents import BY_ID, Agent
 from .ask_all import headless, shell_path
 from .config import AgentSettings, ComputeProfile
@@ -54,7 +54,7 @@ class Schedule:
     task: str = ""
     time: str = "02:00"  # HH:MM, cluster time
     days: list[int] = field(default_factory=list)  # 1 = Monday ... 7 = Sunday; empty = every day
-    hours: int = 2  # time limit of each run
+    minutes: int = 120  # time limit of each run
     enabled: bool = True
     skip: bool = True  # nobody is there to approve its edits, so let it work without asking
 
@@ -117,7 +117,7 @@ def script(s: Schedule, agent: Agent, settings: AgentSettings, profile: ComputeP
         f'{headless(agent, settings, chr(34) + "$DIR/task.md" + chr(34))} > "$OUT/$(date +%F-%H%M).md" 2>&1',
     ])
     lines = ["#!/bin/bash -l", f"#SBATCH --job-name={s.job_name}", '#SBATCH --output=logs/slurm-%j.out']
-    lines += [f"#SBATCH {a}" for a in slurm.resource_args(replace(profile, time=slurm.hours_time(s.hours)))]
+    lines += [f"#SBATCH {a}" for a in slurm.resource_args(replace(profile, time=limits.slurm_time(s.minutes)))]
     return "\n".join(lines + ["", body, ""])
 
 
@@ -172,6 +172,8 @@ def parse_list(text: str) -> list[Status]:
                 raw = json.loads(next(lines, ""))
             except ValueError:
                 continue
+            if isinstance(raw.get("hours"), int):  # saved before minutes
+                raw.setdefault("minutes", raw["hours"] * 60)
             out.append(Status(Schedule(**{k: v for k, v in raw.items() if k in names})))
         elif line.startswith("@@LAST ") and out:
             _, stamp, path = line.split(" ", 2)

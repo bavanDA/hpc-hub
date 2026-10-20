@@ -9,9 +9,9 @@ from enum import Enum
 from typing import Protocol
 from urllib.parse import urlsplit
 
-from . import prompts, slurm, vpn_sso
+from . import limits, prompts, slurm, vpn_sso
 from .askpass_server import AskpassServer
-from .config import ClusterConfig
+from .config import ClusterConfig, ComputeProfile
 from .paths import log_dir
 from .credentials import Login
 from .network import link_works, network_name, reachable, route_device
@@ -61,11 +61,29 @@ class ClusterSession:
         self.vpn_only = False
         self._cancel = threading.Event()
         self._thread: threading.Thread | None = None
+        self.limits = limits.cached(cfg.id)  # longest time per partition and QoS
 
     # -- state -------------------------------------------------------------
     def _set(self, state: State, detail: str = "") -> None:
         self.state, self.detail = state, detail
         self.listener.state_changed(self)
+
+    def fit(self, profile: ComputeProfile) -> ComputeProfile:
+        """The profile with its time cut to what the cluster allows (Slurm would refuse it otherwise)."""
+        if not self.limits:
+            return profile
+        fitted, note = self.limits.fit(profile)
+        if note:
+            self._log(note)
+        return fitted
+
+    def _read_limits(self) -> None:
+        def run():
+            try:
+                self.limits = limits.fetch(self.ssh, self.cfg.id)
+            except (SshError, OSError, subprocess.SubprocessError):
+                pass
+        threading.Thread(target=run, daemon=True).start()
 
     def _log(self, line: str) -> None:
         self.listener.log(self, line)
@@ -174,9 +192,10 @@ class ClusterSession:
 
         threading.Thread(target=run, daemon=True).start()
 
-    def extra_node(self, job_name: str, on_done, hours: int = 0) -> None:
-        """Separate allocation (e.g. Claude on a new node), for hours if given. Kept when you disconnect."""
-        profile = replace(self.cfg.profile, time=slurm.hours_time(hours)) if hours else self.cfg.profile
+    def extra_node(self, job_name: str, on_done, minutes: int = 0) -> None:
+        """Separate allocation (e.g. Claude on a new node), for minutes if given. Kept when you disconnect."""
+        p = self.cfg.profile
+        profile = self.fit(replace(p, time=limits.slurm_time(minutes)) if minutes else p)
 
         def run():
             try:
@@ -297,6 +316,7 @@ class ClusterSession:
 
     def _after_login(self) -> None:
         """Logged in: use a node that is already running before asking Slurm for a new one."""
+        self._read_limits()
         if self.allocation and self._job_running(self.allocation.job_id):
             self._log(f"Reusing job {self.allocation.job_id} on {self.allocation.node}")
             self._set(State.CONNECTED)
@@ -385,7 +405,7 @@ class ClusterSession:
         self._set(State.ALLOCATING, self.cfg.profile.summary())
         try:
             self.allocation = slurm.allocate(
-                self.ssh, self.cfg.profile, self._log,
+                self.ssh, self.fit(self.cfg.profile), self._log,
                 on_pending=lambda job: self._set(State.ALLOCATING, f"Job {job} waiting in queue"),
                 cancelled=self._cancel.is_set,
             )

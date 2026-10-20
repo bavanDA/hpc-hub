@@ -6,7 +6,7 @@ from hpc_hub.schedules import Schedule
 
 
 def test_script_is_valid_bash():
-    s = Schedule("clean-mc", "claude", "~/MC", "tidy up", "02:00", [1, 2, 3, 4, 5], 3)
+    s = Schedule("clean-mc", "claude", "~/MC", "tidy up", "02:00", [1, 2, 3, 4, 5], 180)
     text = schedules.script(s, schedules.BY_ID["claude"], AgentSettings(command="claude", skip_permissions=True),
                             ComputeProfile(cpus=4, mem_gb=16, account="mygroup"))
     assert "#SBATCH --job-name=hpc-hub-sched-clean-mc" in text and "#SBATCH --time=03:00:00" in text
@@ -37,6 +37,7 @@ def test_parse_list():
             "@@SCHED\nnot json\n@@JOBS\nhpc-hub-sched-clean|55|PENDING|2026-10-20T02:00:00\n")
     [st] = schedules.parse_list(text)
     assert st.schedule.when == "Every day at 02:00" and (st.job_id, st.state) == ("55", "PENDING")
+    assert st.schedule.minutes == 120  # old "hours" still read
     assert st.last_run == 1792500000 and st.last_log.endswith("x.md")
     assert Schedule("a", days=[1, 2, 3, 4, 5]).when == "Weekdays at 02:00"
     assert Schedule("a", days=[6, 7], time="09:30").when == "Sat, Sun at 09:30"
