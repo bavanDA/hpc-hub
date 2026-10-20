@@ -147,7 +147,11 @@ class PdfPane(Gtk.Box):
         if self.narrated is not None and self.last and self.narrated is self.last[0]:
             self.view.speak_from(word_id)
 
-    def _speak_state(self, state: str) -> None:
+    def _speak_state(self, state: str, error: str = "") -> None:
+        if state in ("stalled", "waiting", "emptied", "abort"):
+            return  # logged only
+        if state == "error":
+            self.toast(f"Read aloud stopped: {error}")
         self.speaking = state == "playing"
         playing = self.speaking
         self.play.set_child(Adw.ButtonContent(label="Pause" if playing else "Read aloud",

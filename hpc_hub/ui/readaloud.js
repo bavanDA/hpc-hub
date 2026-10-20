@@ -85,9 +85,15 @@
       for (const [id, page] of wordList) (byPage.get(page) || byPage.set(page, []).get(page)).push(id);
       times = timings;
       audio = new Audio(URL.createObjectURL(blob));
-      audio.addEventListener("play", () => { post({kind: "speak", state: "playing"}); tick(); });
-      audio.addEventListener("pause", () => post({kind: "speak", state: "paused"}));
-      audio.addEventListener("ended", () => post({kind: "speak", state: "ended"}));
+      const at = () => (audio ? audio.currentTime : 0);
+      audio.addEventListener("play", () => { post({kind: "speak", state: "playing", at: at()}); tick(); });
+      audio.addEventListener("pause", () => post({kind: "speak", state: "paused", at: at()}));
+      audio.addEventListener("ended", () => post({kind: "speak", state: "ended", at: at()}));
+      audio.addEventListener("error", () => post({kind: "speak", state: "error", at: at(),
+        error: audio && audio.error ? `${audio.error.code} ${audio.error.message}` : "unknown"}));
+      for (const ev of ["stalled", "waiting", "emptied", "abort"]) {
+        audio.addEventListener(ev, () => post({kind: "speak", state: ev, at: at()}));
+      }
       audio.addEventListener("seeked", tick);
     },
     loaded() { return !!audio; },
@@ -95,7 +101,7 @@
     async play(fromView) {
       if (!audio) return;
       if (fromView && audio.currentTime === 0) audio.currentTime = await firstOnVisiblePage();
-      audio.play();
+      audio.play().catch((e) => post({kind: "speak", state: "error", at: audio.currentTime, error: String(e)}));
     },
     pause() { audio && audio.pause(); },
     rate(r) { if (audio) audio.playbackRate = r; },

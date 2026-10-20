@@ -5,6 +5,8 @@ Same small API as PdfView (load_bytes, show_message, scroll_to, on_double_click)
 
 import base64
 import json
+import os
+import time
 from pathlib import Path
 
 import gi
@@ -71,6 +73,18 @@ document.addEventListener("dblclick", (e) => {
 """
 
 
+def _log(line: str) -> None:
+    """Read-aloud player events, for when it misbehaves: ~/.cache/hpc-hub/readaloud.log"""
+    base = os.environ.get("XDG_CACHE_HOME") or str(Path.home() / ".cache")
+    f = Path(base) / "hpc-hub" / "readaloud.log"
+    try:
+        f.parent.mkdir(parents=True, exist_ok=True)
+        with open(f, "a", encoding="utf-8") as out:
+            out.write(time.strftime("%Y-%m-%d %H:%M:%S ") + line + "\n")
+    except OSError:
+        pass
+
+
 class PdfJsView(Gtk.Box):
     def __init__(self, viewer_html: Path):
         super().__init__(orientation=Gtk.Orientation.VERTICAL)
@@ -123,8 +137,9 @@ class PdfJsView(Gtk.Box):
         except (ValueError, TypeError):
             return
         if msg.get("kind") == "speak":
+            _log(f"{msg.get('state')} at {msg.get('at', 0):.1f}s {msg.get('error', '')}".rstrip())
             if self.on_speak_state:
-                self.on_speak_state(msg.get("state", ""))
+                self.on_speak_state(msg.get("state", ""), msg.get("error", ""))
         elif msg.get("kind") == "word":
             if self.on_word:
                 self.on_word(str(msg.get("text", "")), msg.get("id"))
