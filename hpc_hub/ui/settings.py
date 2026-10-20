@@ -14,6 +14,9 @@ from .duration import DurationRow
 from .widgets import TARGETS
 
 
+FACTORS = [("duo", "Duo push on your phone"), ("code", "Code from an authenticator app")]
+
+
 def _entry(title: str, text: str = "") -> Adw.EntryRow:
     row = Adw.EntryRow(title=title)
     row.set_text(text)
@@ -88,9 +91,13 @@ class ClusterSettingsDialog(Adw.PreferencesDialog):
         )
         self.user = _entry("Username", self.ssh_saved.username if self.ssh_saved else "")
         self.password = self._password_row(self.ssh_saved)
+        self.factor = Adw.ComboRow(title="Second step", model=Gtk.StringList.new([f[1] for f in FACTORS]))
+        self.factor.set_selected(next((i for i, f in enumerate(FACTORS) if f[0] == self.cfg.second_factor), 0))
+        self.factor.connect("notify::selected", lambda *_: self._sync_factor())
         self.duo = _entry("Duo answer (push, push2, phone, 1)", self.cfg.duo_answer)
-        for row in (self.user, self.password, self.duo):
+        for row in (self.user, self.password, self.factor, self.duo):
             group.add(row)
+        self._sync_factor()
         page.add(group)
 
         forget_group = Adw.PreferencesGroup()
@@ -186,6 +193,11 @@ class ClusterSettingsDialog(Adw.PreferencesDialog):
         return page
 
     # -- behaviour ---------------------------------------------------------------
+    def _sync_factor(self) -> None:
+        code = FACTORS[self.factor.get_selected()][0] == "code"
+        self.duo.set_visible(not code)
+        self.factor.set_subtitle("The app asks you for the code each time you log in" if code else "")
+
     def _sync_vpn(self) -> None:
         on = self.vpn_on.get_active()
         for row in (self.gateway, self.protocol, self.useragent, self.authgroup, self.same_login, self.split):
@@ -232,6 +244,7 @@ class ClusterSettingsDialog(Adw.PreferencesDialog):
         c.host = self.host.get_text().strip().rpartition("@")[2]  # username lives in Login
         c.port = int(self.port.get_value())
         c.duo_answer = self.duo.get_text().strip() or "push"
+        c.second_factor = FACTORS[self.factor.get_selected()][0]
         v.enabled = self.vpn_on.get_active()
         v.gateway = self.gateway.get_text().strip()
         v.protocol = VPN_PROTOCOLS[self.protocol.get_selected()]
