@@ -21,6 +21,7 @@ from .ui.projects import Actions, ProjectsPage  # noqa: E402
 from .ui.quit import QuitMixin  # noqa: E402
 from .ui.settings import ClusterSettingsDialog  # noqa: E402
 from .ui.tools import Tools  # noqa: E402
+from .ui.browser_login import BrowserLoginDialog  # noqa: E402
 from .ui.web_login import WebLoginDialog  # noqa: E402
 from .ui.window import MainWindow  # noqa: E402
 
@@ -125,7 +126,7 @@ class HpcHubApp(QuitMixin, Adw.Application):
         done.wait()
         return result["answer"]
 
-    def web_login(self, session: ClusterSession, start, login) -> tuple[str, str]:
+    def web_login(self, session: ClusterSession, start, login, in_browser: bool = False) -> tuple[str, str]:
         done = threading.Event()
         result = {"token": "", "err": "Sign-in cancelled"}
 
@@ -133,17 +134,26 @@ class HpcHubApp(QuitMixin, Adw.Application):
             result.update(token=token, err=err)
             done.set()
 
+        def in_app():
+            WebLoginDialog(f"{session.cfg.name} VPN sign-in", start, login.username, login.password,
+                           finished).present(self.window)
+
         def show():
             if not self.window:
                 done.set()
-                return False
-            WebLoginDialog(f"{session.cfg.name} VPN sign-in", start, login.username, login.password,
-                           finished).present(self.window)
+            elif in_browser:
+                BrowserLoginDialog(f"{session.cfg.name} VPN sign-in", start, session.cfg.vpn.browser, finished,
+                                   in_app).present(self.window)
+            else:
+                in_app()
             return False
 
         GLib.idle_add(show)
         done.wait()
         return result["token"], result["err"]
+
+    def browser_login(self, session: ClusterSession, start, login) -> tuple[str, str]:
+        return self.web_login(session, start, login, in_browser=True)
 
     # -- main-thread handlers ---------------------------------------------------------
     def _on_state(self, session: ClusterSession) -> bool:

@@ -25,6 +25,7 @@ class VpnSettings:
     split_tunnel: bool = True  # only the networks/domains below use the VPN
     domains: str = ""  # DNS domains answered by the VPN's DNS, space separated
     routes: str = ""  # networks sent through the VPN, space separated CIDRs
+    browser: str = ""  # sign in with this Chrome profile (e.g. "Uni"); "" = the app's own window
 
 
 @dataclass

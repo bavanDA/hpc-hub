@@ -17,9 +17,11 @@ gi.require_version("WebKit", "6.0")
 from gi.repository import GLib, Gtk, WebKit  # noqa: E402
 
 if __package__:
+    from . import browser  # noqa: E402
     from .paths import web_dir  # noqa: E402
 else:  # run as a script by openconnect (bin/hpc-hub-sso)
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    from hpc_hub import browser  # noqa: E402
     from hpc_hub.paths import web_dir  # noqa: E402
 
 # One step per call: email page -> Next, password page -> Sign in. Returns what it did.
@@ -163,6 +165,9 @@ def main() -> int:
     if len(sys.argv) < 2:
         return 1
     url = sys.argv[1]
+    profile = os.environ.get("HPC_HUB_BROWSER", "")
+    if profile and browser.open_url(url, profile):  # you sign in in Chrome; it comes back to openconnect
+        return 0
     app = Gtk.Application(application_id=None)
     app.connect("activate", lambda a: SsoWindow(a, url).present())
     return app.run([sys.argv[0]])

@@ -43,6 +43,7 @@ class Listener(Protocol):
     def ask(self, session: "ClusterSession", prompt: str) -> str | None: ...
     def code(self, session: "ClusterSession", prompt: str) -> str | None: ...
     def web_login(self, session: "ClusterSession", start: vpn_sso.SsoStart, login: Login) -> tuple[str, str]: ...
+    def browser_login(self, session: "ClusterSession", start: vpn_sso.SsoStart, login: Login) -> tuple[str, str]: ...
 
 
 SSO_USER = "hpc-hub:sso-username"
@@ -371,13 +372,17 @@ class ClusterSession:
         if gw.hostname and not reachable(gw.hostname, gw.port or 443, timeout=8):
             raise VpnError(f"Can't reach VPN server {gw.hostname} or {self.cfg.host}. Check your network.")
         vpn.ensure_profile()
+        env = self.askpass.env(token)
+        if self.cfg.vpn.browser:
+            env["HPC_HUB_BROWSER"] = self.cfg.vpn.browser
+            self._set(State.VPN, f"Sign in to the VPN in Chrome ({self.cfg.vpn.browser})")
         try:
             auth = vpn.authenticate(
                 login.username, login.password,
                 ask=lambda prompt: self.listener.ask(self, prompt),
                 on_duo=lambda: self._set(State.DUO, "Approve the Duo push on your phone"),
                 cancelled=self._cancel.is_set,
-                env=self.askpass.env(token),
+                env=env,
             )
         except NeedsWebLogin:
             auth = self._web_vpn_login(login)
@@ -392,8 +397,12 @@ class ClusterSession:
             if not start:
                 raise VpnError("VPN server did not offer web sign-in")
             self._log("vpn: web sign-in")
-            self._set(State.DUO, "Sign in on the page, then approve Duo on your phone")
-            token, err = self.listener.web_login(self, start, login)
+            if self.cfg.vpn.browser:
+                self._set(State.VPN, f"Sign in to the VPN in Chrome ({self.cfg.vpn.browser})")
+                token, err = self.listener.browser_login(self, start, login)
+            else:
+                self._set(State.DUO, "Sign in on the page, then approve Duo on your phone")
+                token, err = self.listener.web_login(self, start, login)
             if not token:
                 raise VpnError(err or "Sign-in cancelled")
             cookie, host = vpn_sso.finish(start, token, ua)

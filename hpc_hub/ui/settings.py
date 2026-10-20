@@ -4,7 +4,7 @@ from collections.abc import Callable
 
 from gi.repository import Adw, Gtk
 
-from .. import credentials
+from .. import browser, credentials
 from ..config import VPN_PROTOCOLS, ClusterConfig, ComputeProfile
 from ..credentials import Login
 from ..limits import Limits, minutes, slurm_time
@@ -130,13 +130,20 @@ class ClusterSettingsDialog(Adw.PreferencesDialog):
         self.domains = _entry("VPN domains (its DNS answers these)", v.domains)
         self.routes = _entry("VPN networks (CIDR, space separated)", v.routes)
         self.same_login = _switch("Same login as cluster", v.same_login_as_ssh)
+        self.chrome = [p.name for p in browser.profiles()] if browser.chrome() else []
+        if v.browser and v.browser not in self.chrome:
+            self.chrome.append(v.browser)
+        self.sign_in = Adw.ComboRow(title="Sign in with", model=Gtk.StringList.new(
+            ["This app (fills your login)"] + [f"Chrome: {name}" for name in self.chrome]))
+        self.sign_in.set_selected(self.chrome.index(v.browser) + 1 if v.browser else 0)
+        self.sign_in.set_subtitle("In Chrome you are often signed in already, so it is quicker")
         self.vpn_user = _entry("VPN username (e.g. first.last@yale.edu)", self.vpn_saved.username if self.vpn_saved else "")
         self.vpn_password = self._password_row(self.vpn_saved)
         if not (self.vpn_saved and self.vpn_saved.password):
             self.vpn_password.set_title("VPN password (empty = cluster password)")
         else:
             self.vpn_password.set_title("VPN " + self.vpn_password.get_title().lower())
-        for row in (self.vpn_on, self.gateway, self.protocol, self.useragent, self.authgroup,
+        for row in (self.vpn_on, self.gateway, self.sign_in, self.protocol, self.useragent, self.authgroup,
                     self.split, self.domains, self.routes, self.same_login, self.vpn_user, self.vpn_password):
             vpn.add(row)
         page.add(vpn)
@@ -200,7 +207,8 @@ class ClusterSettingsDialog(Adw.PreferencesDialog):
 
     def _sync_vpn(self) -> None:
         on = self.vpn_on.get_active()
-        for row in (self.gateway, self.protocol, self.useragent, self.authgroup, self.same_login, self.split):
+        for row in (self.gateway, self.sign_in, self.protocol, self.useragent, self.authgroup, self.same_login,
+                    self.split):
             row.set_sensitive(on)
         for row in (self.domains, self.routes):
             row.set_sensitive(on and self.split.get_active())
@@ -251,6 +259,8 @@ class ClusterSettingsDialog(Adw.PreferencesDialog):
         v.useragent = self.useragent.get_text().strip()
         v.authgroup = self.authgroup.get_text().strip()
         v.same_login_as_ssh = self.same_login.get_active()
+        i = self.sign_in.get_selected()
+        v.browser = self.chrome[i - 1] if 0 < i <= len(self.chrome) else ""
         v.split_tunnel = self.split.get_active()
         v.domains = " ".join(self.domains.get_text().split())
         v.routes = " ".join(self.routes.get_text().split())
