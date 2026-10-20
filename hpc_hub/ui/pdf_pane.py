@@ -28,14 +28,27 @@ class PdfPane(Gtk.Box):
         self.play = Gtk.Button(child=Adw.ButtonContent(label="Read aloud", icon_name="media-playback-start-symbolic"),
                                tooltip_text="Read the PDF aloud from the page you are on. Triple-click any word to look it up.")
         self.play.connect("clicked", lambda *_: self._toggle())
+        self.transport: list[Gtk.Widget] = []
+        for icon, tip, fn in (("media-seek-backward-symbolic", "Back 10 seconds", lambda: self.view.speak_skip(-10)),
+                              ("media-seek-forward-symbolic", "Forward 10 seconds", lambda: self.view.speak_skip(10)),
+                              ("media-playback-stop-symbolic", "Stop and go back to the start",
+                               lambda: self.view.speak_rewind())):
+            b = Gtk.Button(icon_name=icon, tooltip_text=tip, css_classes=["flat"], sensitive=False)
+            b.connect("clicked", lambda *_, f=fn: f())
+            self.transport.append(b)
+        self.clock = Gtk.Label(css_classes=["numeric", "caption"], width_chars=13)
         self.voice = Gtk.DropDown.new_from_strings([label for _, label in narration.VOICES])
+        self.voice.set_enable_search(True)
+        self.voice.set_expression(Gtk.PropertyExpression.new(Gtk.StringObject, None, "string"))
+        self.voice.set_tooltip_text("Voice (type to search)")
         self.voice.connect("notify::selected", lambda *_: self._reset())
         self.speed = Gtk.DropDown.new_from_strings([f"{s:g}x" for s in SPEEDS])
         self.speed.set_selected(1)
         self.speed.connect("notify::selected", lambda *_: self._rate())
         self.status = Gtk.Label(xalign=0, hexpand=True, ellipsize=Pango.EllipsizeMode.END, css_classes=["dim-label", "caption"])
         self.spin = Adw.Spinner(visible=False)
-        for w in (self.play, self.voice, self.speed, self.spin, self.status):
+        back, forward, stop = self.transport
+        for w in (back, self.play, forward, stop, self.clock, self.voice, self.speed, self.spin, self.status):
             self.reader.append(w)
         self.append(self.reader)
 
@@ -60,6 +73,7 @@ class PdfPane(Gtk.Box):
         view.on_double_click = self._on_double_click
         view.on_speak_state = self._speak_state
         view.on_word = self.words.show_word
+        view.on_time = self._tick
         view.filename = self.filename
         self.stack.add_named(view, "pdfjs")
         self.stack.set_visible_child(view)
@@ -134,6 +148,12 @@ class PdfPane(Gtk.Box):
             GLib.timeout_add(1500, lambda: self._rate() and False)
         bg(lambda: narration.build(pdf, voice, progress), done)
 
+    def _tick(self, at: float, total: float) -> None:
+        def clock(t):
+            t = int(t)
+            return f"{t // 3600}:{t // 60 % 60:02d}:{t % 60:02d}" if t >= 3600 else f"{t // 60}:{t % 60:02d}"
+        self.clock.set_label(f"{clock(at)} / {clock(total)}" if total else clock(at))
+
     def _say(self, entry) -> None:
         """Play the word: the dictionary's recording, or the reader voice saying it."""
         if entry.audio:
@@ -154,9 +174,13 @@ class PdfPane(Gtk.Box):
             self.toast(f"Read aloud stopped: {error}")
         self.speaking = state == "playing"
         playing = self.speaking
-        self.play.set_child(Adw.ButtonContent(label="Pause" if playing else "Read aloud",
-                                              icon_name="media-playback-pause-symbolic" if playing
-                                              else "media-playback-start-symbolic"))
+        for b in self.transport:
+            b.set_sensitive(self.narrated is not None)
+        if state == "stopped":
+            self.clock.set_label("")
+        label = "Pause" if playing else "Play" if self.narrated is not None else "Read aloud"
+        icon = "media-playback-pause-symbolic" if playing else "media-playback-start-symbolic"
+        self.play.set_child(Adw.ButtonContent(label=label, icon_name=icon))
 
     def show_message(self, title: str, text: str = "") -> None:
         self.view.show_message(title, text)

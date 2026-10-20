@@ -50,9 +50,12 @@
     }
   }
 
+  let lastTime = -1;
   function tick() {
     frame = 0;
     if (!audio) return;
+    const sec = Math.floor(audio.currentTime);
+    if (sec !== lastTime) { lastTime = sec; post({kind: "time", at: audio.currentTime, total: audio.duration || 0}); }
     const i = indexAt(audio.currentTime);
     if (i >= 0 && i !== current) { current = i; show(i); }
     if (!audio.paused) frame = requestAnimationFrame(tick);
@@ -104,6 +107,12 @@
       audio.play().catch((e) => post({kind: "speak", state: "error", at: audio.currentTime, error: String(e)}));
     },
     pause() { audio && audio.pause(); },
+    skip(seconds) {
+      if (!audio) return;
+      audio.currentTime = Math.max(0, Math.min(audio.currentTime + seconds, (audio.duration || 1e9) - 0.1));
+      tick();
+    },
+    rewind() { if (audio) { audio.pause(); audio.currentTime = 0; current = -1; tick(); } },
     rate(r) { if (audio) audio.playbackRate = r; },
     stop() {
       if (audio) { audio.pause(); URL.revokeObjectURL(audio.src); audio.src = ""; }

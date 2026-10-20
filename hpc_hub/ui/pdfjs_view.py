@@ -91,6 +91,7 @@ class PdfJsView(Gtk.Box):
         self.on_double_click = None  # (page 1-based, x, y in PDF points from the top) -> None
         self.on_speak_state = None  # ("playing" | "paused" | "ended") -> None
         self.on_word = None  # (word text, narration word id or None) -> None: you clicked a word
+        self.on_time = None  # (position, length) in seconds, about once a second while reading
         self.filename = "document.pdf"  # name used when you save a copy
         self.ready = False
         self.pending: list[str] = []
@@ -140,6 +141,9 @@ class PdfJsView(Gtk.Box):
             _log(f"{msg.get('state')} at {msg.get('at', 0):.1f}s {msg.get('error', '')}".rstrip())
             if self.on_speak_state:
                 self.on_speak_state(msg.get("state", ""), msg.get("error", ""))
+        elif msg.get("kind") == "time":
+            if self.on_time:
+                self.on_time(float(msg.get("at", 0)), float(msg.get("total", 0)))
         elif msg.get("kind") == "word":
             if self.on_word:
                 self.on_word(str(msg.get("text", "")), msg.get("id"))
@@ -188,6 +192,12 @@ class PdfJsView(Gtk.Box):
 
     def speak_rate(self, rate: float) -> None:
         self._js(f"hpchubSpeak.rate({float(rate)})")
+
+    def speak_skip(self, seconds: float) -> None:
+        self._js(f"hpchubSpeak.skip({float(seconds)})")
+
+    def speak_rewind(self) -> None:
+        self._js("hpchubSpeak.rewind()")
 
     def speak_from(self, word_id: int) -> None:
         self._js(f"hpchubSpeak.seekWord({int(word_id)})")
