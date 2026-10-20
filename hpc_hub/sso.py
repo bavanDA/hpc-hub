@@ -68,6 +68,10 @@ def ask_app(prompt: str) -> str | None:
     return reply.get("answer") if reply.get("ok") else None
 
 
+SETTLE = 2800  # ms to wait before typing into a freshly loaded page (sign-in pages finish their scripts late)
+POLL = 800
+
+
 class AutoFill:
     """Fills username, then password, once each, on whatever sign-in page the view shows."""
 
@@ -78,26 +82,33 @@ class AutoFill:
 
     def page_loaded(self) -> None:
         if self.password and not self.timer and not self.done["pass"]:
-            self.timer = GLib.timeout_add(800, self._step)
+            self._later(SETTLE)
+
+    def _later(self, ms: int) -> None:
+        self.timer = GLib.timeout_add(ms, self._step)
 
     def _step(self) -> bool:
+        self.timer = 0
         if self.done["pass"]:
-            self.timer = 0
             return False
         script = STEP_JS % (json.dumps(self.username), json.dumps(self.password),
                             json.dumps(self.done["user"]), json.dumps(self.done["pass"]))
         self.view.evaluate_javascript(script, -1, None, None, None, self._stepped, None)
-        return True
+        return False
 
     def _stepped(self, view, result, _data) -> None:
         try:
             did = view.evaluate_javascript_finish(result).to_string()
         except GLib.Error:
-            return
+            did = ""
         if did in self.done:
             self.done[did] = True
             if did == "pass":
                 self.on_sent()
+                return
+            self._later(SETTLE)  # after the username, let the password page settle before typing
+        elif not self.timer:
+            self._later(POLL)  # no field yet: look again soon
 
 
 _session = None
