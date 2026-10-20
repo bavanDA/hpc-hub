@@ -29,24 +29,28 @@ STEP_JS = """
   const pick = sel => [...document.querySelectorAll(sel)].find(shown);
   const set = (el, v) => {
     el.focus();
-    // native setter, so React/Knockout pages (Okta, Microsoft) see the value
+    // native setter + the events typing makes, so React/Backbone pages (Okta, Microsoft) take the value
     Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(el, v);
-    el.dispatchEvent(new Event('input', {bubbles: true}));
+    el.dispatchEvent(new InputEvent('input', {bubbles: true, inputType: 'insertText', data: v}));
+    el.dispatchEvent(new KeyboardEvent('keyup', {bubbles: true, key: 'End'}));
     el.dispatchEvent(new Event('change', {bubbles: true}));
+    el.dispatchEvent(new Event('blur'));
   };
-  const submit = el => {
+  // press Next / Sign in a moment later, once the page has taken the value ("cannot be left blank" otherwise)
+  const submit = (el, v) => setTimeout(() => {
+    if (el.value !== v) set(el, v);
     const btn = pick('#idSIButton9, button[type=submit], input[type=submit]');
     if (btn) btn.click();
     else if (el.form) el.form.requestSubmit ? el.form.requestSubmit() : el.form.submit();
-  };
+  }, 700);
   const user = pick('input[name=loginfmt], input[type=email], input[name=username], ' +
                     'input#username, input[name=j_username], input[name=identifier]');
   const pw = pick('input[type=password]');
   if (pw && p && !donePass) {
     if (user && u && !user.value) set(user, u);
-    set(pw, p); submit(pw); return 'pass';
+    set(pw, p); submit(pw, p); return 'pass';
   }
-  if (!pw && user && u && !doneUser) { set(user, u); submit(user); return 'user'; }
+  if (!pw && user && u && !doneUser) { set(user, u); submit(user, u); return 'user'; }
   return '';
 })(%s, %s, %s, %s);
 """
