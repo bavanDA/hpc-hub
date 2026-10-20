@@ -268,6 +268,8 @@ class ClusterSession:
                     self._log(f"{kind} asked again; stopping to avoid lockout")
                     return None
                 if kind == prompts.PASSWORD:
+                    if not ssh_login.password:
+                        self._log("The cluster asked for a password: your SSH key is not on it yet")
                     return ssh_login.password or None
                 self._set(State.DUO, "Approve the Duo push on your phone")
                 return prompts.duo_reply(prompt, self.cfg.duo_answer)

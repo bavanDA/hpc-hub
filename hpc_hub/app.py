@@ -22,6 +22,7 @@ from .ui.quit import QuitMixin  # noqa: E402
 from .ui.settings import ClusterSettingsDialog  # noqa: E402
 from .ui.tools import Tools  # noqa: E402
 from .ui.browser_login import BrowserLoginDialog  # noqa: E402
+from .ui.key_setup import KeySetupDialog  # noqa: E402
 from .ui.web_login import WebLoginDialog  # noqa: E402
 from .ui.window import MainWindow  # noqa: E402
 
@@ -295,9 +296,17 @@ class HpcHubApp(QuitMixin, Adw.Application):
         self.window.latex.open_project(session, project)
         self.window.stack.set_visible_child_name("latex")
 
+    def _key_login(self, session: ClusterSession, username: str) -> None:
+        """Key login set up through the portal: save just the username (no password) and connect."""
+        credentials.save(session.cfg.id, credentials.SSH, credentials.Login(username, ""))
+        self.connect_session(session)
+
     def connect_session(self, session: ClusterSession, vpn_only: bool = False) -> None:
         cfg = session.cfg
         ssh_login = credentials.load(cfg.id, credentials.SSH)
+        if (not ssh_login or not ssh_login.username) and cfg.portal:
+            KeySetupDialog(cfg, lambda user: self._key_login(session, user)).present(self.window)
+            return
         if not ssh_login or not ssh_login.username:
             self.open_settings(session, "Enter your username and password first")
             return
