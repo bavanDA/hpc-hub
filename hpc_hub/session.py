@@ -259,7 +259,8 @@ class ClusterSession:
                 self._set(State.DUO, "Sign in to the VPN, then approve Duo on your phone")
                 return vpn_login.password if vpn_login else None
             kind = prompts.classify(prompt)
-            if kind == prompts.CODE or (kind == prompts.DUO and self.cfg.second_factor == "code"):
+            code_login = self.cfg.second_factor == "code"  # then any other question is the code
+            if kind == prompts.CODE or (code_login and kind in (prompts.DUO, prompts.UNKNOWN)):
                 self._set(State.SIGNING_IN, "Type the code from your authenticator app")
                 return self.listener.code(self, prompt)
             if kind in handler_state:
