@@ -184,6 +184,19 @@ class PdfJsView(Gtk.Box):
         self._js(f"hpchubSpeak.load({json.dumps(audio.as_uri())}, {json.dumps(words)}, {json.dumps(timings)})"
                  ".then(() => hpchubSpeak.play(true))")
 
+    def speak_swap(self, audio: Path, words: list, timings: list, offset: float) -> None:
+        self._js(f"hpchubSpeak.swap({json.dumps(audio.as_uri())}, {json.dumps(words)}, {json.dumps(timings)}, "
+                 f"{float(offset)})")
+
+    def current_page(self, done) -> None:
+        """done(page) with the page you are looking at."""
+        def got(web, res, *_):
+            try:
+                done(int(web.evaluate_javascript_finish(res).to_double()) or 1)
+            except Exception:  # noqa: BLE001 - viewer not ready: start at the top
+                done(1)
+        self.web.evaluate_javascript("PDFViewerApplication.page", -1, None, None, None, got, None)
+
     def speak_play(self) -> None:
         self._js("hpchubSpeak.play(true)")
 

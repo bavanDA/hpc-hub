@@ -3,7 +3,7 @@
 (() => {
   const post = (msg) => window.webkit.messageHandlers.hpchub.postMessage(JSON.stringify(msg));
   let audio = null, words = new Map(), times = [], byPage = new Map(), heights = new Map();
-  let current = -1, mark = null, userScrolled = 0, frame = 0;
+  let current = -1, mark = null, userScrolled = 0, timer = 0;
 
   async function app() {
     while (!window.PDFViewerApplication) await new Promise((r) => setTimeout(r, 50));
@@ -51,15 +51,14 @@
   }
 
   let lastTime = -1;
-  function tick() {
-    frame = 0;
+  function tick() {  // a plain timer, not animation frames: those stop when the window is in the background
     if (!audio) return;
     const sec = Math.floor(audio.currentTime);
     if (sec !== lastTime) { lastTime = sec; post({kind: "time", at: audio.currentTime, total: audio.duration || 0}); }
     const i = indexAt(audio.currentTime);
     if (i >= 0 && i !== current) { current = i; show(i); }
-    if (!audio.paused) frame = requestAnimationFrame(tick);
   }
+  timer = setInterval(() => audio && !audio.paused && tick(), 100);
 
   function wordAt(page, x, y) {  // the word under (or nearest to) a point, in PDF points from the top
     let best = null, dist = Infinity;
@@ -78,26 +77,50 @@
     return 0;
   }
 
+  function setWords(wordList, timings) {
+    words = new Map(wordList.map((w) => [w[0], w.slice(1)]));
+    byPage = new Map();
+    for (const [id, page] of wordList) (byPage.get(page) || byPage.set(page, []).get(page)).push(id);
+    times = timings;
+  }
+
+  async function player(url) {
+    // the viewer only plays blob: media, so read the file and hand it over as a blob
+    const blob = await (await fetch(url)).blob();
+    const el = new Audio(URL.createObjectURL(blob));
+    const say = (state, extra = {}) => { if (el === audio) post({kind: "speak", state, at: el.currentTime, ...extra}); };
+    el.addEventListener("play", () => { say("playing"); tick(); });
+    el.addEventListener("pause", () => say("paused"));
+    el.addEventListener("ended", () => say("ended"));
+    el.addEventListener("error", () => say("error", {error: el.error ? `${el.error.code} ${el.error.message}` : "unknown"}));
+    for (const ev of ["stalled", "waiting"]) el.addEventListener(ev, () => say(ev));
+    el.addEventListener("seeked", () => el === audio && tick());
+    return el;
+  }
+
   window.hpchubSpeak = {
     async load(url, wordList, timings) {
       this.stop();
-      // the viewer only plays blob: media, so read the file and hand it over as a blob
-      const blob = await (await fetch(url)).blob();
-      words = new Map(wordList.map((w) => [w[0], w.slice(1)]));
-      byPage = new Map();
-      for (const [id, page] of wordList) (byPage.get(page) || byPage.set(page, []).get(page)).push(id);
-      times = timings;
-      audio = new Audio(URL.createObjectURL(blob));
-      const at = () => (audio ? audio.currentTime : 0);
-      audio.addEventListener("play", () => { post({kind: "speak", state: "playing", at: at()}); tick(); });
-      audio.addEventListener("pause", () => post({kind: "speak", state: "paused", at: at()}));
-      audio.addEventListener("ended", () => post({kind: "speak", state: "ended", at: at()}));
-      audio.addEventListener("error", () => post({kind: "speak", state: "error", at: at(),
-        error: audio && audio.error ? `${audio.error.code} ${audio.error.message}` : "unknown"}));
-      for (const ev of ["stalled", "waiting", "emptied", "abort"]) {
-        audio.addEventListener(ev, () => post({kind: "speak", state: ev, at: at()}));
-      }
-      audio.addEventListener("seeked", tick);
+      const el = await player(url);
+      setWords(wordList, timings);
+      audio = el;
+    },
+    // the full recording replaces the short first one at the same moment: offset = where the short one
+    // began in the full one
+    async swap(url, wordList, timings, offset) {
+      const el = await player(url), old = audio;
+      if (!old) return;
+      const playing = !old.paused;
+      await new Promise((r) => { el.addEventListener("loadedmetadata", r, {once: true}); el.load(); });
+      el.currentTime = offset + old.currentTime;
+      el.playbackRate = old.playbackRate;
+      setWords(wordList, timings);
+      current = -1;
+      audio = el;  // from here events come from the new one
+      if (playing) await el.play();
+      old.pause();
+      URL.revokeObjectURL(old.src);
+      if (!playing) tick();
     },
     loaded() { return !!audio; },
     now() { return audio ? audio.currentTime : 0; },
@@ -115,10 +138,11 @@
     rewind() { if (audio) { audio.pause(); audio.currentTime = 0; current = -1; tick(); } },
     rate(r) { if (audio) audio.playbackRate = r; },
     stop() {
-      if (audio) { audio.pause(); URL.revokeObjectURL(audio.src); audio.src = ""; }
-      audio = null; current = -1;
+      const old = audio;
+      audio = null; current = -1;  // first, so the old player's last events are ignored
+      if (old) { old.pause(); URL.revokeObjectURL(old.src); old.removeAttribute("src"); old.load(); }
       if (mark) mark.remove();
-      if (frame) cancelAnimationFrame(frame);
+
     },
   };
 

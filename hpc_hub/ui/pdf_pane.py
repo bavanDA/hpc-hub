@@ -1,6 +1,8 @@
 """The LaTeX tab's PDF: PDF.js once it is downloaded (first use), the simple Poppler view until then.
 With PDF.js it can also read the PDF aloud, highlighting each word as it is spoken."""
 
+import shutil
+
 from gi.repository import Adw, GLib, Gtk, Pango
 
 from .. import pdfjs
@@ -10,6 +12,7 @@ from .pdf import PdfView
 from .widgets import bg
 
 SPEEDS = [0.75, 1.0, 1.25, 1.5, 1.75, 2.0]
+FIRST_CHUNKS = 3  # recorded before reading starts (about a minute of speech)
 
 
 class PdfPane(Gtk.Box):
@@ -22,6 +25,7 @@ class PdfPane(Gtk.Box):
         self.narrated: bytes | None = None  # the PDF the loaded narration belongs to
         self.speaking = False
         self.recording = False
+        self.round = 0  # bumps when the PDF or voice changes, so old recordings are ignored
 
         self.reader = Gtk.Box(spacing=6, margin_top=4, margin_bottom=4, margin_start=6, margin_end=6,
                               visible=False)
@@ -104,6 +108,9 @@ class PdfPane(Gtk.Box):
 
     # -- read aloud ------------------------------------------------------------------------
     def _reset(self) -> None:
+        self.round += 1  # recordings still running belong to the old PDF or voice
+        self.recording = False
+        self.spin.set_visible(False)
         if hasattr(self.view, "speak_stop"):
             self.view.speak_stop()
         self.narrated = None
@@ -124,29 +131,71 @@ class PdfPane(Gtk.Box):
             self._record(self.last[0], narration.VOICES[self.voice.get_selected()][0])
 
     def _record(self, pdf: bytes, voice: str) -> None:
+        """Read from the page you are on within seconds: record a few chunks from there and start, while
+        the rest is recorded in the background and swapped in at the same moment."""
         self.recording = True
+        self.round += 1
+        token = self.round
         self.spin.set_visible(True)
         self.status.set_label("Getting the voice ready…")
 
         def progress(text):
-            GLib.idle_add(lambda: self.status.set_label(text) and False)
+            GLib.idle_add(lambda: token == self.round and self.status.set_label(text) and False)
 
-        def done(n, err):
+        def first(page):
+            n = narration.cached(pdf, voice)
+            if n:
+                return n, None, 0
+            plan = narration.plan(pdf, voice, progress)
+            start = plan.first_on(page)
+            end = min(start + FIRST_CHUNKS, len(plan.parts))
+            narration.record(plan, list(range(start, end)), progress)
+            if start == 0 and end == len(plan.parts):
+                return narration.full(plan), None, 0
+            return narration.assemble(plan, start, end), plan, start
+
+        def started(result, err):
+            if token != self.round:
+                return
             self.recording = False
-            self.spin.set_visible(False)
-            if err or not n:
+            if err or not result:
+                self.spin.set_visible(False)
                 self.status.set_label("")
                 self.toast(f"Could not read aloud: {err}")
                 return
             if not self.last or self.last[0] is not pdf:
+                self.spin.set_visible(False)
                 self.status.set_label("")
                 return  # rebuilt while recording; press again for the new one
+            n, plan, start = result
             self.narrated = pdf
-            minutes = int(n.duration // 60)
-            self.status.set_label(f"{minutes} min of reading. Triple-click a word to look it up or read from there.")
             self.view.speak_load(n.audio, n.words, n.timings)  # starts playing once loaded
             GLib.timeout_add(1500, lambda: self._rate() and False)
-        bg(lambda: narration.build(pdf, voice, progress), done)
+            if plan is None:
+                self._ready(n)
+                return
+            self.status.set_label("Reading. Recording the rest…")
+            bg(lambda: (narration.full(plan, progress, start), narration.start_time(plan, start)),
+               lambda got, e: swap(got, e, n))
+
+        def swap(got, err, part):
+            if token != self.round:
+                return
+            shutil.rmtree(part.audio.parent, ignore_errors=True)  # the player already holds it
+            if err or not got:
+                self.spin.set_visible(False)
+                self.status.set_label(f"Could not record the rest: {err}")
+                return
+            whole, offset = got
+            self.view.speak_swap(whole.audio, whole.words, whole.timings, offset)
+            self._ready(whole)
+
+        self.view.current_page(lambda page: bg(lambda: first(page), started))
+
+    def _ready(self, n) -> None:
+        self.spin.set_visible(False)
+        self.status.set_label(f"{int(n.duration // 60)} min of reading. Triple-click a word to look it up "
+                              "or read from there.")
 
     def _tick(self, at: float, total: float) -> None:
         def clock(t):
