@@ -17,7 +17,8 @@ class DictionaryPanel(Gtk.Revealer):
     """on_say(entry) plays the word; on_read(id) reads aloud from that word."""
 
     def __init__(self, on_say: Callable[[dictionary.Entry], None], on_read: Callable[[int], None]):
-        super().__init__(transition_type=Gtk.RevealerTransitionType.SLIDE_LEFT, reveal_child=False)
+        # hexpand off: its labels expand, and that would otherwise make the closed panel take space
+        super().__init__(transition_type=Gtk.RevealerTransitionType.SLIDE_LEFT, reveal_child=False, hexpand=False)
         self.on_say, self.on_read = on_say, on_read
         self.token = 0
         self.word_id: int | None = None
