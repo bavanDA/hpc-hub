@@ -16,7 +16,9 @@ TICKS = 10_000_000
 async def one(i: int, text: str, voice: str, rate: str, out: str, limit: asyncio.Semaphore) -> None:
     async with limit:
         audio, tokens = bytearray(), []
-        for attempt in range(3):
+        for attempt in range(5):
+            if attempt:
+                await asyncio.sleep(1.5 * attempt)  # the service is busy: give it a moment
             try:
                 audio, tokens = bytearray(), []
                 async for c in edge_tts.Communicate(text, voice, rate=rate, boundary="WordBoundary").stream():
@@ -27,7 +29,7 @@ async def one(i: int, text: str, voice: str, rate: str, out: str, limit: asyncio
                         tokens.append([c["text"], start, start + c["duration"] / TICKS])
                 break
             except Exception as e:  # noqa: BLE001 - the service hiccups now and then; try again
-                if attempt == 2:
+                if attempt == 4:
                     print(json.dumps({"i": i, "error": str(e)}), flush=True)
                     return
         with open(f"{out}/{i}.mp3", "wb") as fh:
@@ -37,7 +39,7 @@ async def one(i: int, text: str, voice: str, rate: str, out: str, limit: asyncio
 
 async def main() -> None:
     job = json.load(sys.stdin)
-    limit = asyncio.Semaphore(6)
+    limit = asyncio.Semaphore(12)  # the service is happy with a dozen at once
     await asyncio.gather(*(one(i, t, job["voice"], job.get("rate", "+0%"), job["out"], limit)
                            for i, t in enumerate(job["chunks"])))
 
