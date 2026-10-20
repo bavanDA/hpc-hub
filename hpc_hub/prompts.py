@@ -5,17 +5,21 @@ import re
 USERNAME = "username"
 PASSWORD = "password"
 DUO = "duo"
+CODE = "code"  # a one-time code from an authenticator app (TOTP), e.g. SDSC Expanse
 GROUP = "group"
 PASSPHRASE = "passphrase"
 UNKNOWN = "unknown"
 
 _DUO = re.compile(r"duo|passcode|second password|secondary password|push", re.I)
+_CODE = re.compile(r"totp|verification code|one[- ]time|\botp\b|authenticator|token code", re.I)
 
 
 def classify(prompt: str) -> str:
     p = prompt.strip().lower()
     if "passphrase" in p:
         return PASSPHRASE
+    if _CODE.search(p):
+        return CODE
     if _DUO.search(p):
         return DUO
     if "password" in p:

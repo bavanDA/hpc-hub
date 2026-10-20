@@ -18,7 +18,8 @@ def test_classify():
     assert p.classify("Username:") == p.USERNAME
     assert p.classify("GROUP: [Yale|Other]:") == p.GROUP
     assert p.classify("Enter passphrase for key '/home/x/.ssh/id_ed25519': ") == p.PASSPHRASE
-    assert p.classify("Verification code: ") == p.UNKNOWN
+    assert p.classify("Verification code: ") == p.CODE
+    assert p.classify("(jdoe@login.expanse.sdsc.edu) TOTP code for jdoe: ") == p.CODE
 
 
 def test_group_choice():

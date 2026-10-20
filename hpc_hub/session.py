@@ -41,6 +41,7 @@ class Listener(Protocol):
     def state_changed(self, session: "ClusterSession") -> None: ...
     def log(self, session: "ClusterSession", line: str) -> None: ...
     def ask(self, session: "ClusterSession", prompt: str) -> str | None: ...
+    def code(self, session: "ClusterSession", prompt: str) -> str | None: ...
     def web_login(self, session: "ClusterSession", start: vpn_sso.SsoStart, login: Login) -> tuple[str, str]: ...
 
 
@@ -257,6 +258,9 @@ class ClusterSession:
                 self._set(State.DUO, "Sign in to the VPN, then approve Duo on your phone")
                 return vpn_login.password if vpn_login else None
             kind = prompts.classify(prompt)
+            if kind == prompts.CODE or (kind == prompts.DUO and self.cfg.second_factor == "code"):
+                self._set(State.SIGNING_IN, "Type the code from your authenticator app")
+                return self.listener.code(self, prompt)
             if kind in handler_state:
                 handler_state[kind] += 1
                 if handler_state[kind] > 1:

@@ -104,6 +104,7 @@ class ClusterConfig:
     host: str = ""
     port: int = 22
     duo_answer: str = "push"
+    second_factor: str = "duo"  # duo (push to your phone) or code (authenticator app, TOTP)
     request_node_on_connect: bool = True
     reuse_running_job: bool = False
     vpn: VpnSettings = field(default_factory=VpnSettings)
@@ -158,6 +159,7 @@ def default_clusters() -> list[ClusterConfig]:
             id="sdsc",
             name="SDSC Expanse",
             host="login.expanse.sdsc.edu",
+            second_factor="code",  # ACCESS login: ACCESS password, then a TOTP code
             profile=ComputeProfile(cpus=2, mem_gb=16, partition="shared"),
             vscode=VsCodeSettings(setup=FILE_KEYCHAIN,
                                   compute=ComputeProfile(cpus=2, mem_gb=8, time="08:00:00", partition="shared")),

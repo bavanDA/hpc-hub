@@ -118,6 +118,13 @@ class HpcHubApp(QuitMixin, Adw.Application):
         done.wait()
         return result["answer"]
 
+    def code(self, session: ClusterSession, prompt: str) -> str | None:
+        done = threading.Event()
+        result: dict[str, str | None] = {"answer": None}
+        GLib.idle_add(self._code_dialog, session, result, done)
+        done.wait()
+        return result["answer"]
+
     def web_login(self, session: ClusterSession, start, login) -> tuple[str, str]:
         done = threading.Event()
         result = {"token": "", "err": "Sign-in cancelled"}
@@ -200,6 +207,35 @@ class HpcHubApp(QuitMixin, Adw.Application):
 
         dialog.connect("response", on_response)
         dialog.present(self.window)
+        return False
+
+    def _code_dialog(self, session, result, done) -> bool:
+        """The 6-digit code from an authenticator app; sent as soon as it is typed."""
+        dialog = Adw.AlertDialog(heading=f"Code for {session.cfg.name}",
+                                 body="Open your authenticator app and type the 6-digit code.")
+        entry = Gtk.Entry(input_purpose=Gtk.InputPurpose.DIGITS, max_length=8, activates_default=True,
+                          xalign=0.5, placeholder_text="123456", css_classes=["title-2", "numeric"])
+        dialog.set_extra_child(entry)
+        dialog.add_response("cancel", "Cancel")
+        dialog.add_response("ok", "Send")
+        dialog.set_response_appearance("ok", Adw.ResponseAppearance.SUGGESTED)
+        dialog.set_default_response("ok")
+        dialog.set_close_response("cancel")
+
+        def on_response(_d, response):
+            if not done.is_set():
+                result["answer"] = entry.get_text().strip().replace(" ", "") if response == "ok" else None
+                done.set()
+
+        def typed(*_):
+            text = entry.get_text().replace(" ", "")
+            if len(text) == 6 and text.isdigit():
+                on_response(dialog, "ok")
+                dialog.force_close()
+        dialog.connect("response", on_response)
+        entry.connect("changed", typed)
+        dialog.present(self.window)
+        entry.grab_focus()
         return False
 
     # -- user actions ----------------------------------------------------------------
