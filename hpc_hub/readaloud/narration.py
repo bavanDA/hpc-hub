@@ -6,6 +6,7 @@ import os
 import shutil
 import subprocess
 import tempfile
+import time
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
@@ -81,52 +82,111 @@ def cache_dir() -> Path:
     return Path(base) / "hpc-hub" / "readaloud"
 
 
-def build(pdf: bytes, voice: str, progress: Callable[[str], None] = lambda text: None) -> Narration:
-    """Blocking: run off the UI thread. A PDF you already heard comes back from the cache at once."""
-    key = hashlib.sha256(pdf + voice.encode()).hexdigest()[:20]
-    d = cache_dir() / key
-    meta = d / "narration.json"
-    if meta.exists():
-        raw = json.loads(meta.read_text())
-        return Narration(d / "audio.mp3", raw["duration"], raw["words"], raw["timings"])
+@dataclass
+class Plan:
+    """What a PDF needs to be read aloud: its speech chunks and where each one's audio is kept."""
+    key: str
+    voice: str
+    python: Path
+    parts: list
+    keys: list[str]
 
+    def first_on(self, page: int) -> int:
+        """The chunk where reading from that page starts."""
+        return next((i for i, c in enumerate(self.parts) if any(w.page >= page for w in c.words)), 0)
+
+
+def _key(pdf: bytes, voice: str) -> str:
+    return hashlib.sha256(pdf + voice.encode() + b"v2").hexdigest()[:20]  # v2: PyMuPDF reading order
+
+
+def cached(pdf: bytes, voice: str) -> Narration | None:
+    meta = cache_dir() / _key(pdf, voice) / "narration.json"
+    if not meta.exists():
+        return None
+    raw = json.loads(meta.read_text())
+    return Narration(meta.parent / "audio.mp3", raw["duration"], raw["words"], raw["timings"])
+
+
+def _tidy() -> None:
+    """Short first recordings left behind (the app closed before the full one arrived)."""
+    now = time.time()
+    for d in cache_dir().glob("part-*"):
+        if now - d.stat().st_mtime > 3600:
+            shutil.rmtree(d, ignore_errors=True)
+
+
+def plan(pdf: bytes, voice: str, progress: Callable[[str], None] = lambda text: None) -> Plan:
+    if cache_dir().exists():
+        _tidy()
     py = env.python()
     if not py:
         progress("Setting up the voice (first time only)…")
         py = env.install()
-    words = extract(pdf)
-    parts = chunks(words)
+    parts = chunks(extract(pdf, py))
     if not parts:
         raise ValueError("This PDF has no text to read")
-    # speech is kept per chunk, so after an edit only the chunks that changed are recorded again
-    store = cache_dir() / "chunks"
-    store.mkdir(parents=True, exist_ok=True)
     keys = [hashlib.sha256(f"{voice}\n{c.text}".encode()).hexdigest()[:24] for c in parts]
-    todo = [i for i, k in enumerate(keys) if not (store / f"{k}.json").exists()]
-    if todo:
-        _record(py, voice, [parts[i].text for i in todo], [keys[i] for i in todo], store, progress)
+    return Plan(_key(pdf, voice), voice, py, parts, keys)
 
-    tmp = d.with_name(key + ".part")
-    shutil.rmtree(tmp, ignore_errors=True)
-    tmp.mkdir(parents=True)
+
+def _store() -> Path:
+    # speech is kept per chunk, so after an edit only the chunks that changed are recorded again
+    d = cache_dir() / "chunks"
+    d.mkdir(parents=True, exist_ok=True)
+    return d
+
+
+def record(p: Plan, order: list[int], progress: Callable[[str], None] = lambda text: None) -> None:
+    store = _store()
+    todo = [i for i in order if not (store / f"{p.keys[i]}.json").exists()]
+    if todo:
+        _record(p.python, p.voice, [p.parts[i].text for i in todo], [p.keys[i] for i in todo], store, progress)
+
+
+def assemble(p: Plan, first: int = 0, last: int | None = None, out: Path | None = None) -> Narration:
+    """Chunks first..last (all recorded) as one MP3 and timeline, starting at 0."""
+    store, last = _store(), len(p.parts) if last is None else last
+    out = out or Path(tempfile.mkdtemp(prefix="part-", dir=cache_dir()))
+    out.mkdir(parents=True, exist_ok=True)
     times: dict[int, tuple[float, float]] = {}
     elapsed = 0.0
-    with open(tmp / "audio.mp3", "wb") as out:
-        for c, k in zip(parts, keys):
+    with open(out / "audio.mp3", "wb") as f:
+        for c, k in zip(p.parts[first:last], p.keys[first:last]):
             audio = (store / f"{k}.mp3").read_bytes()
-            out.write(audio)
+            f.write(audio)
             tokens = [tuple(t) for t in json.loads((store / f"{k}.json").read_text())]
             for wid, (start, end) in align(c.words, tokens).items():
                 times[wid] = (start + elapsed, end + elapsed)
             elapsed += len(audio) / BYTES_PER_SECOND or (tokens[-1][2] if tokens else 0.0)
-    in_chunks = [w for c in parts for w in c.words]
-    timings = [list(t) for t in fill_gaps(in_chunks, times, elapsed)]
-    raw = {"duration": round(elapsed, 3), "timings": timings,
+    in_chunks = [w for c in p.parts[first:last] for w in c.words]
+    raw = {"duration": round(elapsed, 3), "timings": [list(t) for t in fill_gaps(in_chunks, times, elapsed)],
            "words": [[w.id, w.page, *(round(v, 2) for v in w.box)] for w in in_chunks]}
-    (tmp / "narration.json").write_text(json.dumps(raw))
+    (out / "narration.json").write_text(json.dumps(raw))
+    return Narration(out / "audio.mp3", raw["duration"], raw["words"], raw["timings"])
+
+
+def start_time(p: Plan, chunk: int) -> float:
+    """Where a chunk starts in the whole narration (its earlier chunks must be recorded)."""
+    store = _store()
+    return sum((store / f"{k}.mp3").stat().st_size for k in p.keys[:chunk]) / BYTES_PER_SECOND
+
+
+def full(p: Plan, progress: Callable[[str], None] = lambda text: None, after: int = 0) -> Narration:
+    """Record whatever is missing (from chunk `after` on first, what you hear next) and cache the whole."""
+    record(p, list(range(after, len(p.parts))) + list(range(after)), progress)
+    d = cache_dir() / p.key
+    tmp = d.with_name(p.key + ".part")
+    shutil.rmtree(tmp, ignore_errors=True)
+    n = assemble(p, out=tmp)
     shutil.rmtree(d, ignore_errors=True)
     tmp.rename(d)
-    return Narration(d / "audio.mp3", raw["duration"], raw["words"], raw["timings"])
+    return Narration(d / "audio.mp3", n.duration, n.words, n.timings)
+
+
+def build(pdf: bytes, voice: str, progress: Callable[[str], None] = lambda text: None) -> Narration:
+    """Blocking: the whole narration at once (cached)."""
+    return cached(pdf, voice) or full(plan(pdf, voice, progress), progress)
 
 
 def _record(py: Path, voice: str, texts: list[str], keys: list[str], store: Path,

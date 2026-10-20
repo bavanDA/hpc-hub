@@ -46,3 +46,26 @@ def test_dictionary_parsing():
         d.parse_wiktionary("triangles", {"en": [{"definitions": [{"definition": "plural of triangle"}]}]})
     with pytest.raises(d.NotFound):
         d.term("3.5")
+
+
+def test_assemble_parts_and_offsets(tmp_path, monkeypatch):
+    import json
+    from hpc_hub.readaloud import narration
+    monkeypatch.setenv("XDG_CACHE_HOME", str(tmp_path))
+    ws = words("One", "two.", "Three", "four.", "Five", "six.")
+    parts = text.chunks(ws, budget=8)
+    assert len(parts) == 3
+    keys = ["a", "b", "c"]
+    store = narration._store()
+    for k, part in zip(keys, parts):  # 1 s of "audio" per chunk, a token per word
+        (store / f"{k}.mp3").write_bytes(b"x" * int(narration.BYTES_PER_SECOND))
+        toks = [[w.text.strip("."), 0.1 + 0.4 * i, 0.4 + 0.4 * i] for i, w in enumerate(part.words)]
+        (store / f"{k}.json").write_text(json.dumps(toks))
+    plan = narration.Plan("key", "v", tmp_path, parts, keys)
+    assert plan.first_on(1) == 0
+    tail = narration.assemble(plan, 1, 3)
+    assert tail.duration == 2.0 and [t[0] for t in tail.timings] == [2, 3, 4, 5]
+    assert tail.timings[0][1] == 0.1 and tail.timings[2][1] == 1.1  # starts at 0, second chunk at 1 s
+    assert narration.start_time(plan, 1) == 1.0
+    whole = narration.full(plan)
+    assert whole.duration == 3.0 and narration.cached.__name__ == "cached"
