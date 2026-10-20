@@ -56,13 +56,17 @@ window.hpchub = {
   },
 };
 
+// double click: jump to the source. It waits a moment, because a third click means "dictionary" instead.
+window.hpchubSync = 0;
 document.addEventListener("dblclick", (e) => {
   const div = e.target.closest && e.target.closest(".page");
   if (!div) return;
   const page = Number(div.dataset.pageNumber), view = PDFViewerApplication.pdfViewer.getPageView(page - 1);
   const r = div.getBoundingClientRect();
   const [x, y] = view.viewport.convertToPdfPoint(e.clientX - r.left, e.clientY - r.top);
-  window.webkit.messageHandlers.hpchub.postMessage(JSON.stringify({page, x, y: view.pdfPage.view[3] - y}));
+  const msg = JSON.stringify({page, x, y: view.pdfPage.view[3] - y});
+  clearTimeout(window.hpchubSync);
+  window.hpchubSync = setTimeout(() => window.webkit.messageHandlers.hpchub.postMessage(msg), 300);
 }, true);
 """
 

@@ -26,7 +26,7 @@ class PdfPane(Gtk.Box):
         self.reader = Gtk.Box(spacing=6, margin_top=4, margin_bottom=4, margin_start=6, margin_end=6,
                               visible=False)
         self.play = Gtk.Button(child=Adw.ButtonContent(label="Read aloud", icon_name="media-playback-start-symbolic"),
-                               tooltip_text="Read the PDF aloud from the page you are on. Click any word to look it up.")
+                               tooltip_text="Read the PDF aloud from the page you are on. Triple-click any word to look it up.")
         self.play.connect("clicked", lambda *_: self._toggle())
         self.voice = Gtk.DropDown.new_from_strings([label for _, label in narration.VOICES])
         self.voice.connect("notify::selected", lambda *_: self._reset())
@@ -129,7 +129,7 @@ class PdfPane(Gtk.Box):
                 return  # rebuilt while recording; press again for the new one
             self.narrated = pdf
             minutes = int(n.duration // 60)
-            self.status.set_label(f"{minutes} min of reading. Click a word to look it up or read from there.")
+            self.status.set_label(f"{minutes} min of reading. Triple-click a word to look it up or read from there.")
             self.view.speak_load(n.audio, n.words, n.timings)  # starts playing once loaded
             GLib.timeout_add(1500, lambda: self._rate() and False)
         bg(lambda: narration.build(pdf, voice, progress), done)

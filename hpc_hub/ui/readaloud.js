@@ -1,5 +1,5 @@
 // Read aloud inside the PDF.js viewer: play the narration, highlight each spoken word on the page,
-// follow it down the document; a click on a word asks the app to look it up.
+// follow it down the document; a triple click on a word asks the app to look it up.
 (() => {
   const post = (msg) => window.webkit.messageHandlers.hpchub.postMessage(JSON.stringify(msg));
   let audio = null, words = new Map(), times = [], byPage = new Map(), heights = new Map();
@@ -118,14 +118,13 @@
     return t.slice(a, b);
   }
 
-  // click a word: the app shows it in the dictionary (with "Read from here"); a double click jumps to
-  // the source instead, so wait a moment before acting on a single click
-  let pending = 0;
-  document.addEventListener("dblclick", () => clearTimeout(pending), true);
+  // triple click a word: the app shows it in the dictionary (with "Read from here"). The double click
+  // inside it would jump to the source, so that jump is called off.
   document.addEventListener("click", (e) => {
-    if (e.detail > 1 || !window.getSelection().isCollapsed) return;
-    clearTimeout(pending);
-    pending = setTimeout(() => clicked(e), 250);
+    if (e.detail !== 3) return;
+    clearTimeout(window.hpchubSync);
+    window.getSelection().removeAllRanges();  // a triple click also selects the whole line
+    clicked(e);
   });
 
   async function clicked(e) {
