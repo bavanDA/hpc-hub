@@ -42,8 +42,9 @@ class Listener(Protocol):
     def log(self, session: "ClusterSession", line: str) -> None: ...
     def ask(self, session: "ClusterSession", prompt: str) -> str | None: ...
     def code(self, session: "ClusterSession", prompt: str) -> str | None: ...
-    def web_login(self, session: "ClusterSession", start: vpn_sso.SsoStart, login: Login) -> tuple[str, str]: ...
-    def browser_login(self, session: "ClusterSession", start: vpn_sso.SsoStart, login: Login) -> tuple[str, str]: ...
+    def web_login(self, session: "ClusterSession", start: vpn_sso.SsoStart, login: Login,
+                  profile: str = "") -> tuple[str, str]: ...  # profile: sign in in that Chrome profile
+    def pick_browser(self, session: "ClusterSession") -> str | None: ...  # Chrome profile, "" = app window
 
 
 SSO_USER = "hpc-hub:sso-username"
@@ -378,7 +379,6 @@ class ClusterSession:
         env = self.askpass.env(token)
         if self.cfg.vpn.browser:
             env["HPC_HUB_BROWSER"] = self.cfg.vpn.browser
-            self._set(State.VPN, f"Sign in to the VPN in Chrome ({self.cfg.vpn.browser})")
         try:
             auth = vpn.authenticate(
                 login.username, login.password,
@@ -400,12 +400,14 @@ class ClusterSession:
             if not start:
                 raise VpnError("VPN server did not offer web sign-in")
             self._log("vpn: web sign-in")
-            if self.cfg.vpn.browser:
-                self._set(State.VPN, f"Sign in to the VPN in Chrome ({self.cfg.vpn.browser})")
-                token, err = self.listener.browser_login(self, start, login)
+            profile = self.listener.pick_browser(self)
+            if profile is None:
+                raise VpnError("Sign-in cancelled")
+            if profile:
+                self._set(State.VPN, f"Sign in to the VPN in Chrome ({profile})")
             else:
                 self._set(State.DUO, "Sign in on the page, then approve Duo on your phone")
-                token, err = self.listener.web_login(self, start, login)
+            token, err = self.listener.web_login(self, start, login, profile)
             if not token:
                 raise VpnError(err or "Sign-in cancelled")
             cookie, host = vpn_sso.finish(start, token, ua)
