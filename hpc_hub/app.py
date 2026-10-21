@@ -65,6 +65,10 @@ class HpcHubApp(QuitMixin, Adw.Application):
             self.add_action(action)
             if accels:
                 self.set_accels_for_action(f"app.{name}", accels)
+        connect = Gio.SimpleAction.new("connect", GLib.VariantType.new("s"))  # gapplication action ... connect "'wulver'"
+        connect.connect("activate", lambda _a, cid: cid.unpack() in self.sessions
+                        and self.connect_session(self.sessions[cid.unpack()]))
+        self.add_action(connect)
         GLib.timeout_add_seconds(HEALTH_SECONDS, self._health_check)
         self._watch_sleep()
 
