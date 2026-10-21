@@ -1,0 +1,68 @@
+import json
+import subprocess
+
+from hpc_hub import permissions
+from hpc_hub.permissions import FILES, Permissions
+
+
+def test_fresh_cluster_gets_the_suggested_list():
+    p = permissions.parse('{"theme": "dark"}', "")
+    assert "grep" in p.allowed and "rm" not in p.allowed and p.trash and p.accept_edits
+    assert p.ask == {"scancel", "force_push", "discard"}
+
+
+def test_apply_keeps_other_settings_and_rules():
+    p = Permissions(allowed={"grep", "conda"}, trash=True, ask={"scancel"},
+                    settings={"theme": "dark", "permissions": {"allow": ["WebFetch", "Bash(ls:*)"],
+                                                                "deny": ["Read(./.env)"]}})
+    s = permissions.apply(p)
+    assert s["theme"] == "dark"
+    assert s["permissions"]["allow"] == ["WebFetch", "Bash(conda:*)", "Bash(grep:*)", "Bash(trash:*)"]
+    assert s["permissions"]["deny"] == ["Read(./.env)", "Bash(rm:*)"]
+    assert s["permissions"]["ask"] == ["Bash(scancel:*)"]
+    assert s["permissions"]["defaultMode"] == "acceptEdits"
+    assert len(s["hooks"]["PreToolUse"]) == 1
+
+
+def test_roundtrip_and_turning_things_off():
+    p = Permissions(allowed={"git"}, trash=False, ask=set(), accept_edits=False,
+                    settings={"permissions": {"defaultMode": "acceptEdits", "deny": ["Bash(rm:*)"]}})
+    s = permissions.apply(p)
+    assert "Bash(rm:*)" not in s["permissions"]["deny"] and "defaultMode" not in s["permissions"]
+    back = permissions.parse(json.dumps(s), json.dumps({"trash": False, "ask": []}))
+    assert back.allowed == {"git"} and not back.trash and back.ask == set() and not back.accept_edits
+    assert back.custom == []
+
+
+def _guard(cmd, conf=None, tmp=None):
+    script = FILES / "guard.py"
+    if tmp is not None:
+        (tmp / "guard.py").write_text(script.read_text())
+        (tmp / "guard.json").write_text(json.dumps(conf))
+        script = tmp / "guard.py"
+    out = subprocess.run(["python3", str(script)], input=json.dumps({"tool_input": {"command": cmd}}),
+                         capture_output=True, text=True).stdout
+    return json.loads(out)["hookSpecificOutput"]["permissionDecision"] if out else "pass"
+
+
+def test_guard(tmp_path):
+    assert _guard("rm -rf build") == "deny"
+    assert _guard("cd x && FOO=1 rm a") == "deny"
+    assert _guard("find . -exec rm {} +") == "deny"
+    assert _guard("git rm old.py") == "pass"
+    assert _guard("grep -rn rm src") == "pass"
+    assert _guard("scancel 12") == "ask"
+    assert _guard("git push origin main -f") == "ask"
+    assert _guard("git push origin main") == "pass"
+    assert _guard("git reset --hard HEAD") == "ask"
+    assert _guard("rm -rf build", {"trash": False, "ask": []}, tmp_path) == "pass"
+    assert _guard("scancel 12", {"trash": True, "ask": ["force_push"]}, tmp_path) == "pass"
+
+
+def test_save_command_is_valid_bash():
+    cmd = permissions.save_command(permissions.parse("", ""))
+    assert subprocess.run(["bash", "-n", "-c", cmd]).returncode == 0
+
+
+def test_trash_script_is_valid_bash():
+    assert subprocess.run(["bash", "-n", str(FILES / "trash")]).returncode == 0
