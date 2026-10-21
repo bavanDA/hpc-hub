@@ -1,0 +1,49 @@
+#!/bin/bash
+# trash: like rm, but files go to a .trash folder for 7 days, so they can be restored.
+#   trash [-rf] path...    move to trash (rm-style flags are accepted and ignored)
+#   trash --list           show what is in the trash
+#   trash --empty          delete everything older than 7 days now
+KEEP_DAYS=7
+roots=("/mmfs1/scratch/mygroup/$USER" "/mmfs1/project/mygroup/$USER" "/tmp")
+
+bin_for() {  # the trash folder on the same disk as $1, so moving is instant
+  local p; p=$(realpath -m -- "$1")
+  for r in "${roots[@]}"; do
+    [[ $p == "$r"/* ]] && { [[ $r == /tmp ]] && echo "/tmp/.trash-$USER" || echo "$r/.trash"; return; }
+  done
+  [[ $p == /mmfs1/scratch/* ]] && { echo "/mmfs1/scratch/mygroup/$USER/.trash"; return; }
+  [[ $p == /mmfs1/project/* ]] && { echo "/mmfs1/project/mygroup/$USER/.trash"; return; }
+  echo "$HOME/.trash"
+}
+
+all_bins() { for b in "$HOME/.trash" "/mmfs1/scratch/mygroup/$USER/.trash" "/mmfs1/project/mygroup/$USER/.trash" "/tmp/.trash-$USER"; do [ -d "$b" ] && echo "$b"; done; }
+
+purge() { all_bins | while read -r b; do find "$b" -mindepth 1 -maxdepth 1 -type d -mtime +$KEEP_DAYS -exec /bin/rm -rf {} + 2>/dev/null; done; }
+
+case "$1" in
+  --list) all_bins | while read -r b; do echo "== $b"; ls -lt "$b" | tail -n +2; done; exit 0 ;;
+  --empty) purge; exit 0 ;;
+esac
+
+status=0 ended=0 force=0
+for a in "$@"; do
+  if [ $ended = 0 ] && [[ $a == -* ]]; then
+    [[ $a == -- ]] && ended=1
+    [[ $a == -*f* && $a != --* ]] && force=1
+    continue
+  fi
+  if [ ! -e "$a" ] && [ ! -L "$a" ]; then
+    [ $force = 1 ] || { echo "trash: $a: no such file or directory" >&2; status=1; }
+    continue
+  fi
+  day="$(bin_for "$a")/$(date +%F)"
+  mkdir -p "$day" || { status=1; continue; }
+  dest="$day/$(date +%H%M%S)-$$-$(basename -- "$a")"
+  if mv -- "$a" "$dest"; then
+    printf '%s\n' "$(realpath -m -- "$a")" > "$dest.from"
+  else
+    status=1
+  fi
+done
+purge
+exit $status
