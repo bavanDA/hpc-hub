@@ -7,10 +7,10 @@ from hpc_hub.schedules import Schedule
 
 def test_script_is_valid_bash():
     s = Schedule("clean-mc", "claude", "~/MC", "tidy up", "02:00", [1, 2, 3, 4, 5], 180)
-    text = schedules.script(s, schedules.BY_ID["claude"], AgentSettings(command="claude", skip_permissions=True),
+    text = schedules.script(s, schedules.BY_ID["claude"], AgentSettings(command="claude"),
                             ComputeProfile(cpus=4, mem_gb=16, account="mygroup"))
     assert "#SBATCH --job-name=hpc-hub-sched-clean-mc" in text and "#SBATCH --time=03:00:00" in text
-    assert "--dangerously-skip-permissions" in text and '"$DIR/task.md"' in text
+    assert "--permission-mode acceptEdits" in text and "dangerous" not in text and '"$DIR/task.md"' in text
     assert subprocess.run(["bash", "-n"], input=text, text=True).returncode == 0
     cmd = schedules.save_command(s, AgentSettings(command="claude"), ComputeProfile())
     assert subprocess.run(["bash", "-n", "-c", cmd]).returncode == 0

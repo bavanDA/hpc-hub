@@ -49,12 +49,12 @@ def test_reuse_running_job_roundtrip(tmp_path):
 def test_tool_settings_roundtrip(tmp_path):
     clusters = config.default_clusters()
     clusters[1].vscode.command = "vscode"
-    clusters[1].claude.skip_permissions = True
+    clusters[1].claude.remote = True
     clusters[1].globus.collection_id = "abc"
     path = tmp_path / "c.toml"
     config.save(clusters, path)
     y = config.load(path)[1]
-    assert (y.vscode.command, y.claude.skip_permissions, y.globus.collection_id) == ("vscode", True, "abc")
+    assert (y.vscode.command, y.claude.remote, y.globus.collection_id) == ("vscode", True, "abc")
 
 
 def test_app_settings(tmp_path):

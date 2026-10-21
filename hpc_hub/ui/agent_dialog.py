@@ -51,14 +51,11 @@ class AgentDialog(Adw.Dialog):
         page = Adw.PreferencesPage()
 
         opts = Adw.PreferencesGroup()
-        self.skip = Adw.SwitchRow(title="Skip permission prompts", subtitle=agent.skip_flag,
-                                  active=c.skip_permissions)
         self.remote = Adw.SwitchRow(title=agent.remote_label, subtitle=agent.remote_hint, active=c.remote)
         a = s.allocation
         self.new = Adw.SwitchRow(title="Use a new compute node", active=c.new_node,
                                  subtitle=f"Off: same node as now ({a.node}, job {a.job_id})" if a
                                  else "Off: same node (requested if needed)")
-        opts.add(self.skip)
         if agent.remote_label:  # Cursor has no remote control
             opts.add(self.remote)
         opts.add(self.new)
@@ -71,9 +68,6 @@ class AgentDialog(Adw.Dialog):
             values = [v for v, _ in o.choices]
             current = getattr(c, o.key)
             row.set_selected(values.index(current) if current in values else 0)
-            if o.unless_skip:
-                self.skip.connect("notify::active", lambda sw, r=row: r.set_sensitive(not sw.get_active()))
-                row.set_sensitive(not c.skip_permissions)
             more.add(row)
             self.option_rows.append((o, row))
         if agent.options:
@@ -165,7 +159,7 @@ class AgentDialog(Adw.Dialog):
 
     def _run(self, folder: str, chat_id: str, label: str = "") -> None:
         c = self.settings
-        c.skip_permissions, c.new_node, c.remote = self.skip.get_active(), self.new.get_active(), self.remote.get_active()
+        c.new_node, c.remote = self.new.get_active(), self.remote.get_active()
         c.minutes = self.time.minutes() if self.new.get_active() else c.minutes
         buf = self.task.get_buffer()
         task = buf.get_text(buf.get_start_iter(), buf.get_end_iter(), False).strip()

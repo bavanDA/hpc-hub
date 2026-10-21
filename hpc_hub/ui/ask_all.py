@@ -67,8 +67,6 @@ class AskAllDialog(Adw.Dialog):
         for a in AGENTS:
             row = Adw.SwitchRow(title=a.name, active=True)
             row.add_prefix(Gtk.Image(icon_name=a.icon))
-            c = getattr(s.cfg, a.id)
-            row.set_subtitle("skips permission prompts" if c.skip_permissions else "asks before edits (may only print)")
             who.add(row)
             self.rows[a.id] = row
         self.discuss = Adw.SwitchRow(title="Let them read each other's answers",

@@ -56,7 +56,6 @@ class Schedule:
     days: list[int] = field(default_factory=list)  # 1 = Monday ... 7 = Sunday; empty = every day
     minutes: int = 120  # time limit of each run
     enabled: bool = True
-    skip: bool = True  # nobody is there to approve its edits, so let it work without asking
 
     @property
     def job_name(self) -> str:
@@ -124,7 +123,6 @@ def script(s: Schedule, agent: Agent, settings: AgentSettings, profile: ComputeP
 def save_command(s: Schedule, settings: AgentSettings, profile: ComputeProfile) -> str:
     """Write the schedule's files, then (re)queue it: cancel the waiting job, submit for the next time."""
     agent = BY_ID[s.agent]
-    settings = replace(settings, skip_permissions=s.skip)
     d = folder_of(s.name)
     meta = json.dumps(asdict(s))
     steps = [

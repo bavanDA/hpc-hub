@@ -6,7 +6,7 @@ Everything runs from one bash script in one tmux session on the compute node, so
 
 import base64
 import shlex
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 from .agents import AGY, CLAUDE, CODEX, CURSOR, Agent
 from .config import AgentSettings
@@ -34,25 +34,25 @@ def shell_path(path: str) -> str:
 def headless(agent: Agent, s: AgentSettings, prompt_file: str) -> str:
     """Command that runs one prompt non-interactively and prints the answer. prompt_file is a shell word."""
     base = s.command.strip() or agent.id
-    skip = s.skip_permissions
     prompt = f'"$(cat {prompt_file})"'
     if agent is CODEX:
         args = ["--no-daemon", "exec", "--skip-git-repo-check", "--add-dir", '"$OUT"']
-        args += ["--dangerously-bypass-approvals-and-sandbox"] if skip else ["-s", "workspace-write"]
+        args += ["-s", "workspace-write"]
         if s.effort:
             args += ["-c", shlex.quote(f"model_reasoning_effort={s.effort}")]
         return " ".join([base, *args, prompt])
-    opts = [a for o in agent.options for a in o.args(getattr(s, o.key), skip)]
+    # nobody is there to answer prompts: let it edit files (commands follow the cluster's allow list)
+    mode = {CLAUDE: "acceptEdits", AGY: "accept-edits"}
+    s = replace(s, mode=s.mode or mode.get(agent, ""))
+    opts = [a for o in agent.options for a in o.args(getattr(s, o.key))]
     if agent is AGY:  # agy's -p takes the prompt as its value, so it goes last
-        return " ".join([base, "--add-dir", '"$OUT"', *([agent.skip_flag] if skip else []), *opts, "-p", prompt])
+        return " ".join([base, "--add-dir", '"$OUT"', *opts, "-p", prompt])
     if agent is CLAUDE:
         args = ["-p", "--add-dir", '"$OUT"']
     elif agent is CURSOR:
         args = ["-p", "--trust", "--add-dir", '"$OUT"']
     else:
         args = ["-p"]
-    if skip:
-        args.append(agent.skip_flag)
     return " ".join([base, *args, *opts, prompt])
 
 

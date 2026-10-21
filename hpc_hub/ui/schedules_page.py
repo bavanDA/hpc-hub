@@ -203,9 +203,7 @@ class ScheduleDialog(Adw.Dialog):
         days_row.add_suffix(days_box)
         p = s.cfg.profile
         self.time_limit = DurationRow("Time each run may take", 120, s.limits, p.partition, p.qos)
-        self.skip = Adw.SwitchRow(title="Allow edits without asking", active=True,
-                                  subtitle="Nobody is there to approve them. It works on its own git branch.")
-        for w in (self.time, days_row, self.time_limit, self.skip):
+        for w in (self.time, days_row, self.time_limit):
             when.add(w)
         page.add(when)
 
@@ -235,7 +233,6 @@ class ScheduleDialog(Adw.Dialog):
         for i, b in enumerate(self.days):
             b.set_active(i + 1 in sc.days)
         self.time_limit.set_minutes(sc.minutes)
-        self.skip.set_active(sc.skip)
         if not self.sc:
             self._preset()
 
@@ -269,7 +266,7 @@ class ScheduleDialog(Adw.Dialog):
         days = [i + 1 for i, b in enumerate(self.days) if b.get_active()]
         sc = Schedule(name, AGENTS[self.agent.get_selected()].id, self.folder.get_text().strip() or "~", task, at,
                       [] if len(days) == 7 else days, self.time_limit.minutes(),
-                      self.sc.enabled if self.sc else True, self.skip.get_active())
+                      self.sc.enabled if self.sc else True)
         if self.sc and self.sc.name != name:  # renamed: the old one goes away
             old = self.sc
             bg(lambda: self.s.ssh.run(schedules.delete_command(old), timeout=60), lambda *_: None)

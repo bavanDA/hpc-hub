@@ -7,28 +7,26 @@ from hpc_hub.agents import AGY, CLAUDE, CODEX, CURSOR
 from hpc_hub.config import AgentSettings
 
 
-def _ask(discuss=False, skip=True):
+def _ask(discuss=False):
     return ask_all.Ask("~/proj", "~/proj/.hpc-hub/ask/1", "What's wrong with 'main.py'?\n$HOME `x`", [
-        (CLAUDE, AgentSettings(command="claude", skip_permissions=skip, model="opus")),
-        (CODEX, AgentSettings(command="codex", skip_permissions=skip, effort="high")),
-        (AGY, AgentSettings(command="agy", skip_permissions=skip)),
-        (CURSOR, AgentSettings(command="cursor-agent", skip_permissions=skip)),
+        (CLAUDE, AgentSettings(command="claude", model="opus")),
+        (CODEX, AgentSettings(command="codex", effort="high")),
+        (AGY, AgentSettings(command="agy")),
+        (CURSOR, AgentSettings(command="cursor-agent")),
     ], discuss)
 
 
 def test_headless_flags():
     p = '"$OUT/.p"'
-    assert ask_all.headless(CLAUDE, AgentSettings(command="claude", skip_permissions=True, model="opus"), p) == \
-        'claude -p --add-dir "$OUT" --dangerously-skip-permissions --model opus "$(cat "$OUT/.p")"'
+    assert ask_all.headless(CLAUDE, AgentSettings(command="claude", model="opus"), p) == \
+        'claude -p --add-dir "$OUT" --model opus --permission-mode acceptEdits "$(cat "$OUT/.p")"'
     assert ask_all.headless(CODEX, AgentSettings(command="codex", effort="high"), p) == \
         ('codex --no-daemon exec --skip-git-repo-check --add-dir "$OUT" -s workspace-write '
          '-c model_reasoning_effort=high "$(cat "$OUT/.p")"')
-    assert ask_all.headless(CODEX, AgentSettings(command="codex", skip_permissions=True), p).count(
-        "--dangerously-bypass-approvals-and-sandbox") == 1
-    assert ask_all.headless(AGY, AgentSettings(command="agy", skip_permissions=True), p) == \
-        'agy --add-dir "$OUT" --dangerously-skip-permissions -p "$(cat "$OUT/.p")"'
-    assert ask_all.headless(CURSOR, AgentSettings(command="cursor-agent", skip_permissions=True), p) == \
-        'cursor-agent -p --trust --add-dir "$OUT" --force "$(cat "$OUT/.p")"'
+    assert ask_all.headless(AGY, AgentSettings(command="agy"), p) == \
+        'agy --add-dir "$OUT" --mode accept-edits -p "$(cat "$OUT/.p")"'
+    assert ask_all.headless(CURSOR, AgentSettings(command="cursor-agent"), p) == \
+        'cursor-agent -p --trust --add-dir "$OUT" "$(cat "$OUT/.p")"'
 
 
 def test_shell_path():
