@@ -10,7 +10,7 @@ from urllib.parse import urlsplit
 
 from gi.repository import Adw, Gdk, GLib, Gtk
 
-from .. import agents, ask_all, links, remote, remote_fs, slurm, tmux
+from .. import agents, ask_all, links, permissions, remote, remote_fs, slurm, tmux
 from ..agents import Agent
 from ..limits import human
 from ..links import Link
@@ -186,6 +186,14 @@ class Tools:
         if not a:
             self._error("No compute node", err or f"Could not get a node on {s.cfg.name}.")
             return
+        if agent.remote_setting:  # remote control comes from the agent's settings, not a flag: set it first
+            on = getattr(s.cfg, agent.id).remote
+            bg(lambda: permissions.set_key(s.ssh, agent.remote_setting, on),
+               lambda _r, e: (e and self.toast(f"Could not set remote control: {e}"), self._open_agent(s, agent, a, run)))
+            return
+        self._open_agent(s, agent, a, run)
+
+    def _open_agent(self, s: ClusterSession, agent: Agent, a: Allocation, run: Launch) -> None:
         folder, chat_id = run.folder, run.chat_id
         cmd = agents.command(agent, getattr(s.cfg, agent.id), chat_id, run.task)
         tag = chat_id[:8] if chat_id else time.strftime("%H%M%S")  # one tmux session per chat

@@ -66,3 +66,13 @@ def test_save_command_is_valid_bash():
 
 def test_trash_script_is_valid_bash():
     assert subprocess.run(["bash", "-n", str(FILES / "trash")]).returncode == 0
+
+
+def test_set_key_keeps_other_settings(tmp_path):
+    home = tmp_path
+    (home / ".claude").mkdir()
+    (home / ".claude" / "settings.json").write_text('{"theme": "dark"}')
+    cmd = permissions.set_key_command("remoteControlAtStartup", True)
+    assert subprocess.run(["bash", "-c", cmd], env={"HOME": str(home), "PATH": "/usr/bin:/bin"}).returncode == 0
+    assert json.loads((home / ".claude" / "settings.json").read_text()) == {"theme": "dark",
+                                                                          "remoteControlAtStartup": True}

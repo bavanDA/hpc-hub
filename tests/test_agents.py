@@ -6,7 +6,7 @@ def test_claude():
     s = AgentSettings(command="claude")
     assert agents.command(agents.CLAUDE, s) == "claude"
     s.remote = True
-    assert agents.command(agents.CLAUDE, s, "abc") == "claude --remote-control --resume abc"
+    assert agents.command(agents.CLAUDE, s, "abc") == "claude --resume abc"  # remote control is a setting
 
 
 def test_codex():

@@ -104,6 +104,30 @@ def apply(p: Permissions) -> dict:
     return s
 
 
+SET_KEY = """import json, os, sys
+p = os.path.expanduser("~/.claude/settings.json")
+try:
+    s = json.load(open(p))
+except (OSError, ValueError):
+    s = {}
+s[sys.argv[1]] = json.loads(sys.argv[2])
+os.makedirs(os.path.dirname(p), exist_ok=True)
+json.dump(s, open(p + ".new", "w"), indent=2)
+os.replace(p + ".new", p)
+"""
+
+
+def set_key_command(key: str, value) -> str:
+    """Set one top-level key in Claude's settings.json, keeping the rest."""
+    return f"python3 -c {shlex.quote(SET_KEY)} {shlex.quote(key)} {shlex.quote(json.dumps(value))}"
+
+
+def set_key(ssh: SshMaster, key: str, value) -> None:
+    res = ssh.run(set_key_command(key, value))
+    if res.returncode != 0:
+        raise OSError(res.stderr.strip() or f"could not set {key}")
+
+
 def read(ssh: SshMaster) -> Permissions:
     res = ssh.run(f"cat ~/{SETTINGS} 2>/dev/null; echo; echo @@HPCHUB@@; cat ~/{GUARD_CONF} 2>/dev/null; true")
     if res.returncode != 0:

@@ -35,6 +35,7 @@ class Agent:
     remote_hint: str
     options: tuple[Option, ...] = ()
     task_flag: str = ""  # how to give a first prompt in interactive mode ("" = as the last argument)
+    remote_setting: str = ""  # settings.json key that turns remote control on, used instead of --remote-control
 
 
 CLAUDE = Agent("claude", "Claude", "hpc-claude",
@@ -44,7 +45,7 @@ CLAUDE = Agent("claude", "Claude", "hpc-claude",
                    Option("mode", "Permission mode", "--permission-mode",
                           (DEFAULT, ("acceptEdits", "Accept edits"), ("plan", "Plan only"), ("auto", "Auto"),
                            ("dontAsk", "Don't ask"))),
-                   Option("effort", "Effort", "--effort", EFFORT)))
+                   Option("effort", "Effort", "--effort", EFFORT)), remote_setting="remoteControlAtStartup")
 CODEX = Agent("codex", "ChatGPT", "hpc-openai-symbolic",
               "ChatGPT remote", "Use it from the ChatGPT app. One at a time: this stops the previous one", (
                   Option("sandbox", "Sandbox", "-s", (DEFAULT, ("read-only", "Read only"),
@@ -89,7 +90,7 @@ def command(agent: Agent, s: AgentSettings, chat_id: str = "", task: str = "") -
                     f"{base} remote-control pair --json; {line}")
         return line
     args = list(opts)
-    if s.remote and agent.remote_label:
+    if s.remote and agent.remote_label and not agent.remote_setting:
         args.append("--remote-control")
     if chat:
         args += ["--conversation", chat] if agent is AGY else ["--resume", chat]
