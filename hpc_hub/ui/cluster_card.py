@@ -6,6 +6,7 @@ from collections.abc import Callable
 from gi.repository import Adw, Gtk, Pango
 
 from ..session import ClusterSession, State
+from .authenticator_help import AuthenticatorHelp
 from .compute_dialog import ComputeDialog
 from .widgets import agent_buttons, vscode_button
 
@@ -68,6 +69,10 @@ class ClusterCard(Gtk.Box):
                                   tooltip_text="Just the VPN tunnel, no SSH or compute node")
         self.vpn_btn.connect("clicked", lambda *_: on_connect(session, True))
         head.append(self.vpn_btn)
+        self.code_help = Gtk.Button(icon_name="help-about-symbolic", valign=Gtk.Align.CENTER, css_classes=["flat"],
+                                    tooltip_text="How to set up Google Authenticator")
+        self.code_help.connect("clicked", lambda *_: AuthenticatorHelp(session.cfg).present(self))
+        head.append(self.code_help)
 
         self.action = Gtk.Button(valign=Gtk.Align.CENTER, width_request=120)
         self.action.add_css_class("pill")
@@ -169,6 +174,7 @@ class ClusterCard(Gtk.Box):
 
         self.tools.set_visible(s.connected)
         self.vpn_btn.set_visible(cfg.vpn.enabled and (s.state in (State.DISCONNECTED, State.ERROR)))
+        self.code_help.set_visible(cfg.second_factor == "code" and s.state in (State.DISCONNECTED, State.ERROR))
         a = s.allocation
         self.node.set_visible(s.connected)
         self.node_btn.set_visible(s.connected)

@@ -10,6 +10,7 @@ from ..credentials import Login
 from ..limits import Limits, minutes, slurm_time
 from ..slurm import validate
 from ..vpn import split_errors
+from .authenticator_help import AuthenticatorHelp
 from .duration import DurationRow
 from .widgets import TARGETS
 
@@ -95,7 +96,9 @@ class ClusterSettingsDialog(Adw.PreferencesDialog):
         self.factor.set_selected(next((i for i, f in enumerate(FACTORS) if f[0] == self.cfg.second_factor), 0))
         self.factor.connect("notify::selected", lambda *_: self._sync_factor())
         self.duo = _entry("Duo answer (push, push2, phone, 1)", self.cfg.duo_answer)
-        for row in (self.user, self.password, self.factor, self.duo):
+        self.code_help = Adw.ButtonRow(title="How to set up Google Authenticator", start_icon_name="help-about-symbolic")
+        self.code_help.connect("activated", lambda *_: AuthenticatorHelp(self.cfg).present(self))
+        for row in (self.user, self.password, self.factor, self.code_help, self.duo):
             group.add(row)
         self._sync_factor()
         page.add(group)
@@ -203,6 +206,7 @@ class ClusterSettingsDialog(Adw.PreferencesDialog):
     def _sync_factor(self) -> None:
         code = FACTORS[self.factor.get_selected()][0] == "code"
         self.duo.set_visible(not code)
+        self.code_help.set_visible(code)
         self.factor.set_subtitle("The app asks you for the code each time you log in" if code else "")
 
     def _sync_vpn(self) -> None:

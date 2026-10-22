@@ -21,6 +21,7 @@ from .ui.projects import Actions, ProjectsPage  # noqa: E402
 from .ui.quit import QuitMixin  # noqa: E402
 from .ui.settings import ClusterSettingsDialog  # noqa: E402
 from .ui.tools import Tools  # noqa: E402
+from .ui.authenticator_help import AuthenticatorHelp  # noqa: E402
 from .ui.browser_login import BrowserLoginDialog  # noqa: E402
 from .ui.key_setup import KeySetupDialog  # noqa: E402
 from .ui.widgets import profile_choices  # noqa: E402
@@ -258,7 +259,12 @@ class HpcHubApp(QuitMixin, Adw.Application):
                                  body="Open your authenticator app and type the 6-digit code.")
         entry = Gtk.Entry(input_purpose=Gtk.InputPurpose.DIGITS, max_length=8, activates_default=True,
                           xalign=0.5, placeholder_text="123456", css_classes=["title-2", "numeric"])
-        dialog.set_extra_child(entry)
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
+        box.append(entry)
+        help_btn = Gtk.Button(label="No code yet? How to set it up", css_classes=["flat"], halign=Gtk.Align.CENTER)
+        help_btn.connect("clicked", lambda *_: AuthenticatorHelp(session.cfg).present(self.window))
+        box.append(help_btn)
+        dialog.set_extra_child(box)
         dialog.add_response("cancel", "Cancel")
         dialog.add_response("ok", "Send")
         dialog.set_response_appearance("ok", Adw.ResponseAppearance.SUGGESTED)
