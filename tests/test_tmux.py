@@ -71,6 +71,23 @@ def test_remote_links():
             f"{tmux.MARK}hpchub-term-4\nplain output\n")
     assert tmux.parse_remotes(text) == {"hpchub-agy-1-2": "https://antigravity.google.com/r/abc-v2",
                                         "hpchub-codex-1-3": "code:ZZ99-YY88"}
-    assert "capture-pane -p -J -t =a: -S -3000" in tmux.capture_command(["a"])
+    assert "capture-pane -p -J -t =a: -S -3000" in tmux.capture_command([tmux.Session("a")])
+    on_node = tmux.capture_command([tmux.Session("b", node="n0076")])
+    assert "ssh" in on_node and "n0076" in on_node
     row = tmux.SEP.join(["hpchub-claude-1-2", "1", "0", "", "", "srun", "1", "/h", "https://claude.ai/code/x"])
     assert tmux.parse(f"login02\nTMUX_OK\n{row}\n").sessions[0].remote == "https://claude.ai/code/x"
+
+
+def test_sessions_on_compute_nodes():
+    row = tmux.SEP.join(["hpchub-claude-1440996-1530", "1", "0", "Claude · MC", "#d97757", "bash", "1", "/h"])
+    old = tmux.SEP.join(["hpchub-claude-1431766-0900", "1", "0", "", "", "srun", "1", "/h"])
+    got = tmux.parse(f"login02\nTMUX_OK\n{old}\nSCREEN_LIST\nJOB_LIST\n1440996 n0076\n"
+                     f"NODE_LIST\n{tmux.NODE_MARK}n0076\n{row}\n{tmux.NODE_MARK}n0080\n")
+    where = {t.name: t.node for t in got.sessions}
+    assert where == {"hpchub-claude-1440996-1530": "n0076", "hpchub-claude-1431766-0900": ""}
+    assert got.nodes == {"1440996": "n0076"}
+    t = next(t for t in got.sessions if t.node)
+    for line in (tmux.attach(t), tmux.kill(t), tmux.set_label(t, "x"), tmux.set_remote(t, "u")):
+        assert "n0076" in line and subprocess.run(["bash", "-n", "-c", line]).returncode == 0
+    assert tmux.kill(next(t for t in got.sessions if not t.node)) == "tmux kill-session -t =hpchub-claude-1431766-0900"
+    assert "NODE_LIST" in tmux.LIST and subprocess.run(["bash", "-n", "-c", tmux.LIST]).returncode == 0

@@ -1,5 +1,7 @@
 """Persistent terminals on a cluster: tmux (and screen) sessions you can leave and come back to.
 
+Agent sessions run tmux on the compute node itself, reached with ssh from the login node: Slurm puts
+them in your job, so they last as long as the job and nothing stays behind on the login node.
 Labels and colors live in the tmux session itself (@hpchub_label, @hpchub_color), so they
 survive app restarts and show up from any laptop.
 """
@@ -16,10 +18,16 @@ MARK = "@@HPCHUB_PANE "
 SEP = "\x1f"
 FIELDS = ["session_name", "session_created", "session_attached", "@hpchub_label", "@hpchub_color",
           "pane_current_command", "session_windows", "pane_current_path", "@hpchub_remote"]
+NODE_SSH = "ssh -o BatchMode=yes -o ConnectTimeout=10 -o LogLevel=ERROR"
+NODE_MARK = "@@NODE "
+_LS = f"tmux list-sessions -F {shlex.quote(SEP.join('#{' + f + '}' for f in FIELDS))} 2>/dev/null"
 LIST = ("hostname; command -v tmux >/dev/null && echo TMUX_OK; "
-        f"tmux list-sessions -F {shlex.quote(SEP.join('#{' + f + '}' for f in FIELDS))} 2>/dev/null; "
+        f"{_LS}; "
         "echo SCREEN_LIST; screen -ls 2>/dev/null; "
-        'echo JOB_LIST; squeue -h -u "$USER" -t RUNNING -o "%i %N" 2>/dev/null')
+        'echo JOB_LIST; squeue -h -u "$USER" -t RUNNING -o "%i %N" 2>/dev/null; '
+        'echo NODE_LIST; for n in $(squeue -h -u "$USER" -t RUNNING -o %N 2>/dev/null | '
+        "xargs -r -n1 scontrol show hostnames 2>/dev/null | sort -u); do "
+        f'echo "{NODE_MARK}$n"; {NODE_SSH} "$n" {shlex.quote(_LS)} </dev/null; done')
 SCREEN_RE = re.compile(r"^\s+(\d+)\.(\S+)\s+\((?:\d.*?\)\s+\()?(Attached|Detached)\)", re.M)
 COLORS = ["#3584e4", "#2ec27e", "#e5a50a", "#ff7800", "#e01b24", "#9141ac", "#986a44", "#77767b"]
 AGENT_COLORS = {"claude": "#d97757", "codex": "#10a37f", "agy": "#4285f4", "cursor": "#8b8b8b",
@@ -38,6 +46,7 @@ class Session:
     windows: int = 1
     path: str = ""
     remote: str = ""  # remote control link, or "code:XXXX-XXXX" (ChatGPT pairing), found in its output
+    node: str = ""  # compute node its tmux runs on; "" = the login node
 
     @property
     def title(self) -> str:
@@ -64,7 +73,13 @@ class Listing:
     nodes: dict[str, str] | None = None  # running job id -> node; None if squeue gave nothing
 
 
+def _session(line: str, node: str = "") -> Session:
+    p = (line.split(SEP) + [""] * len(FIELDS))[:len(FIELDS)]
+    return Session(p[0], "tmux", _int(p[1]), _int(p[2]), p[3], p[4], p[5], _int(p[6]) or 1, p[7], p[8], node)
+
+
 def parse(text: str) -> Listing:
+    text, _, node_part = text.partition("NODE_LIST\n")
     lines = text.splitlines()
     host = lines[0].strip() if lines else ""
     has_tmux = "TMUX_OK" in lines[:3]
@@ -75,8 +90,13 @@ def parse(text: str) -> Listing:
             in_screen = True
             continue
         if not in_screen and SEP in line:
-            p = (line.split(SEP) + [""] * len(FIELDS))[:len(FIELDS)]
-            out.append(Session(p[0], "tmux", _int(p[1]), _int(p[2]), p[3], p[4], p[5], _int(p[6]) or 1, p[7], p[8]))
+            out.append(_session(line))
+    node = ""
+    for line in node_part.splitlines():
+        if line.startswith(NODE_MARK):
+            node = line[len(NODE_MARK):].strip()
+        elif node and SEP in line:
+            out.append(_session(line, node))
     text, found, job_part = text.partition("JOB_LIST\n")
     nodes = dict(line.split()[:2] for line in job_part.splitlines() if len(line.split()) >= 2) if found else None
     screen_part = text.split("SCREEN_LIST", 1)[1] if "SCREEN_LIST" in text else ""
@@ -102,6 +122,13 @@ def _opt(name: str) -> str:
     return shlex.quote(f"={name}:")  # set-option wants a pane-style target
 
 
+def on(node: str, line: str, tty: bool = False) -> str:
+    """Run line on a compute node (ssh from the login node), or right here when node is ""."""
+    if not node:
+        return line
+    return f"{NODE_SSH}{' -t' if tty else ''} {shlex.quote(node)} {shlex.quote(line)}"
+
+
 def create(name: str, command: str, label: str = "", color: str = "", cwd: str = "") -> str:
     """Start a detached session unless it exists, then tag it. Shell line."""
     q = shlex.quote(name)
@@ -112,38 +139,41 @@ def create(name: str, command: str, label: str = "", color: str = "", cwd: str =
     return f"tmux has-session -t {_t(name)} 2>/dev/null || {{ {new}{tags}; }}"
 
 
-def open_line(name: str, command: str, label: str = "", color: str = "", cwd: str = "") -> str:
-    """Create (if needed) and attach. Without tmux, just run the command."""
+def open_line(name: str, command: str, label: str = "", color: str = "", cwd: str = "", node: str = "") -> str:
+    """Create (if needed) and attach, on node if given. Without tmux, just run the command."""
     fallback = f"exec {command}" if command else "exec bash -l"
-    return (f"if command -v tmux >/dev/null 2>&1; then {create(name, command, label, color, cwd)} && "
+    line = (f"if command -v tmux >/dev/null 2>&1; then {create(name, command, label, color, cwd)} && "
             f"exec tmux attach-session -t {_t(name)}; else {fallback}; fi")
+    return f"exec {on(node, line, tty=True)}" if node else line
 
 
 def attach(s: Session) -> str:
     if s.kind == "screen":
         return f"exec screen -x {shlex.quote(s.name)}"
-    return f"exec tmux attach-session -t {_t(s.name)}"
+    line = f"exec tmux attach-session -t {_t(s.name)}"
+    return f"exec {on(s.node, line, tty=True)}" if s.node else line
 
 
 def set_label(s: Session, label: str) -> str:
     if s.kind == "screen":
         return f"screen -S {shlex.quote(s.name)} -X sessionname {shlex.quote(re.sub(r'[^\w.-]+', '-', label))}"
-    return f"tmux set-option -t {_opt(s.name)} @hpchub_label {shlex.quote(label)}"
+    return on(s.node, f"tmux set-option -t {_opt(s.name)} @hpchub_label {shlex.quote(label)}")
 
 
 def set_color(s: Session, color: str) -> str:
-    return f"tmux set-option -t {_opt(s.name)} @hpchub_color {shlex.quote(color)}"
+    return on(s.node, f"tmux set-option -t {_opt(s.name)} @hpchub_color {shlex.quote(color)}")
 
 
 def kill(s: Session) -> str:
     if s.kind == "screen":
         return f"screen -S {shlex.quote(s.name)} -X quit"
-    return f"tmux kill-session -t {_t(s.name)}"
+    return on(s.node, f"tmux kill-session -t {_t(s.name)}")
 
 
-def capture_command(names: list[str]) -> str:
-    return "; ".join(f"echo {shlex.quote(MARK + n)}; tmux capture-pane -p -J -t {_opt(n)} -S -3000 2>/dev/null"
-                     for n in names)
+def capture_command(sessions: list[Session]) -> str:
+    return "; ".join(f"echo {shlex.quote(MARK + t.name)}; "
+                     + on(t.node, f"tmux capture-pane -p -J -t {_opt(t.name)} -S -3000 2>/dev/null")
+                     for t in sessions)
 
 
 def parse_remotes(text: str) -> dict[str, str]:
@@ -165,12 +195,16 @@ def parse_remotes(text: str) -> dict[str, str]:
     return out
 
 
-def find_remotes(ssh: SshMaster, names: list[str]) -> dict[str, str]:
-    return parse_remotes(ssh.run(capture_command(names), timeout=30).stdout) if names else {}
+def find_remotes(ssh: SshMaster, sessions: list[Session]) -> dict[str, str]:
+    return parse_remotes(ssh.run(capture_command(sessions), timeout=30).stdout) if sessions else {}
 
 
-def set_remote(name: str, value: str) -> str:
-    return f"tmux set-option -t {_opt(name)} @hpchub_remote {shlex.quote(value)}"
+def set_remote(t: Session, value: str) -> str:
+    return on(t.node, f"tmux set-option -t {_opt(t.name)} @hpchub_remote {shlex.quote(value)}")
+
+
+def save_buffer(node: str) -> str:
+    return on(node, "tmux save-buffer - 2>/dev/null")
 
 
 def list_sessions(ssh: SshMaster) -> Listing:
