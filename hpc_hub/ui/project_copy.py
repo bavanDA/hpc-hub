@@ -71,7 +71,7 @@ class ProjectCopyDialog(Adw.Dialog):
             w.connect(sig, lambda *_: self._sync())
         self._sync()
         bg(lambda: transfer.subfolder_sizes(src.ssh, p.path), self._show_parts)
-        bg(lambda: chats.list_chats(src.ssh, "claude", 400), self._show_chats)
+        bg(lambda: (chats.list_chats(src.ssh, "claude", 400), self._real()), self._show_chats)
 
     # -- state ----------------------------------------------------------------------------
     @property
@@ -124,12 +124,18 @@ class ProjectCopyDialog(Adw.Dialog):
             self.parts.append((name, size, check))
         self._total()
 
-    def _show_chats(self, found, err) -> None:
-        if err or found is None:
+    def _real(self) -> str:
+        """The project folder with links resolved (/scratch is a link to /mmfs1/scratch on Wulver)."""
+        res = self.src.ssh.run(f"readlink -f {remote_fs.q(self.p.path)}", timeout=30)
+        return res.stdout.strip().rstrip("/")
+
+    def _show_chats(self, got, err) -> None:
+        if err or not got:
             self.chat_group.set_description(GLib.markup_escape_text(f"Could not read chats: {err}"))
             return
-        root = self.p.path.rstrip("/")
-        mine = [c for c in found if c.cwd == root or c.cwd.startswith(root + "/")]
+        found, real = got
+        roots = {self.p.path.rstrip("/"), real} - {""}
+        mine = [c for c in found if any(c.cwd == r or c.cwd.startswith(r + "/") for r in roots)]
         self.chat_group.set_description("Copied too, so you can continue them there. Paths move to the new "
                                         "folder." if mine else "No Claude chats in this folder.")
         for c in mine:
