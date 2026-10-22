@@ -153,7 +153,9 @@ class AgentDialog(Adw.Dialog):
         self.search.set_visible(len(chats) > 6)
         for chat in chats:
             row = Adw.ActionRow(title=GLib.markup_escape_text(chat.name), activatable=True, title_lines=1,
-                                subtitle=GLib.markup_escape_text(f"{when(chat.mtime)} · {short(chat.cwd, home)}"))
+                                subtitle=GLib.markup_escape_text(" · ".join(
+                                    x for x in (when(chat.mtime), short(chat.cwd, home),
+                                                GLib.format_size(chat.size) if chat.size else "") if x)))
             row.add_suffix(Gtk.Image(icon_name="go-next-symbolic"))
             row.connect("activated", lambda _r, c=chat: self._run(c.cwd or "~", c.id, c.name[:40]))
             row.haystack = f"{chat.name} {chat.first} {chat.last} {chat.cwd}".lower()
