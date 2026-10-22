@@ -136,10 +136,14 @@ class ProjectCopyDialog(Adw.Dialog):
         found, real = got
         roots = {self.p.path.rstrip("/"), real} - {""}
         mine = [c for c in found if any(c.cwd == r or c.cwd.startswith(r + "/") for r in roots)]
-        self.chat_group.set_description("Copied too, so you can continue them there. Paths move to the new "
-                                        "folder." if mine else "No Claude chats in this folder.")
+        self.chat_group.set_description("Tick the ones to continue there. Paths move to the new folder."
+                                        if mine else "No Claude chats in this folder.")
+        if mine:
+            every = Gtk.CheckButton(label="Select all", valign=Gtk.Align.CENTER)
+            every.connect("toggled", lambda b: [check.set_active(b.get_active()) for _, check in self.chats])
+            self.chat_group.set_header_suffix(every)
         for c in mine:
-            check = Gtk.CheckButton(active=True, valign=Gtk.Align.CENTER)
+            check = Gtk.CheckButton(active=False, valign=Gtk.Align.CENTER)
             check.connect("toggled", lambda *_: self._total())
             row = Adw.ActionRow(title=GLib.markup_escape_text(c.name), title_lines=1, activatable_widget=check)
             row.add_prefix(check)
