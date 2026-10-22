@@ -155,13 +155,18 @@ class Globus:
         return [Collection(d["id"], d.get("display_name") or d.get("canonical_name") or d["id"],
                            d.get("owner_string", "")) for d in resp.get("DATA", [])]
 
-    def submit(self, src: str, src_path: str, dst: str, dst_path: str, label: str, recursive: bool) -> str:
+    def submit(self, src: str, src_path: str, dst: str, dst_path: str, label: str, recursive: bool,
+               sync_level: int | None = None, skip: list[str] | None = None) -> str:
+        """sync_level 2: only files that are new or newer there. skip: folder names left out (at any depth)."""
         token = self._token()
         sid = _http("GET", f"{TRANSFER}/submission_id", token)["value"]
         body = {"DATA_TYPE": "transfer", "submission_id": sid, "source_endpoint": src,
-                "destination_endpoint": dst, "label": label[:128], "sync_level": None,
+                "destination_endpoint": dst, "label": label[:128], "sync_level": sync_level,
                 "DATA": [{"DATA_TYPE": "transfer_item", "source_path": src_path,
                           "destination_path": dst_path, "recursive": recursive}]}
+        if skip:
+            body["filter_rules"] = [{"DATA_TYPE": "filter_rule", "method": "exclude", "type": "dir", "name": n}
+                                    for n in skip]
         return _http("POST", f"{TRANSFER}/transfer", token, body=body)["task_id"]
 
     def ls(self, collection: str, path: str) -> tuple[str, list[Item]]:
