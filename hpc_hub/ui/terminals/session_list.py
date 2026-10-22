@@ -54,20 +54,19 @@ class SessionListMixin:
         """Agent sessions print their remote link once; find it in the pane and keep it on the session.
         Pairing codes change, so those are looked up again (at most once a minute)."""
         now = time.monotonic()
-        names = [t.name for t in listing.sessions
-                 if t.kind == "tmux" and t.agent in REMOTE_AGENTS and (not t.remote or t.remote.startswith("code:"))
-                 and now - self.remote_checked.get((s.cfg.id, t.name), 0) > 60]
-        if not names:
+        look = [t for t in listing.sessions
+                if t.kind == "tmux" and t.agent in REMOTE_AGENTS and (not t.remote or t.remote.startswith("code:"))
+                and now - self.remote_checked.get((s.cfg.id, t.name), 0) > 60]
+        if not look:
             return
-        for n in names:
-            self.remote_checked[(s.cfg.id, n)] = now
+        for t in look:
+            self.remote_checked[(s.cfg.id, t.name)] = now
 
         def work():
-            found = tmux.find_remotes(s.ssh, names)
-            changed = {n: v for n, v in found.items()
-                       if v != next((t.remote for t in listing.sessions if t.name == n), "")}
+            found = tmux.find_remotes(s.ssh, look)
+            changed = {t.name: found[t.name] for t in look if t.name in found and found[t.name] != t.remote}
             if changed:
-                s.ssh.run("; ".join(tmux.set_remote(n, v) for n, v in changed.items()))
+                s.ssh.run("; ".join(tmux.set_remote(t, changed[t.name]) for t in look if t.name in changed))
             return changed
 
         def done(changed, err):
@@ -85,8 +84,8 @@ class SessionListMixin:
         if view.tmux_session.remote == value:
             return
         view.tmux_session.remote = value
-        ssh, name = view.session.ssh, view.tmux_session.name
-        bg(lambda: ssh.run(tmux.set_remote(name, value)), lambda *_: self._fill())
+        ssh, t = view.session.ssh, view.tmux_session
+        bg(lambda: ssh.run(tmux.set_remote(t, value)), lambda *_: self._fill())
 
     def _use_link(self, value: str) -> None:
         if value.startswith("code:"):
@@ -109,9 +108,10 @@ class SessionListMixin:
         for s in live:
             listing = self.listings.get(s.cfg.id)
             head = self._note(s.cfg.name, heading=True)
-            if listing and listing.host:  # tmux lives on the login node, the programs on compute nodes
-                head.set_tooltip_text(f"Sessions are kept by tmux on {listing.host}, so they survive closing the "
-                                      "app. Each row shows the compute node its program runs on.")
+            if listing and listing.host:
+                head.set_tooltip_text("Sessions are kept by tmux, so they survive closing the app. Agents run "
+                                      "tmux on their compute node and end with its job; older sessions may "
+                                      f"still be on {listing.host}.")
             self.list.append(head)
             items = list(listing.sessions) if listing else []
             for (cid, name), (title, color) in self.starting.items():
@@ -166,7 +166,9 @@ class SessionListMixin:
         here = self.current is not None and self.current.key == (s.cfg.id, t.name)
         state = "open" if here else "in use elsewhere" if t.attached else "running"
         what = AGENT_NAMES.get(t.agent, "screen" if t.kind == "screen" else t.command or "tmux")
-        if t.job and nodes is not None:
+        if t.node:
+            node = t.node
+        elif t.job and nodes is not None:
             node = nodes.get(t.job, "node ended")
             state = "" if node == "node ended" and state == "running" else state
         else:

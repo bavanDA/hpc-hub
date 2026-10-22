@@ -45,7 +45,8 @@ def cd_part(workdir: str) -> str:
     return f"cd {shlex.quote(workdir)}"
 
 
-def on_node(job_id: str, workdir: str, command: str) -> str:
-    """Interactive shell on the job's node (bash -i so ~/.bashrc aliases work)."""
+def node_shell(workdir: str, command: str) -> str:
+    """Run command in workdir, then stay in an interactive shell (bash -i so ~/.bashrc aliases work).
+    Started inside tmux on the job's node (see tmux.open_line)."""
     inner = f"{cd_part(workdir)} && {command}; exec bash -i"
-    return f"srun --jobid={int(job_id)} --overlap --pty bash -ic {shlex.quote(inner)}"
+    return f"bash -ic {shlex.quote(inner)}"

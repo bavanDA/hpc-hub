@@ -245,7 +245,8 @@ class TerminalsPage(SessionListMixin, SessionMenuMixin, Gtk.Box):
             listed = self._listed(key)
             view = View(key, tab, title, color, icon, s, listed or tmux.Session(key[1], label=title, color=color))
             if s and s.ssh:
-                tab.tmux_buffer = lambda ssh=s.ssh: ssh.run("tmux save-buffer - 2>/dev/null", timeout=15).stdout
+                where = (listed.node if listed else node)
+                tab.tmux_buffer = lambda ssh=s.ssh: ssh.run(tmux.save_buffer(where), timeout=15).stdout
             if listed and listed.remote:  # known from before: the header button works right away
                 code = listed.remote.startswith("code:")
                 tab.remote = Link(links.PAIR, "", code=listed.remote[5:]) if code else Link(links.REMOTE, listed.remote)
@@ -262,7 +263,7 @@ class TerminalsPage(SessionListMixin, SessionMenuMixin, Gtk.Box):
         return tab
 
     def attach(self, s: ClusterSession, t: tmux.Session) -> None:
-        self.open(t.title, s.ssh.argv(tmux.attach(t), tty=True), "utilities-terminal-symbolic",
+        self.open(t.title, s.ssh.argv(tmux.attach(t), tty=True), "utilities-terminal-symbolic", node=t.node,
                   key=(s.cfg.id, t.name), color=t.color or tmux.AGENT_COLORS.get(t.agent, ""))
 
     def _listed(self, key: tuple[str, str]) -> tmux.Session | None:
@@ -279,10 +280,8 @@ class TerminalsPage(SessionListMixin, SessionMenuMixin, Gtk.Box):
     def _create(self, s: ClusterSession, on_node: bool, label: str, color: str, folder: str) -> None:
         name = f"hpchub-term-{time.strftime('%m%d-%H%M%S')}"
         a = s.allocation
-        if on_node and a:
-            cmd = remote.on_node(a.job_id, folder, ":")
-        else:
-            cmd = f"bash -c {shlex.quote(remote.cd_part(folder) + '; exec bash -l')}"
-        line = tmux.open_line(name, cmd, label, color)
-        self.open(label, s.ssh.argv(line, tty=True), "utilities-terminal-symbolic", node=a.node if on_node and a else "",
+        node = a.node if on_node and a else ""
+        cmd = f"bash -c {shlex.quote(remote.cd_part(folder) + '; exec bash -l')}"
+        line = tmux.open_line(name, cmd, label, color, node=node)
+        self.open(label, s.ssh.argv(line, tty=True), "utilities-terminal-symbolic", node=node,
                   key=(s.cfg.id, name), color=color)

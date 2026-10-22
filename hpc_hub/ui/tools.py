@@ -30,6 +30,16 @@ def _idle(fn, *args):
     GLib.idle_add(lambda: fn(*args) and False)
 
 
+def _with_node(s: ClusterSession, a: Allocation | None) -> Allocation | None:
+    """Fill in the job's node (tmux runs there). Blocking; call from a worker thread."""
+    if a and not a.node:
+        try:
+            a.node = slurm.node_of(s.ssh, a.job_id)
+        except (OSError, subprocess.SubprocessError, slurm.SlurmError):
+            pass
+    return a
+
+
 def _device_login(tab: TerminalTab, link: Link) -> None:
     if link.code:
         Gdk.Display.get_default().get_clipboard().set(link.code)
@@ -222,7 +232,7 @@ class Tools:
             self._error(f"{agent.name} not found",
                         f"'{c.command}' is not on PATH or in ~/.bashrc on {s.cfg.name}.")
             return
-        start = lambda a, err: _idle(self._start_agent, s, agent, a, err, run)  # noqa: E731
+        start = lambda a, err: _idle(self._start_agent, s, agent, _with_node(s, a), err, run)  # noqa: E731
         if c.new_node:
             self.toast(f"Requesting a new node for {agent.name} ({run.profile.summary()})…")
             s.extra_node(f"hpc-hub-{agent.id}", start, run.profile)
@@ -230,7 +240,7 @@ class Tools:
             s.ensure_node(lambda a: start(a, ""), run.profile)
 
     def _start_agent(self, s: ClusterSession, agent: Agent, a: Allocation | None, err: str, run: Launch) -> None:
-        if not a:
+        if not a or not a.node:
             self._error("No compute node", err or f"Could not get a node on {s.cfg.name}.")
             return
         if agent.remote_setting:  # remote control comes from the agent's settings, not a flag: set it first
@@ -247,7 +257,7 @@ class Tools:
         name = f"hpchub-{agent.id}-{a.job_id}-{tag}"
         title = f"{agent.name} · {run.label or posixpath.basename(folder.rstrip('/')) or folder}"
         color = tmux.AGENT_COLORS.get(agent.id, "")
-        line = tmux.open_line(name, remote.on_node(a.job_id, folder, cmd), title, color)
+        line = tmux.open_line(name, remote.node_shell(folder, cmd), title, color, node=a.node)
         self.terminals.open(title, s.ssh.argv(line, tty=True), agent.icon, node=a.node, key=(s.cfg.id, name),
                             color=color, on_link=lambda tab, link: self._agent_link(agent, tab, link))
         self.show_terminals()
@@ -274,13 +284,13 @@ class Tools:
         self.toast(f"Asking {len(picked)} agents on {s.cfg.name}…")
 
         def start(a: Allocation | None) -> None:
-            if not a:
+            if not a or not a.node:
                 self._error("No compute node", f"Could not get a node on {s.cfg.name}.")
                 return
             name = f"hpchub-ask-{a.job_id}-{time.strftime('%H%M%S')}"
             title = f"Ask all · {prompt.strip().splitlines()[0][:40]}"
             color = tmux.AGENT_COLORS["ask"]
-            line = tmux.open_line(name, remote.on_node(a.job_id, folder, ask_all.command(ask)), title, color)
+            line = tmux.open_line(name, remote.node_shell(folder, ask_all.command(ask)), title, color, node=a.node)
             tab = self.terminals.open(title, s.ssh.argv(line, tty=True), "system-users-symbolic", node=a.node,
                                       key=(s.cfg.id, name), color=color)
             if self.open_files:
@@ -289,14 +299,14 @@ class Tools:
             self.toast(f"Answers go to {out}")
 
         if s.allocation:
-            s.ensure_node(lambda a: _idle(start, a))
+            s.ensure_node(lambda a: _idle(start, _with_node(s, a)))
             return
 
         def go(profile, remember):
             if remember:
                 s.cfg.profile = profile
                 self.save_config()
-            s.ensure_node(lambda a: _idle(start, a), profile)
+            s.ensure_node(lambda a: _idle(start, _with_node(s, a)), profile)
         ComputeDialog(f"Ask all on {s.cfg.name}", s, s.cfg.profile, go).present(self.window)
 
     # -- remote text edit (used by VS Code settings) -----------------------------------------
