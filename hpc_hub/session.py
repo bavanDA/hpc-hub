@@ -216,6 +216,7 @@ class ClusterSession:
                 self._log(f"Extra node {a.node} (job {a.job_id}) for {job_name}")
                 on_done(a, "")
             except (SlurmError, OSError, subprocess.SubprocessError) as e:
+                self._log(f"Node request for {job_name} failed: {e}")
                 on_done(None, str(e))
 
         threading.Thread(target=run, daemon=True).start()
