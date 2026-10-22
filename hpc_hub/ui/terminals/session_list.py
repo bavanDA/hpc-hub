@@ -46,6 +46,7 @@ class SessionListMixin:
             t = self._listed(self.current.key)
             if t:
                 self.current.tmux_session, self.current.title = t, t.title
+                self._show_link(self.current, t.remote)
                 self.current.color = t.color or tmux.AGENT_COLORS.get(t.agent, "") or self.current.color
                 self._header(self.current)
         self._fill()
@@ -73,8 +74,19 @@ class SessionListMixin:
             if changed and self.listings.get(s.cfg.id) is listing:
                 for t in listing.sessions:
                     t.remote = changed.get(t.name, t.remote)
+                v = self.current
+                if v and v.session is s and v.key[1] in changed:
+                    self._show_link(v, changed[v.key[1]])
                 self._fill()
         bg(work, done)
+
+    def _show_link(self, view: "View", value: str) -> None:
+        """A link found in the list: the open tab's header button gets it too."""
+        if not value or view.tab.remote:
+            return
+        code = value.startswith("code:")
+        view.tab.remote = Link(links.PAIR, "", code=value[5:]) if code else Link(links.REMOTE, value)
+        self._remote_button(view.tab)
 
     def _remember_remote(self, view: "View", link: Link) -> None:
         """An open tab saw the link: save it on the tmux session so the list can show it."""
