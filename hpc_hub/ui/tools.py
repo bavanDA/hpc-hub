@@ -7,7 +7,7 @@ import time
 from collections.abc import Callable
 from urllib.parse import urlsplit
 
-from gi.repository import Adw, Gdk, GLib, Gtk
+from gi.repository import Adw, Gdk, GLib, GObject, Gtk
 
 from .. import agents, ask_all, links, permissions, remote, remote_fs, slurm, tmux
 from ..agents import Agent
@@ -85,15 +85,13 @@ class Tools:
             if job and not (known and known[0] == job.job_id):
                 name = links.tunnel_name(slurm.tunnel_link(s.ssh, job.job_id))  # e.g. after an app restart
                 known = self.tunnels[cid] = (job.job_id, name) if name else None
-            return job, known
+            return job, known, slurm.resources(s.ssh, job.job_id) if job else ""
 
         def found(got, err):
             if err:
                 self._error("VS Code job failed", err)
-            elif got[0]:
-                self._vscode_running(s, got[0].job_id, got[1], folder, target)
             else:
-                self._vscode_ask(s, folder, target)
+                self._vscode_ask(s, folder, target, *got)
         bg(find, found)
 
     def _vscode_running(self, s: ClusterSession, job_id: str, known, folder: str, target: str) -> None:
@@ -110,9 +108,17 @@ class Tools:
                 self._follow_vscode(s, job_id)
         bg(lambda: remote_fs.expand(s.ssh, folder or v.workdir), done)
 
-    def _vscode_ask(self, s: ClusterSession, folder: str, target: str) -> None:
+    def _vscode_ask(self, s: ClusterSession, folder: str, target: str, job=None, known=None, has: str = "") -> None:
+        """Folder, app or browser, and resources. A running VS Code job is used unless you switch it off."""
         v = s.cfg.vscode
         what = Adw.PreferencesGroup(title="VS Code")
+        keep = None
+        if job:
+            where = job.node or "waiting in the queue"
+            keep = Adw.SwitchRow(title=f"Use the running VS Code job ({where})", active=True,
+                                 subtitle=f"{has}. Off: stop it and start one with the settings below" if has
+                                 else "Off: stop it and start one with the settings below")
+            what.add(keep)
         place = Adw.EntryRow(title="Folder")
         place.set_text(folder or v.workdir)
         browse = Gtk.Button(icon_name="folder-open-symbolic", tooltip_text="Choose folder", valign=Gtk.Align.CENTER,
@@ -128,14 +134,34 @@ class Tools:
 
         def go(profile, remember):
             where, picked = place.get_text().strip() or "~", targets[open_in.get_selected()]
+            using = keep is not None and keep.get_active()
             if remember:
-                v.compute, v.open_in = profile, picked
+                v.open_in = picked
+                if not using:
+                    v.compute = profile
                 if not folder:
                     v.workdir = where
                 self.save_config()
-            self._vscode_submit(s, where, picked, profile)
-        ComputeDialog(f"VS Code on {s.cfg.name}", s, v.compute, go, what, "Extra sbatch arguments").present(
-            self.window)
+            if using:
+                self._vscode_running(s, job.job_id, known, where, picked)
+            elif job:
+                self.tunnels.pop(s.cfg.id, None)
+                self.toast(f"Stopping VS Code job {job.job_id}…")
+
+                def stopped(_r, err):
+                    if err:
+                        self._error("Could not stop the VS Code job", err)
+                    else:
+                        self._vscode_submit(s, where, picked, profile)
+                bg(lambda: slurm.cancel(s.ssh, job.job_id), stopped)
+            else:
+                self._vscode_submit(s, where, picked, profile)
+        dialog = ComputeDialog(f"VS Code on {s.cfg.name}", s, v.compute, go, what, "Extra sbatch arguments",
+                               go_label="Open")
+        if keep:
+            keep.bind_property("active", dialog.compute, "sensitive",
+                               GObject.BindingFlags.SYNC_CREATE | GObject.BindingFlags.INVERT_BOOLEAN)
+        dialog.present(self.window)
 
     def _vscode_submit(self, s: ClusterSession, folder: str, target: str, profile) -> None:
         v = s.cfg.vscode

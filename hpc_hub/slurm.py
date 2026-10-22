@@ -132,6 +132,15 @@ def follow_log(job_id: str) -> str:
             f'[ -n "$f" ] && exec tail -n +1 -F "$f"; echo "No log found for job $j"; exec bash -l')
 
 
+def resources(ssh: SshMaster, job_id: str) -> str:
+    """What the job has, e.g. "16 cores · 64G · 1:23:45 of 12:00:00"."""
+    out = ssh.run(f"squeue -h -j {int(job_id)} -o '%C|%m|%M|%l'").stdout.strip().split("|")
+    if len(out) != 4:
+        return ""
+    cores, mem, used, limit = out
+    return f"{cores} cores · {mem} · {used} of {limit}"
+
+
 def cancel(ssh: SshMaster, job_id: str) -> None:
     ssh.run(f"scancel {int(job_id)}")
 
