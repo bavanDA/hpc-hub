@@ -23,3 +23,18 @@ def test_copy_missing_source(tmp_path):
     with pytest.raises(transfer.TransferError):
         transfer.copy(LocalShell(), str(tmp_path / "nope"), LocalShell(), str(tmp_path / "d"), progress)
     assert progress.error
+
+
+def test_copy_leaves_out_skipped_subfolders(tmp_path):
+    src = tmp_path / "myproject"
+    for d in ("baselines/big", "build", "results"):
+        (src / d).mkdir(parents=True)
+    (src / "baselines" / "big" / "x.bin").write_bytes(b"0" * 2_000_000)
+    (src / "results" / "r.txt").write_text("ok")
+    (src / "build" / "baselines").mkdir()  # same name deeper down is kept
+    sizes = dict(transfer.subfolder_sizes(LocalShell(), str(src)))
+    assert sizes["baselines"] >= 2_000_000 and "results" in sizes
+    dest = tmp_path / "out"
+    transfer.copy(LocalShell(), str(src), LocalShell(), str(dest), transfer.Progress(), skip=["baselines"])
+    assert (dest / "myproject" / "results" / "r.txt").read_text() == "ok"
+    assert not (dest / "myproject" / "baselines").exists() and (dest / "myproject" / "build" / "baselines").is_dir()

@@ -37,9 +37,22 @@ def total_size(ssh: SshMaster, path: str) -> int:
         return 0
 
 
-def pack_command(src: str) -> str:
+def subfolder_sizes(ssh: SshMaster, path: str) -> list[tuple[str, int]]:
+    """(name, bytes) of what is directly inside path, biggest first."""
+    res = ssh.run(f"cd {shlex.quote(path)} && du -sb -- * .[!.]* 2>/dev/null", timeout=600)
+    out = []
+    for line in res.stdout.splitlines():
+        size, _, name = line.partition("\t")
+        if size.isdigit() and name:
+            out.append((name, int(size)))
+    return sorted(out, key=lambda x: -x[1])
+
+
+def pack_command(src: str, skip: list[str] | None = None) -> str:
+    """tar of src; skip: names directly inside src to leave out."""
     parent, name = posixpath.split(src.rstrip("/"))
-    return f"tar cf - -C {shlex.quote(parent or '/')} -- {shlex.quote(name)}"
+    excludes = "".join(f" --exclude={shlex.quote('./' + name + '/' + s)}" for s in skip or [])
+    return f"tar cf -{excludes} -C {shlex.quote(parent or '/')} -- {shlex.quote('./' + name)}"
 
 
 def unpack_command(dest_dir: str) -> str:
@@ -47,10 +60,11 @@ def unpack_command(dest_dir: str) -> str:
 
 
 def copy(src_ssh: SshMaster, src: str, dst_ssh: SshMaster, dest_dir: str, progress: Progress,
-         on_update: Callable[[Progress], None] = lambda p: None) -> None:
-    """Blocking. Copies src (file or folder) into dest_dir on the other cluster."""
-    progress.total = total_size(src_ssh, src)
-    reader = subprocess.Popen(src_ssh.argv(pack_command(src)), stdin=subprocess.DEVNULL,
+         on_update: Callable[[Progress], None] = lambda p: None, skip: list[str] | None = None,
+         total: int = 0) -> None:
+    """Blocking. Copies src (file or folder) into dest_dir on the other cluster, leaving out skip."""
+    progress.total = total or total_size(src_ssh, src)
+    reader = subprocess.Popen(src_ssh.argv(pack_command(src, skip)), stdin=subprocess.DEVNULL,
                               stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     writer = subprocess.Popen(dst_ssh.argv(unpack_command(dest_dir)), stdin=subprocess.PIPE,
                               stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
