@@ -23,6 +23,7 @@ from .ui.settings import ClusterSettingsDialog  # noqa: E402
 from .ui.tools import Tools  # noqa: E402
 from .ui.browser_login import BrowserLoginDialog  # noqa: E402
 from .ui.key_setup import KeySetupDialog  # noqa: E402
+from .ui.widgets import profile_choices  # noqa: E402
 from .ui.web_login import WebLoginDialog  # noqa: E402
 from .ui.window import MainWindow  # noqa: E402
 
@@ -232,23 +233,10 @@ class HpcHubApp(QuitMixin, Adw.Application):
         return False
 
     def _browser_dialog(self, session, found, result, done) -> bool:
-        default = session.cfg.vpn.browser.lower()
         dialog = Adw.AlertDialog(heading=f"Sign in to the {session.cfg.name} VPN",
                                  body="Where do you want to sign in?")
-        options = Gtk.ListBox(css_classes=["boxed-list"], selection_mode=Gtk.SelectionMode.NONE)
-        checks: list[tuple[str, Gtk.CheckButton]] = []
-        for name, subtitle in [("", "Fills in your username and password")] + [(p.name, p.email) for p in found]:
-            check = Gtk.CheckButton(valign=Gtk.Align.CENTER, active=name.lower() == default,
-                                    group=checks[0][1] if checks else None)
-            row = Adw.ActionRow(title=f"Chrome: {name}" if name else "HPC Hub window", subtitle=subtitle,
-                                activatable_widget=check)
-            row.add_prefix(check)
-            if name.lower() == default:
-                row.add_suffix(Gtk.Label(label="Default", css_classes=["dim-label"]))
-            options.append(row)
-            checks.append((name, check))
-        if not any(c.get_active() for _, c in checks):
-            checks[0][1].set_active(True)
+        options, picked = profile_choices(("", "HPC Hub window", "Fills in your username and password"), found,
+                                          session.cfg.vpn.browser)
         dialog.set_extra_child(options)
         dialog.add_response("cancel", "Cancel")
         dialog.add_response("ok", "Sign in")
@@ -257,7 +245,7 @@ class HpcHubApp(QuitMixin, Adw.Application):
         dialog.set_close_response("cancel")
 
         def on_response(_d, response):
-            result["answer"] = next(n for n, c in checks if c.get_active()) if response == "ok" else None
+            result["answer"] = picked() if response == "ok" else None
             done.set()
 
         dialog.connect("response", on_response)

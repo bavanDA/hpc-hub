@@ -15,9 +15,9 @@ class PreferencesDialog(Adw.PreferencesDialog):
         self.found = browser.profiles() if browser.chrome() else []
         page = Adw.PreferencesPage()
         group = Adw.PreferencesGroup(
-            title="Links", description="VS Code, GitHub sign-in and remote control links open here.")
+            title="Links", description="Every link asks which browser opens it. This one is picked for you.")
         labels = ["System browser"] + [f"Chrome: {p.name}" + (f" ({p.email})" if p.email else "") for p in self.found]
-        self.row = Adw.ComboRow(title="Open links in", model=Gtk.StringList.new(labels))
+        self.row = Adw.ComboRow(title="Default for links", model=Gtk.StringList.new(labels))
         names = [p.name.lower() for p in self.found]
         cur = app.browser_profile.lower()
         self.row.set_selected(names.index(cur) + 1 if cur in names else 0)

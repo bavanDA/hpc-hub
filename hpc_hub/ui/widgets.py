@@ -9,9 +9,54 @@ from .. import browser, layout
 from ..agents import AGENTS
 
 
+def profile_choices(first: tuple[str, str, str], found: list[browser.Profile], default: str
+                    ) -> tuple[Gtk.ListBox, Callable[[], str]]:
+    """Radio list: first = (value, title, subtitle), then one row per Chrome profile; default is picked and
+    marked. Returns the list and a function giving the picked value (a profile name, or first's value)."""
+    options = Gtk.ListBox(css_classes=["boxed-list"], selection_mode=Gtk.SelectionMode.NONE)
+    checks: list[tuple[str, Gtk.CheckButton]] = []
+    for name, title, subtitle in [first] + [(p.name, f"Chrome: {p.name}", p.email) for p in found]:
+        is_default = name.lower() == default.lower()
+        check = Gtk.CheckButton(valign=Gtk.Align.CENTER, active=is_default, group=checks[0][1] if checks else None)
+        row = Adw.ActionRow(title=title, subtitle=subtitle, activatable_widget=check)
+        row.add_prefix(check)
+        if is_default:
+            row.add_suffix(Gtk.Label(label="Default", css_classes=["dim-label"]))
+        options.append(row)
+        checks.append((name, check))
+    if not any(c.get_active() for _, c in checks):
+        checks[0][1].set_active(True)
+    return options, lambda: next(n for n, c in checks if c.get_active())
+
+
 def open_uri(widget: Gtk.Widget, uri: str) -> None:
-    if not browser.open_url(uri, browser.preferred):  # your chosen Chrome profile, else the system browser
-        Gtk.UriLauncher.new(uri).launch(widget.get_root(), None, None, None)
+    """Ask which Chrome profile opens it (your default picked), or the system browser."""
+    found = browser.profiles() if browser.chrome() else []
+    root = widget.get_root()
+
+    def launch(profile: str) -> None:
+        if not (profile and browser.open_url(uri, profile)):
+            Gtk.UriLauncher.new(uri).launch(root, None, None, None)
+    if not found:
+        launch("")
+        return
+    options, picked = profile_choices(("", "System browser", ""), found, browser.preferred)
+    d = Adw.AlertDialog(heading="Open link", body=uri if len(uri) < 90 else uri[:87] + "…")
+    d.set_extra_child(options)
+    d.add_response("cancel", "Cancel")
+    d.add_response("copy", "Copy link")
+    d.add_response("open", "Open")
+    d.set_response_appearance("open", Adw.ResponseAppearance.SUGGESTED)
+    d.set_default_response("open")
+    d.set_close_response("cancel")
+
+    def on_response(_d, r):
+        if r == "open":
+            launch(picked())
+        elif r == "copy":
+            Gdk.Display.get_default().get_clipboard().set(uri)
+    d.connect("response", on_response)
+    d.present(root)
 
 
 def ask_name(parent: Gtk.Widget, heading: str, confirm: str, then: Callable[[str], None], text: str = "",
