@@ -17,6 +17,15 @@ def chunk(f, size, end):
     if end:
         f.seek(max(0, size - CHUNK))
     return f.read(CHUNK).decode("utf-8", "replace").splitlines()
+def tree(p):
+    total = 0
+    for root, _, names in os.walk(p):
+        for n in names:
+            try:
+                total += os.lstat(os.path.join(root, n)).st_size
+            except OSError:
+                pass
+    return total
 def text(c):
     if isinstance(c, list):
         c = " ".join(b.get("text", "") for b in c if isinstance(b, dict) and b.get("type") == "text")
@@ -27,8 +36,11 @@ def claude(limit):
     out = []
     for path in files[:limit]:
         st = os.stat(path)
-        chat = {"id": os.path.basename(path)[:-6], "mtime": int(st.st_mtime), "size": st.st_size,
-                "cwd": "", "first": "", "title": "", "last": ""}
+        cid = os.path.basename(path)[:-6]
+        # size: the conversation, its subagents and saved tool output, and its edit history
+        size = st.st_size + tree(path[:-6]) + tree(os.path.expanduser("~/.claude/file-history/" + cid))
+        chat = {"id": cid, "mtime": int(st.st_mtime), "size": size, "cwd": "", "first": "", "title": "",
+                "last": "", "dir": os.path.basename(os.path.dirname(path))}
         try:
             with open(path, "rb") as f:
                 for line in chunk(f, st.st_size, False):
@@ -147,6 +159,7 @@ class Chat:
     last: str
     mtime: int
     size: int
+    dir: str = ""  # Claude: its folder under ~/.claude/projects
 
     @property
     def name(self) -> str:
