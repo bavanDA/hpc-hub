@@ -3,7 +3,6 @@
 import posixpath
 import shutil
 import subprocess
-import threading
 import time
 from collections.abc import Callable
 from urllib.parse import urlsplit
@@ -12,14 +11,15 @@ from gi.repository import Adw, Gdk, GLib, Gtk
 
 from .. import agents, ask_all, links, permissions, remote, remote_fs, slurm, tmux
 from ..agents import Agent
-from ..limits import human
 from ..links import Link
 from ..session import ClusterSession
 from ..slurm import Allocation
 from .agent_dialog import AgentDialog, Launch
 from .ask_all import AskAllDialog
+from .compute_dialog import ComputeDialog
+from .folder_picker import FolderPicker
 from .terminals import TerminalsPage, TerminalTab
-from .widgets import bg, open_uri
+from .widgets import TARGETS, bg, open_uri
 
 
 VSCODE_JOB = "hpc-hub-vscode"
@@ -63,37 +63,85 @@ class Tools:
     # -- VS Code -------------------------------------------------------------------
     def vscode(self, s: ClusterSession, folder: str = "", target: str = "") -> None:
         """Open folder in VS Code (desktop app or browser) through the tunnel of the VS Code batch job.
-        Submits the job if none is running and follows its log."""
+        With no job running, asks what to start (folder, app or browser, resources), then follows its log."""
         if not self._ready(s):
             return
-        v, cid = s.cfg.vscode, s.cfg.id
+        cid = s.cfg.id
+        self.toast(f"Looking for VS Code on {s.cfg.name}…")
+
+        def find():
+            job = slurm.find_job(s.ssh, VSCODE_JOBS)
+            known = self.tunnels.get(cid)
+            if job and not (known and known[0] == job.job_id):
+                name = links.tunnel_name(slurm.tunnel_link(s.ssh, job.job_id))  # e.g. after an app restart
+                known = self.tunnels[cid] = (job.job_id, name) if name else None
+            return job, known
+
+        def found(got, err):
+            if err:
+                self._error("VS Code job failed", err)
+            elif got[0]:
+                self._vscode_running(s, got[0].job_id, got[1], folder, target)
+            else:
+                self._vscode_ask(s, folder, target)
+        bg(find, found)
+
+    def _vscode_running(self, s: ClusterSession, job_id: str, known, folder: str, target: str) -> None:
+        v = s.cfg.vscode
         target = target or v.open_in
-        self.toast(f"Opening VS Code on {s.cfg.name}…")
+
+        def done(where, err):
+            if err:
+                self._error("VS Code job failed", err)
+            elif known:
+                self._open_tunnel(known[1], where, target)
+            else:
+                self.pending[s.cfg.id] = (where, target)
+                self._follow_vscode(s, job_id)
+        bg(lambda: remote_fs.expand(s.ssh, folder or v.workdir), done)
+
+    def _vscode_ask(self, s: ClusterSession, folder: str, target: str) -> None:
+        v = s.cfg.vscode
+        what = Adw.PreferencesGroup(title="VS Code")
+        place = Adw.EntryRow(title="Folder")
+        place.set_text(folder or v.workdir)
+        browse = Gtk.Button(icon_name="folder-open-symbolic", tooltip_text="Choose folder", valign=Gtk.Align.CENTER,
+                            css_classes=["flat"])
+        browse.connect("clicked", lambda *_: FolderPicker(s, place.get_text().strip() or "~",
+                                                         place.set_text).present(self.window))
+        place.add_suffix(browse)
+        targets = [t for t, _, _ in TARGETS]
+        open_in = Adw.ComboRow(title="Open in", model=Gtk.StringList.new([text for _, text, _ in TARGETS]))
+        open_in.set_selected(targets.index(target or v.open_in) if (target or v.open_in) in targets else 0)
+        what.add(place)
+        what.add(open_in)
+
+        def go(profile, remember):
+            where, picked = place.get_text().strip() or "~", targets[open_in.get_selected()]
+            if remember:
+                v.compute, v.open_in = profile, picked
+                if not folder:
+                    v.workdir = where
+                self.save_config()
+            self._vscode_submit(s, where, picked, profile)
+        ComputeDialog(f"VS Code on {s.cfg.name}", s, v.compute, go, what, "Extra sbatch arguments").present(
+            self.window)
+
+    def _vscode_submit(self, s: ClusterSession, folder: str, target: str, profile) -> None:
+        v = s.cfg.vscode
 
         def work():
-            try:
-                where = remote_fs.expand(s.ssh, folder or v.workdir)
-                job = slurm.find_job(s.ssh, VSCODE_JOBS)
-                known = self.tunnels.get(cid)
-                if job and not (known and known[0] == job.job_id):
-                    name = links.tunnel_name(slurm.tunnel_link(s.ssh, job.job_id))  # e.g. after an app restart
-                    known = self.tunnels[cid] = (job.job_id, name) if name else None
-                if job and known:
-                    _idle(self._open_tunnel, known[1], where, target)
-                    return
-                self.pending[cid] = (where, target)
-                if job:
-                    job_id = job.job_id
-                else:
-                    body = "\n".join(x for x in (remote.cd_part(v.workdir), v.setup, v.command) if x.strip())
-                    job_id = slurm.submit(s.ssh, s.fit(v.compute), VSCODE_JOB, body)
-                    _idle(self.toast, f"Submitted VS Code job {job_id}, it opens when the job starts")
-            except (slurm.SlurmError, OSError, subprocess.SubprocessError, remote_fs.FsError) as e:
-                _idle(self._error, "VS Code job failed", str(e))
-                return
-            _idle(self._follow_vscode, s, job_id)
+            self.pending[s.cfg.id] = (remote_fs.expand(s.ssh, folder), target)
+            body = "\n".join(x for x in (remote.cd_part(v.workdir), v.setup, v.command) if x.strip())
+            return slurm.submit(s.ssh, s.fit(profile), VSCODE_JOB, body)
 
-        threading.Thread(target=work, daemon=True).start()
+        def done(job_id, err):
+            if err:
+                self._error("VS Code job failed", err)
+                return
+            self.toast(f"Submitted VS Code job {job_id}, it opens when the job starts")
+            self._follow_vscode(s, job_id)
+        bg(work, done)
 
     def _follow_vscode(self, s: ClusterSession, job_id: str) -> None:
         tab = self.vs_tabs.get(s.cfg.id)
@@ -176,11 +224,10 @@ class Tools:
             return
         start = lambda a, err: _idle(self._start_agent, s, agent, a, err, run)  # noqa: E731
         if c.new_node:
-            for_time = f" for {human(run.minutes)}" if run.minutes else ""
-            self.toast(f"Requesting a new node for {agent.name}{for_time}…")
-            s.extra_node(f"hpc-hub-{agent.id}", start, run.minutes)
+            self.toast(f"Requesting a new node for {agent.name} ({run.profile.summary()})…")
+            s.extra_node(f"hpc-hub-{agent.id}", start, run.profile)
         else:
-            s.ensure_node(lambda a: start(a, ""))
+            s.ensure_node(lambda a: start(a, ""), run.profile)
 
     def _start_agent(self, s: ClusterSession, agent: Agent, a: Allocation | None, err: str, run: Launch) -> None:
         if not a:
@@ -241,7 +288,16 @@ class Tools:
             self.show_terminals()
             self.toast(f"Answers go to {out}")
 
-        s.ensure_node(lambda a: _idle(start, a))
+        if s.allocation:
+            s.ensure_node(lambda a: _idle(start, a))
+            return
+
+        def go(profile, remember):
+            if remember:
+                s.cfg.profile = profile
+                self.save_config()
+            s.ensure_node(lambda a: _idle(start, a), profile)
+        ComputeDialog(f"Ask all on {s.cfg.name}", s, s.cfg.profile, go).present(self.window)
 
     # -- remote text edit (used by VS Code settings) -----------------------------------------
     def edit_remote(self, s: ClusterSession, path: str, template: str = "") -> None:

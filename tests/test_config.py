@@ -84,3 +84,13 @@ def test_empty_vscode_command_gets_default(tmp_path):
     path = tmp_path / "c.toml"
     path.write_text('[clusters.yale.vscode]\ncommand = ""\n')
     assert config.load(path)[1].vscode.command == f"{config.TUNNEL} --name yale"
+
+
+def test_agent_compute_roundtrip(tmp_path):
+    path = tmp_path / "c.toml"
+    clusters = config.default_clusters()
+    assert clusters[0].claude.compute.cpus == 0  # not picked yet: the cluster's node settings are used
+    clusters[0].claude.compute = config.ComputeProfile(cpus=8, mem_gb=32, time="02:00:00", gpus=1)
+    config.save(clusters, path)
+    c = config.load(path)[0].claude.compute
+    assert (c.cpus, c.mem_gb, c.time, c.gpus) == (8, 32, "02:00:00", 1)

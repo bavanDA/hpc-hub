@@ -4,17 +4,18 @@ import datetime
 import posixpath
 import time
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
-from gi.repository import Adw, GLib, GObject, Gtk
+from gi.repository import Adw, GLib, Gtk
 
 from .. import chats as chat_store
 from .. import remote_fs
 from ..agents import Agent
 from ..chats import Chat
-from ..limits import minutes
+from ..config import ComputeProfile
+from ..limits import slurm_time
 from ..session import ClusterSession
-from .duration import DurationRow
+from .compute_dialog import ComputeGroup
 from .folder_picker import FolderPicker, short
 from .widgets import bg
 
@@ -36,7 +37,7 @@ class Launch:
     chat_id: str = ""  # "" = a new chat
     label: str = ""
     task: str = ""  # first prompt the agent starts working on
-    minutes: int = 0  # time on a new node; 0 = the cluster's usual time
+    profile: ComputeProfile | None = None  # resources if a node is requested
 
 
 class AgentDialog(Adw.Dialog):
@@ -81,13 +82,12 @@ class AgentDialog(Adw.Dialog):
                                                    propagate_natural_height=True), )
         work.add(frame)
         page.add(work)
-        time_group = Adw.PreferencesGroup()
-        p = s.cfg.profile
-        self.time = DurationRow("Time on the new node", c.minutes or minutes(p.time) or 240, s.limits,
-                                p.partition, p.qos)
-        self.new.bind_property("active", self.time, "sensitive", GObject.BindingFlags.SYNC_CREATE)
-        time_group.add(self.time)
-        page.add(time_group)
+        base = c.compute if c.compute.cpus else replace(s.cfg.profile, time=slurm_time(c.minutes)) if c.minutes \
+            else s.cfg.profile
+        self.node = ComputeGroup(s, base, title="Compute node")
+        self.new.connect("notify::active", lambda *_: self._node_note())
+        self._node_note()
+        page.add(self.node)
 
         new_chat = Adw.PreferencesGroup(title="New chat")
         self.folder = Adw.EntryRow(title="Folder")
@@ -119,6 +119,14 @@ class AgentDialog(Adw.Dialog):
         tv.add_top_bar(Adw.HeaderBar(title_widget=head))
         self.set_child(tv)
         self._load()
+
+    def _node_note(self) -> None:
+        a = self.s.allocation
+        asks = self.new.get_active() or not a
+        self.node.set_sensitive(asks)
+        self.node.set_description("A new node with:" if self.new.get_active() else
+                                  f"Uses your node {a.node}, nothing to ask for" if a else
+                                  "You have no node yet, so it asks for one with:")
 
     def _load(self) -> None:
         s, limit = self.s, 400 if self.project else chat_store.LIMIT
@@ -160,7 +168,9 @@ class AgentDialog(Adw.Dialog):
     def _run(self, folder: str, chat_id: str, label: str = "") -> None:
         c = self.settings
         c.new_node, c.remote = self.new.get_active(), self.remote.get_active()
-        c.minutes = self.time.minutes() if self.new.get_active() else c.minutes
+        profile = self.node.read()
+        if self.node.get_sensitive():
+            c.compute = profile
         buf = self.task.get_buffer()
         task = buf.get_text(buf.get_start_iter(), buf.get_end_iter(), False).strip()
         for o, row in self.option_rows:
@@ -169,5 +179,5 @@ class AgentDialog(Adw.Dialog):
             c.workdir = folder
         self.save()
         self.close()
-        self.on_run(Launch(folder, chat_id, label, task, c.minutes if c.new_node else 0))
+        self.on_run(Launch(folder, chat_id, label, task, profile if self.node.get_sensitive() else None))
 

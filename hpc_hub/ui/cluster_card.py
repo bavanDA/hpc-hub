@@ -6,6 +6,7 @@ from collections.abc import Callable
 from gi.repository import Adw, Gtk, Pango
 
 from ..session import ClusterSession, State
+from .compute_dialog import ComputeDialog
 from .widgets import agent_buttons, vscode_button
 
 MAX_LOG_LINES = 1000
@@ -122,10 +123,17 @@ class ClusterCard(Gtk.Box):
         self.save()
 
     def _on_node_btn(self, *_):
-        if self.session.allocation:
-            self.session.release_node()
-        else:
-            self.session.request_node()
+        s = self.session
+        if s.allocation:
+            s.release_node()
+            return
+
+        def go(profile, remember):
+            if remember:
+                s.cfg.profile = profile
+                self.save()
+            s.request_node(profile)
+        ComputeDialog(f"Compute node on {s.cfg.name}", s, s.cfg.profile, go, go_label="Request").present(self)
 
     def _on_action(self, *_):
         state = self.session.state

@@ -81,7 +81,8 @@ class AgentSettings:
     effort: str = ""
     sandbox: str = ""
     approval: str = ""
-    minutes: int = 0  # time on a new node; 0 = the cluster's usual time
+    minutes: int = 0  # older configs: time on a new node; 0 = the cluster's usual time
+    compute: ComputeProfile = field(default_factory=lambda: ComputeProfile(cpus=0))  # cpus 0 = not picked yet
 
 
 @dataclass
