@@ -12,6 +12,7 @@ from ..projects import Project, ProjectStore
 from ..remote_fs import Place
 from ..session import ClusterSession, State
 from .folder_picker import FolderPicker
+from .project_copy import ProjectCopyDialog
 from .widgets import agent_buttons, bg, vscode_button
 
 
@@ -23,6 +24,10 @@ class Actions:
     latex: Callable[[ClusterSession, Project], None]
     connect: Callable[[ClusterSession], None]
     ask: Callable[[ClusterSession, str], None] = lambda s, folder: None  # Ask all agents in a folder
+    # copy through the laptop: source, path, destination, folder there, names to skip, bytes
+    copy: Callable[..., None] = lambda *a: None
+    globus_client: Callable[[], object] = lambda: None  # globus.Globus, or None before it is set up
+    open_globus: Callable[[], None] = lambda: None
 
 
 def slug(name: str) -> str:
@@ -107,7 +112,8 @@ class ProjectsPage(Gtk.Box):
         menu = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2, margin_top=4, margin_bottom=4,
                        margin_start=4, margin_end=4)
         pop = Gtk.Popover(child=menu)
-        for label, fn in (("Edit", lambda: self.edit(p, create=False)),
+        for label, fn in (("Copy or sync to another cluster", lambda: self.copy_project(p)),
+                          ("Edit", lambda: self.edit(p, create=False)),
                           ("Copy path", lambda: (self.get_clipboard().set(p.path), self.toast("Path copied"))),
                           ("Remove from list", lambda: self.remove(p))):
             b = Gtk.Button(label=label, css_classes=["flat"])
@@ -118,6 +124,15 @@ class ProjectsPage(Gtk.Box):
         box.append(more)
         row.add_suffix(box)
         return row
+
+    def copy_project(self, p: Project) -> None:
+        src = self.sessions[p.cluster]
+        targets = [s for s in self.sessions.values() if s is not src]
+        if not targets:
+            self.toast("Add another cluster first")
+            return
+        self.run(p, lambda: ProjectCopyDialog(p, src, targets, self.act, self.store.changed, self.toast).present(
+            self.get_root()))
 
     def remove(self, p: Project) -> None:
         d = Adw.AlertDialog(heading=f"Remove {p.name}?", body="Only from this list. The folder on the cluster stays.")

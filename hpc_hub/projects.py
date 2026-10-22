@@ -40,6 +40,8 @@ class Project:
     main_tex: str = ""  # relative to path, for the LaTeX tab
     opened: int = 0  # last opened, unix time
     kind: str = ""  # "code" or "latex"; empty in old files
+    copy_to: str = ""  # cluster id it was last copied or synced to
+    copy_into: str = ""  # folder there it went into
 
     @property
     def is_latex(self) -> bool:

@@ -8,7 +8,7 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Adw, Gio, GLib, Gtk  # noqa: E402
 
-from . import APP_ID, APP_NAME, __version__, browser, config, credentials  # noqa: E402
+from . import APP_ID, APP_NAME, __version__, browser, config, credentials, globus  # noqa: E402
 from .askpass_server import AskpassServer  # noqa: E402
 from .paths import runtime_dir  # noqa: E402
 from .projects import ProjectStore  # noqa: E402
@@ -96,7 +96,13 @@ class HpcHubApp(QuitMixin, Adw.Application):
                     files=self._open_files,
                     latex=self._open_latex_project,
                     connect=self.connect_session,
-                    ask=lambda s, folder: self.tools.ask_all(s, folder))),
+                    ask=lambda s, folder: self.tools.ask_all(s, folder),
+                    copy=lambda src, path, dst, into, skip, size: (
+                        self.window.files.direct_copy(src, path, dst, into, None, skip, size),
+                        self.window.toast("Copying. Progress is on the Files page")),
+                    globus_client=lambda: globus.Globus(self.app_settings.globus_client_id)
+                    if self.app_settings.globus_client_id else None,
+                    open_globus=lambda: self.window.stack.set_visible_child_name("globus"))),
                 self.projects)
             self.window.connect("close-request", self._on_close_request)
             self.window.terminals.on_tool = self.open_tool
