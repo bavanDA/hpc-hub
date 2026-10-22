@@ -289,3 +289,15 @@ def test_reconnect_reuses_live_login(env):
     rec.done.clear()
     s.disconnect()
     assert rec.done.wait(20)
+
+
+def test_code_cluster_without_authenticator_says_so():
+    from hpc_hub import config
+    from hpc_hub.session import ClusterSession
+    s = object.__new__(ClusterSession)
+    s.cfg = next(c for c in config.default_clusters() if c.id == "sdsc")
+    denied = "bd@login.expanse.sdsc.edu: Permission denied (gssapi-with-mic,keyboard-interactive,hostbased)."
+    assert "passive.sdsc.edu" in s._no_code_hint(denied, [])
+    assert s._no_code_hint(denied, ["Verification code:"]) == denied  # it asked: a wrong code, not this
+    s.cfg = config.default_clusters()[0]
+    assert s._no_code_hint(denied, []) == denied

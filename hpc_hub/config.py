@@ -107,6 +107,7 @@ class ClusterConfig:
     duo_answer: str = "push"
     second_factor: str = "duo"  # duo (push to your phone) or code (authenticator app, TOTP)
     portal: str = ""  # web portal where you can add your SSH key after signing in in Chrome
+    code_setup: str = ""  # where you set up the authenticator app the cluster asks codes from
     request_node_on_connect: bool = True
     reuse_running_job: bool = False
     vpn: VpnSettings = field(default_factory=VpnSettings)
@@ -163,6 +164,7 @@ def default_clusters() -> list[ClusterConfig]:
             host="login.expanse.sdsc.edu",
             second_factor="code",  # ACCESS login: ACCESS password or SSH key, then a TOTP code
             portal="https://portal.expanse.sdsc.edu",
+            code_setup="https://passive.sdsc.edu",
             profile=ComputeProfile(cpus=2, mem_gb=16, partition="shared"),
             vscode=VsCodeSettings(setup=FILE_KEYCHAIN,
                                   compute=ComputeProfile(cpus=2, mem_gb=8, time="08:00:00", partition="shared")),

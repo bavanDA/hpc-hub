@@ -250,8 +250,10 @@ class ClusterSession:
     # -- workers -------------------------------------------------------------
     def _connect(self, ssh_login: Login, vpn_login: Login | None) -> None:
         handler_state = {prompts.PASSWORD: 0, prompts.DUO: 0}
+        asked = []
 
         def on_prompt(prompt: str) -> str | None:
+            asked.append(prompt)
             if prompt == SSO_USER:
                 return vpn_login.username if vpn_login else None
             if prompt == SSO_PASS:
@@ -314,12 +316,20 @@ class ClusterSession:
             self.ssh.start(cancelled=self._cancel.is_set)
             self._log("SSH session ready")
         except (VpnError, SshError, OSError) as e:
-            self._fail(str(e))
+            self._fail(self._no_code_hint(str(e), asked))
             return
         finally:
             self.askpass.unregister(token)
 
         self._after_login()
+
+    def _no_code_hint(self, err: str, asked: list[str]) -> str:
+        """A code cluster that refuses before asking anything: the account has no authenticator set up there."""
+        if self.cfg.second_factor != "code" or asked or "Permission denied" not in err:
+            return err
+        where = f" at {self.cfg.code_setup} (Manage 2FA)" if self.cfg.code_setup else ""
+        return (f"{self.cfg.name} accepted your key but never asked for a code, so no authenticator app is set up "
+                f"for your account. Set one up{where}, wait up to 15 minutes, then connect again.")
 
     def _after_login(self) -> None:
         """Logged in: use a node that is already running before asking Slurm for a new one."""
