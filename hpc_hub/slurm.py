@@ -58,7 +58,8 @@ def validate(p: ComputeProfile) -> list[str]:
 
 
 def resource_args(p: ComputeProfile) -> list[str]:
-    args = [f"--cpus-per-task={p.cpus}", f"--mem={p.mem_gb}G", f"--time={p.time}"]
+    # one task on one node, said out loud: Expanse refuses jobs that leave them to the defaults
+    args = ["--nodes=1", "--ntasks=1", f"--cpus-per-task={p.cpus}", f"--mem={p.mem_gb}G", f"--time={p.time}"]
     if p.partition:
         args.append(f"--partition={p.partition}")
     if p.account:

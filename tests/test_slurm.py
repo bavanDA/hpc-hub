@@ -6,7 +6,7 @@ def test_salloc_command():
     p = ComputeProfile(cpus=4, mem_gb=16, time="04:00:00", partition="general",
                        account="pi_x", qos="standard", gpus=1, extra_args="--constraint='a b'")
     cmd = slurm.salloc_command(p)
-    assert cmd.startswith("salloc --no-shell --job-name=hpc-hub --cpus-per-task=4 --mem=16G")
+    assert cmd.startswith("salloc --no-shell --job-name=hpc-hub --nodes=1 --ntasks=1 --cpus-per-task=4 --mem=16G")
     assert "--partition=general --account=pi_x --qos=standard --gres=gpu:1" in cmd
     assert cmd.endswith("'--constraint=a b'")
 
