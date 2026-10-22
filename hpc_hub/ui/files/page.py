@@ -12,6 +12,7 @@ from ...session import ClusterSession, State
 from ..preview import Preview
 from ..widgets import bg, remember_size
 from .actions import TEXT
+from .copy_dialog import CopyDialog
 from .pane import FilePane
 from .transfers import TransferRow
 
@@ -22,7 +23,7 @@ class FilesPage(Gtk.Box):
         super().__init__(orientation=Gtk.Orientation.VERTICAL)
         self.sessions = sessions
         self.toast = toast
-        self.clip: tuple[ClusterSession, str] | None = None  # (cluster, path) waiting to be pasted
+        self.clip: tuple[ClusterSession, str, bool] | None = None  # (cluster, path, is folder) to paste
         self.banner = Adw.Banner(button_label="Paste here")
         self.banner.connect("button-clicked", lambda *_: self.paste())
         self.append(self.banner)
@@ -84,7 +85,7 @@ class FilesPage(Gtk.Box):
             self.pane._connected()
 
     def copy(self, pane: FilePane, e: Entry) -> None:
-        self.clip = (pane.session, pane.child(e))
+        self.clip = (pane.session, pane.child(e), e.is_dir)
         self.banner.set_title(GLib.markup_escape_text(
             f"Copied {e.name} from {pane.session.cfg.name}. Open any folder on any cluster, then paste."))
         self.banner.set_revealed(True)
@@ -93,7 +94,7 @@ class FilesPage(Gtk.Box):
         if not self.clip:
             return
         pane = self.pane
-        src, src_path = self.clip
+        src, src_path, folder = self.clip
         dst, dest_dir = pane.session, pane.path
         if dst.state != State.CONNECTED or not dest_dir:
             self.toast("Open a folder to paste into first")
@@ -108,10 +109,15 @@ class FilesPage(Gtk.Box):
             self.toast(f"Copying {name}…")
             bg(lambda: remote_fs.copy(src.ssh, src_path, dest_dir), pane._done(f"Copied {name}"))
             return
-        self.direct_copy(src, src_path, dst, dest_dir, pane)
+        if folder:
+            CopyDialog(src, src_path, dst, dest_dir,
+                       lambda skip, total: self.direct_copy(src, src_path, dst, dest_dir, pane, skip, total)
+                       ).present(self)
+        else:
+            self.direct_copy(src, src_path, dst, dest_dir, pane)
 
     def direct_copy(self, src: ClusterSession, src_path: str, dst: ClusterSession, dest_dir: str,
-                    dst_pane: FilePane | None = None) -> None:
+                    dst_pane: FilePane | None = None, skip: list[str] | None = None, total: int = 0) -> None:
         name = posixpath.basename(src_path.rstrip("/"))
         progress = transfer.Progress()
         row = TransferRow(f"{name}: {src.cfg.name} → {dst.cfg.name}:{dest_dir}", progress)
@@ -132,4 +138,4 @@ class FilesPage(Gtk.Box):
                 dst_pane.refresh()
             self.toast(f"Copy failed: {err}" if err else f"Copied {name} to {dst.cfg.name}")
 
-        bg(lambda: transfer.copy(src.ssh, src_path, dst.ssh, dest_dir, progress, on_update), done)
+        bg(lambda: transfer.copy(src.ssh, src_path, dst.ssh, dest_dir, progress, on_update, skip, total), done)
