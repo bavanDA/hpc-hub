@@ -132,6 +132,12 @@ def follow_log(job_id: str) -> str:
             f'[ -n "$f" ] && exec tail -n +1 -F "$f"; echo "No log found for job $j"; exec bash -l')
 
 
+def default_account(ssh: SshMaster) -> str:
+    """Your default Slurm account (some clusters, like Expanse, still want it named on every job)."""
+    out = ssh.run('sacctmgr -nP show user "$USER" format=defaultaccount 2>/dev/null').stdout.split()
+    return out[0] if out else ""
+
+
 def resources(ssh: SshMaster, job_id: str) -> str:
     """What the job has, e.g. "16 cores · 64G · 1:23:45 of 12:00:00"."""
     out = ssh.run(f"squeue -h -j {int(job_id)} -o '%C|%m|%M|%l'").stdout.strip().split("|")

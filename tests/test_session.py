@@ -301,3 +301,17 @@ def test_code_cluster_without_authenticator_says_so():
     assert s._no_code_hint(denied, ["Verification code:"]) == denied  # it asked: a wrong code, not this
     s.cfg = config.default_clusters()[0]
     assert s._no_code_hint(denied, []) == denied
+
+
+def test_default_account_is_named_on_requests():
+    from hpc_hub import config
+    from hpc_hub.session import ClusterSession
+
+    class Ssh:
+        def run(self, cmd, timeout=60):
+            import subprocess
+            return subprocess.CompletedProcess(cmd, 0, "xyz789\n" if "defaultaccount" in cmd else "", "")
+    s = object.__new__(ClusterSession)
+    s.cfg, s.ssh, s.limits, s.default_account = config.default_clusters()[2], Ssh(), None, None
+    assert s.fit(config.ComputeProfile()).account == "xyz789"
+    assert s.fit(config.ComputeProfile(account="other")).account == "other"

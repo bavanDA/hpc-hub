@@ -4,6 +4,7 @@ import subprocess
 import threading
 import time
 import traceback
+from dataclasses import replace
 from enum import Enum
 from typing import Protocol
 from urllib.parse import urlsplit
@@ -64,6 +65,7 @@ class ClusterSession:
         self._cancel = threading.Event()
         self._thread: threading.Thread | None = None
         self.limits = limits.cached(cfg.id)  # longest time per partition and QoS
+        self.default_account: str | None = None  # looked up once per login
 
     # -- state -------------------------------------------------------------
     def _set(self, state: State, detail: str = "") -> None:
@@ -71,13 +73,24 @@ class ClusterSession:
         self.listener.state_changed(self)
 
     def fit(self, profile: ComputeProfile) -> ComputeProfile:
-        """The profile with its time cut to what the cluster allows (Slurm would refuse it otherwise)."""
+        """The profile with its time cut to what the cluster allows (Slurm would refuse it otherwise), and your
+        default account named when none is set. Blocking; call from a worker thread."""
+        if not profile.account and self._account():
+            profile = replace(profile, account=self._account())
         if not self.limits:
             return profile
         fitted, note = self.limits.fit(profile)
         if note:
             self._log(note)
         return fitted
+
+    def _account(self) -> str:
+        if self.default_account is None and self.ssh:
+            try:
+                self.default_account = slurm.default_account(self.ssh)
+            except (SshError, OSError, subprocess.SubprocessError):
+                return ""
+        return self.default_account or ""
 
     def _read_limits(self) -> None:
         def run():
@@ -196,11 +209,9 @@ class ClusterSession:
 
     def extra_node(self, job_name: str, on_done, profile: ComputeProfile | None = None) -> None:
         """Separate allocation (e.g. Claude on a new node). Kept when you disconnect."""
-        profile = self.fit(profile or self.cfg.profile)
-
         def run():
             try:
-                a = slurm.allocate(self.ssh, profile, self._log, job_name=job_name)
+                a = slurm.allocate(self.ssh, self.fit(profile or self.cfg.profile), self._log, job_name=job_name)
                 a.owned = False
                 self._log(f"Extra node {a.node} (job {a.job_id}) for {job_name}")
                 on_done(a, "")
