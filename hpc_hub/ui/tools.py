@@ -173,7 +173,7 @@ class Tools:
 
         def done(job_id, err):
             if err:
-                s.listener.log(s, f"VS Code job failed: {err}")
+                s._log(f"VS Code job failed: {err}")
                 self._error("VS Code job failed", err)
                 return
             self.toast(f"Submitted VS Code job {job_id}, it opens when the job starts")
