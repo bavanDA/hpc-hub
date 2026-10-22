@@ -4,7 +4,6 @@ import subprocess
 import threading
 import time
 import traceback
-from dataclasses import replace
 from enum import Enum
 from typing import Protocol
 from urllib.parse import urlsplit
@@ -156,12 +155,12 @@ class ClusterSession:
 
         threading.Thread(target=run, daemon=True).start()
 
-    def request_node(self) -> None:
-        """Ask for a node on an already connected session."""
+    def request_node(self, profile: ComputeProfile | None = None) -> None:
+        """Ask for a node on an already connected session (profile: what you picked, else the saved one)."""
         if self.state != State.CONNECTED or self.allocation:
             return
         self._cancel.clear()
-        self._thread = threading.Thread(target=self._allocate_safely, daemon=True)
+        self._thread = threading.Thread(target=self._allocate_safely, args=(profile,), daemon=True)
         self._thread.start()
 
     def release_node(self) -> None:
@@ -180,7 +179,7 @@ class ClusterSession:
 
         threading.Thread(target=run, daemon=True).start()
 
-    def ensure_node(self, on_done) -> None:
+    def ensure_node(self, on_done, profile: ComputeProfile | None = None) -> None:
         """Get a node if we have none (or ours ended); on_done(Allocation | None) runs on a worker thread."""
         if self.state != State.CONNECTED:
             on_done(self.allocation)
@@ -190,15 +189,14 @@ class ClusterSession:
             self.check_node()
             if not self.allocation:
                 self._cancel.clear()
-                self._allocate_safely()
+                self._allocate_safely(profile)
             on_done(self.allocation)
 
         threading.Thread(target=run, daemon=True).start()
 
-    def extra_node(self, job_name: str, on_done, minutes: int = 0) -> None:
-        """Separate allocation (e.g. Claude on a new node), for minutes if given. Kept when you disconnect."""
-        p = self.cfg.profile
-        profile = self.fit(replace(p, time=limits.slurm_time(minutes)) if minutes else p)
+    def extra_node(self, job_name: str, on_done, profile: ComputeProfile | None = None) -> None:
+        """Separate allocation (e.g. Claude on a new node). Kept when you disconnect."""
+        profile = self.fit(profile or self.cfg.profile)
 
         def run():
             try:
@@ -416,14 +414,15 @@ class ClusterSession:
             raise VpnError(str(e)) from e
         return {"COOKIE": cookie, "HOST": host, "FINGERPRINT": pin}
 
-    def _allocate_safely(self) -> None:
+    def _allocate_safely(self, profile: ComputeProfile | None = None) -> None:
+        profile = profile or self.cfg.profile
         if self._reuse_running_job():
             self._set(State.CONNECTED)
             return
-        self._set(State.ALLOCATING, self.cfg.profile.summary())
+        self._set(State.ALLOCATING, profile.summary())
         try:
             self.allocation = slurm.allocate(
-                self.ssh, self.fit(self.cfg.profile), self._log,
+                self.ssh, self.fit(profile), self._log,
                 on_pending=lambda job: self._set(State.ALLOCATING, f"Job {job} waiting in queue"),
                 cancelled=self._cancel.is_set,
             )
