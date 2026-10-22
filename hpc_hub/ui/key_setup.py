@@ -32,10 +32,9 @@ class KeySetupDialog(Adw.Dialog):
         super().__init__(title=f"Log in to {cfg.name}", content_width=480)
         self.cfg, self.on_done = cfg, on_done
         self.stop = threading.Event()
-        profile = browser.preferred or "Uni"
-        self.page = Adw.StatusPage(icon_name="web-browser-symbolic",
-                                   title=f"Sign in to the portal in Chrome ({profile})",
-                                   description="Use ACCESS and your saved logins. The app does the rest by itself.")
+        self.page = Adw.StatusPage(icon_name="web-browser-symbolic", title="Sign in to the portal in Chrome",
+                                   description="Any Chrome profile works. Use ACCESS and your saved logins; the app "
+                                               "does the rest by itself.")
         self.spinner = Adw.Spinner(width_request=32, height_request=32)
         again = Gtk.Button(label="Open the portal again", css_classes=["pill"], halign=Gtk.Align.CENTER)
         again.connect("clicked", lambda *_: open_uri(self, cfg.portal))
@@ -47,7 +46,7 @@ class KeySetupDialog(Adw.Dialog):
         tv.add_top_bar(Adw.HeaderBar())
         self.set_child(tv)
         self.connect("closed", lambda *_: self.stop.set())
-        threading.Thread(target=self._work, args=(profile,), daemon=True).start()
+        threading.Thread(target=self._work, daemon=True).start()
 
     def _say(self, title: str, text: str = "", busy: bool = True) -> None:
         def show():
@@ -57,17 +56,28 @@ class KeySetupDialog(Adw.Dialog):
             return False
         GLib.idle_add(show)
 
-    def _work(self, profile: str) -> None:
+    def _signed_in(self, portals: list[Portal]) -> tuple[Portal | None, str, str, str]:
+        """The first Chrome profile signed in to the portal: (portal, user, home, csrf)."""
+        for portal in portals:
+            user, home, csrf = portal.signed_in()
+            if user:
+                return portal, user, home, csrf
+        return None, "", "", ""
+
+    def _work(self) -> None:
         key = public_key()
         if not key:
             self._say("No SSH key on this computer", "Make one in a terminal with: ssh-keygen -t ed25519", False)
             return
         try:
-            portal = Portal(self.cfg.portal, profile)
+            portals = [Portal(self.cfg.portal, p.name) for p in browser.profiles()]
+            if not portals:
+                self._say("No Chrome profiles found", "Install Google Chrome and sign in to the portal there.", False)
+                return
             opened = False
             while not self.stop.is_set():
-                user, home, csrf = portal.signed_in()
-                if user:
+                portal, user, home, csrf = self._signed_in(portals)
+                if portal:
                     break
                 if not opened:  # already signed in from before? then Chrome never needs to open
                     GLib.idle_add(lambda: open_uri(self, self.cfg.portal) or False)
