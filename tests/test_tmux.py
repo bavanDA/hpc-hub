@@ -1,3 +1,5 @@
+import json
+import os
 import shutil
 import subprocess
 
@@ -91,3 +93,18 @@ def test_sessions_on_compute_nodes():
         assert "n0076" in line and subprocess.run(["bash", "-n", "-c", line]).returncode == 0
     assert tmux.kill(next(t for t in got.sessions if not t.node)) == "tmux kill-session -t =hpchub-claude-1431766-0900"
     assert "NODE_LIST" in tmux.LIST and subprocess.run(["bash", "-n", "-c", tmux.LIST]).returncode == 0
+
+
+def test_claude_link_from_transcript(tmp_path):
+    chat = tmp_path / ".claude" / "projects" / "-p"
+    chat.mkdir(parents=True)
+    entry = {"type": "system", "subtype": "bridge_status", "url": "https://claude.ai/code/session_01abc"}
+    (chat / "b1aafc4b-1bbe-4f69.jsonl").write_text('{"type": "user"}\n' + json.dumps(entry) + "\n")
+    assert tmux._chat_tag("hpchub-claude-1440996-b1aafc4b") == "b1aafc4b"
+    assert tmux._chat_tag("hpchub-claude-1440996-153012") == ""
+    run = lambda tag: subprocess.run(["python3", "-c", tmux.CLAUDE_LINK, "no-such-session", tag], capture_output=True,
+                                     text=True, env={**os.environ, "HOME": str(tmp_path)}).stdout.strip()
+    assert run("b1aafc4b") == "https://claude.ai/code/session_01abc"
+    assert run("") == ""
+    line = tmux.capture_command([tmux.Session("hpchub-claude-1-b1aafc4b", node="n1")])
+    assert "n1" in line and subprocess.run(["bash", "-n", "-c", line]).returncode == 0

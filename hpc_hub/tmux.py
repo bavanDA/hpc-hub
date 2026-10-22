@@ -170,10 +170,50 @@ def kill(s: Session) -> str:
     return on(s.node, f"tmux kill-session -t {_t(s.name)}")
 
 
+# Claude turned on by its remoteControlAtStartup setting prints no link: it is in the chat's transcript
+# (a bridge_status entry). The chat is found from the claude process in the pane, else from the session name.
+CLAUDE_LINK = r"""import glob, json, os, subprocess, sys
+name, tag = sys.argv[1], sys.argv[2]
+out = lambda *a: subprocess.run(a, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, universal_newlines=True).stdout
+sid, todo = "", [out("tmux", "display-message", "-p", "-t", "=" + name + ":", "#{pane_pid}").strip()]
+rows = [r.split(None, 2) for r in out("ps", "-e", "-o", "pid=,ppid=,comm=").splitlines()]
+while todo and not sid:
+    parent = todo.pop()
+    for r in rows:
+        if len(r) == 3 and r[1] == parent:
+            todo.append(r[0])
+            if r[2].strip() == "claude":
+                try:
+                    sid = json.load(open(os.path.expanduser("~/.claude/sessions/%s.json" % r[0])))["sessionId"]
+                except (OSError, ValueError, KeyError):
+                    pass
+sid = sid or tag
+files = sorted(glob.glob(os.path.expanduser("~/.claude/projects/*/%s*.jsonl" % sid)), key=os.path.getmtime) if sid else []
+url = ""
+for line in open(files[-1]) if files else []:
+    if '"bridge_status"' in line:
+        try:
+            url = json.loads(line).get("url") or url
+        except ValueError:
+            pass
+print(url)
+"""
+
+
+def _chat_tag(name: str) -> str:
+    """The chat id start in hpchub-claude-<job>-<tag> when a chat was resumed (8 hex), else ""."""
+    tag = name.rsplit("-", 1)[-1]
+    return tag if len(tag) == 8 and all(c in "0123456789abcdef" for c in tag) else ""
+
+
 def capture_command(sessions: list[Session]) -> str:
-    return "; ".join(f"echo {shlex.quote(MARK + t.name)}; "
-                     + on(t.node, f"tmux capture-pane -p -J -t {_opt(t.name)} -S -3000 2>/dev/null")
-                     for t in sessions)
+    def one(t: Session) -> str:
+        if t.agent == "claude":
+            line = f"python3 -c {shlex.quote(CLAUDE_LINK)} {shlex.quote(t.name)} {shlex.quote(_chat_tag(t.name))}"
+        else:
+            line = f"tmux capture-pane -p -J -t {_opt(t.name)} -S -3000 2>/dev/null"
+        return f"echo {shlex.quote(MARK + t.name)}; " + on(t.node, line)
+    return "; ".join(one(t) for t in sessions)
 
 
 def parse_remotes(text: str) -> dict[str, str]:
