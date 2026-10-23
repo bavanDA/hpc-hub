@@ -73,45 +73,43 @@ class ClusterSession:
         self.listener.state_changed(self)
 
     def fit(self, profile: ComputeProfile) -> ComputeProfile:
-        """The profile with its time cut to what the cluster allows (Slurm would refuse it otherwise), and your
-        default account named when none is set. Blocking; call from a worker thread."""
+        """The profile with your default account named when none is set, on the best queue (see queues), with
+        its time cut to what that queue allows (Slurm would refuse it otherwise). Blocking; worker thread."""
         if not profile.account and self._account():
             profile = replace(profile, account=self._account())
-        profile = self._sooner_queue(profile)
-        if not self.limits:
-            return profile
-        fitted, note = self.limits.fit(profile)
+        profile = self._best_queue(profile)
+        fitted, note = self._cut_time(profile)
         if note:
             self._log(note)
         return fitted
 
-    def _sooner_queue(self, profile: ComputeProfile) -> ComputeProfile:
-        """If this queue would wait more than queue_wait, take the first faster_queues one that starts in time,
-        else whichever starts soonest."""
-        options = [o.split(":", 1) for o in self.cfg.faster_queues.split(",") if ":" in o]
-        if not options or not self.ssh:
+    def _cut_time(self, profile: ComputeProfile) -> tuple[ComputeProfile, str]:
+        return self.limits.fit(profile) if self.limits else (profile, "")
+
+    def _best_queue(self, profile: ComputeProfile) -> ComputeProfile:
+        """Ask Slurm how long each queue in cfg.queues would wait (nothing is submitted). Of those that start
+        within queue_wait seconds, take the first listed (cheapest); if none does, the one that starts soonest.
+        A queue Slurm would refuse for this request (e.g. more cores than debug allows) is skipped."""
+        listed = [tuple(x.strip() for x in o.split(":", 1)) for o in self.cfg.queues.split(",") if ":" in o]
+        if not listed or not self.ssh:
             return profile
+        mine = (profile.partition, profile.qos)
+        order = listed if mine in listed else [mine, *listed]
+        found = []  # (wait, rank, profile)
         try:
-            best, wait = profile, slurm.wait_seconds(self.ssh, profile)
-            if wait is None or wait <= self.cfg.queue_wait:
-                return profile
-            seen = [f"{profile.qos or profile.partition} waits {slurm.human_wait(wait)}"]
-            for part, qos in options:
-                other = replace(profile, partition=part.strip(), qos=qos.strip())
-                if (other.partition, other.qos) == (profile.partition, profile.qos):
-                    continue
-                w = slurm.wait_seconds(self.ssh, other)
-                if w is None:
-                    continue
-                seen.append(f"{other.qos or other.partition} {slurm.human_wait(w)}")
-                if w < wait:
-                    best, wait = other, w
-                if w <= self.cfg.queue_wait:
-                    break
+            for rank, (part, qos) in enumerate(order):
+                p, _ = self._cut_time(replace(profile, partition=part, qos=qos))
+                wait = slurm.wait_seconds(self.ssh, p)
+                if wait is not None:
+                    found.append((wait, rank, p))
         except (SshError, OSError, subprocess.SubprocessError):
             return profile
-        if best is not profile:
-            self._log(f"Queue: {', '.join(seen)}. Using {best.partition} / {best.qos}")
+        if not found:
+            return profile
+        soon = [f for f in found if f[0] <= self.cfg.queue_wait]
+        wait, _, best = min(soon, key=lambda f: f[1]) if soon else min(found, key=lambda f: (f[0], f[1]))
+        seen = ", ".join(f"{p.partition}/{p.qos} {slurm.human_wait(w)}" for w, _, p in found)
+        self._log(f"Queues: {seen}. Using {best.partition}/{best.qos}")
         return best
 
     def _account(self) -> str:

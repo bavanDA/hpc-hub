@@ -108,8 +108,9 @@ class ClusterConfig:
     second_factor: str = "duo"  # duo (push to your phone) or code (authenticator app, TOTP)
     portal: str = ""  # web portal where you can add your SSH key after signing in in Chrome
     code_setup: str = ""  # where you set up the authenticator app the cluster asks codes from
-    # "partition:qos" to try, in order, when the queue you picked would wait longer than queue_wait seconds
-    faster_queues: str = ""
+    # "partition:qos" queues to choose from, cheapest first: the first that starts within queue_wait seconds
+    # wins, else the one that starts soonest. Empty: always use the queue you picked.
+    queues: str = ""
     queue_wait: int = 60
     request_node_on_connect: bool = True
     reuse_running_job: bool = False
@@ -132,7 +133,7 @@ def default_clusters() -> list[ClusterConfig]:
     return [
         ClusterConfig(
             id="wulver",
-            faster_queues="general:standard",  # low is free but can wait days; standard costs SUs
+            queues="general:low,debug:debug,general:standard",  # free, free (4 cores, 8 h), costs SUs
             name="Wulver (NJIT)",
             host="wulver.njit.edu",
             vpn=VpnSettings(enabled=True, gateway="vpn.njit.edu", useragent="AnyConnect Linux_64 4.10.07061",
