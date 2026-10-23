@@ -133,6 +133,26 @@ def follow_log(job_id: str) -> str:
             f'[ -n "$f" ] && exec tail -n +1 -F "$f"; echo "No log found for job $j"; exec bash -l')
 
 
+def wait_seconds(ssh: SshMaster, p: ComputeProfile) -> int | None:
+    """How long Slurm thinks a job like this waits before it starts (sbatch --test-only: nothing is submitted).
+    None if Slurm would refuse it or gives no estimate."""
+    args = " ".join(shlex.quote(a) for a in resource_args(p))
+    cmd = (f"out=$(sbatch --test-only {args} --wrap=true 2>&1); "
+           "s=$(printf %s \"$out\" | grep -o 'start at [0-9T:-]*' | cut -d' ' -f3); "
+           '[ -n "$s" ] && echo $(( $(date -d "$s" +%s) - $(date +%s) ))')
+    out = ssh.run(cmd, timeout=60).stdout.strip()
+    return max(0, int(out)) if out.lstrip("-").isdigit() else None
+
+
+def human_wait(seconds: int) -> str:
+    if seconds < 90:
+        return "now"
+    for unit, size in (("days", 86400), ("h", 3600), ("min", 60)):
+        if seconds >= size:
+            return f"{seconds / size:.0f} {unit}" if unit != "days" else f"{seconds / size:.1f} days"
+    return "now"
+
+
 def default_account(ssh: SshMaster) -> str:
     """Your default Slurm account (some clusters, like Expanse, still want it named on every job)."""
     out = ssh.run('sacctmgr -nP show user "$USER" format=defaultaccount 2>/dev/null').stdout.split()
