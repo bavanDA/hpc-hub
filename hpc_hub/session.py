@@ -77,12 +77,42 @@ class ClusterSession:
         default account named when none is set. Blocking; call from a worker thread."""
         if not profile.account and self._account():
             profile = replace(profile, account=self._account())
+        profile = self._sooner_queue(profile)
         if not self.limits:
             return profile
         fitted, note = self.limits.fit(profile)
         if note:
             self._log(note)
         return fitted
+
+    def _sooner_queue(self, profile: ComputeProfile) -> ComputeProfile:
+        """If this queue would wait more than queue_wait, take the first faster_queues one that starts in time,
+        else whichever starts soonest."""
+        options = [o.split(":", 1) for o in self.cfg.faster_queues.split(",") if ":" in o]
+        if not options or not self.ssh:
+            return profile
+        try:
+            best, wait = profile, slurm.wait_seconds(self.ssh, profile)
+            if wait is None or wait <= self.cfg.queue_wait:
+                return profile
+            seen = [f"{profile.qos or profile.partition} waits {slurm.human_wait(wait)}"]
+            for part, qos in options:
+                other = replace(profile, partition=part.strip(), qos=qos.strip())
+                if (other.partition, other.qos) == (profile.partition, profile.qos):
+                    continue
+                w = slurm.wait_seconds(self.ssh, other)
+                if w is None:
+                    continue
+                seen.append(f"{other.qos or other.partition} {slurm.human_wait(w)}")
+                if w < wait:
+                    best, wait = other, w
+                if w <= self.cfg.queue_wait:
+                    break
+        except (SshError, OSError, subprocess.SubprocessError):
+            return profile
+        if best is not profile:
+            self._log(f"Queue: {', '.join(seen)}. Using {best.partition} / {best.qos}")
+        return best
 
     def _account(self) -> str:
         if self.default_account is None and self.ssh:

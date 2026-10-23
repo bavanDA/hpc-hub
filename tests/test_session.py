@@ -315,3 +315,28 @@ def test_default_account_is_named_on_requests():
     s.cfg, s.ssh, s.limits, s.default_account = config.default_clusters()[2], Ssh(), None, None
     assert s.fit(config.ComputeProfile()).account == "xyz789"
     assert s.fit(config.ComputeProfile(account="other")).account == "other"
+
+
+def test_slow_queue_switches_to_a_faster_one():
+    from hpc_hub import config
+    from hpc_hub.session import ClusterSession
+    waits = {"low": "506340", "standard": "51720", "debug": "5"}
+
+    class Ssh:
+        def run(self, cmd, timeout=60):
+            import re
+            import subprocess
+            if "defaultaccount" in cmd:
+                return subprocess.CompletedProcess(cmd, 0, "mygroup\n", "")
+            qos = re.search(r"--qos=(\w+)", cmd).group(1)
+            return subprocess.CompletedProcess(cmd, 0, waits[qos] + "\n", "")
+    s = object.__new__(ClusterSession)
+    s.cfg, s.ssh, s.limits, s.default_account, logged = config.default_clusters()[0], Ssh(), None, None, []
+    s._log = logged.append
+    low = config.ComputeProfile(partition="general", qos="low")
+    assert s.fit(low).qos == "standard"  # 14 h beats 6 days, though nothing starts within a minute
+    s.cfg.faster_queues = "general:standard,debug:debug"
+    p = s.fit(low)
+    assert (p.partition, p.qos) == ("debug", "debug") and "low waits 5.9 days" in logged[-1]
+    waits["low"] = "30"
+    assert s.fit(low).qos == "low"  # starts within a minute: stays free
