@@ -8,6 +8,7 @@ survive app restarts and show up from any laptop.
 
 import re
 import shlex
+import time
 from dataclasses import dataclass
 
 from . import links
@@ -172,31 +173,51 @@ def kill(s: Session) -> str:
 
 # Claude turned on by its remoteControlAtStartup setting prints no link: it is in the chat's transcript
 # (a bridge_status entry). The chat is found from the claude process in the pane, else from the session name.
-CLAUDE_LINK = r"""import glob, json, os, subprocess, sys
+# Only this run of Claude counts, and only while connected: "disconnected ... run /remote-control" is off, any
+# other disconnect may come back by itself. Prints the link while on, "on" if on without a link yet, else "".
+CLAUDE_LINK = r"""import calendar, glob, json, os, subprocess, sys, time
 name, tag = sys.argv[1], sys.argv[2]
 out = lambda *a: subprocess.run(a, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, universal_newlines=True).stdout
-sid, todo = "", [out("tmux", "display-message", "-p", "-t", "=" + name + ":", "#{pane_pid}").strip()]
+pane = out("tmux", "display-message", "-p", "-t", "=" + name + ":", "#{pane_pid}").strip()
+sid, since, todo = "", 0, [pane]
 rows = [r.split(None, 2) for r in out("ps", "-e", "-o", "pid=,ppid=,comm=").splitlines()]
 while todo and not sid:
     parent = todo.pop()
     for r in rows:
-        if len(r) == 3 and r[1] == parent:
-            todo.append(r[0])
+        if len(r) == 3 and (r[1] == parent or r[0] == pane == parent):
+            if r[0] != parent:
+                todo.append(r[0])
             if r[2].strip() == "claude":
                 try:
-                    sid = json.load(open(os.path.expanduser("~/.claude/sessions/%s.json" % r[0])))["sessionId"]
+                    info = json.load(open(os.path.expanduser("~/.claude/sessions/%s.json" % r[0])))
+                    sid, since = info["sessionId"], info.get("startedAt", 0) / 1000.0
                 except (OSError, ValueError, KeyError):
                     pass
 sid = sid or tag
 files = sorted(glob.glob(os.path.expanduser("~/.claude/projects/*/%s*.jsonl" % sid)), key=os.path.getmtime) if sid else []
-url = ""
-for line in open(files[-1]) if files else []:
-    if '"bridge_status"' in line:
-        try:
-            url = json.loads(line).get("url") or url
-        except ValueError:
-            pass
-print(url)
+on, url = False, ""
+for line in open(files[-1], errors="replace") if files else []:
+    if '"bridge_status"' not in line and "Remote Control disconnected" not in line and "/remote-control</command-name>" not in line:
+        continue
+    try:
+        d = json.loads(line)
+    except ValueError:
+        continue
+    try:
+        when = calendar.timegm(time.strptime(d.get("timestamp", "")[:19], "%Y-%m-%dT%H:%M:%S"))
+    except ValueError:
+        when = 0
+    if d.get("type") != "system" or (since and when < int(since)):
+        continue
+    text = str(d.get("content", ""))
+    if d.get("subtype") == "bridge_status":
+        on, url = True, d.get("url") or url
+    elif "/remote-control</command-name>" in text:
+        on = True
+    elif "Remote Control disconnected" in text:  # "disconnected." you turned it off; "disconnected — why" it dropped
+        why = text.split("Remote Control disconnected", 1)[1]
+        on = why.lstrip().startswith("—") and not ("run /remote-control to retry" in why or "disabled after" in why)
+print((url or "on") if on else "")
 """
 
 
@@ -217,12 +238,15 @@ def capture_command(sessions: list[Session]) -> str:
 
 
 def parse_remotes(text: str) -> dict[str, str]:
-    """Newest remote link (or pairing code) per captured session."""
+    """Newest remote link (or pairing code) per captured session. Claude sessions say "on" when connected
+    without a link yet."""
     out, name, chunk = {}, "", []
 
     def flush():
         found = [x for x in links.find_links("\n".join(chunk)) if x.kind in (links.REMOTE, links.PAIR)]
-        if name and found:
+        if name and [c.strip() for c in chunk if c.strip()] == ["on"]:
+            out[name] = "on"
+        elif name and found:
             last = found[-1]
             out[name] = last.url if last.kind == links.REMOTE else f"code:{last.code}"
     for line in text.splitlines():
@@ -233,6 +257,39 @@ def parse_remotes(text: str) -> dict[str, str]:
             chunk.append(line)
     flush()
     return out
+
+
+def disconnect_keys(screen: str) -> list[str]:
+    """Keys that pick "Disconnect" in Claude's Remote Control panel: arrows from the ❯ line, then Enter."""
+    lines = screen.splitlines()
+    cursor = next((i for i in range(len(lines) - 1, -1, -1) if lines[i].lstrip().startswith("❯ ")
+                   and "/remote-control" not in lines[i]), None)
+    target = next((i for i in range(len(lines) - 1, -1, -1) if "Disconnect" in lines[i]), None)
+    if cursor is None or target is None or abs(cursor - target) > 6:
+        return []
+    return ["Up" if target < cursor else "Down"] * abs(cursor - target) + ["Enter"]
+
+
+def set_remote_control(ssh: SshMaster, t: Session, want: bool) -> None:
+    """Turn Remote Control on or off in the Claude running in t: types /remote-control, and to turn it off,
+    picks Disconnect in the panel that opens. Blocking."""
+    target = _opt(t.name)
+    what = ssh.run(on(t.node, f"tmux display-message -p -t {target} '#{{pane_current_command}}'"), timeout=30)
+    if what.returncode != 0:
+        raise RuntimeError(what.stderr.strip() or "session not found")
+    if what.stdout.strip() not in ("claude", "node", "srun"):
+        raise RuntimeError(f"Claude is not running in this session ({what.stdout.strip() or 'nothing'})")
+    run(ssh, on(t.node, f"tmux send-keys -t {target} -l /remote-control && tmux send-keys -t {target} Enter"))
+    if want:
+        return
+    for _ in range(8):  # the status panel takes a moment
+        time.sleep(0.5)
+        screen = ssh.run(on(t.node, f"tmux capture-pane -p -t {target}"), timeout=30).stdout
+        keys = disconnect_keys(screen)
+        if keys:
+            run(ssh, on(t.node, f"tmux send-keys -t {target} {' '.join(keys)}"))
+            return
+    raise RuntimeError("Could not find Disconnect in Claude's panel; pick it in the tab")
 
 
 def find_remotes(ssh: SshMaster, sessions: list[Session]) -> dict[str, str]:

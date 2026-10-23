@@ -108,3 +108,28 @@ def test_claude_link_from_transcript(tmp_path):
     assert run("") == ""
     line = tmux.capture_command([tmux.Session("hpchub-claude-1-b1aafc4b", node="n1")])
     assert "n1" in line and subprocess.run(["bash", "-n", "-c", line]).returncode == 0
+
+
+def test_disconnect_keys():
+    panel = ("❯ /remote-control\n  /remote-control is active\n   Remote Control\n\n"
+             "     Disconnect this session\n     Show QR code   Scan with your phone\n   ❯ Continue\n\n"
+             "   Enter to select · Esc to continue\n")
+    assert tmux.disconnect_keys(panel) == ["Up", "Up", "Enter"]
+    assert tmux.disconnect_keys("❯ \n") == []
+
+
+def test_claude_link_follows_on_and_off(tmp_path):
+    chat = tmp_path / ".claude" / "projects" / "-p"
+    chat.mkdir(parents=True)
+    rows = [{"type": "system", "subtype": "bridge_status", "url": "https://claude.ai/code/session_01x",
+             "timestamp": "2026-10-23T10:00:00.000Z"},
+            {"type": "system", "subtype": "local_command", "timestamp": "2026-10-23T10:05:00.000Z",
+             "content": "<local-command-stdout>Remote Control disconnected.</local-command-stdout>"}]
+    f = chat / "b1aafc4b-1.jsonl"
+    run = lambda: subprocess.run(["python3", "-c", tmux.CLAUDE_LINK, "none", "b1aafc4b"], capture_output=True,
+                                 text=True, env={**os.environ, "HOME": str(tmp_path)}).stdout.strip()
+    f.write_text(json.dumps(rows[0]) + "\n")
+    assert run() == "https://claude.ai/code/session_01x"
+    f.write_text("".join(json.dumps(r) + "\n" for r in rows))
+    assert run() == ""  # turned off: no button
+    assert tmux.parse_remotes(f"{tmux.MARK}a\non\n") == {"a": "on"}
