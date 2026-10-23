@@ -11,11 +11,13 @@ With remote-lock they need the 6-digit code from your phone too.
   remote-lock set tries=3      wrong codes before Claude is stopped and locked
   remote-lock set logout=on    also sign Claude out after too many wrong codes
   remote-lock set scancel=on   also cancel the Slurm job Claude runs in
+  remote-lock set remote_only=on  ask only while Remote Control is connected (off: ask always)
   remote-lock lock             close every open session now
   remote-lock reset            unlock after too many wrong codes
   remote-lock uninstall        remove it
 """
 import base64
+import calendar
 import hashlib
 import hmac
 import json
@@ -29,13 +31,13 @@ import sys
 import time
 import urllib.parse
 
-VERSION = "0.1.0"
+VERSION = "0.2.0"
 SYSTEM_DIR = "/var/lib/remote-lock"
 SYSTEM_BIN = "/usr/local/bin/remote-lock"
 SUDOERS = "/etc/sudoers.d/remote-lock"
 MANAGED = ("/Library/Application Support/ClaudeCode/managed-settings.json" if sys.platform == "darwin"
            else "/etc/claude-code/managed-settings.json")
-DEFAULTS = {"minutes": 10, "tries": 3, "logout": True, "scancel": True}
+DEFAULTS = {"minutes": 10, "tries": 3, "logout": True, "scancel": True, "remote_only": True}
 REMOTE_FLAGS = {"--remote-control", "--rc"}
 
 
@@ -105,12 +107,15 @@ def code_ok(secret, code, now):
 
 
 # -- the check ------------------------------------------------------------------------------------------------
-def check(store, session, prompt, now=None):
-    """{"allow": bool, "reason": str, "lockdown": {...} when Claude should be stopped}."""
+def check(store, session, prompt, now=None, remote=True):
+    """{"allow": bool, "reason": str, "lockdown": {...} when Claude should be stopped}.
+    remote: whether Remote Control is connected to this session (see remote_on)."""
     now = time.time() if now is None else now
     secret, conf = store.read("secret", ""), store.config()
     if not secret:
         return {"allow": False, "reason": "remote-lock is not set up. Run: remote-lock setup"}
+    if conf.get("remote_only", True) and not remote:
+        return {"allow": True}  # only people at this machine can type into it
     minutes, tries = int(conf["minutes"]), int(conf["tries"])
     state = store.read("state.json", {})
     state["open"] = {k: v for k, v in state.get("open", {}).items() if v > now}
@@ -166,6 +171,75 @@ def claude_process():
     return 0, []
 
 
+# Claude writes these into the chat transcript. "Remote Control disconnected." is you turning it off; a
+# "disconnected — why" that waits for you to act is off too; any other may reconnect by itself, so it is on.
+DISCONNECTED = "Remote Control disconnected"
+STAYS_OFF = ("run /remote-control to retry", "disabled after repeated failures")
+TURN_ON = "<command-name>/remote-control</command-name>"  # you typed /remote-control: on from here
+
+
+def _stamp(ts):
+    try:
+        return calendar.timegm(time.strptime(ts[:19], "%Y-%m-%dT%H:%M:%S"))
+    except ValueError:
+        return 0
+
+
+def started_at(pid):
+    """When this Claude process started (from ~/.claude/sessions/<pid>.json), or 0."""
+    try:
+        with open(os.path.expanduser("~/.claude/sessions/%d.json" % pid)) as f:
+            return json.load(f).get("startedAt", 0) / 1000.0
+    except (OSError, ValueError, AttributeError):
+        return 0
+
+
+def starts_remote(argv, cwd):
+    """Was Remote Control asked for when this Claude started (flag or remoteControlAtStartup setting)?"""
+    if REMOTE_FLAGS & set(argv):
+        return True
+    for path in (os.path.expanduser("~/.claude/settings.json"), os.path.expanduser("~/.claude.json"),
+                 os.path.join(cwd or ".", ".claude", "settings.json"),
+                 os.path.join(cwd or ".", ".claude", "settings.local.json")):
+        try:
+            with open(path) as f:
+                if json.load(f).get("remoteControlAtStartup"):
+                    return True
+        except (OSError, ValueError, AttributeError):
+            pass
+    return False
+
+
+def remote_on(transcript, since=0, at_start=True):
+    """Is Remote Control connected to this session now? From its transcript, counting only what happened
+    since this Claude started (a resumed chat keeps older runs). A new chat has no transcript yet: then
+    at_start (asked for at startup) decides. No transcript path at all: yes."""
+    on = False
+    if not transcript:
+        return True
+    try:
+        f = open(transcript, errors="replace")
+    except OSError:
+        return at_start
+    with f:
+        for line in f:
+            if '"bridge_status"' not in line and DISCONNECTED not in line and TURN_ON not in line:
+                continue
+            try:
+                d = json.loads(line)
+            except ValueError:
+                continue
+            if d.get("type") != "system" or (since and _stamp(d.get("timestamp", "")) < int(since)):
+                continue
+            text = str(d.get("content", ""))
+            if d.get("subtype") == "bridge_status" or TURN_ON in text:
+                on = True
+            elif DISCONNECTED in text:  # "disconnected." you turned it off; "disconnected — why" it dropped
+                why = text.split(DISCONNECTED, 1)[1]
+                on = why.lstrip().startswith("—") and not any(s in why for s in STAYS_OFF)
+    return on
+
+
 def lock_down(opts, pid, argv):
     if not pid:
         return
@@ -186,14 +260,16 @@ def hook(args):
     pid, argv = claude_process()
     if ("-p" in argv or "--print" in argv) and not REMOTE_FLAGS & set(argv):
         return 0  # scripted run, nobody can type into it
-    req = {"session": data.get("session_id", ""), "prompt": data.get("prompt") or ""}
+    req = {"session": data.get("session_id", ""), "prompt": data.get("prompt") or "",
+           "remote": remote_on(data.get("transcript_path"), started_at(pid) if pid else 0,
+                               starts_remote(argv, data.get("cwd", "")))}
     try:
         if "--system" in args:
             res = subprocess.run(["sudo", "-n", SYSTEM_BIN, "check"], input=json.dumps(req), stdout=subprocess.PIPE,
                                  stderr=subprocess.PIPE, universal_newlines=True, timeout=20)
             out = json.loads(res.stdout or "{}") if res.returncode == 0 else {"reason": res.stderr.strip()}
         else:
-            out = check(Store(store_dir()), req["session"], req["prompt"])
+            out = check(Store(store_dir()), req["session"], req["prompt"], remote=req["remote"])
     except Exception as e:  # never let a broken check open the door
         out = {"allow": False, "reason": "remote-lock could not check the code: %s" % e}
     if out.get("lockdown"):
@@ -208,7 +284,8 @@ def check_cmd(_args):
     if not system():
         sys.exit("remote-lock check needs root")
     req = json.load(sys.stdin)
-    print(json.dumps(check(Store(SYSTEM_DIR), str(req.get("session", "")), str(req.get("prompt", "")))))
+    print(json.dumps(check(Store(SYSTEM_DIR), str(req.get("session", "")), str(req.get("prompt", "")),
+                           remote=req.get("remote") is not False)))
     return 0
 
 
@@ -339,9 +416,9 @@ def status(args):
         return 1
     conf, state, now = store.config(), store.read("state.json", {}), time.time()
     print("Set up %s, settings in %s" % ("for the whole machine" if system() else "for you", settings_path()))
-    print("minutes=%s tries=%s logout=%s scancel=%s" % (conf["minutes"], conf["tries"],
-                                                         "on" if conf["logout"] else "off",
-                                                         "on" if conf["scancel"] else "off"))
+    on = lambda k: "on" if conf[k] else "off"  # noqa: E731
+    print("minutes=%s tries=%s logout=%s scancel=%s remote_only=%s" % (
+        conf["minutes"], conf["tries"], on("logout"), on("scancel"), on("remote_only")))
     if state.get("fails", 0) >= int(conf["tries"]):
         print("LOCKED after too many wrong codes. remote-lock reset unlocks it.")
     print("Open sessions: %d" % sum(1 for v in state.get("open", {}).values() if v > now))
@@ -357,7 +434,7 @@ def set_cmd(args):
         key, _, value = arg.partition("=")
         if key in ("minutes", "tries") and value.isdigit():
             conf[key] = max(int(value), 1 if key == "tries" else 0)
-        elif key in ("logout", "scancel") and value in ("on", "off"):
+        elif key in ("logout", "scancel", "remote_only") and value in ("on", "off"):
             conf[key] = value == "on"
         else:
             sys.exit("Unknown setting %r. Try minutes=10 tries=3 logout=on scancel=on" % arg)
