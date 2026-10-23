@@ -26,7 +26,8 @@ def test_install_configure_uninstall(tmp_path, monkeypatch):
     assert "remote-lock" in json.dumps(settings["hooks"]["UserPromptSubmit"])
     lock.configure(ssh, 0, 4, False, True)
     st = lock.status(ssh)
-    assert st["set_up"] and st["config"] == {"minutes": 0, "tries": 4, "logout": False, "scancel": True}
+    assert st["set_up"] and st["config"] == {"minutes": 0, "tries": 4, "logout": False, "scancel": True,
+                                             "remote_only": True}
     lock.reset(ssh)
     lock.uninstall(ssh)
     assert not lock.status(ssh)["set_up"]
