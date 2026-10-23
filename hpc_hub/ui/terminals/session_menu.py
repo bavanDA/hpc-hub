@@ -1,6 +1,6 @@
 """A tmux session's menu: rename, color, stop."""
 
-from gi.repository import Adw, Gtk
+from gi.repository import Adw, GLib, Gtk
 
 from ... import tmux
 from ...session import ClusterSession
@@ -25,6 +25,12 @@ class SessionMenuMixin:
                 b.connect("clicked", lambda *_, c=c: (pop.popdown(), self._do(s, tmux.set_color(t, c), t, color=c)))
                 colors.append(b)
             box.append(colors)
+        if t.kind == "tmux" and t.agent == "claude":
+            on = bool(t.remote)
+            b = Gtk.Button(label="Turn Remote Control off" if on else "Turn Remote Control on", css_classes=["flat"])
+            b.get_child().set_xalign(0)
+            b.connect("clicked", lambda *_: (pop.popdown(), self._remote_menu(s, t, not on)))
+            box.append(b)
         stop = Gtk.Button(label="Stop session…", css_classes=["flat", "error"])
         stop.get_child().set_xalign(0)
         stop.connect("clicked", lambda *_: (pop.popdown(), self.stop(s, t)))
@@ -43,6 +49,16 @@ class SessionMenuMixin:
                 self._header(v)
             self.refresh()
         bg(lambda: tmux.run(s.ssh, line), done)
+
+    def _remote_menu(self, s: ClusterSession, t: tmux.Session, want: bool) -> None:
+        self.toast(f"Turning Remote Control {'on' if want else 'off'} in {t.title}…")
+
+        def done(_r, err):
+            if err:
+                self.toast(f"Remote Control: {err}")
+            self.remote_checked.pop((s.cfg.id, t.name), None)
+            GLib.timeout_add_seconds(5, lambda: self.refresh() and False)
+        bg(lambda: tmux.set_remote_control(s.ssh, t, want), done)
 
     def rename(self, s: ClusterSession, t: tmux.Session) -> None:
         ask_name(self.get_root(), "Rename session", "Rename",

@@ -9,7 +9,7 @@ from gi.repository import Adw, GLib, Gtk, Pango
 from ... import links, remote, tmux
 from ...links import Link
 from ...session import ClusterSession
-from ..widgets import color_dot, open_uri, remember_size
+from ..widgets import bg, color_dot, open_uri, remember_size
 from .new_terminal import NewTerminalDialog
 from .session_list import SessionListMixin
 from .session_menu import SessionMenuMixin
@@ -68,6 +68,14 @@ class TerminalsPage(SessionListMixin, SessionMenuMixin, Gtk.Box):
         self.remote_btn = Gtk.Button(css_classes=["suggested-action"], visible=False, valign=Gtk.Align.CENTER)
         self.remote_btn.connect("clicked", lambda *_: self._use_remote())
         self.header.append(self.remote_btn)
+        self.remote_box = Gtk.Box(spacing=6, valign=Gtk.Align.CENTER, visible=False,
+                                  tooltip_text="Remote Control: use this Claude from claude.ai or the Claude app")
+        self.remote_box.append(Gtk.Label(label="Remote", css_classes=["dim-label"]))
+        self.remote_switch = Gtk.Switch(valign=Gtk.Align.CENTER)
+        self.remote_switch.connect("state-set", self._remote_switched)
+        self.remote_box.append(self.remote_switch)
+        self.header.append(self.remote_box)
+        self._switch_busy = False
         self.actions = Gtk.MenuButton(icon_name="view-more-symbolic", css_classes=["flat"], tooltip_text="Session")
         close = Gtk.Button(icon_name="window-close-symbolic", css_classes=["flat"], tooltip_text="Close (keeps running)")
         close.connect("clicked", lambda *_: self.close_current())
@@ -193,6 +201,13 @@ class TerminalsPage(SessionListMixin, SessionMenuMixin, Gtk.Box):
         self.dot.append(color_dot(view.color) if view.color else Gtk.Image(icon_name=view.icon))
         self.title.set_label(view.title)
         self._remote_button(view.tab)
+        t = view.tmux_session
+        claude = bool(view.session and t and t.agent == "claude" and t.kind == "tmux")
+        self.remote_box.set_visible(claude)
+        if claude:
+            self._switch_busy = True
+            self.remote_switch.set_active(bool(t.remote) or view.tab.remote is not None)
+            self._switch_busy = False
         if view.session and view.tmux_session:
             self.actions.set_popover(self._menu(view.session, view.tmux_session))
             self.actions.set_visible(True)
@@ -208,6 +223,25 @@ class TerminalsPage(SessionListMixin, SessionMenuMixin, Gtk.Box):
         elif link:
             self.remote_btn.set_label("Open remote")
             self.remote_btn.set_tooltip_text(link.url)
+
+    def _remote_switched(self, _switch, want: bool) -> bool:
+        """Turn Remote Control on or off in the open Claude session."""
+        v = self.current
+        if self._switch_busy or not (v and v.session and v.tmux_session):
+            return False
+        s, t = v.session, v.tmux_session
+        self.toast(f"Turning Remote Control {'on' if want else 'off'}…")
+        if not want:
+            v.tab.remote = None
+            self._remote_button(v.tab)
+
+        def done(_r, err):
+            if err:
+                self.toast(f"Remote Control: {err}")
+            self.remote_checked.pop((s.cfg.id, t.name), None)  # look again soon
+            GLib.timeout_add_seconds(5, lambda: self.refresh() and False)
+        bg(lambda: tmux.set_remote_control(s.ssh, t, want), done)
+        return False
 
     def _use_remote(self) -> None:
         link = self.current.tab.remote if self.current else None

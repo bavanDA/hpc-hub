@@ -55,8 +55,9 @@ class SessionListMixin:
         """Agent sessions print their remote link once; find it in the pane and keep it on the session.
         Pairing codes change, so those are looked up again (at most once a minute)."""
         now = time.monotonic()
-        look = [t for t in listing.sessions
-                if t.kind == "tmux" and t.agent in REMOTE_AGENTS and (not t.remote or t.remote.startswith("code:"))
+        look = [t for t in listing.sessions  # Claude: checked again and again, it can be switched on and off
+                if t.kind == "tmux" and t.agent in REMOTE_AGENTS
+                and (t.agent == "claude" or not t.remote or t.remote.startswith("code:"))
                 and now - self.remote_checked.get((s.cfg.id, t.name), 0) > 60]
         if not look:
             return
@@ -65,7 +66,8 @@ class SessionListMixin:
 
         def work():
             found = tmux.find_remotes(s.ssh, look)
-            changed = {t.name: found[t.name] for t in look if t.name in found and found[t.name] != t.remote}
+            now_is = {t.name: found.get(t.name, "" if t.agent == "claude" else t.remote) for t in look}
+            changed = {t.name: now_is[t.name] for t in look if now_is[t.name] != t.remote}
             if changed:
                 s.ssh.run("; ".join(tmux.set_remote(t, changed[t.name]) for t in look if t.name in changed))
             return changed
@@ -81,12 +83,16 @@ class SessionListMixin:
         bg(work, done)
 
     def _show_link(self, view: "View", value: str) -> None:
-        """A link found in the list: the open tab's header button gets it too."""
-        if not value or view.tab.remote:
-            return
-        code = value.startswith("code:")
-        view.tab.remote = Link(links.PAIR, "", code=value[5:]) if code else Link(links.REMOTE, value)
-        self._remote_button(view.tab)
+        """What the list found goes to the open tab's header too: a link shows the button, off hides it."""
+        if view.tmux_session:
+            view.tmux_session.remote = value
+        if value.startswith(("http", "code:")):
+            if not view.tab.remote:
+                code = value.startswith("code:")
+                view.tab.remote = Link(links.PAIR, "", code=value[5:]) if code else Link(links.REMOTE, value)
+        elif not value:
+            view.tab.remote = None
+        self._header(view)
 
     def _remember_remote(self, view: "View", link: Link) -> None:
         """An open tab saw the link: save it on the tmux session so the list can show it."""
@@ -189,7 +195,7 @@ class SessionListMixin:
         text.append(Gtk.Label(label=" · ".join(b for b in bits if b), xalign=0, ellipsize=Pango.EllipsizeMode.END,
                               css_classes=["dim-label", "caption"]))
         box.append(text)
-        if t.remote:
+        if t.remote.startswith(("http", "code:")):
             code = t.remote.startswith("code:")
             link = Gtk.Button(label="Copy code" if code else "Open", css_classes=["flat", "accent"],
                               valign=Gtk.Align.CENTER,
