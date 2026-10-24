@@ -130,7 +130,7 @@ def save_command(s: Schedule, settings: AgentSettings, profile: ComputeProfile) 
         f"printf %s {shlex.quote(meta)} > {d}/schedule.json",
         f"printf %s {shlex.quote(s.task)} > {d}/task.md",
         f"printf %s {shlex.quote(script(s, agent, settings, profile))} > {d}/run.sbatch",
-        f"scancel --quiet --state=PENDING --name={s.job_name} 2>/dev/null; true",
+        f"scancel --quiet --state=PENDING --name={shlex.quote(s.job_name)} 2>/dev/null; true",
     ]
     if s.enabled:
         days = " ".join(str(x) for x in (s.days or range(1, 8)))
@@ -148,7 +148,7 @@ def run_now_command(name: str) -> str:
 
 
 def delete_command(s: Schedule) -> str:
-    return f"scancel --quiet --name={s.job_name} 2>/dev/null; rm -rf {folder_of(s.name)}"
+    return f"scancel --quiet --name={shlex.quote(s.job_name)} 2>/dev/null; rm -rf {folder_of(s.name)}"
 
 
 LIST = (f'for d in "$HOME"/{ROOT}/*/; do [ -f "$d/schedule.json" ] || continue; '
@@ -172,7 +172,9 @@ def parse_list(text: str) -> list[Status]:
                 continue
             if isinstance(raw.get("hours"), int):  # saved before minutes
                 raw.setdefault("minutes", raw["hours"] * 60)
-            out.append(Status(Schedule(**{k: v for k, v in raw.items() if k in names})))
+            sched = Schedule(**{k: v for k, v in raw.items() if k in names})
+            sched.name = slug(str(sched.name))  # names go into job names and paths: only safe characters
+            out.append(Status(sched))
         elif line.startswith("@@LAST ") and out:
             _, stamp, path = line.split(" ", 2)
             out[-1].last_run, out[-1].last_log = int(stamp) if stamp.isdigit() else 0, path

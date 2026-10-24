@@ -52,3 +52,9 @@ def test_presets_name_their_branch():
         assert "{" not in text
         if text:
             assert f"agent/{role}-" in text
+
+
+def test_odd_names_stay_harmless():
+    st = schedules.parse_list('@@SCHED\n{"name": "x; touch /tmp/pwned #", "agent": "claude", "folder": "~"}\n')
+    assert st[0].schedule.name == "x-touch-tmp-pwned"
+    assert "; touch" not in schedules.delete_command(st[0].schedule)
