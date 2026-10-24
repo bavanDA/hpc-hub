@@ -47,8 +47,11 @@ def test_events_and_lines_stay_whole():
     assert len(lines) == 50 and all(json.loads(x)["params"]["name"] == "log" for x in lines)
 
 
-def test_backend_process_answers_and_keeps_stdout_clean():
+def test_backend_process_answers_and_keeps_stdout_clean(tmp_path):
+    import os
     req = '{"jsonrpc":"2.0","id":7,"method":"app.version"}\n'
+    env = {**os.environ, "XDG_RUNTIME_DIR": str(tmp_path)}  # its own lock: a running HPC Hub doesn't matter
     res = subprocess.run([sys.executable, "-m", "hpc_hub.api"], input=req, capture_output=True, text=True,
-                         timeout=30)
-    assert json.loads(res.stdout.strip())["result"]["version"]
+                         timeout=30, env=env)
+    messages = [json.loads(line) for line in res.stdout.splitlines()]  # every stdout line is protocol
+    assert next(m for m in messages if m.get("id") == 7)["result"]["version"]
