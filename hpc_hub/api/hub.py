@@ -37,8 +37,8 @@ class Hub:
     def _adopt_all(self) -> None:
         """Connections already up (the GTK app, or a restart) are used as they are."""
         for s in self.sessions.values():
-            login = credentials.load(s.cfg.id, credentials.SSH)
-            try:
+            try:  # a keyring hiccup on one cluster must not stop the others
+                login = credentials.load(s.cfg.id, credentials.SSH)
                 s.adopt(login.username if login else "")
             except Exception:  # noqa: BLE001 - a cluster we can't pick up stays disconnected
                 pass
