@@ -194,10 +194,12 @@ while todo and not sid:
                 except (OSError, ValueError, KeyError):
                     pass
 sid = sid or tag
-files = sorted(glob.glob(os.path.expanduser("~/.claude/projects/*/%s*.jsonl" % sid)), key=os.path.getmtime) if sid else []
+pattern = os.path.expanduser("~/.claude/projects/*/%s*.jsonl" % sid)
+files = sorted(glob.glob(pattern), key=os.path.getmtime) if sid else []
 on, url = False, ""
 for line in open(files[-1], errors="replace") if files else []:
-    if '"bridge_status"' not in line and "Remote Control disconnected" not in line and "/remote-control</command-name>" not in line:
+    marks = ('"bridge_status"', "Remote Control disconnected", "/remote-control</command-name>")
+    if not any(m in line for m in marks):
         continue
     try:
         d = json.loads(line)

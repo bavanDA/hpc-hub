@@ -69,7 +69,8 @@ def test_is_latex():
     assert Project("p", "w", "/x", "main.tex").is_latex
     assert not Project("mc", "w", "/x", "papers/final/main.tex").is_latex  # a repo with a paper inside
     assert not Project("k", "w", "/x").is_latex
-    assert Project("p", "w", "/x", kind="latex").is_latex and not Project("c", "w", "/x", "main.tex", kind="code").is_latex
+    assert Project("p", "w", "/x", kind="latex").is_latex
+    assert not Project("c", "w", "/x", "main.tex", kind="code").is_latex
 
 
 def test_papers_are_remembered(tmp_path, monkeypatch):

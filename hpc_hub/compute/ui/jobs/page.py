@@ -64,8 +64,8 @@ class JobsPage(DetailsMixin, CancelMixin, Gtk.Box):
         self.updated = Gtk.Label(css_classes=["dim-label", "caption"])
         actions.pack_start(self.updated)
         self.usage = Gtk.Label(css_classes=["caption"], ellipsize=Pango.EllipsizeMode.END,
-                               tooltip_text="Service units (core hours) of your Slurm accounts. A QoS that charges 0 (like low on "
-                                            "Wulver) is free.")
+                               tooltip_text="Service units (core hours) of your Slurm accounts. "
+                                            "A QoS that charges 0 (like low on Wulver) is free.")
         self.usage_of: dict[str, tuple[float, list[AccountUsage]]] = {}  # cluster -> (when, accounts)
         actions.set_center_widget(self.usage)
         self.cancel_btn = Gtk.Button(label="Cancel job", css_classes=["destructive-action"], sensitive=False)

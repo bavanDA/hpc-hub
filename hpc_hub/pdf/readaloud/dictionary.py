@@ -107,13 +107,15 @@ def _get(url: str, tries: int = 3):
 def parse_free(word: str, payload: list) -> Entry:
     entries = [e for e in payload if isinstance(e, dict)]
     ipa = next((str(e["phonetic"]) for e in entries if e.get("phonetic")), "") or next(
-        (str(p["text"]) for e in entries for p in e.get("phonetics") or [] if isinstance(p, dict) and p.get("text")), "")
+        (str(p["text"]) for e in entries for p in e.get("phonetics") or []
+         if isinstance(p, dict) and p.get("text")), "")
     audio = next((str(p["audio"]) for e in entries for p in e.get("phonetics") or []
                   if isinstance(p, dict) and p.get("audio")), "")
     meanings = []
     for e in entries:
         for m in e.get("meanings") or []:
-            senses = [Sense(str(d["definition"]), str(d.get("example") or ""), [str(x) for x in d.get("synonyms") or []])
+            senses = [Sense(str(d["definition"]), str(d.get("example") or ""),
+                            [str(x) for x in d.get("synonyms") or []])
                       for d in m.get("definitions") or [] if isinstance(d, dict) and d.get("definition")]
             if senses:
                 meanings.append((str(m.get("partOfSpeech") or ""), senses))

@@ -103,7 +103,8 @@ class SchedulesPage(Gtk.Box):
                             subtitle_lines=2)
         row.add_prefix(Gtk.Image(icon_name=agent.icon))
         on = Gtk.Switch(active=sc.enabled, valign=Gtk.Align.CENTER, tooltip_text="On: runs on schedule")
-        on.connect("notify::active", lambda sw, *_: sw.get_active() != sc.enabled and self._toggle(s, sc, sw.get_active()))
+        on.connect("notify::active",
+                   lambda sw, *_: sw.get_active() != sc.enabled and self._toggle(s, sc, sw.get_active()))
         row.add_suffix(on)
         for icon, tip, fn in (("media-playback-start-symbolic", "Run once now", lambda: self._run_now(s, sc)),
                               ("folder-open-symbolic", "Open its logs", lambda: self._logs(s, sc)),
@@ -145,7 +146,8 @@ class SchedulesPage(Gtk.Box):
         d.set_response_appearance("delete", Adw.ResponseAppearance.DESTRUCTIVE)
         d.set_close_response("cancel")
         d.connect("response", lambda _d, r: r == "delete" and bg(
-            lambda: s.ssh.run(schedules.delete_command(sc), timeout=60), lambda *_: self._after("", f"Deleted {sc.name}")))
+            lambda: s.ssh.run(schedules.delete_command(sc), timeout=60),
+            lambda *_: self._after("", f"Deleted {sc.name}")))
         d.present(self.get_root())
 
     def edit(self, sc: Schedule | None) -> None:

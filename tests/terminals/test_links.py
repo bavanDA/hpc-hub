@@ -11,7 +11,7 @@ see https://docs.example.org/x for help
 
 
 def test_find_links():
-    found = {l.kind: l for l in links.find_links(OUT)}
+    found = {link.kind: link for link in links.find_links(OUT)}
     assert found[links.DEVICE_LOGIN].code == "AB12-CD34"
     assert found[links.TUNNEL].url == "https://vscode.dev/tunnel/bouchet-r101u05/home/jdoe"
     web = found[links.LOCAL_WEB]
@@ -37,7 +37,7 @@ def test_tunnel_name_and_urls():
 def test_remote_and_pair():
     text = ("Remote Control: https://claude.ai/code/session_01abc\n"
             "manual pairing code: XWVK-VU8N\nhelp at https://claude.ai/settings\n")
-    kinds = [(l.kind, l.url, l.code) for l in links.find_links(text)]
+    kinds = [(k.kind, k.url, k.code) for k in links.find_links(text)]
     assert (links.PAIR, "", "XWVK-VU8N") in kinds
     assert (links.REMOTE, "https://claude.ai/code/session_01abc", "") in kinds
     assert not any(u.endswith("/settings") for _, u, _ in kinds)

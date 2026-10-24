@@ -22,7 +22,8 @@ def test_script_lists_chats(tmp_path):
     proj = tmp_path / ".claude" / "projects"
     _write(proj / "-home-me" / "aaa.jsonl", [
         {"type": "mode", "mode": "normal"},
-        {"type": "user", "isMeta": True, "message": {"content": "<command-name>/clear</command-name>"}, "cwd": "/home/me"},
+        {"type": "user", "isMeta": True, "message": {"content": "<command-name>/clear</command-name>"},
+         "cwd": "/home/me"},
         {"type": "user", "message": {"content": [{"type": "text", "text": "fix the build"}]}, "cwd": "/home/me"},
         {"type": "ai-title", "aiTitle": "Fix build"},
         {"type": "last-prompt", "lastPrompt": "thanks"},
@@ -36,7 +37,8 @@ def test_script_lists_chats(tmp_path):
     found = _run(tmp_path, "claude")
     assert [c.id for c in found] == ["bbb", "aaa"]
     assert (found[0].name, found[0].cwd) == ("My chat", "/proj")
-    assert (found[1].title, found[1].first, found[1].last, found[1].cwd) == ("Fix build", "fix the build", "thanks", "/home/me")
+    c = found[1]
+    assert (c.title, c.first, c.last, c.cwd) == ("Fix build", "fix the build", "thanks", "/home/me")
 
 
 def test_parse_bad_output():
@@ -52,7 +54,7 @@ def test_codex_chats(tmp_path):
         {"type": "event_msg", "payload": {"type": "user_message", "message": "run the tests"}},
     ], 1000)
     (tmp_path / ".codex" / "session_index.jsonl").write_text(
-        json.dumps({"id": cid, "thread_name": "old name"}) + "\n" + json.dumps({"id": cid, "thread_name": "Run tests"}) + "\n")
+        "".join(json.dumps({"id": cid, "thread_name": n}) + "\n" for n in ("old name", "Run tests")))
     found = _run(tmp_path, "codex")
     assert [(c.id, c.cwd, c.title, c.first) for c in found] == [(cid, "/scratch/myproj", "Run tests", "run the tests")]
 

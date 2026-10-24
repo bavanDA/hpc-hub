@@ -200,7 +200,8 @@ class AccountUsage:
 
 
 USAGE = r"""for a in $(sacctmgr -n -P show assoc where user="$USER" format=account 2>/dev/null | sort -u); do
-q=$(sacctmgr -n -P show assoc where account="$a" user="" format=GrpTRESMins 2>/dev/null | grep -o 'billing=[0-9]*' | head -1)
+q=$(sacctmgr -n -P show assoc where account="$a" user="" format=GrpTRESMins 2>/dev/null |
+  grep -o 'billing=[0-9]*' | head -1)
 [ -n "$q" ] || continue
 u=$(sshare -n -P -A "$a" --users=" " -o GrpTRESRaw 2>/dev/null | grep -o 'billing=[0-9]*' | head -1)
 m=$(sshare -n -P -A "$a" --users="$USER" -o User,RawUsage 2>/dev/null | grep "^$USER|" | cut -d'|' -f2)

@@ -97,8 +97,8 @@ class FileActionsMixin:
 
     def delete(self, e: Entry) -> None:
         s = self.session
-        d = Adw.AlertDialog(heading=f"Delete {e.name}?",
-                            body=f"This permanently deletes it on {s.cfg.name}" + (" with everything inside." if e.is_dir else "."))
+        inside = " with everything inside." if e.is_dir else "."
+        d = Adw.AlertDialog(heading=f"Delete {e.name}?", body=f"This permanently deletes it on {s.cfg.name}{inside}")
         d.add_response("cancel", "Cancel")
         d.add_response("delete", "Delete")
         d.set_response_appearance("delete", Adw.ResponseAppearance.DESTRUCTIVE)

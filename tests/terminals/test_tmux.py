@@ -102,8 +102,9 @@ def test_claude_link_from_transcript(tmp_path):
     (chat / "b1aafc4b-1bbe-4f69.jsonl").write_text('{"type": "user"}\n' + json.dumps(entry) + "\n")
     assert tmux._chat_tag("hpchub-claude-1440996-b1aafc4b") == "b1aafc4b"
     assert tmux._chat_tag("hpchub-claude-1440996-153012") == ""
-    run = lambda tag: subprocess.run(["python3", "-c", tmux.CLAUDE_LINK, "no-such-session", tag], capture_output=True,
-                                     text=True, env={**os.environ, "HOME": str(tmp_path)}).stdout.strip()
+    def run(tag):
+        return subprocess.run(["python3", "-c", tmux.CLAUDE_LINK, "no-such-session", tag], capture_output=True,
+                              text=True, env={**os.environ, "HOME": str(tmp_path)}).stdout.strip()
     assert run("b1aafc4b") == "https://claude.ai/code/session_01abc"
     assert run("") == ""
     line = tmux.capture_command([tmux.Session("hpchub-claude-1-b1aafc4b", node="n1")])
@@ -126,8 +127,9 @@ def test_claude_link_follows_on_and_off(tmp_path):
             {"type": "system", "subtype": "local_command", "timestamp": "2026-10-23T10:05:00.000Z",
              "content": "<local-command-stdout>Remote Control disconnected.</local-command-stdout>"}]
     f = chat / "b1aafc4b-1.jsonl"
-    run = lambda: subprocess.run(["python3", "-c", tmux.CLAUDE_LINK, "none", "b1aafc4b"], capture_output=True,
-                                 text=True, env={**os.environ, "HOME": str(tmp_path)}).stdout.strip()
+    def run():
+        return subprocess.run(["python3", "-c", tmux.CLAUDE_LINK, "none", "b1aafc4b"], capture_output=True,
+                              text=True, env={**os.environ, "HOME": str(tmp_path)}).stdout.strip()
     f.write_text(json.dumps(rows[0]) + "\n")
     assert run() == "https://claude.ai/code/session_01x"
     f.write_text("".join(json.dumps(r) + "\n" for r in rows))

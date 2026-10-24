@@ -47,8 +47,10 @@ class MainWindow(Adw.ApplicationWindow):
         self.files = pages["files"] = FilesPage(sessions, self.toast, self.open_latex)
         if make_globus:
             self.globus = pages["globus"] = make_globus(self.toast)
-        self.latex = pages["latex"] = LatexPage(sessions, self.toast, save_config, store,
-                                                lambda: self.projects.edit(None, create=True) if make_projects else None)
+
+        def new_project():
+            return self.projects.edit(None, create=True) if make_projects else None
+        self.latex = pages["latex"] = LatexPage(sessions, self.toast, save_config, store, new_project)
         self.terminals = pages["terminals"] = TerminalsPage(sessions, self.toast)
         self.schedules = pages["schedules"] = SchedulesPage(sessions, self.toast, save_config, store)
         self.skills = pages["skills"] = SkillsPage(sessions, self.toast)

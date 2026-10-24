@@ -64,7 +64,8 @@ CURSOR = Agent("cursor", "Cursor", "hpc-cursor-symbolic", "", "", (
     Option("model", "Model", "--model", (DEFAULT, ("auto", "Auto"), ("composer-2.5", "Composer 2.5"),
                                          ("claude-opus-5-thinking-high", "Claude Opus 5"),
                                          ("claude-sonnet-5-thinking-high", "Claude Sonnet 5"),
-                                         ("gpt-5.6-sol-high", "GPT-5.6 Sol"), ("gemini-3.7-flash-high", "Gemini 3.7 Flash"))),
+                                         ("gpt-5.6-sol-high", "GPT-5.6 Sol"),
+                                         ("gemini-3.7-flash-high", "Gemini 3.7 Flash"))),
     Option("mode", "Mode", "--mode", (DEFAULT, ("plan", "Plan only"), ("ask", "Ask (read only)"))),
     Option("sandbox", "Sandbox", "--sandbox", (DEFAULT, ("enabled", "On"), ("disabled", "Off")))))
 AGENTS = [CLAUDE, CODEX, AGY, CURSOR]

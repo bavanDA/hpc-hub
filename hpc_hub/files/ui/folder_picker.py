@@ -91,7 +91,8 @@ class FolderPicker(Adw.Dialog):
                                  css_classes=["navigation-sidebar"])
         self.list.connect("activate", lambda _v, pos: self._open(self.selection.get_item(pos).entry))
         self.empty = Adw.StatusPage(icon_name="folder-symbolic", title="Empty folder")
-        self.spinner = Adw.Spinner(halign=Gtk.Align.CENTER, valign=Gtk.Align.CENTER, width_request=32, height_request=32)
+        self.spinner = Adw.Spinner(halign=Gtk.Align.CENTER, valign=Gtk.Align.CENTER,
+                                   width_request=32, height_request=32)
         self.stack = Gtk.Stack(vexpand=True)
         self.stack.add_named(Gtk.ScrolledWindow(child=self.list), "list")
         self.stack.add_named(self.empty, "empty")

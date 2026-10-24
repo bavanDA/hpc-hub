@@ -114,7 +114,8 @@ class FilePane(FileActionsMixin, Gtk.Box):
         if attr == "name":
             icon, label = item.get_child().get_first_child(), item.get_child().get_last_child()
             icon.set_from_icon_name("folder-symbolic" if e.is_dir else
-                                    "x-office-document-symbolic" if remote_fs.ext(e.name) == ".pdf" else "text-x-generic-symbolic")
+                                    "x-office-document-symbolic" if remote_fs.ext(e.name) == ".pdf" else
+                                    "text-x-generic-symbolic")
             label.set_label(e.name)
         elif attr == "size":
             item.get_child().set_label("" if e.is_dir else GLib.format_size(e.size))
@@ -205,7 +206,8 @@ class FilePane(FileActionsMixin, Gtk.Box):
         if e:
             is_archive = remote_fs.ext(e.name) in remote_fs.ARCHIVES
             self.actions["zip"].set_tooltip_text("Extract here" if is_archive else "Zip on the cluster")
-            self.actions["zip"].set_icon_name("extract-archive-symbolic" if is_archive else "package-x-generic-symbolic")
+            self.actions["zip"].set_icon_name(
+                "extract-archive-symbolic" if is_archive else "package-x-generic-symbolic")
             self.actions["latex"].set_visible(remote_fs.ext(e.name) == ".tex")
         else:
             self.actions["latex"].set_visible(False)

@@ -85,7 +85,9 @@ emit() { [ -d "$2" ] && printf '%s	%s	%s
 ' "$1" "$2" "$(readlink -f "$2")"; }
 emit Home "$HOME"
 for v in SCRATCH PROJECT WORK; do eval "p=\${$v:-}"; [ -n "$p" ] && emit "$(printf %s "$v" | tr A-Z a-z)" "$p"; done
-for p in /scratch/$USER /scratch/*/$USER /mmfs1/scratch/*/$USER /project/*/$USER /mmfs1/project/*/$USER          /nfs/*/project/*/$USER /nfs/*/scratch/*/$USER /expanse/lustre/projects/*/$USER          /expanse/lustre/scratch/$USER/temp_project /gpfs/*/$USER /work/$USER; do
+for p in /scratch/$USER /scratch/*/$USER /mmfs1/scratch/*/$USER /project/*/$USER /mmfs1/project/*/$USER \
+         /nfs/*/project/*/$USER /nfs/*/scratch/*/$USER /expanse/lustre/projects/*/$USER \
+         /expanse/lustre/scratch/$USER/temp_project /gpfs/*/$USER /work/$USER; do
   [ -d "$p" ] || continue
   d=$(dirname "$p"); emit "$(basename "$(dirname "$d")")/$(basename "$d")" "$p"
 done 2>/dev/null

@@ -30,7 +30,8 @@ class PdfPane(Gtk.Box):
         self.reader = Gtk.Box(spacing=6, margin_top=4, margin_bottom=4, margin_start=6, margin_end=6,
                               visible=False)
         self.play = Gtk.Button(child=Adw.ButtonContent(label="Read aloud", icon_name="media-playback-start-symbolic"),
-                               tooltip_text="Read the PDF aloud from the page you are on. Triple-click any word to look it up.")
+                               tooltip_text="Read the PDF aloud from the page you are on. "
+                                            "Triple-click any word to look it up.")
         self.play.connect("clicked", lambda *_: self._toggle())
         self.transport: list[Gtk.Widget] = []
         for icon, tip, fn in (("media-seek-backward-symbolic", "Back 10 seconds", lambda: self.view.speak_skip(-10)),
@@ -49,7 +50,8 @@ class PdfPane(Gtk.Box):
         self.speed = Gtk.DropDown.new_from_strings([f"{s:g}x" for s in SPEEDS])
         self.speed.set_selected(1)
         self.speed.connect("notify::selected", lambda *_: self._rate())
-        self.status = Gtk.Label(xalign=0, hexpand=True, ellipsize=Pango.EllipsizeMode.END, css_classes=["dim-label", "caption"])
+        self.status = Gtk.Label(xalign=0, hexpand=True, ellipsize=Pango.EllipsizeMode.END,
+                                css_classes=["dim-label", "caption"])
         self.spin = Adw.Spinner(visible=False)
         back, forward, stop = self.transport
         for w in (back, self.play, forward, stop, self.clock, self.voice, self.speed, self.spin, self.status):

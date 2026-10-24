@@ -142,7 +142,8 @@ def _flush() -> bool:
     return False
 
 
-TARGETS = (("desktop", "VS Code app", "text-editor-symbolic"), ("browser", "Browser (vscode.dev)", "web-browser-symbolic"))
+TARGETS = (("desktop", "VS Code app", "text-editor-symbolic"),
+           ("browser", "Browser (vscode.dev)", "web-browser-symbolic"))
 
 
 def vscode_button(on_open: Callable[[str], None], label: str = "VS Code") -> Adw.SplitButton:

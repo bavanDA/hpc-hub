@@ -19,8 +19,8 @@ HOW = [("laptop", "Through this laptop", "Simple; fine for smaller projects"),
 
 
 class ProjectCopyDialog(Adw.Dialog):
-    def __init__(self, p: Project, src: ClusterSession, targets: list[ClusterSession], act, on_saved: Callable[[], None],
-                 toast: Callable[[str], None]):
+    def __init__(self, p: Project, src: ClusterSession, targets: list[ClusterSession], act,
+                 on_saved: Callable[[], None], toast: Callable[[str], None]):
         super().__init__(title=f"Copy or sync {p.name}", content_width=580, content_height=760)
         self.p, self.src, self.targets, self.act, self.on_saved, self.toast = p, src, targets, act, on_saved, toast
         self.name = posixpath.basename(p.path.rstrip("/"))

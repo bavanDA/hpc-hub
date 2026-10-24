@@ -46,7 +46,7 @@ def test_interactive_login(tmp_path):
 
 def test_cancel_kills(tmp_path):
     with pytest.raises(vpn.VpnError):
-        vpn.run_interactive(fake(tmp_path), lambda p: None, lambda l: None, timeout=10)
+        vpn.run_interactive(fake(tmp_path), lambda p: None, lambda line: None, timeout=10)
 
 
 def test_nm_vpn_data():

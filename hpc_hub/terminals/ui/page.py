@@ -78,7 +78,8 @@ class TerminalsPage(SessionListMixin, SessionMenuMixin, Gtk.Box):
         self.header.append(self.remote_box)
         self._switch_busy = False
         self.actions = Gtk.MenuButton(icon_name="view-more-symbolic", css_classes=["flat"], tooltip_text="Session")
-        close = Gtk.Button(icon_name="window-close-symbolic", css_classes=["flat"], tooltip_text="Close (keeps running)")
+        close = Gtk.Button(icon_name="window-close-symbolic", css_classes=["flat"],
+                           tooltip_text="Close (keeps running)")
         close.connect("clicked", lambda *_: self.close_current())
         self.header.append(self.actions)
         self.header.append(close)

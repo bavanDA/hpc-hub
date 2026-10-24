@@ -62,14 +62,16 @@ class HpcHubApp(QuitMixin, Adw.Application):
             ("about", lambda *_: self._about(), []),
             ("disconnect-quit", lambda *_: self._disconnect_and_quit(), []),
             ("preferences", lambda *_: PreferencesDialog(
-                self.app_settings, lambda: config.save_app(self.app_settings)).present(self.window), ["<primary>comma"]),
+                self.app_settings, lambda: config.save_app(self.app_settings)).present(self.window),
+             ["<primary>comma"]),
         ):
             action = Gio.SimpleAction.new(name, None)
             action.connect("activate", handler)
             self.add_action(action)
             if accels:
                 self.set_accels_for_action(f"app.{name}", accels)
-        connect = Gio.SimpleAction.new("connect", GLib.VariantType.new("s"))  # gapplication action ... connect "'wulver'"
+        # gapplication action ... connect "'wulver'"
+        connect = Gio.SimpleAction.new("connect", GLib.VariantType.new("s"))
         connect.connect("activate", lambda _a, cid: cid.unpack() in self.sessions
                         and self.connect_session(self.sessions[cid.unpack()]))
         self.add_action(connect)

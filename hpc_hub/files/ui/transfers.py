@@ -46,7 +46,8 @@ class TransferRow(Gtk.ListBoxRow):
             self.bar.set_fraction(p.fraction)
         elif not p.finished:
             self.bar.pulse()
-        self.status.set_label(status or f"{GLib.format_size(p.done)} of {GLib.format_size(p.total) if p.total else '?'}")
+        total = GLib.format_size(p.total) if p.total else "?"
+        self.status.set_label(status or f"{GLib.format_size(p.done)} of {total}")
         if p.finished:
             self.cancel.set_icon_name("window-close-symbolic")
             self.cancel.set_tooltip_text("Remove from list")

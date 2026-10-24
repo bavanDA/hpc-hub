@@ -228,7 +228,8 @@ class ProjectDialog(Adw.Dialog):
             ids = [s.cfg.id for s in sessions]
             self.cluster.set_selected(ids.index(p.cluster) if p.cluster in ids else 0)
         self.name.connect("changed", lambda *_: self._sync())
-        self.cluster.connect("notify::selected", lambda *_: (setattr(self, "path", "~" if create else ""), self._sync()))
+        self.cluster.connect("notify::selected",
+                             lambda *_: (setattr(self, "path", "~" if create else ""), self._sync()))
 
         self.error = Gtk.Label(wrap=True, visible=False, css_classes=["error"], margin_start=12, margin_end=12)
         self.save_btn = Gtk.Button(label="Create" if create else "Save", css_classes=["suggested-action", "pill"],

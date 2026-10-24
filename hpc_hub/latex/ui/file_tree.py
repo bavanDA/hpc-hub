@@ -14,8 +14,9 @@ BUILD_OUTPUT = (".aux", ".log", ".out", ".toc", ".fls", ".fdb_latexmk", ".syncte
 FIG_EXT = (".png", ".jpg", ".jpeg", ".pdf", ".eps", ".svg")
 
 # "d path" / "f path" for everything in the project, minus hidden folders and LaTeX's own output
-LIST = ("find . -maxdepth 6 \\( -name '.?*' -o -name _minted\\* \\) -prune -o -mindepth 1 \\( -type d -printf 'd %P\\n' "
-        "-o -type f " + " ".join(f"! -name '*{e}'" for e in BUILD_OUTPUT) + " -printf 'f %P\\n' \\) "
+LIST = ("find . -maxdepth 6 \\( -name '.?*' -o -name _minted\\* \\) -prune -o -mindepth 1 "
+        "\\( -type d -printf 'd %P\\n' -o -type f " + " ".join(f"! -name '*{e}'" for e in BUILD_OUTPUT)
+        + " -printf 'f %P\\n' \\) "
         "| sort -k2 | head -3000")
 
 
@@ -137,7 +138,8 @@ class FileTree(Gtk.Box):
         drag.connect("prepare", lambda *_: Gdk.ContentProvider.new_for_value(expander.node.rel)
                      if getattr(expander, "node", None) else None)
         expander.add_controller(drag)
-        self._drops(expander, lambda: expander.node.rel if expander.node.is_dir else posixpath.dirname(expander.node.rel))
+        self._drops(expander,
+                    lambda: expander.node.rel if expander.node.is_dir else posixpath.dirname(expander.node.rel))
 
     def _bind(self, _f, item) -> None:
         row = item.get_item()

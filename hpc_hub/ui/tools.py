@@ -190,8 +190,9 @@ class Tools:
             self.show_terminals()  # already following it; the link opens the pending folder
             return
         a = Allocation(job_id, "", owned=False)
-        t = self.terminals.open(f"VS Code · {s.cfg.name} · job {job_id}", s.ssh.argv(slurm.follow_log(job_id), tty=True),
-                                "text-editor-symbolic", on_link=lambda tab, link: self._vscode_link(s, a, tab, link))
+        t = self.terminals.open(f"VS Code · {s.cfg.name} · job {job_id}",
+                                s.ssh.argv(slurm.follow_log(job_id), tty=True), "text-editor-symbolic",
+                                on_link=lambda tab, link: self._vscode_link(s, a, tab, link))
         self.vs_tabs[s.cfg.id] = (job_id, t)
         self.show_terminals()
 
@@ -277,7 +278,8 @@ class Tools:
         if agent.remote_setting:  # remote control comes from the agent's settings, not a flag: set it first
             on = getattr(s.cfg, agent.id).remote
             bg(lambda: permissions.set_key(s.ssh, agent.remote_setting, on),
-               lambda _r, e: (e and self.toast(f"Could not set remote control: {e}"), self._open_agent(s, agent, a, run)))
+               lambda _r, e: (e and self.toast(f"Could not set remote control: {e}"),
+                              self._open_agent(s, agent, a, run)))
             return
         self._open_agent(s, agent, a, run)
 

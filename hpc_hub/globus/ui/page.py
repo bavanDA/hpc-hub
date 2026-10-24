@@ -29,7 +29,8 @@ class TaskRow(Adw.ActionRow):
                 f"{t.get('source_endpoint_display_name', '?')} → {t.get('destination_endpoint_display_name', '?')}\n"
                 f"{nice} · {GLib.format_size(int(t.get('bytes_transferred') or 0))} · {files} · {when}"),
             subtitle_lines=2)
-        icon = {"SUCCEEDED": "emblem-ok-symbolic", "FAILED": "dialog-error-symbolic"}.get(status, "content-loading-symbolic")
+        icons = {"SUCCEEDED": "emblem-ok-symbolic", "FAILED": "dialog-error-symbolic"}
+        icon = icons.get(status, "content-loading-symbolic")
         self.add_prefix(Gtk.Image(icon_name=icon))
         if status in ACTIVE:
             stop = Gtk.Button(icon_name="process-stop-symbolic", tooltip_text="Cancel transfer",

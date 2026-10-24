@@ -84,7 +84,9 @@ def test_trash_keeps_files_on_their_own_disk(tmp_path):
     work.mkdir(parents=True)
     (work / "a.txt").write_text("hi")
     env = {"HOME": str(home), "USER": "me", "PATH": "/usr/bin:/bin"}
-    run = lambda *a: subprocess.run(["bash", str(FILES / "trash"), *a], env=env, capture_output=True, text=True)  # noqa: E731
+
+    def run(*args):
+        return subprocess.run(["bash", str(FILES / "trash"), *args], env=env, capture_output=True, text=True)
     try:
         assert run(str(work / "a.txt")).returncode == 0 and not (work / "a.txt").exists()
         assert "a.txt" in run("--list").stdout

@@ -95,7 +95,8 @@ class ClusterSettingsDialog(Adw.PreferencesDialog):
         self.factor.set_selected(next((i for i, f in enumerate(FACTORS) if f[0] == self.cfg.second_factor), 0))
         self.factor.connect("notify::selected", lambda *_: self._sync_factor())
         self.duo = _entry("Duo answer (push, push2, phone, 1)", self.cfg.duo_answer)
-        self.code_help = Adw.ButtonRow(title="How to set up Google Authenticator", start_icon_name="help-about-symbolic")
+        self.code_help = Adw.ButtonRow(title="How to set up Google Authenticator",
+                                       start_icon_name="help-about-symbolic")
         self.code_help.connect("activated", lambda *_: AuthenticatorHelp(self.cfg).present(self))
         for row in (self.user, self.password, self.factor, self.code_help, self.duo):
             group.add(row)
@@ -139,7 +140,8 @@ class ClusterSettingsDialog(Adw.PreferencesDialog):
             ["This app (fills your login)"] + [f"Chrome: {name}" for name in self.chrome]))
         self.sign_in.set_selected(self.chrome.index(v.browser) + 1 if v.browser else 0)
         self.sign_in.set_subtitle("In Chrome you are often signed in already, so it is quicker")
-        self.vpn_user = _entry("VPN username (e.g. first.last@yale.edu)", self.vpn_saved.username if self.vpn_saved else "")
+        self.vpn_user = _entry("VPN username (e.g. first.last@yale.edu)",
+                               self.vpn_saved.username if self.vpn_saved else "")
         self.vpn_password = self._password_row(self.vpn_saved)
         if not (self.vpn_saved and self.vpn_saved.password):
             self.vpn_password.set_title("VPN password (empty = cluster password)")
@@ -179,7 +181,8 @@ class ClusterSettingsDialog(Adw.PreferencesDialog):
         self.vs_setup = _entry("Run first (e.g. module load VSCode)", v.setup)
         self.vs_command = _entry("Command", v.command)
         self.vs_workdir = _entry("Start in folder", v.workdir)
-        self.vs_links = _switch("Open automatically", v.open_links, "When the tunnel is ready, and the GitHub sign-in page")
+        self.vs_links = _switch("Open automatically", v.open_links,
+                                "When the tunnel is ready, and the GitHub sign-in page")
         self.vs_open_in = Adw.ComboRow(title="Open in", model=Gtk.StringList.new([t[1] for t in TARGETS]))
         self.vs_open_in.set_selected(next((i for i, t in enumerate(TARGETS) if t[0] == v.open_in), 0))
         for row in (self.vs_setup, self.vs_command, self.vs_workdir, self.vs_open_in, self.vs_links):

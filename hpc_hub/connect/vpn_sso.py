@@ -95,11 +95,13 @@ def server_pin(host: str, port: int = 443) -> str:
     from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
     ctx = ssl.create_default_context()
     try:
-        with socket.create_connection((host, port), timeout=20) as raw, ctx.wrap_socket(raw, server_hostname=host) as tls:
+        with (socket.create_connection((host, port), timeout=20) as raw,
+              ctx.wrap_socket(raw, server_hostname=host) as tls):
             der = tls.getpeercert(binary_form=True)
     except OSError as e:
         raise SsoError(f"Cannot check VPN server certificate: {e}") from e
-    spki = x509.load_der_x509_certificate(der).public_key().public_bytes(Encoding.DER, PublicFormat.SubjectPublicKeyInfo)
+    public = x509.load_der_x509_certificate(der).public_key()
+    spki = public.public_bytes(Encoding.DER, PublicFormat.SubjectPublicKeyInfo)
     return "pin-sha256:" + base64.b64encode(hashlib.sha256(spki).digest()).decode()
 
 

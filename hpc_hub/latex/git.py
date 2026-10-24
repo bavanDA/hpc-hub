@@ -64,7 +64,7 @@ def info(ssh: SshMaster, folder: str) -> RepoInfo:
         raise GitError(res.stderr.strip() or "git failed")
     parts = (res.stdout.split(sep + "\n") + [""] * 5)[:5]
     return RepoInfo(root=parts[0].strip(), branch=parts[1].strip(), remotes=parse_remotes(parts[2]),
-                    changes=[l for l in parts[3].splitlines() if l.strip()], history=parse_log(parts[4]))
+                    changes=[c for c in parts[3].splitlines() if c.strip()], history=parse_log(parts[4]))
 
 
 BUILD_FILES = ("aux", "log", "out", "toc", "fls", "fdb_latexmk", "synctex.gz", "bbl", "blg", "lof", "lot", "nav", "snm")
@@ -73,7 +73,8 @@ BUILD_FILES = ("aux", "log", "out", "toc", "fls", "fdb_latexmk", "synctex.gz", "
 def commit_all(ssh: SshMaster, folder: str, message: str) -> str:
     """Stage everything except LaTeX build files, then commit."""
     skip = " ".join(shlex.quote(f":!*.{ext}") for ext in BUILD_FILES)
-    return _git(ssh, folder, f"add -A -- . {skip} && {ENV} git -C {shlex.quote(folder)} commit -m {shlex.quote(message)}")
+    commit = f"{ENV} git -C {shlex.quote(folder)} commit -m {shlex.quote(message)}"
+    return _git(ssh, folder, f"add -A -- . {skip} && {commit}")
 
 
 def pull(ssh: SshMaster, folder: str) -> str:

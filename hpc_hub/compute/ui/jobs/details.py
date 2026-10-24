@@ -64,7 +64,8 @@ class DetailsMixin:
                 ("CPUs", get("NumCPUs", "AllocCPUS")),
                 ("Memory", (re.search(r"mem=([^,]+)", tres) or [None, get("ReqMem")])[1]),
                 ("GPUs", str(sum(int(g) for g in gpus)) if gpus else ""),
-                ("Partition · QoS · account", " · ".join(x for x in (get("Partition"), get("QOS"), get("Account")) if x)),
+                ("Partition · QoS · account",
+                 " · ".join(x for x in (get("Partition"), get("QOS"), get("Account")) if x)),
                 ("SU", su_text(j) if j.state else ""),
             ]),
             ("Files", [

@@ -193,8 +193,9 @@ class SshMaster:
     def copy_argv(self, src: str, dst: str) -> list[str]:
         """scp argv riding the master. Remote paths are written as ':path'."""
         fix = lambda p: f"{self.cfg.host}:{p[1:]}" if p.startswith(":") else p  # noqa: E731
-        return ["scp", "-r", "-q", "-o", "ControlMaster=no", "-o", "BatchMode=yes", "-o", f"ControlPath={self.control_path}",
-                "-o", f"User={self.username}", "-P", str(self.cfg.port), "--", fix(src), fix(dst)]
+        return ["scp", "-r", "-q", "-o", "ControlMaster=no", "-o", "BatchMode=yes",
+                "-o", f"ControlPath={self.control_path}", "-o", f"User={self.username}", "-P", str(self.cfg.port),
+                "--", fix(src), fix(dst)]
 
     def stop(self) -> None:
         self.close_shells()

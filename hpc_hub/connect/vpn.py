@@ -250,7 +250,7 @@ class Vpn:
                 raise NeedsWebLogin("VPN wants web sign-in")
             if asked[prompts.PASSWORD] > 1:
                 raise VpnError("VPN rejected the password")
-            tail = next((l for l in reversed(err) if l.strip()), "")
+            tail = next((line for line in reversed(err) if line.strip()), "")
             raise VpnError(f"VPN login failed: {tail}" if tail else "VPN login failed")
         return result
 

@@ -33,7 +33,8 @@ class LoginDialog(Adw.Dialog):
         steps.add(_step(1, "Open the Globus page", "It asks which Chrome profile to use"))
         if domain:
             steps.add(_step(2, f"Sign in with your {domain} account, then click Allow",
-                            f"{what or 'This cluster'} only lets in {domain} accounts. Globus links it to your account"))
+                            f"{what or 'This cluster'} only lets in {domain} accounts. "
+                            "Globus links it to your account"))
         elif fresh:
             steps.add(_step(2, "Sign in and click Allow",
                             "Pick your university or ACCESS CI, whichever your clusters use"))
