@@ -31,7 +31,7 @@ jobs:
           path: ~/.cache/pip
           key: pip-test-${{ hashFiles('.github/workflows/test.yml') }}
       # The system Python, since PyGObject comes from apt (as in the README)
-      - run: python3 -m venv --system-site-packages .venv && .venv/bin/pip install pytest ruff cryptography
+      - run: python3 -m venv --system-site-packages .venv && .venv/bin/pip install pytest ruff 'cryptography>=43'
       - run: .venv/bin/ruff check hpc_hub tests packaging
       - run: .venv/bin/python -m pytest -q
 

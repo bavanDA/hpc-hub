@@ -66,7 +66,10 @@ def system_roots() -> list:
 def check_chain(leaf, issuer, host: str, roots: list) -> None:
     """PortalError unless leaf, through issuer, leads to one of roots and is for host. A fetched issuer is only
     as good as this check: anyone on the network can serve a certificate naming their own issuer."""
-    from cryptography.x509.verification import DNSName, PolicyBuilder, Store, VerificationError
+    try:
+        from cryptography.x509.verification import DNSName, PolicyBuilder, Store, VerificationError
+    except ImportError as e:  # cryptography before 43 (Ubuntu 24.04): can't check, so don't trust it
+        raise PortalError(f"{host} needs python3-cryptography 43 or newer to check its certificate") from e
     try:
         PolicyBuilder().store(Store(roots)).build_server_verifier(DNSName(host)).verify(leaf, [issuer])
     except (VerificationError, ValueError) as e:

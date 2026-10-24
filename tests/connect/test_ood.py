@@ -44,6 +44,7 @@ def _cert(name, key, issuer_name, issuer_key, ca, host=None):
 
 
 def test_fetched_issuer_must_lead_to_a_trusted_root():
+    pytest.importorskip("cryptography.x509.verification")
     from cryptography.hazmat.primitives.asymmetric import ec
     keys = {n: ec.generate_private_key(ec.SECP256R1()) for n in ("root", "mid", "leaf", "evil")}
     root = _cert("Root", keys["root"], "Root", keys["root"], True)
