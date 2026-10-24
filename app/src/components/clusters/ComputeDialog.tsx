@@ -10,7 +10,7 @@ import { ActionRow, EntryRow, Group, SpinRow, SwitchRow } from './fields'
 import { putCluster } from './store'
 import { human, minutes, slurmTime } from './time'
 
-function Duration({ total, onChange, limits }:
+export function Duration({ total, onChange, limits }:
   { total: number; onChange: (m: number) => void; limits: Limits | null }) {
   const d = Math.floor(total / 1440), h = Math.floor((total % 1440) / 60), m = total % 60
   const set = (dd: number, hh: number, mm: number) => onChange(dd * 1440 + hh * 60 + mm)

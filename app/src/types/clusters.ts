@@ -7,17 +7,79 @@ export type Profile = {
   account?: string
   qos?: string
   gpus?: number
+  extra_args?: string
+}
+
+export type Vpn = {
+  enabled: boolean
+  gateway: string
+  same_login_as_ssh?: boolean
+  protocol?: string
+  useragent?: string
+  authgroup?: string
+  split_tunnel?: boolean
+  domains?: string
+  routes?: string
+  browser?: string
+}
+
+export type VsCode = {
+  command: string
+  setup: string
+  workdir: string
+  open_links: boolean
+  open_in: 'desktop' | 'browser'
+  compute: Profile
+}
+
+export type AgentId = 'claude' | 'codex' | 'agy' | 'cursor'
+
+/** One agent's saved choices (config.py AgentSettings); "" = the agent's default. */
+export type AgentSettings = {
+  command: string
+  workdir: string
+  new_node: boolean
+  remote: boolean
+  model: string
+  mode: string
+  effort: string
+  sandbox: string
+  approval: string
 }
 
 export type Cluster = {
   id: string
   name: string
   host: string
+  port?: number
+  duo_answer?: string
   second_factor?: 'duo' | 'code'
+  portal?: string
   code_setup?: string
+  queues?: string
+  queue_wait?: number
   request_node_on_connect?: boolean
-  vpn: { enabled: boolean; gateway: string; same_login_as_ssh?: boolean }
+  reuse_running_job?: boolean
+  vpn: Vpn
   profile: Profile
+  vscode?: VsCode
+} & Partial<Record<AgentId, AgentSettings>>
+
+/** What the settings dialog needs besides the cluster (cluster_settings.get). */
+export type SettingsInfo = {
+  cluster: Cluster
+  browsers: string[]
+  protocols: string[]
+  agents: { id: AgentId; name: string; remote_label: string; remote_hint: string
+    options: { key: keyof AgentSettings; label: string; choices: [string, string][] }[] }[]
+}
+
+/** The portal key setup (keysetup.status). */
+export type KeySetup = {
+  state: 'waiting' | 'working' | 'done' | 'failed' | 'stopped'
+  title: string
+  text: string
+  user: string
 }
 
 export type State = 'Disconnected' | 'Connecting VPN' | 'Signing in' | 'Approve Duo on your phone' |
