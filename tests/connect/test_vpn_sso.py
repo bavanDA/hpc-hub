@@ -59,3 +59,14 @@ def test_server_pin_format(monkeypatch):
     import hashlib
     spki = key.public_key().public_bytes(serialization.Encoding.DER, serialization.PublicFormat.SubjectPublicKeyInfo)
     assert vpn_sso.server_pin("vpn.test") == "pin-sha256:" + base64.b64encode(hashlib.sha256(spki).digest()).decode()
+
+
+def test_password_only_goes_to_the_sign_in_site():
+    from hpc_hub.connect.sso import may_fill, site
+    start = "https://vpn.uni.edu/+CSCOE+/saml/sp/login?tgname=x"
+    assert site("vpn.uni.edu") == "uni.edu" and site("vpn.ox.ac.uk") == "ox.ac.uk"
+    assert may_fill("https://idp.uni.edu/login", start)
+    assert may_fill("https://login.microsoftonline.com/abc/saml2", start)
+    assert not may_fill("http://idp.uni.edu/login", start)  # not https
+    assert not may_fill("https://uni.edu.evil.example/login", start)
+    assert not may_fill("https://evil.example/?next=uni.edu", start)

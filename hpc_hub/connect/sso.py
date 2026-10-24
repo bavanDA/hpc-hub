@@ -74,15 +74,36 @@ def ask_app(prompt: str) -> str | None:
     return reply.get("answer") if reply.get("ok") else None
 
 
+# Sign-in hosts outside the university's own site that may get the password (Microsoft, Okta, Google accounts)
+SIGN_IN_HOSTS = ("login.microsoftonline.com", "login.microsoft.com", "okta.com", "accounts.google.com")
+
+
+def site(host: str) -> str:
+    """The part of a host name an organization owns: vpn.njit.edu -> njit.edu, vpn.ox.ac.uk -> ox.ac.uk."""
+    labels = host.lower().rstrip(".").split(".")
+    second = len(labels) > 2 and len(labels[-1]) == 2 and labels[-2] in ("ac", "co", "edu", "gov", "org", "net", "com")
+    return ".".join(labels[-3:] if second else labels[-2:])
+
+
+def may_fill(uri: str, start: str) -> bool:
+    """Type the password only over https, on the sign-in start page's own site or a known sign-in host,
+    so a link or redirect to another site never gets it."""
+    page = urlparse(uri)
+    host, home = (page.hostname or "").lower(), site(urlparse(start).hostname or "")
+    if page.scheme != "https" or not host:
+        return False
+    return any(host == h or host.endswith("." + h) for h in (home, *SIGN_IN_HOSTS) if h)
+
+
 SETTLE = 2800  # ms to wait before typing into a freshly loaded page (sign-in pages finish their scripts late)
 POLL = 800
 
 
 class AutoFill:
-    """Fills username, then password, once each, on whatever sign-in page the view shows."""
+    """Fills username, then password, once each, on sign-in pages of the start page's site (see may_fill)."""
 
-    def __init__(self, view: WebKit.WebView, username: str, password: str, on_sent=lambda: None):
-        self.view, self.username, self.password, self.on_sent = view, username, password, on_sent
+    def __init__(self, view: WebKit.WebView, start: str, username: str, password: str, on_sent=lambda: None):
+        self.view, self.start, self.username, self.password, self.on_sent = view, start, username, password, on_sent
         self.done = {"user": False, "pass": False}
         self.timer = 0
 
@@ -96,6 +117,9 @@ class AutoFill:
     def _step(self) -> bool:
         self.timer = 0
         if self.done["pass"]:
+            return False
+        if not may_fill(self.view.get_uri() or "", self.start):
+            self._later(POLL)  # not a page we trust with the password; it may redirect to one
             return False
         script = STEP_JS % (json.dumps(self.username), json.dumps(self.password),
                             json.dumps(self.done["user"]), json.dumps(self.done["pass"]))
@@ -146,7 +170,8 @@ class SsoWindow(Gtk.ApplicationWindow):
         self.view.connect("load-changed", self.on_load)
         box.append(self.view)
         self.set_child(box)
-        self.fill = AutoFill(self.view, ask_app("hpc-hub:sso-username") or "", ask_app("hpc-hub:sso-password") or "",
+        self.fill = AutoFill(self.view, url, ask_app("hpc-hub:sso-username") or "",
+                             ask_app("hpc-hub:sso-password") or "",
                              lambda: self.status.set_label("Password sent. Approve Duo on your phone."))
         self.view.load_uri(url)
 

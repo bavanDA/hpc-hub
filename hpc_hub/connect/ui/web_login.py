@@ -26,7 +26,7 @@ class WebLoginDialog(Adw.Dialog):
         tv = Adw.ToolbarView(content=box)
         tv.add_top_bar(Adw.HeaderBar())
         self.set_child(tv)
-        self.fill = AutoFill(self.view, username, password,
+        self.fill = AutoFill(self.view, start.login_url, username, password,
                              lambda: self.status.set_label("Password sent. Approve Duo on your phone."))
         self.connect("closed", lambda *_: self._finish("", "Sign-in cancelled"))
         self.view.load_uri(start.login_url)
