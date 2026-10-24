@@ -6,8 +6,8 @@ One app that looks good on all three systems. The screens are rebuilt as a web U
 
 ## Shape
 
-    app/ui/          React + TypeScript screens (Vite, Tailwind)
-    app/src-tauri/   Tauri shell (Rust): windows, the Python backend as a sidecar, terminals (PTY)
+    app/src/         React + TypeScript screens (Vite, Tailwind, lucide icons)
+    app/src-tauri/   Tauri shell (Rust): the window, the Python backend as a child process, terminals (PTY)
     hpc_hub/         Python logic, unchanged where possible
     hpc_hub/api/     JSON-RPC over stdin/stdout: the UI calls methods, the backend sends events
 
@@ -25,6 +25,12 @@ One app that looks good on all three systems. The screens are rebuilt as a web U
 | Secrets | `keyring` (Secret Service) | `keyring` (Keychain) | `keyring` (Credential Manager) |
 | SSH | OpenSSH ControlMaster | OpenSSH ControlMaster | asyncssh (no ControlMaster in Windows OpenSSH) |
 | VPN | NetworkManager | openconnect with an admin helper | openconnect + wintun, admin |
+
+## Run it (development)
+
+    cd app && npm install && npm run tauri dev
+
+Linux needs WebKitGTK 4.1 headers: `sudo dnf install webkit2gtk4.1-devel openssl-devel libxdo-devel librsvg2-devel`.
 
 ## Order
 
