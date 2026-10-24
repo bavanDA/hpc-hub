@@ -239,6 +239,23 @@ def _table(out: list[str], name: str, data: dict) -> None:
             _table(out, f"{name}.{k}", v)
 
 
+def chosen(clusters: list[ClusterConfig], app: "AppSettings") -> list[ClusterConfig]:
+    """Only the clusters you said you use (all of them if you never chose)."""
+    ids = [i for i in app.clusters.split(",") if i]
+    return [c for c in clusters if c.id in ids] if ids else clusters
+
+
+def save_chosen(clusters: list[ClusterConfig], path: Path = CONFIG_FILE) -> None:
+    """Save the clusters you use without losing the settings of those you turned off."""
+    mine = {c.id: c for c in clusters}
+    save([mine.get(c.id, c) for c in load(path)], path)
+
+
+def first_run(app: "AppSettings", path: Path = CONFIG_FILE) -> bool:
+    """Nothing saved yet: time to ask which clusters you use."""
+    return not path.exists() and not app.clusters
+
+
 def save(clusters: list[ClusterConfig], path: Path = CONFIG_FILE) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_suffix(".tmp")
@@ -251,6 +268,7 @@ class AppSettings:
     globus_client_id: str = ""  # your Globus native app id (app.globus.org/settings/developers)
     browser_profile: str = ""  # Chrome profile name for links (e.g. "Uni"); empty = system browser
     experimental: bool = False  # show LaTeX, Skills and Scheduled agents
+    clusters: str = ""  # ids of the clusters you use, comma separated; empty = all of them
 
 
 def load_app(path: Path = APP_FILE) -> AppSettings:

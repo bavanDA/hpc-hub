@@ -52,9 +52,9 @@ class HpcHubApp(LoginPromptsMixin, QuitMixin, Adw.Application):
         style.install()
 
         self.askpass.start()
-        self.clusters = config.load()
-        self.projects = ProjectStore()
         self.app_settings = config.load_app()
+        self.clusters = config.chosen(config.load(), self.app_settings)
+        self.projects = ProjectStore()
         browser.preferred = self.app_settings.browser_profile
         features.experimental = self.app_settings.experimental
         self.sessions = {c.id: ClusterSession(c, self.askpass, self) for c in self.clusters}
@@ -99,9 +99,9 @@ class HpcHubApp(LoginPromptsMixin, QuitMixin, Adw.Application):
             self.window = MainWindow(
                 self, list(self.sessions.values()),
                 self.connect_session, self.disconnect_session, self.open_settings, self.open_tool,
-                lambda: config.save(self.clusters),
+                lambda: config.save_chosen(self.clusters),
                 lambda toast: GlobusPage(self.app_settings, self.clusters, lambda: config.save_app(self.app_settings),
-                                         lambda: config.save(self.clusters), toast, self.sessions),
+                                         lambda: config.save_chosen(self.clusters), toast, self.sessions),
                 lambda toast: ProjectsPage(list(self.sessions.values()), self.projects, toast, Actions(
                     vscode=lambda s, folder, target: self.tools.vscode(s, folder, target),
                     agent=lambda s, agent, folder: self.tools.agent(s, agent, folder),
@@ -126,7 +126,7 @@ class HpcHubApp(LoginPromptsMixin, QuitMixin, Adw.Application):
                 self.window.files.resume_globus(client)
             self.tools = Tools(self.window, self.window.terminals,
                                lambda: self.window.stack.set_visible_child_name("terminals"),
-                               self.window.toast, lambda: config.save(self.clusters))
+                               self.window.toast, lambda: config.save_chosen(self.clusters))
             self.tools.open_files = self._open_files
         self.window.present()
 
@@ -191,7 +191,7 @@ class HpcHubApp(LoginPromptsMixin, QuitMixin, Adw.Application):
     # -- user actions ----------------------------------------------------------------
     def open_settings(self, session: ClusterSession, hint: str = "") -> None:
         def saved(_cfg):
-            config.save(self.clusters)
+            config.save_chosen(self.clusters)
             self.window.cards[session.cfg.id].refresh()
             self.window.toast(f"{session.cfg.name} settings saved")
 
@@ -211,7 +211,7 @@ class HpcHubApp(LoginPromptsMixin, QuitMixin, Adw.Application):
             target = tool.partition(":")[2]
             if target:
                 session.cfg.vscode.open_in = target  # remember the choice
-                config.save(self.clusters)
+                config.save_chosen(self.clusters)
             self.tools.vscode(session, target=target)
         elif tool.startswith("agent:"):
             self.tools.agent(session, tool.partition(":")[2])

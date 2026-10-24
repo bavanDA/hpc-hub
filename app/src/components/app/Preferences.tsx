@@ -8,13 +8,16 @@ import { useToast } from '../toast'
 import { Dialog, Row, Spinner } from '../ui'
 import { forgetProfiles, getProfiles } from './openLink'
 import type { Preferences, Profiles } from './types'
+import { describe, type SetupStatus } from './Welcome'
 
 export function PreferencesDialog({ onClose, onExperimental }:
   { onClose: () => void; onExperimental: (on: boolean) => void }) {
   const toast = useToast()
   const [prefs, setPrefs] = useState<Preferences | null>(null)
   const [found, setFound] = useState<Profiles | null>(null)
+  const [setup, setSetup] = useState<SetupStatus | null>(null)
   useEffect(() => {
+    call<SetupStatus>('setup.status').then(setSetup).catch(() => {})
     call<Preferences>('preferences.get').then(setPrefs).catch((e: Error) => toast(`Could not load: ${e.message}`))
     getProfiles().then(setFound)
   }, [toast])
@@ -42,6 +45,17 @@ export function PreferencesDialog({ onClose, onExperimental }:
           </ActionRow>
           {!profiles.length && <Row title="No Chrome profiles found" subtitle="Install Google Chrome to pick a profile." />}
         </Group>
+        {setup && <Group title="Clusters" description="The ones you use. The others are hidden, their settings kept.">
+          {setup.choices.map((c) => (
+            <SwitchRow key={c.id} label={c.name} sub={describe(c)} checked={setup.chosen.includes(c.id)}
+              onChange={(on) => {
+                const ids = setup.choices.map((x) => x.id)
+                  .filter((id) => id === c.id ? on : setup.chosen.includes(id))
+                call<SetupStatus>('setup.choose', { ids }).then((s) => { setSetup(s); location.reload() })
+                  .catch((e: Error) => toast(e.message))
+              }} />
+          ))}
+        </Group>}
         <Group title="Experimental">
           <SwitchRow label="Experimental features" sub="LaTeX, Skills and Scheduled agents. They may change or break."
             checked={prefs.experimental} onChange={(on) => save({ experimental: on })} />

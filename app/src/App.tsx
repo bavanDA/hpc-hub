@@ -3,6 +3,7 @@ import { lazy, Suspense, useCallback, useEffect, useState, type ComponentType } 
 import { Server } from 'lucide-react'
 
 import { LinkPicker } from './components/app/LinkPicker'
+import { Welcome, type SetupStatus } from './components/app/Welcome'
 import { useSessionNotifications } from './components/app/notify'
 import type { Preferences } from './components/app/types'
 import { HeaderBar } from './components/HeaderBar'
@@ -47,10 +48,12 @@ export default function App() {
   const [experimental, setExperimental] = useState(false)
   const go = useCallback((p: Page, with_: Record<string, string> = {}) => { setPage(p); setParams(with_) }, [])
   const [blocked, setBlocked] = useState('')
+  const [setup, setSetup] = useState<SetupStatus | null>(null)
   useEffect(() => {
     call<Preferences>('preferences.get').then((p) => setExperimental(p.experimental)).catch(() => {})
     call<{ blocked: boolean; message: string }>('app.status').then((s) => setBlocked(s.blocked ? s.message : ''))
       .catch(() => {})
+    call<SetupStatus>('setup.status').then(setSetup).catch(() => {})
   }, [])
   const showExperimental = (on: boolean) => {
     setExperimental(on)
@@ -58,6 +61,14 @@ export default function App() {
   }
   useSessionNotifications()
   const Current = PAGES[page]
+  if (setup?.first_run && !blocked) {
+    return (
+      <div className="flex h-full flex-col">
+        <HeaderBar title="HPC Hub" onSidebar={() => {}} sidebar={false} onExperimental={() => {}} />
+        <Welcome status={setup} onDone={() => location.reload()} />
+      </div>
+    )
+  }
   if (blocked) {
     return (
       <div className="flex h-full flex-col">

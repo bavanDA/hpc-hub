@@ -11,6 +11,7 @@ from urllib.parse import urlsplit
 
 from ..connect.askpass_server import AskpassServer
 from ..connect.session import SSO_PASS, SSO_USER, ClusterSession
+from ..connect.state import State
 from ..core import browser, config, credentials, single
 
 QUESTION_SECONDS = 600
@@ -30,7 +31,7 @@ class Hub:
     def __init__(self, emit):
         self.emit = emit
         self.askpass = AskpassServer("askpass-app.sock")
-        self.clusters = config.load()
+        self.clusters = config.chosen(config.load(), config.load_app())
         self.sessions: dict[str, ClusterSession] = {}
         self._questions: dict[str, Future] = {}
 
@@ -52,8 +53,24 @@ class Hub:
             except Exception:  # noqa: BLE001 - a cluster we can't pick up stays disconnected
                 pass
 
+    def use_clusters(self, ids: list[str]) -> None:
+        """Change which clusters the app shows (first run, or Preferences). A connected one can't be dropped."""
+        everything = {c.id: c for c in config.load()}
+        kept = {c.id: c for c in self.clusters}
+        for cid, s in self.sessions.items():
+            if cid not in ids and s.state != State.DISCONNECTED:
+                raise RuntimeError(f"Disconnect {s.cfg.name} first")
+        self.clusters = [kept.get(i) or everything[i] for i in ids]
+        for cid in list(self.sessions):
+            if cid not in ids:
+                del self.sessions[cid]
+        for c in self.clusters:
+            if c.id not in self.sessions:
+                self.sessions[c.id] = ClusterSession(c, self.askpass, self)
+        self.save_clusters()
+
     def save_clusters(self) -> None:
-        config.save(self.clusters)
+        config.save_chosen(self.clusters)
 
     def session(self, cluster: str) -> ClusterSession:
         if self.blocked:
