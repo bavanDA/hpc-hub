@@ -70,3 +70,5 @@ def test_password_only_goes_to_the_sign_in_site():
     assert not may_fill("http://idp.uni.edu/login", start)  # not https
     assert not may_fill("https://uni.edu.evil.example/login", start)
     assert not may_fill("https://evil.example/?next=uni.edu", start)
+    assert may_fill("https://uni.okta.com/app/saml", start)
+    assert not may_fill("https://attacker.okta.com/app/saml", start)  # anyone can make an Okta tenant

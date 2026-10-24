@@ -74,8 +74,9 @@ def ask_app(prompt: str) -> str | None:
     return reply.get("answer") if reply.get("ok") else None
 
 
-# Sign-in hosts outside the university's own site that may get the password (Microsoft, Okta, Google accounts)
-SIGN_IN_HOSTS = ("login.microsoftonline.com", "login.microsoft.com", "okta.com", "accounts.google.com")
+# Sign-in hosts outside the university's own site that may get the password. Okta only as the university's own
+# tenant (njit.okta.com for vpn.njit.edu): anyone can make a free one.
+SIGN_IN_HOSTS = ("login.microsoftonline.com", "login.microsoft.com", "accounts.google.com")
 
 
 def site(host: str) -> str:
@@ -92,7 +93,8 @@ def may_fill(uri: str, start: str) -> bool:
     host, home = (page.hostname or "").lower(), site(urlparse(start).hostname or "")
     if page.scheme != "https" or not host:
         return False
-    return any(host == h or host.endswith("." + h) for h in (home, *SIGN_IN_HOSTS) if h)
+    okta = f"{home.split('.')[0]}.okta.com" if home else ""
+    return host in (*SIGN_IN_HOSTS, okta) or bool(home) and (host == home or host.endswith("." + home))
 
 
 SETTLE = 2800  # ms to wait before typing into a freshly loaded page (sign-in pages finish their scripts late)
