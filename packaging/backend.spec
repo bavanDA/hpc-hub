@@ -35,8 +35,10 @@ a = Analysis(
     [str(Path(SPECPATH) / "backend.py")],
     pathex=[str(ROOT)],
     datas=datas,
-    # methods.load_all() finds these at run time, so the analysis can't see them
-    hiddenimports=collect_submodules("hpc_hub.api.methods"),
+    # methods.load_all() finds these at run time, so the analysis can't see them; ssh_async is imported only
+    # where it is the login (Windows), and asyncssh picks some of its parts at run time
+    hiddenimports=[*collect_submodules("hpc_hub.api.methods"), "hpc_hub.core.ssh_async", "hpc_hub.core.ssh_bridge",
+                   *collect_submodules("asyncssh")],
     excludes=["gi", "tkinter"],  # no GTK in the backend: credentials falls back to keyring
     noarchive=False,
 )

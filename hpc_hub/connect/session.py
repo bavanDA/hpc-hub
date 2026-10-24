@@ -12,7 +12,7 @@ from ..compute.slurm import Allocation
 from ..core.config import ClusterConfig
 from ..core.credentials import Login
 from ..core.paths import log_dir
-from ..core.ssh import SshError, SshMaster
+from ..core.ssh import SshError, SshMaster, new_master
 from . import prompts, vpn_sso
 from .askpass_server import AskpassServer
 from .network import link_works, network_name, reachable, route_device
@@ -100,7 +100,7 @@ class ClusterSession(NodesMixin):
     def adopt(self, username: str) -> None:
         """App restarted: pick up a VPN / SSH session that is still running. Blocking."""
         vpn_up = self.cfg.vpn.enabled and self.vpn.is_active()
-        ssh = SshMaster(self.cfg, username, {}, self._log) if username and self.cfg.host else None
+        ssh = new_master(self.cfg, username, {}, self._log) if username and self.cfg.host else None
         alive = bool(ssh and ssh.alive())
         if not (vpn_up or alive) or self.state != State.DISCONNECTED:
             return
@@ -179,7 +179,7 @@ class ClusterSession(NodesMixin):
             return self.listener.ask(self, prompt)
 
         if not self.vpn_only and self.cfg.host and ssh_login.username:
-            live = self.ssh or SshMaster(self.cfg, ssh_login.username, {}, self._log)
+            live = self.ssh or new_master(self.cfg, ssh_login.username, {}, self._log)
             if link_works(live):  # still logged in (e.g. after an app restart): no VPN, no Duo
                 self.ssh = live
                 self.vpn_used = self.cfg.vpn.enabled and self.vpn.is_active()
@@ -213,7 +213,7 @@ class ClusterSession(NodesMixin):
             self._set(State.SIGNING_IN, f"{ssh_login.username}@{self.cfg.host}")
             if not self.cfg.host:
                 raise SshError("Login host is empty. Set it in Settings → Server & VPN.")
-            self.ssh = SshMaster(self.cfg, ssh_login.username, self.askpass.env(token), self._log)
+            self.ssh = new_master(self.cfg, ssh_login.username, self.askpass.env(token), self._log, ask=on_prompt)
             self.ssh.start(cancelled=self._cancel.is_set)
             self._log("SSH session ready")
         except (VpnError, SshError, OSError) as e:
