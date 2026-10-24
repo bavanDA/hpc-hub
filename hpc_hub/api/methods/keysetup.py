@@ -82,7 +82,7 @@ def _work(job: Job, cluster: str, url: str) -> None:
             portal, user, home, csrf = _signed_in(portals)
             if portal:
                 break
-            if not opened:  # already signed in from before? then Chrome never needs to open
+            if not opened and not job.stop.is_set():  # signed in from before? then Chrome never opens
                 _open(url)
                 opened = True
             job.stop.wait(POLL)
