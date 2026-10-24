@@ -148,10 +148,13 @@ class UsagePage(Gtk.Box):
     def _load_people(self) -> None:
         a, s = self._account(), self.session
         if not a or not s.ssh:
-            self.summary.set_label("No Slurm account with an SU allocation found.")
+            self.summary.set_label("No Slurm account found.")
             return
-        self.summary.set_markup(f"<b>{a.account}</b>: {a.used:,} of {a.quota:,} SU used "
-                                f"({_pct(a.used, a.quota)}) · {a.quota - a.used:,} left · yours {a.mine:,}")
+        if a.quota:
+            self.summary.set_markup(f"<b>{a.account}</b>: {a.used:,} of {a.quota:,} SU used "
+                                    f"({_pct(a.used, a.quota)}) · {a.quota - a.used:,} left · yours {a.mine:,}")
+        else:
+            self.summary.set_markup(f"<b>{a.account}</b>: {a.used:,} SU used, no limit · yours {a.mine:,}")
         self.summary_bar.set_value(min(a.used / a.quota, 1) if a.quota else 0)
         label, days = usage.PERIODS[self.period.get_selected()]
         self.people_note.set_label(f"{label}. Loading…")

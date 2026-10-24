@@ -20,8 +20,8 @@ STATES = ["Any state", "RUNNING", "PENDING", "COMPLETED", "FAILED", "CANCELLED",
 
 def usage_text(accounts: list[AccountUsage]) -> str:
     used = [a for a in accounts if a.used or a.mine] or accounts[:1]
-    return " · ".join(f"{a.account}: {a.used:,} of {a.quota:,} SU used ({100 * a.used // max(a.quota, 1)}%), "
-                      f"yours {a.mine:,}" for a in used)
+    return " · ".join(f"{a.account}: {a.used:,} of {a.quota:,} SU used ({100 * a.used // a.quota}%), yours {a.mine:,}"
+                      if a.quota else f"{a.account}: {a.used:,} SU used, yours {a.mine:,}" for a in used)
 
 
 class JobsPage(DetailsMixin, CancelMixin, Gtk.Box):

@@ -52,3 +52,23 @@ def test_scripts_are_valid_bash():
     for script in (usage.USAGE, usage.STORAGE, usage.GROUP, usage.LOAD):
         assert subprocess.run(["bash", "-n", "-c", script]).returncode == 0
     assert "exit" not in usage.USAGE  # runs in the long-lived shell
+
+
+def test_yale_getquota_and_accounts_without_limits():
+    text = ("@QUOTA\nUsage Details for pi_abc group (oldest data as of Oct 24 2026 00:00)\n"
+            "Fileset       User         Usage (GiB)      File Count\n"
+            "project       jdoe               1371         152,083\n"
+            "scratch       jdoe               2735          42,404\n"
+            "Quota Summary for pi_abc group (oldest data as of Oct 24 2026 00:00)\n"
+            "Fileset       Type   Usage (GiB)   Quota (GiB)     File Count     File Limit   Backup   Purged\n"
+            "project       GRP           3126          4096      4,676,026      5,000,000   Yes      No\n"
+            "scratch       GRP           7831         10240      5,150,632     15,000,000   No       30 days\n"
+            "Notice: project storage usage is at 76% of its quota limit.\n"
+            "home          USR             10           125         41,222        500,000   Yes      No\n@USERS\n")
+    rows, raw = usage.parse_storage(text)
+    assert [(r.label, r.used, r.quota, r.mine) for r in rows] == [
+        ("pi_abc project", 3126, 4096, 1371), ("pi_abc scratch", 7831, 10240, 2735), ("Home", 10, 125, 10)]
+    assert raw == ""
+    no_limits = usage.parse_usage("pi_abc||3944920|34787225\nprio_abc||600|3600\n")
+    assert [(a.account, a.quota) for a in no_limits] == [("pi_abc", 0), ("prio_abc", 0)]
+    assert [a.account for a in usage.parse_usage("a|60|0|0\nb||60|0\n")] == ["a"]  # limits known: those only

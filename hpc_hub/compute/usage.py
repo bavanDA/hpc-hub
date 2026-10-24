@@ -132,6 +132,24 @@ def group_usage(ssh: SshMaster, account: str, days: int) -> list[Person]:
 QUOTA_RE = re.compile(r"(\d+) GB(?: \(of (\d+) GB quota\))?")
 
 
+def parse_getquota(lines: list[str]) -> list[Storage]:
+    """Yale's getquota tables: your share per fileset, the group's usage and quota, your home."""
+    group, mine, rows = "", {}, []
+    for line in lines:
+        s = line.strip()
+        if m := re.match(r"Quota Summary for (\S+) group", s):
+            group = m.group(1)
+        elif m := re.fullmatch(r"(\w+)\s+(GRP|USR)\s+(\d+)\s+(\d+)\b.*", s):
+            name, kind, used, quota = m.group(1), m.group(2), int(m.group(3)), int(m.group(4))
+            if kind == "USR":
+                rows.append(Storage("Home" if name == "home" else name, used, quota, used))
+            else:
+                rows.append(Storage(f"{group} {name}".strip(), used, quota, mine.get(name)))
+        elif m := re.fullmatch(r"(\w+)\s+\S+\s+(\d+)\s+[\d,]+", s):  # usage details: fileset, you, GiB, files
+            mine[m.group(1)] = int(m.group(2))
+    return rows
+
+
 def parse_storage(text: str) -> tuple[list[Storage], str]:
     """quota_info lines become Storage rows; anything else comes back as plain text."""
     sec = _sections(text)
@@ -159,6 +177,7 @@ def parse_storage(text: str) -> tuple[list[Storage], str]:
         for r in rows:
             if kind and r.label.endswith(kind) and gb >= 0.05:
                 r.people[p[0]] = r.people.get(p[0], 0) + gb
+    rows = rows or parse_getquota(sec.get("QUOTA", []))
     raw = "" if rows else "\n".join(sec.get("QUOTA", [])).strip()
     return rows, raw
 
@@ -221,7 +240,6 @@ else
 for a in $(sacctmgr -n -P show assoc where user="$USER" format=account 2>/dev/null | sort -u); do
 q=$(sacctmgr -n -P show assoc where account="$a" user="" format=GrpTRESMins 2>/dev/null |
   grep -o 'billing=[0-9]*' | head -1)
-[ -n "$q" ] || continue
 u=$(sshare -n -P -A "$a" --users=" " -o GrpTRESRaw 2>/dev/null | grep -o 'billing=[0-9]*' | head -1)
 m=$(sshare -n -P -A "$a" --users="$USER" -o User,RawUsage 2>/dev/null | grep "^$USER|" | cut -d'|' -f2)
 echo "$a|${q#billing=}|${u#billing=}|$m"
@@ -235,10 +253,11 @@ def parse_usage(text: str) -> list[AccountUsage]:
         p = line.strip().split("|")
         if len(p) == 5 and p[1] == "SU" and all(x.isdigit() for x in p[2:]):  # expanse-client: SU already
             out.append(AccountUsage(p[0], int(p[2]), int(p[3]), int(p[4])))
-        elif len(p) == 4 and p[1].isdigit():
+        elif len(p) == 4 and (p[1].isdigit() or not p[1]):
             num = [int(x) if x.isdigit() else 0 for x in p[1:]]
             out.append(AccountUsage(p[0], num[0] // 60, num[1] // 60, num[2] // 3600))  # minutes, minutes, seconds
-    return out
+    # accounts with an SU limit; a cluster without limits (Yale) shows them all
+    return [a for a in out if a.quota] or out
 
 
 def account_usage(ssh: SshMaster) -> list[AccountUsage]:
