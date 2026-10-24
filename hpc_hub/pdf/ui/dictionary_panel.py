@@ -5,7 +5,7 @@ from collections.abc import Callable
 from gi.repository import GLib, Gtk, Pango
 
 from ..readaloud import dictionary
-from .widgets import bg
+from ...ui.widgets import bg
 
 
 def _label(text: str, *classes: str, wrap: bool = True) -> Gtk.Label:

@@ -1,5 +1,5 @@
-from hpc_hub.readaloud import align, text
-from hpc_hub.readaloud.text import Word
+from hpc_hub.pdf.readaloud import align, text
+from hpc_hub.pdf.readaloud.text import Word
 
 
 def words(*names):
@@ -28,7 +28,7 @@ def test_align_handles_splits_merges_and_drift():
 
 
 def test_dictionary_parsing():
-    from hpc_hub.readaloud import dictionary as d
+    from hpc_hub.pdf.readaloud import dictionary as d
     assert d.term("“Census,”") == "census" and "study" in d.base_forms("studies")
     assert d.base_forms("running")[:3] == ["runn", "runne", "run"]
     free = [{"word": "algorithm", "phonetic": "/ˈælɡəɹɪðm̩/", "phonetics": [{"audio": "https://x/a.mp3"}],
@@ -50,7 +50,7 @@ def test_dictionary_parsing():
 
 def test_assemble_parts_and_offsets(tmp_path, monkeypatch):
     import json
-    from hpc_hub.readaloud import narration
+    from hpc_hub.pdf.readaloud import narration
     monkeypatch.setenv("XDG_CACHE_HOME", str(tmp_path))
     ws = words("One", "two.", "Three", "four.", "Five", "six.")
     parts = text.chunks(ws, budget=8)

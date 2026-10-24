@@ -11,7 +11,7 @@ from .. import remote_fs  # noqa: E402
 from ..remote_fs import Entry  # noqa: E402
 from ...connect.session import ClusterSession  # noqa: E402
 from .editor import source_view  # noqa: E402
-from ...ui.pdf import PdfView  # noqa: E402
+from ...pdf.ui.poppler import PdfView  # noqa: E402
 from ...ui.widgets import bg, shortcuts  # noqa: E402
 
 IMAGES = (".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".bmp")

@@ -8,7 +8,7 @@ from gi.repository import Adw, Gdk, Gio, GLib, Gtk
 from .. import remote_fs
 from ..remote_fs import Entry
 from .editor import EditorDialog
-from ...ui.pdf import PdfDialog
+from ...pdf.ui.poppler import PdfDialog
 from .preview import IMAGES
 from ...ui.widgets import ask_name, bg
 
