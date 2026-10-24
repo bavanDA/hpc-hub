@@ -3,6 +3,7 @@
 import base64
 import hashlib
 import json
+import re
 import secrets
 import time
 import urllib.error
@@ -69,6 +70,18 @@ def authorize_url(client_id: str, challenge: str, scope: str = TRANSFER_SCOPE) -
         "code_challenge": challenge, "code_challenge_method": "S256", "access_type": "offline",
         "prompt": "login",
     })
+
+
+def pasted_code(text: str) -> str:
+    """The code Globus shows after sign-in, also when the whole page address was pasted."""
+    text = text.strip()
+    return code_from_url(text) or (text if re.fullmatch(r"[A-Za-z0-9_-]{8,200}", text) else "")
+
+
+def looks_like_code(text: str) -> bool:
+    """Clipboard text that is probably a Globus code (long enough not to be some other copied word)."""
+    code = pasted_code(text)
+    return bool(code) and (len(code) >= 20 or code != text.strip())
 
 
 def code_from_url(url: str) -> str:

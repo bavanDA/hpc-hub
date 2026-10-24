@@ -17,6 +17,14 @@ def test_pkce_and_url():
     assert q["scope"] == [globus.TRANSFER_SCOPE] and q["access_type"] == ["offline"]
 
 
+def test_pasted_code():
+    code = "Ab3dE5fG7hJ9kL1mN3pQ5rS7tV9xZ1"
+    assert globus.pasted_code(f"  {code}\n") == code
+    assert globus.pasted_code(globus.REDIRECT + "?code=" + code) == code
+    assert globus.pasted_code("https://evil.example/?code=x") == "" and globus.pasted_code("two words") == ""
+    assert globus.looks_like_code(code) and not globus.looks_like_code("hello")
+
+
 def test_code_from_url():
     assert globus.code_from_url(globus.REDIRECT + "?code=abc&state=x") == "abc"
     assert globus.code_from_url("https://evil.example/?code=abc") == ""
