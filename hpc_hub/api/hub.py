@@ -25,13 +25,14 @@ def session_json(s: ClusterSession) -> dict:
 class Hub:
     """Listener of every session (called on worker threads): changes become events, questions wait for the UI."""
 
+    blocked = False  # another HPC Hub holds the lock: leave the clusters alone (see core/single.py)
+
     def __init__(self, emit):
         self.emit = emit
         self.askpass = AskpassServer("askpass-app.sock")
         self.clusters = config.load()
         self.sessions: dict[str, ClusterSession] = {}
         self._questions: dict[str, Future] = {}
-        self.blocked = False
 
     def start(self) -> None:
         if not single.take():
