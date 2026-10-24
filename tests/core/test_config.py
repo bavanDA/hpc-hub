@@ -94,3 +94,4 @@ def test_agent_compute_roundtrip(tmp_path):
     config.save(clusters, path)
     c = config.load(path)[0].claude.compute
     assert (c.cpus, c.mem_gb, c.time, c.gpus) == (8, 32, "02:00:00", 1)
+
