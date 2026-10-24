@@ -176,6 +176,26 @@ def agent_buttons(on_open: Callable[[str], None], labels: bool = True) -> list[G
     return out
 
 
+def open_menu(on_open: Callable[[str], None], extra: tuple[tuple[str, str, str], ...] = ()) -> Gtk.MenuButton:
+    """One Open button for everything: VS Code (app or browser), each agent, then extra (id, label, icon)."""
+    box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2, margin_top=4, margin_bottom=4,
+                  margin_start=4, margin_end=4)
+    pop = Gtk.Popover(child=box)
+    vscode = {"desktop": "VS Code app", "browser": "VS Code in browser"}
+    groups = [[(f"vscode:{t}", vscode.get(t, text), icon) for t, text, icon in TARGETS],
+              [(f"agent:{a.id}", a.name, a.icon) for a in AGENTS], list(extra)]
+    for n, group in enumerate(g for g in groups if g):
+        if n:
+            box.append(Gtk.Separator(margin_top=2, margin_bottom=2))
+        for key, text, icon in group:
+            b = Gtk.Button(child=Adw.ButtonContent(label=text, icon_name=icon, halign=Gtk.Align.START),
+                           css_classes=["flat"])
+            b.connect("clicked", lambda *_, k=key: (pop.popdown(), on_open(k)))
+            box.append(b)
+    return Gtk.MenuButton(child=Adw.ButtonContent(label="Open", icon_name="view-app-grid-symbolic"), popover=pop,
+                          always_show_arrow=True, tooltip_text="VS Code, Claude and more")
+
+
 def color_dot(color: str, size: int = 12) -> Gtk.DrawingArea:
     rgba = Gdk.RGBA()
     rgba.parse(color or "#77767b")

@@ -8,7 +8,7 @@ from gi.repository import Adw, Gtk, Pango
 from ..session import ClusterSession, State
 from .authenticator_help import AuthenticatorHelp
 from .compute_dialog import ComputeDialog
-from .widgets import agent_buttons, vscode_button
+from .widgets import open_menu
 
 MAX_LOG_LINES = 1000
 
@@ -104,14 +104,10 @@ class ClusterCard(Gtk.Box):
         node_row.append(self.node_btn)
         self.append(node_row)
 
-        self.tools = Adw.WrapBox(child_spacing=6, line_spacing=6, margin_top=4)
-        self.tools.append(vscode_button(lambda target: on_tool(session, f"vscode:{target}")))
-        for b in agent_buttons(lambda agent: on_tool(session, f"agent:{agent}")):
-            self.tools.append(b)
-        for name, label, icon in (("ask", "Ask all", "system-users-symbolic"), ("files", "Files", "folder-symbolic")):
-            btn = Gtk.Button(child=Adw.ButtonContent(label=label, icon_name=icon), tooltip_text=f"Open {label}")
-            btn.connect("clicked", lambda _b, n=name: on_tool(session, n))
-            self.tools.append(btn)
+        self.tools = open_menu(lambda key: on_tool(session, key),
+                               (("ask", "Ask all", "system-users-symbolic"), ("files", "Files", "folder-symbolic")))
+        self.tools.set_halign(Gtk.Align.START)
+        self.tools.set_margin_top(4)
         self.append(self.tools)
 
         self.log_view = Gtk.TextView(editable=False, monospace=True, cursor_visible=False,
