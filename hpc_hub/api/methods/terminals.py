@@ -1,12 +1,21 @@
 """Terminals: tmux sessions on each cluster, and the local ssh command line that attaches one in a PTY
-(run by the Tauri side, see app/src-tauri/src/pty.rs)."""
+(run by the Tauri side, see app/src-tauri/src/pty.rs).
 
+Where no local ssh can ride the login (Windows: asyncssh, core/ssh_async.py) that command line is
+[CHANNEL, cluster, command] instead, and the backend runs the terminal itself: terminals.open_channel opens a PTY
+channel on the connection, its output comes as "term-data" events {id, data in base64}, its end as "term-exit"
+{id, code}, and terminals.write / resize / close drive it."""
+
+import base64
+import itertools
 import shlex
+import threading
 import time
 import webbrowser
 from dataclasses import asdict
 
 from ...core import remote
+from ...core.ssh import CHANNEL
 from ...terminals import links, tmux
 from ..hub import hub
 from ..server import method
@@ -97,3 +106,66 @@ def open_link(url: str) -> None:
     if not url.startswith(("https://", "http://127.0.0.1:", "http://localhost:")):
         raise ValueError("Only web links open from here")
     webbrowser.open(url)
+
+
+# -- terminals the backend runs (Windows) ----------------------------------------------------
+_channels: dict[int, object | None] = {}  # id -> its Channel; None while it opens
+_lock = threading.Lock()
+_ids = itertools.count(1)
+
+
+@method("terminals.open_channel")
+def open_channel(argv: list[str], cols: int = 80, rows: int = 24) -> int:
+    """Start a terminal's argv from terminals.command ([CHANNEL, cluster, command]) on the cluster's connection.
+    Answers its id."""
+    if len(argv) != 3 or argv[0] != CHANNEL:
+        raise ValueError("Not a terminal the backend runs")
+    s, h = hub().connected(argv[1]), hub()
+    if not hasattr(s.ssh, "open_channel"):
+        raise RuntimeError("This login runs its terminals in a local PTY")
+    cid = next(_ids)
+
+    def data(chunk: bytes) -> None:
+        h.emit("term-data", {"id": cid, "data": base64.b64encode(chunk).decode()})
+
+    def ended(code: int) -> None:
+        with _lock:
+            _channels.pop(cid, None)
+        h.emit("term-exit", {"id": cid, "code": code})
+
+    with _lock:
+        _channels[cid] = None
+    try:
+        channel = s.ssh.open_channel(argv[2], int(cols), int(rows), data, ended)
+    except Exception:
+        with _lock:
+            _channels.pop(cid, None)
+        raise
+    with _lock:
+        if cid in _channels:  # not ended already
+            _channels[cid] = channel
+    return cid
+
+
+def _channel(cid: int):
+    with _lock:
+        return _channels.get(int(cid))
+
+
+@method("terminals.write")
+def write(id: int, data: str) -> None:
+    if channel := _channel(id):
+        channel.write(data)
+
+
+@method("terminals.resize")
+def resize(id: int, cols: int, rows: int) -> None:
+    if channel := _channel(id):
+        channel.resize(int(cols), int(rows))
+
+
+@method("terminals.close")
+def close(id: int) -> None:
+    """Detach: the channel closes (tmux keeps the session); term-exit follows."""
+    if channel := _channel(id):
+        channel.close()

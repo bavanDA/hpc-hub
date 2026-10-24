@@ -24,9 +24,8 @@ import asyncssh
 from . import ssh_bridge
 from .config import ClusterConfig
 from .fastshell import START, FastShellError, wrap
-from .ssh import SshError, SshMaster
+from .ssh import CHANNEL, SshError, SshMaster
 
-CHANNEL = "hpc-hub-channel"  # argv(tty=True) is [CHANNEL, cluster id, command]: see terminals.open_channel
 KNOWN_HOSTS = Path.home() / ".ssh" / "known_hosts"  # where Windows' own OpenSSH keeps them too
 OPTIONS: dict = {}  # more asyncssh connect options (tests leave your keys and agent out)
 TOKEN = os.environ.setdefault(ssh_bridge.TOKEN_ENV, secrets.token_hex(16))  # children inherit it

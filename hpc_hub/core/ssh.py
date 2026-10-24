@@ -23,6 +23,7 @@ COMMON = [
 
 
 FAST_SHELLS = 3  # quick commands share these; more at once (or long ones) use plain ssh
+CHANNEL = "hpc-hub-channel"  # argv(tty=True) of a login no local ssh can ride: [CHANNEL, cluster id, command]
 
 
 class SshError(Exception):
