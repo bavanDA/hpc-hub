@@ -5,7 +5,7 @@ import subprocess
 
 import pytest
 
-from hpc_hub import tmux
+from hpc_hub.terminals import tmux
 
 SCREEN = """There are screens on:
 \t12345.build\t(10/19/2026 01:02:03 PM)\t(Detached)

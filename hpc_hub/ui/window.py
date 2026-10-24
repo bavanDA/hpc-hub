@@ -6,7 +6,7 @@ from ..files.ui import FilesPage
 from ..compute.ui.jobs import JobsPage
 from ..latex.ui import LatexPage
 from ..agents.ui.permissions_page import PermissionsPage
-from .terminals import TerminalsPage
+from ..terminals.ui import TerminalsPage
 from ..agents.ui.schedules_page import SchedulesPage
 from ..agents.ui.skills_page import SkillsPage
 from ..compute.ui.usage_page import UsagePage

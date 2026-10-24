@@ -1,4 +1,4 @@
-from hpc_hub import links
+from hpc_hub.terminals import links
 
 OUT = """*
 * Visual Studio Code Server

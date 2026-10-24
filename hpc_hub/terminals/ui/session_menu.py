@@ -2,9 +2,9 @@
 
 from gi.repository import Adw, GLib, Gtk
 
-from ... import tmux
+from .. import tmux
 from ...connect.session import ClusterSession
-from ..widgets import ask_name, bg, color_dot
+from ...ui.widgets import ask_name, bg, color_dot
 
 
 class SessionMenuMixin:

@@ -33,7 +33,7 @@ def test_cd_part():
 
 
 def test_agent_tmux_runs_on_the_node():
-    from hpc_hub import tmux
+    from hpc_hub.terminals import tmux
     line = tmux.open_line("hpchub-claude-42-x", remote.node_shell("~/proj", "claude"), node="n0076")
     words = shlex.split(line)
     assert words[:2] == ["exec", "ssh"] and "-t" in words and words[-2] == "n0076"

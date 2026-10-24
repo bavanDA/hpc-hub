@@ -4,10 +4,10 @@ import time
 
 from gi.repository import Gtk, Pango
 
-from ... import links, tmux
-from ...links import Link
+from .. import links, tmux
+from ..links import Link
 from ...connect.session import ClusterSession
-from ..widgets import bg, color_dot, open_uri
+from ...ui.widgets import bg, color_dot, open_uri
 from .terminal_tab import View
 
 

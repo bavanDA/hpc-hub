@@ -2,7 +2,7 @@
 
 from gi.repository import Adw
 
-from .... import tmux
+from ....terminals import tmux
 from ...jobs import JobInfo, cancel_job, wait_gone
 from ....connect.session import ClusterSession
 from ....ui.widgets import bg

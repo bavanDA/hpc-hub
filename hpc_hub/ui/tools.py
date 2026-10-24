@@ -10,19 +10,19 @@ from urllib.parse import urlsplit
 from gi.repository import Adw, Gdk, GLib, GObject, Gtk
 
 from ..agents import catalog as agents, ask_all, permissions
-from .. import links, tmux
+from ..terminals import links, tmux
 from ..files import remote_fs
 from ..compute import slurm
 from ..core import remote
 from ..agents.catalog import Agent
-from ..links import Link
+from ..terminals.links import Link
 from ..connect.session import ClusterSession
 from ..compute.slurm import Allocation
 from ..agents.ui.agent_dialog import AgentDialog, Launch
 from ..agents.ui.ask_all import AskAllDialog
 from ..compute.ui.compute_dialog import ComputeDialog
 from ..files.ui.folder_picker import FolderPicker
-from .terminals import TerminalsPage, TerminalTab
+from ..terminals.ui import TerminalsPage, TerminalTab
 from .widgets import TARGETS, bg, open_uri
 
 

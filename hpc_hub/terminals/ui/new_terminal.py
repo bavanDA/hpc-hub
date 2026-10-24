@@ -4,9 +4,9 @@ import time
 
 from gi.repository import Adw, Gtk
 
-from ... import tmux
+from .. import tmux
 from ...connect.session import ClusterSession
-from ..widgets import color_dot
+from ...ui.widgets import color_dot
 
 
 class NewTerminalDialog(Adw.Dialog):
