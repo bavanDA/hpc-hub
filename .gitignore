@@ -1,5 +1,19 @@
+# Python
 __pycache__/
 *.pyc
+*.egg-info/
+build/
+dist/
 .venv/
+
+# Tools
 .pytest_cache/
-.claude/worktrees/
+.ruff_cache/
+
+# Local, never shared
+.claude/
+.env
+*.log
+.idea/
+.vscode/
+*.swp
