@@ -1,5 +1,8 @@
-"""One SSH ControlMaster per cluster. Login (and Duo) happens once; later commands reuse it."""
+"""One SSH ControlMaster per cluster. Login (and Duo) happens once; later commands reuse it.
 
+Windows' OpenSSH has no ControlMaster, so there new_master() gives the asyncssh one (ssh_async.py) instead."""
+
+import os
 import shlex
 import socket
 import subprocess
@@ -10,7 +13,7 @@ from collections.abc import Callable
 
 from .config import ClusterConfig
 from .fastshell import FastShell, FastShellError
-from .paths import runtime_dir
+from .paths import WINDOWS, runtime_dir
 
 COMMON = [
     "-o", "StrictHostKeyChecking=accept-new",
@@ -112,10 +115,16 @@ class SshMaster:
             else:
                 self._return_shell(shell)
                 return res
+        return self._run_plain(command, timeout)
+
+    def _run_plain(self, command: str, timeout: float) -> subprocess.CompletedProcess:
         return subprocess.run(
             self.argv(command), capture_output=True, text=True, timeout=timeout,
             stdin=subprocess.DEVNULL,
         )
+
+    def _new_shell(self, **kwargs) -> FastShell:
+        return FastShell(self.argv(), **kwargs)
 
     def _take_shell(self) -> FastShell | None:
         with self._shell_lock:
@@ -125,7 +134,7 @@ class SshMaster:
                 return None
             self._shells += 1
         try:
-            return FastShell(self.argv())
+            return self._new_shell()
         except FastShellError:
             with self._shell_lock:
                 self._shells -= 1
@@ -148,7 +157,7 @@ class SshMaster:
             idle, self._idle = self._idle, []
             self._shells -= len(idle)
             nodes, self._node_shells = self._node_shells, {}
-        for shell in idle + [sh for sh, _ in nodes.values()]:
+        for shell in idle + [sh for sh, _ in nodes.values() if sh]:  # a node whose shell failed has None
             shell.close()
 
     def run_on_node(self, job_id: str, command: str, timeout: float = 900) -> subprocess.CompletedProcess:
@@ -162,8 +171,8 @@ class SshMaster:
         with lock:
             if shell is None or not shell.alive:
                 try:
-                    shell = FastShell(self.argv(), timeout=60,
-                                      launcher=f"exec srun --jobid={job} --overlap bash --norc --noprofile")
+                    shell = self._new_shell(timeout=60,
+                                            launcher=f"exec srun --jobid={job} --overlap bash --norc --noprofile")
                 except FastShellError:
                     shell = None
                 with self._shell_lock:
@@ -209,3 +218,18 @@ class SshMaster:
                 self.proc.kill()
         self.proc = None
         self.control_path.unlink(missing_ok=True)
+
+
+def backend() -> str:
+    """openssh (a ControlMaster per cluster) on Linux and macOS, asyncssh on Windows. HPC_HUB_SSH picks one."""
+    return os.environ.get("HPC_HUB_SSH") or ("asyncssh" if WINDOWS else "openssh")
+
+
+def new_master(cfg: ClusterConfig, username: str, env: dict, log: Callable[[str], None],
+               ask: Callable[[str], str | None] | None = None) -> SshMaster:
+    """The SSH login for one cluster. ask answers login questions (password, Duo, code) where no askpass
+    helper can: asyncssh asks it directly; OpenSSH asks through env's askpass socket."""
+    if backend() == "asyncssh":
+        from .ssh_async import AsyncSshMaster
+        return AsyncSshMaster(cfg, username, env, log, ask)
+    return SshMaster(cfg, username, env, log)
