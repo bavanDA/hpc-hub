@@ -61,7 +61,6 @@ class FileTree(Gtk.Box):
         super().__init__(orientation=Gtk.Orientation.VERTICAL)
         self.page, self.on_open = page, on_open
         self.expanded: set[str] = set()
-        self.selected_rel = ""
 
         bar = Gtk.Box(spacing=2, margin_top=6, margin_bottom=4, margin_start=10, margin_end=4)
         bar.append(Gtk.Label(label="Files", xalign=0, hexpand=True, css_classes=["heading"]))

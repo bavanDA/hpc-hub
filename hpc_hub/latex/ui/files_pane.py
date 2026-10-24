@@ -3,7 +3,7 @@
 import os
 import posixpath
 
-from gi.repository import Adw, Gdk, GLib, Gtk, Pango
+from gi.repository import Adw, Gdk, GLib, Gtk
 
 from ...files import remote_fs
 from ...pdf.ui.poppler import PdfDialog
@@ -12,19 +12,6 @@ from ...ui.widgets import bg
 PROJECT_EXT = (".tex", ".bib", ".sty", ".cls", ".bst")
 TEXT_EXT = PROJECT_EXT + (".txt", ".md", ".csv", ".dat", ".py", ".sh")
 FIG_EXT = (".png", ".jpg", ".jpeg", ".pdf", ".eps", ".svg")
-LIST_EXT = TEXT_EXT + FIG_EXT
-
-
-def _file_row(name: str, icon: str, depth: int, bold: bool = False, dim: bool = False) -> Gtk.Box:
-    box = Gtk.Box(spacing=6, margin_start=6 + 14 * depth)
-    box.append(Gtk.Image(icon_name=icon))
-    label = Gtk.Label(label=name, xalign=0, ellipsize=Pango.EllipsizeMode.MIDDLE)
-    if bold:
-        label.add_css_class("heading")
-    if dim:
-        label.add_css_class("dim-label")
-    box.append(label)
-    return box
 
 
 class FilesMixin:
