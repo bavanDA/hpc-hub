@@ -1,9 +1,10 @@
-import { useState, type ComponentType } from 'react'
+import { useCallback, useState, type ComponentType } from 'react'
 
 import { HeaderBar } from './components/HeaderBar'
 import { Questions } from './components/Questions'
 import { GROUPS, Sidebar, type Page } from './components/Sidebar'
 import { ToastProvider } from './components/toast'
+import { NavContext } from './nav'
 import { Clusters } from './pages/Clusters'
 import { Files } from './pages/Files'
 import { Globus } from './pages/Globus'
@@ -22,13 +23,18 @@ const PAGES: Partial<Record<Page, ComponentType>> = {
 }
 
 export default function App() {
-  const [page, setPage] = useState<Page>('clusters')
+  // ?page=jobs opens a page directly (handy for screenshots of the browser preview)
+  const start = new URLSearchParams(location.search).get('page') as Page | null
+  const [page, setPage] = useState<Page>(start && start in TITLES ? start : 'clusters')
+  const [params, setParams] = useState<Record<string, string>>({})
   const [sidebar, setSidebar] = useState(true)
+  const go = useCallback((p: Page, with_: Record<string, string> = {}) => { setPage(p); setParams(with_) }, [])
   const Current = PAGES[page]
   return (
+    <NavContext.Provider value={{ go, params }}>
     <ToastProvider>
       <div className="flex h-full">
-        {sidebar && <Sidebar page={page} onPick={setPage} experimental={false} />}
+        {sidebar && <Sidebar page={page} onPick={(p) => go(p)} experimental={false} />}
         <main className="flex min-w-0 flex-1 flex-col">
           <HeaderBar title={TITLES[page]} onSidebar={() => setSidebar(!sidebar)} />
           <div className="min-h-0 flex-1 overflow-auto">
@@ -38,5 +44,6 @@ export default function App() {
       </div>
       <Questions />
     </ToastProvider>
+    </NavContext.Provider>
   )
 }
