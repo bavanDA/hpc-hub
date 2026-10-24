@@ -116,7 +116,7 @@ export function ClusterCard({ cluster: c, session: s, log }: { cluster: Cluster;
                 disabled={busy}>Get node</Button>}
         </div>
       )}
-      {connected && <div className="mt-2"><OpenMenu /></div>}
+      {connected && <div className="mt-2"><OpenMenu cluster={c} /></div>}
 
       <div className="mt-1"><LogView lines={log} /></div>
 

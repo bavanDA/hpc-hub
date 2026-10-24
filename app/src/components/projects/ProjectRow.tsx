@@ -4,7 +4,9 @@ import {
   MousePointer2, Rocket, Sparkles, Users,
 } from 'lucide-react'
 
+import { call } from '../../rpc'
 import type { Project } from '../../types/projects'
+import { useTools } from '../tools/useTools'
 import { Menu, type MenuItem } from './Menu'
 
 /** What Open can open; the keys match the GTK open_menu (vscode:<target>, files, ask, agent:<id>, latex). */
@@ -31,6 +33,10 @@ export type RowActions = {
 export function ProjectRow({ p, experimental, act }: { p: Project; experimental: boolean; act: RowActions }) {
   const known = Boolean(p.cluster_name)
   const Icon = p.main_tex ? FileText : Folder
+  const tools = useTools()
+  // VS Code, Files and the agents open here (connecting first); the page gets the rest (LaTeX)
+  const open = (key: string) => key === 'latex' ? act.open(p, key) : tools.open(p.cluster, p.cluster_name, key, p.path,
+    () => call<Project>('projects.opened', { id: p.id }).then((x) => x.path, () => p.path))
   return (
     <div className="flex min-h-[56px] items-center gap-3 py-2 pr-3 pl-4">
       <Icon size={22} strokeWidth={1.75} className="shrink-0" />
@@ -42,7 +48,7 @@ export function ProjectRow({ p, experimental, act }: { p: Project; experimental:
       </div>
       {known && (
         <div className="flex shrink-0 items-center gap-1">
-          <Menu label="VS Code, Claude and more" groups={openGroups((key) => act.open(p, key), experimental)}
+          <Menu label="VS Code, Claude and more" groups={openGroups(open, experimental)}
             className="flex h-9 items-center gap-2 rounded-md bg-pill px-3 font-bold hover:bg-selected"
             trigger={<><LayoutGrid size={14} /> Open <ChevronDown size={16} /></>} />
           <Menu label="More" className="grid size-9 place-items-center rounded-full hover:bg-hover"
@@ -55,6 +61,7 @@ export function ProjectRow({ p, experimental, act }: { p: Project; experimental:
             ]]} />
         </div>
       )}
+      {tools.dialog}
     </div>
   )
 }

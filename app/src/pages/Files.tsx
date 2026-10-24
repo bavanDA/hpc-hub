@@ -18,8 +18,10 @@ import { Preview } from '../components/files/Preview'
 import { Transfers } from '../components/files/Transfers'
 import { useTransfers } from '../components/files/useTransfers'
 import { useToast } from '../components/toast'
+import { useTools } from '../components/tools/useTools'
 import { EmptyState, Spinner } from '../components/ui'
 import { useEvent } from '../hooks'
+import { usePageParams } from '../nav'
 import { call } from '../rpc'
 import type { Cluster, Session } from '../types'
 import type { Clip, Entry, Listing, Place, Sort, Transfer } from '../types/files'
@@ -32,7 +34,11 @@ export function Files() {
   const toast = useToast()
   const [clusters, setClusters] = useState<Cluster[] | null>(null)
   const [sessions, setSessions] = useState<Record<string, Session>>({})
-  const [cluster, setClusterState] = useState(memory.cluster)
+  const params = usePageParams()  // opened from elsewhere: an Open menu, Ask all's answers
+  const [cluster, setClusterState] = useState(() => {
+    if (params.cluster && params.path) memory.paths[params.cluster] = params.path
+    return (memory.cluster = params.cluster || memory.cluster)
+  })
   const [listing, setListing] = useState<Listing | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -43,6 +49,7 @@ export function Files() {
   const [clip, setClipState] = useState<Clip | null>(memory.clip)
   const [dialog, setDialog] = useState<ReactNode>(null)
   const [menu, setMenu] = useState<{ x: number; y: number; entry: Entry | null } | null>(null)
+  const tools = useTools()
   const asked = useRef(0)  // the newest listing asked for; older answers are dropped
   const dests = useRef(new Map<string, { cluster: string; dir: string }>())
 
@@ -154,6 +161,7 @@ export function Files() {
     const p = e ? join(path, e.name) : path
     navigator.clipboard.writeText(p).then(() => toast(`Copied ${p}`)).catch(() => toast('Could not copy'))
   }
+  const folderOf = (e: Entry | null) => (e && isDir(e) ? join(path, e.name) : path)
   const copy = (e: Entry) => setClip({ cluster, clusterName: info?.name ?? cluster, path: join(path, e.name),
     name: e.name, folder: isDir(e) })
 
@@ -194,6 +202,8 @@ export function Files() {
     copyPath: () => copyPath(menu.entry), download: soon, rename: () => act('rename', menu.entry),
     zip: () => act('zip', menu.entry), copy: () => act('copy', menu.entry), delete: () => act('delete', menu.entry),
     newFolder, upload: soon, paste,
+    vscode: () => tools.open(cluster, info?.name ?? cluster, 'vscode', folderOf(menu.entry)),
+    claude: () => tools.open(cluster, info?.name ?? cluster, 'agent:claude', folderOf(menu.entry)),
   })
 
   if (error && !clusters) return <p className="p-8 text-bad">Could not load clusters: {error}</p>
@@ -232,6 +242,7 @@ export function Files() {
       <Transfers items={transfers.items} onX={transfers.x} />
       {items && <ContextMenu x={menu.x} y={menu.y} sections={items} onClose={() => setMenu(null)} />}
       {dialog}
+      {tools.dialog}
     </div>
   )
 }
