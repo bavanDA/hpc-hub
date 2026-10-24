@@ -1,6 +1,6 @@
 import gzip
 
-from hpc_hub.synctex import SyncTex
+from hpc_hub.latex.synctex import SyncTex
 
 TEXT = """SyncTeX Version:1
 Input:1:/s/paper/./main.tex

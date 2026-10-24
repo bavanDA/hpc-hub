@@ -3,7 +3,7 @@
 import shlex
 from dataclasses import dataclass, field
 
-from .core.ssh import SshMaster
+from ..core.ssh import SshMaster
 
 ENV = "GIT_TERMINAL_PROMPT=0 GIT_SSH_COMMAND='ssh -o BatchMode=yes'"
 LOG_FORMAT = "%h%x09%ad%x09%an%x09%s"

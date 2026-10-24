@@ -5,11 +5,11 @@ import shutil
 
 from gi.repository import Adw, GLib, Gtk, Pango
 
-from ..pdf import pdfjs
-from ..pdf.readaloud import narration
-from ..pdf.ui.dictionary_panel import DictionaryPanel
-from ..pdf.ui.poppler import PdfView
-from .widgets import bg
+from ...pdf import pdfjs
+from ...pdf.readaloud import narration
+from ...pdf.ui.dictionary_panel import DictionaryPanel
+from ...pdf.ui.poppler import PdfView
+from ...ui.widgets import bg
 
 SPEEDS = [0.75, 1.0, 1.25, 1.5, 1.75, 2.0]
 FIRST_CHUNKS = 3  # recorded before reading starts (about a minute of speech)
@@ -72,7 +72,7 @@ class PdfPane(Gtk.Box):
                self.toast(f"Using the simple PDF view ({err})"))
 
     def _use_pdfjs(self, html) -> None:
-        from ..pdf.ui.pdfjs_view import PdfJsView
+        from ...pdf.ui.pdfjs_view import PdfJsView
         view = PdfJsView(html)
         view.on_double_click = self._on_double_click
         view.on_speak_state = self._speak_state

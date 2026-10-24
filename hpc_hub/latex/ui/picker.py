@@ -10,7 +10,7 @@ from gi.repository import Adw, GLib, Gtk
 from ... import projects
 from ...projects import Project, ProjectStore
 from ...connect.session import ClusterSession
-from ..widgets import bg
+from ...ui.widgets import bg
 
 
 def _short(folder: str) -> str:

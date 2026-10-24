@@ -7,7 +7,7 @@ from collections.abc import Callable
 from gi.repository import Adw, Gdk, Gio, GObject, Gtk, Pango
 
 from ...files import remote_fs
-from ..widgets import ask_name, bg
+from ...ui.widgets import ask_name, bg
 
 BUILD_OUTPUT = (".aux", ".log", ".out", ".toc", ".fls", ".fdb_latexmk", ".synctex.gz", ".bbl", ".blg", ".lof",
                 ".lot", ".nav", ".snm", ".bcf", ".run.xml", ".xdv")

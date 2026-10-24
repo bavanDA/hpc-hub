@@ -5,9 +5,9 @@ import re
 import shlex
 from dataclasses import dataclass
 
-from .core import remote
-from .core.config import LatexSettings
-from .core.ssh import SshMaster
+from ..core import remote
+from ..core.config import LatexSettings
+from ..core.ssh import SshMaster
 
 ERROR_RE = re.compile(r"^(?:\./)?([^:\s][^:]*\.(?:tex|sty|cls|bib|bbl)):(\d+): (.+)$", re.M)
 

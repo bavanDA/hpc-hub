@@ -5,7 +5,7 @@ import gi
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 
-from hpc_hub.ui.latex import file_tree  # noqa: E402
+from hpc_hub.latex.ui import file_tree  # noqa: E402
 
 
 def names(store):

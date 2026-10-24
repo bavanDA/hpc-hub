@@ -1,6 +1,6 @@
 import subprocess
 
-from hpc_hub import git, latex
+from hpc_hub.latex import git, build as latex
 from hpc_hub.core.config import LatexSettings
 from tests.test_remote_fs import LocalShell
 

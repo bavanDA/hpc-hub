@@ -4,11 +4,11 @@ import posixpath
 
 from gi.repository import Adw, GLib, Gtk
 
-from ... import latex
+from .. import build as latex
 from ...files import remote_fs
 from ...core.config import LATEX_ENGINES
-from ...latex import LatexIssue
-from ..widgets import bg
+from ..build import LatexIssue
+from ...ui.widgets import bg
 
 
 class BuildMixin:

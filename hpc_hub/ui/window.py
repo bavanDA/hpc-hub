@@ -4,7 +4,7 @@ from .. import APP_NAME
 from ..connect.ui.cluster_card import ClusterCard
 from ..files.ui import FilesPage
 from ..compute.ui.jobs import JobsPage
-from .latex import LatexPage
+from ..latex.ui import LatexPage
 from ..agents.ui.permissions_page import PermissionsPage
 from .terminals import TerminalsPage
 from ..agents.ui.schedules_page import SchedulesPage
