@@ -1,8 +1,8 @@
 import subprocess
 
-from hpc_hub import schedules
+from hpc_hub.agents import schedules
 from hpc_hub.core.config import AgentSettings, ComputeProfile
-from hpc_hub.schedules import Schedule
+from hpc_hub.agents.schedules import Schedule
 
 
 def test_script_is_valid_bash():

@@ -7,9 +7,9 @@ import shlex
 import subprocess
 from collections.abc import Callable
 
-from .files import remote_fs, transfer
+from ..files import remote_fs, transfer
 from .chats import Chat
-from .core.ssh import SshMaster
+from ..core.ssh import SshMaster
 
 
 def project_dir(folder: str) -> str:

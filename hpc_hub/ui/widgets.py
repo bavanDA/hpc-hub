@@ -6,7 +6,7 @@ from collections.abc import Callable
 from gi.repository import Adw, Gdk, GLib, Gtk
 
 from ..core import browser, layout
-from ..agents import AGENTS
+from ..agents.catalog import AGENTS
 
 
 def profile_choices(first: tuple[str, str, str], found: list[browser.Profile], default: str

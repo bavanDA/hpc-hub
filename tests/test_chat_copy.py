@@ -1,7 +1,7 @@
 import json
 import os
 
-from hpc_hub import chat_copy, chats
+from hpc_hub.agents import chat_copy, chats
 from hpc_hub.files import transfer
 from tests.test_remote_fs import LocalShell
 

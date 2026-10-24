@@ -5,10 +5,10 @@ from ..connect.ui.cluster_card import ClusterCard
 from ..files.ui import FilesPage
 from ..compute.ui.jobs import JobsPage
 from .latex import LatexPage
-from .permissions_page import PermissionsPage
+from ..agents.ui.permissions_page import PermissionsPage
 from .terminals import TerminalsPage
-from .schedules_page import SchedulesPage
-from .skills_page import SkillsPage
+from ..agents.ui.schedules_page import SchedulesPage
+from ..agents.ui.skills_page import SkillsPage
 from ..compute.ui.usage_page import UsagePage
 
 

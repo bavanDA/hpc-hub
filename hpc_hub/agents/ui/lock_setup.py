@@ -7,8 +7,8 @@ from collections.abc import Callable
 from gi.repository import Adw, Gdk, GLib, Gtk
 
 from .. import lock
-from ..connect.session import ClusterSession
-from .widgets import bg
+from ...connect.session import ClusterSession
+from ...ui.widgets import bg
 
 
 def qr_texture(text: str) -> Gdk.Texture | None:

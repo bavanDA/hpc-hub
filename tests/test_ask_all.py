@@ -2,8 +2,8 @@ import base64
 import re
 import subprocess
 
-from hpc_hub import ask_all
-from hpc_hub.agents import AGY, CLAUDE, CODEX, CURSOR
+from hpc_hub.agents import ask_all
+from hpc_hub.agents.catalog import AGY, CLAUDE, CODEX, CURSOR
 from hpc_hub.core.config import AgentSettings
 
 

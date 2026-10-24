@@ -2,7 +2,7 @@ import json
 import os
 import subprocess
 
-from hpc_hub import chats
+from hpc_hub.agents import chats
 
 
 def _run(home, agent):

@@ -2,7 +2,7 @@ import subprocess
 
 import pytest
 
-from hpc_hub import skills
+from hpc_hub.agents import skills
 
 
 def test_scan_and_parse(tmp_path):

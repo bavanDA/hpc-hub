@@ -1,8 +1,8 @@
 import json
 import subprocess
 
-from hpc_hub import permissions
-from hpc_hub.permissions import FILES, Permissions
+from hpc_hub.agents import permissions
+from hpc_hub.agents.permissions import FILES, Permissions
 
 
 def test_fresh_cluster_gets_the_suggested_list():

@@ -1,4 +1,4 @@
-from hpc_hub import agents
+from hpc_hub.agents import catalog as agents
 from hpc_hub.core.config import AgentSettings
 
 

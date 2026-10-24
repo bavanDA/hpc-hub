@@ -9,8 +9,8 @@ import shlex
 from dataclasses import dataclass
 from pathlib import Path
 
-from .files import remote_fs
-from .core.ssh import SshMaster
+from ..files import remote_fs
+from ..core.ssh import SshMaster
 
 TARGETS = {"claude": ("Claude", ".claude/skills"), "codex": ("ChatGPT", ".codex/skills"),
            "cursor": ("Cursor", ".cursor/skills"), "agy": ("Antigravity", ".gemini/config/skills")}

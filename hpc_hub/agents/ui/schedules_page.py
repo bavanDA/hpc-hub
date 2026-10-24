@@ -8,13 +8,13 @@ from collections.abc import Callable
 from gi.repository import Adw, GLib, Gtk
 
 from .. import schedules
-from ..agents import AGENTS
-from ..projects import Project, ProjectStore
+from ..catalog import AGENTS
+from ...projects import Project, ProjectStore
 from ..schedules import PRESETS, Schedule, Status
-from ..connect.session import ClusterSession
-from ..compute.ui.duration import DurationRow
-from ..files.ui.folder_picker import FolderPicker
-from .widgets import bg
+from ...connect.session import ClusterSession
+from ...compute.ui.duration import DurationRow
+from ...files.ui.folder_picker import FolderPicker
+from ...ui.widgets import bg
 
 TIME_RE = re.compile(r"^([01]\d|2[0-3]):[0-5]\d$")
 

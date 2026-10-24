@@ -5,7 +5,7 @@ import json
 import shlex
 from dataclasses import dataclass
 
-from .core.ssh import SshMaster
+from ..core.ssh import SshMaster
 
 LIMIT = 60
 
