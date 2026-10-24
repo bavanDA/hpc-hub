@@ -8,7 +8,7 @@ import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirro
 import { bracketMatching, HighlightStyle, indentOnInput, StreamLanguage, syntaxHighlighting } from '@codemirror/language'
 import { stex } from '@codemirror/legacy-modes/mode/stex'
 import { highlightSelectionMatches, search, searchKeymap } from '@codemirror/search'
-import { EditorState, RangeSetBuilder, StateEffect, StateField } from '@codemirror/state'
+import { EditorState, RangeSetBuilder, StateEffect, StateField, type Transaction } from '@codemirror/state'
 import { Decoration, type DecorationSet, drawSelection, EditorView, highlightActiveLine,
   highlightActiveLineGutter, keymap, lineNumbers } from '@codemirror/view'
 import { tags as t } from '@lezer/highlight'
@@ -72,30 +72,35 @@ function completions(words: () => Props['words']) {
   }
 }
 
-// Lines with build issues, and a short flash on the line a PDF double-click jumped to
+// Lines with build issues, and a short flash on the line a jump landed on
 const setIssues = StateEffect.define<Issue[]>()
 const flash = StateEffect.define<number>()
-const marks = StateField.define<DecorationSet>({
-  create: () => Decoration.none,
-  update(deco, tr) {
-    deco = deco.map(tr.changes)
-    for (const e of tr.effects) {
-      if (e.is(setIssues) || e.is(flash)) {
-        const b = new RangeSetBuilder<Decoration>()
-        const lines = e.is(flash) ? [[e.value, 'cm-flash']] as [number, string][]
-          : [...new Map(e.value.filter((i) => i.line > 0 && i.line <= tr.state.doc.lines)
-            .sort((x, y) => x.line - y.line).map((i) => [i.line, `cm-issue-${i.level}`])).entries()]
-        for (const [n, cls] of lines) {
-          if (n < 1 || n > tr.state.doc.lines) continue
-          const at = tr.state.doc.line(n).from
-          b.add(at, at, Decoration.line({ class: cls }))
-        }
-        deco = b.finish()
+
+function lines(f: (tr: Transaction) => [number, string][] | null) {
+  return StateField.define<DecorationSet>({
+    create: () => Decoration.none,
+    update(deco, tr) {
+      const want = f(tr)
+      if (!want) return deco.map(tr.changes)
+      const b = new RangeSetBuilder<Decoration>()
+      for (const [n, cls] of want) {
+        if (n < 1 || n > tr.state.doc.lines) continue
+        const at = tr.state.doc.line(n).from
+        b.add(at, at, Decoration.line({ class: cls }))
       }
-    }
-    return deco
-  },
-  provide: (f) => EditorView.decorations.from(f),
+      return b.finish()
+    },
+    provide: (field) => EditorView.decorations.from(field),
+  })
+}
+const issueLines = lines((tr) => {
+  const e = tr.effects.find((x) => x.is(setIssues))
+  return e ? [...new Map((e.value as Issue[]).filter((i) => i.line > 0).sort((x, y) => x.line - y.line)
+    .map((i) => [i.line, `cm-issue-${i.level}`])).entries()] : null
+})
+const flashLine = lines((tr) => {
+  const e = tr.effects.find((x) => x.is(flash))
+  return e ? [[e.value as number, 'cm-flash']] : null
 })
 
 const theme = EditorView.theme({
@@ -111,6 +116,7 @@ const theme = EditorView.theme({
   '&.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground, .cm-selectionBackground':
     { backgroundColor: 'var(--cm-selection) !important' },
   '.cm-line': { padding: '0 16px 0 10px' },
+  '&.cm-focused': { outline: 'none' },
 }, { dark: matchMedia('(prefers-color-scheme: dark)').matches })
 
 export default function CodeEditor({ path, version, text, line: startLine, issues, words, onChange, onSave, onBuild, onToPdf,
@@ -131,7 +137,7 @@ export default function CodeEditor({ path, version, text, line: startLine, issue
         extensions: [
           lineNumbers(), highlightActiveLineGutter(), highlightActiveLine(), history(), drawSelection(),
           indentOnInput(), bracketMatching(), closeBrackets(), highlightSelectionMatches(), search({ top: true }),
-          EditorView.lineWrapping, theme, marks, syntaxHighlighting(style),
+          EditorView.lineWrapping, theme, issueLines, flashLine, syntaxHighlighting(style),
           ...(tex ? [StreamLanguage.define(stex), autocompletion({ override: [completions(() => latest.current.words)] })]
             : []),
           keymap.of([
@@ -154,7 +160,7 @@ export default function CodeEditor({ path, version, text, line: startLine, issue
         v.dispatch({ selection: { anchor: at.from }, effects: [EditorView.scrollIntoView(at.from, { y: 'center' }),
           flash.of(at.number)] })
         v.focus()
-        setTimeout(() => v.dispatch({ effects: setIssues.of(latest.current.issues) }), 1600)
+        setTimeout(() => { if (view.current === v) v.dispatch({ effects: flash.of(0) }) }, 1700)
       },
       line: () => line(v),
       text: () => v.state.doc.toString(),

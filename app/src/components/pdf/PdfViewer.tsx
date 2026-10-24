@@ -188,8 +188,9 @@ export default function PdfViewer({ data, memory, compact, zoom: start = 'page-w
     findPrevious: previous, matchDiacritics: false })
   const openSearch = () => {
     setSearching(true)
-    requestAnimationFrame(() => queryBox.current?.select())
+    queryBox.current?.select()  // already open: pick the words, to type new ones
   }
+  useEffect(() => { if (searching) queryBox.current?.select() }, [searching])
   const closeSearch = () => {
     setSearching(false)
     setFound(null)
@@ -253,7 +254,7 @@ export default function PdfViewer({ data, memory, compact, zoom: start = 'page-w
         {searching && (
           <div className="absolute right-3 top-2 z-10 flex items-center gap-1 rounded-xl border border-line bg-window
             p-1 shadow-lg">
-            <input ref={queryBox} autoFocus value={query} placeholder="Find in PDF" aria-label="Find in PDF"
+            <input ref={queryBox} value={query} placeholder="Find in PDF" aria-label="Find in PDF"
               onChange={(e) => { setQuery(e.target.value); find('', false, e.target.value) }}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') { e.preventDefault(); find('again', e.shiftKey) }
