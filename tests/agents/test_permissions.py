@@ -76,3 +76,19 @@ def test_set_key_keeps_other_settings(tmp_path):
     assert subprocess.run(["bash", "-c", cmd], env={"HOME": str(home), "PATH": "/usr/bin:/bin"}).returncode == 0
     assert json.loads((home / ".claude" / "settings.json").read_text()) == {"theme": "dark",
                                                                           "remoteControlAtStartup": True}
+
+
+def test_trash_keeps_files_on_their_own_disk(tmp_path):
+    home, work = tmp_path / "home", tmp_path / "work" / "proj"
+    home.mkdir()
+    work.mkdir(parents=True)
+    (work / "a.txt").write_text("hi")
+    env = {"HOME": str(home), "USER": "me", "PATH": "/usr/bin:/bin"}
+    run = lambda *a: subprocess.run(["bash", str(FILES / "trash"), *a], env=env, capture_output=True, text=True)  # noqa: E731
+    try:
+        assert run(str(work / "a.txt")).returncode == 0 and not (work / "a.txt").exists()
+        assert "a.txt" in run("--list").stdout
+    finally:
+        for b in (home / ".trash" / ".bins").read_text().split():
+            if b != str(home / ".trash"):
+                subprocess.run(["rm", "-rf", b])

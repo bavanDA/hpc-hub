@@ -4,24 +4,35 @@
 #   trash --list           show what is in the trash
 #   trash --empty          delete everything older than 7 days now
 KEEP_DAYS=7
-roots=("/mmfs1/scratch/mygroup/$USER" "/mmfs1/project/mygroup/$USER" "/tmp")
+BINS="$HOME/.trash/.bins"  # every trash folder used, for --list and the 7-day cleanup
 
-bin_for() {  # the trash folder on the same disk as $1, so moving is instant
-  local p; p=$(realpath -m -- "$1")
-  for r in "${roots[@]}"; do
-    [[ $p == "$r"/* ]] && { [[ $r == /tmp ]] && echo "/tmp/.trash-$USER" || echo "$r/.trash"; return; }
+bin_for() {  # a .trash on the same disk as $1 (moving is instant), in the highest folder you own there
+  local p d dev top=""
+  p=$(realpath -m -- "$1"); d=$(dirname -- "$p")
+  dev=$(stat -c %d -- "$d" 2>/dev/null) || { echo "$HOME/.trash"; return; }
+  while [ "$d" != / ]; do
+    [ -O "$d" ] && [ "$(stat -c %d -- "$d")" = "$dev" ] && top=$d
+    d=$(dirname -- "$d")
   done
-  [[ $p == /mmfs1/scratch/* ]] && { echo "/mmfs1/scratch/mygroup/$USER/.trash"; return; }
-  [[ $p == /mmfs1/project/* ]] && { echo "/mmfs1/project/mygroup/$USER/.trash"; return; }
-  echo "$HOME/.trash"
+  if [ -n "$top" ]; then echo "$top/.trash"
+  elif [[ $p == /tmp/* ]]; then echo "/tmp/.trash-$USER"
+  else echo "$HOME/.trash"; fi
 }
 
-all_bins() { for b in "$HOME/.trash" "/mmfs1/scratch/mygroup/$USER/.trash" "/mmfs1/project/mygroup/$USER/.trash" "/tmp/.trash-$USER"; do [ -d "$b" ] && echo "$b"; done; }
+remember() { mkdir -p "$HOME/.trash"; grep -qxF -- "$1" "$BINS" 2>/dev/null || printf '%s\n' "$1" >> "$BINS"; }
+
+all_bins() {
+  { echo "$HOME/.trash"; cat "$BINS" 2>/dev/null; echo "/tmp/.trash-$USER"; } | awk '!seen[$0]++' |
+    while read -r b; do [ -d "$b" ] && echo "$b"; done
+}
 
 purge() { all_bins | while read -r b; do find "$b" -mindepth 1 -maxdepth 1 -type d -mtime +$KEEP_DAYS -exec /bin/rm -rf {} + 2>/dev/null; done; }
 
 case "$1" in
-  --list) all_bins | while read -r b; do echo "== $b"; ls -lt "$b" | tail -n +2; done; exit 0 ;;
+  --list)  # day, where it was, where it is now
+    all_bins | while read -r b; do
+      for f in "$b"/*/*.from; do [ -e "$f" ] && printf '%s  %s  ->  %s\n' "$(basename "$(dirname "$f")")" "$(cat "$f")" "${f%.from}"; done
+    done; exit 0 ;;
   --empty) purge; exit 0 ;;
 esac
 
@@ -36,8 +47,10 @@ for a in "$@"; do
     [ $force = 1 ] || { echo "trash: $a: no such file or directory" >&2; status=1; }
     continue
   fi
-  day="$(bin_for "$a")/$(date +%F)"
+  bin=$(bin_for "$a")
+  day="$bin/$(date +%F)"
   mkdir -p "$day" || { status=1; continue; }
+  remember "$bin"
   dest="$day/$(date +%H%M%S)-$$-$(basename -- "$a")"
   if mv -- "$a" "$dest"; then
     printf '%s\n' "$(realpath -m -- "$a")" > "$dest.from"
