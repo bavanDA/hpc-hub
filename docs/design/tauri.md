@@ -79,14 +79,15 @@ GitHub Actions:
 
 Each step ships with the GTK app still working, until the Tauri app has every page.
 
-1. Skeleton: Tauri window, Python backend over JSON-RPC, CI on all three systems.
-2. Clusters: connect, Duo, compute node.
-3. Jobs and usage.
-4. Projects.
-5. Files, copies and Globus.
-6. Terminals.
-7. Agents, permissions.
-8. Experimental: LaTeX, skills, scheduled agents.
-9. macOS: Keychain, VPN.
-10. Windows: SSH backend, VPN.
-11. Remove the GTK screens.
+1. Skeleton: Tauri window, Python backend over JSON-RPC, CI on all three systems. **Done**
+2. Clusters: connect, Duo, compute node, VPN web sign-in, portal key, settings, health. **Done**
+3. Jobs and usage. **Done**
+4. Projects. **Done**
+5. Files, copies and Globus. **Done**
+6. Terminals. **Done**
+7. Agents, VS Code, Ask all, permissions. **Done**
+8. Experimental: LaTeX (with PDF viewer), skills, scheduled agents. **Done**
+9. macOS: Keychain (done, through `keyring`), VPN (openconnect needs an admin helper), first test on a Mac.
+10. Windows: the askpass socket and `getuid` are Unix-only, and Windows OpenSSH has no ControlMaster, so the
+    SSH layer needs another way to share one login (asyncssh, or a long-lived ssh per cluster); VPN.
+11. Remove the GTK screens, once the Tauri app has been used for real on Linux.
