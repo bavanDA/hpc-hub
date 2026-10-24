@@ -96,7 +96,7 @@ export type Session = {
 }
 
 /** Saved usernames; password only says whether one is saved, it never comes back. */
-export type Logins = Record<'ssh' | 'vpn', { username: string; password: boolean }>
+export type Logins = Record<'ssh' | 'vpn', { username: string; password: boolean }> & { remember?: boolean }
 
 /** What Slurm allows (clusters.partitions); longest in minutes, null = no limit. */
 export type Limits = {

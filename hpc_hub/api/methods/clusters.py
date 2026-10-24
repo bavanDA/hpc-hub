@@ -18,14 +18,37 @@ KINDS = (credentials.SSH, credentials.VPN)
 LOG_TAIL = 200_000  # bytes read from the end of a log file
 
 
+def _memory() -> dict:
+    """Passwords of clusters set to "don't remember": (cluster, kind) -> password, only until the app quits."""
+    return hub().__dict__.setdefault("passwords", {})
+
+
+def _unsaved(cfg, kind: str, login: credentials.Login) -> credentials.Login:
+    """A login whose password is not kept: the one typed earlier in this run, else ask for it now."""
+    if cfg.remember_password or login.password:
+        return login
+    key = (cfg.id, kind)
+    if key not in _memory():
+        what = "VPN password" if kind == credentials.VPN else "Password"
+        typed = hub().question("ask", {"cluster": cfg.id, "name": cfg.name,
+                                       "prompt": f"{what} for {login.username} on {cfg.name}"})
+        if not typed:
+            raise ValueError("No password, so not connecting")
+        _memory()[key] = typed
+    return credentials.Login(login.username, _memory()[key])
+
+
 def _logins(cfg) -> tuple[credentials.Login, credentials.Login | None]:
     """The saved SSH and VPN logins, like the GTK app's connect: the VPN uses the SSH login or its own."""
     ssh = credentials.load(cfg.id, credentials.SSH)
     if not ssh or not ssh.username:
         raise ValueError(f"Add your {cfg.name} username in the cluster's settings first")
+    ssh = _unsaved(cfg, credentials.SSH, ssh)
     if not cfg.vpn.enabled:
         return ssh, None
     vpn = ssh if cfg.vpn.same_login_as_ssh else credentials.load(cfg.id, credentials.VPN)
+    if vpn and not cfg.vpn.same_login_as_ssh:
+        vpn = _unsaved(cfg, credentials.VPN, vpn)
     if vpn and not vpn.password:
         vpn = credentials.Login(vpn.username, ssh.password)
     if not vpn or not vpn.username:
@@ -136,13 +159,28 @@ def login(cluster: str) -> dict:
     for kind in KINDS:
         saved = credentials.load(cfg.id, kind)
         out[kind] = {"username": saved.username if saved else "", "password": bool(saved and saved.password)}
+    out["remember"] = cfg.remember_password
     return out
 
 
 @method("clusters.set_login")
-def set_login(cluster: str, kind: str, username: str, password: str | None = None) -> None:
-    """Save a login. An empty password keeps the saved one (leave it empty for SSH key logins)."""
+def set_login(cluster: str, kind: str, username: str, password: str | None = None, remember: bool = True) -> None:
+    """Save a login. An empty password keeps the saved one (leave it empty for SSH key logins).
+    remember False: the keyring keeps only the username; the password is asked once per run, kept in memory."""
     cfg = hub().session(cluster).cfg
+    if cfg.remember_password != remember:
+        cfg.remember_password = remember
+        hub().save_clusters()
+    if not remember:
+        if not username.strip():
+            raise ValueError("Username is empty")
+        if password:
+            _memory()[(cfg.id, kind)] = password
+        password = None
+        saved = credentials.load(cfg.id, kind)
+        if not (saved and saved.username == username.strip() and not saved.password):
+            credentials.save(cfg.id, kind, credentials.Login(username.strip(), ""))
+        return
     if kind not in KINDS:
         raise ValueError(f"No login kind {kind}")
     username = username.strip()
@@ -160,6 +198,7 @@ def forget_logins(cluster: str) -> None:
     cfg = hub().session(cluster).cfg
     for kind in KINDS:
         credentials.clear(cfg.id, kind)
+        _memory().pop((cfg.id, kind), None)
 
 
 @method("clusters.partitions")

@@ -176,6 +176,7 @@ export const answers: Record<string, unknown> = {
   'clusters.login': ({ cluster }: { cluster: string }): Logins => ({
     ssh: { username: 'jdoe', password: cluster !== 'sdsc' },
     vpn: { username: cluster === 'yale' ? 'jane.doe@example.edu' : '', password: false },
+    remember: true,
   }),
   'clusters.set_login': () => null,
   'clusters.forget_logins': () => null,

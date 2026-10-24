@@ -71,6 +71,7 @@ export function SettingsDialog({ cluster, hint, onClose, start = 'login' }:
   const [password, setPassword] = useState('')
   const [vpnUser, setVpnUser] = useState('')
   const [vpnPassword, setVpnPassword] = useState('')
+  const [remember, setRemember] = useState(true)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   // no login yet on a cluster with a portal: set it up there, like the GTK app does on Connect
@@ -80,7 +81,7 @@ export function SettingsDialog({ cluster, hint, onClose, start = 'login' }:
     call<SettingsInfo>('cluster_settings.get', { cluster: cluster.id })
       .then((got) => { setInfo(got); setD(got.cluster) }).catch((e: Error) => setError(e.message))
     call<Logins>('clusters.login', { cluster: cluster.id })
-      .then((l) => { setSaved(l); setUser(l.ssh.username); setVpnUser(l.vpn.username) })
+      .then((l) => { setSaved(l); setUser(l.ssh.username); setVpnUser(l.vpn.username); setRemember(l.remember ?? true) })
       .catch((e: Error) => setError(e.message))
   }, [cluster.id])
 
@@ -118,9 +119,12 @@ export function SettingsDialog({ cluster, hint, onClose, start = 'login' }:
     setError('')
     try {
       putCluster(await call<Cluster>('cluster_settings.save', { cluster: d.id, changes: changes() }))
-      if (user.trim()) await call('clusters.set_login', { cluster: d.id, kind: 'ssh', username: user, password })
+      if (user.trim()) {
+        await call('clusters.set_login', { cluster: d.id, kind: 'ssh', username: user, password, remember })
+      }
       if (ownVpnLogin && vpnUser.trim()) {
-        await call('clusters.set_login', { cluster: d.id, kind: 'vpn', username: vpnUser, password: vpnPassword })
+        await call('clusters.set_login', { cluster: d.id, kind: 'vpn', username: vpnUser, password: vpnPassword,
+          remember })
       }
       toast(`${d.name} settings saved`)
       onClose()
@@ -152,8 +156,12 @@ export function SettingsDialog({ cluster, hint, onClose, start = 'login' }:
     <Group title="Cluster login"
       description="Stored only in your system keyring. Leave the password empty if you log in with an SSH key.">
       <EntryRow label="Username" value={user} onChange={setUser} autoFocus placeholder="jdoe" />
-      <EntryRow label={saved?.ssh.password ? 'Password (saved, leave empty to keep)' : 'Password'}
+      <EntryRow label={!remember ? 'Password (optional: asked when you connect)'
+        : saved?.ssh.password ? 'Password (saved, leave empty to keep)' : 'Password'}
         value={password} onChange={setPassword} password />
+      <SwitchRow label="Remember my password" checked={remember} onChange={setRemember}
+        sub={remember ? 'Kept in your system keyring, so connecting needs only Duo'
+          : 'Not saved anywhere. HPC Hub asks once after it starts and forgets it when you quit'} />
       <ComboRow label="Second step" value={d.second_factor ?? 'duo'} options={FACTORS}
         sub={code ? 'The app asks you for the code each time you log in' : undefined}
         onChange={(x) => up({ second_factor: x as Cluster['second_factor'] })} />

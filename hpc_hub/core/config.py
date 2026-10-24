@@ -106,6 +106,7 @@ class ClusterConfig:
     port: int = 22
     duo_answer: str = "push"
     second_factor: str = "duo"  # duo (push to your phone) or code (authenticator app, TOTP)
+    remember_password: bool = True  # False: the keyring keeps only the username; asked once per run
     portal: str = ""  # web portal where you can add your SSH key after signing in in Chrome
     code_setup: str = ""  # where you set up the authenticator app the cluster asks codes from
     # "partition:qos" queues to choose from, cheapest first: the first that starts within queue_wait seconds

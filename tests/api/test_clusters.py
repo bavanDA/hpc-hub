@@ -124,7 +124,7 @@ def test_update_saves_only_safe_settings(hub):
 
 def test_logins_go_in_but_passwords_never_come_out(hub, keyring):
     assert clusters.login("sdsc") == {"ssh": {"username": "", "password": False},
-                                      "vpn": {"username": "", "password": False}}
+                                      "vpn": {"username": "", "password": False}, "remember": True}
     clusters.set_login("sdsc", "ssh", " jdoe ", "secret")
     assert keyring["sdsc", "ssh"] == Login("jdoe", "secret")
     clusters.set_login("sdsc", "ssh", "jdoe2", "")  # empty keeps the saved password
@@ -153,3 +153,24 @@ def test_log_tail(hub, monkeypatch, tmp_path):
     assert clusters.log("wulver") == []
     (tmp_path / "wulver.log").write_text("2026-01-02 10:00:00 VPN up\n2026-01-02 10:00:05 Signed in as jdoe\n")
     assert clusters.log("wulver", lines=1) == ["10:00:05  Signed in as jdoe"]
+
+
+def test_password_not_remembered_is_asked_once_and_kept_in_memory(monkeypatch):
+    from hpc_hub.api.methods import clusters as m
+    from hpc_hub.core import config, credentials
+    cfg = config.default_clusters()[2]  # no VPN
+    saved = {}
+    monkeypatch.setattr(credentials, "save", lambda c, k, login: saved.__setitem__((c, k), login))
+    monkeypatch.setattr(credentials, "load", lambda c, k: saved.get((c, k)))
+    asked = []
+    fake = type("H", (), {"save_clusters": lambda self: None,
+                          "question": lambda self, kind, data: asked.append(data["prompt"]) or "secret",
+                          "session": lambda self, c: type("S", (), {"cfg": cfg})()})()
+    monkeypatch.setattr(m, "hub", lambda: fake)
+    m.set_login(cfg.id, "ssh", "jdoe", "typed-now", remember=False)
+    assert saved[(cfg.id, "ssh")] == credentials.Login("jdoe", "") and not cfg.remember_password  # no password kept
+    assert m._logins(cfg)[0].password == "typed-now" and asked == []  # typed in settings: no need to ask
+    m.forget_logins(cfg.id)
+    m.set_login(cfg.id, "ssh", "jdoe", None, remember=False)
+    assert m._logins(cfg)[0].password == "secret" and m._logins(cfg)[0].password == "secret"
+    assert len(asked) == 1  # once per run
