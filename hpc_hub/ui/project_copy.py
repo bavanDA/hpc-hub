@@ -80,6 +80,8 @@ class ProjectCopyDialog(Adw.Dialog):
             w.connect(sig, lambda *_: self._sync())
         self.cluster.connect("notify::selected", lambda *_: self._load_spots())
         self._load_spots()
+        if not self._globus_missing():
+            self.how.set_selected(1)  # Globus when it is ready: faster, and copying again only sends changes
         self._sync()
         bg(lambda: transfer.subfolder_sizes(src.ssh, p.path), self._show_parts)
         bg(lambda: (chats.list_chats(src.ssh, "claude", 400), self._real()), self._show_chats)
@@ -262,12 +264,7 @@ class ProjectCopyDialog(Adw.Dialog):
                 return
             dest = posixpath.join(parent, self.name)
             if use_globus:
-                bg(lambda: self.act.globus_client().submit(
-                    src.cfg.globus.collection_id, p.path, dst.cfg.globus.collection_id, dest,
-                    f"{p.name} to {dst.cfg.name}", True, sync_level=2, skip=skip),
-                   lambda task, e: self.toast(f"Globus could not start: {e}" if e else
-                                              f"Globus is syncing {p.name} to {dst.cfg.name}. Progress on the "
-                                              "Globus page"))
+                self.act.globus_copy(self.act.globus_client(), src.cfg, p.path, dst.cfg, dest, skip)
             else:
                 self.act.copy(src, p.path, dst, parent, skip, size)
             if picked:

@@ -100,6 +100,8 @@ class HpcHubApp(QuitMixin, Adw.Application):
                     copy=lambda src, path, dst, into, skip, size: (
                         self.window.files.direct_copy(src, path, dst, into, None, skip, size),
                         self.window.toast("Copying. Progress is on the Files page")),
+                    globus_copy=lambda *a: (self.window.files.globus_copy(*a),
+                                            self.window.toast("Sent to Globus. Progress is on the Files page")),
                     globus_client=lambda: globus.Globus(self.app_settings.globus_client_id)
                     if self.app_settings.globus_client_id else None,
                     open_globus=lambda: self.window.stack.set_visible_child_name("globus"))),

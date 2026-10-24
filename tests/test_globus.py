@@ -121,3 +121,20 @@ def test_personal_start_and_offline():
     assert cmd.endswith("_ '/project/my group/me'")
     assert globus.personal_offline("The Globus Connect Personal endpoint 'w (1)' is not currently connected to Globus")
     assert not globus.personal_offline("Permission denied")
+
+
+def test_task_info():
+    t = {"status": "ACTIVE", "nice_status": "OK", "bytes_transferred": 2048, "files": 10, "files_transferred": 3,
+         "files_skipped": 2, "effective_bytes_per_second": 512}
+    i = globus.task_info(t)
+    assert (i.files_done, i.files, i.problem, i.finished) == (5, 10, "", False)
+    assert globus.task_info({"status": "INACTIVE", "nice_status": "PERMISSION_DENIED"}).problem == "PERMISSION_DENIED"
+    assert globus.task_info({"status": "SUCCEEDED", "nice_status": None}).finished
+
+
+def test_collection_path():
+    expanse = {"projects", "scratch"}
+    assert globus.collection_path("/expanse/lustre/scratch/me/temp_project/x", expanse) == "/scratch/me/temp_project/x"
+    assert globus.collection_path("/home/me/x/", {"home", "nfs"}) == "/home/me/x/"
+    with pytest.raises(globus.GlobusError):
+        globus.collection_path("/home/me", expanse)

@@ -105,6 +105,40 @@ class Item:
     modified: str
 
 
+@dataclass
+class TaskInfo:
+    """Where a Globus transfer is at."""
+    status: str  # ACTIVE, INACTIVE (paused), SUCCEEDED, FAILED
+    bytes: int
+    files_done: int
+    files: int  # 0 while Globus is still counting
+    rate: float  # bytes a second
+    problem: str  # Globus' word for what holds it up (PERMISSION_DENIED...), "" when fine
+
+    @property
+    def finished(self) -> bool:
+        return self.status in ("SUCCEEDED", "FAILED")
+
+
+def task_info(t: dict) -> TaskInfo:
+    nice = t.get("nice_status") or ""
+    return TaskInfo(t.get("status", ""), int(t.get("bytes_transferred") or 0),
+                    int(t.get("files_transferred") or 0) + int(t.get("files_skipped") or 0), int(t.get("files") or 0),
+                    float(t.get("effective_bytes_per_second") or 0),
+                    "" if nice in ("", "OK", "Queued", "SUCCEEDED") else nice)
+
+
+def collection_path(real: str, top: set[str]) -> str:
+    """A path on the cluster as the collection names it. Some collections start lower down: Expanse's starts at
+    /expanse/lustre, so /expanse/lustre/scratch/you is /scratch/you there. top: names at the collection's /."""
+    parts = [x for x in real.split("/") if x]
+    for k in range(len(parts)):
+        if parts[k] in top:
+            return "/" + "/".join(parts[k:]) + ("/" if real.endswith("/") and len(parts) > k else "")
+    raise GlobusError(f"{real} is not in this Globus collection. It only has {', '.join(sorted(top))}. "
+                      "Pick a folder in one of those")
+
+
 def parse_ls(resp: dict) -> tuple[str, list[Item]]:
     """(absolute path, folders first then files) from an ls response."""
     items = [Item(d["name"], d.get("type") == "dir", int(d.get("size") or 0), (d.get("last_modified") or "")[:16])
@@ -249,6 +283,7 @@ def check_collections(client: "Globus", clusters) -> dict[str, Collection | None
 class Globus:
     def __init__(self, client_id: str):
         self.client_id = client_id
+        self._tops: dict[str, set[str]] = {}  # collection id: names at its /
         saved = credentials.load(*KEY)
         self.tokens: dict = json.loads(saved.password) if saved and saved.password else {}
 
@@ -322,6 +357,12 @@ class Globus:
         q = urllib.parse.urlencode({"path": path or "/~/"})
         return parse_ls(_http("GET", f"{TRANSFER}/operation/endpoint/{collection}/ls?{q}", self._token()))
 
+    def path_for(self, collection: str, real: str) -> str:
+        """The collection's name for a path on the cluster (see collection_path)."""
+        if collection not in self._tops:
+            self._tops[collection] = {i.name for i in self.ls(collection, "/")[1]}
+        return collection_path(real, self._tops[collection])
+
     def needs(self, collection: str) -> NeedsSignIn | None:
         """What this collection wants before it lists files: a permission, an account from its domain, or nothing."""
         try:
@@ -339,6 +380,9 @@ class Globus:
     def tasks(self, limit: int = 20) -> list[dict]:
         q = urllib.parse.urlencode({"limit": limit, "orderby": "request_time desc", "filter": "type:TRANSFER"})
         return _http("GET", f"{TRANSFER}/task_list?{q}", self._token()).get("DATA", [])
+
+    def task(self, task_id: str) -> TaskInfo:
+        return task_info(_http("GET", f"{TRANSFER}/task/{urllib.parse.quote(task_id)}", self._token()))
 
     def cancel(self, task_id: str) -> None:
         _http("POST", f"{TRANSFER}/task/{urllib.parse.quote(task_id)}/cancel", self._token(), body={})

@@ -26,6 +26,8 @@ class Actions:
     ask: Callable[[ClusterSession, str], None] = lambda s, folder: None  # Ask all agents in a folder
     # copy through the laptop: source, path, destination, folder there, names to skip, bytes
     copy: Callable[..., None] = lambda *a: None
+    # Globus: client, source config, path, destination config, path there, names to skip
+    globus_copy: Callable[..., None] = lambda *a: None
     globus_client: Callable[[], object] = lambda: None  # globus.Globus, or None before it is set up
     open_globus: Callable[[], None] = lambda: None
 

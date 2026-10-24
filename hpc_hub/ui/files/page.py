@@ -6,7 +6,8 @@ from collections.abc import Callable
 
 from gi.repository import Adw, GLib, Gtk
 
-from ... import remote_fs, transfer
+from ... import globus, remote_fs, transfer
+from ...config import ClusterConfig
 from ...remote_fs import Entry
 from ...session import ClusterSession, State
 from ..preview import Preview
@@ -139,3 +140,64 @@ class FilesPage(Gtk.Box):
             self.toast(f"Copy failed: {err}" if err else f"Copied {name} to {dst.cfg.name}")
 
         bg(lambda: transfer.copy(src.ssh, src_path, dst.ssh, dest_dir, progress, on_update, skip, total), done)
+
+    def globus_copy(self, client: globus.Globus, src: ClusterConfig, src_path: str, dst: ClusterConfig,
+                    dest_path: str, skip: list[str] | None = None) -> None:
+        """Cluster to cluster with Globus (only what changed); its progress in the list like the other copies."""
+        name = posixpath.basename(src_path.rstrip("/"))
+        row = TransferRow(f"{name}: {src.name} → {dst.name}:{dest_path} · Globus", transfer.Progress())
+        self.transfers.prepend(row)
+        self.revealer.set_reveal_child(True)
+        row.update("Sending to Globus…")
+
+        def started(task_id, err):
+            if err:
+                row.progress.finished = True
+                row.update(f"Failed: {err}")
+                self.toast(f"Globus could not start: {err}")
+                return
+            self._watch(client, task_id, row, name, dst.name)
+        a, b = src.globus.collection_id, dst.globus.collection_id
+        bg(lambda: client.submit(a, client.path_for(a, src_path), b, client.path_for(b, dest_path),
+                                 f"{name} to {dst.name}", True, sync_level=2, skip=skip), started)
+
+    def _watch(self, client: globus.Globus, task_id: str, row: TransferRow, name: str, where: str) -> None:
+        """Ask Globus every few seconds; the cancel button cancels the Globus task."""
+        p, busy = row.progress, {"asking": False, "cancelled": False}
+
+        def shown(info: globus.TaskInfo, err):
+            busy["asking"] = False
+            if err:
+                row.update(f"Globus: {err}")
+                return
+            p.done, p.total, p.finished = info.files_done, info.files, info.finished
+            row.update(task_line(info))
+            if info.status == "SUCCEEDED":
+                self.toast(f"Globus copied {name} to {where}")
+            elif info.status == "FAILED":
+                self.toast(f"Globus copy of {name} failed")
+
+        def tick():
+            if p.cancelled.is_set() and not busy["cancelled"]:
+                busy["cancelled"] = True
+                bg(lambda: client.cancel(task_id), lambda _r, e: e and self.toast(f"Cancel failed: {e}"))
+            if not busy["asking"]:
+                busy["asking"] = True
+                bg(lambda: client.task(task_id), shown)
+            return not p.finished
+        tick()
+        GLib.timeout_add_seconds(3, tick)
+
+
+def task_line(i: globus.TaskInfo) -> str:
+    size = GLib.format_size(i.bytes)
+    if i.status == "SUCCEEDED":
+        return f"Done · {size} · {i.files} files"
+    if i.status == "FAILED":
+        return "Failed" + (f": {i.problem.replace('_', ' ').lower()}" if i.problem else "")
+    parts = [i.problem.replace("_", " ").lower() if i.problem else "Copying" if i.files else "Counting files", size]
+    if i.files:
+        parts.append(f"{i.files_done} of {i.files} files")
+    if i.rate:
+        parts.append(f"{GLib.format_size(int(i.rate))}/s")
+    return " · ".join(parts)
