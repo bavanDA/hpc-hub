@@ -1,3 +1,4 @@
+import datetime
 import subprocess
 
 from hpc_hub.agents import schedules
@@ -22,8 +23,10 @@ def test_next_run_picks_the_next_matching_day():
         out = subprocess.run(["bash", "-c", f"DAYS='{days}'; TIME='{time}'; {schedules.NEXT_RUN}; next_run; "
                               "date +%F; date +%u"], capture_output=True, text=True).stdout.split()
         return out
-    nxt, today, dow = run("1 2 3 4 5 6 7", "23:59")
-    assert nxt == f"{today}T23:59:00"  # later today
+    soon = datetime.datetime.now() + datetime.timedelta(minutes=5)
+    nxt, today, dow = run("1 2 3 4 5 6 7", soon.strftime("%H:%M"))
+    if soon.date().isoformat() == today:  # not in the last minutes before midnight
+        assert nxt == f"{today}T{soon:%H:%M}:00"  # later today
     nxt, today, dow = run("1 2 3 4 5 6 7", "00:00")
     assert nxt.endswith("T00:00:00") and nxt[:10] > today  # tomorrow
     other = str(int(dow) % 7 + 1)  # tomorrow's weekday only
