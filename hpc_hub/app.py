@@ -13,13 +13,13 @@ from .globus import api as globus
 from .core import browser, config, credentials  # noqa: E402
 from .connect.askpass_server import AskpassServer  # noqa: E402
 from .core.paths import runtime_dir  # noqa: E402
-from .projects import ProjectStore  # noqa: E402
+from .projects.store import ProjectStore  # noqa: E402
 from .connect.session import ClusterSession, State  # noqa: E402
 from .ui import style  # noqa: E402
 from .connect.ui.duo import DuoDialog  # noqa: E402
 from .globus.ui import GlobusPage  # noqa: E402
 from .ui.preferences import PreferencesDialog  # noqa: E402
-from .ui.projects import Actions, ProjectsPage  # noqa: E402
+from .projects.ui.page import Actions, ProjectsPage  # noqa: E402
 from .ui.quit import QuitMixin  # noqa: E402
 from .connect.ui.settings import ClusterSettingsDialog  # noqa: E402
 from .ui.tools import Tools  # noqa: E402

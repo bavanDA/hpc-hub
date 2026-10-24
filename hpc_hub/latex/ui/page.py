@@ -7,7 +7,7 @@ from gi.repository import Adw, GLib, GObject, Gtk, Pango
 
 from .. import build as latex, synctex
 from ...files import remote_fs
-from ...projects import Project, ProjectStore
+from ...projects.store import Project, ProjectStore
 from ...connect.session import ClusterSession
 from ...files.ui.editor import source_view
 from .pdf_pane import PdfPane

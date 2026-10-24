@@ -1,7 +1,7 @@
 import subprocess
 
-from hpc_hub import projects
-from hpc_hub.projects import Project
+from hpc_hub.projects import store as projects
+from hpc_hub.projects.store import Project
 
 
 def test_round_trip(tmp_path):

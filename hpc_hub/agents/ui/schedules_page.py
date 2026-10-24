@@ -9,7 +9,7 @@ from gi.repository import Adw, GLib, Gtk
 
 from .. import schedules
 from ..catalog import AGENTS
-from ...projects import Project, ProjectStore
+from ...projects.store import Project, ProjectStore
 from ..schedules import PRESETS, Schedule, Status
 from ...connect.session import ClusterSession
 from ...compute.ui.duration import DurationRow

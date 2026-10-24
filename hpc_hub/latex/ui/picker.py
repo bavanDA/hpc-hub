@@ -7,8 +7,8 @@ from collections.abc import Callable
 
 from gi.repository import Adw, GLib, Gtk
 
-from ... import projects
-from ...projects import Project, ProjectStore
+from ...projects import store as projects
+from ...projects.store import Project, ProjectStore
 from ...connect.session import ClusterSession
 from ...ui.widgets import bg
 
