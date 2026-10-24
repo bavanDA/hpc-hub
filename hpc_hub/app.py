@@ -8,26 +8,26 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Adw, Gio, GLib, Gtk  # noqa: E402
 
-from . import APP_ID, APP_NAME, __version__
-from .globus import api as globus
-from .core import browser, config, credentials  # noqa: E402
+from . import APP_ID, APP_NAME, __version__  # noqa: E402
 from .connect.askpass_server import AskpassServer  # noqa: E402
-from .core.paths import runtime_dir  # noqa: E402
-from .projects.store import ProjectStore  # noqa: E402
 from .connect.session import ClusterSession, State  # noqa: E402
-from .ui import style  # noqa: E402
-from .connect.ui.duo import DuoDialog  # noqa: E402
-from .globus.ui import GlobusPage  # noqa: E402
-from .ui.preferences import PreferencesDialog  # noqa: E402
-from .projects.ui.page import Actions, ProjectsPage  # noqa: E402
-from .ui.quit import QuitMixin  # noqa: E402
-from .connect.ui.settings import ClusterSettingsDialog  # noqa: E402
-from .ui.tools import Tools  # noqa: E402
 from .connect.ui.authenticator_help import AuthenticatorHelp  # noqa: E402
 from .connect.ui.browser_login import BrowserLoginDialog  # noqa: E402
+from .connect.ui.duo import DuoDialog  # noqa: E402
 from .connect.ui.key_setup import KeySetupDialog  # noqa: E402
-from .ui.widgets import profile_choices  # noqa: E402
+from .connect.ui.settings import ClusterSettingsDialog  # noqa: E402
 from .connect.ui.web_login import WebLoginDialog  # noqa: E402
+from .core import browser, config, credentials  # noqa: E402
+from .core.paths import runtime_dir  # noqa: E402
+from .globus import api as globus  # noqa: E402
+from .globus.ui import GlobusPage  # noqa: E402
+from .projects.store import ProjectStore  # noqa: E402
+from .projects.ui.page import Actions, ProjectsPage  # noqa: E402
+from .ui import style  # noqa: E402
+from .ui.preferences import PreferencesDialog  # noqa: E402
+from .ui.quit import QuitMixin  # noqa: E402
+from .ui.tools import Tools  # noqa: E402
+from .ui.widgets import profile_choices  # noqa: E402
 from .ui.window import MainWindow  # noqa: E402
 
 HEALTH_SECONDS = 30

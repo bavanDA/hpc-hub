@@ -50,6 +50,7 @@ def test_dictionary_parsing():
 
 def test_assemble_parts_and_offsets(tmp_path, monkeypatch):
     import json
+
     from hpc_hub.pdf.readaloud import narration
     monkeypatch.setenv("XDG_CACHE_HOME", str(tmp_path))
     ws = words("One", "two.", "Three", "four.", "Five", "six.")

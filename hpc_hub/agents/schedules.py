@@ -11,10 +11,10 @@ import shlex
 from dataclasses import asdict, dataclass, field, fields, replace
 
 from ..compute import limits, slurm
-from .catalog import BY_ID, Agent
-from .ask_all import headless, shell_path
 from ..core.config import AgentSettings, ComputeProfile
 from ..core.ssh import SshMaster
+from .ask_all import headless, shell_path
+from .catalog import BY_ID, Agent
 
 ROOT = ".hpc-hub/schedules"  # under $HOME
 JOB_PREFIX = "hpc-hub-sched-"

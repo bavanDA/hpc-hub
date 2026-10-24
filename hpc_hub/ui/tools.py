@@ -9,22 +9,22 @@ from urllib.parse import urlsplit
 
 from gi.repository import Adw, Gdk, GLib, GObject, Gtk
 
-from ..agents import catalog as agents, ask_all, permissions
-from ..terminals import links, tmux
-from ..files import remote_fs
-from ..compute import slurm
-from ..core import remote
+from ..agents import ask_all, permissions
+from ..agents import catalog as agents
 from ..agents.catalog import Agent
-from ..terminals.links import Link
-from ..connect.session import ClusterSession
-from ..compute.slurm import Allocation
 from ..agents.ui.agent_dialog import AgentDialog, Launch
 from ..agents.ui.ask_all import AskAllDialog
+from ..compute import slurm
+from ..compute.slurm import Allocation
 from ..compute.ui.compute_dialog import ComputeDialog
+from ..connect.session import ClusterSession
+from ..core import remote
+from ..files import remote_fs
 from ..files.ui.folder_picker import FolderPicker
+from ..terminals import links, tmux
+from ..terminals.links import Link
 from ..terminals.ui import TerminalsPage, TerminalTab
 from .widgets import TARGETS, bg, open_uri
-
 
 VSCODE_JOB = "hpc-hub-vscode"
 VSCODE_JOBS = [VSCODE_JOB, "vscode", "vs-code", "vscode_slurm.sh"]  # also your own scripts' jobs

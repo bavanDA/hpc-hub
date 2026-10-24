@@ -1,7 +1,8 @@
 import subprocess
 
-from hpc_hub.latex import git, build as latex
 from hpc_hub.core.config import LatexSettings
+from hpc_hub.latex import build as latex
+from hpc_hub.latex import git
 from tests.helpers import LocalShell
 
 LOG = """./main.tex:12: Undefined control sequence.

@@ -4,9 +4,9 @@ from pathlib import Path
 import pytest
 
 from hpc_hub.connect.askpass_server import AskpassServer
+from hpc_hub.connect.session import ClusterSession, State
 from hpc_hub.core.config import ClusterConfig
 from hpc_hub.core.credentials import Login
-from hpc_hub.connect.session import ClusterSession, State
 
 FAKE_BIN = Path(__file__).parent / "fake_bin"
 
@@ -71,6 +71,7 @@ def test_wrong_password(env):
 
 def test_skips_vpn_when_reachable(env, monkeypatch):
     import socket
+
     from hpc_hub.connect import session as session_mod
 
     def no_vpn(*_a, **_k):
@@ -292,8 +293,8 @@ def test_reconnect_reuses_live_login(env):
 
 
 def test_code_cluster_without_authenticator_says_so():
-    from hpc_hub.core import config
     from hpc_hub.connect.session import ClusterSession
+    from hpc_hub.core import config
     s = object.__new__(ClusterSession)
     s.cfg = next(c for c in config.default_clusters() if c.id == "sdsc")
     denied = "bd@login.expanse.sdsc.edu: Permission denied (gssapi-with-mic,keyboard-interactive,hostbased)."
@@ -304,8 +305,8 @@ def test_code_cluster_without_authenticator_says_so():
 
 
 def test_default_account_is_named_on_requests():
-    from hpc_hub.core import config
     from hpc_hub.connect.session import ClusterSession
+    from hpc_hub.core import config
 
     class Ssh:
         def run(self, cmd, timeout=60):
@@ -320,8 +321,9 @@ def test_default_account_is_named_on_requests():
 def test_best_queue_on_wulver():
     import re
     import subprocess
-    from hpc_hub.core import config
+
     from hpc_hub.connect.session import ClusterSession
+    from hpc_hub.core import config
     waits = {"low": "506340", "standard": "51720", "debug": "5"}
 
     class Ssh:

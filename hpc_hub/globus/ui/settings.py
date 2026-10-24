@@ -4,8 +4,8 @@ from collections.abc import Callable
 
 from gi.repository import Adw, GLib, Gtk
 
-from .. import api as globus
 from ...core.config import AppSettings, ClusterConfig
+from .. import api as globus
 from .dialogs import CollectionPicker, LoginDialog
 
 HELP = ("Register a free app at app.globus.org → Settings → Developers → Register an app. Choose the one for "

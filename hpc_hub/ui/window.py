@@ -1,16 +1,15 @@
 from gi.repository import Adw, Gio, GObject, Gtk
 
 from .. import APP_NAME
-from ..connect.ui.cluster_card import ClusterCard
-from ..files.ui import FilesPage
-from ..compute.ui.jobs import JobsPage
-from ..latex.ui import LatexPage
 from ..agents.ui.permissions_page import PermissionsPage
-from ..terminals.ui import TerminalsPage
 from ..agents.ui.schedules_page import SchedulesPage
 from ..agents.ui.skills_page import SkillsPage
+from ..compute.ui.jobs import JobsPage
 from ..compute.ui.usage_page import UsagePage
-
+from ..connect.ui.cluster_card import ClusterCard
+from ..files.ui import FilesPage
+from ..latex.ui import LatexPage
+from ..terminals.ui import TerminalsPage
 
 GROUPS = [  # sidebar sections: (heading, [(page, title, icon)])
     ("Work", [("projects", "Projects", "view-grid-symbolic"), ("latex", "LaTeX", "x-office-document-symbolic"),

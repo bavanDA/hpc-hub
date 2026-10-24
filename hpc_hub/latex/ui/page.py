@@ -5,20 +5,20 @@ from collections.abc import Callable
 
 from gi.repository import Adw, GLib, GObject, Gtk, Pango
 
-from .. import build as latex, synctex
-from ...files import remote_fs
-from ...projects.store import Project, ProjectStore
 from ...connect.session import ClusterSession
+from ...files import remote_fs
 from ...files.ui.editor import source_view
-from .pdf_pane import PdfPane
-from ...ui.widgets import bg, remember, remembered, remember_size, shortcuts
+from ...projects.store import Project, ProjectStore
+from ...ui.widgets import bg, remember, remember_size, remembered, shortcuts
+from .. import build as latex
+from .. import synctex
 from .build import BuildMixin
 from .file_tree import FileTree, list_tree
 from .files_pane import FilesMixin
 from .git_menu import GitMixin
+from .pdf_pane import PdfPane
 from .picker import ProjectPicker
 from .sync import SyncMixin
-
 
 VIEWS = ["editor", "split", "pdf"]
 

@@ -2,10 +2,10 @@
 
 from collections.abc import Callable
 
-from gi.repository import GLib, Gtk, Pango
+from gi.repository import Gtk, Pango
 
-from ..readaloud import dictionary
 from ...ui.widgets import bg
+from ..readaloud import dictionary
 
 
 def _label(text: str, *classes: str, wrap: bool = True) -> Gtk.Label:

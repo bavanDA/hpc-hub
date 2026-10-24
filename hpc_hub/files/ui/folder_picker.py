@@ -6,10 +6,10 @@ from collections.abc import Callable
 
 from gi.repository import Adw, Gio, GLib, GObject, Gtk, Pango
 
-from .. import remote_fs
-from ..remote_fs import Entry, Place
 from ...connect.session import ClusterSession
 from ...ui.widgets import ask_name, bg, shortcuts
+from .. import remote_fs
+from ..remote_fs import Entry, Place
 
 _places: dict[str, list[Place]] = {}  # per cluster, found once per app run
 

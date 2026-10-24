@@ -8,16 +8,16 @@ from dataclasses import dataclass, replace
 
 from gi.repository import Adw, GLib, Gtk
 
-from .. import chats as chat_store
-from ...files import remote_fs
-from ..catalog import Agent
-from ..chats import Chat
-from ...core.config import ComputeProfile
 from ...compute.limits import slurm_time
-from ...connect.session import ClusterSession
 from ...compute.ui.compute_dialog import ComputeGroup
+from ...connect.session import ClusterSession
+from ...core.config import ComputeProfile
+from ...files import remote_fs
 from ...files.ui.folder_picker import FolderPicker, short
 from ...ui.widgets import bg
+from .. import chats as chat_store
+from ..catalog import Agent
+from ..chats import Chat
 
 
 def when(ts: int) -> str:

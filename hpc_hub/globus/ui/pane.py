@@ -6,9 +6,9 @@ from typing import TYPE_CHECKING
 
 from gi.repository import Adw, Gio, GLib, GObject, Gtk, Pango
 
-from .. import api as globus
 from ...core.config import ClusterConfig
 from ...ui.widgets import ask_name, bg
+from .. import api as globus
 
 if TYPE_CHECKING:
     from .page import GlobusPage

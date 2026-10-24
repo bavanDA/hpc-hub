@@ -5,10 +5,10 @@ from collections.abc import Callable
 
 from gi.repository import Adw, Gtk, Pango
 
-from ..session import ClusterSession, State
-from .authenticator_help import AuthenticatorHelp
 from ...compute.ui.compute_dialog import ComputeDialog
 from ...ui.widgets import open_menu
+from ..session import ClusterSession, State
+from .authenticator_help import AuthenticatorHelp
 
 MAX_LOG_LINES = 1000
 

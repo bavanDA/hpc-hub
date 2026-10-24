@@ -5,8 +5,8 @@ import shlex
 import time
 from dataclasses import dataclass
 
-from .slurm import SlurmError
 from ..core.ssh import SshMaster
+from .slurm import SlurmError
 
 MINE, HISTORY, ALL = "mine", "history", "all"
 SQUEUE_FORMAT = "%i|%j|%u|%P|%T|%M|%l|%C|%m|%R|%q"

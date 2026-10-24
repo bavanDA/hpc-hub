@@ -7,10 +7,10 @@ from collections.abc import Callable
 
 from gi.repository import Adw, Gtk
 
-from ..catalog import AGENTS, Agent
 from ...connect.session import ClusterSession
 from ...files.ui.folder_picker import FolderPicker
 from ...ui.widgets import bg
+from ..catalog import AGENTS, Agent
 
 
 def answers_folder(folder: str) -> str:

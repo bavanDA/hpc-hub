@@ -2,9 +2,9 @@
 
 from gi.repository import Adw, GLib, Gtk
 
-from .. import git
 from ...connect.session import ClusterSession
 from ...ui.widgets import bg
+from .. import git
 
 
 class GitMixin:

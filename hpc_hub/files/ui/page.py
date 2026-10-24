@@ -6,16 +6,16 @@ from collections.abc import Callable
 
 from gi.repository import Adw, GLib, Gtk
 
-from ...globus import api as globus
-from .. import remote_fs, transfer
-from ...core.config import ClusterConfig
-from ..remote_fs import Entry
 from ...connect.session import ClusterSession, State
-from .preview import Preview
+from ...core.config import ClusterConfig
+from ...globus import api as globus
 from ...ui.widgets import bg, remember_size
+from .. import remote_fs, transfer
+from ..remote_fs import Entry
 from .actions import TEXT
 from .copy_dialog import CopyDialog
 from .pane import FilePane
+from .preview import Preview
 from .transfers import TransferRow
 
 

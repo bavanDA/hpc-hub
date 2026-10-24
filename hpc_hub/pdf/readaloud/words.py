@@ -12,7 +12,6 @@ from gi.repository import GLib, Poppler  # noqa: E402
 
 from .text import Word  # noqa: E402
 
-
 WORKER = Path(__file__).with_name("words_worker.py")
 
 

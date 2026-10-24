@@ -32,6 +32,7 @@ def test_finish_body_and_session():
 
 def test_server_pin_format(monkeypatch):
     import datetime
+
     from cryptography import x509
     from cryptography.hazmat.primitives import hashes, serialization
     from cryptography.hazmat.primitives.asymmetric import ec
@@ -54,6 +55,7 @@ def test_server_pin_format(monkeypatch):
 
     monkeypatch.setattr(vpn_sso.ssl, "create_default_context", lambda: FakeCtx())
     monkeypatch.setattr(vpn_sso.socket, "create_connection", lambda *a, **k: FakeTls())
-    import base64, hashlib
+    import base64
+    import hashlib
     spki = key.public_key().public_bytes(serialization.Encoding.DER, serialization.PublicFormat.SubjectPublicKeyInfo)
     assert vpn_sso.server_pin("vpn.test") == "pin-sha256:" + base64.b64encode(hashlib.sha256(spki).digest()).decode()

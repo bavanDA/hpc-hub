@@ -4,9 +4,9 @@ from collections.abc import Callable
 
 from gi.repository import Adw, Gdk, GLib, Gtk
 
-from .. import api as globus
 from ...core.config import ClusterConfig
 from ...ui.widgets import bg, open_uri
+from .. import api as globus
 
 
 def _step(n: int, title: str, subtitle: str = "") -> Adw.ActionRow:

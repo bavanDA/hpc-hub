@@ -10,14 +10,14 @@ from typing import Protocol
 from urllib.parse import urlsplit
 
 from ..compute import limits, slurm
+from ..compute.slurm import Allocation, SlurmError
+from ..core.config import ClusterConfig, ComputeProfile
+from ..core.credentials import Login
+from ..core.paths import log_dir
+from ..core.ssh import SshError, SshMaster
 from . import prompts, vpn_sso
 from .askpass_server import AskpassServer
-from ..core.config import ClusterConfig, ComputeProfile
-from ..core.paths import log_dir
-from ..core.credentials import Login
 from .network import link_works, network_name, reachable, route_device
-from ..compute.slurm import Allocation, SlurmError
-from ..core.ssh import SshError, SshMaster
 from .vpn import NeedsWebLogin, Vpn, VpnError
 
 

@@ -9,10 +9,10 @@ import gi
 gi.require_version("Vte", "3.91")
 from gi.repository import Adw, Gdk, Gio, GLib, Gtk, Pango, Vte  # noqa: E402
 
-from .. import links, tmux  # noqa: E402
-from ..links import Link  # noqa: E402
 from ...connect.session import ClusterSession  # noqa: E402
 from ...ui.widgets import bg  # noqa: E402
+from .. import links, tmux  # noqa: E402
+from ..links import Link  # noqa: E402
 
 
 class TerminalTab(Gtk.Box):

@@ -7,12 +7,12 @@ from collections.abc import Callable
 from gi.repository import Adw, GLib, Gtk
 
 from ...agents import chat_copy, chats
+from ...connect.session import ClusterSession, State
 from ...files import remote_fs, transfer
 from ...files.remote_fs import storage
-from ..store import Project
-from ...connect.session import ClusterSession, State
 from ...files.ui.folder_picker import FolderPicker, load_places
 from ...ui.widgets import bg
+from ..store import Project
 
 HOW = [("laptop", "Through this laptop", "Simple; fine for smaller projects"),
        ("globus", "Globus", "Cluster to cluster, for big projects. Copying again only sends what changed")]

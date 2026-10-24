@@ -11,8 +11,8 @@ import shlex
 import time
 from dataclasses import dataclass
 
-from . import links
 from ..core.ssh import SshMaster
+from . import links
 
 MARK = "@@HPCHUB_PANE "
 

@@ -4,8 +4,8 @@ import re
 
 from gi.repository import Adw, GLib, Gtk, Pango
 
-from ...jobs import JobInfo, job_details, parse_details
 from ....ui.widgets import bg
+from ...jobs import JobInfo, job_details, parse_details
 from .columns import su_text
 
 

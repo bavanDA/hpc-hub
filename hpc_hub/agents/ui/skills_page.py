@@ -4,10 +4,10 @@ from collections.abc import Callable
 
 from gi.repository import Adw, GLib, Gtk
 
-from .. import skills
 from ...connect.session import ClusterSession
-from ..skills import TARGETS, Skill
 from ...ui.widgets import bg
+from .. import skills
+from ..skills import TARGETS, Skill
 
 
 def _row(sk: Skill) -> Adw.ActionRow:

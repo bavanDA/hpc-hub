@@ -5,9 +5,9 @@ import json
 import subprocess
 import time
 
+from ..core.ssh import SshMaster
 from .guard_files import remote_lock as rl
 from .permissions import FILES, _write
-from ..core.ssh import SshMaster
 
 BIN = ".local/bin/remote-lock"
 new_secret = rl.new_secret

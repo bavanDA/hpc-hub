@@ -8,8 +8,8 @@ import base64
 import shlex
 from dataclasses import dataclass, replace
 
-from .catalog import AGY, CLAUDE, CODEX, CURSOR, Agent
 from ..core.config import AgentSettings
+from .catalog import AGY, CLAUDE, CODEX, CURSOR, Agent
 
 
 @dataclass

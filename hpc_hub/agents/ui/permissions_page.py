@@ -4,11 +4,11 @@ from collections.abc import Callable
 
 from gi.repository import Adw, GLib, Gtk
 
+from ...connect.session import ClusterSession
+from ...ui.widgets import bg
 from .. import lock, permissions
 from ..permissions import ASKS, GROUPS, Permissions
-from ...connect.session import ClusterSession
 from .lock_setup import LockSetupDialog
-from ...ui.widgets import bg
 
 
 class PermissionsPage(Gtk.Box):

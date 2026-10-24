@@ -5,9 +5,9 @@ from collections.abc import Callable
 
 from gi.repository import Adw, GLib, Gtk
 
-from .. import transfer
 from ...connect.session import ClusterSession
 from ...ui.widgets import bg
+from .. import transfer
 
 BIG = 5 * 1024 ** 3  # past this, Globus (cluster to cluster) beats streaming through the laptop
 

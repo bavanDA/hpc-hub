@@ -3,8 +3,8 @@
 import posixpath
 
 from ...files import remote_fs
-from .. import synctex
 from ...ui.widgets import bg
+from .. import synctex
 
 
 class SyncMixin:

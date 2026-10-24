@@ -2,12 +2,10 @@
 
 import os
 import posixpath
-import shlex
 
 from gi.repository import Adw, Gdk, GLib, Gtk, Pango
 
 from ...files import remote_fs
-from ...connect.session import ClusterSession
 from ...pdf.ui.poppler import PdfDialog
 from ...ui.widgets import bg
 
