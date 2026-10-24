@@ -36,3 +36,19 @@ def test_parse_usage():
     got = usage.parse_usage("mygroup|181080000|16076854|962138433\nnew|1500||\njunk\n")
     assert [(u.account, u.quota, u.used, u.mine) for u in got] == [
         ("mygroup", 3018000, 267947, 267260), ("new", 25, 0, 0)]
+
+
+def test_expanse_su_and_lustre_storage():
+    assert usage.parse_usage("abc123|SU|200000|11118|500\n") == [usage.AccountUsage("abc123", 200000, 11118, 500)]
+    text = ("@QUOTA\nUsage for account: abc123\n   PROJECTS + SCRATCH Storage: 336 GB (of 51200 GB quota)\n"
+            "     User jdoe Usage: 120 GB\n@USERS\n")
+    rows, raw = usage.parse_storage(text)
+    assert [(r.label, r.used, r.quota, r.mine) for r in rows] == [("abc123 projects + scratch", 336, 51200, 120)]
+    assert raw == ""
+
+
+def test_scripts_are_valid_bash():
+    import subprocess
+    for script in (usage.USAGE, usage.STORAGE, usage.GROUP, usage.LOAD):
+        assert subprocess.run(["bash", "-n", "-c", script]).returncode == 0
+    assert "exit" not in usage.USAGE  # runs in the long-lived shell

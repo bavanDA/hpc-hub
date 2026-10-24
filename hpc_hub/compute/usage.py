@@ -23,6 +23,20 @@ STORAGE = r"""A=$1
 echo @QUOTA
 if [ -x /apps/site/bin/quota_info.sh ]; then /apps/site/bin/quota_info.sh
 elif command -v getquota >/dev/null; then getquota
+elif command -v lfs >/dev/null && findmnt -n -t lustre >/dev/null; then  # Lustre (Expanse): one row per filesystem
+  echo "Usage for account: $A"
+  num='{for (i = 1; i <= NF; i++) if ($i ~ /^[0-9]+[*]?$/) {print int($i / 1048576) "|" int($(i + 2) / 1048576); exit}}'
+  findmnt -n -t lustre -o TARGET | while read -r m; do
+    printf '%s %s\n' "$(lfs getname "$m" | awk '{sub(/-[^-]*$/, "", $1); print $1}')" "$m"
+  done | awk '{b = $2; sub(/.*\//, "", b); n[$1] = n[$1] (n[$1] ? " + " : "") b; if (!m[$1]) m[$1] = $2}
+              END {for (f in n) print m[f] "|" toupper(n[f])}' |
+  while IFS='|' read -r m label; do
+    u=$(lfs quota -q -u "$USER" "$m" | awk "$num")
+    g=$([ -n "$A" ] && lfs quota -q -g "$A" "$m" | awk "$num")
+    g=${g:-$u}
+    echo "   $label Storage: ${g%|*} GB (of ${g#*|} GB quota)"
+    echo "     User $USER Usage: ${u%|*} GB"
+  done
 else df -h "$HOME"; fi 2>/dev/null
 echo @USERS
 f=/mmfs1/apps/utils/custom/.mmfs1_quotas
@@ -199,21 +213,29 @@ class AccountUsage:
     mine: int  # SU you used in it
 
 
-USAGE = r"""for a in $(sacctmgr -n -P show assoc where user="$USER" format=account 2>/dev/null | sort -u); do
+# SDSC keeps SU in its own accounting (expanse-client), elsewhere they are Slurm limits. No exit: this runs in
+# the long-lived shell.
+USAGE = r"""if command -v expanse-client >/dev/null; then
+expanse-client user -p 2>/dev/null | awk -v u="$USER" '$1 == u && $2 == "allow" {print $3 "|SU|" $6 "|" $7 "|" $5}'
+else
+for a in $(sacctmgr -n -P show assoc where user="$USER" format=account 2>/dev/null | sort -u); do
 q=$(sacctmgr -n -P show assoc where account="$a" user="" format=GrpTRESMins 2>/dev/null |
   grep -o 'billing=[0-9]*' | head -1)
 [ -n "$q" ] || continue
 u=$(sshare -n -P -A "$a" --users=" " -o GrpTRESRaw 2>/dev/null | grep -o 'billing=[0-9]*' | head -1)
 m=$(sshare -n -P -A "$a" --users="$USER" -o User,RawUsage 2>/dev/null | grep "^$USER|" | cut -d'|' -f2)
 echo "$a|${q#billing=}|${u#billing=}|$m"
-done"""
+done
+fi"""
 
 
 def parse_usage(text: str) -> list[AccountUsage]:
     out = []
     for line in text.splitlines():
         p = line.strip().split("|")
-        if len(p) == 4 and p[1].isdigit():
+        if len(p) == 5 and p[1] == "SU" and all(x.isdigit() for x in p[2:]):  # expanse-client: SU already
+            out.append(AccountUsage(p[0], int(p[2]), int(p[3]), int(p[4])))
+        elif len(p) == 4 and p[1].isdigit():
             num = [int(x) if x.isdigit() else 0 for x in p[1:]]
             out.append(AccountUsage(p[0], num[0] // 60, num[1] // 60, num[2] // 3600))  # minutes, minutes, seconds
     return out
