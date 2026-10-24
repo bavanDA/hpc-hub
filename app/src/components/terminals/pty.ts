@@ -2,7 +2,7 @@
 import { invoke } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
 
-import { call } from '../../rpc'
+export { openLink } from '../app/openLink'  // links from terminals open like every other link
 
 export const inTauri = '__TAURI_INTERNALS__' in window
 
@@ -50,10 +50,4 @@ export function ptyClose(id: number) {
   handlers.delete(id)
   closed.add(id)
   return invoke('pty_close', { id })
-}
-
-/** Open a link in your browser (the backend does it in the app). */
-export function openLink(url: string) {
-  if (inTauri) call('terminals.open_link', { url }).catch(() => {})
-  else window.open(url, '_blank', 'noopener')
 }

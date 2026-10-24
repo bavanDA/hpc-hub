@@ -3,6 +3,8 @@ import { Copy, ExternalLink } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
 import { call } from '../../rpc'
+import { copyText, readText } from '../app/clipboard'
+import { openLink } from '../app/openLink'
 import type { GlobusStatus, Login } from '../../types/globus'
 import { Button, Dialog, List, Spinner } from '../ui'
 import { Field, looksLikeCode, pastedCode } from './parts'
@@ -44,7 +46,7 @@ export function LoginDialog({ start, onClose, onDone }:
   useEffect(() => {
     const back = () => {
       if (code) return
-      navigator.clipboard?.readText().then((t) => looksLikeCode(t) && setCode(t.trim())).catch(() => {})
+      readText().then((t) => looksLikeCode(t) && setCode(t.trim()))
     }
     window.addEventListener('focus', back)
     return () => window.removeEventListener('focus', back)
@@ -59,10 +61,10 @@ export function LoginDialog({ start, onClose, onDone }:
       .then(onDone)
       .catch((e: Error) => { setError(e.message); setBusy(false) })
   }
-  const copy = () => login && navigator.clipboard?.writeText(login.url).then(() => {
+  const copy = () => login && copyText(login.url).then(() => {
     setCopied(true)
     setTimeout(() => setCopied(false), 1500)
-  })
+  }, () => {})
 
   const fresh = !login || login.fresh || !!login.domain
   return (
@@ -87,7 +89,7 @@ export function LoginDialog({ start, onClose, onDone }:
               className="h-9 min-w-0 flex-1 truncate rounded-md bg-pill px-3 font-mono text-[13px] leading-9 text-dim">
               {login.url}</div>
             <Button onClick={copy}><Copy size={15} />{copied ? 'Copied' : 'Copy'}</Button>
-            <Button kind="suggested" onClick={() => window.open(login.url, '_blank')}>
+            <Button kind="suggested" onClick={() => openLink(login.url)}>
               <ExternalLink size={15} />Open</Button>
           </div>
           <label className="flex flex-col gap-1.5">

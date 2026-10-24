@@ -9,6 +9,7 @@ import { ContextMenu } from '../components/files/ContextMenu'
 import { ConfirmDialog, NameDialog } from '../components/files/dialogs'
 import { EditorDialog } from '../components/files/EditorDialog'
 import { FileTable } from '../components/files/FileTable'
+import { useLocalFiles } from '../components/files/local'
 import { EDIT_LIMIT, isDir, isText, join, kind, parent, sorted } from '../components/files/format'
 import { ImageDialog } from '../components/files/ImageDialog'
 import { menuFor } from '../components/files/menu'
@@ -106,10 +107,17 @@ export function Files() {
   const refresh = () => go(path)
   const done = (msg: string) => () => { toast(msg); refresh() }
   const failed = (e: Error) => toast(`Failed: ${e.message}`)
-  const soon = () => toast('Coming soon')
+
+  const local = useLocalFiles(cluster, info?.name ?? cluster)
+  const upload = () => {
+    if (!connected || !path) return
+    const into = { cluster, dir: path }
+    local.upload(path).then((id) => id && dests.current.set(id, into))
+  }
+  const download = (e: Entry) => local.download(join(path, e.name))
 
   const onFinished = (t: Transfer) => {
-    toast(t.error ? (t.error === 'Cancelled' ? 'Copy cancelled' : `Copy failed: ${t.error}`)
+    if (!local.finished(t)) toast(t.error ? (t.error === 'Cancelled' ? 'Copy cancelled' : `Copy failed: ${t.error}`)
       : `Copied ${t.title.split(':')[0]}`)
     const d = dests.current.get(t.id)
     if (!t.error && d && d.cluster === memory.cluster && d.dir === memory.paths[d.cluster]) refresh()
@@ -122,7 +130,7 @@ export function Files() {
     if (isDir(e)) go(p)
     else if (kind(e) === 'image') setDialog(<ImageDialog cluster={cluster} path={p} onClose={close} />)
     else if (isText(e) && e.size < EDIT_LIMIT) edit(e)
-    else soon()  // PDFs and downloads need native windows and file dialogs
+    else local.download(p, true)  // no preview here: download and open it, as the GTK app does
   }
   const edit = (e: Entry) => setDialog(
     <EditorDialog cluster={cluster} clusterName={info?.name ?? cluster} path={join(path, e.name)} onClose={close} />)
@@ -180,7 +188,7 @@ export function Files() {
 
   const act = (a: Action, e: Entry | null = entry) => {
     if (!e) return
-    ({ open, download: soon, rename, zip, delete: remove, copy } as Record<Action, (e: Entry) => void>)[a](e)
+    ({ open, download, rename, zip, delete: remove, copy } as Record<Action, (e: Entry) => void>)[a](e)
   }
   const key = (k: string, e: Entry | null) => {
     if (k === 'Backspace') { go(parent(path)); return true }
@@ -191,9 +199,9 @@ export function Files() {
   }
   const items = menu && menuFor(menu.entry, !!clip, {
     open: () => act('open', menu.entry), edit: () => menu.entry && edit(menu.entry),
-    copyPath: () => copyPath(menu.entry), download: soon, rename: () => act('rename', menu.entry),
+    copyPath: () => copyPath(menu.entry), download: () => menu.entry && download(menu.entry), rename: () => act('rename', menu.entry),
     zip: () => act('zip', menu.entry), copy: () => act('copy', menu.entry), delete: () => act('delete', menu.entry),
-    newFolder, upload: soon, paste,
+    newFolder, upload, paste,
   })
 
   if (error && !clusters) return <p className="p-8 text-bad">Could not load clusters: {error}</p>
@@ -220,7 +228,7 @@ export function Files() {
         connected={connected} loading={loading} places={places} count={listing ? entries.length : null}
         preview={preview} onPreview={() => { memory.preview = !preview; setPreview(!preview) }}
         onGo={go} onUp={() => path && go(parent(path))} onRefresh={refresh} onNewFolder={newFolder}
-        onUpload={soon} />
+        onUpload={upload} />
       {clip && <ClipBanner clip={clip} canPaste={connected && !!path} onPaste={paste} onDrop={() => setClip(null)} />}
       <div className="flex min-h-0 flex-1">
         <div className="flex min-w-0 flex-1 flex-col">{body}</div>
