@@ -51,3 +51,10 @@ def test_link_split_over_lines():
     assert link.kind == links.REMOTE
     assert link.url == "https://antigravity.google.com/r/0a7a6826-86ef-4822-807a-f531d8389996-v2"
     assert links.unwrap("see https://x.org/\nnext words here") == "see https://x.org/\nnext words here"
+
+
+def test_device_login_only_on_real_sign_in_hosts():
+    assert links.classify("https://github.com/login/device").kind == links.DEVICE_LOGIN
+    assert links.classify("https://microsoft.com/devicelogin").kind == links.DEVICE_LOGIN
+    assert links.classify("https://evil.example/login/device").kind == links.OTHER
+    assert links.classify("https://devicelogin.evil.example/").kind == links.OTHER

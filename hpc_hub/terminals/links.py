@@ -11,6 +11,8 @@ LOCAL_HOSTS = {"localhost", "127.0.0.1", "0.0.0.0", "::1"}
 TUNNEL, DEVICE_LOGIN, LOCAL_WEB, REMOTE, PAIR, OTHER = (
     "tunnel", "device-login", "local-web", "remote", "pair", "other")
 PAIR_RE = re.compile(r"(?:manualPairingCode\W+|pairing code\W+)([A-Z0-9]{4}-[A-Z0-9]{4})", re.I)
+# Device sign-in pages opened for you (VS Code's GitHub or Microsoft login); a look-alike on another host is not
+DEVICE_HOSTS = ("github.com", "microsoft.com", "www.microsoft.com", "login.microsoft.com", "login.microsoftonline.com")
 REMOTE_HOSTS = ("claude.ai", "chatgpt.com", "antigravity.google", "antigravity.google.com")
 
 
@@ -29,7 +31,7 @@ def classify(url: str, text: str = "", node: str = "") -> Link:
     host = parts.hostname or ""
     if host == "vscode.dev" and parts.path.startswith("/tunnel"):
         return Link(TUNNEL, url)
-    if parts.path.rstrip("/") in ("/login/device", "/devicelogin") or "devicelogin" in host:
+    if parts.scheme == "https" and host in DEVICE_HOSTS and parts.path.rstrip("/") in ("/login/device", "/devicelogin"):
         m = CODE_RE.search(text[text.find(url):] if url in text else text) or CODE_RE.search(text)
         return Link(DEVICE_LOGIN, url, code=m.group(1) if m else "")
     if host in REMOTE_HOSTS or host.endswith(".antigravity.google"):
