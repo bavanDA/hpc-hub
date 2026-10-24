@@ -1,25 +1,42 @@
-import { useState } from 'react'
+import { useState, type ComponentType } from 'react'
 
 import { HeaderBar } from './components/HeaderBar'
+import { Questions } from './components/Questions'
 import { GROUPS, Sidebar, type Page } from './components/Sidebar'
+import { ToastProvider } from './components/toast'
 import { Clusters } from './pages/Clusters'
+import { Files } from './pages/Files'
+import { Globus } from './pages/Globus'
+import { Jobs } from './pages/Jobs'
+import { Permissions } from './pages/Permissions'
+import { Projects } from './pages/Projects'
+import { Terminals } from './pages/Terminals'
+import { Usage } from './pages/Usage'
 
 const TITLES = Object.fromEntries(GROUPS.flatMap(([, items]) => items.map((i) => [i.page, i.title]))) as
   Record<Page, string>
 
+const PAGES: Partial<Record<Page, ComponentType>> = {
+  projects: Projects, terminals: Terminals, permissions: Permissions, clusters: Clusters, jobs: Jobs,
+  usage: Usage, files: Files, globus: Globus,
+}
+
 export default function App() {
   const [page, setPage] = useState<Page>('clusters')
   const [sidebar, setSidebar] = useState(true)
+  const Current = PAGES[page]
   return (
-    <div className="flex h-full">
-      {sidebar && <Sidebar page={page} onPick={setPage} experimental={false} />}
-      <main className="flex min-w-0 flex-1 flex-col">
-        <HeaderBar title={TITLES[page]} onSidebar={() => setSidebar(!sidebar)} />
-        <div className="flex-1 overflow-auto">
-          {page === 'clusters' ? <Clusters />
-            : <p className="p-8 text-dim">{TITLES[page]} comes in a later step. The GTK app has it today.</p>}
-        </div>
-      </main>
-    </div>
+    <ToastProvider>
+      <div className="flex h-full">
+        {sidebar && <Sidebar page={page} onPick={setPage} experimental={false} />}
+        <main className="flex min-w-0 flex-1 flex-col">
+          <HeaderBar title={TITLES[page]} onSidebar={() => setSidebar(!sidebar)} />
+          <div className="min-h-0 flex-1 overflow-auto">
+            {Current ? <Current /> : <p className="p-8 text-dim">{TITLES[page]} is experimental.</p>}
+          </div>
+        </main>
+      </div>
+      <Questions />
+    </ToastProvider>
   )
 }

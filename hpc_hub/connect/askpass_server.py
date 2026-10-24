@@ -16,8 +16,8 @@ Handler = Callable[[str], str | None]
 
 
 class AskpassServer:
-    def __init__(self):
-        self.path = runtime_dir() / "askpass.sock"
+    def __init__(self, name: str = "askpass.sock"):
+        self.path = runtime_dir() / name  # each app its own: the GTK app and the Tauri backend can run together
         self._handlers: dict[str, Handler] = {}
         self._lock = threading.Lock()
         self._sock: socket.socket | None = None

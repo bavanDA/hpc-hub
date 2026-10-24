@@ -2,7 +2,7 @@
 import { invoke } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
 
-import { demoCall } from './demo'
+import { demoCall } from './demo/index'
 
 // In a plain browser (design work) there is no Tauri: answer from demo data
 const inTauri = '__TAURI_INTERNALS__' in window
@@ -28,7 +28,7 @@ const ready = inTauri ? listen<string>('rpc', (e) => {
 }) : Promise.resolve()
 
 export async function call<T>(method: string, params: Record<string, unknown> = {}): Promise<T> {
-  if (!inTauri) return demoCall<T>(method)
+  if (!inTauri) return demoCall<T>(method, params)
   await ready
   const id = next++
   const answer = new Promise<T>((resolve, reject) => waiting.set(id, { resolve: resolve as (v: unknown) => void, reject }))

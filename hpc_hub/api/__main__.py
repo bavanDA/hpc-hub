@@ -2,9 +2,12 @@
 
 import sys
 
-from . import methods  # noqa: F401 - registers the methods
+from . import hub, methods
 from .server import Server
 
 protocol = sys.stdout
 sys.stdout = sys.stderr  # a stray print must never land in the protocol stream
-Server(out=protocol).serve()
+methods.load_all()
+server = Server(out=protocol)
+hub.start(server.emit)
+server.serve()

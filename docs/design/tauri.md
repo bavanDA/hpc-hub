@@ -26,6 +26,23 @@ One app that looks good on all three systems. The screens are rebuilt as a web U
 | SSH | OpenSSH ControlMaster | OpenSSH ControlMaster | asyncssh (no ControlMaster in Windows OpenSSH) |
 | VPN | NetworkManager | openconnect with an admin helper | openconnect + wintun, admin |
 
+## How a feature is built
+
+Each feature touches only its own files, so several can be built at once:
+
+- **Backend:** `hpc_hub/api/methods/<feature>.py` with `@method("<feature>.<verb>")` functions (keyword params,
+  plain JSON back). Every module in that folder loads by itself. Live connections: `hub().connected(cluster)`
+  gives a connected `ClusterSession` (its `.ssh` runs commands), or raises "Connect to X first". Push events with
+  `hub().emit(name, data)`. Reuse the logic modules (`hpc_hub/compute/jobs.py`...); don't copy them.
+- **Tests:** `tests/api/test_<feature>.py`, with fakes, never real clusters.
+- **Screen:** `app/src/pages/<Page>.tsx`, parts in `app/src/components/<feature>/`, types in
+  `app/src/types/<feature>.ts`. Use the shared pieces in `components/ui.tsx` (Card, List, Row, Button, Pill,
+  EmptyState, Dialog), `useToast()`, and `useCall` / `useEvent` from `hooks.ts`.
+- **Demo data:** `app/src/demo/<feature>.ts` exporting `answers` (method -> result, or a function of params).
+  `npm run dev` then shows the page in a plain browser with that data; screenshot it with headless Chrome.
+- **Copy:** plain and short, no em or en dashes, made-up names only (jdoe, mygroup, abc123).
+- **Don't** connect, disconnect, submit or cancel jobs on the real clusters while building.
+
 ## Run it (development)
 
     cd app && npm install && npm run tauri dev

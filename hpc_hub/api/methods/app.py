@@ -2,9 +2,9 @@
 
 from dataclasses import asdict
 
-from .. import __version__
-from ..core import config
-from .server import method
+from ... import __version__
+from ...core import config
+from ..server import method
 
 
 @method("app.version")

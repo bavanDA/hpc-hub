@@ -11,8 +11,10 @@ export type Session = {
   id: string
   state: 'Disconnected' | 'Connecting VPN' | 'Signing in' | 'Approve Duo on your phone' |
     'Requesting compute node' | 'Connected' | 'Disconnecting' | 'Error'
+  connected?: boolean
   detail?: string
   node?: string
   job?: string
+  owned?: boolean
   log?: string
 }
