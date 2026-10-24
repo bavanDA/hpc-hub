@@ -120,3 +120,22 @@ def test_settings_written_private(tmp_path, monkeypatch):
     assert stat.S_IMODE(os.stat(tmp_path / permissions.SETTINGS).st_mode) == 0o600
     sp.run(["bash", "-c", permissions.set_key_command("remoteControlAtStartup", True)], check=True)
     assert stat.S_IMODE(os.stat(tmp_path / permissions.SETTINGS).st_mode) == 0o600
+
+
+def test_remote_off_turns_off_resumed_chats_too(tmp_path, monkeypatch):
+    import subprocess as sp
+
+    from tests.helpers import LocalShell
+    monkeypatch.setenv("HOME", str(tmp_path))
+    (tmp_path / ".claude").mkdir()
+    (tmp_path / permissions.SETTINGS).write_text('{"theme": "dark"}')
+
+    class Shell(LocalShell):
+        def run(self, command, timeout=60, fast=None):
+            return sp.run(["bash", "-c", command], capture_output=True, text=True, timeout=timeout)
+    permissions.set_remote(Shell(), "remoteControlAtStartup", False)
+    s = json.loads((tmp_path / permissions.SETTINGS).read_text())
+    assert s == {"theme": "dark", "remoteControlAtStartup": False, "disableRemoteControl": True}
+    permissions.set_remote(Shell(), "remoteControlAtStartup", True)
+    s = json.loads((tmp_path / permissions.SETTINGS).read_text())
+    assert s["remoteControlAtStartup"] is True and s["disableRemoteControl"] is False

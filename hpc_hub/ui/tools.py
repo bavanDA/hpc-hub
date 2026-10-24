@@ -277,7 +277,7 @@ class Tools:
             return
         if agent.remote_setting:  # remote control comes from the agent's settings, not a flag: set it first
             on = getattr(s.cfg, agent.id).remote
-            bg(lambda: permissions.set_key(s.ssh, agent.remote_setting, on),
+            bg(lambda: permissions.set_remote(s.ssh, agent.remote_setting, on),
                lambda _r, e: (e and self.toast(f"Could not set remote control: {e}"),
                               self._open_agent(s, agent, a, run)))
             return

@@ -130,6 +130,13 @@ def set_key(ssh: SshMaster, key: str, value) -> None:
         raise OSError(res.stderr.strip() or f"could not set {key}")
 
 
+def set_remote(ssh: SshMaster, startup_key: str, on: bool) -> None:
+    """Remote control on or off for real. The startup key only covers new chats: a resumed chat reconnects to the
+    remote session it had, unless disableRemoteControl is set (Claude Code's switch for everywhere)."""
+    set_key(ssh, startup_key, on)
+    set_key(ssh, "disableRemoteControl", not on)
+
+
 def read(ssh: SshMaster) -> Permissions:
     res = ssh.run(f"cat ~/{SETTINGS} 2>/dev/null; echo; echo @@HPCHUB@@; cat ~/{GUARD_CONF} 2>/dev/null; true")
     if res.returncode != 0:

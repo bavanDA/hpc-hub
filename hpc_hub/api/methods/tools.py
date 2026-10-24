@@ -175,7 +175,7 @@ def agent_start(cluster: str, agent: str, folder: str = "", chat_id: str = "", l
     node = _node(s, picked, f"hpc-hub-{a.id}" if c.new_node else "")
     if a.remote_setting:  # remote control comes from the agent's settings, not a flag: set it first
         try:
-            permissions.set_key(s.ssh, a.remote_setting, c.remote)
+            permissions.set_remote(s.ssh, a.remote_setting, c.remote)
         except OSError as e:
             _progress(cluster, f"Could not set remote control: {e}")
     tag = chat_id[:8] if chat_id else time.strftime("%H%M%S")  # one tmux session per chat
