@@ -1,0 +1,50 @@
+/* The PDF viewer around pdf.js: pages as cards on a calm background, in both themes. */
+.pdf-scroll {
+  --pdf-bg: #e9e9ec;
+  position: absolute;
+  inset: 0;
+  overflow: auto;
+  background: var(--pdf-bg);
+  outline: none;
+}
+@media (prefers-color-scheme: dark) {
+  .pdf-scroll { --pdf-bg: #18181b; }
+}
+
+.pdf-scroll .pdfViewer {
+  --page-margin: 14px auto 0;
+  --page-border: none;
+  padding-bottom: 14px;
+  user-select: text;
+  -webkit-user-select: text;
+}
+.pdf-scroll .pdfViewer .page {
+  box-shadow: 0 0 0 1px rgb(0 0 6 / 0.06), 0 2px 8px rgb(0 0 6 / 0.12);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.pdf-compact .pdfViewer { --page-margin: 10px auto 0; padding-bottom: 10px; }
+
+/* Dark pages: the paper turns dark, colors keep their hue */
+.pdf-dark .pdfViewer .page { background-color: #1d1d20; }
+.pdf-dark .pdfViewer .canvasWrapper { filter: invert(0.88) hue-rotate(180deg); }
+
+.pdf-scroll .textLayer ::selection { background: rgb(53 132 228 / 0.35); }
+.pdf-scroll .textLayer .highlight { --highlight-bg-color: rgb(229 165 10 / 0.38); }
+.pdf-scroll .textLayer .highlight.selected { --highlight-selected-bg-color: rgb(230 97 0 / 0.55); }
+
+/* Where a SyncTeX jump landed: a short pulse */
+.pdf-mark {
+  position: absolute;
+  z-index: 5;
+  height: 18px;
+  border-radius: 4px;
+  background: rgb(53 132 228 / 0.28);
+  box-shadow: 0 0 0 2px rgb(53 132 228 / 0.55);
+  pointer-events: none;
+  animation: pdf-mark 1.8s ease-out forwards;
+}
+@keyframes pdf-mark {
+  0%, 60% { opacity: 1; }
+  100% { opacity: 0; }
+}

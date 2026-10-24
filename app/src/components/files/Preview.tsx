@@ -4,11 +4,14 @@ import { useEffect, useState } from 'react'
 
 import { call } from '../../rpc'
 import type { Entry, FileData } from '../../types/files'
+import { Pdf } from '../pdf'
+import { readFile } from '../pdf/load'
 import { Button, Spinner } from '../ui'
 import { FileIcon } from './FileIcon'
 import { isText, join, kind, MEDIA_LIMIT, size, when } from './format'
 
 type Shown = { key: string; data?: FileData; error?: string }
+const PDF_PREVIEW_LIMIT = 40 * 1024 * 1024
 
 export function Preview({ cluster, dir, entry, onOpen, onEdit }:
   { cluster: string; dir: string; entry: Entry; onOpen: () => void; onEdit: () => void }) {
@@ -38,7 +41,8 @@ export function Preview({ cluster, dir, entry, onOpen, onEdit }:
         </div>
       </div>
       <div className="relative min-h-0 flex-1 overflow-hidden">
-        {!wanted ? <Placeholder entry={entry} onOpen={onOpen} />
+        {k === 'pdf' && entry.size <= PDF_PREVIEW_LIMIT ? <PdfPreview cluster={cluster} path={path} stamp={key} />
+          : !wanted ? <Placeholder entry={entry} onOpen={onOpen} />
           : !now ? <div className="grid h-full place-items-center"><Spinner size={24} /></div>
           : now.error ? <Note icon={ImageOff} title="No preview" text={now.error} />
           : <Content data={now.data!} />}
@@ -70,10 +74,26 @@ function Content({ data }: { data: FileData }) {
   )
 }
 
+function PdfPreview({ cluster, path, stamp }: { cluster: string; path: string; stamp: string }) {
+  const [got, setGot] = useState<{ stamp: string; data?: Uint8Array; error?: string } | null>(null)
+  const [progress, setProgress] = useState(0)
+  useEffect(() => {
+    let live = true  // you may pick another file before this one arrives
+    setProgress(0)
+    readFile(cluster, path, (p) => live && setProgress(p))
+      .then((data) => live && setGot({ stamp, data }))
+      .catch((e: Error) => live && setGot({ stamp, error: e.message }))
+    return () => { live = false }
+  }, [cluster, path, stamp])
+  const now = got?.stamp === stamp ? got : null
+  return <Pdf compact data={now?.data ?? null} memory={`preview:${stamp}`} loading={!now} progress={progress}
+    message={now?.error ? <Note icon={ImageOff} title="No preview" text={now.error} /> : undefined} />
+}
+
 function Placeholder({ entry, onOpen }: { entry: Entry; onOpen: () => void }) {
   const k = kind(entry)
   if (k === 'pdf') {
-    return <Note icon={FileType} title="PDF" text="Previews of PDFs come soon."
+    return <Note icon={FileType} title="Big PDF" text="Too big to preview here. Open it to read it."
       action={<Button kind="suggested" onClick={onOpen}>Open</Button>} />
   }
   if (k === 'image') return <Note icon={ImageOff} title="Too big to preview" text="Open it to see it." />

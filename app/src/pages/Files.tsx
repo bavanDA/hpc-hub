@@ -18,6 +18,7 @@ import { PathBar } from '../components/files/PathBar'
 import { Preview } from '../components/files/Preview'
 import { Transfers } from '../components/files/Transfers'
 import { useTransfers } from '../components/files/useTransfers'
+import { PdfDialog } from '../components/pdf/PdfDialog'
 import { useToast } from '../components/toast'
 import { useTools } from '../components/tools/useTools'
 import { EmptyState, Spinner } from '../components/ui'
@@ -136,6 +137,9 @@ export function Files() {
     const p = join(path, e.name)
     if (isDir(e)) go(p)
     else if (kind(e) === 'image') setDialog(<ImageDialog cluster={cluster} path={p} onClose={close} />)
+    else if (kind(e) === 'pdf') {
+      setDialog(<PdfDialog cluster={cluster} path={p} subtitle={`${info?.name}: ${p}`} onClose={close} />)
+    }
     else if (isText(e) && e.size < EDIT_LIMIT) edit(e)
     else local.download(p, true)  // no preview here: download and open it, as the GTK app does
   }
