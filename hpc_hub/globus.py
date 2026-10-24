@@ -114,6 +114,7 @@ class TaskInfo:
     files: int  # 0 while Globus is still counting
     rate: float  # bytes a second
     problem: str  # Globus' word for what holds it up (PERMISSION_DENIED...), "" when fine
+    cancelled: bool = False
 
     @property
     def finished(self) -> bool:
@@ -125,7 +126,8 @@ def task_info(t: dict) -> TaskInfo:
     return TaskInfo(t.get("status", ""), int(t.get("bytes_transferred") or 0),
                     int(t.get("files_transferred") or 0) + int(t.get("files_skipped") or 0), int(t.get("files") or 0),
                     float(t.get("effective_bytes_per_second") or 0),
-                    "" if nice in ("", "OK", "Queued", "SUCCEEDED") else nice)
+                    "" if nice in ("", "OK", "Queued", "SUCCEEDED") else nice,
+                    (t.get("fatal_error") or {}).get("code") == "CANCELED")
 
 
 def collection_path(real: str, top: set[str]) -> str:

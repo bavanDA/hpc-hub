@@ -134,12 +134,24 @@ class FilesPage(Gtk.Box):
                 GLib.idle_add(lambda: row.update() and False)
 
         def done(_r, err):
-            row.update(f"Failed: {err}" if err else f"Done · {GLib.format_size(progress.done)}")
+            row.finish(f"Failed: {err}" if err else f"Done · {GLib.format_size(progress.done)}")
             if not err and dst_pane:
                 dst_pane.refresh()
             self.toast(f"Copy failed: {err}" if err else f"Copied {name} to {dst.cfg.name}")
 
         bg(lambda: transfer.copy(src.ssh, src_path, dst.ssh, dest_dir, progress, on_update, skip, total), done)
+
+    def resume_globus(self, client: globus.Globus) -> None:
+        """Copies still running in Globus (started before the app restarted): show them again."""
+        def show(tasks, err):
+            for t in reversed([] if err else tasks):
+                if t.get("status") in ("ACTIVE", "INACTIVE"):
+                    where = t.get("destination_endpoint_display_name") or "?"
+                    row = TransferRow(f"{t.get('label') or t['task_id']} · Globus", transfer.Progress())
+                    self.transfers.prepend(row)
+                    self.revealer.set_reveal_child(True)
+                    self._watch(client, t["task_id"], row, t.get("label") or "copy", where)
+        bg(lambda: client.tasks(10), show)
 
     def globus_copy(self, client: globus.Globus, src: ClusterConfig, src_path: str, dst: ClusterConfig,
                     dest_path: str, skip: list[str] | None = None) -> None:
@@ -152,8 +164,7 @@ class FilesPage(Gtk.Box):
 
         def started(task_id, err):
             if err:
-                row.progress.finished = True
-                row.update(f"Failed: {err}")
+                row.finish(f"Failed: {err}")
                 self.toast(f"Globus could not start: {err}")
                 return
             self._watch(client, task_id, row, name, dst.name)
@@ -162,8 +173,15 @@ class FilesPage(Gtk.Box):
                                  f"{name} to {dst.name}", True, sync_level=2, skip=skip), started)
 
     def _watch(self, client: globus.Globus, task_id: str, row: TransferRow, name: str, where: str) -> None:
-        """Ask Globus every few seconds; the cancel button cancels the Globus task."""
-        p, busy = row.progress, {"asking": False, "cancelled": False}
+        """Ask Globus every few seconds; the X cancels the Globus task."""
+        p, busy = row.progress, {"asking": False}
+
+        def cancelled(_r, err):
+            if err:
+                p.cancelled.clear()
+                row.cancel.set_sensitive(True)
+                self.toast(f"Cancel failed: {err}")
+        row.on_cancel = lambda: bg(lambda: client.cancel(task_id), cancelled)
 
         def shown(info: globus.TaskInfo, err):
             busy["asking"] = False
@@ -171,16 +189,13 @@ class FilesPage(Gtk.Box):
                 row.update(f"Globus: {err}")
                 return
             p.done, p.total, p.finished = info.files_done, info.files, info.finished
-            row.update(task_line(info))
+            row.update("Cancelling…" if p.cancelled.is_set() and not p.finished else task_line(info))
             if info.status == "SUCCEEDED":
                 self.toast(f"Globus copied {name} to {where}")
             elif info.status == "FAILED":
-                self.toast(f"Globus copy of {name} failed")
+                self.toast(f"Cancelled copy of {name}" if info.cancelled else f"Globus copy of {name} failed")
 
         def tick():
-            if p.cancelled.is_set() and not busy["cancelled"]:
-                busy["cancelled"] = True
-                bg(lambda: client.cancel(task_id), lambda _r, e: e and self.toast(f"Cancel failed: {e}"))
             if not busy["asking"]:
                 busy["asking"] = True
                 bg(lambda: client.task(task_id), shown)
@@ -193,6 +208,8 @@ def task_line(i: globus.TaskInfo) -> str:
     size = GLib.format_size(i.bytes)
     if i.status == "SUCCEEDED":
         return f"Done · {size} · {i.files} files"
+    if i.cancelled:
+        return "Cancelled"
     if i.status == "FAILED":
         return "Failed" + (f": {i.problem.replace('_', ' ').lower()}" if i.problem else "")
     parts = [i.problem.replace("_", " ").lower() if i.problem else "Copying" if i.files else "Counting files", size]

@@ -110,6 +110,8 @@ class HpcHubApp(QuitMixin, Adw.Application):
             self.window.terminals.on_tool = self.open_tool
             self.window.files.pane.on_tool = self._tool_in_folder
             self.window.schedules.on_open_folder = self._open_files
+            if (cid := self.app_settings.globus_client_id) and (client := globus.Globus(cid)).logged_in:
+                self.window.files.resume_globus(client)
             self.tools = Tools(self.window, self.window.terminals,
                                lambda: self.window.stack.set_visible_child_name("terminals"),
                                self.window.toast, lambda: config.save(self.clusters))

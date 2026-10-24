@@ -130,6 +130,7 @@ def test_task_info():
     assert (i.files_done, i.files, i.problem, i.finished) == (5, 10, "", False)
     assert globus.task_info({"status": "INACTIVE", "nice_status": "PERMISSION_DENIED"}).problem == "PERMISSION_DENIED"
     assert globus.task_info({"status": "SUCCEEDED", "nice_status": None}).finished
+    assert globus.task_info({"status": "FAILED", "fatal_error": {"code": "CANCELED"}}).cancelled
 
 
 def test_collection_path():
