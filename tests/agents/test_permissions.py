@@ -94,3 +94,13 @@ def test_trash_keeps_files_on_their_own_disk(tmp_path):
         for b in (home / ".trash" / ".bins").read_text().split():
             if b != str(home / ".trash"):
                 subprocess.run(["rm", "-rf", b])
+
+
+def test_settings_go_on_stdin_not_the_command_line(tmp_path, monkeypatch):
+    from tests.helpers import LocalShell
+    monkeypatch.setenv("HOME", str(tmp_path))
+    p = permissions.parse(json.dumps({"env": {"ANTHROPIC_API_KEY": "sk-secret"}}), "")
+    assert "sk-secret" not in permissions.save_command(p)  # ps on the login node shows command lines
+    permissions.save(LocalShell(), p)
+    saved = json.loads((tmp_path / permissions.SETTINGS).read_text())
+    assert saved["env"]["ANTHROPIC_API_KEY"] == "sk-secret" and "Bash(trash:*)" in saved["permissions"]["allow"]

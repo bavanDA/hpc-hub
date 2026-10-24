@@ -5,6 +5,7 @@ import base64
 import json
 import re
 import shlex
+import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -143,11 +144,13 @@ def _write(path: str, text: str, mode: str = "") -> str:
 
 
 def save_command(p: Permissions) -> str:
+    """Writes the hook files; settings.json itself comes on stdin (it can hold API keys, and a command line
+    shows in ps on the shared login node)."""
     guard = {"trash": p.trash, "ask": sorted(p.ask)}
     steps = [
         "mkdir -p ~/.claude/hooks ~/.local/bin",
         f"cp ~/{SETTINGS} ~/{SETTINGS}.bak 2>/dev/null; true",
-        _write(SETTINGS, json.dumps(apply(p), indent=2) + "\n"),
+        f"cat > ~/{SETTINGS}.new && mv ~/{SETTINGS}.new ~/{SETTINGS}",
         _write(GUARD, (FILES / "guard.py").read_text(), "+x"),
         _write(GUARD_CONF, json.dumps(guard) + "\n"),
         _write(TRASH, (FILES / "trash").read_text(), "+x"),
@@ -159,6 +162,7 @@ def save_command(p: Permissions) -> str:
 
 
 def save(ssh: SshMaster, p: Permissions) -> None:
-    res = ssh.run(save_command(p), timeout=60)
+    res = subprocess.run(ssh.argv(save_command(p)), input=json.dumps(apply(p), indent=2) + "\n",
+                         capture_output=True, text=True, timeout=60)
     if res.returncode != 0:
         raise OSError(res.stderr.strip() or "could not save the settings")
