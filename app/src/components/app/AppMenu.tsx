@@ -1,0 +1,63 @@
+// The ☰ menu in the header (hpc_hub/ui/window.py _menu): Preferences, About, and the two ways to quit.
+// Ctrl+, opens Preferences and Ctrl+Q quits, as in the GTK app (Cmd on macOS).
+import { Menu } from 'lucide-react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
+
+import { AboutDialog } from './About'
+import { isMac } from './platform'
+import { PreferencesDialog } from './Preferences'
+import { useQuit } from './quit'
+
+export function AppMenu({ onExperimental }: { onExperimental: (on: boolean) => void }) {
+  const [open, setOpen] = useState(false)
+  const [dialog, setDialog] = useState<ReactNode>(null)
+  const box = useRef<HTMLDivElement>(null)
+  const quit = useQuit()
+  const close = () => setDialog(null)
+  const prefs = () => setDialog(<PreferencesDialog onClose={close} onExperimental={onExperimental} />)
+
+  useEffect(() => {
+    const away = (e: MouseEvent) => !box.current?.contains(e.target as Node) && setOpen(false)
+    const key = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false)
+      if (!(isMac ? e.metaKey : e.ctrlKey) || e.altKey || e.shiftKey) return
+      if (e.key === ',') { e.preventDefault(); setOpen(false); prefs() }
+      if (e.key.toLowerCase() === 'q') { e.preventDefault(); setOpen(false); quit.quit() }
+    }
+    window.addEventListener('mousedown', away)
+    window.addEventListener('keydown', key)
+    return () => { window.removeEventListener('mousedown', away); window.removeEventListener('keydown', key) }
+  })
+
+  const items: [string, () => void, string?][][] = [
+    [['Preferences…', prefs, isMac ? '⌘,' : 'Ctrl+,'], ['About HPC Hub', () => setDialog(<AboutDialog onClose={close} />)]],
+    [['Disconnect all and quit…', quit.disconnectAndQuit],
+      ['Quit (keep everything running)', quit.quit, isMac ? '⌘Q' : 'Ctrl+Q']],
+  ]
+  return (
+    <div ref={box} className="relative">
+      <button aria-label="Menu" title="Menu" aria-expanded={open} onClick={() => setOpen(!open)}
+        className={`grid size-8 place-items-center rounded-md hover:bg-hover ${open ? 'bg-selected' : ''}`}>
+        <Menu size={16} />
+      </button>
+      {open && (
+        <div role="menu" className="absolute right-0 top-full z-30 mt-1.5 min-w-[280px] rounded-xl bg-card p-1
+          shadow-[0_0_0_1px_var(--color-line),0_6px_20px_rgb(0_0_0/0.25)]">
+          {items.map((group, n) => (
+            <div key={n} className={n ? 'mt-1 border-t border-line pt-1' : ''}>
+              {group.map(([label, run, keys]) => (
+                <button key={label} role="menuitem" onClick={() => { setOpen(false); run() }}
+                  className="flex h-9 w-full items-center gap-6 whitespace-nowrap rounded-md px-3 text-left hover:bg-hover">
+                  <span className="flex-1">{label}</span>
+                  {keys && <span className="text-[13px] text-dim">{keys}</span>}
+                </button>
+              ))}
+            </div>
+          ))}
+        </div>
+      )}
+      {dialog}
+      {quit.dialog}
+    </div>
+  )
+}
