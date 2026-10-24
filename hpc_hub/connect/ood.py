@@ -3,11 +3,13 @@ find your username and home folder, and add this computer's SSH key, so the app 
 
 import html
 import json
+import os
 import re
 import ssl
 import urllib.error
 import urllib.parse
 import urllib.request
+import warnings
 
 from ..core import browser
 from . import chrome_cookies
@@ -44,9 +46,36 @@ def with_key(current: str, key: str) -> str | None:
     return current + ("" if not current or current.endswith("\n") else "\n") + key.strip() + "\n"
 
 
+# Where Linux distributions keep the trusted certificate authorities (Fedora/RHEL, Debian/Ubuntu/Arch, others)
+CA_BUNDLES = ("/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem", "/etc/ssl/certs/ca-certificates.crt",
+              "/etc/ssl/cert.pem", "/etc/pki/tls/cert.pem")
+
+
+def system_roots() -> list:
+    """The certificate authorities this computer trusts."""
+    from cryptography import x509
+    paths = ssl.get_default_verify_paths()
+    for f in (os.environ.get(paths.openssl_cafile_env), paths.cafile, paths.openssl_cafile, *CA_BUNDLES):
+        if f and os.path.isfile(f):
+            with open(f, "rb") as fh, warnings.catch_warnings():
+                warnings.simplefilter("ignore")  # some system roots predate today's rules (negative serials)
+                return x509.load_pem_x509_certificates(fh.read())
+    raise PortalError("Can't find this computer's trusted certificate authorities")
+
+
+def check_chain(leaf, issuer, host: str, roots: list) -> None:
+    """PortalError unless leaf, through issuer, leads to one of roots and is for host. A fetched issuer is only
+    as good as this check: anyone on the network can serve a certificate naming their own issuer."""
+    from cryptography.x509.verification import DNSName, PolicyBuilder, Store, VerificationError
+    try:
+        PolicyBuilder().store(Store(roots)).build_server_verifier(DNSName(host)).verify(leaf, [issuer])
+    except (VerificationError, ValueError) as e:
+        raise PortalError(f"{host} sent a certificate that does not lead to a trusted authority") from e
+
+
 def tls_context(host: str) -> ssl.SSLContext:
     """Some portals send the wrong intermediate certificate (browsers fetch the right one): fetch it the same
-    way, from the address in the server's certificate. The chain is still checked up to a trusted root."""
+    way, from the address in the server's certificate, and use it only if the chain reaches a trusted root."""
     ctx = ssl.create_default_context()
     try:
         with urllib.request.urlopen(f"https://{host}/", timeout=15, context=ctx):
@@ -60,10 +89,14 @@ def tls_context(host: str) -> ssl.SSLContext:
     from cryptography.hazmat.primitives.serialization import Encoding
     from cryptography.x509.oid import AuthorityInformationAccessOID, ExtensionOID
     leaf = x509.load_pem_x509_certificate(ssl.get_server_certificate((host, 443), timeout=15).encode())
-    aia = leaf.extensions.get_extension_for_oid(ExtensionOID.AUTHORITY_INFORMATION_ACCESS).value
-    url = next(d.access_location.value for d in aia if d.access_method == AuthorityInformationAccessOID.CA_ISSUERS)
+    try:
+        aia = leaf.extensions.get_extension_for_oid(ExtensionOID.AUTHORITY_INFORMATION_ACCESS).value
+        url = next(d.access_location.value for d in aia if d.access_method == AuthorityInformationAccessOID.CA_ISSUERS)
+    except (x509.ExtensionNotFound, StopIteration) as e:
+        raise PortalError(f"{host} sent a certificate this computer does not trust") from e
     with urllib.request.urlopen(url, timeout=15) as r:
         issuer = x509.load_der_x509_certificate(r.read())
+    check_chain(leaf, issuer, host, system_roots())
     ctx.load_verify_locations(cadata=issuer.public_bytes(Encoding.PEM).decode())
     return ctx
 
