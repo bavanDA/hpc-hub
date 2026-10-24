@@ -156,6 +156,13 @@ class GlobusPane(Gtk.Box):
                 self._show_empty("Globus needs your permission", f"Allow HPC Hub to use {cfg.globus.collection_name}.",
                                  "dialog-password-symbolic", "Allow", self.page.consent)
                 return
+            if err and globus.personal_offline(err):
+                self._show_empty(f"Globus Connect is not running on {cfg.name}",
+                                 f"Your {cfg.globus.collection_name} collection only works while it runs there. "
+                                 "Start it on the login node? It shares your home, project and scratch folders, "
+                                 "only with your own Globus account.", "network-offline-symbolic", "Start it",
+                                 lambda: self.page.start_personal(cfg))
+                return
             if err:
                 if self.path and path != self.path:
                     self.page.toast(f"{cfg.name}: {err}")

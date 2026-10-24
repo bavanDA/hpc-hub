@@ -4,8 +4,9 @@ import posixpath
 
 from gi.repository import Adw, GLib, Gtk
 
-from ... import globus
+from ... import globus, remote_fs
 from ...config import AppSettings, ClusterConfig
+from ...session import ClusterSession
 from ..widgets import bg
 from .dialogs import CollectionPicker, LoginDialog
 from .pane import GlobusPane, or_consent
@@ -37,10 +38,13 @@ class TaskRow(Adw.ActionRow):
 
 
 class GlobusPage(Gtk.Box):
-    def __init__(self, app: AppSettings, clusters: list[ClusterConfig], save_app, save_clusters, toast):
+    def __init__(self, app: AppSettings, clusters: list[ClusterConfig], save_app, save_clusters, toast,
+                 sessions: dict[str, ClusterSession] | None = None):
         super().__init__(orientation=Gtk.Orientation.VERTICAL)
         self.app, self.clusters, self.save_app, self.save_clusters, self.toast = (
             app, clusters, save_app, save_clusters, toast)
+        self.sessions = sessions or {}
+        self._checked = False
         self.client: globus.Globus | None = None
         self.poll_id = 0
         self._seen_active: set[str] = set()
@@ -105,7 +109,7 @@ class GlobusPage(Gtk.Box):
             self._setup = self.consent
         else:
             self.stack.set_visible_child_name("main")
-            self.find_own()
+            self.check_collections()
             for pane in (self.left, self.right):
                 pane.go(pane.paths.get(pane.cfg.id, ""))
             self.refresh_tasks()
@@ -114,21 +118,46 @@ class GlobusPage(Gtk.Box):
         self._stop_poll()
         self.stack.set_visible_child_name("setup")
 
-    def find_own(self) -> None:
-        """Clusters with no shared Globus collection (Wulver) use yours; find it instead of asking."""
-        client = self.client
-        if not any(not c.globus.collection_id and c.globus.mine for c in self.clusters):
+    def check_collections(self) -> None:
+        """Find each cluster's collection, and replace saved ones that are not working collections. Once a run."""
+        if self._checked:
             return
+        self._checked = True
+        client = self.client
 
-        def done(found, _err):
+        def done(changes, _err):
             for c in self.clusters:
-                if c.id in (found or {}):
-                    c.globus.collection_id, c.globus.collection_name = found[c.id].id, found[c.id].name
-                    self.toast(f"Using your Globus collection {found[c.id].name} for {c.name}")
-            if found:
+                if c.id not in (changes or {}):
+                    continue
+                found = changes[c.id]
+                c.globus.collection_id, c.globus.collection_name = (found.id, found.name) if found else ("", "")
+                self.toast(f"{c.name} uses Globus collection {found.name}" if found else
+                           f"No Globus collection found for {c.name}. Pick one")
+            if changes:
                 self.save_clusters()
                 self.reload()
-        bg(lambda: globus.find_own(client, self.clusters), done)
+        bg(lambda: globus.check_collections(client, self.clusters), done)
+
+    def start_personal(self, cfg: ClusterConfig) -> None:
+        """Your own collection (Wulver): start Globus Connect Personal on the login node."""
+        s = self.sessions.get(cfg.id)
+        if not (s and s.connected):
+            self.toast(f"Connect to {cfg.name} first")
+            return
+        self.toast(f"Starting Globus Connect on {cfg.name}…")
+
+        def start():
+            folders = [p.path for p in remote_fs.storage(remote_fs.places(s.ssh)) if p.label != "Home"]
+            res = s.ssh.run(globus.personal_start(folders), timeout=90)
+            if res.returncode != 0:
+                raise RuntimeError(res.stderr.strip() or "Could not start it")
+
+        def done(_r, err):
+            self.toast(f"Could not start Globus Connect: {err}" if err else f"Globus Connect is running on {cfg.name}")
+            for pane in (self.left, self.right):
+                if pane.cfg is cfg:
+                    pane.go(pane.paths.get(cfg.id, ""))
+        bg(start, done)
 
     def _setup_action(self) -> None:
         self._setup()

@@ -89,7 +89,7 @@ class HpcHubApp(QuitMixin, Adw.Application):
                 self.connect_session, self.disconnect_session, self.open_settings, self.open_tool,
                 lambda: config.save(self.clusters),
                 lambda toast: GlobusPage(self.app_settings, self.clusters, lambda: config.save_app(self.app_settings),
-                                         lambda: config.save(self.clusters), toast),
+                                         lambda: config.save(self.clusters), toast, self.sessions),
                 lambda toast: ProjectsPage(list(self.sessions.values()), self.projects, toast, Actions(
                     vscode=lambda s, folder, target: self.tools.vscode(s, folder, target),
                     agent=lambda s, agent, folder: self.tools.agent(s, agent, folder),

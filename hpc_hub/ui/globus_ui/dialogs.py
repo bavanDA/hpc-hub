@@ -106,7 +106,7 @@ class LoginDialog(Adw.Dialog):
 class CollectionPicker(Adw.Dialog):
     def __init__(self, client: globus.Globus, cluster: ClusterConfig, on_pick: Callable[[globus.Collection], None]):
         super().__init__(title=f"Globus collection for {cluster.name}", content_width=560, content_height=620)
-        self.client, self.on_pick = client, on_pick
+        self.client, self.on_pick, self.cluster = client, on_pick, cluster
         self.search = Gtk.SearchEntry(placeholder_text="Search, e.g. Expanse, Wulver, Bouchet", margin_top=8,
                                       margin_start=12, margin_end=12)
         self.results = Gtk.ListBox(css_classes=["boxed-list"], selection_mode=Gtk.SelectionMode.NONE,
@@ -120,7 +120,7 @@ class CollectionPicker(Adw.Dialog):
         self.set_child(tv)
         self.search.connect("activate", lambda *_: self._run())
         self.search.connect("search-changed", lambda *_: len(self.search.get_text()) >= 3 and self._run())
-        self.search.set_text(cluster.name.split()[0])
+        self.search.set_text((globus.cluster_words(cluster.name, cluster.host)[0] or [cluster.name])[0])
 
     def _run(self) -> None:
         text = self.search.get_text().strip()
@@ -133,9 +133,15 @@ class CollectionPicker(Adw.Dialog):
             if err:
                 self.results.append(Adw.ActionRow(title="Search failed", subtitle=GLib.markup_escape_text(err)))
                 return
-            for c in found:
+            words, domain = globus.cluster_words(self.cluster.name, self.cluster.host)
+            top = globus.best(found, words, domain)
+            for c in globus.ranked(found, words, domain):
                 row = Adw.ActionRow(title=GLib.markup_escape_text(c.name),
                                     subtitle=GLib.markup_escape_text(f"{c.owner} · {c.id}"), activatable=True)
+                if c is top:
+                    row.add_suffix(Gtk.Label(label="Best match", css_classes=["accent"]))
                 row.collection = c
                 self.results.append(row)
-        bg(lambda: self.client.search(text), done)
+            if not found:
+                self.results.append(Adw.ActionRow(title="Nothing found", subtitle="Try another word"))
+        bg(lambda: self.client.search(text) + self.client.search(text, mine=True), done)

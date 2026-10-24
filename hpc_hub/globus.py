@@ -5,6 +5,7 @@ import hashlib
 import json
 import re
 import secrets
+import shlex
 import time
 import urllib.error
 import urllib.parse
@@ -35,6 +36,53 @@ class Collection:
     id: str
     name: str
     owner: str
+    kind: str = ""  # Globus entity_type
+    working: bool = True
+    managed: bool = False  # under an institution's Globus subscription
+    contact: str = ""
+    mine: bool = False  # one of your own (Globus Connect Personal)
+
+
+# Collections that hold a cluster's files for everyone with an account there. Not: servers (GCSv5_endpoint),
+# someone's shared folder (guest collections).
+CLUSTER_KINDS = {"GCSv5_mapped_collection", "GCP_mapped_collection", "GCSv4_host"}
+PICKABLE_KINDS = CLUSTER_KINDS | {"GCSv5_guest_collection", "GCSv4_share", "GCP_guest_collection"}
+GENERIC_WORDS = {"login", "hpc", "cluster", "ssh", "www", "edu", "org", "com", "net", "ac", "uk"}
+
+
+def _collection(d: dict, mine: bool = False) -> Collection:
+    return Collection(d["id"], d.get("display_name") or d.get("canonical_name") or d["id"], d.get("owner_string") or "",
+                      d.get("entity_type") or "", not d.get("non_functional"), bool(d.get("subscription_id")),
+                      d.get("contact_email") or "", mine)
+
+
+def cluster_words(name: str, host: str) -> tuple[list[str], str]:
+    """Words that name the cluster (expanse, bouchet, wulver) and its site's domain (sdsc.edu)."""
+    labels = host.lower().split(".")
+    domain = ".".join(labels[-2:]) if len(labels) > 1 else ""
+    words = re.findall(r"[a-z0-9]+", f"{name} {host}".lower())
+    skip = GENERIC_WORDS | set(domain.split("."))
+    return list(dict.fromkeys(w for w in words if len(w) > 2 and w not in skip)), domain
+
+
+def score(c: Collection, words: list[str], domain: str) -> int:
+    """Higher is more likely the cluster's own collection."""
+    name = c.name.lower()
+    at_site = bool(domain) and any(e.lower().endswith(("@" + domain, "." + domain)) for e in (c.owner, c.contact))
+    return (2 * any(w in name for w in words) + 3 * c.managed + 2 * at_site + 3 * c.mine
+            - 3 * ("test" in name) - (c.kind == "GCP_mapped_collection") - 2 * (c.kind not in CLUSTER_KINDS))
+
+
+def ranked(found: list[Collection], words: list[str], domain: str) -> list[Collection]:
+    """Pickable collections, best first."""
+    ok = {c.id: c for c in found if c.working and c.kind in PICKABLE_KINDS}
+    return sorted(ok.values(), key=lambda c: -score(c, words, domain))
+
+
+def best(found: list[Collection], words: list[str], domain: str) -> Collection | None:
+    """The cluster's own collection when one is clearly it, else None (then you pick)."""
+    top = [c for c in ranked(found, words, domain) if c.kind in CLUSTER_KINDS]
+    return top[0] if top and score(top[0], words, domain) >= 5 else None
 
 
 @dataclass
@@ -125,19 +173,42 @@ def transfer_tokens(resp: dict) -> dict:
     raise GlobusError("Globus did not return a transfer token")
 
 
-def own_collection(found: list[Collection], name: str) -> Collection | None:
-    """Your personal collection for a cluster: its name has the cluster's word in it (wulver-jdoe)."""
-    return next((c for c in found if name.lower() in c.name.lower()), None)
+# Start Globus Connect Personal (unpacked in ~) on a login node, sharing home and the given folders, unless it runs.
+PERSONAL_START = r"""
+gcp=$(ls -d "$HOME"/globusconnectpersonal-*/ 2>/dev/null | sort -V | tail -1)
+[ -n "$gcp" ] || { echo "Globus Connect Personal is not installed in your home folder there" >&2; exit 2; }
+"$gcp/globusconnectpersonal" -status >/dev/null 2>&1 && exit 0
+allow="rw~/"
+for p in "$@"; do allow="$allow,rw$p,rw$(readlink -f "$p")"; done
+cd "$gcp" && setsid nohup ./globusconnectpersonal -start -restrict-paths "$allow" >/dev/null 2>&1 </dev/null &
+for _ in $(seq 20); do sleep 2; "$gcp/globusconnectpersonal" -status >/dev/null 2>&1 && exit 0; done
+echo "Globus Connect Personal started but did not connect to Globus" >&2; exit 1
+"""
 
 
-def find_own(client: "Globus", clusters) -> dict[str, Collection]:
-    """Your own collection for each cluster that has no shared one yet, by cluster id."""
+def personal_start(paths: list[str]) -> str:
+    return " ".join(["bash", "-c", shlex.quote(PERSONAL_START), "_", *map(shlex.quote, paths)])
+
+
+def personal_offline(err: str) -> bool:
+    return "Globus Connect Personal" in err and "not currently connected" in err
+
+
+def check_collections(client: "Globus", clusters) -> dict[str, Collection | None]:
+    """Each cluster's collection, found when missing or when the saved one is not a working collection.
+    Returns only the clusters whose collection should change (None: none found, you pick)."""
     out = {}
     for c in clusters:
-        if not c.globus.collection_id and c.globus.mine:
-            found = own_collection(client.search(c.globus.mine, mine=True), c.globus.mine)
-            if found:
-                out[c.id] = found
+        if c.globus.collection_id:
+            try:
+                saved = client.collection(c.globus.collection_id)
+                if saved.working and saved.kind in PICKABLE_KINDS:
+                    continue
+            except GlobusError:
+                continue  # can't tell (offline, no permission yet): keep it
+        found = client.find_for(c.name, c.host)
+        if found or c.globus.collection_id:
+            out[c.id] = found
     return out
 
 
@@ -179,11 +250,25 @@ class Globus:
         return self.tokens["access_token"]
 
     def search(self, text: str, mine: bool = False) -> list[Collection]:
-        q = urllib.parse.urlencode({"filter_fulltext": text, "limit": 25,
+        q = urllib.parse.urlencode({"filter_fulltext": text, "limit": 50,
                                     **({"filter_scope": "my-endpoints"} if mine else {})})
         resp = _http("GET", f"{TRANSFER}/endpoint_search?{q}", self._token())
-        return [Collection(d["id"], d.get("display_name") or d.get("canonical_name") or d["id"],
-                           d.get("owner_string", "")) for d in resp.get("DATA", [])]
+        return [_collection(d, mine) for d in resp.get("DATA", [])]
+
+    def collection(self, collection_id: str) -> Collection:
+        return _collection(_http("GET", f"{TRANSFER}/endpoint/{collection_id}", self._token()))
+
+    def candidates(self, name: str, host: str) -> list[Collection]:
+        """Everything Globus knows that could be this cluster's, best first; yours count as yours."""
+        words, domain = cluster_words(name, host)
+        found: dict[str, Collection] = {}
+        for w in words:
+            for c in self.search(w) + self.search(w, mine=True):
+                found[c.id] = c if c.mine or c.id not in found else found[c.id]
+        return ranked(list(found.values()), words, domain)
+
+    def find_for(self, name: str, host: str) -> Collection | None:
+        return best(self.candidates(name, host), *cluster_words(name, host))
 
     def submit(self, src: str, src_path: str, dst: str, dst_path: str, label: str, recursive: bool,
                sync_level: int | None = None, skip: list[str] | None = None) -> str:

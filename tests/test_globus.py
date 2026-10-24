@@ -56,16 +56,52 @@ def test_parse_ls():
     assert items[2].size == 5 and not items[2].is_dir and items[2].modified == "2026-10-18 12:30"
 
 
-def test_find_own_collection():
+C = globus.Collection
+MAPPED, SERVER, GUEST, PERSONAL = ("GCSv5_mapped_collection", "GCSv5_endpoint", "GCSv5_guest_collection",
+                                   "GCP_mapped_collection")
+
+
+def test_cluster_words():
+    assert globus.cluster_words("SDSC Expanse", "login.expanse.sdsc.edu") == (["expanse"], "sdsc.edu")
+    assert globus.cluster_words("Wulver (NJIT)", "wulver.njit.edu") == (["wulver"], "njit.edu")
+
+
+def test_best_collection_skips_servers_shares_and_tests():
+    words, domain = ["bouchet"], "yale.edu"
+    found = [C("1", "Yale CRC Bouchet", "site@globusid.org", SERVER, False, True),
+             C("2", "PI-Bouchet", "pi@yale.edu", GUEST, True, True),
+             C("3", "Bouchet testing", "ops@yale.edu", MAPPED, True, True),
+             C("4", "Yale CRC Bouchet HA", "admin@yale.edu", MAPPED, True, True, "hpc@lists.yale.edu")]
+    assert globus.best(found, words, domain).id == "4"
+    assert [c.id for c in globus.ranked(found, words, domain)] == ["4", "2", "3"]  # no server
+    assert globus.best(found[:3], words, domain) is None  # nothing clearly it: you pick
+
+
+def test_best_collection_falls_back_to_yours():
+    words, domain = ["wulver"], "njit.edu"
+    assert globus.best([C("9", "wulver-jdoe", "jdoe@njit.edu", PERSONAL, mine=True)], words, domain).id == "9"
+    assert globus.best([C("9", "wulver-jdoe", "jdoe@njit.edu", PERSONAL)], words, domain) is None  # someone else's
+
+
+def test_check_collections_replaces_broken_ones():
     from hpc_hub import config
+    good = C("good", "SDSC HPC - Expanse Lustre", "site@globusid.org", MAPPED, True, True, "help@sdsc.edu")
 
     class Fake:
-        def __init__(self, *found):
-            self.found = list(found)
+        def collection(self, cid):
+            return {"server": C("server", "x", "", SERVER, False), "good": good}[cid]
 
-        def search(self, text, mine=False):
-            return self.found if mine else []
-    laptop, wulver = globus.Collection("1", "laptop", "me"), globus.Collection("2", "Wulver-me", "me")
+        def find_for(self, name, host):
+            return good if "Expanse" in name else None
     clusters = config.default_clusters()
-    assert globus.find_own(Fake(laptop, wulver), clusters) == {"wulver": wulver}  # Expanse, Yale are built in
-    assert globus.find_own(Fake(laptop), clusters) == {}
+    by_id = {c.id: c for c in clusters}
+    by_id["sdsc"].globus.collection_id = "server"
+    by_id["yale"].globus.collection_id = "good"
+    assert globus.check_collections(Fake(), clusters) == {"sdsc": good}  # wulver: none found, nothing saved
+
+
+def test_personal_start_and_offline():
+    cmd = globus.personal_start(["/project/my group/me"])
+    assert cmd.endswith("_ '/project/my group/me'")
+    assert globus.personal_offline("The Globus Connect Personal endpoint 'w (1)' is not currently connected to Globus")
+    assert not globus.personal_offline("Permission denied")
