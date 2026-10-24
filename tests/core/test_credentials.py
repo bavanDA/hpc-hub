@@ -5,6 +5,8 @@ import pytest
 
 from hpc_hub.core import credentials
 
+pytestmark = pytest.mark.keyring_backends  # these stand in for the vault modules themselves
+
 
 def _fake_keyring(monkeypatch):
     """keyring's backend modules, standing in for the real ones (not installed here)."""

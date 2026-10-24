@@ -162,6 +162,7 @@ def test_password_not_remembered_is_asked_once_and_kept_in_memory(monkeypatch):
     saved = {}
     monkeypatch.setattr(credentials, "save", lambda c, k, login: saved.__setitem__((c, k), login))
     monkeypatch.setattr(credentials, "load", lambda c, k: saved.get((c, k)))
+    monkeypatch.setattr(credentials, "clear", lambda c, k: saved.pop((c, k), None))
     asked = []
     fake = type("H", (), {"save_clusters": lambda self: None,
                           "question": lambda self, kind, data: asked.append(data["prompt"]) or "secret",

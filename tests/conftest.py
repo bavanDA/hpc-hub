@@ -45,6 +45,8 @@ def _name(path: Path) -> str:
 def pytest_configure(config):
     config.addinivalue_line("markers", "gtk: needs PyGObject (GTK screens, Poppler, GNOME keyring)")
     config.addinivalue_line("markers", "posix: needs a POSIX system (bash, coreutils, Unix sockets)")
+    config.addinivalue_line("markers", "keyring_backends: may call credentials' real backend functions "
+                                       "(the test stands in for the vault modules itself)")
 
 
 def pytest_ignore_collect(collection_path, config):
@@ -94,3 +96,20 @@ def sshd(tmp_path, monkeypatch):
     server.start()
     yield server
     server.stop()
+
+
+@pytest.fixture(autouse=True)
+def _never_the_real_keyring(request, monkeypatch):
+    """Every test gets an in-memory keyring, so none can read, change or delete the logins of whoever runs the
+    tests (a missed monkeypatch once called the real one). Tests marked keyring_backends stub the vaults
+    themselves."""
+    if request.node.get_closest_marker("keyring_backends"):
+        yield
+        return
+    from hpc_hub.core import credentials
+    store: dict = {}
+    key = lambda attrs: tuple(sorted(attrs.items()))  # noqa: E731
+    monkeypatch.setattr(credentials, "_store", lambda attrs, label, secret: store.__setitem__(key(attrs), secret))
+    monkeypatch.setattr(credentials, "_lookup", lambda attrs: store.get(key(attrs)))
+    monkeypatch.setattr(credentials, "_clear", lambda attrs: store.pop(key(attrs), None))
+    yield
