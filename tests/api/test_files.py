@@ -231,3 +231,28 @@ def test_running_globus_copies_are_picked_up(monkeypatch):
     first = m.transfers()
     assert [t["title"] for t in first] == ["data to Yale · Globus"]
     assert m.transfers() == m.transfers() and len(m._transfers) == 1  # once per run, no duplicates
+
+
+def test_copy_on_one_cluster_copies_and_can_be_stopped(tmp_path, monkeypatch):
+    import threading
+    import time
+
+    from hpc_hub.api.methods import files as m
+    from tests.helpers import LocalShell
+    monkeypatch.setattr(m, "_emit", lambda t: None)
+    (tmp_path / "src").mkdir()
+    (tmp_path / "src" / "a.txt").write_text("hi")
+    (tmp_path / "dst").mkdir()
+    t = m.Transfer("1", "x", "cluster")
+    m._on_cluster(t, LocalShell(), str(tmp_path / "src"), str(tmp_path / "dst"))
+    assert (tmp_path / "dst" / "src" / "a.txt").read_text() == "hi" and t.status == "Done"
+
+    monkeypatch.setattr(m, "_cp_command", lambda s, d: "sleep 30 & echo $!; wait $!")  # a copy that takes long
+    t2 = m.Transfer("2", "x", "cluster")
+    threading.Timer(0.5, t2.progress.cancelled.set).start()
+    start = time.time()
+    try:
+        m._on_cluster(t2, LocalShell(), "a", "b")
+        raise AssertionError("should stop")
+    except RuntimeError as e:
+        assert str(e) == "Cancelled" and time.time() - start < 10

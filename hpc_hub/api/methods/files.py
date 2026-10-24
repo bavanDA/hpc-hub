@@ -3,6 +3,7 @@
 import base64
 import posixpath
 import secrets
+import subprocess
 import threading
 import time
 from dataclasses import asdict, dataclass, field
@@ -234,10 +235,25 @@ def _run(t: Transfer, work) -> None:
     _emit(t)
 
 
+def _cp_command(src_path: str, dst_dir: str) -> str:
+    """cp in the background, printing its process id first, so the X can stop it on the cluster."""
+    return f"cp -r -- {remote_fs.q(src_path)} {remote_fs.q(dst_dir.rstrip('/') + '/')} & echo $!; wait $!"
+
+
 def _on_cluster(t: Transfer, ssh, src_path: str, dst_dir: str) -> None:
     t.status = "Copying on the cluster…"
     _emit(t)
-    remote_fs.copy(ssh, src_path, dst_dir)
+    proc = ssh.popen(_cp_command(src_path, dst_dir), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    pid = (proc.stdout.readline() or "").strip()
+    while proc.poll() is None:
+        if t.progress.cancelled.is_set() and pid.isdigit():
+            ssh.run(f"kill {int(pid)}", timeout=30)
+            proc.wait(timeout=30)
+            raise RuntimeError("Cancelled")
+        time.sleep(0.5)
+    if proc.returncode != 0:
+        err = proc.stderr.read().strip()
+        raise RuntimeError(err.splitlines()[-1] if err else "Copy failed")
     t.status = "Done"
 
 
