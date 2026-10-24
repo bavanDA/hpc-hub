@@ -129,8 +129,18 @@ struct Exit {
     code: u32,
 }
 
+/// The UI may only start ssh: even a bug in the page can't run other programs on this computer.
+fn ssh_only(argv: &[String]) -> bool {
+    argv.first()
+        .and_then(|p| std::path::Path::new(p).file_stem())
+        .is_some_and(|name| name == "ssh")
+}
+
 #[tauri::command]
 pub fn pty_open(argv: Vec<String>, cols: u16, rows: u16, app: AppHandle, ptys: State<Ptys>) -> Result<u32, String> {
+    if !ssh_only(&argv) {
+        return Err("Terminals only run ssh".into());
+    }
     let out = app.clone();
     ptys.open(
         &argv,
@@ -162,6 +172,13 @@ pub fn pty_close(id: u32, ptys: State<Ptys>) -> Result<(), String> {
 
 #[cfg(test)]
 mod tests {
+
+    #[test]
+    fn only_ssh_may_start() {
+        let v = |a: &[&str]| a.iter().map(|x| x.to_string()).collect::<Vec<_>>();
+        assert!(ssh_only(&v(&["ssh", "-t", "host"])) && ssh_only(&v(&["/usr/bin/ssh"])) && ssh_only(&v(&["ssh.exe"])));
+        assert!(!ssh_only(&v(&["bash", "-c", "ssh"])) && !ssh_only(&v(&["sshd"])) && !ssh_only(&[]));
+    }
     use super::*;
     use std::time::{Duration, Instant};
 
