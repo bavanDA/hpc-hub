@@ -11,6 +11,8 @@ import { Globus } from './pages/Globus'
 import { Jobs } from './pages/Jobs'
 import { Permissions } from './pages/Permissions'
 import { Projects } from './pages/Projects'
+import { Schedules } from './pages/Schedules'
+import { Skills } from './pages/Skills'
 import { Terminals } from './pages/Terminals'
 import { Usage } from './pages/Usage'
 
@@ -20,6 +22,8 @@ const TITLES = Object.fromEntries(GROUPS.flatMap(([, items]) => items.map((i) =>
 const PAGES: Partial<Record<Page, ComponentType>> = {
   projects: Projects, terminals: Terminals, permissions: Permissions, clusters: Clusters, jobs: Jobs,
   usage: Usage, files: Files, globus: Globus,
+  skills: Skills,
+  schedules: Schedules,
 }
 
 export default function App() {

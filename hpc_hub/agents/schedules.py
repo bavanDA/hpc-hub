@@ -56,6 +56,7 @@ class Schedule:
     days: list[int] = field(default_factory=list)  # 1 = Monday ... 7 = Sunday; empty = every day
     minutes: int = 120  # time limit of each run
     enabled: bool = True
+    compute: dict = field(default_factory=dict)  # cores, memory, GPUs, queue; empty = the cluster's node settings
 
     @property
     def job_name(self) -> str:
@@ -120,9 +121,31 @@ def script(s: Schedule, agent: Agent, settings: AgentSettings, profile: ComputeP
     return "\n".join(lines + ["", body, ""])
 
 
+COMPUTE_INTS = ("cpus", "mem_gb", "gpus")
+COMPUTE_TEXT = ("partition", "account", "qos")
+
+
+def profile_for(s: Schedule, base: ComputeProfile) -> ComputeProfile:
+    """The cluster's node settings with the schedule's own resources on top. Raises ValueError if they are bad."""
+    c = s.compute if isinstance(s.compute, dict) else {}
+    changes: dict = {}
+    for k in COMPUTE_INTS:
+        if k in c:
+            if isinstance(c[k], bool) or not isinstance(c[k], int) or c[k] < 0:
+                raise ValueError(f"{k} must be a whole number")
+            changes[k] = c[k]
+    changes.update({k: str(c[k]).strip() for k in COMPUTE_TEXT if k in c})
+    p = replace(base, **changes)
+    errors = slurm.validate(p)
+    if errors:
+        raise ValueError(". ".join(errors))
+    return p
+
+
 def save_command(s: Schedule, settings: AgentSettings, profile: ComputeProfile) -> str:
     """Write the schedule's files, then (re)queue it: cancel the waiting job, submit for the next time."""
     agent = BY_ID[s.agent]
+    profile = profile_for(s, profile)
     d = folder_of(s.name)
     meta = json.dumps(asdict(s))
     steps = [
