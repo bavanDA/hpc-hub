@@ -146,3 +146,10 @@ def test_partitions_and_longest_time(hub):
     assert got["known"] and got["partitions"] == ["general", "debug"] and got["qos"] == ["low"]
     assert (got["longest"], got["why"]) == (480, "partition debug")
     assert clusters.partitions("wulver")["longest"] == 1440
+
+
+def test_log_tail(hub, monkeypatch, tmp_path):
+    monkeypatch.setattr(clusters, "log_dir", lambda: tmp_path)
+    assert clusters.log("wulver") == []
+    (tmp_path / "wulver.log").write_text("2026-01-02 10:00:00 VPN up\n2026-01-02 10:00:05 Signed in as jdoe\n")
+    assert clusters.log("wulver", lines=1) == ["10:00:05  Signed in as jdoe"]

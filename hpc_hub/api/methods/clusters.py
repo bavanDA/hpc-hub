@@ -7,6 +7,7 @@ from ...compute import slurm
 from ...connect.state import State
 from ...core import credentials
 from ...core.config import ComputeProfile
+from ...core.paths import log_dir
 from ..hub import hub
 from ..server import method
 
@@ -14,6 +15,7 @@ from ..server import method
 PROFILE_KEYS = {f.name for f in fields(ComputeProfile)} - {"extra_args"}
 INT_KEYS = {"cpus", "mem_gb", "gpus"}
 KINDS = (credentials.SSH, credentials.VPN)
+LOG_TAIL = 200_000  # bytes read from the end of a log file
 
 
 def _logins(cfg) -> tuple[credentials.Login, credentials.Login | None]:
@@ -171,3 +173,21 @@ def partitions(cluster: str, partition: str = "", qos: str = "") -> dict:
     longest, why = lim.longest(partition.strip(), qos.strip())
     return {"known": True, "partitions": list(lim.partitions), "default_partition": lim.default_partition,
             "qos": lim.allowed_qos, "default_qos": lim.default_qos, "longest": longest, "why": why}
+
+
+@method("clusters.log")
+def log(cluster: str, lines: int = 200) -> list[str]:
+    """The last lines of the cluster's log file as 'HH:MM:SS  text', so the card's log survives a restart."""
+    path = log_dir() / f"{hub().session(cluster).cfg.id}.log"
+    try:
+        with open(path, "rb") as fh:
+            fh.seek(max(0, path.stat().st_size - LOG_TAIL))
+            text = fh.read().decode("utf-8", "replace")
+    except OSError:
+        return []
+    out = []
+    for line in text.splitlines()[-lines:]:
+        day, _, rest = line.partition(" ")
+        clock, _, rest = rest.partition(" ")
+        out.append(f"{clock}  {rest}" if len(day) == 10 and len(clock) == 8 else line)
+    return out
