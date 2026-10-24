@@ -8,10 +8,11 @@ from dataclasses import dataclass
 from gi.repository import Adw, GLib, Gtk
 
 from ...connect.session import ClusterSession, State
+from ...core import features
 from ...files import remote_fs
 from ...files.remote_fs import Place
 from ...files.ui.folder_picker import FolderPicker
-from ...ui.widgets import agent_buttons, bg, vscode_button
+from ...ui.widgets import bg, open_menu
 from .. import store as projects
 from ..store import Project, ProjectStore
 from .copy_dialog import ProjectCopyDialog
@@ -83,7 +84,8 @@ class ProjectsPage(Gtk.Box):
     # -- list ------------------------------------------------------------------------------
     def reload(self) -> None:
         self.list.remove_all()
-        items = [p for p in self.store.recent() if not p.is_latex]  # papers are in the LaTeX tab
+        # papers are in the LaTeX tab while it is on
+        items = [p for p in self.store.recent() if not (p.is_latex and features.experimental)]
         self.stack.set_visible_child_name("list" if items else "empty")
         q = self.search.get_text().lower().split()
         for p in items:
@@ -101,16 +103,10 @@ class ProjectsPage(Gtk.Box):
         if not s:
             return row
         box = Gtk.Box(spacing=4, valign=Gtk.Align.CENTER)
-        box.append(vscode_button(lambda t: self.run(p, lambda: self.act.vscode(s, p.path, t)), label=""))
-        for b in agent_buttons(lambda agent: self.run(p, lambda: self.act.agent(s, agent, p.path)), labels=False):
-            box.append(b)
-        for icon, tip, fn in (("system-users-symbolic", "Ask all agents in this project",
-                               lambda: self.act.ask(s, p.path)),
-                              ("folder-symbolic", "Files", lambda: self.act.files(s, p.path)),
-                              ("x-office-document-symbolic", "LaTeX", lambda: self.act.latex(s, p))):
-            b = Gtk.Button(icon_name=icon, tooltip_text=tip)
-            b.connect("clicked", lambda *_, f=fn: self.run(p, f))
-            box.append(b)
+        extra = [("ask", "Ask all agents", "system-users-symbolic"), ("files", "Files", "folder-symbolic")]
+        if features.experimental:
+            extra.append(("latex", "LaTeX", "x-office-document-symbolic"))
+        box.append(open_menu(lambda key: self._open(p, s, key), tuple(extra)))
         more = Gtk.MenuButton(icon_name="view-more-symbolic", css_classes=["flat"], tooltip_text="More")
         menu = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2, margin_top=4, margin_bottom=4,
                        margin_start=4, margin_end=4)
@@ -127,6 +123,15 @@ class ProjectsPage(Gtk.Box):
         box.append(more)
         row.add_suffix(box)
         return row
+
+    def _open(self, p: Project, s: ClusterSession, key: str) -> None:
+        kind, _, what = key.partition(":")
+        work = {"vscode": lambda: self.act.vscode(s, p.path, what),
+                "agent": lambda: self.act.agent(s, what, p.path),
+                "ask": lambda: self.act.ask(s, p.path),
+                "files": lambda: self.act.files(s, p.path),
+                "latex": lambda: self.act.latex(s, p)}[kind]
+        self.run(p, work)
 
     def copy_project(self, p: Project) -> None:
         src = self.sessions[p.cluster]
