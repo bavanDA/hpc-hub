@@ -47,12 +47,25 @@ export type Limits = {
   why: string
 }
 
+export type ChromeProfile = { name: string; email: string }
+
+/** A question a login asks (hpc_hub/api/hub.py). pick-browser: where to sign in to the VPN (answer "" for the
+ * app's window or a profile name). browser-login: signing in in Chrome (answer "again", "in-app" or null).
+ * web-login: the app's sign-in window (app/src-tauri/src/sso.rs), answered with JSON {token, error}. */
 export type Question = {
   id: string
-  kind: 'ask' | 'code' | 'pick-browser'
+  kind: 'ask' | 'code' | 'pick-browser' | 'browser-login' | 'web-login'
   cluster: string
   name: string
   prompt?: string
+  default?: string
+  profiles?: ChromeProfile[]
+  profile?: string
+  login_url?: string
+  final_url?: string
+  token_cookie?: string
+  error_cookie?: string
+  fill?: { socket: string; token: string } | null
 }
 
 export const BUSY: State[] = ['Connecting VPN', 'Signing in', 'Approve Duo on your phone', 'Requesting compute node',
