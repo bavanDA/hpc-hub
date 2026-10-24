@@ -154,7 +154,9 @@ class UsagePage(Gtk.Box):
             self.summary.set_markup(f"<b>{a.account}</b>: {a.used:,} of {a.quota:,} SU used "
                                     f"({_pct(a.used, a.quota)}) · {a.quota - a.used:,} left · yours {a.mine:,}")
         else:
-            self.summary.set_markup(f"<b>{a.account}</b>: {a.used:,} SU used, no limit · yours {a.mine:,}")
+            when = f" in {a.period}" if a.period else ""
+            cost = f" · about ${a.used * a.rate:,.0f} at ${a.rate:g} per SU" if a.rate else ""
+            self.summary.set_markup(f"<b>{a.account}</b>: {a.used:,} SU used{when}, no limit{cost} · yours {a.mine:,}")
         self.summary_bar.set_value(min(a.used / a.quota, 1) if a.quota else 0)
         label, days = usage.PERIODS[self.period.get_selected()]
         self.people_note.set_label(f"{label}. Loading…")

@@ -72,3 +72,12 @@ def test_yale_getquota_and_accounts_without_limits():
     no_limits = usage.parse_usage("pi_abc||3944920|34787225\nprio_abc||600|3600\n")
     assert [(a.account, a.quota) for a in no_limits] == [("pi_abc", 0), ("prio_abc", 0)]
     assert [a.account for a in usage.parse_usage("a|60|0|0\nb||60|0\n")] == ["a"]  # limits known: those only
+
+
+def test_yale_getusage():
+    import json
+    rows = [{"su_hours": 100.4, "username": "jdoe"}, {"su_hours": 50.0, "username": "other"},
+            {"su_hours": 10.0, "username": "jdoe"}]
+    text = (f"@USER jdoe\n@ACCOUNT pi_abc\n{json.dumps({'fy': 'FY27', 'bill_rate': 0.0049, 'rows': rows}, indent=2)}\n"
+            "@ACCOUNT broken\nnot json\n")
+    assert usage.parse_usage(text) == [usage.AccountUsage("pi_abc", 0, 160, 110, "FY27", 0.0049)]
