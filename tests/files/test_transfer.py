@@ -1,7 +1,7 @@
 import pytest
 
 from hpc_hub.files import transfer
-from tests.test_remote_fs import LocalShell
+from tests.helpers import LocalShell
 
 
 def test_copy_folder_between_shells(tmp_path):

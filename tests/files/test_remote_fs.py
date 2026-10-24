@@ -1,6 +1,7 @@
 import pytest
 
 from hpc_hub.files import remote_fs
+from tests.helpers import LocalShell
 
 
 def test_parse_listing():
@@ -24,20 +25,6 @@ def test_remove_guard():
         remote_fs.remove(None, "/")
     with pytest.raises(remote_fs.FsError):
         remote_fs.remove(None, "/home")
-
-
-class LocalShell:
-    """Stands in for SshMaster: runs the 'remote' commands locally."""
-
-    def argv(self, command, tty=False):
-        return ["bash", "-c", command]
-
-    def run(self, command, timeout=60, fast=None):
-        import subprocess
-        return subprocess.run(self.argv(command), capture_output=True, text=True, timeout=timeout)
-
-    def copy_argv(self, src, dst):
-        return ["cp", "-r", src.lstrip(":"), dst.lstrip(":")]
 
 
 def test_roundtrip_on_local_shell(tmp_path):
