@@ -8,6 +8,7 @@ use std::sync::Mutex;
 use tauri::{AppHandle, Emitter, Manager, RunEvent, State};
 
 mod pty;
+mod sso;
 
 struct Backend {
     stdin: Mutex<ChildStdin>,
@@ -59,7 +60,10 @@ pub fn run() {
             pty::pty_open,
             pty::pty_write,
             pty::pty_resize,
-            pty::pty_close
+            pty::pty_close,
+            sso::sso_open,
+            sso::sso_show,
+            sso::sso_close
         ])
         .build(tauri::generate_context!())
         .expect("error while building HPC Hub")
