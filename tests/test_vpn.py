@@ -3,7 +3,8 @@ import textwrap
 
 import pytest
 
-from hpc_hub import config, vpn
+from hpc_hub.core import config
+from hpc_hub import vpn
 
 FAKE_OPENCONNECT = textwrap.dedent("""
     import sys

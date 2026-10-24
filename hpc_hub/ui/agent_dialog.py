@@ -12,7 +12,7 @@ from .. import chats as chat_store
 from .. import remote_fs
 from ..agents import Agent
 from ..chats import Chat
-from ..config import ComputeProfile
+from ..core.config import ComputeProfile
 from ..limits import slurm_time
 from ..session import ClusterSession
 from .compute_dialog import ComputeGroup

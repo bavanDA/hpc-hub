@@ -12,7 +12,7 @@ import time
 from dataclasses import dataclass
 
 from . import links
-from .ssh import SshMaster
+from .core.ssh import SshMaster
 
 MARK = "@@HPCHUB_PANE "
 

@@ -7,7 +7,7 @@ from collections.abc import Callable
 from gi.repository import Adw, GLib, Gtk
 
 from ... import globus, remote_fs, transfer
-from ...config import ClusterConfig
+from ...core.config import ClusterConfig
 from ...remote_fs import Entry
 from ...session import ClusterSession, State
 from ..preview import Preview

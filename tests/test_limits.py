@@ -1,5 +1,5 @@
 from hpc_hub import limits
-from hpc_hub.config import ComputeProfile
+from hpc_hub.core.config import ComputeProfile
 
 WULVER = """general*|infinite
 debug|8:00:00

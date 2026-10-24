@@ -5,7 +5,7 @@ from collections.abc import Callable
 from gi.repository import Adw, Gdk, GLib, Gtk
 
 from ... import globus
-from ...config import ClusterConfig
+from ...core.config import ClusterConfig
 from ..widgets import bg, open_uri
 
 

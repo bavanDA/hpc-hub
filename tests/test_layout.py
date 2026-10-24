@@ -1,4 +1,4 @@
-from hpc_hub import layout
+from hpc_hub.core import layout
 
 
 def test_round_trip(tmp_path):

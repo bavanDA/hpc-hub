@@ -5,7 +5,7 @@ import posixpath
 from gi.repository import Adw, GLib, Gtk
 
 from ... import globus, remote_fs
-from ...config import AppSettings, ClusterConfig
+from ...core.config import AppSettings, ClusterConfig
 from ...session import ClusterSession
 from ..widgets import bg
 from .dialogs import CollectionPicker, LoginDialog

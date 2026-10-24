@@ -1,6 +1,6 @@
 import json
 
-from hpc_hub import browser
+from hpc_hub.core import browser
 
 
 def test_profiles_and_find(tmp_path):

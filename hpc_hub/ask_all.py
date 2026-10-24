@@ -9,7 +9,7 @@ import shlex
 from dataclasses import dataclass, replace
 
 from .agents import AGY, CLAUDE, CODEX, CURSOR, Agent
-from .config import AgentSettings
+from .core.config import AgentSettings
 
 
 @dataclass

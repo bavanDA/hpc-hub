@@ -9,8 +9,8 @@ from pathlib import Path
 
 from gi.repository import Adw, GLib, Gtk
 
-from .. import browser
-from ..config import ClusterConfig
+from ..core import browser
+from ..core.config import ClusterConfig
 from ..ood import Portal, PortalError
 from .widgets import open_uri
 

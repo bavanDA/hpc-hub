@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parents[2]
 ASKPASS_BIN = ROOT / "bin" / "hpc-hub-askpass"
 SSO_BIN = ROOT / "bin" / "hpc-hub-sso"
 

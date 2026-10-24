@@ -1,7 +1,7 @@
 import shlex
 import subprocess
 
-from hpc_hub import remote
+from hpc_hub.core import remote
 
 ALIASES = """alias ll='ls -l'
 alias vscode='code tunnel --accept-server-license-terms --name bouchet'

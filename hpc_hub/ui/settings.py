@@ -4,9 +4,9 @@ from collections.abc import Callable
 
 from gi.repository import Adw, Gtk
 
-from .. import browser, credentials
-from ..config import VPN_PROTOCOLS, ClusterConfig, ComputeProfile
-from ..credentials import Login
+from ..core import browser, credentials
+from ..core.config import VPN_PROTOCOLS, ClusterConfig, ComputeProfile
+from ..core.credentials import Login
 from ..limits import Limits, minutes, slurm_time
 from ..slurm import validate
 from ..vpn import split_errors

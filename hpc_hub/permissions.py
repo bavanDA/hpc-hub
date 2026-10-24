@@ -8,7 +8,7 @@ import shlex
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from .ssh import SshMaster
+from .core.ssh import SshMaster
 
 FILES = Path(__file__).parent / "guard_files"
 SETTINGS = ".claude/settings.json"

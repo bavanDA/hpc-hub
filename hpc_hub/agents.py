@@ -3,7 +3,7 @@
 import shlex
 from dataclasses import dataclass
 
-from .config import AgentSettings
+from .core.config import AgentSettings
 
 
 @dataclass(frozen=True)

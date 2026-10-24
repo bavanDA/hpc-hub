@@ -6,7 +6,8 @@ from collections.abc import Callable
 
 from gi.repository import Adw, GLib, Gtk, Pango
 
-from ... import links, remote, tmux
+from ... import links, tmux
+from ...core import remote
 from ...links import Link
 from ...session import ClusterSession
 from ..widgets import bg, color_dot, open_uri, remember_size

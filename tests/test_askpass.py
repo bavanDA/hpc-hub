@@ -1,7 +1,7 @@
 import subprocess
 
 from hpc_hub.askpass_server import AskpassServer
-from hpc_hub.paths import ASKPASS_BIN
+from hpc_hub.core.paths import ASKPASS_BIN
 
 
 def run(env, prompt):

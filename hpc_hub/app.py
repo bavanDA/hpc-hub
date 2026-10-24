@@ -8,9 +8,10 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Adw, Gio, GLib, Gtk  # noqa: E402
 
-from . import APP_ID, APP_NAME, __version__, browser, config, credentials, globus  # noqa: E402
+from . import APP_ID, APP_NAME, __version__, globus
+from .core import browser, config, credentials  # noqa: E402
 from .askpass_server import AskpassServer  # noqa: E402
-from .paths import runtime_dir  # noqa: E402
+from .core.paths import runtime_dir  # noqa: E402
 from .projects import ProjectStore  # noqa: E402
 from .session import ClusterSession, State  # noqa: E402
 from .ui import style  # noqa: E402

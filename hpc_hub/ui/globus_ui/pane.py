@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 from gi.repository import Adw, Gio, GLib, GObject, Gtk, Pango
 
 from ... import globus
-from ...config import ClusterConfig
+from ...core.config import ClusterConfig
 from ..widgets import ask_name, bg
 
 if TYPE_CHECKING:

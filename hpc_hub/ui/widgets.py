@@ -5,7 +5,7 @@ from collections.abc import Callable
 
 from gi.repository import Adw, Gdk, GLib, Gtk
 
-from .. import browser, layout
+from ..core import browser, layout
 from ..agents import AGENTS
 
 

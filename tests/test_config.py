@@ -1,4 +1,4 @@
-from hpc_hub import config
+from hpc_hub.core import config
 
 
 def test_defaults_per_cluster():

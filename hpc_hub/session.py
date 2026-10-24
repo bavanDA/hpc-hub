@@ -11,12 +11,12 @@ from urllib.parse import urlsplit
 
 from . import limits, prompts, slurm, vpn_sso
 from .askpass_server import AskpassServer
-from .config import ClusterConfig, ComputeProfile
-from .paths import log_dir
-from .credentials import Login
+from .core.config import ClusterConfig, ComputeProfile
+from .core.paths import log_dir
+from .core.credentials import Login
 from .network import link_works, network_name, reachable, route_device
 from .slurm import Allocation, SlurmError
-from .ssh import SshError, SshMaster
+from .core.ssh import SshError, SshMaster
 from .vpn import NeedsWebLogin, Vpn, VpnError
 
 

@@ -1,7 +1,7 @@
 import subprocess
 
 from hpc_hub import schedules
-from hpc_hub.config import AgentSettings, ComputeProfile
+from hpc_hub.core.config import AgentSettings, ComputeProfile
 from hpc_hub.schedules import Schedule
 
 

@@ -6,7 +6,7 @@ import shlex
 import subprocess
 from dataclasses import dataclass
 
-from .ssh import SshMaster
+from .core.ssh import SshMaster
 
 LIST_FORMAT = r"%Y\t%s\t%T@\t%f\n"
 MAX_READ = 64 * 1024 * 1024

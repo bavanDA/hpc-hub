@@ -9,8 +9,8 @@ import tomllib
 from dataclasses import asdict, dataclass, fields
 from pathlib import Path
 
-from .config import CONFIG_DIR, _toml_value
-from .ssh import SshMaster
+from .core.config import CONFIG_DIR, _toml_value
+from .core.ssh import SshMaster
 
 PROJECTS_FILE = CONFIG_DIR / "projects.toml"
 TEMPLATES = ["Empty", "LaTeX paper", "Python"]

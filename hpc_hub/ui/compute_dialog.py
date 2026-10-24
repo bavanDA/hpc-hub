@@ -4,7 +4,7 @@ from collections.abc import Callable
 
 from gi.repository import Adw, Gtk
 
-from ..config import ComputeProfile
+from ..core.config import ComputeProfile
 from ..session import ClusterSession
 from .settings import ProfileRows
 

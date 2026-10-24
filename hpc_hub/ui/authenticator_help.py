@@ -4,7 +4,7 @@ from urllib.parse import urlsplit
 
 from gi.repository import Adw, Gtk
 
-from ..config import ClusterConfig
+from ..core.config import ClusterConfig
 from .widgets import open_uri
 
 

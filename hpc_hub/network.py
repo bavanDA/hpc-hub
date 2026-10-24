@@ -3,7 +3,7 @@
 import socket
 import subprocess
 
-from .ssh import SshMaster
+from .core.ssh import SshMaster
 
 
 def reachable(host: str, port: int, timeout: float = 3.0) -> bool:

@@ -4,8 +4,8 @@ from collections.abc import Callable
 
 from gi.repository import Adw, GLib, Gtk
 
-from .. import browser
-from ..config import AppSettings
+from ..core import browser
+from ..core.config import AppSettings
 
 
 class PreferencesDialog(Adw.PreferencesDialog):

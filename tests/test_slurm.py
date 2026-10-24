@@ -1,5 +1,5 @@
 from hpc_hub import slurm
-from hpc_hub.config import ComputeProfile
+from hpc_hub.core.config import ComputeProfile
 
 
 def test_salloc_command():

@@ -9,7 +9,8 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
-from . import browser, chrome_cookies
+from .core import browser
+from . import chrome_cookies
 
 COOKIES = ("mod_auth_openidc_session", "_session_id")
 DASHBOARD = "/pun/sys/dashboard"

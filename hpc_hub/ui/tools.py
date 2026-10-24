@@ -9,7 +9,8 @@ from urllib.parse import urlsplit
 
 from gi.repository import Adw, Gdk, GLib, GObject, Gtk
 
-from .. import agents, ask_all, links, permissions, remote, remote_fs, slurm, tmux
+from .. import agents, ask_all, links, permissions, remote_fs, slurm, tmux
+from ..core import remote
 from ..agents import Agent
 from ..links import Link
 from ..session import ClusterSession

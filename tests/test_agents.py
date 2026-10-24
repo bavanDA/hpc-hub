@@ -1,5 +1,5 @@
 from hpc_hub import agents
-from hpc_hub.config import AgentSettings
+from hpc_hub.core.config import AgentSettings
 
 
 def test_claude():
@@ -30,7 +30,7 @@ def test_cursor():
 
 
 def test_cluster_has_all_agents():
-    from hpc_hub.config import ClusterConfig
+    from hpc_hub.core.config import ClusterConfig
     c = ClusterConfig(id="x", name="X")
     assert (c.claude.command, c.codex.command, c.agy.command, c.cursor.command) == (
         "claude", "codex", "agy", "cursor-agent")

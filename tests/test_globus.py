@@ -100,7 +100,7 @@ def test_best_collection_falls_back_to_yours():
 
 
 def test_check_collections_replaces_broken_ones():
-    from hpc_hub import config
+    from hpc_hub.core import config
     good = C("good", "SDSC HPC - Expanse Lustre", "site@globusid.org", MAPPED, True, True, "help@sdsc.edu")
 
     class Fake:
