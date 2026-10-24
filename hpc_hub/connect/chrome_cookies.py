@@ -6,20 +6,40 @@ Chrome keeps cookies in <profile>/Cookies (SQLite), encrypted with a key from GN
 import hashlib
 import shutil
 import sqlite3
+import sys
 import tempfile
 import time
+from contextlib import closing
 from pathlib import Path
 
-import gi
+from ..core.browser import CHROME_DIRS
 
-gi.require_version("Secret", "1")
-from gi.repository import Secret  # noqa: E402
+try:  # the GTK app has libsecret; the new app's backend has no GTK and uses secretstorage (same keyring)
+    import gi
 
-from ..core.browser import CHROME_DIRS  # noqa: E402
+    gi.require_version("Secret", "1")
+    from gi.repository import Secret
+except (ImportError, ValueError, AttributeError):
+    Secret = None
 
 SCHEMA = Secret.Schema.new("chrome_libsecret_os_crypt_password_v2", Secret.SchemaFlags.DONT_MATCH_NAME,
-                           {"application": Secret.SchemaAttributeType.STRING})
+                           {"application": Secret.SchemaAttributeType.STRING}) if Secret else None
 EPOCH_1601 = 11644473600  # seconds between 1601 (Chrome's clock) and 1970
+
+
+def keyring_password() -> str:
+    """The key Chrome keeps in the keyring for its cookies ("" if none: Chrome then uses its fixed one)."""
+    if Secret:
+        return Secret.password_lookup_sync(SCHEMA, {"application": "chrome"}, None) or ""
+    if not sys.platform.startswith("linux"):  # macOS Keychain and Windows DPAPI work differently
+        raise RuntimeError("Reading a Chrome sign-in works on Linux only for now")
+    import secretstorage
+    with closing(secretstorage.dbus_init()) as conn:
+        for item in secretstorage.search_items(conn, {"application": "chrome"}):
+            if item.is_locked():
+                item.unlock()
+            return item.get_secret().decode()
+    return ""
 
 
 def chrome_time(unix: float) -> int:
@@ -72,7 +92,7 @@ def read(profile_folder: str, host: str, name: str, since: float = 0) -> str:
     host_key, plain, encrypted = rows[0]
     if plain:
         return plain
-    password = Secret.password_lookup_sync(SCHEMA, {"application": "chrome"}, None) or ""
+    password = keyring_password()
     return decrypt(encrypted, host_key, password)
 
 
