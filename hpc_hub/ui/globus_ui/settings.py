@@ -8,9 +8,9 @@ from ... import globus
 from ...config import AppSettings, ClusterConfig
 from .dialogs import CollectionPicker, LoginDialog
 
-HELP = ("Register a free app at app.globus.org → Settings → Developers → "
-        "“Register a thick client or script that will be installed and run by users on their devices”. "
-        "Paste its Client ID here.")
+HELP = ("Register a free app at app.globus.org → Settings → Developers → Register an app. Choose the one for "
+        "\u201cnative applications that are distributed to users\u201d, name it HPC Hub, and add the redirect "
+        "https://auth.globus.org/v2/web/auth-code. Paste its Client ID here.")
 
 
 class GlobusSettingsDialog(Adw.PreferencesDialog):
