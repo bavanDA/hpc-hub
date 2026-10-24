@@ -108,6 +108,15 @@ class AutoFill:
         self.view, self.start, self.username, self.password, self.on_sent = view, start, username, password, on_sent
         self.done = {"user": False, "pass": False}
         self.timer = 0
+        self.off = False  # you clicked a link yourself ("forgot password"...): from then on you type
+        view.connect("decide-policy", self._policy)
+
+    def _policy(self, _view, decision, kind) -> bool:
+        if kind == WebKit.PolicyDecisionType.NAVIGATION_ACTION:
+            action = decision.get_navigation_action()
+            if action.get_navigation_type() == WebKit.NavigationType.LINK_CLICKED and action.is_user_gesture():
+                self.off = True
+        return False  # WebKit decides as usual
 
     def page_loaded(self) -> None:
         if self.password and not self.timer and not self.done["pass"]:
@@ -118,7 +127,7 @@ class AutoFill:
 
     def _step(self) -> bool:
         self.timer = 0
-        if self.done["pass"]:
+        if self.done["pass"] or self.off:
             return False
         if not may_fill(self.view.get_uri() or "", self.start):
             self._later(POLL)  # not a page we trust with the password; it may redirect to one
