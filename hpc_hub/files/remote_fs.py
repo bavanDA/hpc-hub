@@ -178,12 +178,14 @@ def remove(ssh: SshMaster, path: str) -> None:
 
 def zip_command(path: str) -> str:
     parent, name = posixpath.split(path.rstrip("/"))
+    name = "./" + name  # a name like "--checkpoint-action=..." must never pass as an option
     return (f"cd {q(parent or '/')} && if command -v zip >/dev/null; then zip -qry {q(name + '.zip')} {q(name)}; "
             f"else tar czf {q(name + '.tar.gz')} {q(name)}; fi")
 
 
 def unzip_command(path: str) -> str:
     parent, name = posixpath.split(path)
+    name = "./" + name  # never an option, whatever the file is called
     if name.endswith(".zip"):
         extract = f"unzip -oq {q(name)}"
     elif name.endswith((".tar.gz", ".tgz", ".tar", ".tar.bz2", ".tar.xz")):

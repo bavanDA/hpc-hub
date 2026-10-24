@@ -12,10 +12,12 @@ def test_parse_listing():
 
 def test_zip_commands():
     assert remote_fs.zip_command("/home/u/my proj/") == (
-        "cd /home/u && if command -v zip >/dev/null; then zip -qry 'my proj.zip' 'my proj'; "
-        "else tar czf 'my proj.tar.gz' 'my proj'; fi")
-    assert remote_fs.unzip_command("/x/a.zip") == "cd /x && unzip -oq a.zip"
-    assert remote_fs.unzip_command("/x/a.tar.gz") == "cd /x && tar xf a.tar.gz"
+        "cd /home/u && if command -v zip >/dev/null; then zip -qry './my proj.zip' './my proj'; "
+        "else tar czf './my proj.tar.gz' './my proj'; fi")
+    assert remote_fs.unzip_command("/x/a.zip") == "cd /x && unzip -oq ./a.zip"
+    assert remote_fs.unzip_command("/x/a.tar.gz") == "cd /x && tar xf ./a.tar.gz"
+    cmd = remote_fs.zip_command("/x/--checkpoint-action=exec=sh")
+    assert " ./--checkpoint-action=exec=sh" in cmd and " --checkpoint" not in cmd
     with pytest.raises(remote_fs.FsError):
         remote_fs.unzip_command("/x/a.txt")
 
