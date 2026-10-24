@@ -19,15 +19,6 @@ def test_pkce_and_url():
     assert "prompt=" not in globus.authorize_url("cid", challenge, fresh=False)  # only Allow, no new login
 
 
-def test_consent_ids_skip_personal():
-    from hpc_hub import config
-    clusters = config.default_clusters()
-    for c, (cid, kind) in zip(clusters, [("mine", "GCP_mapped_collection"), ("a", "GCSv5_mapped_collection"),
-                                         ("b", "")]):
-        c.globus.collection_id, c.globus.collection_kind = cid, kind
-    assert globus.consent_ids(clusters) == ["a", "b"]
-
-
 def test_pasted_code():
     code = "Ab3dE5fG7hJ9kL1mN3pQ5rS7tV9xZ1"
     assert globus.pasted_code(f"  {code}\n") == code
@@ -41,9 +32,23 @@ def test_code_from_url():
     assert globus.code_from_url("https://evil.example/?code=abc") == ""
 
 
-def test_data_access_scope():
-    s = globus.data_access_scope(["c1", ""])
-    assert s == globus.TRANSFER_SCOPE + "[*https://auth.globus.org/scopes/c1/data_access]"
+def test_merge_scopes():
+    one = globus.TRANSFER_SCOPE + "[*https://auth.globus.org/scopes/c1/data_access]"
+    two = globus.TRANSFER_SCOPE + "[*https://auth.globus.org/scopes/c2/data_access]"
+    assert globus.merge_scopes([one, two, one]) == (globus.TRANSFER_SCOPE + "[*https://auth.globus.org/scopes/c1/"
+                                                    "data_access *https://auth.globus.org/scopes/c2/data_access]")
+    assert globus.merge_scopes([]) == globus.TRANSFER_SCOPE
+
+
+def test_session_domains():
+    msg = 'Login Failed\n530-GridFTP-JSON-Result: {"authorization_parameters": {"session_required_single_domain": ' \
+          '["uni.edu"]}, "code": "permission_denied"}'
+    assert globus.session_domains({}, msg) == ["uni.edu"]
+    assert globus.session_domains({"authorization_parameters": {"session_required_single_domain": ["a.edu"]}}, "") \
+        == ["a.edu"]
+    assert globus.session_domains({}, "Permission denied") == []
+    url = globus.authorize_url("cid", "ch", fresh=False, domain="uni.edu")
+    assert "session_required_single_domain=uni.edu" in url
 
 
 def test_transfer_tokens():
@@ -108,7 +113,6 @@ def test_check_collections_replaces_broken_ones():
     by_id = {c.id: c for c in clusters}
     by_id["sdsc"].globus.collection_id = "server"
     by_id["yale"].globus.collection_id = "good"
-    by_id["yale"].globus.collection_kind = MAPPED
     assert globus.check_collections(Fake(), clusters) == {"sdsc": good}  # wulver: none found, nothing saved
 
 

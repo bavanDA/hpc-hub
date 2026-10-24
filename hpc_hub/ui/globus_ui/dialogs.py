@@ -18,19 +18,23 @@ def _step(n: int, title: str, subtitle: str = "") -> Adw.ActionRow:
 class LoginDialog(Adw.Dialog):
     """Opens the Globus sign-in page in your browser; Globus then shows a code you paste here."""
 
-    def __init__(self, client: globus.Globus, ids: list[str], on_done: Callable[[str], None], what: str = ""):
-        """ids: collections to allow at the same time. Already signed in: only the Allow page, no login."""
+    def __init__(self, client: globus.Globus, scope: str, on_done: Callable[[str], None], what: str = "",
+                 domain: str = ""):
+        """scope: every permission at once. Already signed in: only the Allow page, unless domain wants its account."""
         fresh = not client.logged_in
-        super().__init__(title="Sign in to Globus" if fresh else "Allow Globus access", content_width=520,
+        super().__init__(title="Sign in to Globus" if fresh or domain else "Allow Globus access", content_width=520,
                          content_height=520)
-        self.client, self.on_done, self.finished, self.ids = client, on_done, False, ids
+        self.client, self.on_done, self.finished = client, on_done, False
         self.verifier, challenge = globus.pkce()
-        self.url = globus.authorize_url(client.client_id, challenge, globus.data_access_scope(ids), fresh)
+        self.url = globus.authorize_url(client.client_id, challenge, scope, fresh, domain)
         page = Adw.PreferencesPage()
 
         steps = Adw.PreferencesGroup()
         steps.add(_step(1, "Open the Globus page", "It asks which Chrome profile to use"))
-        if fresh:
+        if domain:
+            steps.add(_step(2, f"Sign in with your {domain} account, then click Allow",
+                            f"{what or 'This cluster'} only lets in {domain} accounts. Globus links it to your account"))
+        elif fresh:
             steps.add(_step(2, "Sign in and click Allow",
                             "Pick your university or ACCESS CI, whichever your clusters use"))
         else:
@@ -107,7 +111,7 @@ class LoginDialog(Adw.Dialog):
             self.finished = True
             self.close()
             self.on_done("")
-        bg(lambda: self.client.finish_login(code, self.verifier, self.ids), done)
+        bg(lambda: self.client.finish_login(code, self.verifier), done)
 
 
 class CollectionPicker(Adw.Dialog):

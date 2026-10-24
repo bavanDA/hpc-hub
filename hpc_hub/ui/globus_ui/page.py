@@ -45,6 +45,7 @@ class GlobusPage(Gtk.Box):
             app, clusters, save_app, save_clusters, toast)
         self.sessions = sessions or {}
         self._checked = False
+        self.wants: dict[str, globus.NeedsSignIn] = {}  # cluster id: what its collection wants first
         self.client: globus.Globus | None = None
         self.poll_id = 0
         self._seen_active: set[str] = set()
@@ -56,6 +57,9 @@ class GlobusPage(Gtk.Box):
         self.setup.set_child(self.setup_btn)
 
         main = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        self.banner = Adw.Banner(revealed=False)
+        self.banner.connect("button-clicked", lambda *_: self.consent())
+        main.append(self.banner)
         bar = Gtk.Box(spacing=8, margin_top=6, margin_start=12, margin_end=8)
         bar.append(Gtk.Label(label="Copies run on Globus, so you can close the app or your laptop.",
                              xalign=0, hexpand=True, wrap=True, css_classes=["dim-label", "caption"]))
@@ -136,16 +140,44 @@ class GlobusPage(Gtk.Box):
                                f"No Globus collection found for {c.name}. Pick one")
             if changes:
                 self.save_clusters()
-            if set(globus.consent_ids(self.clusters)) - client.allowed:
-                self.consent()  # one Allow for all clusters, right away
-            elif changes:
                 self.reload()
+            self.check_access()
         bg(lambda: globus.check_collections(client, self.clusters), done)
 
     @staticmethod
     def _use(cfg: ClusterConfig, c: globus.Collection | None) -> None:
-        g = cfg.globus
-        g.collection_id, g.collection_name, g.collection_kind = (c.id, c.name, c.kind) if c else ("", "", "")
+        cfg.globus.collection_id, cfg.globus.collection_name = (c.id, c.name) if c else ("", "")
+
+    def check_access(self) -> None:
+        """Ask each collection what it wants before it lists files, so one sign-in can cover all of them."""
+        client, clusters = self.client, [c for c in self.clusters if c.globus.collection_id]
+
+        def done(found, _err):
+            self.wants = {cid: w for cid, w in (found or {}).items() if w}
+            self._show_banner()
+        bg(lambda: {c.id: client.needs(c.globus.collection_id) for c in clusters}, done)
+
+    def need(self, cfg: ClusterConfig, want: globus.NeedsSignIn) -> None:
+        self.wants[cfg.id] = want
+        self._show_banner()
+
+    def _names(self, kind) -> list[str]:
+        return [c.name for c in self.clusters if isinstance(self.wants.get(c.id), kind)]
+
+    def _domain(self) -> str:
+        return next((w.domains[0] for w in self.wants.values() if isinstance(w, globus.SessionRequired)), "")
+
+    def _show_banner(self) -> None:
+        allow, domain = self._names(globus.ConsentRequired), self._domain()
+        if domain:
+            self.banner.set_title(f"{' and '.join(self._names(globus.SessionRequired))} wants you signed in with "
+                                  f"your {domain} account" + (f". {' and '.join(allow)} also needs your OK"
+                                                              if allow else ""))
+            self.banner.set_button_label("Sign in")
+        elif allow:
+            self.banner.set_title(f"Globus needs your OK to use {' and '.join(allow)}. One time")
+            self.banner.set_button_label("Allow")
+        self.banner.set_revealed(bool(allow or domain))
 
     def start_personal(self, cfg: ClusterConfig) -> None:
         """Your own collection (Wulver): start Globus Connect Personal on the login node."""
@@ -180,19 +212,25 @@ class GlobusPage(Gtk.Box):
         """Sign in, or only Allow when signed in already: access to every cluster's collection at once."""
         if not self.client:
             return
-        ids = globus.consent_ids(self.clusters)
-        what = ", ".join(c.name for c in self.clusters if c.globus.collection_id in ids)
+        domain = self._domain()
+        scope = globus.merge_scopes([s for w in self.wants.values() if isinstance(w, globus.ConsentRequired)
+                                     for s in w.scopes])
+        what = " and ".join(self._names(globus.SessionRequired) if domain else self._names(globus.ConsentRequired))
 
         def done(err):
             self.toast(err or "Globus is ready")
+            if not err:
+                self.wants.clear()
+                self.banner.set_revealed(False)
+                self.check_access()  # anything left (a second domain) shows again
             self.reload()
-        LoginDialog(self.client, ids, done, what).present(self.get_root())
+        LoginDialog(self.client, scope, done, what, domain).present(self.get_root())
 
     def pick(self, cfg: ClusterConfig) -> None:
         def chosen(c: globus.Collection):
             self._use(cfg, c)
             self.save_clusters()
-            self.consent()  # new collection may need its own permission
+            self.check_access()  # the new one may want its own Allow
         CollectionPicker(self.client, cfg, chosen).present(self.get_root())
 
     # -- transfers ------------------------------------------------------------------------
@@ -207,8 +245,9 @@ class GlobusPage(Gtk.Box):
         src_path, dst_path = posixpath.join(src.path, it.name), posixpath.join(dst.path, it.name)
 
         def done(task, err):
-            if isinstance(task, globus.ConsentRequired):
-                self.consent()
+            if isinstance(task, globus.NeedsSignIn):
+                self.toast(str(task))
+                self.check_access()
                 return
             self.toast(f"Transfer failed: {err}" if err else f"Sent {it.name} to Globus")
             self.refresh_tasks()

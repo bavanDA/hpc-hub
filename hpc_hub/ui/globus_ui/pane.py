@@ -15,11 +15,11 @@ if TYPE_CHECKING:
 
 
 def or_consent(work: Callable[[], object]) -> Callable[[], object]:
-    """Return a ConsentRequired instead of raising it, so done() can spot it."""
+    """Return a NeedsSignIn instead of raising it, so done() can spot it."""
     def run():
         try:
             return work()
-        except globus.ConsentRequired as e:
+        except globus.NeedsSignIn as e:
             return e
     return run
 
@@ -152,9 +152,17 @@ class GlobusPane(Gtk.Box):
         def done(result, err):
             if cfg is not self.cfg:
                 return
-            if isinstance(result, globus.ConsentRequired):
-                self._show_empty("Globus needs your permission", f"Allow HPC Hub to use {cfg.globus.collection_name}.",
-                                 "dialog-password-symbolic", "Allow", self.page.consent)
+            if isinstance(result, globus.NeedsSignIn):
+                self.page.need(cfg, result)
+                if isinstance(result, globus.SessionRequired):
+                    self._show_empty(f"{cfg.name} wants your {result.domains[0]} account",
+                                     f"{cfg.globus.collection_name} only lets in {' or '.join(result.domains)} "
+                                     "accounts. Sign in with it once.", "dialog-password-symbolic", "Sign in",
+                                     self.page.consent)
+                else:
+                    self._show_empty("Globus needs your permission",
+                                     f"Allow HPC Hub to use {cfg.globus.collection_name}.",
+                                     "dialog-password-symbolic", "Allow", self.page.consent)
                 return
             if err and globus.personal_offline(err):
                 self._show_empty(f"Globus Connect is not running on {cfg.name}",

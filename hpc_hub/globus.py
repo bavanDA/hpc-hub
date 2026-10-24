@@ -25,10 +25,22 @@ class GlobusError(Exception):
     pass
 
 
-class ConsentRequired(GlobusError):
+class NeedsSignIn(GlobusError):
+    """A collection wants more than the plain sign-in."""
+
+
+class ConsentRequired(NeedsSignIn):
     def __init__(self, scopes: list[str]):
         super().__init__("Globus needs extra permission for this collection")
         self.scopes = scopes
+
+
+class SessionRequired(NeedsSignIn):
+    """The collection only lets in accounts from these domains (Yale: yale.edu)."""
+
+    def __init__(self, domains: list[str]):
+        super().__init__(f"Sign in with your {' or '.join(domains)} account")
+        self.domains = domains
 
 
 @dataclass
@@ -47,8 +59,6 @@ class Collection:
 # someone's shared folder (guest collections).
 CLUSTER_KINDS = {"GCSv5_mapped_collection", "GCP_mapped_collection", "GCSv4_host"}
 PICKABLE_KINDS = CLUSTER_KINDS | {"GCSv5_guest_collection", "GCSv4_share", "GCP_guest_collection"}
-# Only these ask you to allow access to them on top of the sign-in.
-NEEDS_CONSENT = {"GCSv5_mapped_collection"}
 GENERIC_WORDS = {"login", "hpc", "cluster", "ssh", "www", "edu", "org", "com", "net", "ac", "uk"}
 
 
@@ -109,18 +119,36 @@ def pkce() -> tuple[str, str]:
     return verifier, challenge
 
 
-def data_access_scope(collection_ids: list[str]) -> str:
-    deps = " ".join(f"*https://auth.globus.org/scopes/{c}/data_access" for c in collection_ids if c)
-    return f"{TRANSFER_SCOPE}[{deps}]" if deps else TRANSFER_SCOPE
+def merge_scopes(scopes: list[str]) -> str:
+    """The transfer scope with every permission Globus asked for, so one Allow covers all collections.
+    Only what Globus named: a made-up one (a collection without data_access) fails with Unknown scope."""
+    deps = []
+    for s in scopes:
+        m = re.search(r"\[(.*)\]$", s)
+        deps += m.group(1).split() if m else []
+    deps = list(dict.fromkeys(deps))
+    return f"{TRANSFER_SCOPE}[{' '.join(deps)}]" if deps else TRANSFER_SCOPE
 
 
-def authorize_url(client_id: str, challenge: str, scope: str = TRANSFER_SCOPE, fresh: bool = True) -> str:
-    """fresh: ask for the login again. Off when only adding permissions, so Globus just shows Allow."""
+def authorize_url(client_id: str, challenge: str, scope: str = TRANSFER_SCOPE, fresh: bool = True,
+                  domain: str = "") -> str:
+    """fresh: ask for the login again. Off when only adding permissions, so Globus just shows Allow.
+    domain: make Globus sign you in with an account from there (yale.edu)."""
     return f"{AUTH}/authorize?" + urllib.parse.urlencode({
         "client_id": client_id, "redirect_uri": REDIRECT, "scope": scope, "response_type": "code",
         "code_challenge": challenge, "code_challenge_method": "S256", "access_type": "offline",
         **({"prompt": "login"} if fresh else {}),
+        **({"session_required_single_domain": domain} if domain else {}),
     })
+
+
+def session_domains(err: dict, text: str) -> list[str]:
+    """Domains a collection wants you signed in from; also when buried in a GridFTP message."""
+    found = (err.get("authorization_parameters") or {}).get("session_required_single_domain")
+    if found:
+        return list(found)
+    m = re.search(r'"session_required_single_domain":\s*\[([^\]]*)\]', text)
+    return re.findall(r'"([^"]+)"', m.group(1)) if m else []
 
 
 def pasted_code(text: str) -> str:
@@ -162,7 +190,10 @@ def _http(method: str, url: str, token: str = "", body: dict | None = None, form
             err = {}
         if err.get("code") == "ConsentRequired":
             raise ConsentRequired(err.get("required_scopes") or []) from e
-        raise GlobusError(err.get("message") or err.get("error_description") or f"HTTP {e.code}") from e
+        message = err.get("message") or err.get("error_description") or f"HTTP {e.code}"
+        if domains := session_domains(err, message):
+            raise SessionRequired(domains) from e
+        raise GlobusError(message) from e
     except urllib.error.URLError as e:
         raise GlobusError(f"Cannot reach Globus: {e.reason}") from e
 
@@ -206,8 +237,6 @@ def check_collections(client: "Globus", clusters) -> dict[str, Collection | None
             try:
                 saved = client.collection(c.globus.collection_id)
                 if saved.working and saved.kind in PICKABLE_KINDS:
-                    if saved.kind != c.globus.collection_kind:
-                        out[c.id] = saved  # same one, its kind was not saved yet
                     continue
             except GlobusError:
                 continue  # can't tell (offline, no permission yet): keep it
@@ -215,12 +244,6 @@ def check_collections(client: "Globus", clusters) -> dict[str, Collection | None
         if found or c.globus.collection_id:
             out[c.id] = found
     return out
-
-
-def consent_ids(clusters) -> list[str]:
-    """Collections to allow at sign-in, one time for all clusters. Unknown kind: ask, to be safe."""
-    return list(dict.fromkeys(c.globus.collection_id for c in clusters if c.globus.collection_id
-                              and c.globus.collection_kind in NEEDS_CONSENT | {""}))
 
 
 class Globus:
@@ -240,16 +263,11 @@ class Globus:
         self.tokens = {}
         credentials.clear(*KEY)
 
-    @property
-    def allowed(self) -> set[str]:
-        """Collections you gave access to at the last sign-in."""
-        return set(self.tokens.get("allowed", []))
-
-    def finish_login(self, code: str, verifier: str, allowed: list[str] = ()) -> None:
+    def finish_login(self, code: str, verifier: str) -> None:
         resp = _http("POST", f"{AUTH}/token", form={
             "grant_type": "authorization_code", "code": code, "redirect_uri": REDIRECT,
             "client_id": self.client_id, "code_verifier": verifier})
-        self.tokens = transfer_tokens(resp) | {"allowed": list(allowed)}
+        self.tokens = transfer_tokens(resp)
         self._store()
 
     def _token(self) -> str:
@@ -261,7 +279,6 @@ class Globus:
                 "client_id": self.client_id})
             fresh = transfer_tokens(resp)
             fresh["refresh_token"] = fresh["refresh_token"] or self.tokens["refresh_token"]
-            fresh["allowed"] = self.tokens.get("allowed", [])
             self.tokens = fresh
             self._store()
         return self.tokens["access_token"]
@@ -304,6 +321,16 @@ class Globus:
     def ls(self, collection: str, path: str) -> tuple[str, list[Item]]:
         q = urllib.parse.urlencode({"path": path or "/~/"})
         return parse_ls(_http("GET", f"{TRANSFER}/operation/endpoint/{collection}/ls?{q}", self._token()))
+
+    def needs(self, collection: str) -> NeedsSignIn | None:
+        """What this collection wants before it lists files: a permission, an account from its domain, or nothing."""
+        try:
+            self.ls(collection, "")
+        except NeedsSignIn as e:
+            return e
+        except GlobusError:
+            pass  # other trouble (offline Globus Connect) shows in its pane
+        return None
 
     def mkdir(self, collection: str, path: str) -> None:
         _http("POST", f"{TRANSFER}/operation/endpoint/{collection}/mkdir", self._token(),
