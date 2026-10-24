@@ -120,6 +120,18 @@ def places(ssh: SshMaster) -> list[Place]:
     return parse_places(ssh.run(f"bash -c {q(PLACES)}", timeout=30).stdout)
 
 
+def storage(found: list[Place]) -> list[Place]:
+    """Home, Project and Scratch out of the places; "Project (mygroup)" when there are several."""
+    picked = []
+    for p in found:
+        low = p.path.lower()  # scratch first: Expanse scratch is .../scratch/you/temp_project
+        kind = "Home" if p.label == "Home" else "Scratch" if "scratch" in low else "Project" if "project" in low else ""
+        if kind:
+            picked.append((kind, p))
+    kinds = [k for k, _ in picked]
+    return [Place(k if kinds.count(k) == 1 else f"{k} ({p.label.rsplit('/', 1)[-1]})", p.path) for k, p in picked]
+
+
 def head_bytes(ssh: SshMaster, path: str, n: int) -> bytes:
     """Up to the first n bytes (plus one, so callers can tell it was cut)."""
     res = ssh.run(f"set -o pipefail; head -c {int(n) + 1} -- {q(path)} | base64 -w0", timeout=300, fast=True)

@@ -7,9 +7,10 @@ from collections.abc import Callable
 from gi.repository import Adw, GLib, Gtk
 
 from .. import chat_copy, chats, remote_fs, transfer
+from ..remote_fs import storage
 from ..projects import Project
 from ..session import ClusterSession
-from .folder_picker import FolderPicker
+from .folder_picker import FolderPicker, load_places
 from .widgets import bg
 
 HOW = [("laptop", "Through this laptop", "Simple; fine for smaller projects"),
@@ -24,12 +25,17 @@ class ProjectCopyDialog(Adw.Dialog):
         self.name = posixpath.basename(p.path.rstrip("/"))
         self.parts: list[tuple[str, int, Gtk.CheckButton]] = []
         self.chats: list[tuple[chats.Chat, Gtk.CheckButton]] = []
+        self.paths: dict[str, str] = {}  # Home, Project, Scratch on the target cluster
         page = Adw.PreferencesPage()
 
         to = Adw.PreferencesGroup(title="To")
         self.cluster = Adw.ComboRow(title="Cluster", model=Gtk.StringList.new([s.cfg.name for s in targets]))
         ids = [s.cfg.id for s in targets]
         self.cluster.set_selected(ids.index(p.copy_to) if p.copy_to in ids else 0)
+        self.where = Adw.ActionRow(title="Where", subtitle_lines=0)
+        self.spots = Adw.ToggleGroup(valign=Gtk.Align.CENTER)
+        self.spots.connect("notify::active-name", lambda *_: self._spot())
+        self.where.add_suffix(self.spots)
         self.into = Adw.EntryRow(title="Into folder")
         self.into.set_text(p.copy_into or "~")
         browse = Gtk.Button(icon_name="folder-open-symbolic", tooltip_text="Choose folder", valign=Gtk.Align.CENTER,
@@ -37,7 +43,7 @@ class ProjectCopyDialog(Adw.Dialog):
         browse.connect("clicked", lambda *_: self._browse())
         self.into.add_suffix(browse)
         self.result = Adw.ActionRow(title="Will be", css_classes=["property"])
-        for row in (self.cluster, self.into, self.result):
+        for row in (self.cluster, self.where, self.into, self.result):
             to.add(row)
         page.add(to)
 
@@ -69,6 +75,8 @@ class ProjectCopyDialog(Adw.Dialog):
 
         for w, sig in ((self.cluster, "notify::selected"), (self.how, "notify::selected"), (self.into, "changed")):
             w.connect(sig, lambda *_: self._sync())
+        self.cluster.connect("notify::selected", lambda *_: self._load_spots())
+        self._load_spots()
         self._sync()
         bg(lambda: transfer.subfolder_sizes(src.ssh, p.path), self._show_parts)
         bg(lambda: (chats.list_chats(src.ssh, "claude", 400), self._real()), self._show_chats)
@@ -100,7 +108,45 @@ class ProjectCopyDialog(Adw.Dialog):
         self.globus_note.set_subtitle(f"Needs {missing}. Set it up on the Globus page." if missing else "")
         self.go.set_label("Sync" if self.globus else "Copy")
         self.go.set_sensitive(not missing)
+        self._mark_spot()
         self._total()
+
+    # -- home, project or scratch ----------------------------------------------------------
+    def _load_spots(self) -> None:
+        dst = self.dst
+        self.paths.clear()
+        self.spots.remove_all()
+        self.where.set_visible(dst.connected)
+        if dst.connected:
+            load_places(dst, lambda found: dst is self.dst and self._show_spots(found))
+
+    def _show_spots(self, found) -> None:
+        self.paths.clear()
+        self.spots.remove_all()
+        for p in storage(found):  # adding one selects it: paths stay empty till the end so the folder stays
+            self.spots.add(Adw.Toggle(name=p.label, label=p.label, tooltip=p.path))
+        self.paths.update((p.label, "~" if p.label == "Home" else p.path) for p in storage(found))
+        self._mark_spot()
+
+    def _mark_spot(self) -> None:
+        """Light up Home, Project or Scratch when the folder is inside it."""
+        inside = [n for n, path in self.paths.items() if self._inside(path)]
+        name = max(inside, key=lambda n: len(self.paths[n]), default=None)
+        if name != self.spots.get_active_name():
+            self.spots.set_active_name(name)
+        self.where.set_subtitle("Scratch may be cleaned up after a while. Keep work you need in Project."
+                                if name and name.startswith("Scratch") else "")
+
+    def _spot(self) -> None:
+        name = self.spots.get_active_name()
+        path = self.paths.get(name or "")
+        if path and not self._inside(path):
+            self.into.set_text(path)
+        self._mark_spot()
+
+    def _inside(self, path: str) -> bool:
+        into = self.into.get_text().strip() or "~"
+        return into == path or into.startswith(path.rstrip("/") + "/")
 
     def _browse(self) -> None:
         dst = self.dst

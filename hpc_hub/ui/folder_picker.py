@@ -14,6 +14,20 @@ from .widgets import ask_name, bg, shortcuts
 _places: dict[str, list[Place]] = {}  # per cluster, found once per app run
 
 
+def load_places(s: ClusterSession, done: Callable[[list[Place]], None]) -> None:
+    """Places on the cluster, asked once per app run."""
+    cid = s.cfg.id
+    if cid in _places:
+        done(_places[cid])
+        return
+
+    def got(found, _err):
+        if found:
+            _places[cid] = found
+            done(found)
+    bg(lambda: remote_fs.places(s.ssh), got)
+
+
 def short(path: str, home: str = "") -> str:
     if home and (path == home or path.startswith(home + "/")):
         return "~" + path[len(home):]
@@ -116,17 +130,9 @@ class FolderPicker(Adw.Dialog):
 
     # -- places ----------------------------------------------------------------------------
     def _load_places(self) -> None:
-        cid = self.s.cfg.id
-        if cid in _places:
-            self._fill_places(_places[cid])
-            return
-        self._fill_places([Place("Home", "~")])
-
-        def done(found, _err):
-            if found:
-                _places[cid] = found
-                self._fill_places(found)
-        bg(lambda: remote_fs.places(self.s.ssh), done)
+        if self.s.cfg.id not in _places:
+            self._fill_places([Place("Home", "~")])
+        load_places(self.s, self._fill_places)
 
     def _fill_places(self, found: list[Place]) -> None:
         self.sidebar.remove_all()
