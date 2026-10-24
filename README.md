@@ -36,10 +36,13 @@ Experimental, off until you turn them on in Preferences:
 
 ## Safety
 
-- Usernames and passwords are typed into the app and kept in GNOME Keyring. Nothing is stored in plain text, and
-  nothing is hardcoded.
-- Settings in `~/.config/hpc-hub` never hold secrets.
+- Usernames and passwords are typed into the app and kept in GNOME Keyring on your computer, never in plain text
+  and never hardcoded. Settings in `~/.config/hpc-hub` hold no secrets.
 - Globus sign-in uses OAuth with PKCE in your own browser. Tokens are kept in the keyring.
+- Your saved VPN password is typed only into sign-in pages of your university's own site or a known sign-in
+  provider, over https.
+- One exception, on the cluster: VS Code keeps its GitHub sign-in in your home folder there, unencrypted, so a
+  tunnel on a new node does not ask you again. Sign out with `code tunnel user logout` if you don't want that.
 
 ## Install
 
