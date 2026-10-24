@@ -105,9 +105,10 @@ class PdfJsView(Gtk.Box):
         ucm.connect("script-message-received::hpchub", self._message)
         self.web = WebKit.WebView(user_content_manager=ucm, vexpand=True, hexpand=True)
         s = self.web.get_settings()
-        s.set_allow_file_access_from_file_urls(True)
-        s.set_allow_universal_access_from_file_urls(True)
+        s.set_allow_file_access_from_file_urls(True)  # the viewer's own files; PDFs arrive as bytes
         self.web.connect("load-changed", self._loaded)
+        self.home = viewer_html.parent.as_uri()
+        self.web.connect("decide-policy", self._policy)
         self.web.connect("context-menu", lambda *_: False)
         self.web.get_network_session().connect("download-started", self._download)
         self.web.load_uri(viewer_html.as_uri())
@@ -125,6 +126,18 @@ class PdfJsView(Gtk.Box):
             for js in self.pending:
                 self._js(js)
             self.pending.clear()
+
+    def _policy(self, _web, decision, kind) -> bool:
+        """Links inside a PDF open in your browser; the view only ever shows the viewer (and saves copies)."""
+        if kind not in (WebKit.PolicyDecisionType.NAVIGATION_ACTION, WebKit.PolicyDecisionType.NEW_WINDOW_ACTION):
+            return False
+        uri = decision.get_navigation_action().get_request().get_uri() or ""
+        if uri.startswith((self.home, "blob:", "data:", "about:")):
+            return False
+        decision.ignore()
+        if uri.lower().startswith(("https://", "http://", "mailto:")):
+            Gtk.UriLauncher.new(uri).launch(self.get_root(), None, None, None)
+        return True
 
     def _js(self, js: str) -> None:
         if not self.ready:
