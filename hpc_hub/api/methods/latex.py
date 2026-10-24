@@ -433,16 +433,7 @@ def sync_edit(cluster: str, main: str, page: int, x: float, y: float) -> dict | 
 @method("latex.git_info")
 def git_info(cluster: str, folder: str) -> dict:
     """Branch, remotes, changed files and the last 200 commits; root "" when it is not a repository."""
-    ssh = _ssh(cluster)
-    try:
-        i = git.info(ssh, folder)
-    except git.GitError as e:
-        if "does not have any commits" not in str(e):
-            raise
-        i = git.RepoInfo(root=git._git(ssh, folder, "rev-parse --show-toplevel").strip(),  # a new repository
-                         branch=git._git(ssh, folder, "branch --show-current").strip(),
-                         remotes=git.parse_remotes(git._git(ssh, folder, "remote -v")),
-                         changes=[c for c in git._git(ssh, folder, "status --porcelain").splitlines() if c.strip()])
+    i = git.info(_ssh(cluster), folder)
     return {"root": i.root, "branch": i.branch, "remotes": [{"name": n, "url": u} for n, u in i.remotes.items()],
             "changes": [{"status": c[:2].strip(), "path": c[3:]} for c in i.changes],
             "history": [asdict(c) for c in i.history]}

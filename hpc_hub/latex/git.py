@@ -56,7 +56,8 @@ def info(ssh: SshMaster, folder: str) -> RepoInfo:
               f"git -C {shlex.quote(folder)} branch --show-current; echo {sep}; "
               f"git -C {shlex.quote(folder)} remote -v; echo {sep}; "
               f"git -C {shlex.quote(folder)} status --porcelain; echo {sep}; "
-              f"git -C {shlex.quote(folder)} log --date=short --pretty=format:{shlex.quote(LOG_FORMAT)} -n 200")
+              f"git -C {shlex.quote(folder)} log --date=short --pretty=format:{shlex.quote(LOG_FORMAT)} -n 200"
+              " 2>/dev/null; true")  # a new repository has no commits yet: no history, not an error
     res = ssh.run(script, timeout=60)
     if res.returncode == 3:
         return RepoInfo()

@@ -58,3 +58,13 @@ def test_git_on_local_repo(tmp_path):
     git.commit_all(sh, str(repo), "second")
     after = git.info(sh, str(repo))
     assert after.history[0].subject == "second" and after.changes == ["?? main.aux"]
+
+
+def test_info_on_a_repository_without_commits(tmp_path):
+    import subprocess
+
+    from hpc_hub.latex import git
+    subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
+    (tmp_path / "main.tex").write_text("x")
+    i = git.info(LocalShell(), str(tmp_path))
+    assert i.root == str(tmp_path) and i.history == [] and any("main.tex" in c for c in i.changes)
