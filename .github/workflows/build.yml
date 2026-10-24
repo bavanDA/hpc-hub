@@ -1,10 +1,17 @@
 name: Build
 
-# Only on version tags and by hand: macOS minutes count ten times.
+# By hand only, so it never spends minutes by surprise (GitHub Pro: 3000 a month; macOS counts 10x, Windows 2x).
+# A full build is about 110 counted minutes; pick fewer systems to spend less.
 on:
-  push:
-    tags: ["v*"]
   workflow_dispatch:
+    inputs:
+      systems:
+        description: 'Runners as JSON, e.g. ["ubuntu-22.04"] for Linux only'
+        default: '["ubuntu-22.04","macos-14","windows-latest"]'
+
+concurrency:
+  group: build
+  cancel-in-progress: false
 
 permissions:
   contents: read
@@ -15,9 +22,9 @@ jobs:
       fail-fast: false
       matrix:
         # ubuntu-22.04: the oldest glibc we build on is the oldest the installers run on
-        os: [ubuntu-22.04, macos-14, windows-latest]
+        os: ${{ fromJSON(inputs.systems) }}
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 45
+    timeout-minutes: 30  # a stuck macOS job costs at most 300 of the month's minutes
     steps:
       - uses: actions/checkout@v5
 

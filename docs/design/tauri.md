@@ -70,10 +70,13 @@ Installers on this machine: `cd app && npm run tauri:release` (add `-- --bundles
 GitHub Actions:
 
 - `test.yml`, on every push and pull request: pytest and ruff, the web build, `cargo check`.
-- `build.yml`, on a `v*` tag (`git tag v0.2.0 && git push origin v0.2.0`) or by hand (Actions, Build, Run
-  workflow): installers for Linux (`.AppImage`, `.deb`, `.rpm`, built on Ubuntu 22.04), macOS on Apple Silicon
-  (`.dmg`) and Windows (`.msi`, `.exe`). Download them from the run's page, under Artifacts (kept 14 days).
-  They are not signed yet, so macOS and Windows warn when you open them.
+- `build.yml`, by hand only (Actions, Build, Run workflow, or `gh workflow run build.yml`): installers for Linux
+  (`.AppImage`, `.deb`, `.rpm`, built on Ubuntu 22.04), macOS on Apple Silicon (`.dmg`) and Windows (`.msi`,
+  `.exe`). The `systems` input picks runners, e.g. `-f systems='["ubuntu-22.04"]'` for Linux only. Download them
+  from the run's page, under Artifacts (kept 14 days). Not signed yet, so macOS and Windows warn when you open them.
+- **Minutes:** GitHub Pro gives 3000 a month; macOS counts 10x and Windows 2x. A test run is about 2 minutes, a
+  full installer build about 110. Keep the account's Actions budget at $0 (Settings, Billing) so going over stops
+  the jobs instead of charging.
 
 ## Order
 
