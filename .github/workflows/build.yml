@@ -63,7 +63,9 @@ jobs:
       - name: Frozen backend has the SSH bridge (the asyncssh login's local ssh commands)
         timeout-minutes: 2
         shell: bash
-        run: app/src-tauri/binaries/hpc-hub-backend-* --ssh-bridge 2>&1 | grep usage
+        run: |
+          # no arguments: prints its usage and exits 2
+          { app/src-tauri/binaries/hpc-hub-backend-* --ssh-bridge 2>&1 || true; } | grep usage
 
       - run: npm ci
         working-directory: app
