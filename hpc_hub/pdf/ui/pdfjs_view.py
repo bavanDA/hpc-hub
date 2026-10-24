@@ -6,7 +6,9 @@ Same small API as PdfView (load_bytes, show_message, scroll_to, on_double_click)
 import base64
 import json
 import os
+import posixpath
 import time
+import urllib.parse
 from pathlib import Path
 
 import gi
@@ -85,6 +87,15 @@ def _log(line: str) -> None:
         pass
 
 
+def _inside(uri: str, home: str) -> bool:
+    """A file: URI in the viewer's own folder, after resolving any ../ in it."""
+    u, h = urllib.parse.urlparse(uri), urllib.parse.urlparse(home)
+    if u.scheme != "file" or h.scheme != "file":
+        return False
+    path = posixpath.normpath(urllib.parse.unquote(u.path))
+    return path == h.path.rstrip("/") or path.startswith(h.path.rstrip("/") + "/")
+
+
 class PdfJsView(Gtk.Box):
     def __init__(self, viewer_html: Path):
         super().__init__(orientation=Gtk.Orientation.VERTICAL)
@@ -132,7 +143,7 @@ class PdfJsView(Gtk.Box):
         if kind not in (WebKit.PolicyDecisionType.NAVIGATION_ACTION, WebKit.PolicyDecisionType.NEW_WINDOW_ACTION):
             return False
         uri = decision.get_navigation_action().get_request().get_uri() or ""
-        if uri.startswith((self.home, "blob:", "data:", "about:")):
+        if uri.startswith(("blob:", "data:", "about:")) or _inside(uri, self.home):
             return False
         decision.ignore()
         if uri.lower().startswith(("https://", "http://", "mailto:")):
