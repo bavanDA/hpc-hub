@@ -85,7 +85,7 @@ class ProjectCopyDialog(Adw.Dialog):
             self.how.set_selected(1)  # Globus when it is ready: faster, and copying again only sends changes
         self._sync()
         bg(lambda: transfer.subfolder_sizes(src.ssh, p.path), self._show_parts)
-        bg(lambda: (chats.list_chats(src.ssh, "claude", 400), self._real()), self._show_chats)
+        bg(lambda: (chats.list_chats(src.ssh, "claude", 400, full_size=True), self._real()), self._show_chats)
 
     # -- state ----------------------------------------------------------------------------
     @property

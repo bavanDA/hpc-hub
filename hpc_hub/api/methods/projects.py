@@ -244,7 +244,7 @@ def _project_chats(ssh, path: str) -> list[chat_list.Chat]:
     """Claude chats started in the folder or below it; /scratch may be a link to /mmfs1/scratch."""
     real = ssh.run(f"readlink -f {remote_fs.q(path)}", timeout=30).stdout.strip().rstrip("/")
     roots = {path.rstrip("/"), real} - {""}
-    return [c for c in chat_list.list_chats(ssh, "claude", CHAT_LIMIT)
+    return [c for c in chat_list.list_chats(ssh, "claude", CHAT_LIMIT, full_size=True)
             if any(c.cwd == r or c.cwd.startswith(r + "/") for r in roots)]
 
 
@@ -367,7 +367,7 @@ def _globus(client: globus.Globus, src: config.ClusterConfig, path: str, dst: co
 
 def _chats(src, picked: list[str], dst, dest: str):
     def work(p: transfer.Progress, report: _Report):
-        found = [c for c in chat_list.list_chats(src.ssh, "claude", CHAT_LIMIT) if c.id in picked]
+        found = [c for c in chat_list.list_chats(src.ssh, "claude", CHAT_LIMIT, full_size=True) if c.id in picked]
         p.total = sum(c.size for c in found)
         for c in found:
             part = transfer.Progress(cancelled=p.cancelled)

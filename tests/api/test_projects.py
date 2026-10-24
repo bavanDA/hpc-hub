@@ -136,7 +136,7 @@ def test_copy_plan_sizes_and_chats(hub, tmp_path, monkeypatch):
     src = _project(tmp_path)
     found = [Chat("c1", str(src), "Fix the run", "", "", 1, 300), Chat("c2", str(src / "code"), "", "Hi", "", 1, 9),
              Chat("c3", "/elsewhere", "Other", "", "", 1, 5)]
-    monkeypatch.setattr(api.chat_list, "list_chats", lambda ssh, agent, limit: found)
+    monkeypatch.setattr(api.chat_list, "list_chats", lambda ssh, agent, limit, full_size=False: found)
     got = api.copy_plan("proj")
     assert [x["name"] for x in got["parts"]] == ["data", "code"] and got["parts"][0]["size"] >= 50000
     assert [c["id"] for c in got["chats"]] == ["c1", "c2"] and got["chats"][1]["name"] == "Hi"

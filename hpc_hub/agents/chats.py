@@ -38,7 +38,9 @@ def claude(limit):
         st = os.stat(path)
         cid = os.path.basename(path)[:-6]
         # size: the conversation, its subagents and saved tool output, and its edit history
-        size = st.st_size + tree(path[:-6]) + tree(os.path.expanduser("~/.claude/file-history/" + cid))
+        size = st.st_size
+        if FULL:  # slow on some home file systems (7 s on Wulver): only when copying needs it
+            size += tree(path[:-6]) + tree(os.path.expanduser("~/.claude/file-history/" + cid))
         chat = {"id": cid, "mtime": int(st.st_mtime), "size": size, "cwd": "", "first": "", "title": "",
                 "last": "", "dir": os.path.basename(os.path.dirname(path))}
         try:
@@ -142,6 +144,7 @@ def agy(limit):
                     "title": title or "", "last": ""})
     return out
 try:
+    FULL = len(sys.argv) > 3 and sys.argv[3] == "full"
     out = {"claude": claude, "codex": codex, "agy": agy}.get(sys.argv[1], lambda n: [])(int(sys.argv[2]))
 except Exception as e:
     sys.stderr.write("%s\n" % e)
@@ -176,12 +179,13 @@ def parse(text: str) -> list[Chat]:
             for d in data if isinstance(d, dict) and d.get("id")]
 
 
-def command(agent: str = "claude", limit: int = LIMIT) -> str:
-    return f"python3 -c {shlex.quote(SCRIPT)} {shlex.quote(agent)} {int(limit)}"
+def command(agent: str = "claude", limit: int = LIMIT, full_size: bool = False) -> str:
+    """full_size: add the chat's subagents, saved tool output and edit history to its size (for copying)."""
+    return f"python3 -c {shlex.quote(SCRIPT)} {shlex.quote(agent)} {int(limit)}" + (" full" if full_size else "")
 
 
-def list_chats(ssh: SshMaster, agent: str = "claude", limit: int = LIMIT) -> list[Chat]:
-    res = ssh.run(command(agent, limit), timeout=60)
+def list_chats(ssh: SshMaster, agent: str = "claude", limit: int = LIMIT, full_size: bool = False) -> list[Chat]:
+    res = ssh.run(command(agent, limit, full_size), timeout=60)
     if res.returncode != 0:
         raise RuntimeError(res.stderr.strip().splitlines()[-1] if res.stderr.strip() else "Could not list chats")
     return parse(res.stdout)
