@@ -17,7 +17,7 @@ from .connect.ui.duo import DuoDialog  # noqa: E402
 from .connect.ui.key_setup import KeySetupDialog  # noqa: E402
 from .connect.ui.settings import ClusterSettingsDialog  # noqa: E402
 from .connect.ui.web_login import WebLoginDialog  # noqa: E402
-from .core import browser, config, credentials  # noqa: E402
+from .core import browser, config, credentials, features  # noqa: E402
 from .core.paths import runtime_dir  # noqa: E402
 from .globus import api as globus  # noqa: E402
 from .globus.ui import GlobusPage  # noqa: E402
@@ -52,6 +52,7 @@ class HpcHubApp(QuitMixin, Adw.Application):
         self.projects = ProjectStore()
         self.app_settings = config.load_app()
         browser.preferred = self.app_settings.browser_profile
+        features.experimental = self.app_settings.experimental
         self.sessions = {c.id: ClusterSession(c, self.askpass, self) for c in self.clusters}
         for leftover in runtime_dir().glob("nm-*"):  # VPN cookie files from a killed run
             leftover.unlink(missing_ok=True)
@@ -62,7 +63,8 @@ class HpcHubApp(QuitMixin, Adw.Application):
             ("about", lambda *_: self._about(), []),
             ("disconnect-quit", lambda *_: self._disconnect_and_quit(), []),
             ("preferences", lambda *_: PreferencesDialog(
-                self.app_settings, lambda: config.save_app(self.app_settings)).present(self.window),
+                self.app_settings, lambda: config.save_app(self.app_settings),
+                lambda on: self.window.set_experimental(on)).present(self.window),
              ["<primary>comma"]),
         ):
             action = Gio.SimpleAction.new(name, None)

@@ -1,17 +1,18 @@
-"""App preferences: which browser opens links."""
+"""App preferences: which browser opens links, and experimental features."""
 
 from collections.abc import Callable
 
 from gi.repository import Adw, GLib, Gtk
 
-from ..core import browser
+from ..core import browser, features
 from ..core.config import AppSettings
 
 
 class PreferencesDialog(Adw.PreferencesDialog):
-    def __init__(self, app: AppSettings, save: Callable[[], None]):
+    def __init__(self, app: AppSettings, save: Callable[[], None],
+                 on_experimental: Callable[[bool], None] = lambda on: None):
         super().__init__(title="Preferences", search_enabled=False)
-        self.app, self.save = app, save
+        self.app, self.save, self.on_experimental = app, save, on_experimental
         self.found = browser.profiles() if browser.chrome() else []
         page = Adw.PreferencesPage()
         group = Adw.PreferencesGroup(
@@ -27,7 +28,20 @@ class PreferencesDialog(Adw.PreferencesDialog):
             group.add(Adw.ActionRow(title="No Chrome profiles found", subtitle=GLib.markup_escape_text(
                 "Install Google Chrome to pick a profile.")))
         page.add(group)
+
+        trial = Adw.PreferencesGroup(title="Experimental")
+        self.experimental = Adw.SwitchRow(title="Experimental features", active=app.experimental,
+                                          subtitle="LaTeX, Skills and Scheduled agents. They may change or break.")
+        self.experimental.connect("notify::active", lambda *_: self._experimental())
+        trial.add(self.experimental)
+        page.add(trial)
         self.add(page)
+
+    def _experimental(self) -> None:
+        on = self.experimental.get_active()
+        self.app.experimental = features.experimental = on
+        self.save()
+        self.on_experimental(on)
 
     def _changed(self) -> None:
         i = self.row.get_selected()

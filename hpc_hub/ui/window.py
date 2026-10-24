@@ -7,6 +7,7 @@ from ..agents.ui.skills_page import SkillsPage
 from ..compute.ui.jobs import JobsPage
 from ..compute.ui.usage_page import UsagePage
 from ..connect.ui.cluster_card import ClusterCard
+from ..core import features
 from ..files.ui import FilesPage
 from ..latex.ui import LatexPage
 from ..terminals.ui import TerminalsPage
@@ -105,7 +106,18 @@ class MainWindow(Adw.ApplicationWindow):
         narrow.add_setter(self.split, "collapsed", True)
         self.add_breakpoint(narrow)
         self.set_size_request(360, 400)
+        self.set_experimental(features.experimental)
         self._page_changed()
+
+    def set_experimental(self, on: bool) -> None:
+        """Show or hide the experimental pages (LaTeX, Skills, Scheduled agents) and the buttons that lead there."""
+        for name in features.EXPERIMENTAL_PAGES:
+            if name in self.rows:
+                self.rows[name].set_visible(on)
+        if not on and self.stack.get_visible_child_name() in features.EXPERIMENTAL_PAGES:
+            self.stack.set_visible_child_name("clusters")
+        if hasattr(self, "projects"):
+            self.projects.reload()
 
     def _row_selected(self, _box, row) -> None:
         if row is not None and self.stack.get_visible_child_name() != row.page:

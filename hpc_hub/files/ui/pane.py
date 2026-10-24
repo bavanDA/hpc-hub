@@ -7,6 +7,7 @@ from collections.abc import Callable
 from gi.repository import Adw, Gio, GLib, GObject, Gtk, Pango
 
 from ...connect.session import ClusterSession, State
+from ...core import features
 from ...ui.widgets import bg
 from .. import remote_fs
 from ..remote_fs import Entry
@@ -208,7 +209,7 @@ class FilePane(FileActionsMixin, Gtk.Box):
             self.actions["zip"].set_tooltip_text("Extract here" if is_archive else "Zip on the cluster")
             self.actions["zip"].set_icon_name(
                 "extract-archive-symbolic" if is_archive else "package-x-generic-symbolic")
-            self.actions["latex"].set_visible(remote_fs.ext(e.name) == ".tex")
+            self.actions["latex"].set_visible(remote_fs.ext(e.name) == ".tex" and features.experimental)
         else:
             self.actions["latex"].set_visible(False)
 

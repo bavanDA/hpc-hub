@@ -3,6 +3,7 @@ import gi
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 
+from hpc_hub.core import features  # noqa: E402
 from hpc_hub.files.remote_fs import Entry  # noqa: E402
 from hpc_hub.files.ui import menu as file_menu  # noqa: E402
 
@@ -16,11 +17,14 @@ def labels(menu):
     return out
 
 
-def test_menus():
+def test_menus(monkeypatch):
+    monkeypatch.setattr(features, "experimental", True)
     folder = labels(file_menu.build(Entry("myproj", "d", 0, 0), False, (".tex",)))
     assert folder[:2] == ["Open", "Open in VS Code"] and "Make a zip" in folder and folder[-1] == "Delete…"
     tex = labels(file_menu.build(Entry("main.tex", "f", 10, 0), False, (".tex",)))
     assert tex[:3] == ["Open", "Edit", "Open in LaTeX"] and "Open its folder in VS Code" in tex
+    monkeypatch.setattr(features, "experimental", False)
+    assert "Open in LaTeX" not in labels(file_menu.build(Entry("main.tex", "f", 10, 0), False, (".tex",)))
     assert "Extract here" in labels(file_menu.build(Entry("data.tar.gz", "f", 10, 0), False, ()))
     here = labels(file_menu.build(None, True, ()))
     assert "Paste here" in here and "Open this folder in VS Code" in here and "Delete…" not in here
