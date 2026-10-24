@@ -41,10 +41,11 @@ def find(name: str, found: list[Profile] | None = None) -> Profile | None:
 
 
 def open_url(url: str, profile_name: str) -> bool:
-    """True if Chrome took it; False means: use the system browser."""
+    """True if Chrome took it; False means: use the system browser. Web links only, after "--", so a link
+    from a server can never pass as a Chrome option."""
     binary, p = chrome(), find(profile_name)
-    if not (binary and p):
+    if not (binary and p and url.lower().startswith(("https://", "http://"))):
         return False
-    subprocess.Popen([binary, f"--profile-directory={p.folder}", url], stdin=subprocess.DEVNULL,
+    subprocess.Popen([binary, f"--profile-directory={p.folder}", "--", url], stdin=subprocess.DEVNULL,
                      stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
     return True
