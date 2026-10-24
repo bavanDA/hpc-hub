@@ -57,13 +57,35 @@ export async function ptyOpen(argv: string[], cols: number, rows: number, h: Han
   return id
 }
 
+// Keys to a backend terminal go one call at a time (the backend answers calls on several threads), with what
+// was typed meanwhile sent together next
+const typed = new Map<number, { busy: boolean; pending: string }>()
+
+async function channelWrite(id: number, data: string) {
+  const q = typed.get(id) ?? { busy: false, pending: '' }
+  typed.set(id, q)
+  q.pending += data
+  if (q.busy) return
+  q.busy = true
+  try {
+    while (q.pending) {
+      const chunk = q.pending
+      q.pending = ''
+      await call('terminals.write', { id: -id, data: chunk })
+    }
+  } finally {
+    q.busy = false
+  }
+}
+
 export const ptyWrite = (id: number, data: string) =>
-  id < 0 ? call('terminals.write', { id: -id, data }) : invoke('pty_write', { id, data })
+  id < 0 ? channelWrite(id, data) : invoke('pty_write', { id, data })
 export const ptyResize = (id: number, cols: number, rows: number) =>
   id < 0 ? call('terminals.resize', { id: -id, cols, rows }) : invoke('pty_resize', { id, cols, rows })
 
 export function ptyClose(id: number) {
   handlers.delete(id)
   closed.add(id)
+  typed.delete(id)
   return id < 0 ? call('terminals.close', { id: -id }) : invoke('pty_close', { id })
 }
