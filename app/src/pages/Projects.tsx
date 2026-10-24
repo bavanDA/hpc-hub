@@ -10,6 +10,7 @@ import { expectCopies } from '../components/projects/copies'
 import { useToast } from '../components/toast'
 import { Button, Dialog, EmptyState, List, Spinner } from '../components/ui'
 import { useCall, useEvent } from '../hooks'
+import { useGo } from '../nav'
 import { call } from '../rpc'
 import type { Project, ProjectList } from '../types/projects'
 
@@ -32,13 +33,14 @@ export function Projects() {
   const [query, setQuery] = useState('')
   const [open, setOpen] = useState<Open | null>(null)
   const toast = useToast()
+  const go = useGo()
 
   useEvent<{ id: string; connected: boolean }>('session', (s) => setData((d) => d && {
     ...d, clusters: d.clusters.map((c) => c.id === s.id ? { ...c, connected: s.connected } : c) }))
 
   const act: RowActions = {
-    // VS Code, agents, Files and LaTeX come with their pages
-    open: () => toast('Coming soon'),
+    // a paper opens at its main .tex in the LaTeX page
+    open: (p) => go('latex', { cluster: p.cluster, path: p.main_tex ? `${p.path.replace(/\/$/, '')}/${p.main_tex}` : p.path }),
     copy: (p) => data && data.clusters.length < 2 ? toast('Add another cluster first') : setOpen({ kind: 'copy', p }),
     edit: (p) => setOpen({ kind: 'edit', mode: 'edit', p }),
     copyPath: (p) => copyText(p.path).then(() => toast('Path copied')),

@@ -26,8 +26,8 @@ export function useTools() {
     try {
       await whenConnected(cluster, name)
       const where = prepare ? await prepare() : folder
-      if (kind === 'files') {
-        go('files', where ? { cluster, path: where } : { cluster })
+      if (kind === 'files' || kind === 'latex') {
+        go(kind, where ? { cluster, path: where } : { cluster })
         return
       }
       if (kind === 'vscode') toast(`Looking for VS Code on ${name}…`)
@@ -44,7 +44,7 @@ export function useTools() {
       } else if (kind === 'ask') {
         setDialog(<AskAllDialog setup={setup} folder={where} onClose={close} />)
       } else {
-        toast('Coming soon')
+        toast(`Can't open ${key}`)
       }
     } catch (e) {
       toast((e as Error).message)

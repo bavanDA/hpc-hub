@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type ComponentType } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useState, type ComponentType } from 'react'
 
 import { LinkPicker } from './components/app/LinkPicker'
 import { useSessionNotifications } from './components/app/notify'
@@ -7,19 +7,22 @@ import { HeaderBar } from './components/HeaderBar'
 import { Questions } from './components/Questions'
 import { GROUPS, Sidebar, type Page } from './components/Sidebar'
 import { ToastProvider } from './components/toast'
+import { Spinner } from './components/ui'
 import { NavContext } from './nav'
 import { Clusters } from './pages/Clusters'
-import { Files } from './pages/Files'
-import { Globus } from './pages/Globus'
-import { Jobs } from './pages/Jobs'
-import { Latex } from './pages/Latex'
-import { Permissions } from './pages/Permissions'
-import { Projects } from './pages/Projects'
-import { Schedules } from './pages/Schedules'
-import { Skills } from './pages/Skills'
-import { Terminals } from './pages/Terminals'
-import { Usage } from './pages/Usage'
 import { call } from './rpc'
+
+// Pages load the first time you open them, so the app starts fast (Clusters is the first screen)
+const Files = lazy(() => import('./pages/Files').then((m) => ({ default: m.Files })))
+const Globus = lazy(() => import('./pages/Globus').then((m) => ({ default: m.Globus })))
+const Jobs = lazy(() => import('./pages/Jobs').then((m) => ({ default: m.Jobs })))
+const Latex = lazy(() => import('./pages/Latex').then((m) => ({ default: m.Latex })))
+const Permissions = lazy(() => import('./pages/Permissions').then((m) => ({ default: m.Permissions })))
+const Projects = lazy(() => import('./pages/Projects').then((m) => ({ default: m.Projects })))
+const Schedules = lazy(() => import('./pages/Schedules').then((m) => ({ default: m.Schedules })))
+const Skills = lazy(() => import('./pages/Skills').then((m) => ({ default: m.Skills })))
+const Terminals = lazy(() => import('./pages/Terminals').then((m) => ({ default: m.Terminals })))
+const Usage = lazy(() => import('./pages/Usage').then((m) => ({ default: m.Usage })))
 
 const EXPERIMENTAL = new Set(GROUPS.flatMap(([, items]) => items.filter((i) => i.experimental).map((i) => i.page)))
 
@@ -59,7 +62,11 @@ export default function App() {
           <HeaderBar title={TITLES[page]} onSidebar={() => setSidebar(!sidebar)} sidebar={sidebar}
             onExperimental={showExperimental} />
           <div className="min-h-0 flex-1 overflow-auto">
-            {Current ? <Current /> : <p className="p-8 text-dim">{TITLES[page]} is experimental.</p>}
+            {Current
+              ? <Suspense fallback={<div className="grid h-full place-items-center"><Spinner size={24} /></div>}>
+                  <Current />
+                </Suspense>
+              : <p className="p-8 text-dim">{TITLES[page]} is experimental.</p>}
           </div>
         </main>
       </div>
