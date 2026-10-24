@@ -143,6 +143,7 @@ export function start(tab: Tab) {
       banner(tab, 'Session ended. Close this tab, or open it again from the list.')
     },
   }).then((id) => {
+    if (!state.tabs.includes(tab)) return ptyClose(id)  // closed while it was starting
     tab.pty = id
     term.onData((d) => { if (tab.pty !== null) ptyWrite(tab.pty, d).catch(() => {}) })
     term.onResize(({ cols, rows }) => { if (tab.pty !== null) ptyResize(tab.pty, cols, rows).catch(() => {}) })
