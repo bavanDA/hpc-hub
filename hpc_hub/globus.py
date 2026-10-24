@@ -125,6 +125,22 @@ def transfer_tokens(resp: dict) -> dict:
     raise GlobusError("Globus did not return a transfer token")
 
 
+def own_collection(found: list[Collection], name: str) -> Collection | None:
+    """Your personal collection for a cluster: its name has the cluster's word in it (wulver-jdoe)."""
+    return next((c for c in found if name.lower() in c.name.lower()), None)
+
+
+def find_own(client: "Globus", clusters) -> dict[str, Collection]:
+    """Your own collection for each cluster that has no shared one yet, by cluster id."""
+    out = {}
+    for c in clusters:
+        if not c.globus.collection_id and c.globus.mine:
+            found = own_collection(client.search(c.globus.mine, mine=True), c.globus.mine)
+            if found:
+                out[c.id] = found
+    return out
+
+
 class Globus:
     def __init__(self, client_id: str):
         self.client_id = client_id
@@ -162,8 +178,9 @@ class Globus:
             self._store()
         return self.tokens["access_token"]
 
-    def search(self, text: str) -> list[Collection]:
-        q = urllib.parse.urlencode({"filter_fulltext": text, "limit": 25})
+    def search(self, text: str, mine: bool = False) -> list[Collection]:
+        q = urllib.parse.urlencode({"filter_fulltext": text, "limit": 25,
+                                    **({"filter_scope": "my-endpoints"} if mine else {})})
         resp = _http("GET", f"{TRANSFER}/endpoint_search?{q}", self._token())
         return [Collection(d["id"], d.get("display_name") or d.get("canonical_name") or d["id"],
                            d.get("owner_string", "")) for d in resp.get("DATA", [])]

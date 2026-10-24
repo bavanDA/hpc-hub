@@ -57,6 +57,17 @@ def test_tool_settings_roundtrip(tmp_path):
     assert (y.vscode.command, y.claude.remote, y.globus.collection_id) == ("vscode", True, "abc")
 
 
+def test_known_globus_collections_fill_old_configs(tmp_path):
+    clusters = config.default_clusters()
+    for c in clusters:
+        c.globus.collection_id = c.globus.collection_name = ""  # what older versions saved
+    path = tmp_path / "c.toml"
+    config.save(clusters, path)
+    by_id = {c.id: c.globus for c in config.load(path)}
+    assert by_id["sdsc"].collection_name == "SDSC HPC - Expanse Lustre" and by_id["yale"].collection_id
+    assert not by_id["wulver"].collection_id and by_id["wulver"].mine == "wulver"
+
+
 def test_app_settings(tmp_path):
     path = tmp_path / "app.toml"
     config.save_app(config.AppSettings(globus_client_id="cid"), path)

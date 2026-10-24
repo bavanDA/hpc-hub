@@ -54,3 +54,18 @@ def test_parse_ls():
     assert path == "/home/bd/"
     assert [i.name for i in items] == ["a", "Zed", "b.txt"]
     assert items[2].size == 5 and not items[2].is_dir and items[2].modified == "2026-10-18 12:30"
+
+
+def test_find_own_collection():
+    from hpc_hub import config
+
+    class Fake:
+        def __init__(self, *found):
+            self.found = list(found)
+
+        def search(self, text, mine=False):
+            return self.found if mine else []
+    laptop, wulver = globus.Collection("1", "laptop", "me"), globus.Collection("2", "Wulver-me", "me")
+    clusters = config.default_clusters()
+    assert globus.find_own(Fake(laptop, wulver), clusters) == {"wulver": wulver}  # Expanse, Yale are built in
+    assert globus.find_own(Fake(laptop), clusters) == {}

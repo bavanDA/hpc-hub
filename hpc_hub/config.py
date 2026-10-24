@@ -96,6 +96,7 @@ class LatexSettings:
 class GlobusSettings:
     collection_id: str = ""
     collection_name: str = ""
+    mine: str = ""  # no shared collection: use your own Globus Connect Personal one with this in its name
 
 
 @dataclass
@@ -139,6 +140,7 @@ def default_clusters() -> list[ClusterConfig]:
             vpn=VpnSettings(enabled=True, gateway="vpn.njit.edu", useragent="AnyConnect Linux_64 4.10.07061",
                              domains="njit.edu", routes="128.235.0.0/16"),
             profile=ComputeProfile(cpus=4, mem_gb=16),
+            globus=GlobusSettings(mine="wulver"),
             vscode=VsCodeSettings(
                 command=f"$HOME/vscode_cli/{TUNNEL}", setup=f"{FILE_KEYCHAIN}; module purge; module load wulver",
                 compute=ComputeProfile(cpus=16, mem_gb=64, time="12:00:00", partition="general", qos="standard")),
@@ -158,6 +160,7 @@ def default_clusters() -> list[ClusterConfig]:
                 routes="130.132.0.0/16 128.36.0.0/16",
             ),
             profile=ComputeProfile(cpus=2, mem_gb=16, partition="devel"),
+            globus=GlobusSettings("1415f57f-3237-480f-8886-3844abfdfa97", "Yale CRC Bouchet"),
             vscode=VsCodeSettings(
                 command=f"{TUNNEL} --name yale",
                 setup=f"{FILE_KEYCHAIN}; module load VSCode",
@@ -171,6 +174,7 @@ def default_clusters() -> list[ClusterConfig]:
             portal="https://portal.expanse.sdsc.edu",
             code_setup="https://passive.sdsc.edu",
             profile=ComputeProfile(cpus=2, mem_gb=16, partition="shared"),
+            globus=GlobusSettings("8735b734-00dc-4659-be0d-ff96beaff17b", "SDSC HPC - Expanse Lustre"),
             vscode=VsCodeSettings(setup=FILE_KEYCHAIN,
                                   compute=ComputeProfile(cpus=2, mem_gb=8, time="08:00:00", partition="shared")),
         ),
@@ -207,6 +211,8 @@ def load(path: Path = CONFIG_FILE) -> list[ClusterConfig]:
             _merge(c, saved[c.id])
         c.host = c.host.strip().rpartition("@")[2]  # user@ belongs in the login
         c.vscode.command = c.vscode.command or default.vscode.command  # old configs saved an empty alias
+        if not c.globus.collection_id:  # old configs saved none; the cluster's own collection is known
+            c.globus.collection_id, c.globus.collection_name = default.globus.collection_id, default.globus.collection_name
     return clusters
 
 

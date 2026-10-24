@@ -105,6 +105,7 @@ class GlobusPage(Gtk.Box):
             self._setup = self.consent
         else:
             self.stack.set_visible_child_name("main")
+            self.find_own()
             for pane in (self.left, self.right):
                 pane.go(pane.paths.get(pane.cfg.id, ""))
             self.refresh_tasks()
@@ -112,6 +113,22 @@ class GlobusPage(Gtk.Box):
             return
         self._stop_poll()
         self.stack.set_visible_child_name("setup")
+
+    def find_own(self) -> None:
+        """Clusters with no shared Globus collection (Wulver) use yours; find it instead of asking."""
+        client = self.client
+        if not any(not c.globus.collection_id and c.globus.mine for c in self.clusters):
+            return
+
+        def done(found, _err):
+            for c in self.clusters:
+                if c.id in (found or {}):
+                    c.globus.collection_id, c.globus.collection_name = found[c.id].id, found[c.id].name
+                    self.toast(f"Using your Globus collection {found[c.id].name} for {c.name}")
+            if found:
+                self.save_clusters()
+                self.reload()
+        bg(lambda: globus.find_own(client, self.clusters), done)
 
     def _setup_action(self) -> None:
         self._setup()
