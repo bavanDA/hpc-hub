@@ -10,17 +10,39 @@ import { call } from '../rpc'
 import { DUO, type Question, type Session } from '../types/clusters'
 import { DuoDialog } from './clusters/DuoDialog'
 import { QuestionDialog } from './clusters/QuestionDialog'
+import { KeySetupDialog } from './clusters/KeySetupDialog'
+import { SettingsDialog, type Tab } from './clusters/SettingsDialog'
 import { inTauri } from './clusters/SignIn'
 import { load, useClusters } from './clusters/store'
 import { useToast } from './toast'
 
+// a plain browser (design work): ?question=pick-browser|browser-login|web-login or ?show=settings|keysetup,
+// with &cluster=id and &tab=..., opens that dialog with demo data
+const demo = inTauri ? null : new URLSearchParams(location.search)
+
+function demoQuestions(): Question[] {
+  const kind = demo?.get('question') as Question['kind'] | undefined
+  const cluster = demo?.get('cluster') ?? 'wulver'
+  return kind ? [{ id: 'demo', kind, cluster, name: cluster === 'yale' ? 'Yale Bouchet' : 'Wulver (NJIT)',
+    default: 'Uni', profile: 'Uni', profiles: [{ name: 'Home', email: '' }, { name: 'Uni', email: 'jdoe@example.edu' }],
+    fill: { socket: '', token: '' } }] : []
+}
+
 export function Questions() {
   const toast = useToast()
   const { clusters, sessions } = useClusters()
-  const [questions, setQuestions] = useState<Question[]>([])
+  const [questions, setQuestions] = useState<Question[]>(demoQuestions)
+  const [shown, setShown] = useState(demo?.get('show') ?? '')
   const asked = useRef<Question[]>([])
-  asked.current = questions
+  useEffect(() => { asked.current = questions })
   useEffect(load, [])
+
+  function answer(q: Question, value: string | null) {
+    setQuestions((all) => all.filter((x) => x.id !== q.id))
+    call('question.answer', { id: q.id, answer: value }).catch((e: Error) => toast(e.message))
+  }
+  const answerRef = useRef(answer)
+  useEffect(() => { answerRef.current = answer })
 
   useEvent<Question>('question', (q) => setQuestions((all) => [...all.filter((x) => x.id !== q.id), q]))
   useEvent<{ id: string }>('question-done', ({ id }) => {
@@ -35,7 +57,7 @@ export function Questions() {
     if (!inTauri) return
     const stop = listen<{ id: string; token: string; error: string }>('sso-result', ({ payload: r }) => {
       const q = asked.current.find((x) => x.id === r.id && x.kind === 'web-login')
-      if (q) answer(q, JSON.stringify({ token: r.token, error: r.error }))
+      if (q) answerRef.current(q, JSON.stringify({ token: r.token, error: r.error }))
     })
     return () => { stop.then((fn) => fn()) }
   }, [])
@@ -43,10 +65,7 @@ export function Questions() {
     if (s.state === 'Error' && s.detail) toast(`${clusters?.find((c) => c.id === s.id)?.name ?? s.id}: ${s.detail}`)
   })
 
-  function answer(q: Question, value: string | null) {
-    setQuestions((all) => all.filter((x) => x.id !== q.id))
-    call('question.answer', { id: q.id, answer: value }).catch((e: Error) => toast(e.message))
-  }
+  const demoCluster = clusters?.find((c) => c.id === (demo?.get('cluster') ?? 'wulver'))
 
   const duo = Object.values(sessions).find((s) => s.state === DUO)
   const q = questions[0]
@@ -56,6 +75,10 @@ export function Questions() {
         onCancel={() => call('clusters.cancel', { cluster: duo.id }).catch((e: Error) => toast(e.message))} />}
       {q && <QuestionDialog key={q.id} q={q} cluster={clusters?.find((c) => c.id === q.cluster)}
         onAnswer={(a) => answer(q, a)} />}
+      {shown === 'settings' && demoCluster && <SettingsDialog cluster={demoCluster} onClose={() => setShown('')}
+        start={(demo?.get('tab') ?? 'login') as Tab} hint={demo?.get('hint') ?? undefined} />}
+      {shown === 'keysetup' && demoCluster && <KeySetupDialog cluster={demoCluster} onClose={() => setShown('')}
+        onDone={() => setShown('')} />}
     </>
   )
 }
