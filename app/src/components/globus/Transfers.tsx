@@ -57,7 +57,7 @@ export function Transfers({ tasks, error, onRefresh, onCancel }:
         <h2 className="flex-1 font-bold">Recent transfers</h2>
         <IconButton icon={RefreshCw} label="Refresh" size={16} onClick={onRefresh} />
       </div>
-      <div className="max-h-[184px] min-h-0 overflow-auto rounded-xl">
+      <div className="max-h-[168px] min-h-0 overflow-auto rounded-xl">
         <List>
           {error ? <p className="p-4 text-center text-[13px] text-bad">{error}</p>
             : !tasks?.length ? <p className="p-4 text-center text-dim">{tasks ? 'No transfers yet' : 'Loading…'}</p>

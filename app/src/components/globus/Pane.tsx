@@ -15,7 +15,7 @@ import type { Pane as PaneState } from './usePane'
 function Empty({ icon: Icon, title, text, button, onClick }:
   { icon: LucideIcon; title: string; text?: string; button?: string; onClick?: () => void }) {
   return (
-    <div className="flex h-full flex-col items-center justify-center gap-2 p-6 text-center">
+    <div className="flex min-h-full flex-col items-center justify-center gap-2 p-6 text-center">
       <Icon size={44} strokeWidth={1.25} className="text-dim" />
       <h3 className="text-lg font-bold leading-snug">{title}</h3>
       {text && <p className="max-w-xs text-[13px] text-dim">{text}</p>}

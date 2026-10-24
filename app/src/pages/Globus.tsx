@@ -125,7 +125,7 @@ export function Globus() {
         <p className="flex-1 text-[13px] text-dim">Copies run on Globus, so you can close the app or your laptop.</p>
         <IconButton icon={Settings} label="Globus settings" size={16} onClick={() => setSettings(true)} />
       </div>
-      <div className="flex min-h-[300px] flex-1 gap-3">
+      <div className="flex min-h-[340px] flex-1 gap-3">
         <Pane pane={left} clusters={status.clusters} onChoose={setPicking} onStart={startPersonal}
           onConsent={() => setLogin('globus.consent_url')} />
         <div className="flex shrink-0 flex-col items-center justify-center gap-2">
