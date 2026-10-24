@@ -104,3 +104,19 @@ def test_settings_go_on_stdin_not_the_command_line(tmp_path, monkeypatch):
     permissions.save(LocalShell(), p)
     saved = json.loads((tmp_path / permissions.SETTINGS).read_text())
     assert saved["env"]["ANTHROPIC_API_KEY"] == "sk-secret" and "Bash(trash:*)" in saved["permissions"]["allow"]
+
+
+def test_settings_written_private(tmp_path, monkeypatch):
+    import os
+    import stat
+    import subprocess as sp
+
+    from tests.helpers import LocalShell
+    monkeypatch.setenv("HOME", str(tmp_path))
+    (tmp_path / ".claude").mkdir()
+    (tmp_path / permissions.SETTINGS).write_text("{}")
+    os.chmod(tmp_path / permissions.SETTINGS, 0o644)
+    permissions.save(LocalShell(), permissions.parse("{}", ""))
+    assert stat.S_IMODE(os.stat(tmp_path / permissions.SETTINGS).st_mode) == 0o600
+    sp.run(["bash", "-c", permissions.set_key_command("remoteControlAtStartup", True)], check=True)
+    assert stat.S_IMODE(os.stat(tmp_path / permissions.SETTINGS).st_mode) == 0o600

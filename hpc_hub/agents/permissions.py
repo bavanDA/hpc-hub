@@ -113,7 +113,8 @@ except (OSError, ValueError):
     s = {}
 s[sys.argv[1]] = json.loads(sys.argv[2])
 os.makedirs(os.path.dirname(p), exist_ok=True)
-json.dump(s, open(p + ".new", "w"), indent=2)
+with open(os.open(p + ".new", os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600), "w") as f:
+    json.dump(s, f, indent=2)  # 0600: it can hold API keys, and login nodes are shared
 os.replace(p + ".new", p)
 """
 
@@ -148,6 +149,7 @@ def save_command(p: Permissions) -> str:
     shows in ps on the shared login node)."""
     guard = {"trash": p.trash, "ask": sorted(p.ask)}
     steps = [
+        "umask 077",  # settings.json can hold API keys: only you may read what we write
         "mkdir -p ~/.claude/hooks ~/.local/bin",
         f"cp ~/{SETTINGS} ~/{SETTINGS}.bak 2>/dev/null; true",
         f"cat > ~/{SETTINGS}.new && mv ~/{SETTINGS}.new ~/{SETTINGS}",
