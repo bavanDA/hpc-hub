@@ -66,7 +66,7 @@ def _status(signed_in: bool | None = None) -> dict:
     return {"client_id": cid, "signed_in": signed_in,
             "clusters": [{"id": c.id, "name": c.name, "collection_id": c.globus.collection_id,
                           "collection_name": c.globus.collection_name} for c in hub().clusters],
-            "wants": [_want_json(k, w) for k, w in _wants.items()]}
+            "wants": [_want_json(k, w) for k, w in list(_wants.items())]}
 
 
 @method("globus.status")
@@ -86,7 +86,7 @@ def set_client(id: str) -> dict:
 
 def _start_login(scope: str, fresh: bool, domain: str = "", what: str = "") -> dict:
     now = time.time()
-    for k in [k for k, (_v, t) in _logins.items() if now - t > LOGIN_SECONDS]:
+    for k in [k for k, (_v, t) in list(_logins.items()) if now - t > LOGIN_SECONDS]:
         _logins.pop(k, None)
     verifier, challenge = globus.pkce()
     lid = secrets.token_hex(8)
@@ -105,10 +105,11 @@ def login_url() -> dict:
 def consent_url() -> dict:
     """One page for every collection's wishes: the permissions merged, and an account from a domain if one asks.
     Already signed in: only Allow, unless a domain wants its account."""
-    domain = next((w.domains[0] for w in _wants.values() if isinstance(w, globus.SessionRequired)), "")
+    wants = list(_wants.items())  # panes add to it from other threads
+    domain = next((w.domains[0] for _k, w in wants if isinstance(w, globus.SessionRequired)), "")
     kind = globus.SessionRequired if domain else globus.ConsentRequired
-    names = [_cluster(k).name for k, w in _wants.items() if isinstance(w, kind)]
-    scope = globus.merge_scopes([s for w in _wants.values() if isinstance(w, globus.ConsentRequired)
+    names = [_cluster(k).name for k, w in wants if isinstance(w, kind)]
+    scope = globus.merge_scopes([s for _k, w in wants if isinstance(w, globus.ConsentRequired)
                                  for s in w.scopes])
     return _start_login(scope, not client().logged_in, domain, " and ".join(names))
 
