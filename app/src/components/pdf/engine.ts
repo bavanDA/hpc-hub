@@ -6,9 +6,10 @@ type Viewer = typeof import('pdfjs-dist/web/pdf_viewer.mjs')
 
 // Standard fonts and image decoders by file name: bundled as files, fetched only when a PDF needs them
 const FILES = {
-  ...import.meta.glob('/node_modules/pdfjs-dist/standard_fonts/*.{pfb,ttf}', { query: '?url', import: 'default' }),
-  ...import.meta.glob('/node_modules/pdfjs-dist/wasm/*.wasm', { query: '?url', import: 'default' }),
-} as Record<string, () => Promise<string>>
+  ...import.meta.glob('/node_modules/pdfjs-dist/standard_fonts/*.{pfb,ttf}', { query: '?url', import: 'default',
+    eager: true }),
+  ...import.meta.glob('/node_modules/pdfjs-dist/wasm/*.wasm', { query: '?url', import: 'default', eager: true }),
+} as Record<string, string>
 const byName = Object.fromEntries(Object.entries(FILES).map(([k, v]) => [k.split('/').pop()!, v]))
 
 /** Hands pdf.js the bundled files instead of fetching them from a folder. */
@@ -17,7 +18,7 @@ class BundledData {
   async fetch({ filename }: { kind: string; filename: string }): Promise<Uint8Array> {
     const url = byName[filename]
     if (!url) throw new Error(`No bundled ${filename}`)
-    return new Uint8Array(await (await fetch(await url())).arrayBuffer())
+    return new Uint8Array(await (await fetch(url)).arrayBuffer())
   }
 }
 
