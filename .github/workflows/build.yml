@@ -52,7 +52,9 @@ jobs:
         continue-on-error: ${{ runner.os == 'Windows' }}
         timeout-minutes: 2
         shell: bash
-        run: echo '{"jsonrpc":"2.0","id":1,"method":"app.version"}' | app/src-tauri/binaries/hpc-hub-backend-* | grep '"version"'
+        run: |
+          echo '{"jsonrpc":"2.0","id":1,"method":"app.version"}' |
+            app/src-tauri/binaries/hpc-hub-backend-* | grep '"version"'
 
       - run: npm ci
         working-directory: app
