@@ -4,7 +4,8 @@ import posixpath
 
 from gi.repository import Adw, GLib, Gtk
 
-from ... import globus, remote_fs
+from ... import globus
+from ...files import remote_fs
 from ...core.config import AppSettings, ClusterConfig
 from ...connect.session import ClusterSession
 from ..widgets import bg

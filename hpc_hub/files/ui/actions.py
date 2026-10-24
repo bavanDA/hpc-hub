@@ -5,12 +5,12 @@ from pathlib import Path
 
 from gi.repository import Adw, Gdk, Gio, GLib, Gtk
 
-from ... import remote_fs
-from ...remote_fs import Entry
-from ..editor import EditorDialog
-from ..pdf import PdfDialog
-from ..preview import IMAGES
-from ..widgets import ask_name, bg
+from .. import remote_fs
+from ..remote_fs import Entry
+from .editor import EditorDialog
+from ...ui.pdf import PdfDialog
+from .preview import IMAGES
+from ...ui.widgets import ask_name, bg
 
 DOWNLOADS = Path(GLib.get_user_special_dir(GLib.UserDirectory.DIRECTORY_DOWNLOAD) or Path.home()) / "HPC Hub"
 TEXT = (".txt", ".md", ".py", ".sh", ".tex", ".bib", ".sty", ".cls", ".json", ".yaml", ".yml", ".toml", ".cfg",

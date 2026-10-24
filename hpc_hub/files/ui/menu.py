@@ -2,8 +2,8 @@
 
 from gi.repository import Gdk, Gio, Gtk
 
-from ... import remote_fs
-from ...remote_fs import Entry
+from .. import remote_fs
+from ..remote_fs import Entry
 
 
 def build(entry: Entry | None, can_paste: bool, text_ext: tuple[str, ...]) -> Gio.Menu:

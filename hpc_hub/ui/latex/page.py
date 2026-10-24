@@ -5,10 +5,11 @@ from collections.abc import Callable
 
 from gi.repository import Adw, GLib, GObject, Gtk, Pango
 
-from ... import latex, remote_fs, synctex
+from ... import latex, synctex
+from ...files import remote_fs
 from ...projects import Project, ProjectStore
 from ...connect.session import ClusterSession
-from ..editor import source_view
+from ...files.ui.editor import source_view
 from ..pdf_pane import PdfPane
 from ..widgets import bg, remember, remembered, remember_size, shortcuts
 from .build import BuildMixin

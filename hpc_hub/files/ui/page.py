@@ -6,12 +6,13 @@ from collections.abc import Callable
 
 from gi.repository import Adw, GLib, Gtk
 
-from ... import globus, remote_fs, transfer
+from ... import globus
+from .. import remote_fs, transfer
 from ...core.config import ClusterConfig
-from ...remote_fs import Entry
+from ..remote_fs import Entry
 from ...connect.session import ClusterSession, State
-from ..preview import Preview
-from ..widgets import bg, remember_size
+from .preview import Preview
+from ...ui.widgets import bg, remember_size
 from .actions import TEXT
 from .copy_dialog import CopyDialog
 from .pane import FilePane

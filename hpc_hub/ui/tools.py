@@ -9,7 +9,8 @@ from urllib.parse import urlsplit
 
 from gi.repository import Adw, Gdk, GLib, GObject, Gtk
 
-from .. import agents, ask_all, links, permissions, remote_fs, tmux
+from .. import agents, ask_all, links, permissions, tmux
+from ..files import remote_fs
 from ..compute import slurm
 from ..core import remote
 from ..agents import Agent
@@ -19,7 +20,7 @@ from ..compute.slurm import Allocation
 from .agent_dialog import AgentDialog, Launch
 from .ask_all import AskAllDialog
 from ..compute.ui.compute_dialog import ComputeDialog
-from .folder_picker import FolderPicker
+from ..files.ui.folder_picker import FolderPicker
 from .terminals import TerminalsPage, TerminalTab
 from .widgets import TARGETS, bg, open_uri
 
@@ -340,5 +341,5 @@ class Tools:
 
     # -- remote text edit (used by VS Code settings) -----------------------------------------
     def edit_remote(self, s: ClusterSession, path: str, template: str = "") -> None:
-        from .editor import EditorDialog
+        from ..files.ui.editor import EditorDialog
         EditorDialog(s, path, template).present(self.window)

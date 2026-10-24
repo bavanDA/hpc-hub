@@ -7,7 +7,7 @@ import threading
 from collections.abc import Callable
 from dataclasses import dataclass, field
 
-from .core.ssh import SshMaster
+from ..core.ssh import SshMaster
 
 CHUNK = 1024 * 1024
 

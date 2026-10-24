@@ -4,7 +4,7 @@ from collections.abc import Callable
 
 from gi.repository import GLib, Gtk, Pango
 
-from ... import transfer
+from .. import transfer
 
 
 class TransferRow(Gtk.ListBoxRow):

@@ -3,8 +3,8 @@ import gi
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 
-from hpc_hub.remote_fs import Entry  # noqa: E402
-from hpc_hub.ui.files import menu as file_menu  # noqa: E402
+from hpc_hub.files.remote_fs import Entry  # noqa: E402
+from hpc_hub.files.ui import menu as file_menu  # noqa: E402
 
 
 def labels(menu):

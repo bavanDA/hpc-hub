@@ -9,7 +9,7 @@ from gi.repository import Adw, Gtk
 
 from ..agents import AGENTS, Agent
 from ..connect.session import ClusterSession
-from .folder_picker import FolderPicker
+from ..files.ui.folder_picker import FolderPicker
 from .widgets import bg
 
 

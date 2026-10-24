@@ -13,7 +13,7 @@ from ..projects import Project, ProjectStore
 from ..schedules import PRESETS, Schedule, Status
 from ..connect.session import ClusterSession
 from ..compute.ui.duration import DurationRow
-from .folder_picker import FolderPicker
+from ..files.ui.folder_picker import FolderPicker
 from .widgets import bg
 
 TIME_RE = re.compile(r"^([01]\d|2[0-3]):[0-5]\d$")

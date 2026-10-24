@@ -6,11 +6,12 @@ from collections.abc import Callable
 
 from gi.repository import Adw, GLib, Gtk
 
-from .. import chat_copy, chats, remote_fs, transfer
-from ..remote_fs import storage
+from .. import chat_copy, chats
+from ..files import remote_fs, transfer
+from ..files.remote_fs import storage
 from ..projects import Project
 from ..connect.session import ClusterSession, State
-from .folder_picker import FolderPicker, load_places
+from ..files.ui.folder_picker import FolderPicker, load_places
 from .widgets import bg
 
 HOW = [("laptop", "Through this laptop", "Simple; fine for smaller projects"),

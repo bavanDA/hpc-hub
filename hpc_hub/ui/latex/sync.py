@@ -2,7 +2,8 @@
 
 import posixpath
 
-from ... import remote_fs, synctex
+from ...files import remote_fs
+from ... import synctex
 from ..widgets import bg
 
 

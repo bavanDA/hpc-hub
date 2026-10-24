@@ -7,11 +7,12 @@ from dataclasses import dataclass
 
 from gi.repository import Adw, GLib, Gtk
 
-from .. import projects, remote_fs
+from .. import projects
+from ..files import remote_fs
 from ..projects import Project, ProjectStore
-from ..remote_fs import Place
+from ..files.remote_fs import Place
 from ..connect.session import ClusterSession, State
-from .folder_picker import FolderPicker
+from ..files.ui.folder_picker import FolderPicker
 from .project_copy import ProjectCopyDialog
 from .widgets import agent_buttons, bg, vscode_button
 

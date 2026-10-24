@@ -1,6 +1,6 @@
 import pytest
 
-from hpc_hub import remote_fs
+from hpc_hub.files import remote_fs
 
 
 def test_parse_listing():

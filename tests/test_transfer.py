@@ -1,6 +1,6 @@
 import pytest
 
-from hpc_hub import transfer
+from hpc_hub.files import transfer
 from tests.test_remote_fs import LocalShell
 
 

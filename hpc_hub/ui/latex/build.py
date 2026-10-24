@@ -4,7 +4,8 @@ import posixpath
 
 from gi.repository import Adw, GLib, Gtk
 
-from ... import latex, remote_fs
+from ... import latex
+from ...files import remote_fs
 from ...core.config import LATEX_ENGINES
 from ...latex import LatexIssue
 from ..widgets import bg

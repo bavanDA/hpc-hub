@@ -2,7 +2,7 @@ from gi.repository import Adw, Gio, GObject, Gtk
 
 from .. import APP_NAME
 from ..connect.ui.cluster_card import ClusterCard
-from .files import FilesPage
+from ..files.ui import FilesPage
 from ..compute.ui.jobs import JobsPage
 from .latex import LatexPage
 from .permissions_page import PermissionsPage

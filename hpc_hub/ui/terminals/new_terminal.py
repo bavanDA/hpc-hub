@@ -67,7 +67,7 @@ class NewTerminalDialog(Adw.Dialog):
                 b.set_active(False)
 
     def _browse(self) -> None:
-        from ..folder_picker import FolderPicker
+        from ...files.ui.folder_picker import FolderPicker
         FolderPicker(self.session, self.folder.get_subtitle() or "~", self.folder.set_subtitle).present(self)
 
     def _create(self) -> None:

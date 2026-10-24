@@ -7,7 +7,7 @@ import shlex
 import subprocess
 from collections.abc import Callable
 
-from . import remote_fs, transfer
+from .files import remote_fs, transfer
 from .chats import Chat
 from .core.ssh import SshMaster
 

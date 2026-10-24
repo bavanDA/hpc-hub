@@ -6,7 +6,7 @@ import shlex
 
 from gi.repository import Adw, Gdk, GLib, Gtk, Pango
 
-from ... import remote_fs
+from ...files import remote_fs
 from ...connect.session import ClusterSession
 from ..pdf import PdfDialog
 from ..widgets import bg

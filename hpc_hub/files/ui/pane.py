@@ -6,10 +6,10 @@ from collections.abc import Callable
 
 from gi.repository import Adw, Gio, GLib, GObject, Gtk, Pango
 
-from ... import remote_fs
-from ...remote_fs import Entry
+from .. import remote_fs
+from ..remote_fs import Entry
 from ...connect.session import ClusterSession, State
-from ..widgets import bg
+from ...ui.widgets import bg
 from . import menu
 from .actions import TEXT, FileActionsMixin
 

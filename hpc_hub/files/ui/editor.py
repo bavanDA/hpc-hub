@@ -8,8 +8,8 @@ gi.require_version("GtkSource", "5")
 from gi.repository import Adw, Gtk, GtkSource  # noqa: E402
 
 from .. import remote_fs  # noqa: E402
-from ..connect.session import ClusterSession  # noqa: E402
-from .widgets import bg  # noqa: E402
+from ...connect.session import ClusterSession  # noqa: E402
+from ...ui.widgets import bg  # noqa: E402
 
 
 def source_view(filename: str) -> GtkSource.View:
