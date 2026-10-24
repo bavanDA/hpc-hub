@@ -1,4 +1,4 @@
-"""App preferences: which browser opens links, and experimental features."""
+"""App preferences: which browser opens links, select to copy in terminals, and experimental features."""
 
 from collections.abc import Callable
 
@@ -29,6 +29,15 @@ class PreferencesDialog(Adw.PreferencesDialog):
                 "Install Google Chrome to pick a profile.")))
         page.add(group)
 
+        terms = Adw.PreferencesGroup(title="Terminals")
+        self.select = Adw.SwitchRow(title="Select to copy", active=app.select_to_copy,
+                                    subtitle="Highlight text with the mouse to copy it, also in Claude. Claude chats "
+                                             "you start or resume after this scroll with the scroll bar, not the mouse "
+                                             "wheel.")
+        self.select.connect("notify::active", lambda *_: self._select())
+        terms.add(self.select)
+        page.add(terms)
+
         trial = Adw.PreferencesGroup(title="Experimental")
         self.experimental = Adw.SwitchRow(title="Experimental features", active=app.experimental,
                                           subtitle="LaTeX, Skills and Scheduled agents. They may change or break.")
@@ -42,6 +51,10 @@ class PreferencesDialog(Adw.PreferencesDialog):
         self.app.experimental = features.experimental = on
         self.save()
         self.on_experimental(on)
+
+    def _select(self) -> None:
+        self.app.select_to_copy = features.select_to_copy = self.select.get_active()
+        self.save()
 
     def _changed(self) -> None:
         i = self.row.get_selected()

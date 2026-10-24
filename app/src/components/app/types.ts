@@ -4,4 +4,4 @@ export type ChromeProfile = { folder: string; name: string; email: string }
 /** Chrome profiles to open links in, and the default one ("" is the system browser). */
 export type Profiles = { profiles: ChromeProfile[]; default: string }
 
-export type Preferences = { browser_profile: string; experimental: boolean }
+export type Preferences = { browser_profile: string; experimental: boolean; select_to_copy: boolean }

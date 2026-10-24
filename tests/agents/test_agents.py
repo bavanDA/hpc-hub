@@ -67,3 +67,9 @@ def test_task_is_the_first_prompt():
     assert agents.command(agents.CODEX, s, "abc", task="go") == "codex resume --no-daemon abc go"
     assert agents.command(agents.AGY, s, task="go on") == "agy -i 'go on'"
     assert agents.command(agents.AGY, s, task="  ") == "agy"
+
+
+def test_select_to_copy_starts_claude_without_mouse_capture():
+    assert agents.command(agents.CLAUDE, AgentSettings(command="claude"), "abc", select_to_copy=True) == \
+        "export CLAUDE_CODE_DISABLE_MOUSE=1 && claude --resume abc"
+    assert agents.command(agents.CODEX, AgentSettings(command="codex"), select_to_copy=True) == "codex --no-daemon"

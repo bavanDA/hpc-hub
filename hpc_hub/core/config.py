@@ -269,6 +269,7 @@ class AppSettings:
     browser_profile: str = ""  # Chrome profile name for links (e.g. "Uni"); empty = system browser
     experimental: bool = False  # show LaTeX, Skills and Scheduled agents
     clusters: str = ""  # ids of the clusters you use, comma separated; empty = all of them
+    select_to_copy: bool = False  # highlighting text in a terminal copies it; Claude leaves the mouse alone
 
 
 def load_app(path: Path = APP_FILE) -> AppSettings:

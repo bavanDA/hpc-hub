@@ -10,6 +10,7 @@ gi.require_version("Vte", "3.91")
 from gi.repository import Adw, Gdk, Gio, GLib, Gtk, Pango, Vte  # noqa: E402
 
 from ...connect.session import ClusterSession  # noqa: E402
+from ...core import features  # noqa: E402
 from ...ui.widgets import bg  # noqa: E402
 from .. import links, tmux  # noqa: E402
 from ..links import Link  # noqa: E402
@@ -108,7 +109,7 @@ class TerminalTab(Gtk.Box):
             self._copy_tmux()
 
     def _selected(self, *_):
-        if self.term.get_has_selection():  # Shift+drag selects here: copy right away, like most terminals
+        if features.select_to_copy and self.term.get_has_selection():  # Preferences: Select to copy
             self.term.copy_clipboard_format(Vte.Format.TEXT)
 
     def _copy_tmux(self) -> None:

@@ -1,9 +1,10 @@
-// Preferences (hpc_hub/ui/preferences.py): which browser opens links, and the experimental pages.
+// Preferences (hpc_hub/ui/preferences.py): which browser opens links, select to copy, and the experimental pages.
 import { useEffect, useState } from 'react'
 
 import { call } from '../../rpc'
 import { ActionRow, Group, SwitchRow } from '../clusters/fields'
 import { Select } from '../jobs/Select'
+import { setSelectToCopy } from '../terminals/xterm'
 import { useToast } from '../toast'
 import { Dialog, Row, Spinner } from '../ui'
 import { forgetProfiles, getProfiles } from './openLink'
@@ -28,6 +29,7 @@ export function PreferencesDialog({ onClose, onExperimental }:
       setPrefs(p)
       forgetProfiles()
       if (changes.experimental !== undefined) onExperimental(p.experimental)
+      setSelectToCopy(p.select_to_copy)
     }).catch((e: Error) => toast(`Could not save: ${e.message}`))
   }
 
@@ -56,6 +58,11 @@ export function PreferencesDialog({ onClose, onExperimental }:
               }} />
           ))}
         </Group>}
+        <Group title="Terminals">
+          <SwitchRow label="Select to copy"
+            sub="Highlight text with the mouse to copy it, also in Claude. Claude chats you start or resume after this scroll with the scroll bar, not the mouse wheel."
+            checked={prefs.select_to_copy} onChange={(on) => save({ select_to_copy: on })} />
+        </Group>
         <Group title="Experimental">
           <SwitchRow label="Experimental features" sub="LaTeX, Skills and Scheduled agents. They may change or break."
             checked={prefs.experimental} onChange={(on) => save({ experimental: on })} />

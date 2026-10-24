@@ -129,7 +129,8 @@ class TerminalsPage(SessionListMixin, SessionMenuMixin, Gtk.Box):
         self.list.connect("row-activated", lambda _l, row: getattr(row, "open", None) and row.open())
         box.append(Gtk.ScrolledWindow(child=self.list, vexpand=True, hscrollbar_policy=Gtk.PolicyType.NEVER))
         box.append(Gtk.Label(label="Switching or closing only detaches. Sessions keep running on the cluster.\n"
-                                   "Select text with the mouse to copy it. Paste: Ctrl+Shift+V or right click.",
+                                   "Copy: Ctrl+Shift+C or right click. Paste: Ctrl+Shift+V or right click.\n"
+                                   "To copy by highlighting, turn on Select to copy in Preferences.",
                              wrap=True, xalign=0, css_classes=["dim-label", "caption"], margin_start=10,
                              margin_end=10, margin_bottom=10))
         return box

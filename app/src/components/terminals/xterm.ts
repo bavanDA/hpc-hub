@@ -13,6 +13,11 @@ export function theme(): ITheme {
       yellow: '#9c6e03', brightYellow: '#b58300', white: '#77767b', brightWhite: '#5e5c64' }
 }
 
+// Preferences: Select to copy. Read once, then kept up to date by the Preferences dialog.
+let selectToCopy = false
+call<{ select_to_copy: boolean }>('preferences.get').then((p) => { selectToCopy = p.select_to_copy }).catch(() => {})
+export const setSelectToCopy = (on: boolean) => { selectToCopy = on }
+
 export async function copyText(text: string): Promise<boolean> {
   try {
     await navigator.clipboard.writeText(text)
@@ -49,7 +54,8 @@ function copyTmux(tab: Tab, notify: (text: string) => void) {
     .catch(() => {})
 }
 
-/** Ctrl+Shift+C and Ctrl+Shift+V; Ctrl+C copies when text is selected (else it interrupts). Selecting copies too. */
+/** Ctrl+Shift+C and Ctrl+Shift+V; Ctrl+C copies when text is selected (else it interrupts). Selecting copies
+ * too when Select to copy is on. */
 export function clipboardKeys(tab: Tab, notify: (text: string) => void) {
   const { term } = tab
   term.attachCustomKeyEventHandler((e) => {
@@ -70,7 +76,7 @@ export function clipboardKeys(tab: Tab, notify: (text: string) => void) {
   let pending: number | undefined
   term.onSelectionChange(() => {
     clearTimeout(pending)
-    pending = setTimeout(() => term.hasSelection() && copyText(term.getSelection()), 300)
+    pending = setTimeout(() => selectToCopy && term.hasSelection() && copyText(term.getSelection()), 300)
   })
   let down: { x: number; y: number; shift: boolean } | null = null
   tab.el.addEventListener('mousedown', (e) => { down = e.button === 0 ? { x: e.x, y: e.y, shift: e.shiftKey } : null })
