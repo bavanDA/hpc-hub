@@ -26,6 +26,12 @@ def test_parse():
                                                                      ("678.work", "screen", 1)]
 
 
+def test_parse_escaped_separator():
+    """tmux 3.4 prints the field separator as the four characters \\037."""
+    row = "\\037".join(["work", "1792430282", "0", "work", "", "bash", "1", "/h"])
+    assert [t.name for t in tmux.parse(f"login02\nTMUX_OK\n{row}\n").sessions] == ["work"]
+
+
 def test_job_nodes():
     row = tmux.SEP.join(["hpchub-codex-1429952-170139", "1", "0", "", "", "srun", "1", "/h"])
     got = tmux.parse(f"login02\nTMUX_OK\n{row}\nSCREEN_LIST\nJOB_LIST\n1429952 n0093\n1429907 n0052\n")

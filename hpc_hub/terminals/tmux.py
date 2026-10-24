@@ -80,6 +80,7 @@ def _session(line: str, node: str = "") -> Session:
 
 
 def parse(text: str) -> Listing:
+    text = text.replace("\\037", SEP)  # tmux 3.4 prints the separator as the text \037
     text, _, node_part = text.partition("NODE_LIST\n")
     lines = text.splitlines()
     host = lines[0].strip() if lines else ""
