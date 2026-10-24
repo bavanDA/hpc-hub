@@ -46,13 +46,16 @@ Experimental, off until you turn them on in Preferences:
 
 ## Install
 
-Fedora:
+Linux (Fedora, Ubuntu, Debian, Arch, openSUSE and others):
 
-    sudo dnf install python3-gobject python3-cairo python3-cryptography gtk4 libadwaita libsecret \
-        webkitgtk6.0 vte291-gtk4 gtksourceview5 poppler-glib openconnect NetworkManager-openconnect openssh-clients
+    git clone <this repo> && cd hpc-hub
     ./install.sh
 
-This adds HPC Hub to the app grid and `hpc-hub` to `~/.local/bin`. To run it without installing: `./bin/hpc-hub`.
+It checks for GTK 4, libadwaita 1.7+, WebKitGTK, VTE, openconnect and the rest. If something is missing, it prints
+the install command for your distribution. Then it adds HPC Hub to the app grid and `hpc-hub` to `~/.local/bin`.
+`./install.sh --check` only checks. To run without installing: `./bin/hpc-hub`.
+
+macOS and Windows are not supported yet.
 
 ## Globus
 
