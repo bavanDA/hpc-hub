@@ -91,7 +91,7 @@ def test_download_a_folder(h, tmp_path):
 def test_cancel_stops_the_copy_and_drops_the_half_file(h, tmp_path, monkeypatch):
     src = tmp_path / "big.bin"
     src.write_text("x")
-    monkeypatch.setattr(h.s.ssh, "copy_argv", lambda a, b: ["bash", "-c", f"echo part > '{b}'; sleep 30"],
+    monkeypatch.setattr(h.s.ssh, "copy_argv", lambda a, b: ["bash", "-c", f"echo part > '{b}'; exec sleep 30"],
                         raising=False)
     got = files_local.download("wulver", str(src), str(tmp_path / "here"))
     end = time.monotonic() + 5
