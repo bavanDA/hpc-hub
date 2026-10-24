@@ -63,6 +63,18 @@ def clear(cluster_id: str, kind: str) -> None:
 
 
 # -- backends ----------------------------------------------------------------------------
+def _vault():
+    """macOS Keychain or Windows Credential Manager, picked by name: left to itself, keyring may fall back to a
+    weak store (a plain file) on a system without a vault, and other people's passwords must never land there."""
+    if sys.platform == "darwin":
+        from keyring.backends.macOS import Keyring
+    elif sys.platform == "win32":
+        from keyring.backends.Windows import WinVaultKeyring as Keyring
+    else:
+        raise RuntimeError("No safe place to keep passwords here. Install GNOME Keyring or KWallet")
+    return Keyring()
+
+
 def _secret_service() -> bool:
     return Secret is None and sys.platform.startswith("linux")
 
@@ -84,9 +96,7 @@ def _store(attrs: dict, label: str, secret: str) -> None:
             # libsecret keeps the schema name in xdg:schema, so both apps find the same entry
             collection.create_item(label, {"xdg:schema": SCHEMA_NAME, **attrs}, secret.encode(), replace=True)
     else:
-        import keyring
-
-        keyring.set_password(SERVICE, _account(attrs), secret)
+        _vault().set_password(SERVICE, _account(attrs), secret)
 
 
 def _lookup(attrs: dict) -> str | None:
@@ -101,9 +111,7 @@ def _lookup(attrs: dict) -> str | None:
                     item.unlock()
                 return item.get_secret().decode()
         return None
-    import keyring
-
-    return keyring.get_password(SERVICE, _account(attrs))
+    return _vault().get_password(SERVICE, _account(attrs))
 
 
 def _clear(attrs: dict) -> None:
@@ -116,10 +124,9 @@ def _clear(attrs: dict) -> None:
             for item in secretstorage.search_items(conn, {"xdg:schema": SCHEMA_NAME, **attrs}):
                 item.delete()
     else:
-        import keyring
         from keyring.errors import PasswordDeleteError
 
         try:
-            keyring.delete_password(SERVICE, _account(attrs))
+            _vault().delete_password(SERVICE, _account(attrs))
         except PasswordDeleteError:
             pass  # nothing saved
