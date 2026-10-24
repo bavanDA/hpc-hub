@@ -3,7 +3,7 @@
 from gi.repository import Adw, GLib, Gtk
 
 from ... import tmux
-from ...session import ClusterSession
+from ...connect.session import ClusterSession
 from ..widgets import ask_name, bg, color_dot
 
 

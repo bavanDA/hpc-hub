@@ -3,10 +3,10 @@ from pathlib import Path
 
 import pytest
 
-from hpc_hub.askpass_server import AskpassServer
+from hpc_hub.connect.askpass_server import AskpassServer
 from hpc_hub.core.config import ClusterConfig
 from hpc_hub.core.credentials import Login
-from hpc_hub.session import ClusterSession, State
+from hpc_hub.connect.session import ClusterSession, State
 
 FAKE_BIN = Path(__file__).parent / "fake_bin"
 
@@ -71,7 +71,7 @@ def test_wrong_password(env):
 
 def test_skips_vpn_when_reachable(env, monkeypatch):
     import socket
-    from hpc_hub import session as session_mod
+    from hpc_hub.connect import session as session_mod
 
     def no_vpn(*_a, **_k):
         raise AssertionError("VPN should be skipped")
@@ -126,7 +126,7 @@ def test_extra_node(env):
 
 
 def test_vpn_only(env, monkeypatch):
-    from hpc_hub import session as session_mod
+    from hpc_hub.connect import session as session_mod
     calls = []
     monkeypatch.setattr(session_mod.Vpn, "is_active", lambda self: "up" in calls and "down" not in calls)
     monkeypatch.setattr(session_mod.Vpn, "ensure_profile", lambda self: None)
@@ -218,7 +218,7 @@ def test_healthy_needs_working_link(env, monkeypatch):
     assert s.healthy()
     run = s.ssh.run
     s.ssh.run = lambda *a, **k: __import__("subprocess").CompletedProcess([], 255, "", "")
-    monkeypatch.setattr("hpc_hub.session.time.sleep", lambda _s: None)
+    monkeypatch.setattr("hpc_hub.connect.session.time.sleep", lambda _s: None)
     assert not s.healthy()
     s.ssh.run = run
     rec.done.clear()
@@ -293,7 +293,7 @@ def test_reconnect_reuses_live_login(env):
 
 def test_code_cluster_without_authenticator_says_so():
     from hpc_hub.core import config
-    from hpc_hub.session import ClusterSession
+    from hpc_hub.connect.session import ClusterSession
     s = object.__new__(ClusterSession)
     s.cfg = next(c for c in config.default_clusters() if c.id == "sdsc")
     denied = "bd@login.expanse.sdsc.edu: Permission denied (gssapi-with-mic,keyboard-interactive,hostbased)."
@@ -305,7 +305,7 @@ def test_code_cluster_without_authenticator_says_so():
 
 def test_default_account_is_named_on_requests():
     from hpc_hub.core import config
-    from hpc_hub.session import ClusterSession
+    from hpc_hub.connect.session import ClusterSession
 
     class Ssh:
         def run(self, cmd, timeout=60):
@@ -321,7 +321,7 @@ def test_best_queue_on_wulver():
     import re
     import subprocess
     from hpc_hub.core import config
-    from hpc_hub.session import ClusterSession
+    from hpc_hub.connect.session import ClusterSession
     waits = {"low": "506340", "standard": "51720", "debug": "5"}
 
     class Ssh:

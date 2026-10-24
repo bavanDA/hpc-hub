@@ -1,4 +1,4 @@
-from hpc_hub import ood
+from hpc_hub.connect import ood
 
 PAGE = ('<meta name="csrf-token" content="abc&amp;1" /><a title="Logged in as bdx" data-placement="bottom">'
         '<li> <a title="Home Directory" class="dropdown-item" href="/pun/sys/dashboard/files/fs/home/bdx/expanse">')

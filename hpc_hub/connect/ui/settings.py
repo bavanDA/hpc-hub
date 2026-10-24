@@ -4,15 +4,15 @@ from collections.abc import Callable
 
 from gi.repository import Adw, Gtk
 
-from ..core import browser, credentials
-from ..core.config import VPN_PROTOCOLS, ClusterConfig, ComputeProfile
-from ..core.credentials import Login
-from ..limits import Limits, minutes, slurm_time
-from ..slurm import validate
+from ...core import browser, credentials
+from ...core.config import VPN_PROTOCOLS, ClusterConfig, ComputeProfile
+from ...core.credentials import Login
+from ...limits import Limits, minutes, slurm_time
+from ...slurm import validate
 from ..vpn import split_errors
 from .authenticator_help import AuthenticatorHelp
-from .duration import DurationRow
-from .widgets import TARGETS
+from ...ui.duration import DurationRow
+from ...ui.widgets import TARGETS
 
 
 FACTORS = [("duo", "Duo push on your phone"), ("code", "Code from an authenticator app")]

@@ -3,7 +3,7 @@
 from gi.repository import Adw, GLib, Gtk
 
 from ... import git
-from ...session import ClusterSession
+from ...connect.session import ClusterSession
 from ..widgets import bg
 
 

@@ -1,6 +1,6 @@
 import subprocess
 
-from hpc_hub import network
+from hpc_hub.connect import network
 
 
 def test_route_device(monkeypatch):

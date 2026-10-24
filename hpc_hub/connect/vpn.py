@@ -18,8 +18,8 @@ from collections.abc import Callable
 from urllib.parse import urlsplit
 
 from . import prompts
-from .core.config import ClusterConfig
-from .core.paths import SSO_BIN, runtime_dir
+from ..core.config import ClusterConfig
+from ..core.paths import SSO_BIN, runtime_dir
 
 PROMPT_END = re.compile(r"[:?\]]\s*$")
 NM_ENV = {**os.environ, "LC_ALL": "C"}

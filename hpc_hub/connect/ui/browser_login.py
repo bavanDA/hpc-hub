@@ -7,7 +7,7 @@ from collections.abc import Callable
 
 from gi.repository import Adw, GLib, Gtk
 
-from ..core import browser
+from ...core import browser
 from .. import chrome_cookies
 from ..vpn_sso import SsoStart
 

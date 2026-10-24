@@ -15,7 +15,7 @@ import gi
 gi.require_version("Secret", "1")
 from gi.repository import Secret  # noqa: E402
 
-from .core.browser import CHROME_DIRS  # noqa: E402
+from ..core.browser import CHROME_DIRS  # noqa: E402
 
 SCHEMA = Secret.Schema.new("chrome_libsecret_os_crypt_password_v2", Secret.SchemaFlags.DONT_MATCH_NAME,
                            {"application": Secret.SchemaAttributeType.STRING})

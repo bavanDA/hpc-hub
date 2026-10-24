@@ -4,7 +4,7 @@ from gi.repository import Adw
 
 from ... import tmux
 from ...jobs import JobInfo, cancel_job, wait_gone
-from ...session import ClusterSession
+from ...connect.session import ClusterSession
 from ..widgets import bg
 
 

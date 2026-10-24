@@ -11,7 +11,7 @@ from gi.repository import Adw, Gdk, Gio, GLib, Gtk, Pango, Vte  # noqa: E402
 
 from ... import links, tmux  # noqa: E402
 from ...links import Link  # noqa: E402
-from ...session import ClusterSession  # noqa: E402
+from ...connect.session import ClusterSession  # noqa: E402
 from ..widgets import bg  # noqa: E402
 
 

@@ -8,7 +8,7 @@ from gi.repository import Adw, Gio, GLib, GObject, Gtk, Pango
 
 from ... import remote_fs
 from ...remote_fs import Entry
-from ...session import ClusterSession, State
+from ...connect.session import ClusterSession, State
 from ..widgets import bg
 from . import menu
 from .actions import TEXT, FileActionsMixin

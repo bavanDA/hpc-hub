@@ -5,8 +5,8 @@ from collections.abc import Callable
 from gi.repository import Adw, Gtk
 
 from ..core.config import ComputeProfile
-from ..session import ClusterSession
-from .settings import ProfileRows
+from ..connect.session import ClusterSession
+from ..connect.ui.settings import ProfileRows
 
 
 class ComputeGroup(Adw.PreferencesGroup):

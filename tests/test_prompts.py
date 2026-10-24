@@ -1,4 +1,4 @@
-from hpc_hub import prompts as p
+from hpc_hub.connect import prompts as p
 
 DUO_MENU = """Duo two-factor login for jdoe
 

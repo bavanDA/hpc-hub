@@ -9,7 +9,7 @@ from gi.repository import Adw, GLib, Gtk, Pango
 from ... import links, tmux
 from ...core import remote
 from ...links import Link
-from ...session import ClusterSession
+from ...connect.session import ClusterSession
 from ..widgets import bg, color_dot, open_uri, remember_size
 from .new_terminal import NewTerminalDialog
 from .session_list import SessionListMixin

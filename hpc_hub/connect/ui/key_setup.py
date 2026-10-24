@@ -9,10 +9,10 @@ from pathlib import Path
 
 from gi.repository import Adw, GLib, Gtk
 
-from ..core import browser
-from ..core.config import ClusterConfig
+from ...core import browser
+from ...core.config import ClusterConfig
 from ..ood import Portal, PortalError
-from .widgets import open_uri
+from ...ui.widgets import open_uri
 
 KEYS = ["id_ed25519.pub", "id_ecdsa.pub", "id_rsa.pub"]
 

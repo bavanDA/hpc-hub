@@ -10,7 +10,7 @@ from gi.repository import Adw, GLib, Gtk
 from .. import projects, remote_fs
 from ..projects import Project, ProjectStore
 from ..remote_fs import Place
-from ..session import ClusterSession, State
+from ..connect.session import ClusterSession, State
 from .folder_picker import FolderPicker
 from .project_copy import ProjectCopyDialog
 from .widgets import agent_buttons, bg, vscode_button

@@ -8,7 +8,7 @@ from gi.repository import Adw, Gio, GLib, GObject, Gtk, Pango
 
 from .. import remote_fs
 from ..remote_fs import Entry, Place
-from ..session import ClusterSession
+from ..connect.session import ClusterSession
 from .widgets import ask_name, bg, shortcuts
 
 _places: dict[str, list[Place]] = {}  # per cluster, found once per app run

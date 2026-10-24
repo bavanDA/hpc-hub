@@ -6,7 +6,7 @@ from gi.repository import Adw, GLib, Gtk
 
 from .. import lock, permissions
 from ..permissions import ASKS, GROUPS, Permissions
-from ..session import ClusterSession
+from ..connect.session import ClusterSession
 from .lock_setup import LockSetupDialog
 from .widgets import bg
 

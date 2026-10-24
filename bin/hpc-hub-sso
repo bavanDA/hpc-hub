@@ -2,4 +2,4 @@
 here="$(dirname "$(readlink -f "$0")")"
 # openconnect sets this to /dev/null, which breaks TLS in WebKit
 unset GNUTLS_SYSTEM_PRIORITY_FILE
-exec /usr/bin/python3 -I "$here/../hpc_hub/sso.py" "$@"
+exec /usr/bin/python3 -I "$here/../hpc_hub/connect/sso.py" "$@"

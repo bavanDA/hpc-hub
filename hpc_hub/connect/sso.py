@@ -17,12 +17,12 @@ gi.require_version("WebKit", "6.0")
 from gi.repository import GLib, Gtk, WebKit  # noqa: E402
 
 if __package__:
-    from .core import browser  # noqa: E402
-    from .core.paths import web_dir  # noqa: E402
+    from ..core import browser  # noqa: E402
+    from ..core.paths import web_dir  # noqa: E402
 else:  # run as a script by openconnect (bin/hpc-hub-sso)
-    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    from .core import browser  # noqa: E402
-    from .core.paths import web_dir  # noqa: E402
+    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+    from ..core import browser  # noqa: E402
+    from ..core.paths import web_dir  # noqa: E402
 
 # One step per call: email page -> Next, password page -> Sign in. Returns what it did.
 STEP_JS = """

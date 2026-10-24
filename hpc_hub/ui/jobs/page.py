@@ -7,7 +7,7 @@ from collections.abc import Callable
 from gi.repository import Adw, Gio, GLib, Gtk, Pango
 
 from ...jobs import ALL, HISTORY, MINE, JobInfo, list_jobs
-from ...session import ClusterSession, State
+from ...connect.session import ClusterSession, State
 from ...usage import AccountUsage, account_usage
 from .cancel import CancelMixin
 from .columns import JobItem, add_columns

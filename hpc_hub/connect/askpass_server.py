@@ -9,7 +9,7 @@ import struct
 import threading
 from collections.abc import Callable
 
-from .core.paths import ASKPASS_BIN, runtime_dir
+from ..core.paths import ASKPASS_BIN, runtime_dir
 
 # Handler gets the prompt text, returns the answer or None to refuse.
 Handler = Callable[[str], str | None]

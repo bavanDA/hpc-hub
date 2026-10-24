@@ -14,7 +14,7 @@ from ..agents import Agent
 from ..chats import Chat
 from ..core.config import ComputeProfile
 from ..limits import slurm_time
-from ..session import ClusterSession
+from ..connect.session import ClusterSession
 from .compute_dialog import ComputeGroup
 from .folder_picker import FolderPicker, short
 from .widgets import bg

@@ -6,7 +6,7 @@ from gi.repository import Adw, GLib, Gtk
 
 from ... import globus, remote_fs
 from ...core.config import AppSettings, ClusterConfig
-from ...session import ClusterSession
+from ...connect.session import ClusterSession
 from ..widgets import bg
 from .dialogs import CollectionPicker, LoginDialog
 from .pane import GlobusPane, or_consent

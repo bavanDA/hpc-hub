@@ -9,7 +9,7 @@ from gi.repository import Adw, GLib, Gtk
 from ... import globus, remote_fs, transfer
 from ...core.config import ClusterConfig
 from ...remote_fs import Entry
-from ...session import ClusterSession, State
+from ...connect.session import ClusterSession, State
 from ..preview import Preview
 from ..widgets import bg, remember_size
 from .actions import TEXT

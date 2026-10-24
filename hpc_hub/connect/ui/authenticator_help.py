@@ -4,8 +4,8 @@ from urllib.parse import urlsplit
 
 from gi.repository import Adw, Gtk
 
-from ..core.config import ClusterConfig
-from .widgets import open_uri
+from ...core.config import ClusterConfig
+from ...ui.widgets import open_uri
 
 
 def _step(n: int, title: str, subtitle: str) -> Adw.ActionRow:

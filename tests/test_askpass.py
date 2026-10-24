@@ -1,6 +1,6 @@
 import subprocess
 
-from hpc_hub.askpass_server import AskpassServer
+from hpc_hub.connect.askpass_server import AskpassServer
 from hpc_hub.core.paths import ASKPASS_BIN
 
 

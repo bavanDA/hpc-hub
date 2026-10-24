@@ -3,7 +3,7 @@ import hashlib
 from cryptography.hazmat.primitives import padding
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 
-from hpc_hub import chrome_cookies as cc
+from hpc_hub.connect import chrome_cookies as cc
 
 
 def _encrypt(plain: bytes, password: str) -> bytes:

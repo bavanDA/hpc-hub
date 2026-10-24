@@ -5,7 +5,7 @@ from collections.abc import Callable
 from gi.repository import Adw, GLib, Gtk
 
 from .. import usage
-from ..session import ClusterSession
+from ..connect.session import ClusterSession
 from .widgets import bg
 
 

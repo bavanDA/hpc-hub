@@ -11,7 +11,7 @@ from .. import schedules
 from ..agents import AGENTS
 from ..projects import Project, ProjectStore
 from ..schedules import PRESETS, Schedule, Status
-from ..session import ClusterSession
+from ..connect.session import ClusterSession
 from .duration import DurationRow
 from .folder_picker import FolderPicker
 from .widgets import bg

@@ -1,3 +1,3 @@
 #!/bin/sh
 here="$(dirname "$(readlink -f "$0")")"
-exec /usr/bin/python3 -I "$here/../hpc_hub/askpass.py" "$@"
+exec /usr/bin/python3 -I "$here/../hpc_hub/connect/askpass.py" "$@"

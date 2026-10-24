@@ -13,7 +13,7 @@ from .. import agents, ask_all, links, permissions, remote_fs, slurm, tmux
 from ..core import remote
 from ..agents import Agent
 from ..links import Link
-from ..session import ClusterSession
+from ..connect.session import ClusterSession
 from ..slurm import Allocation
 from .agent_dialog import AgentDialog, Launch
 from .ask_all import AskAllDialog

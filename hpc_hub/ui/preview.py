@@ -9,7 +9,7 @@ from gi.repository import Adw, Gdk, GLib, Gtk, GtkSource, Pango  # noqa: E402
 
 from .. import remote_fs  # noqa: E402
 from ..remote_fs import Entry  # noqa: E402
-from ..session import ClusterSession  # noqa: E402
+from ..connect.session import ClusterSession  # noqa: E402
 from .editor import source_view  # noqa: E402
 from .pdf import PdfView  # noqa: E402
 from .widgets import bg, shortcuts  # noqa: E402

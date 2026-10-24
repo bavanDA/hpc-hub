@@ -2,7 +2,7 @@
 
 from gi.repository import Adw, GLib
 
-from ..session import ClusterSession, State
+from ..connect.session import ClusterSession, State
 
 
 class QuitMixin:

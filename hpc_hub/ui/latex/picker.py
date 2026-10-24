@@ -9,7 +9,7 @@ from gi.repository import Adw, GLib, Gtk
 
 from ... import projects
 from ...projects import Project, ProjectStore
-from ...session import ClusterSession
+from ...connect.session import ClusterSession
 from ..widgets import bg
 
 

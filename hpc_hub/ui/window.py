@@ -1,7 +1,7 @@
 from gi.repository import Adw, Gio, GObject, Gtk
 
 from .. import APP_NAME
-from .cluster_card import ClusterCard
+from ..connect.ui.cluster_card import ClusterCard
 from .files import FilesPage
 from .jobs import JobsPage
 from .latex import LatexPage

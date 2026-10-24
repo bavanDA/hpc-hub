@@ -1,6 +1,6 @@
 import pytest
 
-from hpc_hub import vpn_sso
+from hpc_hub.connect import vpn_sso
 
 NJIT = """<?xml version="1.0" encoding="UTF-8"?>
 <config-auth client="vpn" type="auth-request" aggregate-auth-version="2">

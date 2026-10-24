@@ -5,7 +5,7 @@ import time
 from gi.repository import Adw, Gtk
 
 from ... import tmux
-from ...session import ClusterSession
+from ...connect.session import ClusterSession
 from ..widgets import color_dot
 
 

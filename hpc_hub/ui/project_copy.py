@@ -9,7 +9,7 @@ from gi.repository import Adw, GLib, Gtk
 from .. import chat_copy, chats, remote_fs, transfer
 from ..remote_fs import storage
 from ..projects import Project
-from ..session import ClusterSession, State
+from ..connect.session import ClusterSession, State
 from .folder_picker import FolderPicker, load_places
 from .widgets import bg
 
