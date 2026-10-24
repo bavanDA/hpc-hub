@@ -104,8 +104,7 @@ class ClusterCard(Gtk.Box):
         node_row.append(self.node_btn)
         self.append(node_row)
 
-        self.tools = open_menu(lambda key: on_tool(session, key),
-                               (("ask", "Ask all", "system-users-symbolic"), ("files", "Files", "folder-symbolic")))
+        self.tools = open_menu(lambda key: on_tool(session, key))
         self.tools.set_halign(Gtk.Align.START)
         self.tools.set_margin_top(4)
         self.append(self.tools)

@@ -147,13 +147,17 @@ TARGETS = (("desktop", "VS Code app", "text-editor-symbolic"),
 
 
 def open_menu(on_open: Callable[[str], None], extra: tuple[tuple[str, str, str], ...] = ()) -> Gtk.MenuButton:
-    """One Open button for everything: VS Code (app or browser), each agent, then extra (id, label, icon)."""
+    """One Open button: VS Code (app or browser) and Files; Ask all agents and each agent; then extra
+    (id, label, icon). Keys: vscode:<target>, files, ask, agent:<id>, or an extra's id."""
     box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2, margin_top=4, margin_bottom=4,
                   margin_start=4, margin_end=4)
     pop = Gtk.Popover(child=box)
     vscode = {"desktop": "VS Code app", "browser": "VS Code in browser"}
-    groups = [[(f"vscode:{t}", vscode.get(t, text), icon) for t, text, icon in TARGETS],
-              [(f"agent:{a.id}", a.name, a.icon) for a in AGENTS], list(extra)]
+    groups = [[(f"vscode:{t}", vscode.get(t, text), icon) for t, text, icon in TARGETS]
+              + [("files", "Files", "folder-symbolic")],
+              [("ask", "Ask all agents", "system-users-symbolic")]
+              + [(f"agent:{a.id}", a.name, a.icon) for a in AGENTS],
+              list(extra)]
     for n, group in enumerate(g for g in groups if g):
         if n:
             box.append(Gtk.Separator(margin_top=2, margin_bottom=2))

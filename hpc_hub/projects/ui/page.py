@@ -103,10 +103,8 @@ class ProjectsPage(Gtk.Box):
         if not s:
             return row
         box = Gtk.Box(spacing=4, valign=Gtk.Align.CENTER)
-        extra = [("ask", "Ask all agents", "system-users-symbolic"), ("files", "Files", "folder-symbolic")]
-        if features.experimental:
-            extra.append(("latex", "LaTeX", "x-office-document-symbolic"))
-        box.append(open_menu(lambda key: self._open(p, s, key), tuple(extra)))
+        extra = (("latex", "LaTeX", "x-office-document-symbolic"),) if features.experimental else ()
+        box.append(open_menu(lambda key: self._open(p, s, key), extra))
         more = Gtk.MenuButton(icon_name="view-more-symbolic", css_classes=["flat"], tooltip_text="More")
         menu = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2, margin_top=4, margin_bottom=4,
                        margin_start=4, margin_end=4)
