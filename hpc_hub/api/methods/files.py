@@ -154,9 +154,41 @@ def _globus_client() -> globus.Globus:
     return client
 
 
+_resumed = False
+
+
+def _resume_globus() -> None:
+    """Globus copies still running from before (the app was closed, or the GTK app started them): follow them too.
+    Once per backend run."""
+    global _resumed
+    if _resumed:
+        return
+    _resumed = True
+    cid = config.load_app().globus_client_id
+    client = globus.Globus(cid) if cid else None
+    if not client or not client.logged_in:
+        return
+    try:
+        tasks = client.tasks(10)
+    except globus.GlobusError:
+        return
+    for task in reversed(tasks):
+        if task.get("status") not in ("ACTIVE", "INACTIVE"):
+            continue
+        t = Transfer(secrets.token_hex(6), f"{task.get('label') or task['task_id']} · Globus", "globus",
+                     status="Asking Globus…", task=task["task_id"])
+        with _lock:
+            if any(x.task == t.task for x in _transfers.values()):
+                continue
+            _transfers[t.id] = t
+        threading.Thread(target=_run, args=(t, partial(_watch, client=client)), daemon=True,
+                         name=f"copy-{t.id}").start()
+
+
 @method("files.transfers")
 def transfers() -> list[dict]:
-    """Copies started since the backend started, newest first."""
+    """Copies started since the backend started, plus Globus ones still running from before, newest first."""
+    _resume_globus()
     with _lock:
         return [t.json() for t in reversed(_transfers.values())]
 
@@ -229,9 +261,14 @@ def _globus(t: Transfer, client: globus.Globus, a: str, src_path: str, b: str, d
     _emit(t)
     t.task = client.submit(a, client.path_for(a, src_path), b, client.path_for(b, dst_path), label, folder,
                            sync_level=2, skip=skip)
-    p = t.progress
-    if p.cancelled.is_set():  # the X was pressed while it was being sent
+    if t.progress.cancelled.is_set():  # the X was pressed while it was being sent
         client.cancel(t.task)
+    _watch(t, client)
+
+
+def _watch(t: Transfer, client: globus.Globus) -> None:
+    """Ask Globus every few seconds until the task is over."""
+    p = t.progress
     while True:
         try:
             info = client.task(t.task)

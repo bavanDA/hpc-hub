@@ -204,3 +204,30 @@ def test_cancel_a_copy_through_laptop(h, tmp_path, monkeypatch):
     files.cancel_transfer(tid)
     last = _wait(h, tid)
     assert last["status"] == "Cancelled" and last["finished"]
+
+
+def test_running_globus_copies_are_picked_up(monkeypatch):
+    from hpc_hub.api.methods import files as m
+    events = []
+    monkeypatch.setattr(m, "hub", lambda: type("H", (), {"emit": staticmethod(lambda n, d: events.append(d))})())
+    monkeypatch.setattr(m, "_resumed", False)
+    monkeypatch.setattr(m, "_transfers", {})
+    monkeypatch.setattr(m.config, "load_app", lambda: type("A", (), {"globus_client_id": "cid"})())
+
+    class Client:
+        logged_in = True
+
+        def __init__(self, cid):
+            pass
+
+        def tasks(self, n):
+            return [{"task_id": "t1", "label": "data to Yale", "status": "ACTIVE"},
+                    {"task_id": "t0", "label": "old", "status": "SUCCEEDED"}]
+
+        def task(self, tid):
+            from hpc_hub.globus.api import TaskInfo
+            return TaskInfo("SUCCEEDED", 10, 2, 2, 0, "")
+    monkeypatch.setattr(m.globus, "Globus", Client)
+    first = m.transfers()
+    assert [t["title"] for t in first] == ["data to Yale · Globus"]
+    assert m.transfers() == m.transfers() and len(m._transfers) == 1  # once per run, no duplicates
