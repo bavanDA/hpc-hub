@@ -1,4 +1,7 @@
-"""Unix socket that answers askpass requests on behalf of a connecting session."""
+"""Unix socket that answers askpass requests on behalf of a connecting session.
+
+Windows has no such socket (nor an askpass helper ssh could run): there SSH is asyncssh, which calls the
+session's handler directly, so only the handlers are kept."""
 
 import hmac
 import json
@@ -9,7 +12,7 @@ import struct
 import threading
 from collections.abc import Callable
 
-from ..core.paths import ASKPASS_BIN, runtime_dir
+from ..core.paths import ASKPASS_BIN, WINDOWS, runtime_dir
 
 # Handler gets the prompt text, returns the answer or None to refuse.
 Handler = Callable[[str], str | None]
@@ -23,6 +26,8 @@ class AskpassServer:
         self._sock: socket.socket | None = None
 
     def start(self) -> None:
+        if WINDOWS:
+            return
         self.path.unlink(missing_ok=True)
         sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         sock.bind(str(self.path))
@@ -35,7 +40,8 @@ class AskpassServer:
         if self._sock:
             self._sock.close()
             self._sock = None
-        self.path.unlink(missing_ok=True)
+        if not WINDOWS:
+            self.path.unlink(missing_ok=True)
 
     def register(self, handler: Handler) -> str:
         token = secrets.token_hex(16)
@@ -49,6 +55,9 @@ class AskpassServer:
 
     def env(self, token: str) -> dict:
         env = dict(os.environ)
+        if WINDOWS:
+            env["HPC_HUB_ASKPASS_TOKEN"] = token
+            return env
         env.update(
             SSH_ASKPASS=str(ASKPASS_BIN),
             SSH_ASKPASS_REQUIRE="force",
