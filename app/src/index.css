@@ -49,6 +49,8 @@
   }
 }
 
+:root { color-scheme: light dark; }  /* native scrollbars and form controls follow the theme */
+
 html, body, #root { height: 100%; }
 body {
   margin: 0;

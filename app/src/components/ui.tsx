@@ -60,13 +60,21 @@ export function EmptyState({ icon: Icon, title, text, action }:
   )
 }
 
+// Open dialogs, newest last: Escape closes only the top one
+const open: symbol[] = []
+
 /** A dialog over the window. Escape or the X closes it. */
 export function Dialog({ title, onClose, children, actions, width = 480 }:
   { title: string; onClose: () => void; children: ReactNode; actions?: ReactNode; width?: number }) {
   useEffect(() => {
-    const key = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
+    const me = Symbol('dialog')
+    open.push(me)
+    const key = (e: KeyboardEvent) => e.key === 'Escape' && open[open.length - 1] === me && onClose()
     window.addEventListener('keydown', key)
-    return () => window.removeEventListener('keydown', key)
+    return () => {
+      window.removeEventListener('keydown', key)
+      open.splice(open.indexOf(me), 1)
+    }
   }, [onClose])
   return (
     <div className="fixed inset-0 z-40 grid place-items-center bg-black/40 p-4" onMouseDown={onClose}>
