@@ -1,4 +1,4 @@
-from hpc_hub import jobs
+from hpc_hub.compute import jobs
 
 
 def test_parse_jobs():

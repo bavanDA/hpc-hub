@@ -7,7 +7,7 @@ from gi.repository import Adw, Gtk, Pango
 
 from ..session import ClusterSession, State
 from .authenticator_help import AuthenticatorHelp
-from ...ui.compute_dialog import ComputeDialog
+from ...compute.ui.compute_dialog import ComputeDialog
 from ...ui.widgets import open_menu
 
 MAX_LOG_LINES = 1000

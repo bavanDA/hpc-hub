@@ -2,10 +2,10 @@
 
 from gi.repository import Adw
 
-from ... import tmux
+from .... import tmux
 from ...jobs import JobInfo, cancel_job, wait_gone
-from ...connect.session import ClusterSession
-from ..widgets import bg
+from ....connect.session import ClusterSession
+from ....ui.widgets import bg
 
 
 class CancelMixin:

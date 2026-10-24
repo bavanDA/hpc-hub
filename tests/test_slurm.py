@@ -1,4 +1,4 @@
-from hpc_hub import slurm
+from hpc_hub.compute import slurm
 from hpc_hub.core.config import ComputeProfile
 
 

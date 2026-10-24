@@ -1,4 +1,4 @@
-from hpc_hub import usage
+from hpc_hub.compute import usage
 
 
 def test_group():

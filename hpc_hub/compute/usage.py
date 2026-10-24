@@ -4,7 +4,7 @@ import re
 import shlex
 from dataclasses import dataclass, field
 
-from .core.ssh import SshMaster
+from ..core.ssh import SshMaster
 
 PERIODS = [("Last 7 days", 7), ("Last 30 days", 30), ("Last 90 days", 90), ("Last year", 365)]
 

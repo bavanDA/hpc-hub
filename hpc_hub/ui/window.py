@@ -3,13 +3,13 @@ from gi.repository import Adw, Gio, GObject, Gtk
 from .. import APP_NAME
 from ..connect.ui.cluster_card import ClusterCard
 from .files import FilesPage
-from .jobs import JobsPage
+from ..compute.ui.jobs import JobsPage
 from .latex import LatexPage
 from .permissions_page import PermissionsPage
 from .terminals import TerminalsPage
 from .schedules_page import SchedulesPage
 from .skills_page import SkillsPage
-from .usage_page import UsagePage
+from ..compute.ui.usage_page import UsagePage
 
 
 GROUPS = [  # sidebar sections: (heading, [(page, title, icon)])

@@ -1,4 +1,4 @@
-from hpc_hub import limits
+from hpc_hub.compute import limits
 from hpc_hub.core.config import ComputeProfile
 
 WULVER = """general*|infinite

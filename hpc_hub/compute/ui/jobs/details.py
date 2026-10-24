@@ -5,7 +5,7 @@ import re
 from gi.repository import Adw, GLib, Gtk, Pango
 
 from ...jobs import JobInfo, job_details, parse_details
-from ..widgets import bg
+from ....ui.widgets import bg
 from .columns import su_text
 
 

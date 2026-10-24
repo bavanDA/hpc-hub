@@ -12,7 +12,7 @@ from ..agents import AGENTS
 from ..projects import Project, ProjectStore
 from ..schedules import PRESETS, Schedule, Status
 from ..connect.session import ClusterSession
-from .duration import DurationRow
+from ..compute.ui.duration import DurationRow
 from .folder_picker import FolderPicker
 from .widgets import bg
 

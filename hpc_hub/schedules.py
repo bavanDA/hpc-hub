@@ -10,7 +10,7 @@ import re
 import shlex
 from dataclasses import asdict, dataclass, field, fields, replace
 
-from . import limits, slurm
+from .compute import limits, slurm
 from .agents import BY_ID, Agent
 from .ask_all import headless, shell_path
 from .core.config import AgentSettings, ComputeProfile

@@ -5,8 +5,8 @@ import json
 import re
 from dataclasses import asdict, dataclass, field, replace
 
-from .core.config import ComputeProfile
-from .core.paths import log_dir
+from ..core.config import ComputeProfile
+from ..core.paths import log_dir
 
 FETCH = ("sinfo -h -o '%P|%l'; echo @QOS; sacctmgr -nP show qos format=name,maxwall 2>/dev/null; "
          "echo @ASSOC; sacctmgr -nP show assoc user=\"$USER\" format=qos,defaultqos 2>/dev/null; true")

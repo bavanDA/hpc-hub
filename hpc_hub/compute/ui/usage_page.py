@@ -5,8 +5,8 @@ from collections.abc import Callable
 from gi.repository import Adw, GLib, Gtk
 
 from .. import usage
-from ..connect.session import ClusterSession
-from .widgets import bg
+from ...connect.session import ClusterSession
+from ...ui.widgets import bg
 
 
 def _bar(fraction: float = 0.0) -> Gtk.LevelBar:

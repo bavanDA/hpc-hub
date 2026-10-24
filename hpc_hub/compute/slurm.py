@@ -8,8 +8,8 @@ import time
 from collections.abc import Callable
 from dataclasses import dataclass
 
-from .core.config import ComputeProfile
-from .core.ssh import SshMaster
+from ..core.config import ComputeProfile
+from ..core.ssh import SshMaster
 
 SAFE = re.compile(r"^[A-Za-z0-9_.,:=+-]*$")
 TIME = re.compile(r"^(\d+-)?\d{1,2}(:\d{2}){0,2}$")
