@@ -11,6 +11,7 @@ let picked = ''
 export function useClusters() {
   const [clusters, setClusters] = useState<Cluster[] | null>(null)
   const [sessions, setSessions] = useState<Record<string, Session>>({})
+  const [known, setKnown] = useState(false) // sessions are in: until then "not connected" would only flash
   const [error, setError] = useState('')
   const [pick, setPick] = useState(picked)
 
@@ -19,15 +20,16 @@ export function useClusters() {
     call<Session[]>('sessions.list')
       .then((all) => setSessions((now) => ({ ...Object.fromEntries(all.map((s) => [s.id, s])), ...now })))
       .catch(() => {})
+      .finally(() => setKnown(true))
   }, [])
   useEvent<Session>('session', (s) => setSessions((now) => ({ ...now, [s.id]: s })))
 
   // Until you pick one: the first connected cluster
-  const cluster = clusters?.find((c) => c.id === pick) ??
-    clusters?.find((c) => sessions[c.id]?.state === 'Connected') ?? clusters?.[0] ?? null
+  const cluster = !known ? null : clusters?.find((c) => c.id === pick) ??
+    clusters?.find((c) => sessions[c.id]?.connected) ?? clusters?.[0] ?? null
   const session = cluster ? sessions[cluster.id] : undefined
   const setCluster = (id: string) => { picked = id; setPick(id) }
-  return { clusters, cluster, session, connected: session?.state === 'Connected', setCluster, error }
+  return { clusters, cluster, session, connected: !!session?.connected, setCluster, error }
 }
 
 /** Why a page has nothing to show for a cluster that is not connected. */

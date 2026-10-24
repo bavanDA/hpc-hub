@@ -14,7 +14,9 @@ export function DetailsDialog({ cluster, job: j, onClose, onCancel }:
   const [error, setError] = useState('')
   const [all, setAll] = useState(false)
   useEffect(() => {
-    call<JobDetails>('jobs.details', { cluster, job_id: j.job_id }).then(setDetails).catch((e: Error) => setError(e.message))
+    call<JobDetails>('jobs.details', { cluster, job_id: j.job_id })
+      .then(setDetails)
+      .catch((e: Error) => setError(e.message))
   }, [cluster, j.job_id])
 
   const groups: DetailGroup[] = (details?.groups ?? []).map((g) => g.title === 'Resources' && j.su
@@ -25,7 +27,8 @@ export function DetailsDialog({ cluster, job: j, onClose, onCancel }:
     <Dialog title={`Job ${j.job_id} · ${j.name}`} onClose={onClose} width={600}
       actions={j.cancellable && <Button kind="destructive" onClick={onCancel}>Cancel job</Button>}>
       {error && <p className="py-6 text-center text-bad">{error}</p>}
-      {!details && !error && <p className="flex items-center justify-center gap-2 py-10 text-dim"><Spinner />Loading…</p>}
+      {!details && !error && <p className="flex items-center justify-center gap-2 py-10 text-dim">
+        <Spinner />Loading…</p>}
       <div className="flex flex-col gap-5 pb-2">
         {groups.filter((g) => g.rows.length).map((g) => (
           <section key={g.title} className="flex flex-col gap-2">

@@ -22,7 +22,8 @@ function job(job_id: string, name: string, user: string, partition: string, qos:
   const su = !factor ? 'free' : ACTIVE.includes(state)
     ? `${one(su_spent)} / ${Math.round(su_max).toLocaleString('en-US')}` : one(su_spent)
   return { job_id, name, user, partition, qos, state, elapsed, limit, cpus: String(cpus), mem, where, billing, factor,
-    from_app: name.startsWith('hpc-hub'), su_spent, su_max, su, seconds: seconds(elapsed), limit_seconds: seconds(limit),
+    from_app: name.startsWith('hpc-hub'), su_spent, su_max, su, seconds: seconds(elapsed),
+    limit_seconds: seconds(limit),
     cancellable: user === ME && ['RUNNING', 'PENDING'].includes(state) }
 }
 
@@ -98,10 +99,12 @@ function details({ cluster, job_id }: Record<string, unknown>): JobDetails {
       ['Exit code', active ? '' : j.state === 'COMPLETED' ? '0:0' : '1:0']] },
     { title: 'Resources', rows: [
       ['Node', j.state === 'PENDING' ? '' : j.where], ['CPUs', j.cpus], ['Memory', j.mem],
-      ['GPUs', j.partition === 'gpu' ? '2' : ''], ['Partition · QoS · account', `${j.partition} · ${j.qos} · mygroup`]] },
+      ['GPUs', j.partition === 'gpu' ? '2' : ''],
+      ['Partition · QoS · account', `${j.partition} · ${j.qos} · mygroup`]] },
     { title: 'Files', rows: [['Work folder', dir], ['Output', `${dir}/slurm-${j.job_id}.out`]] },
   ].map((g) => ({ title: g.title, rows: g.rows.filter(([, v]) => v).map(([label, value]) => ({ label, value })) }))
-  const text = [`JobId=${j.job_id} JobName=${j.name}`, `   UserId=${j.user}(51234) GroupId=mygroup(5000) Account=mygroup`,
+  const text = [`JobId=${j.job_id} JobName=${j.name}`,
+    `   UserId=${j.user}(51234) GroupId=mygroup(5000) Account=mygroup`,
     `   JobState=${j.state} Reason=${j.state === 'PENDING' ? j.where.slice(1, -1) : 'None'} ExitCode=0:0`,
     `   RunTime=${j.elapsed} TimeLimit=${j.limit} TimeMin=N/A`, `   Partition=${j.partition} QOS=${j.qos}`,
     `   NodeList=${j.state === 'PENDING' ? '(null)' : j.where} NumNodes=1 NumCPUs=${j.cpus} NumTasks=1`,

@@ -42,14 +42,15 @@ export function JobTable({ jobs, showUser, sort, onSort, onOpen, onCancel }: {
           <tr key={j.job_id} onClick={() => onOpen(j)} title="Show details"
             className="h-12 border-b border-line last:border-0 hover:bg-hover">
             <td className="pr-2 pl-4 whitespace-nowrap">{j.job_id}</td>
-            <td className="max-w-0 min-w-[120px] px-2">
+            <td className="max-w-0 min-w-[100px] px-2">
               <div className="truncate leading-tight" title={j.name}>{j.name}</div>
               {(showUser || j.from_app) && <div className="truncate text-[12px] leading-tight text-dim">
                 {[showUser && j.user, j.from_app && 'started by HPC Hub'].filter(Boolean).join(' · ')}</div>}
             </td>
             <td className="px-2 leading-tight whitespace-nowrap" title={queue(j)}>{j.partition}
               {j.qos && <div className="text-[12px] text-dim">{j.qos}</div>}</td>
-            <td className={`px-2 font-bold whitespace-nowrap ${STATE_COLOR[j.state] ?? ''}`}>{j.state}</td>
+            <td className={`max-w-28 px-2 leading-tight font-bold ${STATE_COLOR[j.state] ?? ''}`}>
+              {j.state.replaceAll('_', ' ')}</td>
             <td className="px-2 leading-tight whitespace-nowrap">{j.elapsed}
               <div className="text-[12px] text-dim">of {j.limit}</div></td>
             <td className="px-2 whitespace-nowrap">{j.cpus} · {j.mem}</td>

@@ -13,6 +13,8 @@ import { call } from '../rpc'
 import type { Job, JobList, Scope } from '../types/jobs'
 
 const REFRESH_MS = 15_000
+const NO_JOBS = 'Nothing to show for this view.'
+const NO_MATCH = 'Try another state or filter.'
 const SCOPES = [['mine', 'My jobs'], ['history', 'My history (7 days)'], ['all', 'All jobs']] as const
 const STATES = [['', 'Any state'], ...['RUNNING', 'PENDING', 'COMPLETED', 'FAILED', 'CANCELLED', 'TIMEOUT']
   .map((s) => [s, s] as const)] as const
@@ -23,15 +25,17 @@ export function Jobs() {
   const [state, setState] = useState('')
   const [query, setQuery] = useState('')
   const [sort, setSort] = useState<Sort>({ key: 'id', desc: true })
-  const [list, setList] = useState<JobList | null>(null)
-  const [error, setError] = useState('')
+  // the last answer, for one cluster and scope: another view shows nothing until its own answer is in
+  const [got, setGot] = useState({ key: '', list: null as JobList | null, error: '', updated: '' })
   const [loading, setLoading] = useState(false)
-  const [updated, setUpdated] = useState('')
   const [open, setOpen] = useState<Job | null>(null)
   const [cancel, setCancel] = useState<Job | null>(null)
   const turn = useRef(0) // answers to an older cluster or scope are dropped
   const busy = useRef(false)
   const id = cluster?.id ?? ''
+  const key = `${id}|${scope}`
+  const list = got.key === key ? got.list : null
+  const error = got.key === key ? got.error : ''
 
   const refresh = useCallback((quiet = false) => {
     if (!id || !connected || (quiet && busy.current)) return
@@ -39,13 +43,10 @@ export function Jobs() {
     busy.current = true
     setLoading(true)
     call<JobList>('jobs.list', { cluster: id, scope })
-      .then((d) => {
-        if (mine !== turn.current) return
-        setList(d)
-        setError('')
-        setUpdated(new Date().toLocaleTimeString('en-GB'))
-      })
-      .catch((e: Error) => mine === turn.current && setError(e.message))
+      .then((d) => mine === turn.current &&
+        setGot({ key: `${id}|${scope}`, list: d, error: '', updated: new Date().toLocaleTimeString('en-GB') }))
+      .catch((e: Error) => mine === turn.current &&
+        setGot({ key: `${id}|${scope}`, list: null, error: e.message, updated: '' }))
       .finally(() => {
         if (mine !== turn.current) return
         busy.current = false
@@ -53,11 +54,7 @@ export function Jobs() {
       })
   }, [id, scope, connected])
 
-  useEffect(() => {
-    setList(null)
-    setError('')
-    refresh()
-  }, [refresh])
+  useEffect(() => refresh(), [refresh])
   useEffect(() => {
     const t = setInterval(() => document.visibilityState === 'visible' && refresh(true), REFRESH_MS)
     return () => clearInterval(t)
@@ -78,8 +75,8 @@ export function Jobs() {
   if (off) body = <EmptyState icon={WifiOff} title={off.title} text={off.text} />
   else if (error) body = <EmptyState icon={CircleAlert} title="Could not load jobs" text={error} />
   else if (!list) body = <div className="grid h-full place-items-center"><Spinner size={24} /></div>
-  else if (!list.jobs.length) body = <EmptyState icon={ListChecks} title="No jobs" text="Nothing to show for this view." />
-  else if (!shown.length) body = <EmptyState icon={Search} title="No matching jobs" text="Try another state or filter." />
+  else if (!list.jobs.length) body = <EmptyState icon={ListChecks} title="No jobs" text={NO_JOBS} />
+  else if (!shown.length) body = <EmptyState icon={Search} title="No matching jobs" text={NO_MATCH} />
   else body = (
     <div className="min-w-fit px-3 pb-3">
       <Card className="overflow-clip">
@@ -100,7 +97,8 @@ export function Jobs() {
         <label className="flex h-9 min-w-0 flex-1 items-center gap-2 rounded-md bg-pill px-3
           focus-within:ring-2 focus-within:ring-accent">
           <Search size={16} className="shrink-0 text-dim" />
-          <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Filter by id, name, user, partition"
+          <input value={query} onChange={(e) => setQuery(e.target.value)}
+            placeholder="Filter by id, name, user, partition"
             className="min-w-0 flex-1 bg-transparent outline-none placeholder:text-dim" />
         </label>
         <button aria-label="Refresh" title="Refresh" onClick={() => refresh()} disabled={!connected || loading}
@@ -111,7 +109,8 @@ export function Jobs() {
       <div className="@container min-h-0 flex-1 overflow-auto scheme-light-dark">{body}</div>
       {!off && !error && <footer className="flex h-11 shrink-0 items-center gap-4 border-t border-line bg-header px-4
         text-[13px]">
-        <span className="shrink-0 text-dim">{list ? `${list.jobs.length} jobs · updated ${updated}` : 'Loading…'}</span>
+        <span className="shrink-0 text-dim">
+          {list ? `${list.jobs.length} jobs · updated ${got.updated}` : 'Loading…'}</span>
         <span className="min-w-0 flex-1 truncate text-right" title={usage &&
           'Service units (core hours) of your Slurm accounts. A QoS that charges 0 (like low on Wulver) is free.'}>
           {usage}</span>

@@ -32,6 +32,7 @@ const n = (v: number) => v.toLocaleString('en-US')
 export function usageText(accounts: Account[]): string {
   const used = accounts.filter((a) => a.used || a.mine)
   return (used.length ? used : accounts.slice(0, 1)).map((a) => a.quota
-    ? `${a.account}: ${n(a.used)} of ${n(a.quota)} SU used (${Math.floor((100 * a.used) / a.quota)}%), yours ${n(a.mine)}`
+    ? `${a.account}: ${n(a.used)} of ${n(a.quota)} SU used (${Math.floor((100 * a.used) / a.quota)}%), ` +
+      `yours ${n(a.mine)}`
     : `${a.account}: ${n(a.used)} SU used${a.period ? ` in ${a.period}` : ''}, yours ${n(a.mine)}`).join(' · ')
 }
