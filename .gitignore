@@ -6,6 +6,9 @@ build/
 dist/
 .venv/
 
+# Frozen backend (packaging/build_backend.py)
+app/src-tauri/binaries/
+
 # Tools
 .pytest_cache/
 .ruff_cache/

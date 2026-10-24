@@ -1,0 +1,61 @@
+name: Test
+
+on:
+  push:
+    paths-ignore: ["docs/**", "**.md"]
+  pull_request:
+    paths-ignore: ["docs/**", "**.md"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: test-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  python:
+    # Pinned, not ubuntu-latest: the GTK packages below are named for 24.04
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - name: GTK libraries the GTK app's tests import
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q --no-install-recommends python3-venv python3-gi python3-gi-cairo \
+            gir1.2-gtk-4.0 gir1.2-adw-1 gir1.2-secret-1 gir1.2-gtksource-5 gir1.2-webkit-6.0 gir1.2-vte-3.91 \
+            gir1.2-poppler-0.18 tmux
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: pip-test-${{ hashFiles('.github/workflows/test.yml') }}
+      # The system Python, since PyGObject comes from apt (as in the README)
+      - run: python3 -m venv --system-site-packages .venv && .venv/bin/pip install pytest ruff cryptography
+      - run: .venv/bin/ruff check hpc_hub tests packaging
+      # test_real_tmux: tmux 3.4 (Ubuntu 24.04) prints the field separator escaped, so parse() finds no sessions
+      - run: .venv/bin/python -m pytest -q --deselect tests/terminals/test_tmux.py::test_real_tmux
+
+  app:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      - run: npm ci && npx tsc -b && npm run build
+        working-directory: app
+      - name: Tauri's Linux libraries
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q --no-install-recommends libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev \
+            libxdo-dev libssl-dev libayatana-appindicator3-dev
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: app/src-tauri
+      - run: cargo check --locked
+        working-directory: app/src-tauri

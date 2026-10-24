@@ -1,0 +1,4 @@
+# What the frozen backend needs. PyGObject is left out on purpose: credentials falls back to keyring.
+pyinstaller>=6.11,<7
+keyring>=25
+cryptography>=43
