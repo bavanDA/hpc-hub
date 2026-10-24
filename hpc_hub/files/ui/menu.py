@@ -87,7 +87,7 @@ def install(pane) -> None:
         e = None
         if pos is not None:
             pane.selection.set_selected(pos)
-            e = pane.store.get_item(pos).entry
+            e = pane.selection.get_item(pos).entry
         target["entry"] = e
         popover.set_menu_model(build(e, bool(pane.can_paste and pane.can_paste()), pane.text_ext))
         rect = Gdk.Rectangle()

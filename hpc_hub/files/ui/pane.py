@@ -21,6 +21,15 @@ class EntryItem(GObject.Object):
         self.entry = entry
 
 
+SORT_KEYS = {"name": lambda e: e.name.lower(), "size": lambda e: e.size if not e.is_dir else -1,
+             "mtime": lambda e: e.mtime}
+
+
+def _compare(a: EntryItem, b: EntryItem, key) -> Gtk.Ordering:
+    x, y = key(a.entry), key(b.entry)
+    return Gtk.Ordering((x > y) - (x < y))
+
+
 class FilePane(FileActionsMixin, Gtk.Box):
     def __init__(self, sessions: list[ClusterSession], toast: Callable[[str], None], index: int,
                  on_copy: Callable[["FilePane", Entry], None], on_latex: Callable[[ClusterSession, str], None]):
@@ -56,15 +65,24 @@ class FilePane(FileActionsMixin, Gtk.Box):
         self.append(nav)
 
         self.store = Gio.ListStore(item_type=EntryItem)
-        self.selection = Gtk.SingleSelection(model=self.store, autoselect=False, can_unselect=True)
-        self.view = Gtk.ColumnView(model=self.selection, show_row_separators=False)
+        self.view = Gtk.ColumnView(show_row_separators=False)
         self.view.add_css_class("data-table")
+        columns = {}
         for title, attr, expand in (("Name", "name", True), ("Size", "size", False), ("Modified", "mtime", False)):
             f = Gtk.SignalListItemFactory()
             f.connect("setup", self._setup, attr)
             f.connect("bind", self._bind, attr)
-            self.view.append_column(Gtk.ColumnViewColumn(title=title, factory=f, expand=expand, resizable=True))
-        self.view.connect("activate", lambda _v, pos: self.open_entry(self.store.get_item(pos).entry))
+            columns[attr] = Gtk.ColumnViewColumn(title=title, factory=f, expand=expand, resizable=True,
+                                                 sorter=Gtk.CustomSorter.new(_compare, SORT_KEYS[attr]))
+            self.view.append_column(columns[attr])
+        order = Gtk.MultiSorter()  # click a column title to sort by it; folders stay on top
+        order.append(Gtk.CustomSorter.new(_compare, lambda e: not e.is_dir))
+        order.append(self.view.get_sorter())
+        self.selection = Gtk.SingleSelection(model=Gtk.SortListModel(model=self.store, sorter=order),
+                                             autoselect=False, can_unselect=True)
+        self.view.set_model(self.selection)
+        self.view.sort_by_column(columns["name"], Gtk.SortType.ASCENDING)
+        self.view.connect("activate", lambda _v, pos: self.open_entry(self.selection.get_item(pos).entry))
         menu.install(self)
 
         self.empty = Adw.StatusPage(icon_name="folder-symbolic")
