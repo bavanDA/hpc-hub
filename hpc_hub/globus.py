@@ -385,4 +385,4 @@ class Globus:
         return task_info(_http("GET", f"{TRANSFER}/task/{urllib.parse.quote(task_id)}", self._token()))
 
     def cancel(self, task_id: str) -> None:
-        _http("POST", f"{TRANSFER}/task/{urllib.parse.quote(task_id)}/cancel", self._token(), body={})
+        _http("POST", f"{TRANSFER}/task/{urllib.parse.quote(task_id)}/cancel", self._token())
