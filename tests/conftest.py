@@ -5,8 +5,6 @@
   are not collected; single tests are skipped.
 - posix: tests whose fake cluster is the local bash, coreutils, tmux, fake ssh scripts, Unix sockets or
   symlinks. What they check runs on the Linux cluster, and the Linux job runs them.
-- backend: the backend process loads every method module, and keysetup imports gi through ood and chrome_cookies,
-  so without PyGObject it does not start yet (xfail until chrome_cookies imports gi only when used).
 """
 
 import importlib.util
@@ -28,7 +26,6 @@ GTK_TESTS = {
     "connect/test_vpn_sso.py::test_password_only_goes_to_the_sign_in_site",
     "pdf/test_readaloud.py::test_assemble_parts_and_offsets",
 }
-BACKEND_TESTS = {"api/test_server.py::test_backend_process_answers_and_keeps_stdout_clean"}
 POSIX = {
     "agents/test_ask_all.py", "agents/test_chat_copy.py", "agents/test_chats.py", "agents/test_lock.py",
     "agents/test_permissions.py", "agents/test_schedules.py", "agents/test_skills.py",
@@ -73,8 +70,6 @@ def pytest_collection_modifyitems(config, items):
             item.add_marker(pytest.mark.gtk)
             if not HAVE_GTK:
                 item.add_marker(pytest.mark.skip(reason="gtk: needs PyGObject"))
-        if test in BACKEND_TESTS and not HAVE_GTK:
-            item.add_marker(pytest.mark.xfail(reason="backend: keysetup imports gi through ood and chrome_cookies"))
         if name in POSIX:
             item.add_marker(pytest.mark.posix)
             if WINDOWS:
