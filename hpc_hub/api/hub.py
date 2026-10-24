@@ -11,7 +11,7 @@ from urllib.parse import urlsplit
 
 from ..connect.askpass_server import AskpassServer
 from ..connect.session import SSO_PASS, SSO_USER, ClusterSession
-from ..core import browser, config, credentials
+from ..core import browser, config, credentials, single
 
 QUESTION_SECONDS = 600
 
@@ -31,8 +31,13 @@ class Hub:
         self.clusters = config.load()
         self.sessions: dict[str, ClusterSession] = {}
         self._questions: dict[str, Future] = {}
+        self.blocked = False
 
     def start(self) -> None:
+        if not single.take():
+            self.blocked = True  # sessions stay empty: nothing to adopt, check or connect
+            self.emit("blocked", {"message": single.MESSAGE})
+            return
         self.askpass.start()
         self.sessions = {c.id: ClusterSession(c, self.askpass, self) for c in self.clusters}
         threading.Thread(target=self._adopt_all, daemon=True).start()
@@ -50,6 +55,8 @@ class Hub:
         config.save(self.clusters)
 
     def session(self, cluster: str) -> ClusterSession:
+        if self.blocked:
+            raise RuntimeError(single.MESSAGE)
         if cluster not in self.sessions:
             raise ValueError(f"No cluster {cluster}")
         return self.sessions[cluster]

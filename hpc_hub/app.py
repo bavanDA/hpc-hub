@@ -6,7 +6,7 @@ import gi
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
-from gi.repository import Adw, Gio, GLib  # noqa: E402
+from gi.repository import Adw, Gio, GLib, Gtk  # noqa: E402
 
 from . import APP_ID, APP_NAME, __version__  # noqa: E402
 from .connect.askpass_server import AskpassServer  # noqa: E402
@@ -15,7 +15,7 @@ from .connect.ui.duo import DuoDialog  # noqa: E402
 from .connect.ui.key_setup import KeySetupDialog  # noqa: E402
 from .connect.ui.prompts import LoginPromptsMixin  # noqa: E402
 from .connect.ui.settings import ClusterSettingsDialog  # noqa: E402
-from .core import browser, config, credentials, features  # noqa: E402
+from .core import browser, config, credentials, features, single  # noqa: E402
 from .core.paths import runtime_dir  # noqa: E402
 from .globus import api as globus  # noqa: E402
 from .globus.ui import GlobusPage  # noqa: E402
@@ -42,6 +42,13 @@ class HpcHubApp(LoginPromptsMixin, QuitMixin, Adw.Application):
     # -- lifecycle -----------------------------------------------------------------
     def do_startup(self):
         Adw.Application.do_startup(self)
+        if not single.take():  # the new app is open: two apps fight over the same logins
+            self.hold()
+            dialog = Gtk.AlertDialog(message="HPC Hub is already open", detail=single.MESSAGE)
+            dialog.choose(None, None, lambda *_: self.quit())
+            self.blocked = True
+            return
+        self.blocked = False
         style.install()
 
         self.askpass.start()
@@ -86,6 +93,8 @@ class HpcHubApp(LoginPromptsMixin, QuitMixin, Adw.Application):
                 pass
 
     def do_activate(self):
+        if self.blocked:
+            return
         if not self.window:
             self.window = MainWindow(
                 self, list(self.sessions.values()),
@@ -122,7 +131,8 @@ class HpcHubApp(LoginPromptsMixin, QuitMixin, Adw.Application):
         self.window.present()
 
     def do_shutdown(self):
-        self.askpass.stop()
+        if not self.blocked:
+            self.askpass.stop()
         Adw.Application.do_shutdown(self)
 
     # -- Listener (called from worker threads) --------------------------------------

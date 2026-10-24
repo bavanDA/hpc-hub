@@ -1,5 +1,7 @@
 import { lazy, Suspense, useCallback, useEffect, useState, type ComponentType } from 'react'
 
+import { Server } from 'lucide-react'
+
 import { LinkPicker } from './components/app/LinkPicker'
 import { useSessionNotifications } from './components/app/notify'
 import type { Preferences } from './components/app/types'
@@ -7,7 +9,7 @@ import { HeaderBar } from './components/HeaderBar'
 import { Questions } from './components/Questions'
 import { GROUPS, Sidebar, type Page } from './components/Sidebar'
 import { ToastProvider } from './components/toast'
-import { Spinner } from './components/ui'
+import { EmptyState, Spinner } from './components/ui'
 import { NavContext } from './nav'
 import { Clusters } from './pages/Clusters'
 import { call } from './rpc'
@@ -44,8 +46,11 @@ export default function App() {
   const [sidebar, setSidebar] = useState(true)
   const [experimental, setExperimental] = useState(false)
   const go = useCallback((p: Page, with_: Record<string, string> = {}) => { setPage(p); setParams(with_) }, [])
+  const [blocked, setBlocked] = useState('')
   useEffect(() => {
     call<Preferences>('preferences.get').then((p) => setExperimental(p.experimental)).catch(() => {})
+    call<{ blocked: boolean; message: string }>('app.status').then((s) => setBlocked(s.blocked ? s.message : ''))
+      .catch(() => {})
   }, [])
   const showExperimental = (on: boolean) => {
     setExperimental(on)
@@ -53,6 +58,14 @@ export default function App() {
   }
   useSessionNotifications()
   const Current = PAGES[page]
+  if (blocked) {
+    return (
+      <div className="flex h-full flex-col">
+        <HeaderBar title="HPC Hub" onSidebar={() => {}} sidebar={false} onExperimental={() => {}} />
+        <EmptyState icon={Server} title="HPC Hub is already open" text={blocked} />
+      </div>
+    )
+  }
   return (
     <NavContext.Provider value={{ go, params }}>
     <ToastProvider>

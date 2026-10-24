@@ -15,6 +15,7 @@ export const answers: Record<string, unknown> = {
   'browser.profiles': () => ({ ...profiles, default: prefs.browser_profile }),
   'browser.open': false,
   'preferences.get': () => ({ ...prefs }),
+  'app.status': { blocked: false, message: '' },
   'preferences.set': (p: Partial<Preferences>) => Object.assign(prefs, p) && { ...prefs },
   'files.upload': { id: 'demo-up' },
   'files.download': (p: { remote_path: string; local_dir: string }) =>
