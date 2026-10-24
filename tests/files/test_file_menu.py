@@ -17,7 +17,7 @@ def labels(menu):
 
 
 def test_menus():
-    folder = labels(file_menu.build(Entry("myproject", "d", 0, 0), False, (".tex",)))
+    folder = labels(file_menu.build(Entry("myproj", "d", 0, 0), False, (".tex",)))
     assert folder[:2] == ["Open", "Open in VS Code"] and "Make a zip" in folder and folder[-1] == "Delete…"
     tex = labels(file_menu.build(Entry("main.tex", "f", 10, 0), False, (".tex",)))
     assert tex[:3] == ["Open", "Edit", "Open in LaTeX"] and "Open its folder in VS Code" in tex

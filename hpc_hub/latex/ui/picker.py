@@ -14,7 +14,7 @@ from ...ui.widgets import bg
 
 
 def _short(folder: str) -> str:
-    """/mmfs1/scratch/mygroup/jdoe/MC/paper -> scratch/MC/paper; home becomes ~."""
+    """/mmfs1/scratch/mygroup/jdoe/thesis/paper -> scratch/thesis/paper; home becomes ~."""
     m = re.match(r"^(?:/mmfs1)?/(scratch|project)/[^/]+/[^/]+(/.*)?$", folder)
     if m:
         return m.group(1) + (m.group(2) or "")

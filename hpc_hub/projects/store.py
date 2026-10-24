@@ -1,4 +1,4 @@
-"""Projects: a named folder on a cluster (myproject, mc, paper...). Saved in projects.toml."""
+"""Projects: a named folder on a cluster (myproj, thesis, paper...). Saved in projects.toml."""
 
 import json
 import os

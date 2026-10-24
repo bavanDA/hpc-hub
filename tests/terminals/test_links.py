@@ -29,8 +29,8 @@ def test_tunnel_name_and_urls():
     assert links.tunnel_name("https://vscode.dev/tunnel/yale/home/jdoe") == "yale"
     assert links.tunnel_name("https://vscode.dev/tunnel/n0043") == "n0043"
     assert links.tunnel_name("https://github.com/login/device") == ""
-    assert links.tunnel_urls("yale", "/nfs/MC/") == ("vscode-remote://tunnel+yale/nfs/MC",
-                                                    "https://vscode.dev/tunnel/yale/nfs/MC")
+    assert links.tunnel_urls("yale", "/nfs/thesis/") == ("vscode-remote://tunnel+yale/nfs/thesis",
+                                                    "https://vscode.dev/tunnel/yale/nfs/thesis")
     assert links.tunnel_urls("w", "")[1] == "https://vscode.dev/tunnel/w"
 
 

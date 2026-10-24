@@ -26,7 +26,7 @@ def test_copy_missing_source(tmp_path):
 
 
 def test_copy_leaves_out_skipped_subfolders(tmp_path):
-    src = tmp_path / "myproject"
+    src = tmp_path / "myproj"
     for d in ("baselines/big", "build", "results"):
         (src / d).mkdir(parents=True)
     (src / "baselines" / "big" / "x.bin").write_bytes(b"0" * 2_000_000)
@@ -36,5 +36,5 @@ def test_copy_leaves_out_skipped_subfolders(tmp_path):
     assert sizes["baselines"] >= 2_000_000 and "results" in sizes
     dest = tmp_path / "out"
     transfer.copy(LocalShell(), str(src), LocalShell(), str(dest), transfer.Progress(), skip=["baselines"])
-    assert (dest / "myproject" / "results" / "r.txt").read_text() == "ok"
-    assert not (dest / "myproject" / "baselines").exists() and (dest / "myproject" / "build" / "baselines").is_dir()
+    assert (dest / "myproj" / "results" / "r.txt").read_text() == "ok"
+    assert not (dest / "myproj" / "baselines").exists() and (dest / "myproj" / "build" / "baselines").is_dir()

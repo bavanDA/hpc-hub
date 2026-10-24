@@ -7,8 +7,8 @@ from hpc_hub.projects.store import Project
 def test_round_trip(tmp_path):
     path = tmp_path / "p.toml"
     assert projects.load(path) == []
-    items = [Project("myproject", "wulver", "/scratch/mygroup/jdoe/myproject", opened=5),
-             Project('my "mc"', "yale", "/nfs/x/MC", main_tex="paper/main.tex")]
+    items = [Project("myproj", "wulver", "/scratch/mygroup/jdoe/myproj", opened=5),
+             Project('my "mc"', "yale", "/nfs/x/thesis", main_tex="paper/main.tex")]
     projects.save(items, path)
     assert projects.load(path) == items
 
@@ -58,10 +58,10 @@ def test_store(tmp_path):
 
 
 def test_parse_papers():
-    text = ("1700000300|/s/MC/paper/main.tex\n1700000400|/s/MC/paper/draft.tex\n"
+    text = ("1700000300|/s/thesis/paper/main.tex\n1700000400|/s/thesis/paper/draft.tex\n"
             "1700000100|/home/me/old/thesis.tex\nnoise\n")
     a, b = projects.parse_papers(text)
-    assert (a.folder, a.main, a.mtime, a.others) == ("/s/MC/paper", "main.tex", 1700000400, 1)
+    assert (a.folder, a.main, a.mtime, a.others) == ("/s/thesis/paper", "main.tex", 1700000400, 1)
     assert (b.folder, b.main, b.others) == ("/home/me/old", "thesis.tex", 0)
 
 
@@ -75,7 +75,7 @@ def test_is_latex():
 def test_papers_are_remembered(tmp_path, monkeypatch):
     monkeypatch.setenv("XDG_CACHE_HOME", str(tmp_path))
     assert projects.load_papers("wulver") == ([], 0)
-    found = [projects.Paper("/s/MC/paper", "main.tex", 1700000400, 1)]
+    found = [projects.Paper("/s/thesis/paper", "main.tex", 1700000400, 1)]
     projects.save_papers("wulver", found)
     papers, at = projects.load_papers("wulver")
     assert papers == found and at > 0

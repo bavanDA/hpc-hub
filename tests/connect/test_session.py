@@ -311,10 +311,10 @@ def test_default_account_is_named_on_requests():
     class Ssh:
         def run(self, cmd, timeout=60):
             import subprocess
-            return subprocess.CompletedProcess(cmd, 0, "xyz789\n" if "defaultaccount" in cmd else "", "")
+            return subprocess.CompletedProcess(cmd, 0, "abc123\n" if "defaultaccount" in cmd else "", "")
     s = object.__new__(ClusterSession)
     s.cfg, s.ssh, s.limits, s.default_account = config.default_clusters()[2], Ssh(), None, None
-    assert s.fit(config.ComputeProfile()).account == "xyz789"
+    assert s.fit(config.ComputeProfile()).account == "abc123"
     assert s.fit(config.ComputeProfile(account="other")).account == "other"
 
 

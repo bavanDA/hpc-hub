@@ -74,10 +74,10 @@ def test_storage_names():
     P = remote_fs.Place
     wulver = [P("Home", "/home/me"), P("scratch/mygroup", "/scratch/mygroup/me"), P("project/mygroup", "/project/mygroup/me")]
     assert [p.label for p in remote_fs.storage(wulver)] == ["Home", "Scratch", "Project"]
-    expanse = [P("Home", "/home/me"), P("projects/xyz789", "/expanse/lustre/projects/xyz789/me"),
+    expanse = [P("Home", "/home/me"), P("projects/abc123", "/expanse/lustre/projects/abc123/me"),
                P("projects/abc", "/expanse/lustre/projects/abc/me"), P("work", "/work/me"),
                P("scratch/me", "/expanse/lustre/scratch/me/temp_project")]
-    assert [p.label for p in remote_fs.storage(expanse)] == ["Home", "Project (xyz789)", "Project (abc)", "Scratch"]
+    assert [p.label for p in remote_fs.storage(expanse)] == ["Home", "Project (abc123)", "Project (abc)", "Scratch"]
 
 
 def test_parse_places_skips_junk():

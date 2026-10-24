@@ -60,7 +60,7 @@ class ProjectsPage(Gtk.Box):
         self.list = Gtk.ListBox(selection_mode=Gtk.SelectionMode.NONE, css_classes=["boxed-list"])
 
         self.empty = Adw.StatusPage(icon_name="folder-symbolic", title="No projects yet", vexpand=True,
-                                    description="Add a folder you already have on a cluster (myproject, MC, a paper…) "
+                                    description="Add a folder you already have on a cluster (myproj, thesis, a paper…) "
                                                 "or create a new one. Then open it in VS Code, Claude, Files or LaTeX.")
         col = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, margin_start=16, margin_end=16, margin_bottom=24)
         col.append(top)
@@ -202,7 +202,7 @@ class ProjectDialog(Adw.Dialog):
         self.waiting = 0
         page = Adw.PreferencesPage()
         group = Adw.PreferencesGroup()
-        self.name = Adw.EntryRow(title="Name (e.g. myproject, MC)")
+        self.name = Adw.EntryRow(title="Name (e.g. myproj, thesis)")
         self.cluster = Adw.ComboRow(title="Cluster", model=Gtk.StringList.new([s.cfg.name for s in sessions]))
         self.folder = Adw.ActionRow(title="Create inside" if create else "Folder", activatable=True,
                                     subtitle_selectable=True)

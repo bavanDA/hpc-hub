@@ -15,13 +15,13 @@ SCREEN = """There are screens on:
 
 
 def test_parse():
-    row = tmux.SEP.join(["hpchub-claude-42-131802", "1792430282", "1", "MC paper", "#d97757", "srun", "1", "/h"])
+    row = tmux.SEP.join(["hpchub-claude-42-131802", "1792430282", "1", "thesis paper", "#d97757", "srun", "1", "/h"])
     text = f"login02\nTMUX_OK\n{row}\nSCREEN_LIST\n{SCREEN}"
     got = tmux.parse(text)
     assert got.host == "login02" and got.has_tmux
     t = got.sessions[0]
     assert (t.name, t.title, t.color, t.attached, t.agent, t.command) == (
-        "hpchub-claude-42-131802", "MC paper", "#d97757", 1, "claude", "srun")
+        "hpchub-claude-42-131802", "thesis paper", "#d97757", 1, "claude", "srun")
     assert [(s.name, s.kind, s.attached) for s in got.sessions[1:]] == [("12345.build", "screen", 0),
                                                                      ("678.work", "screen", 1)]
 
@@ -62,7 +62,7 @@ def test_real_tmux(tmp_path, monkeypatch):
 
 
 def test_open_line_is_valid_shell():
-    line = tmux.open_line("hpchub-claude-1-x", "srun --pty bash -ic 'cd ~ && claude'", "Claude · MC", "#d97757")
+    line = tmux.open_line("hpchub-claude-1-x", "srun --pty bash -ic 'cd ~ && claude'", "Claude · thesis", "#d97757")
     assert subprocess.run(["bash", "-n", "-c", line]).returncode == 0
     assert "exec tmux attach-session -t =hpchub-claude-1-x" in line
 
@@ -81,7 +81,7 @@ def test_remote_links():
 
 
 def test_sessions_on_compute_nodes():
-    row = tmux.SEP.join(["hpchub-claude-1440996-1530", "1", "0", "Claude · MC", "#d97757", "bash", "1", "/h"])
+    row = tmux.SEP.join(["hpchub-claude-1440996-1530", "1", "0", "Claude · thesis", "#d97757", "bash", "1", "/h"])
     old = tmux.SEP.join(["hpchub-claude-1431766-0900", "1", "0", "", "", "srun", "1", "/h"])
     got = tmux.parse(f"login02\nTMUX_OK\n{old}\nSCREEN_LIST\nJOB_LIST\n1440996 n0076\n"
                      f"NODE_LIST\n{tmux.NODE_MARK}n0076\n{row}\n{tmux.NODE_MARK}n0080\n")
