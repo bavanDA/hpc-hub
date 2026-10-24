@@ -17,6 +17,7 @@ import { PathBar } from '../components/files/PathBar'
 import { Preview } from '../components/files/Preview'
 import { Transfers } from '../components/files/Transfers'
 import { useTransfers } from '../components/files/useTransfers'
+import { PdfDialog } from '../components/pdf/PdfDialog'
 import { useToast } from '../components/toast'
 import { EmptyState, Spinner } from '../components/ui'
 import { useEvent } from '../hooks'
@@ -121,8 +122,11 @@ export function Files() {
     const p = join(path, e.name)
     if (isDir(e)) go(p)
     else if (kind(e) === 'image') setDialog(<ImageDialog cluster={cluster} path={p} onClose={close} />)
+    else if (kind(e) === 'pdf') {
+      setDialog(<PdfDialog cluster={cluster} path={p} subtitle={`${info?.name}: ${p}`} onClose={close} />)
+    }
     else if (isText(e) && e.size < EDIT_LIMIT) edit(e)
-    else soon()  // PDFs and downloads need native windows and file dialogs
+    else soon()  // downloads need native file dialogs
   }
   const edit = (e: Entry) => setDialog(
     <EditorDialog cluster={cluster} clusterName={info?.name ?? cluster} path={join(path, e.name)} onClose={close} />)
