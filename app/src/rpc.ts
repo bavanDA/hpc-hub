@@ -2,6 +2,11 @@
 import { invoke } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
 
+import { demoCall } from './demo'
+
+// In a plain browser (design work) there is no Tauri: answer from demo data
+const inTauri = '__TAURI_INTERNALS__' in window
+
 type Waiting = { resolve: (v: unknown) => void; reject: (e: Error) => void }
 type Message = { id?: number | null; result?: unknown; error?: { message: string }; method?: string;
   params?: { name: string; data: unknown } }
@@ -10,7 +15,7 @@ let next = 1
 const waiting = new Map<number, Waiting>()
 const listeners = new Map<string, Set<(data: unknown) => void>>()
 
-const ready = listen<string>('rpc', (e) => {
+const ready = inTauri ? listen<string>('rpc', (e) => {
   const m: Message = JSON.parse(e.payload)
   if (m.method === 'event' && m.params) {
     listeners.get(m.params.name)?.forEach((fn) => fn(m.params!.data))
@@ -20,9 +25,10 @@ const ready = listen<string>('rpc', (e) => {
     if (m.error) w.reject(new Error(m.error.message))
     else w.resolve(m.result)
   }
-})
+}) : Promise.resolve()
 
 export async function call<T>(method: string, params: Record<string, unknown> = {}): Promise<T> {
+  if (!inTauri) return demoCall<T>(method)
   await ready
   const id = next++
   const answer = new Promise<T>((resolve, reject) => waiting.set(id, { resolve: resolve as (v: unknown) => void, reject }))

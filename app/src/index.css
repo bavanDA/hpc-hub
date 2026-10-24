@@ -1,36 +1,59 @@
 @import "tailwindcss";
 
-/* Colors as tokens, so light and dark follow the system */
+/* Adwaita's palette, so the app sits well next to GNOME apps; it reads as plain and calm on macOS and Windows */
 @theme {
-  --color-bg: #fafafa;
-  --color-panel: #ffffff;
-  --color-sidebar: #f0f0f2;
-  --color-line: #e3e3e8;
-  --color-text: #1d1d1f;
-  --color-muted: #6e6e73;
-  --color-accent: #2f6fde;
-  --color-ok: #1f9d55;
-  --color-warn: #c98a00;
-  --color-bad: #d93a3a;
+  --font-sans: "Adwaita Sans", "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --color-window: #fafafb;
+  --color-view: #ffffff;
+  --color-sidebar: #ebebed;
+  --color-card: #ffffff;
+  --color-header: #ffffff;
+  --color-line: rgb(0 0 6 / 0.09);
+  --color-hover: rgb(0 0 6 / 0.06);
+  --color-selected: rgb(0 0 6 / 0.10);
+  --color-text: rgb(0 0 6 / 0.80);
+  --color-dim: rgb(0 0 6 / 0.55);
+  --color-accent: #3584e4;
+  --color-accent-text: #1c71d8;
+  --color-ok: #1b8553;
+  --color-ok-bg: rgb(46 194 126 / 0.14);
+  --color-bad: #c01c28;
+  --color-bad-bg: rgb(224 27 36 / 0.12);
+  --color-pill: rgb(0 0 6 / 0.07);
+  --shadow-card: 0 0 0 1px rgb(0 0 6 / 0.03), 0 1px 3px 1px rgb(0 0 6 / 0.07), 0 2px 6px 2px rgb(0 0 6 / 0.03);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --color-bg: #1e1e20;
-    --color-panel: #2a2a2d;
-    --color-sidebar: #252528;
-    --color-line: #3a3a3e;
-    --color-text: #f2f2f4;
-    --color-muted: #a1a1a6;
-    --color-accent: #5b8ff0;
+    --color-window: #222226;
+    --color-view: #1d1d20;
+    --color-sidebar: #2e2e32;
+    --color-card: #2e2e32;
+    --color-header: #2e2e32;
+    --color-line: rgb(255 255 255 / 0.08);
+    --color-hover: rgb(255 255 255 / 0.07);
+    --color-selected: rgb(255 255 255 / 0.10);
+    --color-text: #ffffff;
+    --color-dim: rgb(255 255 255 / 0.55);
+    --color-accent-text: #78aeed;
+    --color-ok: #8ff0a4;
+    --color-ok-bg: rgb(38 162 105 / 0.30);
+    --color-bad: #ff7b63;
+    --color-bad-bg: rgb(192 28 40 / 0.35);
+    --color-pill: rgb(255 255 255 / 0.10);
+    --shadow-card: 0 0 0 1px rgb(0 0 6 / 0.36), 0 1px 3px 1px rgb(0 0 6 / 0.25), 0 2px 6px 2px rgb(0 0 6 / 0.15);
   }
 }
 
 html, body, #root { height: 100%; }
 body {
   margin: 0;
-  background: var(--color-bg);
+  background: var(--color-window);
   color: var(--color-text);
-  font-family: system-ui, -apple-system, "Segoe UI", "Cantarell", sans-serif;
+  font-family: var(--font-sans);
+  font-size: 15px;
   -webkit-font-smoothing: antialiased;
+  user-select: none;
+  cursor: default;
 }
+button { cursor: default; }
