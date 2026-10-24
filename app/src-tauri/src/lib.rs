@@ -7,6 +7,8 @@ use std::sync::Mutex;
 
 use tauri::{AppHandle, Emitter, Manager, RunEvent, State};
 
+mod pty;
+
 struct Backend {
     stdin: Mutex<ChildStdin>,
     child: Mutex<Child>,
@@ -46,12 +48,19 @@ fn start_backend(app: &AppHandle) -> std::io::Result<Backend> {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .manage(pty::Ptys::default())
         .setup(|app| {
             let backend = start_backend(app.handle())?;
             app.manage(backend);
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![rpc_send])
+        .invoke_handler(tauri::generate_handler![
+            rpc_send,
+            pty::pty_open,
+            pty::pty_write,
+            pty::pty_resize,
+            pty::pty_close
+        ])
         .build(tauri::generate_context!())
         .expect("error while building HPC Hub")
         .run(|app, event| {
