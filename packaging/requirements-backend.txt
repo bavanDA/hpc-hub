@@ -2,3 +2,4 @@
 pyinstaller>=6.11,<7
 keyring>=25
 cryptography>=43
+asyncssh>=2.17,<3  # the SSH login on Windows (hpc_hub/core/ssh_async.py)
