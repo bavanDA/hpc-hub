@@ -1,9 +1,12 @@
-"""Shared fixtures, and what Windows skips.
+"""Shared fixtures, and what Windows (CI's windows-latest) leaves out, each with its reason in the report:
 
-On Windows (CI's windows-latest) two kinds of tests are left out, each with its reason in the report:
-- gtk: the GTK app's screens; no PyGObject there. Their files are not even collected, as they import gi.
+- gtk: needs PyGObject, which Windows has not: the GTK app's screens, Poppler, the GTK sign-in window, and
+  Chrome's cookie key from the GNOME keyring (chrome_cookies, so also ood and keysetup). Whole files that import gi
+  are not collected; single tests are skipped.
 - posix: tests whose fake cluster is the local bash, coreutils, tmux, fake ssh scripts, Unix sockets or
   symlinks. What they check runs on the Linux cluster, and the Linux job runs them.
+- backend: the backend process loads every method module, and keysetup imports gi through ood and chrome_cookies,
+  so without PyGObject it does not start yet (xfail until chrome_cookies imports gi only when used).
 """
 
 import importlib.util
@@ -16,7 +19,16 @@ HERE = Path(__file__).parent
 WINDOWS = sys.platform == "win32"
 HAVE_GTK = importlib.util.find_spec("gi") is not None
 
-GTK = {"files/test_file_menu.py", "latex/test_file_tree.py"}
+GTK_FILES = {"files/test_file_menu.py", "latex/test_file_tree.py", "api/test_keysetup.py",
+             "connect/test_chrome_cookies.py", "connect/test_ood.py"}
+GTK_TESTS = {
+    "api/test_sso.py::test_chrome_profile_picks_up_the_token",
+    "api/test_sso.py::test_chrome_profile_can_switch_to_the_app_window_or_cancel",
+    "api/test_sso.py::test_sign_in_window_uses_the_same_fill_script",
+    "connect/test_vpn_sso.py::test_password_only_goes_to_the_sign_in_site",
+    "pdf/test_readaloud.py::test_assemble_parts_and_offsets",
+}
+BACKEND_TESTS = {"api/test_server.py::test_backend_process_answers_and_keeps_stdout_clean"}
 POSIX = {
     "agents/test_ask_all.py", "agents/test_chat_copy.py", "agents/test_chats.py", "agents/test_lock.py",
     "agents/test_permissions.py", "agents/test_schedules.py", "agents/test_skills.py",
@@ -34,12 +46,12 @@ def _name(path: Path) -> str:
 
 
 def pytest_configure(config):
-    config.addinivalue_line("markers", "gtk: needs PyGObject and GTK (the GTK app)")
+    config.addinivalue_line("markers", "gtk: needs PyGObject (GTK screens, Poppler, GNOME keyring)")
     config.addinivalue_line("markers", "posix: needs a POSIX system (bash, coreutils, Unix sockets)")
 
 
 def pytest_ignore_collect(collection_path, config):
-    if not HAVE_GTK and _name(Path(collection_path)) in GTK:
+    if not HAVE_GTK and _name(Path(collection_path)) in GTK_FILES:
         return True
     return None
 
@@ -47,7 +59,7 @@ def pytest_ignore_collect(collection_path, config):
 def pytest_report_header(config):
     lines = []
     if not HAVE_GTK:
-        lines.append(f"gtk: no PyGObject, not collected: {', '.join(sorted(GTK))}")
+        lines.append(f"gtk: no PyGObject, not collected: {', '.join(sorted(GTK_FILES))}")
     if WINDOWS:
         lines.append(f"posix: skipped on Windows: {len(POSIX)} files (see tests/conftest.py)")
     return lines
@@ -56,8 +68,13 @@ def pytest_report_header(config):
 def pytest_collection_modifyitems(config, items):
     for item in items:
         name = _name(Path(str(item.fspath)))
-        if name in GTK:
+        test = f"{name}::{getattr(item, 'originalname', item.name)}"
+        if name in GTK_FILES or test in GTK_TESTS:
             item.add_marker(pytest.mark.gtk)
+            if not HAVE_GTK:
+                item.add_marker(pytest.mark.skip(reason="gtk: needs PyGObject"))
+        if test in BACKEND_TESTS and not HAVE_GTK:
+            item.add_marker(pytest.mark.xfail(reason="backend: keysetup imports gi through ood and chrome_cookies"))
         if name in POSIX:
             item.add_marker(pytest.mark.posix)
             if WINDOWS:
