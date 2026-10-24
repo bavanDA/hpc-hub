@@ -70,16 +70,14 @@ class GlobusSettingsDialog(Adw.PreferencesDialog):
             client.logout()
             self._sync()
             return
-        ids = [c.globus.collection_id for c in self.clusters]
-
         def done(err):
             self.add_toast(Adw.Toast(title=err or "Signed in to Globus"))
             self._sync()
-        LoginDialog(client, globus.data_access_scope(ids), done).present(self)
+        LoginDialog(client, globus.consent_ids(self.clusters), done).present(self)
 
     def _pick(self, cfg: ClusterConfig) -> None:
         def chosen(c: globus.Collection):
-            cfg.globus.collection_id, cfg.globus.collection_name = c.id, c.name
+            cfg.globus.collection_id, cfg.globus.collection_name, cfg.globus.collection_kind = c.id, c.name, c.kind
             self.save_clusters()
             self._sync()
         CollectionPicker(self.client(), cfg, chosen).present(self)

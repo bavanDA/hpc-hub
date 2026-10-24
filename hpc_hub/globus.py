@@ -47,6 +47,8 @@ class Collection:
 # someone's shared folder (guest collections).
 CLUSTER_KINDS = {"GCSv5_mapped_collection", "GCP_mapped_collection", "GCSv4_host"}
 PICKABLE_KINDS = CLUSTER_KINDS | {"GCSv5_guest_collection", "GCSv4_share", "GCP_guest_collection"}
+# Only these ask you to allow access to them on top of the sign-in.
+NEEDS_CONSENT = {"GCSv5_mapped_collection"}
 GENERIC_WORDS = {"login", "hpc", "cluster", "ssh", "www", "edu", "org", "com", "net", "ac", "uk"}
 
 
@@ -112,11 +114,12 @@ def data_access_scope(collection_ids: list[str]) -> str:
     return f"{TRANSFER_SCOPE}[{deps}]" if deps else TRANSFER_SCOPE
 
 
-def authorize_url(client_id: str, challenge: str, scope: str = TRANSFER_SCOPE) -> str:
+def authorize_url(client_id: str, challenge: str, scope: str = TRANSFER_SCOPE, fresh: bool = True) -> str:
+    """fresh: ask for the login again. Off when only adding permissions, so Globus just shows Allow."""
     return f"{AUTH}/authorize?" + urllib.parse.urlencode({
         "client_id": client_id, "redirect_uri": REDIRECT, "scope": scope, "response_type": "code",
         "code_challenge": challenge, "code_challenge_method": "S256", "access_type": "offline",
-        "prompt": "login",
+        **({"prompt": "login"} if fresh else {}),
     })
 
 
@@ -203,6 +206,8 @@ def check_collections(client: "Globus", clusters) -> dict[str, Collection | None
             try:
                 saved = client.collection(c.globus.collection_id)
                 if saved.working and saved.kind in PICKABLE_KINDS:
+                    if saved.kind != c.globus.collection_kind:
+                        out[c.id] = saved  # same one, its kind was not saved yet
                     continue
             except GlobusError:
                 continue  # can't tell (offline, no permission yet): keep it
@@ -210,6 +215,12 @@ def check_collections(client: "Globus", clusters) -> dict[str, Collection | None
         if found or c.globus.collection_id:
             out[c.id] = found
     return out
+
+
+def consent_ids(clusters) -> list[str]:
+    """Collections to allow at sign-in, one time for all clusters. Unknown kind: ask, to be safe."""
+    return list(dict.fromkeys(c.globus.collection_id for c in clusters if c.globus.collection_id
+                              and c.globus.collection_kind in NEEDS_CONSENT | {""}))
 
 
 class Globus:
@@ -229,11 +240,16 @@ class Globus:
         self.tokens = {}
         credentials.clear(*KEY)
 
-    def finish_login(self, code: str, verifier: str) -> None:
+    @property
+    def allowed(self) -> set[str]:
+        """Collections you gave access to at the last sign-in."""
+        return set(self.tokens.get("allowed", []))
+
+    def finish_login(self, code: str, verifier: str, allowed: list[str] = ()) -> None:
         resp = _http("POST", f"{AUTH}/token", form={
             "grant_type": "authorization_code", "code": code, "redirect_uri": REDIRECT,
             "client_id": self.client_id, "code_verifier": verifier})
-        self.tokens = transfer_tokens(resp)
+        self.tokens = transfer_tokens(resp) | {"allowed": list(allowed)}
         self._store()
 
     def _token(self) -> str:
@@ -245,6 +261,7 @@ class Globus:
                 "client_id": self.client_id})
             fresh = transfer_tokens(resp)
             fresh["refresh_token"] = fresh["refresh_token"] or self.tokens["refresh_token"]
+            fresh["allowed"] = self.tokens.get("allowed", [])
             self.tokens = fresh
             self._store()
         return self.tokens["access_token"]

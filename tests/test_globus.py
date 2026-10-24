@@ -15,6 +15,17 @@ def test_pkce_and_url():
     q = urllib.parse.parse_qs(urllib.parse.urlsplit(url).query)
     assert q["client_id"] == ["cid"] and q["code_challenge_method"] == ["S256"]
     assert q["scope"] == [globus.TRANSFER_SCOPE] and q["access_type"] == ["offline"]
+    assert q["prompt"] == ["login"]
+    assert "prompt=" not in globus.authorize_url("cid", challenge, fresh=False)  # only Allow, no new login
+
+
+def test_consent_ids_skip_personal():
+    from hpc_hub import config
+    clusters = config.default_clusters()
+    for c, (cid, kind) in zip(clusters, [("mine", "GCP_mapped_collection"), ("a", "GCSv5_mapped_collection"),
+                                         ("b", "")]):
+        c.globus.collection_id, c.globus.collection_kind = cid, kind
+    assert globus.consent_ids(clusters) == ["a", "b"]
 
 
 def test_pasted_code():
@@ -97,6 +108,7 @@ def test_check_collections_replaces_broken_ones():
     by_id = {c.id: c for c in clusters}
     by_id["sdsc"].globus.collection_id = "server"
     by_id["yale"].globus.collection_id = "good"
+    by_id["yale"].globus.collection_kind = MAPPED
     assert globus.check_collections(Fake(), clusters) == {"sdsc": good}  # wulver: none found, nothing saved
 
 

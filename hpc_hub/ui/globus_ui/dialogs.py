@@ -18,22 +18,29 @@ def _step(n: int, title: str, subtitle: str = "") -> Adw.ActionRow:
 class LoginDialog(Adw.Dialog):
     """Opens the Globus sign-in page in your browser; Globus then shows a code you paste here."""
 
-    def __init__(self, client: globus.Globus, scope: str, on_done: Callable[[str], None]):
-        super().__init__(title="Sign in to Globus", content_width=520, content_height=520)
-        self.client, self.on_done, self.finished = client, on_done, False
+    def __init__(self, client: globus.Globus, ids: list[str], on_done: Callable[[str], None], what: str = ""):
+        """ids: collections to allow at the same time. Already signed in: only the Allow page, no login."""
+        fresh = not client.logged_in
+        super().__init__(title="Sign in to Globus" if fresh else "Allow Globus access", content_width=520,
+                         content_height=520)
+        self.client, self.on_done, self.finished, self.ids = client, on_done, False, ids
         self.verifier, challenge = globus.pkce()
-        self.url = globus.authorize_url(client.client_id, challenge, scope)
+        self.url = globus.authorize_url(client.client_id, challenge, globus.data_access_scope(ids), fresh)
         page = Adw.PreferencesPage()
 
         steps = Adw.PreferencesGroup()
-        steps.add(_step(1, "Open the Globus sign-in page", "It asks which Chrome profile to use"))
-        steps.add(_step(2, "Sign in and click Allow",
-                        "Pick your university or ACCESS CI, whichever your clusters use"))
+        steps.add(_step(1, "Open the Globus page", "It asks which Chrome profile to use"))
+        if fresh:
+            steps.add(_step(2, "Sign in and click Allow",
+                            "Pick your university or ACCESS CI, whichever your clusters use"))
+        else:
+            steps.add(_step(2, "Click Allow", f"Lets HPC Hub reach {what or 'your clusters'} through Globus. "
+                            "One time for all of them; Globus remembers it"))
         steps.add(_step(3, "Copy the code Globus shows", "It fills in below when you come back here. Or paste it"))
         page.add(steps)
 
         go = Adw.PreferencesGroup()
-        open_row = Adw.ButtonRow(title="Open Globus sign-in", start_icon_name="web-browser-symbolic")
+        open_row = Adw.ButtonRow(title="Open Globus", start_icon_name="web-browser-symbolic")
         open_row.add_css_class("suggested-action")
         open_row.connect("activated", lambda *_: open_uri(self, self.url))
         go.add(open_row)
@@ -50,7 +57,7 @@ class LoginDialog(Adw.Dialog):
 
         cancel = Gtk.Button(label="Cancel")
         cancel.connect("clicked", lambda *_: self.close())
-        self.done = Gtk.Button(label="Sign in", css_classes=["suggested-action"], sensitive=False)
+        self.done = Gtk.Button(label="Sign in" if fresh else "Done", css_classes=["suggested-action"], sensitive=False)
         self.done.connect("clicked", lambda *_: self._finish())
         bar = Adw.HeaderBar(show_end_title_buttons=False, show_start_title_buttons=False)
         bar.pack_start(cancel)
@@ -100,7 +107,7 @@ class LoginDialog(Adw.Dialog):
             self.finished = True
             self.close()
             self.on_done("")
-        bg(lambda: self.client.finish_login(code, self.verifier), done)
+        bg(lambda: self.client.finish_login(code, self.verifier, self.ids), done)
 
 
 class CollectionPicker(Adw.Dialog):

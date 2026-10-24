@@ -96,6 +96,7 @@ class LatexSettings:
 class GlobusSettings:
     collection_id: str = ""
     collection_name: str = ""
+    collection_kind: str = ""  # Globus entity_type: tells if it needs its own Allow
 
 
 @dataclass

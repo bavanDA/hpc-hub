@@ -129,14 +129,23 @@ class GlobusPage(Gtk.Box):
             for c in self.clusters:
                 if c.id not in (changes or {}):
                     continue
-                found = changes[c.id]
-                c.globus.collection_id, c.globus.collection_name = (found.id, found.name) if found else ("", "")
-                self.toast(f"{c.name} uses Globus collection {found.name}" if found else
-                           f"No Globus collection found for {c.name}. Pick one")
+                found, old = changes[c.id], c.globus.collection_id
+                self._use(c, found)
+                if not (found and found.id == old):
+                    self.toast(f"{c.name} uses Globus collection {found.name}" if found else
+                               f"No Globus collection found for {c.name}. Pick one")
             if changes:
                 self.save_clusters()
+            if set(globus.consent_ids(self.clusters)) - client.allowed:
+                self.consent()  # one Allow for all clusters, right away
+            elif changes:
                 self.reload()
         bg(lambda: globus.check_collections(client, self.clusters), done)
+
+    @staticmethod
+    def _use(cfg: ClusterConfig, c: globus.Collection | None) -> None:
+        g = cfg.globus
+        g.collection_id, g.collection_name, g.collection_kind = (c.id, c.name, c.kind) if c else ("", "", "")
 
     def start_personal(self, cfg: ClusterConfig) -> None:
         """Your own collection (Wulver): start Globus Connect Personal on the login node."""
@@ -168,19 +177,20 @@ class GlobusPage(Gtk.Box):
         d.present(self.get_root())
 
     def consent(self) -> None:
-        """Sign in again, asking access to every chosen collection."""
+        """Sign in, or only Allow when signed in already: access to every cluster's collection at once."""
         if not self.client:
             return
-        scope = globus.data_access_scope([c.globus.collection_id for c in self.clusters])
+        ids = globus.consent_ids(self.clusters)
+        what = ", ".join(c.name for c in self.clusters if c.globus.collection_id in ids)
 
         def done(err):
-            self.toast(err or "Signed in to Globus")
+            self.toast(err or "Globus is ready")
             self.reload()
-        LoginDialog(self.client, scope, done).present(self.get_root())
+        LoginDialog(self.client, ids, done, what).present(self.get_root())
 
     def pick(self, cfg: ClusterConfig) -> None:
         def chosen(c: globus.Collection):
-            cfg.globus.collection_id, cfg.globus.collection_name = c.id, c.name
+            self._use(cfg, c)
             self.save_clusters()
             self.consent()  # new collection may need its own permission
         CollectionPicker(self.client, cfg, chosen).present(self.get_root())
