@@ -126,7 +126,8 @@ def test_agent_resumes_a_chat_on_a_new_node(env):
     profile = {"cpus": 8, "mem_gb": 32, "time": "02:00:00", "partition": "gpu", "gpus": 1}
     got = tools.agent_start("wulver", "codex", "/home/jdoe/x", chat_id="019a-abc", label="Old chat", new_node=True,
                             profile=profile)
-    assert got["node"] == "n0200" and got["name"] == "hpchub-codex-777-019a-abc" and got["title"] == "ChatGPT · Old chat"
+    assert got["node"] == "n0200" and got["name"] == "hpchub-codex-777-019a-abc"
+    assert got["title"] == "ChatGPT · Old chat"
     assert "resume --no-daemon 019a-abc" in got["argv"][-1]
     job, asked = env.s.asked[0]
     assert job == "hpc-hub-codex" and asked.cpus == 8 and asked.gpus == 1
