@@ -223,13 +223,14 @@ fn later(w: &WebviewWindow, run: &Shared, ms: u64) {
 }
 
 fn step(w: &WebviewWindow, run: &Shared) {
+    // asked before taking the lock: it waits for the main thread, which may be waiting for the lock
+    let uri = w.url().map(|u| u.to_string()).unwrap_or_default();
     let script = {
         let Ok(mut r) = run.lock() else { return };
         r.timer = false;
         if r.done_pass || r.off || r.finished {
             return;
         }
-        let uri = w.url().map(|u| u.to_string()).unwrap_or_default();
         if !may_fill(&uri, &r.start) {
             drop(r);
             later(w, run, POLL); // not a page we trust with the password; it may redirect to one
