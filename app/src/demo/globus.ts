@@ -16,12 +16,14 @@ let state = { client_id: 'abc123de-0000-4000-8000-0000000000aa', signed_in: true
 const status = (): GlobusStatus => ({ ...state, clusters, wants })
 
 const dir = (name: string, modified = '2026-10-21 14:02'): Item => ({ name, is_dir: true, size: 0, modified })
-const file = (name: string, size: number, modified = '2026-10-22 09:15'): Item => ({ name, is_dir: false, size, modified })
+const file = (name: string, size: number, modified = '2026-10-22 09:15'): Item =>
+  ({ name, is_dir: false, size, modified })
 
 const TREE: Record<string, Item[]> = {
   '/home/jdoe/': [dir('data'), dir('projects', '2026-10-18 11:40'), dir('results'), dir('scripts', '2026-09-30 16:21'),
     file('README.md', 2481), file('environment.yml', 734, '2026-08-12 10:03'), file('train.sbatch', 1210)],
-  '/home/jdoe/data/': [dir('raw'), dir('processed'), file('samples.csv', 48_213_442), file('labels.parquet', 3_904_118)],
+  '/home/jdoe/data/': [dir('raw'), dir('processed'), file('samples.csv', 48_213_442),
+    file('labels.parquet', 3_904_118)],
   '/home/jdoe/results/': [dir('run-01'), dir('run-02'), file('summary.json', 18_204)],
   '/gpfs/home/jdoe/': [dir('mygroup'), dir('models', '2026-10-20 08:55'), dir('notebooks'),
     file('checkpoint-12.pt', 1_284_110_336, '2026-10-23 22:41'), file('notes.txt', 902)],

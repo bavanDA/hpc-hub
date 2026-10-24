@@ -92,7 +92,8 @@ export function Pane({ pane, clusters, onChoose, onConsent, onStart }: {
   else if (!l.items.length) body = <Empty icon={FolderOpen} title="Empty folder" />
   else body = (
     <div className="flex flex-col px-2 pb-2">
-      <div className="sticky top-0 grid grid-cols-[1fr_64px_96px] gap-2 bg-card px-2 py-1.5 text-[12px] font-bold text-dim">
+      <div className="sticky top-0 grid grid-cols-[1fr_64px_96px] gap-2 bg-card px-2 py-1.5 text-[12px] font-bold
+        text-dim">
         <span className="pl-6">Name</span><span className="text-right">Size</span><span>Modified</span>
       </div>
       {l.items.map((it) => (

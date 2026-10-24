@@ -79,7 +79,8 @@ export function LoginDialog({ start, onClose, onDone }:
           <List>
             <Step n={1} title="Open the Globus page" text="With the button below, or copy the link into your browser" />
             <Step n={2} title={second(login)[0]} text={second(login)[1]} />
-            <Step n={3} title="Copy the code Globus shows" text="It fills in below when you come back here. Or paste it" />
+            <Step n={3} title="Copy the code Globus shows"
+              text="It fills in below when you come back here. Or paste it" />
           </List>
           <div className="flex items-center gap-2">
             <div title={login.url}

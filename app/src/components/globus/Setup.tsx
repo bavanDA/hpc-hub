@@ -54,7 +54,8 @@ export function SettingsDialog({ status, onClose, onChange, onSignIn, onChoose }
           <List>
             <Row title="Status" subtitle={status.signed_in ? 'Signed in' : 'Not signed in'}
               suffix={status.signed_in ? <Button kind="destructive" onClick={signOut}>Sign out</Button>
-                : <Button kind="suggested" disabled={!status.client_id} onClick={onSignIn}>Sign in to Globus</Button>} />
+                : <Button kind="suggested" disabled={!status.client_id} onClick={onSignIn}>
+                  Sign in to Globus</Button>} />
           </List>
         </section>
         <section className={`flex flex-col gap-2 ${status.signed_in ? '' : 'pointer-events-none opacity-50'}`}>

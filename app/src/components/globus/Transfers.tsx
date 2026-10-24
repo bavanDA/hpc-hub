@@ -15,7 +15,9 @@ function state(t: Task): [string, 'ok' | 'bad' | 'warn' | 'dim'] {
 
 function Icon({ t }: { t: Task }) {
   if (t.status === 'SUCCEEDED') return <CircleCheck size={20} className="shrink-0 text-ok" />
-  if (t.status === 'FAILED') return <CircleX size={20} className={`shrink-0 ${t.cancelled ? 'text-dim' : 'text-bad'}`} />
+  if (t.status === 'FAILED') {
+    return <CircleX size={20} className={`shrink-0 ${t.cancelled ? 'text-dim' : 'text-bad'}`} />
+  }
   if (t.status === 'INACTIVE') return <Pause size={20} className="shrink-0 text-warn" />
   return <Loader2 size={20} className="shrink-0 animate-spin text-accent-text" />
 }

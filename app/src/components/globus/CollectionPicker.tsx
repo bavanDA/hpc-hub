@@ -50,7 +50,8 @@ export function CollectionPicker({ cluster, onClose, onPicked }:
   return (
     <Dialog title={`Globus collection for ${cluster.name}`} onClose={onClose} width={560}>
       <div className="flex flex-col gap-3 pt-1">
-        <label className="flex h-9 items-center gap-2 rounded-md bg-pill px-3 focus-within:ring-2 focus-within:ring-accent">
+        <label className="flex h-9 items-center gap-2 rounded-md bg-pill px-3 focus-within:ring-2
+          focus-within:ring-accent">
           <Search size={15} className="text-dim" />
           <input autoFocus value={query} spellCheck={false} placeholder="Search, e.g. Expanse, Wulver, Bouchet"
             onChange={(e) => setQuery(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && run(query.trim())}
