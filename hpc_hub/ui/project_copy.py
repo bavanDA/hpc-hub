@@ -9,7 +9,7 @@ from gi.repository import Adw, GLib, Gtk
 from .. import chat_copy, chats, remote_fs, transfer
 from ..remote_fs import storage
 from ..projects import Project
-from ..session import ClusterSession
+from ..session import ClusterSession, State
 from .folder_picker import FolderPicker, load_places
 from .widgets import bg
 
@@ -36,6 +36,9 @@ class ProjectCopyDialog(Adw.Dialog):
         self.spots = Adw.ToggleGroup(valign=Gtk.Align.CENTER)
         self.spots.connect("notify::active-name", lambda *_: self._spot())
         self.where.add_suffix(self.spots)
+        self.connect_btn = Gtk.Button(label="Connect", valign=Gtk.Align.CENTER)
+        self.connect_btn.connect("clicked", lambda *_: self._connect())
+        self.where.add_suffix(self.connect_btn)
         self.into = Adw.EntryRow(title="Into folder")
         self.into.set_text(p.copy_into or "~")
         browse = Gtk.Button(icon_name="folder-open-symbolic", tooltip_text="Choose folder", valign=Gtk.Align.CENTER,
@@ -116,9 +119,34 @@ class ProjectCopyDialog(Adw.Dialog):
         dst = self.dst
         self.paths.clear()
         self.spots.remove_all()
-        self.where.set_visible(dst.connected)
+        self.spots.set_visible(dst.connected)
+        self.connect_btn.set_visible(not dst.connected)
         if dst.connected:
+            self._mark_spot()
             load_places(dst, lambda found: dst is self.dst and self._show_spots(found))
+        else:
+            self.where.set_subtitle(f"Connect to {dst.cfg.name} to choose Home, Project or Scratch")
+
+    def _connect(self) -> None:
+        """Connect the target from here; Home, Project and Scratch show up once it is connected."""
+        dst = self.dst
+        self.activate_action("app.connect", GLib.Variant("s", dst.cfg.id))
+        self.connect_btn.set_sensitive(False)
+        self.where.set_subtitle(f"Connecting to {dst.cfg.name}…")
+
+        def wait():
+            if dst is not self.dst or not self.get_root():
+                return False
+            if dst.state == State.ERROR:
+                self.connect_btn.set_sensitive(True)
+                self.where.set_subtitle(f"Could not connect to {dst.cfg.name}. See its card on the first page")
+                return False
+            if not dst.connected:
+                return True
+            self.connect_btn.set_sensitive(True)
+            self._load_spots()
+            return False
+        GLib.timeout_add_seconds(2, wait)
 
     def _show_spots(self, found) -> None:
         self.paths.clear()
@@ -134,8 +162,9 @@ class ProjectCopyDialog(Adw.Dialog):
         name = max(inside, key=lambda n: len(self.paths[n]), default=None)
         if name != self.spots.get_active_name():
             self.spots.set_active_name(name)
-        self.where.set_subtitle("Scratch may be cleaned up after a while. Keep work you need in Project."
-                                if name and name.startswith("Scratch") else "")
+        if self.dst.connected:
+            self.where.set_subtitle("Scratch may be cleaned up after a while. Keep work you need in Project."
+                                    if name and name.startswith("Scratch") else "")
 
     def _spot(self) -> None:
         name = self.spots.get_active_name()
