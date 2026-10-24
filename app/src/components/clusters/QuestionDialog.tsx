@@ -1,11 +1,11 @@
-// One question a login asks (prompts.py): a password, a 6-digit code, or where to sign in to the VPN.
-import { Check } from 'lucide-react'
+// One question a login asks (prompts.py): a password, a 6-digit code, or the VPN's web sign-in (SignIn.tsx).
 import { useState } from 'react'
 
 import type { Cluster, Question } from '../../types/clusters'
 import { Button, Dialog } from '../ui'
 import { AuthenticatorHelp } from './AuthenticatorHelp'
 import { EntryRow, Group } from './fields'
+import { BrowserLogin, PickBrowser, WebLogin } from './SignIn'
 
 const digits = (text: string) => text.replace(/\s/g, '')
 
@@ -15,25 +15,9 @@ export function QuestionDialog({ q, cluster, onAnswer }:
   const [help, setHelp] = useState(false)
   const cancel = () => onAnswer(null)
 
-  if (q.kind === 'pick-browser') {
-    return (
-      <Dialog title={`Sign in to the ${q.name} VPN`} onClose={cancel} width={440}
-        actions={<><Button onClick={cancel}>Cancel</Button>
-          <Button kind="suggested" onClick={() => onAnswer('')}>Sign in</Button></>}>
-        <p className="mb-3 text-center text-dim">Where do you want to sign in?</p>
-        <Group>
-          <div className="flex min-h-[56px] items-center gap-3 px-4 py-2">
-            <span className="grid size-5 place-items-center rounded-full bg-accent text-white">
-              <Check size={13} /></span>
-            <div className="flex-1">
-              <div>HPC Hub window</div>
-              <div className="text-[13px] text-dim">Fills in your username and password</div>
-            </div>
-          </div>
-        </Group>
-      </Dialog>
-    )
-  }
+  if (q.kind === 'pick-browser') return <PickBrowser q={q} onAnswer={onAnswer} />
+  if (q.kind === 'browser-login') return <BrowserLogin q={q} onAnswer={onAnswer} />
+  if (q.kind === 'web-login') return <WebLogin q={q} onAnswer={onAnswer} />
 
   if (q.kind === 'code') {
     const typed = (v: string) => {

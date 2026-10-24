@@ -96,3 +96,28 @@ export function SwitchRow({ label, sub, checked, onChange }:
 export function ActionRow({ label, sub, children }: { label: ReactNode; sub?: ReactNode; children: ReactNode }) {
   return <RowBox label={label} sub={sub}>{children}</RowBox>
 }
+
+/** A choice from a short list, like Adw.ComboRow. */
+export function ComboRow({ label, sub, value, onChange, options }:
+  { label: string; sub?: ReactNode; value: string; onChange: (v: string) => void; options: [string, string][] }) {
+  return (
+    <RowBox label={label} sub={sub}>
+      <select value={value} onChange={(e) => onChange(e.target.value)} aria-label={label}
+        className="h-9 max-w-[300px] rounded-md bg-pill px-2 outline-none focus:ring-2 focus:ring-accent">
+        {options.map(([v, text]) => <option key={v} value={v}>{text}</option>)}
+      </select>
+    </RowBox>
+  )
+}
+
+/** A whole row that is a button, like Adw.ButtonRow. */
+export function ButtonRow({ label, onClick, tone = 'accent', icon }:
+  { label: string; onClick: () => void; tone?: 'accent' | 'bad'; icon?: ReactNode }) {
+  return (
+    <button type="button" onClick={onClick}
+      className={`flex min-h-[52px] w-full items-center justify-center gap-2 px-4 font-bold hover:bg-hover ${
+        tone === 'bad' ? 'text-bad' : 'text-accent-text'}`}>
+      {icon}{label}
+    </button>
+  )
+}
