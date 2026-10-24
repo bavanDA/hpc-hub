@@ -3,6 +3,7 @@ import { Bot, ChevronDown, Code, Folder, Globe, LayoutGrid, Users, type LucideIc
 import { useEffect, useRef, useState } from 'react'
 
 import { useToast } from '../toast'
+import { useTools } from '../tools/useTools'
 
 const GROUPS: [string, string, LucideIcon][][] = [
   [['vscode:desktop', 'VS Code app', Code], ['vscode:browser', 'VS Code in browser', Globe],
@@ -11,8 +12,10 @@ const GROUPS: [string, string, LucideIcon][][] = [
     ['agent:agy', 'Antigravity', Bot], ['agent:cursor', 'Cursor', Bot]],
 ]
 
-export function OpenMenu({ onOpen }: { onOpen?: (key: string) => void }) {
+export function OpenMenu({ onOpen, cluster }:
+  { onOpen?: (key: string) => void; cluster?: { id: string; name: string } }) {
   const toast = useToast()
+  const tools = useTools()
   const [open, setOpen] = useState(false)
   const box = useRef<HTMLDivElement>(null)
   useEffect(() => {
@@ -27,6 +30,7 @@ export function OpenMenu({ onOpen }: { onOpen?: (key: string) => void }) {
   function pick(key: string) {
     setOpen(false)
     if (onOpen) onOpen(key)
+    else if (cluster) tools.open(cluster.id, cluster.name, key)
     else toast('Coming soon')
   }
 
@@ -52,6 +56,7 @@ export function OpenMenu({ onOpen }: { onOpen?: (key: string) => void }) {
           ))}
         </div>
       )}
+      {tools.dialog}
     </div>
   )
 }

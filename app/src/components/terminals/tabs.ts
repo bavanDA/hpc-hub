@@ -29,6 +29,7 @@ export type Tab = {
   error: string
   banners: Banner[]
   seen: Set<string>
+  onLink?: (link: Link) => void  // the code that opened it wants its links too (VS Code)
 }
 
 type State = { tabs: Tab[]; current: string | null }
@@ -89,20 +90,30 @@ export function openSession(cluster: string, s: TmuxSession) {
 /** A new tmux terminal. Answers its tab key once the cluster said its name. */
 export async function openNew(cluster: string, spec: NewTerminal): Promise<string> {
   const c = await call<Command>('terminals.command', { cluster, new: spec })
-  const tab = makeTab(tabKey(cluster, c.name), { cluster, session: c.name, kind: 'tmux', node: c.node,
-    title: c.title ?? spec.name, color: c.color ?? spec.color })
+  return openTmux(cluster, { ...c, title: c.title ?? spec.name, color: c.color ?? spec.color })
+}
+
+/** A tmux session whose command line the backend made (agents, Ask all), or its tab if it is open. */
+export function openTmux(cluster: string, c: Command): string {
+  const key = tabKey(cluster, c.name)
+  if (getTab(key)) { select(key); return key }
+  const tab = makeTab(key, { cluster, session: c.name, kind: 'tmux', node: c.node, title: c.title ?? c.name,
+    color: c.color ?? '' })
   add(tab)
   tab.argv = c.argv
   start(tab)
-  return tab.key
+  return key
 }
 
-/** Any other command in a tab of its own (VS Code jobs, logs): stays until you close it. */
-export function openCommand(title: string, argv: string[], color = '', node = '', cluster = '') {
+/** Any other command in a tab of its own (VS Code jobs, logs): stays until you close it. Answers its key. */
+export function openCommand(title: string, argv: string[], color = '', node = '', cluster = '',
+  onLink?: (link: Link) => void): string {
   const tab = makeTab(`log/${++logs}`, { cluster, session: '', kind: 'tmux', node, title, color })
+  tab.onLink = onLink
   add(tab)
   tab.argv = argv
   start(tab)
+  return tab.key
 }
 
 function command(tab: Tab, params: Record<string, unknown>) {
@@ -170,6 +181,12 @@ export function update(key: string, fields: Partial<Pick<Tab, 'title' | 'color'>
   changed()
 }
 
+/** A banner over an open tab, by its key. */
+export function addBanner(key: string, text: string, button?: string, action?: () => void) {
+  const tab = getTab(key)
+  if (tab) banner(tab, text, button, action)
+}
+
 function banner(tab: Tab, text: string, button?: string, action?: () => void) {
   tab.banners = [...tab.banners, { id: `${Date.now()}-${tab.banners.length}`, text, button, action }]
   changed()
@@ -219,5 +236,6 @@ async function scan(tab: Tab, text: string) {
       banner(tab, `ChatGPT pairing code ${link.code}. In the ChatGPT app: Codex, connect a machine, enter the code.`,
         'Copy code', () => copyText(link.code).then((ok) => notify(ok ? 'Code copied' : 'Could not copy')))
     }
+    tab.onLink?.(link)
   }
 }

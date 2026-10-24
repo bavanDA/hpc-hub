@@ -13,7 +13,7 @@ export function demoShell(tab: Tab, scan: (text: string) => void) {
   const host = tab.node || 'login1'
   const prompt = () => term.write(`\x1b[1;32mjdoe@${host}\x1b[0m:\x1b[1;34m~\x1b[0m$ `)
   term.writeln(`\x1b[2mDemo terminal: no cluster in the browser. This is ${tab.title}.\x1b[0m`)
-  if (tab.session.includes('vscode')) {
+  if (tab.session.includes('vscode') || tab.title.startsWith('VS Code')) {
     const text = 'Open this link in your browser https://vscode.dev/tunnel/abc123/home/jdoe'
     term.writeln(text)
     scan(text)
