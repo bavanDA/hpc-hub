@@ -31,7 +31,7 @@ export type ToolSetup = {
 export type Chat = { id: string; name: string; cwd: string; title: string; first: string; last: string;
   mtime: number; size: number }
 
-export type Chats = { home: string; chats: Chat[] }
+export type Chats = { home: string; chats: Chat[]; cached?: boolean }  // cached: the last list, fresh one coming
 
 /** A started agent or Ask all: the tab's command line. */
 export type Started = Command & { title: string; color: string; out?: string }

@@ -99,6 +99,12 @@ def sshd(tmp_path, monkeypatch):
 
 
 @pytest.fixture(autouse=True)
+def _own_cache_folder(tmp_path_factory, monkeypatch):
+    """Logs and the chat lists the app keeps go to a temporary folder, never the user's ~/.cache."""
+    monkeypatch.setenv("XDG_CACHE_HOME", str(tmp_path_factory.mktemp("cache")))
+
+
+@pytest.fixture(autouse=True)
 def _never_the_real_keyring(request, monkeypatch):
     """Every test gets an in-memory keyring, so none can read, change or delete the logins of whoever runs the
     tests (a missed monkeypatch once called the real one). Tests marked keyring_backends stub the vaults

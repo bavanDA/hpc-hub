@@ -129,9 +129,18 @@ class AgentDialog(Adw.Dialog):
                                   "You have no node yet, so it asks for one with:")
 
     def _load(self) -> None:
+        """The last list at once (reading chats can take seconds on a cold cluster), then the fresh one."""
         s, limit = self.s, 400 if self.project else chat_store.LIMIT
-        bg(lambda: (chat_store.list_chats(s.ssh, self.agent.id, limit), remote_fs.home(s.ssh), self._real(s)),
-           self._show)
+        key = f"gtk\n{s.cfg.id}\n{self.agent.id}\n{self.project}"
+        kept = chat_store.recall(key)
+        if kept:
+            self._show((kept[0], kept[1].get("home", ""), kept[1].get("real", "")), "", cached=True)
+
+        def fresh():
+            got = (chat_store.list_chats(s.ssh, self.agent.id, limit), remote_fs.home(s.ssh), self._real(s))
+            chat_store.remember(key, got[0], {"home": got[1], "real": got[2]})
+            return got
+        bg(fresh, self._show)
 
     def _real(self, s: ClusterSession) -> str:
         """The project folder with links resolved (/scratch is a link to /mmfs1/scratch on Wulver)."""
@@ -140,16 +149,20 @@ class AgentDialog(Adw.Dialog):
         res = s.ssh.run(f"readlink -f {remote_fs.q(remote_fs.expand(s.ssh, self.project))}", timeout=30)
         return res.stdout.strip().rstrip("/")
 
-    def _show(self, got: tuple[list[Chat], str] | None, err: str) -> None:
+    def _show(self, got: tuple[list[Chat], str] | None, err: str, cached: bool = False) -> None:
         if err or not got:
             self.chats.set_description(GLib.markup_escape_text(f"Could not read chats: {err}"))
             return
+        for row in self.rows:  # the fresh list replaces the one kept from last time
+            self.chats.remove(row)
+        self.rows.clear()
         chats, home, real = got
         if self.project:
             roots = {self.project, real} - {""}
             chats = [c for c in chats if any(c.cwd == r or c.cwd.startswith(r + "/") for r in roots)]
-        self.chats.set_description("Pick one to continue it." if chats
-                                   else "No chats here yet." if self.project else "No chats yet on this cluster.")
+        self.chats.set_description(("Pick one to continue it." + (" Checking for newer ones…" if cached else ""))
+                                   if chats else "No chats here yet." if self.project
+                                   else "No chats yet on this cluster.")
         self.search.set_visible(len(chats) > 6)
         for chat in chats:
             row = Adw.ActionRow(title=GLib.markup_escape_text(chat.name), activatable=True, title_lines=1,

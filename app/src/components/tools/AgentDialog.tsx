@@ -30,8 +30,13 @@ export function AgentDialog({ setup, agent: a, project = '', onClose }:
   const [query, setQuery] = useState('')
 
   useEffect(() => {
-    call<Chats>('tools.chats', { cluster: setup.id, agent: a.id, folder: project })
-      .then(setChats).catch((e: Error) => setError(e.message))
+    // the last list at once (reading chats can take seconds on a cold cluster), then the fresh one
+    let fresh = false
+    const where = { cluster: setup.id, agent: a.id, folder: project }
+    call<Chats | null>('tools.chats_cached', where).then((c) => { if (c && !fresh) setChats(c) }).catch(() => {})
+    call<Chats>('tools.chats', where)
+      .then((c) => { fresh = true; setChats(c) })
+      .catch((e: Error) => { fresh = true; setError(e.message) })
   }, [setup.id, a.id, project])
 
   const hasNode = Boolean(setup.node)
@@ -52,7 +57,8 @@ export function AgentDialog({ setup, agent: a, project = '', onClose }:
   })
   const where = project ? `in ${basename(project)}` : `on ${setup.name}`
   const chatsNote = error ? `Could not read chats: ${error}` : !chats ? 'Loading…'
-    : list.length ? 'Pick one to continue it.' : project ? 'No chats here yet.' : 'No chats yet on this cluster.'
+    : list.length ? `Pick one to continue it.${chats.cached ? ' Checking for newer ones…' : ''}`
+      : project ? 'No chats here yet.' : 'No chats yet on this cluster.'
 
   return (
     <Dialog title={`${a.name} ${where}`} onClose={onClose} width={600}>

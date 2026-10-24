@@ -1,10 +1,13 @@
 """Past agent chats on a cluster, newest first: Claude (~/.claude/projects), ChatGPT/Codex (~/.codex),
 Antigravity (~/.gemini/antigravity-cli)."""
 
+import hashlib
 import json
+import os
 import shlex
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 
+from ..core.paths import log_dir
 from ..core.ssh import SshMaster
 
 LIMIT = 60
@@ -189,3 +192,31 @@ def list_chats(ssh: SshMaster, agent: str = "claude", limit: int = LIMIT, full_s
     if res.returncode != 0:
         raise RuntimeError(res.stderr.strip().splitlines()[-1] if res.stderr.strip() else "Could not list chats")
     return parse(res.stdout)
+
+
+# -- the last list, kept on this computer --------------------------------------------------
+# Reading the chats can take seconds when the cluster's file system is cold (7 s on Wulver), so the picker
+# shows the last list at once and swaps in the fresh one when it arrives.
+
+def _cache_file(key: str):
+    folder = log_dir() / "chats"
+    folder.mkdir(mode=0o700, exist_ok=True)
+    return folder / (hashlib.sha256(key.encode()).hexdigest()[:24] + ".json")
+
+
+def remember(key: str, chats: list[Chat], extra: dict | None = None) -> None:
+    """Keep what was just loaded (titles and first lines of your chats: readable only by you)."""
+    path = _cache_file(key)
+    tmp = path.with_suffix(".tmp")
+    with open(os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600), "w") as f:
+        json.dump({"chats": [asdict(c) for c in chats], **(extra or {})}, f)
+    tmp.replace(path)
+
+
+def recall(key: str) -> tuple[list[Chat], dict] | None:
+    """The last list kept for key, and what was kept with it; None if there is none (or it is unreadable)."""
+    try:
+        data = json.loads(_cache_file(key).read_text())
+        return [Chat(**c) for c in data.pop("chats")], data
+    except (OSError, ValueError, TypeError, KeyError):
+        return None

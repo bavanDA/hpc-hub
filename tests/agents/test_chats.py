@@ -79,3 +79,18 @@ def test_agy_chats(tmp_path):
 def test_missing_stores_are_empty(tmp_path):
     for agent in ("claude", "codex", "agy"):
         assert _run(tmp_path, agent) == []
+
+
+def test_last_list_is_kept_and_private(tmp_path, monkeypatch):
+    import os
+    import stat
+
+    from hpc_hub.agents import chats
+    monkeypatch.setenv("XDG_CACHE_HOME", str(tmp_path))
+    assert chats.recall("wulver\nclaude\n") is None
+    kept = [chats.Chat("c1", "/home/jdoe", "Fix build", "fix it", "done", 5, 10, "-home-jdoe")]
+    chats.remember("wulver\nclaude\n", kept, {"home": "/home/jdoe"})
+    back, extra = chats.recall("wulver\nclaude\n")
+    assert back == kept and extra == {"home": "/home/jdoe"}
+    files = list((tmp_path / "hpc-hub" / "chats").iterdir())
+    assert len(files) == 1 and stat.S_IMODE(os.stat(files[0]).st_mode) == 0o600

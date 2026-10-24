@@ -75,6 +75,7 @@ function vscodeStart({ folder, target, job, replace_job }:
 export const answers: Record<string, unknown> = {
   'tools.setup': setup,
   'tools.chats': chats,
+  'tools.chats_cached': () => null,
   'tools.installed': ['claude', 'codex', 'cursor'],
   'tools.vscode_find': ({ cluster }: { cluster: string }): VsFound => cluster === 'wulver'
     ? { job: { id: '123500', node: 'n0007', name: 'hpc-hub-vscode', resources: '2 cores · 8G · 1:12:40 of 8:00:00' },

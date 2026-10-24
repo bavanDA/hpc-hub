@@ -88,7 +88,22 @@ def chats(cluster: str, agent: str, folder: str = "") -> dict:
         top = folder.strip().rstrip("/") or "/"
         roots = {remote_fs.expand(s.ssh, top), _real(s, top)} - {""}
         found = [c for c in found if any(c.cwd == r or c.cwd.startswith(r.rstrip("/") + "/") for r in roots)]
+    chat_store.remember(_chats_key(cluster, agent, folder), found, {"home": home})
     return {"home": home, "chats": [{**asdict(c), "name": c.name} for c in found]}
+
+
+def _chats_key(cluster: str, agent: str, folder: str) -> str:
+    return f"{cluster}\n{agent}\n{folder.strip()}"
+
+
+@method("tools.chats_cached")
+def chats_cached(cluster: str, agent: str, folder: str = "") -> dict | None:
+    """The list tools.chats gave last time, at once (no cluster needed); None the first time."""
+    kept = chat_store.recall(_chats_key(cluster, agent, folder))
+    if not kept:
+        return None
+    found, extra = kept
+    return {"home": extra.get("home", ""), "chats": [{**asdict(c), "name": c.name} for c in found], "cached": True}
 
 
 @method("tools.installed")
