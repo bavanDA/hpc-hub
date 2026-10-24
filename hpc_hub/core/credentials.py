@@ -13,7 +13,7 @@ try:
 
     gi.require_version("Secret", "1")
     from gi.repository import Secret
-except (ImportError, ValueError):
+except (ImportError, ValueError, AttributeError):  # AttributeError: a stray gi folder without PyGObject
     Secret = None
 
 SCHEMA_NAME = "local.hpchub.Login"
