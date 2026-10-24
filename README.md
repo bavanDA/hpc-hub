@@ -6,6 +6,12 @@ transfers and LaTeX are in the same window.
 
 It comes set up for NJIT Wulver, Yale Bouchet and SDSC Expanse. You can add other clusters in Settings.
 
+![Clusters: connect, get a compute node, open tools](docs/screenshots/clusters.png)
+
+| Projects | Jobs |
+|---|---|
+| ![Projects](docs/screenshots/projects.png) | ![Jobs](docs/screenshots/jobs.png) |
+
 ## What it does
 
 - **Clusters**: connect with one button. VPN, SSH and Duo push are handled for you. Ask for a compute node with the
@@ -15,14 +21,18 @@ It comes set up for NJIT Wulver, Yale Bouchet and SDSC Expanse. You can add othe
 - **Projects**: name a folder on a cluster and open it in VS Code, Claude, Files or LaTeX in one click. Copy or sync a
   project, with its Claude chats, to another cluster.
 - **Terminals**: tmux sessions on the cluster, so VS Code tunnels and agents keep running when you close the laptop.
-- **Agents**: run Claude, Codex, Antigravity or Cursor on a compute node. Choose which commands they may run, add
-  skills, and schedule tasks to run at night.
+- **Agents**: run Claude, Codex, Antigravity or Cursor on a compute node, and choose which commands they may run.
 - **Files**: browse, preview PDFs and images, edit, zip, upload and download. Copy between clusters directly or with
   Globus, with live progress.
 - **Globus**: sign in once. The app finds each cluster's collection by itself and asks only for the permissions
   Globus needs.
+
+Experimental, off until you turn them on in Preferences:
+
 - **LaTeX**: an Overleaf-like editor for projects on the cluster. Build with latexmk, jump between source and PDF,
   see git history, pull and push.
+- **Skills**: add skills to Claude and Codex on each cluster, from HPC Hub's set or any git repository.
+- **Scheduled agents**: an agent runs a task on its own, for example every night at 02:00.
 
 ## Safety
 
