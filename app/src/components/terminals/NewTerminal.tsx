@@ -23,9 +23,11 @@ export function NewTerminalDialog({ live, onClose, onOpened }:
   { live: Live[]; onClose: () => void; onOpened: () => void }) {
   const toast = useToast()
   const [name, setName] = useState(() => `Terminal ${new Date().toTimeString().slice(0, 5)}`)
-  const [cluster, setCluster] = useState(live[0]?.id ?? '')
-  const c = live.find((x) => x.id === cluster)
-  const [onNode, setOnNode] = useState(Boolean(c?.node))
+  const [picked, setCluster] = useState('')
+  const c = live.find((x) => x.id === picked) ?? live[0]
+  const cluster = c?.id ?? ''
+  const [node, setOnNode] = useState<boolean | null>(null)  // null: the compute node when there is one
+  const onNode = node ?? Boolean(c?.node)
   const [folder, setFolder] = useState('~')
   const [color, setColor] = useState(COLORS[0])
 
@@ -46,7 +48,7 @@ export function NewTerminalDialog({ live, onClose, onOpened }:
         <Field label="Cluster">
           <select value={cluster} className={inputClass} onChange={(e) => {
             setCluster(e.target.value)
-            setOnNode(Boolean(live.find((x) => x.id === e.target.value)?.node))
+            setOnNode(null)
           }}>
             {live.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
           </select>
