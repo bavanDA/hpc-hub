@@ -4,7 +4,7 @@ import urllib.parse
 
 import pytest
 
-from hpc_hub import globus
+from hpc_hub.globus import api as globus
 
 
 def test_pkce_and_url():

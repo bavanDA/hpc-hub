@@ -4,7 +4,7 @@ from collections.abc import Callable
 
 from gi.repository import Adw, GLib, Gtk
 
-from ... import globus
+from .. import api as globus
 from ...core.config import AppSettings, ClusterConfig
 from .dialogs import CollectionPicker, LoginDialog
 

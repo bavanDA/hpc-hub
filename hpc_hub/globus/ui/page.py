@@ -4,11 +4,11 @@ import posixpath
 
 from gi.repository import Adw, GLib, Gtk
 
-from ... import globus
+from .. import api as globus
 from ...files import remote_fs
 from ...core.config import AppSettings, ClusterConfig
 from ...connect.session import ClusterSession
-from ..widgets import bg
+from ...ui.widgets import bg
 from .dialogs import CollectionPicker, LoginDialog
 from .pane import GlobusPane, or_consent
 from .settings import HELP, GlobusSettingsDialog

@@ -6,7 +6,7 @@ from collections.abc import Callable
 
 from gi.repository import Adw, GLib, Gtk
 
-from ... import globus
+from ...globus import api as globus
 from .. import remote_fs, transfer
 from ...core.config import ClusterConfig
 from ..remote_fs import Entry

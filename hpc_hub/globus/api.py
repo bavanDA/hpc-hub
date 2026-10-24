@@ -12,7 +12,7 @@ import urllib.parse
 import urllib.request
 from dataclasses import dataclass
 
-from .core import credentials
+from ..core import credentials
 
 AUTH = "https://auth.globus.org/v2/oauth2"
 TRANSFER = "https://transfer.api.globus.org/v0.10"
