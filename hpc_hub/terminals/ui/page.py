@@ -129,8 +129,8 @@ class TerminalsPage(SessionListMixin, SessionMenuMixin, Gtk.Box):
         self.list.connect("row-activated", lambda _l, row: getattr(row, "open", None) and row.open())
         box.append(Gtk.ScrolledWindow(child=self.list, vexpand=True, hscrollbar_policy=Gtk.PolicyType.NEVER))
         box.append(Gtk.Label(label="Switching or closing only detaches. Sessions keep running on the cluster.\n"
-                                   "Copy: Ctrl+Shift+C or right click. Paste: Ctrl+Shift+V or right click.\n"
-                                   "To copy by highlighting, turn on Select to copy in Preferences.",
+                                   "Highlight text to copy it. Paste: Ctrl+Shift+V or right click. "
+                                   "Click a link to open it.",
                              wrap=True, xalign=0, css_classes=["dim-label", "caption"], margin_start=10,
                              margin_end=10, margin_bottom=10))
         return box
@@ -300,7 +300,7 @@ class TerminalsPage(SessionListMixin, SessionMenuMixin, Gtk.Box):
         return tab
 
     def attach(self, s: ClusterSession, t: tmux.Session) -> None:
-        self.open(t.title, s.ssh.argv(tmux.attach(t), tty=True), "utilities-terminal-symbolic", node=t.node,
+        self.open(t.title, tmux.attach_argv(s.ssh, t), "utilities-terminal-symbolic", node=t.node,
                   key=(s.cfg.id, t.name), color=t.color or tmux.AGENT_COLORS.get(t.agent, ""))
 
     def _listed(self, key: tuple[str, str]) -> tmux.Session | None:
@@ -319,6 +319,6 @@ class TerminalsPage(SessionListMixin, SessionMenuMixin, Gtk.Box):
         a = s.allocation
         node = a.node if on_node and a else ""
         cmd = f"bash -c {shlex.quote(remote.cd_part(folder) + '; exec bash -l')}"
-        line = tmux.open_line(name, cmd, label, color, node=node)
-        self.open(label, s.ssh.argv(line, tty=True), "utilities-terminal-symbolic", node=node,
+        self.open(label, tmux.tab_argv(s.ssh, name, cmd, label, color, node=node), "utilities-terminal-symbolic",
+                  node=node,
                   key=(s.cfg.id, name), color=color)

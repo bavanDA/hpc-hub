@@ -11,9 +11,12 @@ from gi.repository import Adw, Gdk, Gio, GLib, Gtk, Pango, Vte  # noqa: E402
 
 from ...connect.session import ClusterSession  # noqa: E402
 from ...core import features  # noqa: E402
-from ...ui.widgets import bg  # noqa: E402
+from ...ui.widgets import bg, open_uri  # noqa: E402
 from .. import links, tmux  # noqa: E402
 from ..links import Link  # noqa: E402
+
+# what a click opens: web links as the terminal shows them (a trailing dot or bracket is left out)
+LINK_RE = Vte.Regex.new_for_match(r"https?://[^\s'\"<>()\x1b]*[^\s'\"<>()\x1b.,;:!?\]]", -1, 0x00000400)  # MULTILINE
 
 
 class TerminalTab(Gtk.Box):
@@ -30,7 +33,7 @@ class TerminalTab(Gtk.Box):
         self.remote: Link | None = None  # remote control link or pairing code the session printed
         self.on_remote: Callable[["TerminalTab"], None] | None = None
         self.toast: Callable[[str], None] = lambda text: None
-        self.tmux_buffer: Callable[[], str] | None = None  # reads tmux's copy buffer (mouse drag in tmux)
+        self.tmux_buffer: Callable[[], str] | None = None  # tmux's copy buffer: Copy with nothing selected
 
         self.term = Vte.Terminal(vexpand=True, hexpand=True, scrollback_lines=20000)
         self.term.set_font(Pango.FontDescription.from_string("Monospace 11"))
@@ -92,14 +95,27 @@ class TerminalTab(Gtk.Box):
         right.connect("pressed", on_right)
         self.term.add_controller(right)
 
-        drag = Gtk.GestureDrag(button=1, propagation_phase=Gtk.PropagationPhase.CAPTURE)
+        self._links()
 
-        def on_end(g, dx, dy):
-            shift = g.get_current_event_state() & Gdk.ModifierType.SHIFT_MASK
-            if self.tmux_buffer and not shift and abs(dx) + abs(dy) > 6:
-                GLib.timeout_add(250, lambda: self._copy_tmux() and False)
-        drag.connect("drag-end", on_end)
-        self.term.add_controller(drag)
+    def _links(self) -> None:
+        """Links look like links (a hand over them) and a click opens one; a drag still selects."""
+        self.term.set_allow_hyperlink(True)
+        self.term.match_set_cursor_name(self.term.match_add_regex(LINK_RE, 0), "pointer")
+        click = Gtk.GestureClick(button=1, propagation_phase=Gtk.PropagationPhase.CAPTURE)
+        pressed_at: list[tuple[float, float]] = []
+
+        def on_pressed(_g, _n, x, y):
+            pressed_at[:] = [(x, y)]
+
+        def on_released(_g, n, x, y):
+            if n != 1 or not pressed_at or abs(x - pressed_at[0][0]) + abs(y - pressed_at[0][1]) > 4:
+                return  # a drag: that was a selection
+            url = self.term.check_hyperlink_at(x, y) or self.term.check_match_at(x, y)[0]
+            if url:
+                open_uri(self, links.classify(url).url if url.startswith("http") else url)
+        click.connect("pressed", on_pressed)
+        click.connect("released", on_released)
+        self.term.add_controller(click)
 
     def copy(self) -> None:
         if self.term.get_has_selection():

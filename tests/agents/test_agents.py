@@ -1,12 +1,14 @@
 from hpc_hub.agents import catalog as agents
 from hpc_hub.core.config import AgentSettings
 
+C = agents.CLAUDE_CLASSIC  # Claude starts with its classic screen
+
 
 def test_claude():
     s = AgentSettings(command="claude")
-    assert agents.command(agents.CLAUDE, s) == "claude"
+    assert agents.command(agents.CLAUDE, s) == C + "claude"
     s.remote = True
-    assert agents.command(agents.CLAUDE, s, "abc") == "claude --resume abc"  # remote control is a setting
+    assert agents.command(agents.CLAUDE, s, "abc") == C + "claude --resume abc"  # remote control is a setting
 
 
 def test_codex():
@@ -38,7 +40,7 @@ def test_cluster_has_all_agents():
 
 def test_options_add_flags():
     s = AgentSettings(command="claude", model="opus", mode="plan", effort="high")
-    assert agents.command(agents.CLAUDE, s) == "claude --model opus --permission-mode plan --effort high"
+    assert agents.command(agents.CLAUDE, s) == C + "claude --model opus --permission-mode plan --effort high"
     c = AgentSettings(command="codex", sandbox="workspace-write", approval="never", effort="xhigh")
     assert agents.command(agents.CODEX, c) == \
         "codex --no-daemon -s workspace-write -a never -c model_reasoning_effort=xhigh"
@@ -63,13 +65,14 @@ def test_option_choices_are_known_values():
 
 def test_task_is_the_first_prompt():
     s = AgentSettings(command="")
-    assert agents.command(agents.CLAUDE, s, task="fix it's tests") == "claude 'fix it'\"'\"'s tests'"
+    assert agents.command(agents.CLAUDE, s, task="fix it's tests") == C + "claude 'fix it'\"'\"'s tests'"
     assert agents.command(agents.CODEX, s, "abc", task="go") == "codex resume --no-daemon abc go"
     assert agents.command(agents.AGY, s, task="go on") == "agy -i 'go on'"
     assert agents.command(agents.AGY, s, task="  ") == "agy"
 
 
-def test_select_to_copy_starts_claude_without_mouse_capture():
-    assert agents.command(agents.CLAUDE, AgentSettings(command="claude"), "abc", select_to_copy=True) == \
-        "export CLAUDE_CODE_DISABLE_MOUSE=1 && claude --resume abc"
-    assert agents.command(agents.CODEX, AgentSettings(command="codex"), select_to_copy=True) == "codex --no-daemon"
+def test_claude_runs_with_its_classic_screen():
+    """Its output goes to the terminal's scrollback and the mouse stays with the terminal; Claude only."""
+    assert agents.command(agents.CLAUDE, AgentSettings(command="claude"), "abc") == \
+        "export CLAUDE_CODE_DISABLE_ALTERNATE_SCREEN=1 && claude --resume abc"
+    assert agents.command(agents.CODEX, AgentSettings(command="codex")) == "codex --no-daemon"

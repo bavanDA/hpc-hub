@@ -17,7 +17,7 @@ from ...agents import chats as chat_store
 from ...compute import slurm
 from ...compute.limits import slurm_time
 from ...compute.slurm import Allocation
-from ...core import config, remote
+from ...core import remote
 from ...files import remote_fs
 from ...terminals import links, tmux
 from ..hub import hub
@@ -75,11 +75,6 @@ def _real(s, folder: str) -> str:
     """The folder with links resolved (/scratch is a link to /mmfs1/scratch on Wulver)."""
     res = s.ssh.run(f"readlink -f {remote_fs.q(remote_fs.expand(s.ssh, folder))}", timeout=30)
     return res.stdout.strip().rstrip("/")
-
-
-def _select_to_copy() -> bool:
-    """Preferences: Select to copy (read at each start, so a change counts for the next chat)."""
-    return config.load_app(config.APP_FILE).select_to_copy
 
 
 @method("tools.chats")
@@ -200,7 +195,7 @@ def agent_start(cluster: str, agent: str, folder: str = "", chat_id: str = "", l
             _progress(cluster, f"Could not set remote control: {e}")
     tag = chat_id[:8] if chat_id else time.strftime("%H%M%S")  # one tmux session per chat
     title = f"{a.name} · {label.strip() or posixpath.basename(folder.rstrip('/')) or folder}"
-    line = catalog.command(a, c, chat_id, task, _select_to_copy())
+    line = catalog.command(a, c, chat_id, task)
     return _tab(s, node, f"hpchub-{a.id}-{node.job_id}-{tag}", line, folder, title,
                 tmux.AGENT_COLORS.get(a.id, ""))
 

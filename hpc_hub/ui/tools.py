@@ -18,7 +18,7 @@ from ..compute import slurm
 from ..compute.slurm import Allocation
 from ..compute.ui.compute_dialog import ComputeDialog
 from ..connect.session import ClusterSession
-from ..core import features, remote
+from ..core import remote
 from ..files import remote_fs
 from ..files.ui.folder_picker import FolderPicker
 from ..terminals import links, tmux
@@ -285,13 +285,13 @@ class Tools:
 
     def _open_agent(self, s: ClusterSession, agent: Agent, a: Allocation, run: Launch) -> None:
         folder, chat_id = run.folder, run.chat_id
-        cmd = agents.command(agent, getattr(s.cfg, agent.id), chat_id, run.task, features.select_to_copy)
+        cmd = agents.command(agent, getattr(s.cfg, agent.id), chat_id, run.task)
         tag = chat_id[:8] if chat_id else time.strftime("%H%M%S")  # one tmux session per chat
         name = f"hpchub-{agent.id}-{a.job_id}-{tag}"
         title = f"{agent.name} · {run.label or posixpath.basename(folder.rstrip('/')) or folder}"
         color = tmux.AGENT_COLORS.get(agent.id, "")
-        line = tmux.open_line(name, remote.node_shell(folder, cmd), title, color, node=a.node)
-        self.terminals.open(title, s.ssh.argv(line, tty=True), agent.icon, node=a.node, key=(s.cfg.id, name),
+        argv = tmux.tab_argv(s.ssh, name, remote.node_shell(folder, cmd), title, color, node=a.node)
+        self.terminals.open(title, argv, agent.icon, node=a.node, key=(s.cfg.id, name),
                             color=color, on_link=lambda tab, link: self._agent_link(agent, tab, link))
         self.show_terminals()
 
@@ -323,8 +323,9 @@ class Tools:
             name = f"hpchub-ask-{a.job_id}-{time.strftime('%H%M%S')}"
             title = f"Ask all · {prompt.strip().splitlines()[0][:40]}"
             color = tmux.AGENT_COLORS["ask"]
-            line = tmux.open_line(name, remote.node_shell(folder, ask_all.command(ask)), title, color, node=a.node)
-            tab = self.terminals.open(title, s.ssh.argv(line, tty=True), "system-users-symbolic", node=a.node,
+            argv = tmux.tab_argv(s.ssh, name, remote.node_shell(folder, ask_all.command(ask)), title, color,
+                                 node=a.node)
+            tab = self.terminals.open(title, argv, "system-users-symbolic", node=a.node,
                                       key=(s.cfg.id, name), color=color)
             if self.open_files:
                 tab.add_banner(f"Answers go to {out}", "Open folder", lambda: self.open_files(s, out))

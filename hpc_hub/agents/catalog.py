@@ -74,9 +74,13 @@ BY_ID = {a.id: a for a in AGENTS}
 PAIR_NOTE = "Pairing code below. In the ChatGPT app open Codex, then connect a machine and enter it."
 
 
-def command(agent: Agent, s: AgentSettings, chat_id: str = "", task: str = "", select_to_copy: bool = False) -> str:
+CLAUDE_CLASSIC = "export CLAUDE_CODE_DISABLE_ALTERNATE_SCREEN=1 && "  # see command()
+
+
+def command(agent: Agent, s: AgentSettings, chat_id: str = "", task: str = "") -> str:
     """Shell line that starts (or resumes) the agent; task is a first prompt it starts working on.
-    select_to_copy: Claude leaves the mouse to the terminal, so highlighting text selects it."""
+    Claude runs with its classic screen: what it prints lands in the terminal's scrollback, and the mouse
+    stays with the terminal (select, scroll, links), instead of its full-screen view."""
     base = s.command.strip() or agent.id
     opts = [a for o in agent.options for a in o.args(getattr(s, o.key))]
     chat = shlex.quote(chat_id) if chat_id else ""
@@ -97,7 +101,7 @@ def command(agent: Agent, s: AgentSettings, chat_id: str = "", task: str = "", s
     if chat:
         args += ["--conversation", chat] if agent is AGY else ["--resume", chat]
     line = " ".join([base, *args, *_task(agent, task)])
-    return f"export CLAUDE_CODE_DISABLE_MOUSE=1 && {line}" if select_to_copy and agent is CLAUDE else line
+    return CLAUDE_CLASSIC + line if agent is CLAUDE else line
 
 
 def _task(agent: Agent, task: str) -> list[str]:
