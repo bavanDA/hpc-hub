@@ -6,13 +6,16 @@ Labels and colors live in the tmux session itself (@hpchub_label, @hpchub_color)
 survive app restarts and show up from any laptop.
 """
 
+import json
 import re
 import shlex
+import sys
 import time
 from dataclasses import dataclass
+from pathlib import Path
 
 from ..core.ssh import SshMaster
-from . import links
+from . import control, links
 
 MARK = "@@HPCHUB_PANE "
 
@@ -147,6 +150,41 @@ def open_line(name: str, command: str, label: str = "", color: str = "", cwd: st
     line = (f"if command -v tmux >/dev/null 2>&1; then {create(name, command, label, color, cwd)} && "
             f"exec tmux attach-session -t {_t(name)}; else {fallback}; fi")
     return f"exec {on(node, line, tty=True)}" if node else line
+
+
+def control_line(name: str, command: str, label: str = "", color: str = "", cwd: str = "", node: str = "") -> str:
+    """Like open_line, but attaches in control mode for the bridge (terminals/cc_bridge.py); no tty."""
+    line = (f"if command -v tmux >/dev/null 2>&1; then {create(name, command, label, color, cwd)} && "
+            f"exec tmux -u -C attach-session -t {_t(name)}; else echo {control.NO_TMUX}; fi")
+    return f"exec {on(node, line)}" if node else line
+
+
+def control_attach(s: Session) -> str | None:
+    """Control-mode attach for the bridge; None for screen sessions (they stay on plain ssh -t)."""
+    if s.kind == "screen":
+        return None
+    line = f"exec tmux -u -C attach-session -t {_t(s.name)}"
+    return f"exec {on(s.node, line)}" if s.node else line
+
+
+def bridge_argv(control_ssh: list[str], fallback: list[str]) -> list[str]:
+    """The terminal runs the bridge, which runs control_ssh; fallback is the old ssh -t argv."""
+    return [sys.executable, str(Path(__file__).with_name("cc_bridge.py")), "--fallback", json.dumps(fallback),
+            "--", *control_ssh]
+
+
+def tab_argv(ssh: SshMaster, name: str, command: str, label: str = "", color: str = "", cwd: str = "",
+             node: str = "") -> list[str]:
+    """Terminal tab argv for a session (created if needed): the bridge, with plain ssh -t as its fallback."""
+    fallback = ssh.argv(open_line(name, command, label, color, cwd, node), tty=True)
+    return bridge_argv(ssh.argv(control_line(name, command, label, color, cwd, node)), fallback)
+
+
+def attach_argv(ssh: SshMaster, s: Session) -> list[str]:
+    """Terminal tab argv for a listed session."""
+    plain = ssh.argv(attach(s), tty=True)
+    line = control_attach(s)
+    return bridge_argv(ssh.argv(line), plain) if line else plain
 
 
 def attach(s: Session) -> str:
