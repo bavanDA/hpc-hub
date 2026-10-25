@@ -31,9 +31,7 @@ class PreferencesDialog(Adw.PreferencesDialog):
 
         terms = Adw.PreferencesGroup(title="Terminals")
         self.select = Adw.SwitchRow(title="Select to copy", active=app.select_to_copy,
-                                    subtitle="Highlight text with the mouse to copy it, also in Claude. Claude chats "
-                                             "you start or resume after this scroll with the scroll bar, not the mouse "
-                                             "wheel.")
+                                    subtitle="Highlight text with the mouse to copy it.")
         self.select.connect("notify::active", lambda *_: self._select())
         terms.add(self.select)
         page.add(terms)

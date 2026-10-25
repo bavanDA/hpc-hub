@@ -60,7 +60,7 @@ export function PreferencesDialog({ onClose, onExperimental }:
         </Group>}
         <Group title="Terminals">
           <SwitchRow label="Select to copy"
-            sub="Highlight text with the mouse to copy it, also in Claude. Claude chats you start or resume after this scroll with the scroll bar, not the mouse wheel."
+            sub="Highlight text with the mouse to copy it."
             checked={prefs.select_to_copy} onChange={(on) => save({ select_to_copy: on })} />
         </Group>
         <Group title="Experimental">

@@ -4,4 +4,4 @@ EXPERIMENTAL_PAGES = ("latex", "skills", "schedules")
 
 experimental = False
 
-select_to_copy = False  # Preferences: highlighting terminal text copies it (Claude starts without mouse capture)
+select_to_copy = True  # Preferences: highlighting terminal text copies it

@@ -14,7 +14,7 @@ export function theme(): ITheme {
 }
 
 // Preferences: Select to copy. Read once, then kept up to date by the Preferences dialog.
-let selectToCopy = false
+let selectToCopy = true
 call<{ select_to_copy: boolean }>('preferences.get').then((p) => { selectToCopy = p.select_to_copy }).catch(() => {})
 export const setSelectToCopy = (on: boolean) => { selectToCopy = on }
 
