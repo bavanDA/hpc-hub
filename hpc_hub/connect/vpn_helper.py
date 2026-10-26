@@ -178,6 +178,9 @@ class HelperVpn(Vpn):
         self.address = address  # tests: a socket of their own
         self.openconnect = str(openconnect_program())
         self.external_browser = ""  # SAML gateways use the in-app sign-in (vpn_sso), not an external browser
+        cafile = Path(self.openconnect).with_name("cert.pem")
+        if cafile.exists():  # macOS: the shipped openconnect knows no system certificates, so it gets a list
+            self.extra_args = ["--cafile", str(cafile)]
 
     def ensure_profile(self) -> None:
         if not self.cfg.vpn.gateway:

@@ -180,6 +180,7 @@ class Vpn:
         self.name = cfg.vpn_connection_name
         self.openconnect = "openconnect"
         self.external_browser = str(SSO_BIN)  # SAML gateways: the sign-in window (bin/hpc-hub-sso)
+        self.extra_args: list[str] = []
 
     def _nmcli(self, *args: str, timeout: float = 60) -> subprocess.CompletedProcess:
         return subprocess.run(["nmcli", *args], capture_output=True, text=True, timeout=timeout, env=NM_ENV)
@@ -222,6 +223,7 @@ class Vpn:
         argv = [self.openconnect, "--authenticate", "--protocol", v.protocol, "--user", username]
         if self.external_browser:
             argv += ["--external-browser", self.external_browser]
+        argv += self.extra_args
         if v.useragent:
             argv += ["--useragent", v.useragent]
         if v.authgroup:

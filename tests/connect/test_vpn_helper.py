@@ -130,9 +130,12 @@ def test_sign_in_uses_the_shipped_openconnect_without_the_linux_browser(tmp_path
     monkeypatch.setenv("HPC_HUB_RESOURCES", str(tmp_path))
     exe = tmp_path / "vpn" / "openconnect" / "openconnect"
     exe.parent.mkdir(parents=True)
-    exe.write_text("#!/bin/sh\necho \"$@\" >&2\necho COOKIE=abc\n")
+    exe.write_text("#!/bin/sh\necho \"$@\" > \"$(dirname \"$0\")/args\"\necho COOKIE=abc\n")
     exe.chmod(0o755)
+    (exe.parent / "cert.pem").write_text("certs")
     v, _ = make(wulver, str(tmp_path / "none.sock"))
     assert v.openconnect == str(exe) and v.external_browser == ""
     auth = v.authenticate("jdoe", "pw", ask=lambda p: None, on_duo=lambda: None)
-    assert auth["COOKIE"] == "abc"
+    args = (exe.parent / "args").read_text()
+    assert auth["COOKIE"] == "abc" and f"--cafile {exe.parent / 'cert.pem'}" in args
+    assert "--external-browser" not in args
