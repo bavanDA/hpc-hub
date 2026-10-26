@@ -48,7 +48,9 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
         with:
-          workspaces: app/src-tauri
+          workspaces: |
+            app/src-tauri
+            app/vpn-helper
 
       - name: Frozen backend
         run: |
@@ -66,6 +68,59 @@ jobs:
         run: |
           # no arguments: prints its usage and exits 2
           { app/src-tauri/binaries/hpc-hub-backend-* --ssh-bridge 2>&1 || true; } | grep usage
+
+      # VPN on Windows and macOS (docs/design/vpn-helper.md): openconnect and the helper go into
+      # app/src-tauri/vpn/, which tauri.windows.conf.json / tauri.macos.conf.json ship as <resources>/vpn/.
+      # openconnect is kept in the cache until its scripts change, which saves most of these minutes.
+      - name: openconnect from an earlier build
+        id: openconnect
+        if: runner.os != 'Linux'
+        uses: actions/cache/restore@v6
+        with:
+          path: app/src-tauri/vpn/openconnect
+          key: openconnect-${{ runner.os }}-${{ hashFiles('packaging/fetch_openconnect_*.sh', 'packaging/vpn/*') }}
+      - uses: msys2/setup-msys2@v2
+        if: runner.os == 'Windows' && steps.openconnect.outputs.cache-hit != 'true'
+        with:
+          msystem: UCRT64
+          update: false
+      - name: openconnect (Windows; MSYS2 has no package, so this builds it)
+        if: runner.os == 'Windows' && steps.openconnect.outputs.cache-hit != 'true'
+        timeout-minutes: 15
+        shell: msys2 {0}
+        run: bash packaging/fetch_openconnect_windows.sh
+      - name: openconnect (macOS, Homebrew's)
+        if: runner.os == 'macOS' && steps.openconnect.outputs.cache-hit != 'true'
+        timeout-minutes: 8  # dylibbundler waits for an answer if it can't find a library
+        run: bash packaging/fetch_openconnect_macos.sh
+      - name: Keep openconnect for the next build
+        if: runner.os != 'Linux' && steps.openconnect.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v6
+        with:
+          path: app/src-tauri/vpn/openconnect
+          key: ${{ steps.openconnect.outputs.cache-primary-key }}
+      - name: VPN helper
+        if: runner.os != 'Linux'
+        shell: bash
+        run: |
+          cargo build --release --manifest-path app/vpn-helper/Cargo.toml
+          exe=""; if [ "$RUNNER_OS" = Windows ]; then exe=.exe; fi
+          mkdir -p app/src-tauri/vpn
+          cp "app/vpn-helper/target/release/hpc-hub-vpn-helper$exe" app/src-tauri/vpn/
+      - name: Bundled openconnect and VPN helper start
+        if: runner.os != 'Linux'
+        timeout-minutes: 2
+        shell: bash
+        run: |
+          cd app/src-tauri/vpn
+          if [ "$RUNNER_OS" = Windows ]; then
+            # only Windows' own folders on PATH, so a DLL left out of the bundle can't load from elsewhere
+            PATH=/c/Windows/System32:/c/Windows openconnect/openconnect.exe --version
+            ./hpc-hub-vpn-helper.exe --version
+          else
+            openconnect/openconnect --version
+            ./hpc-hub-vpn-helper --version
+          fi
 
       - run: npm ci
         working-directory: app

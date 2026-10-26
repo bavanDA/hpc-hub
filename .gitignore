@@ -8,6 +8,8 @@ dist/
 
 # Frozen backend (packaging/build_backend.py)
 app/src-tauri/binaries/
+# openconnect and the VPN helper for Windows and macOS (packaging/fetch_openconnect_*.sh, CI)
+app/src-tauri/vpn/
 
 # Tools
 .pytest_cache/

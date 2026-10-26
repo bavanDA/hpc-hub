@@ -16,5 +16,8 @@
         "trafficLightPosition": { "x": 16, "y": 18 }
       }
     ]
+  },
+  "bundle": {
+    "resources": { "vpn/": "vpn/" }
   }
 }
