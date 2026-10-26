@@ -1,0 +1,37 @@
+[package]
+name = "hpc-hub-vpn-helper"
+version = "1.0.0"
+description = "HPC Hub VPN helper: runs openconnect as admin for the app (docs/design/vpn-helper.md)"
+authors = ["HPC Hub contributors"]
+license = ""
+edition = "2024"
+rust-version = "1.90"
+publish = false
+
+[[bin]]
+name = "hpc-hub-vpn-helper"
+path = "src/main.rs"
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
+
+[target.'cfg(windows)'.dependencies]
+windows-service = "0.8.1"
+windows-sys = { version = "0.61", features = [
+    "Win32_Foundation",
+    "Win32_Security",
+    "Win32_Security_Authorization",
+    "Win32_Storage_FileSystem",
+    "Win32_System_Console",
+    "Win32_System_IO",
+    "Win32_System_Pipes",
+    "Win32_System_Threading",
+] }
+
+[profile.release]
+strip = true
+lto = true
