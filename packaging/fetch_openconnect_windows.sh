@@ -50,6 +50,9 @@ fetch "https://www.infradead.org/openconnect/download/openconnect-$OC_VERSION.ta
 	"$WORK/openconnect.tar.gz"
 tar -xzf "$WORK/openconnect.tar.gz" -C "$WORK"
 SRC=$WORK/openconnect-$OC_VERSION
+# newer mingw-w64 dropped sec_api/stdlib_s.h; stdlib.h declares the same (errno_t, the _s functions)
+sed -i 's|#include <sec_api/stdlib_s.h>|#include <stdlib.h>|' "$SRC/compat.c"
+grep -q 'sec_api/stdlib_s.h' "$SRC/compat.c" && { echo "compat.c patch did not apply" >&2; exit 1; }
 (
 	cd "$SRC"
 	./configure --build="$MINGW_CHOST" --host="$MINGW_CHOST" \
