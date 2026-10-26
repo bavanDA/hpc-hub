@@ -37,9 +37,7 @@ def request(message: dict, timeout: float = 15, address: str | None = None) -> d
     line = (json.dumps(message) + "\n").encode()
     try:
         if WINDOWS and not address:
-            with open(PIPE, "r+b", buffering=0) as pipe:
-                pipe.write(line)
-                data = pipe.readline()
+            data = _pipe(line, timeout)
         else:
             with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as s:
                 s.settimeout(timeout)
@@ -57,6 +55,20 @@ def request(message: dict, timeout: float = 15, address: str | None = None) -> d
     if not isinstance(answer, dict):
         raise VpnError("The VPN helper gave an answer HPC Hub can't read")
     return answer
+
+
+def _pipe(line: bytes, timeout: float) -> bytes:
+    """Windows: the helper's named pipe. Busy (it is answering someone else): try again for a moment."""
+    deadline = time.monotonic() + min(timeout, 5)
+    while True:
+        try:
+            with open(PIPE, "r+b", buffering=0) as pipe:
+                pipe.write(line)
+                return pipe.readline()
+        except OSError as e:
+            if getattr(e, "winerror", 0) != 231 or time.monotonic() > deadline:  # ERROR_PIPE_BUSY
+                raise
+            time.sleep(0.1)
 
 
 def _checked(answer: dict) -> dict:
