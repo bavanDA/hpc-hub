@@ -254,7 +254,9 @@ def chunk(cluster: str, path: str, offset: int = 0, length: int = CHUNK) -> dict
     """Part of a file as base64 (any file, so big PDFs come in pieces), and its whole size."""
     offset, length = max(0, int(offset)), max(1, min(int(length), CHUNK))
     q = shlex.quote(path)
-    res = _ssh(cluster).run(f"set -o pipefail; stat -L -c %s -- {q} && tail -c +{offset + 1} -- {q} "
+    # head stops once it has enough, and tail may then die of SIGPIPE (141): that's fine, not a read error
+    res = _ssh(cluster).run(f"set -o pipefail; stat -L -c %s -- {q} && "
+                            f"{{ tail -c +{offset + 1} -- {q} || [ $? -eq 141 ]; }} "
                             f"| head -c {length} | base64 -w0", timeout=300, fast=True)
     if res.returncode != 0:
         raise remote_fs.FsError(res.stderr.strip().splitlines()[-1] if res.stderr.strip() else "Could not read file")
