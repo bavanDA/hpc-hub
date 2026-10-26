@@ -13,7 +13,7 @@ from ..core.config import ClusterConfig
 from ..core.credentials import Login
 from ..core.paths import log_dir
 from ..core.ssh import SshError, SshMaster, new_master
-from . import prompts, vpn_sso
+from . import prompts, vpn_helper, vpn_sso
 from .askpass_server import AskpassServer
 from .network import link_works, network_name, reachable, route_device
 from .nodes import NodesMixin
@@ -31,6 +31,7 @@ class Listener(Protocol):
     def web_login(self, session: "ClusterSession", start: vpn_sso.SsoStart, login: Login,
                   profile: str = "") -> tuple[str, str]: ...  # profile: sign in in that Chrome profile
     def pick_browser(self, session: "ClusterSession") -> str | None: ...  # Chrome profile, "" = app window
+    def confirm(self, session: "ClusterSession", title: str, text: str) -> bool: ...  # yes or no
 
 
 SSO_USER = "hpc-hub:sso-username"
@@ -75,7 +76,13 @@ class ClusterSession(NodesMixin):
 
     @property
     def vpn(self) -> Vpn:
+        if vpn_helper.needs_helper():  # Windows and macOS: the tunnel runs in the helper service
+            return vpn_helper.HelperVpn(self.cfg, self._log, lambda title, text: self._confirm(title, text))
         return Vpn(self.cfg, self._log)
+
+    def _confirm(self, title: str, text: str) -> bool:
+        confirm = getattr(self.listener, "confirm", None)  # the GTK app runs on Linux only: never asked
+        return bool(confirm and confirm(self, title, text))
 
     # -- public API (call from UI thread) -----------------------------------
     def connect(self, ssh_login: Login, vpn_login: Login | None, vpn_only: bool = False) -> None:

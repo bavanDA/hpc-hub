@@ -117,9 +117,10 @@ export type ChromeProfile = { name: string; email: string }
  * web-login: the app's sign-in window (app/src-tauri/src/sso.rs), answered with JSON {token, error}. */
 export type Question = {
   id: string
-  kind: 'ask' | 'code' | 'pick-browser' | 'browser-login' | 'web-login'
+  kind: 'ask' | 'code' | 'pick-browser' | 'browser-login' | 'web-login' | 'confirm'
   cluster: string
   name: string
+  title?: string  // confirm: answered "yes", or null for no
   prompt?: string
   default?: string
   profiles?: ChromeProfile[]

@@ -118,6 +118,10 @@ class Hub:
     def code(self, s: ClusterSession, prompt: str) -> str | None:
         return self.question("code", {"cluster": s.cfg.id, "name": s.cfg.name, "prompt": prompt})
 
+    def confirm(self, s: ClusterSession, title: str, text: str) -> bool:
+        return self.question("confirm", {"cluster": s.cfg.id, "name": s.cfg.name, "title": title,
+                                         "prompt": text}) == "yes"
+
     def pick_browser(self, s: ClusterSession) -> str | None:
         """Where to sign in to the VPN: "" = the app's window, else a Chrome profile's name. None: cancelled."""
         found = browser.profiles() if browser.chrome() else []

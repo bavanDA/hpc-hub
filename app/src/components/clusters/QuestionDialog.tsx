@@ -18,6 +18,15 @@ export function QuestionDialog({ q, cluster, onAnswer }:
   if (q.kind === 'pick-browser') return <PickBrowser q={q} onAnswer={onAnswer} />
   if (q.kind === 'browser-login') return <BrowserLogin q={q} onAnswer={onAnswer} />
   if (q.kind === 'web-login') return <WebLogin q={q} onAnswer={onAnswer} />
+  if (q.kind === 'confirm') {
+    return (
+      <Dialog title={q.title ?? q.name} onClose={cancel} width={440}
+        actions={<><Button onClick={cancel}>Not now</Button>
+          <Button kind="suggested" autoFocus onClick={() => onAnswer('yes')}>Set up</Button></>}>
+        <p className="text-dim">{q.prompt}</p>
+      </Dialog>
+    )
+  }
 
   if (q.kind === 'code') {
     const typed = (v: string) => {

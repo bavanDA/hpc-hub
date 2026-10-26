@@ -9,6 +9,13 @@ SSO_BIN = ROOT / "bin" / "hpc-hub-sso"
 WINDOWS = sys.platform == "win32"
 
 
+def resources_dir() -> Path | None:
+    """The installed app's resources folder (openconnect and the VPN helper live in <it>/vpn); the Tauri app
+    passes it as HPC_HUB_RESOURCES. None when run from the repository."""
+    value = os.environ.get("HPC_HUB_RESOURCES")
+    return Path(value) if value else None
+
+
 def _windows_dir(var: str, fallback: str, *parts: str) -> Path:
     """%LOCALAPPDATA% or %APPDATA%: already private to you, so no owner or mode checks."""
     path = Path(os.environ.get(var) or Path.home() / "AppData" / fallback).joinpath("HPC Hub", *parts)

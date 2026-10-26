@@ -50,6 +50,10 @@ pub fn start(app: &AppHandle) -> std::io::Result<Backend> {
         use std::os::windows::process::CommandExt;
         cmd.creation_flags(0x0800_0000); // CREATE_NO_WINDOW: no console flashing up next to the app
     }
+    // where openconnect and the VPN helper ship (hpc_hub/core/paths.py resources_dir)
+    if let Ok(dir) = app.path().resource_dir() {
+        cmd.env("HPC_HUB_RESOURCES", dir);
+    }
     let mut child = cmd.stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::inherit()).spawn()?;
     let stdout = child.stdout.take().expect("piped stdout");
     let stdin = child.stdin.take().expect("piped stdin");

@@ -18,7 +18,7 @@ from collections.abc import Callable
 from urllib.parse import urlsplit
 
 from ..core.config import ClusterConfig
-from ..core.paths import SSO_BIN, runtime_dir
+from ..core.paths import SSO_BIN, WINDOWS, runtime_dir
 from . import prompts
 
 PROMPT_END = re.compile(r"[:?\]]\s*$")
@@ -47,7 +47,7 @@ def run_interactive(
     """
     proc = subprocess.Popen(
         argv, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-        start_new_session=True, env=env,
+        start_new_session=True, env=env, creationflags=0x0800_0000 if WINDOWS else 0,  # no console window
     )
     chunks: queue.Queue = queue.Queue()
 
@@ -172,10 +172,14 @@ def nm_ip_args(cfg: ClusterConfig) -> list[str]:
 
 
 class Vpn:
+    """Linux: NetworkManager runs the tunnel. Windows and macOS: vpn_helper.HelperVpn."""
+
     def __init__(self, cfg: ClusterConfig, log: Callable[[str], None]):
         self.cfg = cfg
         self.log = log
         self.name = cfg.vpn_connection_name
+        self.openconnect = "openconnect"
+        self.external_browser = str(SSO_BIN)  # SAML gateways: the sign-in window (bin/hpc-hub-sso)
 
     def _nmcli(self, *args: str, timeout: float = 60) -> subprocess.CompletedProcess:
         return subprocess.run(["nmcli", *args], capture_output=True, text=True, timeout=timeout, env=NM_ENV)
@@ -215,10 +219,9 @@ class Vpn:
     ) -> dict[str, str]:
         """Log in. Browser (SAML) gateways open the in-app sign-in window via env's askpass."""
         v = self.cfg.vpn
-        argv = [
-            "openconnect", "--authenticate", "--protocol", v.protocol, "--user", username,
-            "--external-browser", str(SSO_BIN),
-        ]
+        argv = [self.openconnect, "--authenticate", "--protocol", v.protocol, "--user", username]
+        if self.external_browser:
+            argv += ["--external-browser", self.external_browser]
         if v.useragent:
             argv += ["--useragent", v.useragent]
         if v.authgroup:
