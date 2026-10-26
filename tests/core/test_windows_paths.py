@@ -25,6 +25,7 @@ def test_runtime_dir_set_by_hand(tmp_path, monkeypatch):
 def test_askpass_keeps_handlers_without_a_socket(tmp_path, monkeypatch):
     monkeypatch.setattr(askpass_server, "WINDOWS", True)
     monkeypatch.setenv("XDG_RUNTIME_DIR", str(tmp_path))
+    monkeypatch.delenv("SSH_ASKPASS", raising=False)  # Fedora's KDE/GNOME profile scripts set one
     server = askpass_server.AskpassServer()
     server.start()
     try:
