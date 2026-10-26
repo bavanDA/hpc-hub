@@ -1,7 +1,7 @@
 from hpc_hub.agents import catalog as agents
 from hpc_hub.core.config import AgentSettings
 
-C = agents.CLAUDE_CLASSIC  # Claude starts with its classic screen
+C = agents.claude_start("claude")  # classic screen, its program read in one go first
 
 
 def test_claude():
@@ -74,5 +74,18 @@ def test_task_is_the_first_prompt():
 def test_claude_runs_with_its_classic_screen():
     """Its output goes to the terminal's scrollback and the mouse stays with the terminal; Claude only."""
     assert agents.command(agents.CLAUDE, AgentSettings(command="claude"), "abc") == \
-        "export CLAUDE_CODE_DISABLE_ALTERNATE_SCREEN=1 && claude --resume abc"
+        C + "claude --resume abc"
     assert agents.command(agents.CODEX, AgentSettings(command="codex")) == "codex --no-daemon"
+
+
+def test_claude_start_reads_its_program_first(tmp_path):
+    import subprocess
+    exe = tmp_path / "claude"
+    exe.write_text("#!/bin/sh\necho started\n")
+    exe.chmod(0o755)
+    line = agents.claude_start("claude") + "claude"
+    path = {"PATH": f"{tmp_path}:/usr/bin:/bin"}
+    out = subprocess.run(["bash", "-c", line], capture_output=True, text=True, env=path)
+    assert out.stdout == "Starting Claude...\nstarted\n" and C.startswith(agents.CLAUDE_CLASSIC)
+    gone = subprocess.run(["bash", "-c", agents.claude_start("nope") + "echo ran"], capture_output=True, text=True)
+    assert gone.stdout.endswith("ran\n")  # not on PATH (an alias): it still starts

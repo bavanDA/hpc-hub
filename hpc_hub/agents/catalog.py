@@ -77,6 +77,15 @@ PAIR_NOTE = "Pairing code below. In the ChatGPT app open Codex, then connect a m
 CLAUDE_CLASSIC = "export CLAUDE_CODE_DISABLE_ALTERNATE_SCREEN=1 && "  # see command()
 
 
+def claude_start(base: str) -> str:
+    """What runs before Claude. Its program is ~300 MB on the cluster's shared file system: started cold it
+    reads itself in small pieces and took over 2 minutes on Wulver (blank tab); read in one go it takes
+    seconds. A custom command or an alias that isn't on PATH is just started."""
+    exe = shlex.quote(shlex.split(base)[0]) if base.strip() else "claude"
+    return (CLAUDE_CLASSIC + "echo 'Starting Claude...' && "
+            f"{{ cat \"$(readlink -f \"$(type -P {exe})\")\" >/dev/null 2>&1 || true; }} && ")
+
+
 def command(agent: Agent, s: AgentSettings, chat_id: str = "", task: str = "") -> str:
     """Shell line that starts (or resumes) the agent; task is a first prompt it starts working on.
     Claude runs with its classic screen: what it prints lands in the terminal's scrollback, and the mouse
@@ -101,7 +110,7 @@ def command(agent: Agent, s: AgentSettings, chat_id: str = "", task: str = "") -
     if chat:
         args += ["--conversation", chat] if agent is AGY else ["--resume", chat]
     line = " ".join([base, *args, *_task(agent, task)])
-    return CLAUDE_CLASSIC + line if agent is CLAUDE else line
+    return claude_start(base) + line if agent is CLAUDE else line
 
 
 def _task(agent: Agent, task: str) -> list[str]:
