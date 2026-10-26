@@ -57,6 +57,7 @@ export type Cluster = {
   portal?: string
   code_setup?: string
   queues?: string
+  fast?: string  // "partition:qos:time" of the Fast node queue
   queue_wait?: number
   request_node_on_connect?: boolean
   reuse_running_job?: boolean
@@ -138,3 +139,22 @@ export function summary(p: Profile) {
   return [`${p.cpus} cores`, `${p.mem_gb} GB`, p.time, p.gpus ? `${p.gpus} GPU` : '', p.partition]
     .filter(Boolean).join(' · ')
 }
+
+/** Your node settings on the Fast node queue (hpc_hub/core/config.py fast_profile); null without one. */
+export function fastProfile(c: Cluster): Profile | null {
+  const [part = '', qos = '', ...rest] = (c.fast ?? '').split(':')
+  if (!part.trim()) return null
+  return { ...c.profile, partition: part.trim(), qos: qos.trim(), time: rest.join(':').trim() || c.profile.time }
+}
+
+/** 'Fast node (30 min)', 'Fast node (8 h)'; '' without a fast queue. */
+export function fastLabel(c: Cluster): string {
+  const p = fastProfile(c)
+  if (!p) return ''
+  const [d, hms] = p.time.includes('-') ? p.time.split('-') : ['0', p.time]
+  const [h = 0, m = 0] = hms.split(':').map((x) => Number(x) || 0)
+  const minutes = Number(d) * 1440 + h * 60 + m
+  return minutes < 60 ? `Fast node (${minutes} min)` : `Fast node (${+(minutes / 60).toFixed(2)} h)`
+}
+
+export const fastSummary = (c: Cluster) => { const p = fastProfile(c); return p ? summary(p) : '' }

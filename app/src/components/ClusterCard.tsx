@@ -3,7 +3,7 @@ import { Info, Settings } from 'lucide-react'
 import { useState } from 'react'
 
 import { call } from '../rpc'
-import { BUSY, DUO, summary, type Cluster, type Session } from '../types/clusters'
+import { BUSY, DUO, fastLabel, fastSummary, summary, type Cluster, type Session } from '../types/clusters'
 import { AuthenticatorHelp } from './clusters/AuthenticatorHelp'
 import { ComputeDialog } from './clusters/ComputeDialog'
 import { LogView } from './clusters/LogView'
@@ -112,8 +112,12 @@ export function ClusterCard({ cluster: c, session: s, log }: { cluster: Cluster;
             ? <Button round onClick={() => run('clusters.release_node')}
                 title={a.owned ? 'Cancel this job, stay connected' : 'Keep the job running, just stop using it here'}>
                 {a.owned ? 'Release node' : 'Stop using'}</Button>
-            : <Button round onClick={() => setOpen('compute')} title={`Request ${summary(c.profile)}`}
-                disabled={busy}>Get node</Button>}
+            : <>
+                {fastLabel(c) && <Button round onClick={() => run('clusters.request_fast_node')}
+                  title={`Starts sooner, ends sooner: ${fastSummary(c)}`} disabled={busy}>{fastLabel(c)}</Button>}
+                <Button round onClick={() => setOpen('compute')} title={`Request ${summary(c.profile)}`}
+                  disabled={busy}>Get node</Button>
+              </>}
         </div>
       )}
       {connected && <div className="mt-2"><OpenMenu cluster={c} /></div>}

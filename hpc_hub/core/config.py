@@ -3,7 +3,7 @@
 import json
 import os
 import tomllib
-from dataclasses import asdict, dataclass, field, fields
+from dataclasses import asdict, dataclass, field, fields, replace
 from pathlib import Path
 
 CONFIG_DIR = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config")) / "hpc-hub"
@@ -113,6 +113,8 @@ class ClusterConfig:
     # wins, else the one that starts soonest. Empty: always use the queue you picked.
     queues: str = ""
     queue_wait: int = 60
+    # Fast node: "partition:qos:time" of a short queue that starts quickly (debug); empty: no Fast node button
+    fast: str = ""
     request_node_on_connect: bool = True
     reuse_running_job: bool = False
     vpn: VpnSettings = field(default_factory=VpnSettings)
@@ -125,6 +127,24 @@ class ClusterConfig:
     globus: GlobusSettings = field(default_factory=GlobusSettings)
     latex: LatexSettings = field(default_factory=LatexSettings)
 
+    def fast_profile(self) -> ComputeProfile | None:
+        """Your node settings on the fast queue (cores, memory and GPUs stay yours); None without one."""
+        part, _, rest = self.fast.partition(":")
+        qos, _, time = rest.partition(":")
+        if not part.strip():
+            return None
+        return replace(self.profile, partition=part.strip(), qos=qos.strip(), time=time.strip() or self.profile.time)
+
+    def fast_label(self) -> str:
+        """'Fast node (30 min)', 'Fast node (8 h)'."""
+        p = self.fast_profile()
+        if not p:
+            return ""
+        days, _, hms = p.time.rpartition("-")
+        h, m = (int(x) if x.isdigit() else 0 for x in (hms.split(":") + ["0", "0"])[:2])
+        minutes = (int(days) if days.isdigit() else 0) * 1440 + h * 60 + m
+        return f"Fast node ({minutes} min)" if minutes < 60 else f"Fast node ({minutes / 60:g} h)"
+
     @property
     def vpn_connection_name(self) -> str:
         return f"HPC Hub - {self.name}"
@@ -135,6 +155,7 @@ def default_clusters() -> list[ClusterConfig]:
         ClusterConfig(
             id="wulver",
             queues="general:low,debug:debug,general:standard",  # free, free (4 cores, 8 h), costs SUs
+            fast="debug:debug:08:00:00",  # one job at a time
             name="Wulver (NJIT)",
             host="wulver.njit.edu",
             vpn=VpnSettings(enabled=True, gateway="vpn.njit.edu", useragent="AnyConnect Linux_64 4.10.07061",
@@ -172,6 +193,7 @@ def default_clusters() -> list[ClusterConfig]:
             portal="https://portal.expanse.sdsc.edu",
             code_setup="https://passive.sdsc.edu",
             profile=ComputeProfile(cpus=2, mem_gb=16, partition="shared"),
+            fast="debug::00:30:00",  # 2 nodes, a short line; shared can wait hours
             vscode=VsCodeSettings(setup=FILE_KEYCHAIN,
                                   compute=ComputeProfile(cpus=2, mem_gb=8, time="08:00:00", partition="shared")),
         ),

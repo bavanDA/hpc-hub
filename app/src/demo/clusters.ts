@@ -20,7 +20,8 @@ const agents = { claude: { ...agent('claude'), model: 'opus', remote: true }, co
   agy: agent('agy'), cursor: agent('cursor-agent') }
 const clusters: Cluster[] = [
   { id: 'wulver', name: 'Wulver (NJIT)', host: 'wulver.njit.edu', port: 22, duo_answer: 'push', second_factor: 'duo',
-    queues: 'general:low,debug:debug,general:standard', queue_wait: 60, request_node_on_connect: true,
+    queues: 'general:low,debug:debug,general:standard', queue_wait: 60, fast: 'debug:debug:08:00:00',
+    request_node_on_connect: true,
     reuse_running_job: false, vpn: { ...vpn, enabled: true, gateway: 'vpn.njit.edu', same_login_as_ssh: true,
       domains: 'njit.edu', routes: '128.235.0.0/16' }, profile,
     vscode: vscode({ cpus: 16, mem_gb: 64, time: '12:00:00', qos: 'standard' }), ...agents },
@@ -160,6 +161,12 @@ export const answers: Record<string, unknown> = {
     steps(cluster, [[0, { state: 'Requesting compute node', connected: false, detail: 'Job 123777 waiting in queue' },
       'Requesting a node'], [2500, { state: 'Connected', connected: true, node: 'n0311', job: '123777', owned: true },
       'Node n0311 (job 123777)']])
+    return null
+  },
+  'clusters.request_fast_node': ({ cluster }: { cluster: string }) => {
+    steps(cluster, [[0, { state: 'Requesting compute node', connected: false, detail: 'Job 123778 waiting in queue' },
+      'Requesting a fast node (debug)'], [1200, { state: 'Connected', connected: true, node: 'n0052', job: '123778',
+      owned: true }, 'Node n0052 (job 123778)']])
     return null
   },
   'clusters.release_node': ({ cluster }: { cluster: string }) => {

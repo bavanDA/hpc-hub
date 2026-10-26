@@ -100,7 +100,10 @@ class ClusterCard(Gtk.Box):
         self.node.set_hexpand(True)
         self.node_btn = Gtk.Button(valign=Gtk.Align.CENTER, css_classes=["pill", "small"])
         self.node_btn.connect("clicked", self._on_node_btn)
+        self.fast_btn = Gtk.Button(valign=Gtk.Align.CENTER, css_classes=["pill", "small"])
+        self.fast_btn.connect("clicked", lambda *_: self.session.request_fast_node())
         node_row.append(self.node)
+        node_row.append(self.fast_btn)
         node_row.append(self.node_btn)
         self.append(node_row)
 
@@ -173,6 +176,11 @@ class ClusterCard(Gtk.Box):
         a = s.allocation
         self.node.set_visible(s.connected)
         self.node_btn.set_visible(s.connected)
+        fast = cfg.fast_profile()
+        self.fast_btn.set_visible(s.connected and not a and fast is not None)
+        if fast:
+            self.fast_btn.set_label(cfg.fast_label())
+            self.fast_btn.set_tooltip_text(f"Starts sooner, ends sooner: {fast.summary()}")
         if a:
             self.node.set_label(f"Node {a.node} · Job {a.job_id}" + ("" if a.owned else " (your job)"))
             self.node_btn.set_label("Release node" if a.owned else "Stop using")
