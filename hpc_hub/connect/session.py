@@ -1,6 +1,7 @@
 """Connect flow for one cluster: VPN → SSH (+ Duo) → compute node. UI-agnostic."""
 
 import subprocess
+import sys
 import threading
 import time
 import traceback
@@ -19,6 +20,7 @@ from .network import link_works, network_name, reachable, route_device
 from .nodes import NodesMixin
 from .state import State
 from .vpn import NeedsWebLogin, Vpn, VpnError
+from .vpn_android import AndroidVpn
 
 
 class Listener(Protocol):
@@ -76,6 +78,8 @@ class ClusterSession(NodesMixin):
 
     @property
     def vpn(self) -> Vpn:
+        if sys.platform == "android":
+            return AndroidVpn(self.cfg, self._log)
         if vpn_helper.needs_helper():  # Windows and macOS: the tunnel runs in the helper service
             return vpn_helper.HelperVpn(self.cfg, self._log, lambda title, text: self._confirm(title, text))
         return Vpn(self.cfg, self._log)
