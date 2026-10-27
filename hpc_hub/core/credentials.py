@@ -1,7 +1,9 @@
 """Logins stored in the system keyring. Nothing touches disk in plain text.
 
 With GTK: GNOME Keyring through libsecret. Without it (the Tauri app's frozen backend): the same Secret Service
-entries through secretstorage on Linux, Keychain or Credential Manager through keyring elsewhere."""
+entries through secretstorage on Linux, Keychain or Credential Manager through keyring elsewhere.
+Android has no keyring the backend can reach: a file encrypted with a key the phone's key store keeps
+(vault_file.py)."""
 
 import json
 import sys
@@ -70,6 +72,8 @@ def _vault():
         from keyring.backends.macOS import Keyring
     elif sys.platform == "win32":
         from keyring.backends.Windows import WinVaultKeyring as Keyring
+    elif sys.platform == "android":
+        from .vault_file import FileVault as Keyring
     else:
         raise RuntimeError("No safe place to keep passwords here. Install GNOME Keyring or KWallet")
     return Keyring()
@@ -123,6 +127,8 @@ def _clear(attrs: dict) -> None:
         with closing(secretstorage.dbus_init()) as conn:
             for item in secretstorage.search_items(conn, {"xdg:schema": SCHEMA_NAME, **attrs}):
                 item.delete()
+    elif sys.platform == "android":
+        _vault().delete_password(SERVICE, _account(attrs))
     else:
         from keyring.errors import PasswordDeleteError
 

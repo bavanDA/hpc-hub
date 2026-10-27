@@ -44,3 +44,16 @@ def test_no_vault_means_no_saving(monkeypatch):
     monkeypatch.setattr(credentials.sys, "platform", "freebsd14")
     with pytest.raises(RuntimeError, match="No safe place"):
         credentials.save("wulver", credentials.SSH, credentials.Login("jdoe", "pw"))
+
+
+def test_android_keeps_logins_in_the_encrypted_file(monkeypatch, tmp_path):
+    monkeypatch.setattr(credentials, "Secret", None)
+    monkeypatch.setattr(credentials.sys, "platform", "android")
+    monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path))
+    monkeypatch.setenv("HPC_HUB_VAULT_KEY", "ab" * 32)
+    credentials.save("wulver", credentials.SSH, credentials.Login("jdoe", "pw"))
+    assert credentials.load("wulver", credentials.SSH) == credentials.Login("jdoe", "pw")
+    assert b"jdoe" not in (tmp_path / "hpc-hub" / "vault.bin").read_bytes()
+    credentials.clear("wulver", credentials.SSH)
+    credentials.clear("wulver", credentials.SSH)  # nothing saved: fine
+    assert credentials.load("wulver", credentials.SSH) is None
