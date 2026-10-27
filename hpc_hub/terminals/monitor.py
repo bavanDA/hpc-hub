@@ -227,6 +227,12 @@ def size(n: float) -> str:
     return ""
 
 
+def used_of(used: float, total: float) -> str:
+    """12.3 / 62.0 GB, the unit written once when both have it."""
+    a, b = size(used), size(total)
+    return f"{a.rsplit(' ', 1)[0]} / {b}" if a.rsplit(" ", 1)[1] == b.rsplit(" ", 1)[1] else f"{a} / {b}"
+
+
 def rate(n: float | None) -> str:
     return "..." if n is None else f"{size(n)}/s"
 

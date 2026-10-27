@@ -12,6 +12,7 @@ from ...core import remote
 from ...ui.widgets import bg, color_dot, open_uri, remember_size
 from .. import links, tmux
 from ..links import Link
+from .monitor_bar import MonitorBar
 from .new_terminal import NewTerminalDialog
 from .session_list import SessionListMixin
 from .session_menu import SessionMenuMixin
@@ -282,6 +283,7 @@ class TerminalsPage(SessionListMixin, SessionMenuMixin, Gtk.Box):
             if s and s.ssh:
                 where = (listed.node if listed else node)
                 tab.tmux_buffer = lambda ssh=s.ssh: ssh.run(tmux.save_buffer(where), timeout=15).stdout
+                tab.append(MonitorBar(s.ssh, where))
             if listed and listed.remote:  # known from before: the header button works right away
                 code = listed.remote.startswith("code:")
                 tab.remote = Link(links.PAIR, "", code=listed.remote[5:]) if code else Link(links.REMOTE, listed.remote)

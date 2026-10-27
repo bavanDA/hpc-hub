@@ -6,6 +6,7 @@ from gi.repository import Adw, GLib, Gtk
 
 from ..core import browser, features
 from ..core.config import AppSettings
+from ..terminals.ui import monitor_bar
 
 
 class PreferencesDialog(Adw.PreferencesDialog):
@@ -61,6 +62,7 @@ class PreferencesDialog(Adw.PreferencesDialog):
     def _monitor(self) -> None:
         self.app.monitor_bar = features.monitor_bar = self.monitor.get_active()
         self.save()
+        monitor_bar.show_all(self.app.monitor_bar)
 
     def _changed(self) -> None:
         i = self.row.get_selected()
