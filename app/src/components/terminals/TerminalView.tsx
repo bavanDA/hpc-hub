@@ -1,4 +1,5 @@
-// One open terminal: its banners (links it printed, session ended) over xterm, sized to fit.
+// One open terminal: its banners (links it printed, session ended) over xterm, sized to fit, and for a session
+// the monitoring bar under it.
 import { X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
@@ -6,6 +7,7 @@ import '@xterm/xterm/css/xterm.css'
 
 import { useToast } from '../toast'
 import { Button, IconButton } from '../ui'
+import { MonitorBar } from './MonitorBar'
 import { MenuItem, Popover } from './Popover'
 import { dismiss, start, type Tab } from './tabs'
 import { copy, paste } from './xterm'
@@ -50,6 +52,7 @@ export function TerminalView({ tab, shown }: { tab: Tab; shown: boolean }) {
       ))}
       <div ref={host} className="min-h-0 flex-1 bg-view py-1 pl-2"
         onContextMenu={(e) => { e.preventDefault(); setMenu({ x: e.clientX, y: e.clientY }) }} />
+      {tab.session && tab.cluster && <MonitorBar cluster={tab.cluster} node={tab.node} shown={shown} />}
       {menu && (
         <Popover x={menu.x} y={menu.y} onClose={() => setMenu(null)}>
           <MenuItem onClick={() => { setMenu(null); copy(tab, toast) }}>Copy</MenuItem>

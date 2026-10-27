@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { call } from '../../rpc'
 import { ActionRow, Group, SwitchRow } from '../clusters/fields'
 import { Select } from '../jobs/Select'
+import { setMonitorBar } from '../terminals/MonitorBar'
 import { setSelectToCopy } from '../terminals/xterm'
 import { useToast } from '../toast'
 import { Dialog, Row, Spinner } from '../ui'
@@ -30,6 +31,7 @@ export function PreferencesDialog({ onClose, onExperimental }:
       forgetProfiles()
       if (changes.experimental !== undefined) onExperimental(p.experimental)
       setSelectToCopy(p.select_to_copy)
+      setMonitorBar(p.monitor_bar)
     }).catch((e: Error) => toast(`Could not save: ${e.message}`))
   }
 

@@ -2,6 +2,7 @@
 import { invoke } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
 
+import { onDemoEvent } from './demo/events'
 import { demoCall } from './demo/index'
 
 // In a plain browser (design work) there is no Tauri: answer from demo data
@@ -26,6 +27,7 @@ const ready = inTauri ? listen<string>('rpc', (e) => {
     else w.resolve(m.result)
   }
 }) : Promise.resolve()
+if (!inTauri) onDemoEvent((name, data) => listeners.get(name)?.forEach((fn) => fn(data)))
 
 export async function call<T>(method: string, params: Record<string, unknown> = {}): Promise<T> {
   if (!inTauri) return demoCall<T>(method, params)
