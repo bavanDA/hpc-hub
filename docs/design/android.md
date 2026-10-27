@@ -26,8 +26,9 @@ from the logic is added to `hpc_hub/` as a normal feature, behind a setting or a
   Android (python.org) has no `python` program, so `launcher/` is one: `Py_BytesMain` linked to `libpython3.14.so`.
   It ships as `libhpchub_backend.so` in the APK's native libraries, the one folder Android lets an app run
   programs from. `sys.executable` is the launcher, so code that starts Python helpers keeps working.
-- **Python files:** stdlib and site-packages ship as an asset zip, unpacked into the app's private folder on first
-  start and after an update.
+- **Python files:** stdlib and site-packages ship as an asset zip per processor (`python-<abi>.zip`), unpacked
+  into the app's private folder on first start and after an update. Native libraries must be unpacked on
+  install too (`useLegacyPackaging`), or there is no launcher file to run.
 - **Environment:** `HOME`, `XDG_*` point into the app's private folder; `HPC_HUB_SSH=asyncssh` (no OpenSSH on
   Android; the same path as Windows); `HPC_HUB_VAULT_KEY` (below).
 - **UI link:** `rpc_send` and the `rpc` event, as on the desktop, so `app/src/rpc.ts` works unchanged. Terminals are
@@ -56,3 +57,12 @@ build leaves the VPN out and the `fdroid` build keeps it. Until then: SDSC anywh
   Tauri app as other Tauri apps on F-Droid do. Nothing prebuilt in git.
 - **Flavors:** `play` and `fdroid` differ only in signing and the VPN switch above.
 - **Releases:** tags `vX.Y.Z`; versionCode from the tag.
+
+## Build it
+
+    mobile/python/build.sh arm64-v8a          # Python bundle and launcher into the Android project
+    cd mobile && npx tauri android build --debug --apk --target aarch64
+    adb install -r src-tauri/gen/android/app/build/outputs/apk/universal/debug/app-universal-debug.apk
+
+Needs `ANDROID_HOME`, `NDK_HOME` (NDK 27.3), a JDK with javac (`JAVA_HOME`, e.g. Android Studio's `jbr`), and
+python3 3.14 on PATH for the wheels.

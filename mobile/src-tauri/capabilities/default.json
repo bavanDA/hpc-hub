@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/mobile-schema.json",
+  "identifier": "default",
+  "description": "The app's one window: the backend link and its events",
+  "windows": ["main"],
+  "permissions": ["core:default"]
+}
