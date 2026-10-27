@@ -97,3 +97,7 @@ Guidelines:
 - Short docstrings, few comments, and only ones that say why. Lines up to 120 characters.
 - UI text: plain and short, no em or en dashes.
 - Commits: atomic, `type(scope): short msg`.
+
+## License
+
+MIT, see [LICENSE](LICENSE).
