@@ -1,7 +1,7 @@
 // Demo answers for the app menu, Preferences, links, and upload and download.
 import type { Preferences, Profiles } from '../components/app/types'
 
-const prefs: Preferences = { browser_profile: 'Uni', experimental: false, select_to_copy: true }
+const prefs: Preferences = { browser_profile: 'Uni', experimental: false, select_to_copy: true, monitor_bar: true }
 
 const profiles: Profiles = {
   profiles: [

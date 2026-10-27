@@ -19,6 +19,12 @@ CSS = """
 levelbar block.ok { background: @accent_bg_color; }
 levelbar block.warn { background: @warning_bg_color; }
 levelbar block.over { background: @error_bg_color; }
+.monitor-bar { min-height: 24px; padding: 0 10px; border-top: 1px solid alpha(currentColor, 0.12);
+               background: @view_bg_color; font-size: 11px; }
+.monitor-item { opacity: 0.8; }
+.monitor-value { font-family: monospace; font-feature-settings: "tnum"; }
+.monitor-item.warn { opacity: 1; color: mix(@orange_3, @window_fg_color, 0.25); }  /* both themes */
+.monitor-item.high { opacity: 1; color: @error_color; font-weight: bold; }
 """
 
 

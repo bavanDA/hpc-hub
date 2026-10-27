@@ -58,6 +58,7 @@ class HpcHubApp(LoginPromptsMixin, QuitMixin, Adw.Application):
         browser.preferred = self.app_settings.browser_profile
         features.experimental = self.app_settings.experimental
         features.select_to_copy = self.app_settings.select_to_copy
+        features.monitor_bar = self.app_settings.monitor_bar
         self.sessions = {c.id: ClusterSession(c, self.askpass, self) for c in self.clusters}
         for leftover in runtime_dir().glob("nm-*"):  # VPN cookie files from a killed run
             leftover.unlink(missing_ok=True)

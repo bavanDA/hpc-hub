@@ -30,6 +30,24 @@ export type Command = { argv: string[]; name: string; node: string; title?: stri
 
 export type NewTerminal = { name: string; node: boolean; folder: string; color: string }
 
+/** One disk of the host, from df: / and /tmp, local ones only. */
+export type MonitorDisk = { mount: string; used: number; size: number; percent: number }
+
+/** What the monitoring bar shows, from `monitor` events (hpc_hub/terminals/monitor.py). Sizes in bytes. */
+export type MonitorStats = {
+  id: number  // from monitor.watch
+  host: string
+  cpu: number | null  // percent of all cores; null until the second sample
+  mem_used: number
+  mem_total: number
+  up: number | null  // bytes per second; null until the second sample
+  down: number | null
+  uptime: number  // seconds
+  users: number
+  disks: MonitorDisk[]
+  nets: string[]  // the interfaces counted
+}
+
 export type Link = {
   kind: 'tunnel' | 'device-login' | 'local-web' | 'remote' | 'pair'
   url: string
