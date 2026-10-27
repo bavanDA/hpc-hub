@@ -1,4 +1,4 @@
-"""App preferences: which browser opens links, select to copy in terminals, and experimental features."""
+"""App preferences: which browser opens links, terminal settings, and experimental features."""
 
 from collections.abc import Callable
 
@@ -34,6 +34,10 @@ class PreferencesDialog(Adw.PreferencesDialog):
                                     subtitle="Highlight text with the mouse to copy it.")
         self.select.connect("notify::active", lambda *_: self._select())
         terms.add(self.select)
+        self.monitor = Adw.SwitchRow(title="Monitoring bar", active=app.monitor_bar,
+                                     subtitle="CPU, memory and network of the host, under each terminal.")
+        self.monitor.connect("notify::active", lambda *_: self._monitor())
+        terms.add(self.monitor)
         page.add(terms)
 
         trial = Adw.PreferencesGroup(title="Experimental")
@@ -52,6 +56,10 @@ class PreferencesDialog(Adw.PreferencesDialog):
 
     def _select(self) -> None:
         self.app.select_to_copy = features.select_to_copy = self.select.get_active()
+        self.save()
+
+    def _monitor(self) -> None:
+        self.app.monitor_bar = features.monitor_bar = self.monitor.get_active()
         self.save()
 
     def _changed(self) -> None:

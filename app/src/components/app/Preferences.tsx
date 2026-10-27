@@ -1,4 +1,4 @@
-// Preferences (hpc_hub/ui/preferences.py): which browser opens links, select to copy, and the experimental pages.
+// Preferences (hpc_hub/ui/preferences.py): which browser opens links, terminal settings, and the experimental pages.
 import { useEffect, useState } from 'react'
 
 import { call } from '../../rpc'
@@ -62,6 +62,9 @@ export function PreferencesDialog({ onClose, onExperimental }:
           <SwitchRow label="Select to copy"
             sub="Highlight text with the mouse to copy it."
             checked={prefs.select_to_copy} onChange={(on) => save({ select_to_copy: on })} />
+          <SwitchRow label="Monitoring bar"
+            sub="CPU, memory and network of the host, under each terminal."
+            checked={prefs.monitor_bar} onChange={(on) => save({ monitor_bar: on })} />
         </Group>
         <Group title="Experimental">
           <SwitchRow label="Experimental features" sub="LaTeX, Skills and Scheduled agents. They may change or break."

@@ -292,6 +292,7 @@ class AppSettings:
     experimental: bool = False  # show LaTeX, Skills and Scheduled agents
     clusters: str = ""  # ids of the clusters you use, comma separated; empty = all of them
     select_to_copy: bool = True  # highlighting text in a terminal copies it
+    monitor_bar: bool = True  # CPU, memory and network of the host under each terminal
 
 
 def load_app(path: Path = APP_FILE) -> AppSettings:
