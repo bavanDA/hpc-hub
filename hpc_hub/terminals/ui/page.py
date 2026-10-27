@@ -6,6 +6,7 @@ from collections.abc import Callable
 
 from gi.repository import Adw, GLib, Gtk, Pango
 
+from ...agents.catalog import AGENTS
 from ...connect.session import ClusterSession
 from ...core import remote
 from ...ui.widgets import bg, color_dot, open_uri, remember_size
@@ -166,10 +167,7 @@ class TerminalsPage(SessionListMixin, SessionMenuMixin, Gtk.Box):
         for s in live:
             self.launch.append(Gtk.Label(label=s.cfg.name, xalign=0, css_classes=["heading"], margin_top=12))
             for tool, label, icon in (("vscode:", "VS Code", "text-editor-symbolic"),
-                                      ("agent:claude", "Claude", "hpc-claude"),
-                                      ("agent:codex", "ChatGPT", "hpc-openai-symbolic"),
-                                      ("agent:agy", "Antigravity", "hpc-antigravity"),
-                                      ("agent:cursor", "Cursor", "hpc-cursor-symbolic"),
+                                      *((f"agent:{a.id}", a.name, a.icon) for a in AGENTS),
                                       ("ask", "Ask all", "system-users-symbolic")):
                 content = Gtk.Box(spacing=8)
                 content.append(Gtk.Image(icon_name=icon))

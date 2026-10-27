@@ -38,7 +38,7 @@ class Agent:
     remote_setting: str = ""  # settings.json key that turns remote control on, used instead of --remote-control
 
 
-CLAUDE = Agent("claude", "Claude", "hpc-claude",
+CLAUDE = Agent("claude", "Claude", "starred-symbolic",
                "Remote control", "Use this session from claude.ai/code or the Claude app", (
                    Option("model", "Model", "--model", (DEFAULT, ("opus", "Opus"), ("sonnet", "Sonnet"),
                                                          ("haiku", "Haiku"))),
@@ -46,21 +46,21 @@ CLAUDE = Agent("claude", "Claude", "hpc-claude",
                           (DEFAULT, ("acceptEdits", "Accept edits"), ("plan", "Plan only"), ("auto", "Auto"),
                            ("dontAsk", "Don't ask"))),
                    Option("effort", "Effort", "--effort", EFFORT)), remote_setting="remoteControlAtStartup")
-CODEX = Agent("codex", "ChatGPT", "hpc-openai-symbolic",
+CODEX = Agent("codex", "ChatGPT", "chat-message-new-symbolic",
               "ChatGPT remote", "Use it from the ChatGPT app. One at a time: this stops the previous one", (
                   Option("sandbox", "Sandbox", "-s", (DEFAULT, ("read-only", "Read only"),
                                                       ("workspace-write", "Write in the folder"))),
                   Option("approval", "Ask before running commands", "-a",
                          (DEFAULT, ("on-request", "When it thinks it should"), ("never", "Never"))),
                   Option("effort", "Reasoning effort", "-c", EFFORT[:5], prefix="model_reasoning_effort=")))
-AGY = Agent("agy", "Antigravity", "hpc-antigravity",
+AGY = Agent("agy", "Antigravity", "applications-science-symbolic",
             "Remote control", "Use this session from Antigravity on another device", (
                 Option("mode", "Mode", "--mode", (DEFAULT, ("accept-edits", "Accept edits"), ("auto", "Auto"),
                                                   ("plan", "Plan only"))),
                 Option("effort", "Effort", "--effort", EFFORT),
                 Option("sandbox", "Sandbox the terminal", "--sandbox", (("", "Off"), ("on", "On")), switch=True)),
             task_flag="-i")
-CURSOR = Agent("cursor", "Cursor", "hpc-cursor-symbolic", "", "", (
+CURSOR = Agent("cursor", "Cursor", "input-mouse-symbolic", "", "", (
     Option("model", "Model", "--model", (DEFAULT, ("auto", "Auto"), ("composer-2.5", "Composer 2.5"),
                                          ("claude-opus-5-thinking-high", "Claude Opus 5"),
                                          ("claude-sonnet-5-thinking-high", "Claude Sonnet 5"),

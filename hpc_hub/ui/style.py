@@ -1,6 +1,5 @@
 """App-wide CSS, and the bundled icons (Claude, ChatGPT, Antigravity logos)."""
 
-from pathlib import Path
 
 from gi.repository import Gdk, Gtk
 
@@ -25,7 +24,6 @@ levelbar block.over { background: @error_bg_color; }
 
 def install() -> None:
     display = Gdk.Display.get_default()
-    Gtk.IconTheme.get_for_display(display).add_search_path(str(Path(__file__).parent.parent / "icons"))
     css = Gtk.CssProvider()
     css.load_from_string(CSS)
     Gtk.StyleContext.add_provider_for_display(display, css, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
