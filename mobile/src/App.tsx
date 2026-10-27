@@ -1,11 +1,47 @@
-import { useEffect, useState } from 'react'
+// The phone app: one screen at a time, picked with the tabs at the bottom (docs/design/android.md).
+import { Folder, ListChecks, Menu, Server, SquareTerminal, type LucideIcon } from 'lucide-react'
+import { useState } from 'react'
 
-import { call } from '@shared/rpc'
+import { Questions } from './parts/Questions'
+import { Clusters } from './screens/Clusters'
+import { Files } from './screens/Files'
+import { Jobs } from './screens/Jobs'
+import { More } from './screens/More'
+import { Terminals } from './screens/Terminals'
+import { ToastProvider } from './ui'
+
+type Tab = 'clusters' | 'jobs' | 'terminals' | 'files' | 'more'
+const TABS: [Tab, string, LucideIcon][] = [['clusters', 'Clusters', Server], ['jobs', 'Jobs', ListChecks],
+  ['terminals', 'Terminals', SquareTerminal], ['files', 'Files', Folder], ['more', 'More', Menu]]
+// a plain browser (design work with the demo data): ?tab=jobs opens that screen
+const first = ('__TAURI_INTERNALS__' in window ? null : new URLSearchParams(location.search).get('tab')) as Tab | null
 
 export default function App() {
-  const [text, setText] = useState('Starting the backend...')
-  useEffect(() => {
-    call<unknown>('clusters.list').then((r) => setText(JSON.stringify(r, null, 1)), (e: Error) => setText(e.message))
-  }, [])
-  return <pre className="p-4 text-xs whitespace-pre-wrap">{text}</pre>
+  const [tab, setTab] = useState<Tab>(first ?? 'clusters')
+  return (
+    <ToastProvider>
+      <div className="flex h-full flex-col pt-[var(--top)]">
+        <main className="relative min-h-0 flex-1">
+          {tab === 'clusters' && <Clusters />}
+          {tab === 'jobs' && <Jobs />}
+          {/* kept mounted: open terminals keep running while you look elsewhere */}
+          <div className={tab === 'terminals' ? 'h-full' : 'hidden'}><Terminals shown={tab === 'terminals'} /></div>
+          {tab === 'files' && <Files />}
+          {tab === 'more' && <More />}
+        </main>
+        <nav className="flex shrink-0 border-t border-line bg-header pb-[var(--bottom)]">
+          {TABS.map(([id, label, Icon]) => (
+            <button key={id} onClick={() => setTab(id)} aria-current={tab === id}
+              className={`flex h-16 flex-1 flex-col items-center justify-center gap-1 text-xs font-bold
+                ${tab === id ? 'text-accent-text' : 'text-dim'}`}>
+              <span className={`grid h-8 w-14 place-items-center rounded-full ${tab === id ? 'bg-accent/15' : ''}`}>
+                <Icon size={22} /></span>
+              {label}
+            </button>
+          ))}
+        </nav>
+      </div>
+      <Questions />
+    </ToastProvider>
+  )
 }

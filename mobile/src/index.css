@@ -1,1 +1,13 @@
-@import 'tailwindcss';
+@import '../../app/src/index.css';
+/* shared pieces the phone shows (the terminal's monitoring bar, the log) use classes from there */
+@source '../../app/src/components/terminals';
+@source '../../app/src/components/clusters';
+@source '../../app/src/components/ui.tsx';
+
+/* A phone: no tap flash, no rubber band of the whole page, text you can't select by accident */
+html, body { overscroll-behavior: none; -webkit-tap-highlight-color: transparent; }
+body { font-size: 16px; }
+
+/* Room for the status bar and the gesture bar: the app draws under them (edge to edge) */
+:root { --top: env(safe-area-inset-top, 0px); --bottom: env(safe-area-inset-bottom, 0px); }
+.safe { padding-top: var(--top); padding-bottom: var(--bottom); }
