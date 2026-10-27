@@ -27,6 +27,7 @@ object PythonSetup {
       "HPC_HUB_SSH" to "asyncssh", // no OpenSSH on Android
       "HPC_HUB_VAULT_KEY" to Vault.key(context),
       "PYTHONUNBUFFERED" to "1",
+      "CRYPTOGRAPHY_OPENSSL_NO_LEGACY" to "1", // old ciphers SSH never uses; their module is not shipped
     )
     for ((name, value) in env) Os.setenv(name, value, true)
   }

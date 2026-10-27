@@ -17,6 +17,7 @@ CFFI_SHA256=dd31f52ea1086513bb9df30f8fcee9b8918323ae067a3d5b78bc826a000712be
 CRYPTOGRAPHY_VERSION=50.0.2
 CRYPTOGRAPHY_SHA256=7b46165bb56eb4704e2eaaf86f3c940d19154535d9b0ca7d6d590b04060e00d5
 CIBUILDWHEEL_VERSION=4.3.4
+PATCHELF_VERSION=0.17.2.4
 NDK_VERSION=27.3.13750724 # the one Python for Android is built with
 
 case $ABI in
@@ -59,7 +60,8 @@ STDLIB=$PREFIX/lib/python${PY_VERSION%.*}
 # Native packages, built with cibuildwheel (it needs a Python $PY_VERSION%.* on this machine)
 python3 -c "import sys; sys.exit(sys.version_info[:2] != tuple(map(int, '${PY_VERSION%.*}'.split('.'))))" ||
 	die "needs python3 ${PY_VERSION%.*} on PATH to build the wheels"
-[ -x venv/bin/cibuildwheel ] || { python3 -m venv venv && venv/bin/pip -q install "cibuildwheel==$CIBUILDWHEEL_VERSION"; }
+[ -x venv/bin/patchelf ] || { python3 -m venv venv && venv/bin/pip -q install "cibuildwheel==$CIBUILDWHEEL_VERSION" \
+	"patchelf==$PATCHELF_VERSION"; }
 cibuildwheel() { # <source dir> [env]
 	CIBW_BUILD="cp$(echo "${PY_VERSION%.*}" | tr -d .)-*" CIBW_ARCHS=$CIBW_ARCH CIBW_ENVIRONMENT_ANDROID="${2:-}" \
 		venv/bin/cibuildwheel --platform android --output-dir wheels "$1"
@@ -115,6 +117,12 @@ for whl in wheels/cffi-$CFFI_VERSION-*.whl wheels/cryptography-$CRYPTOGRAPHY_VER
 done
 venv/bin/python -m pip download -q --no-deps --only-binary :all: --require-hashes -r "$HERE/requirements.txt" -d pure
 for whl in pure/*.whl; do python3 -m zipfile -e "$whl" "$SITE"; done
+# Android's linker doesn't let a module use libpython's symbols unless the module names libpython itself, as
+# CPython's own modules do; abi3 wheels (cryptography) don't
+PYLIB=libpython${PY_VERSION%.*}.so
+find "$SITE" -name '*.so' | while read -r so; do
+	readelf -d "$so" | grep -q "\[$PYLIB\]" || venv/bin/patchelf --add-needed "$PYLIB" "$so"
+done
 # hpc_hub without the GTK app (its screens and the GTK entry point)
 (cd "$ROOT" && find hpc_hub -type f ! -path '*/__pycache__/*' ! -path '*/ui/*' ! -path 'hpc_hub/app.py' \
 	! -path 'hpc_hub/__main__.py' -print0 | xargs -0 -I{} cp --parents {} "$WORK/$SITE/")
