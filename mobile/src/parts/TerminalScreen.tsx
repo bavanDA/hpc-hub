@@ -1,14 +1,16 @@
 // One terminal, full screen: xterm sized to fit (it shrinks when the keyboard opens), the monitoring bar, and a
 // row of the keys a phone keyboard lacks.
-import { ArrowLeft, ClipboardPaste, X } from 'lucide-react'
+import { ArrowLeft, ClipboardPaste, Copy, Link, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
 import '@xterm/xterm/css/xterm.css'
 
 import { MonitorBar } from '@shared/components/terminals/MonitorBar'
 import { close, start, type Tab } from '@shared/components/terminals/tabs'
-import { paste } from '@shared/components/terminals/xterm'
-import { useToast } from '../ui'
+import { openLink } from '@shared/components/app/openLink'
+import { copyText, paste } from '@shared/components/terminals/xterm'
+import { Sheet, useToast } from '../ui'
+import { screenLinks } from './screenLinks'
 
 const KEYS: [string, string][] = [['Esc', '\x1b'], ['Tab', '\t'], ['↑', '\x1b[A'], ['↓', '\x1b[B'], ['←', '\x1b[D'],
   ['→', '\x1b[C'], ['|', '|'], ['~', '~'], ['/', '/'], ['-', '-']]
@@ -19,6 +21,7 @@ export function TerminalScreen({ tab, shown, onBack }: { tab: Tab; shown: boolea
   const toast = useToast()
   const host = useRef<HTMLDivElement>(null)
   const [ctrl, setCtrl] = useState(false)
+  const [links, setLinks] = useState<string[] | null>(null)
 
   useEffect(() => {
     const box = host.current!
@@ -47,6 +50,8 @@ export function TerminalScreen({ tab, shown, onBack }: { tab: Tab; shown: boolea
           active:bg-hover"><ArrowLeft size={22} /></button>
         <span className="size-2.5 shrink-0 rounded-full" style={{ background: tab.color || 'var(--color-dim)' }} />
         <h1 className="min-w-0 flex-1 truncate font-bold">{tab.title}</h1>
+        <button aria-label="Links" onClick={() => setLinks(screenLinks(tab))} className="grid size-11 place-items-center
+          rounded-full active:bg-hover"><Link size={20} /></button>
         <button aria-label="Paste" onClick={() => paste(tab, toast)} className="grid size-11 place-items-center
           rounded-full active:bg-hover"><ClipboardPaste size={20} /></button>
         <button aria-label="Close" onClick={() => { close(tab.key); onBack() }} className="grid size-11 place-items-center
@@ -65,6 +70,21 @@ export function TerminalScreen({ tab, shown, onBack }: { tab: Tab; shown: boolea
               key(`^${c}`, () => { send(String.fromCharCode(c.charCodeAt(0) - 64)); setCtrl(false) }))}</>
           : <>{key('Ctrl', () => setCtrl(true))}{KEYS.map(([label, data]) => key(label, () => send(data)))}</>}
       </div>
+      {links && (
+        <Sheet title="Links on the screen" onClose={() => setLinks(null)}>
+          {!links.length && <p className="text-dim">No links on the screen.</p>}
+          <div className="flex flex-col gap-2">
+            {links.map((url) => (
+              <div key={url} className="flex items-center gap-2 rounded-2xl bg-card p-2 shadow-[var(--shadow-card)]">
+                <button onClick={() => { openLink(url).catch((e) => toast(`Could not open it: ${e}`)); setLinks(null) }}
+                  className="min-w-0 flex-1 break-all p-2 text-left text-sm text-accent-text active:bg-hover">{url}</button>
+                <button aria-label="Copy" onClick={() => copyText(url).then((ok) => toast(ok ? 'Copied' : 'Could not copy'))}
+                  className="grid size-11 shrink-0 place-items-center rounded-full active:bg-hover"><Copy size={20} /></button>
+              </div>
+            ))}
+          </div>
+        </Sheet>
+      )}
     </div>
   )
 }
