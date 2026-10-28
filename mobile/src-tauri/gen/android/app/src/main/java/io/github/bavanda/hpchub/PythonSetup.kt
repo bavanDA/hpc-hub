@@ -8,6 +8,9 @@ import java.util.zip.ZipInputStream
 
 /** Puts the backend's Python files in place and sets the environment it inherits (docs/design/android.md). */
 object PythonSetup {
+  // Android 14+ keeps them in the updatable Conscrypt module, older phones in /system
+  private val CA_DIRS = listOf("/apex/com.android.conscrypt/cacerts", "/system/etc/security/cacerts")
+
 
   fun prepare(context: Context) {
     val files = context.filesDir
@@ -28,6 +31,7 @@ object PythonSetup {
       "HPC_HUB_VAULT_KEY" to Vault.key(context),
       "PYTHONUNBUFFERED" to "1",
       "CRYPTOGRAPHY_OPENSSL_NO_LEGACY" to "1", // old ciphers SSH never uses; their module is not shipped
+      "SSL_CERT_FILE" to certificates(files).path,
     )
     for ((name, value) in env) Os.setenv(name, value, true)
   }
@@ -56,6 +60,17 @@ object PythonSetup {
       }
     }
     stamp.writeText(version)
+  }
+
+  /** Python for Android knows no certificate authorities: give it the phone's own, in one file. Made at every
+   *  start, so a system update's changes are picked up. */
+  private fun certificates(files: File): File {
+    val bundle = File(files, "cacerts.pem")
+    val dir = CA_DIRS.map(::File).firstOrNull { it.isDirectory } ?: return bundle
+    val pem = dir.listFiles().orEmpty().filter { it.isFile }.sortedBy { it.name }
+      .joinToString("") { it.readText().substringBefore("-----END CERTIFICATE-----") + "-----END CERTIFICATE-----\n" }
+    if (!bundle.exists() || bundle.readText() != pem) bundle.writeText(pem)
+    return bundle
   }
 
   /** python-<abi>.zip (mobile/python/build.sh) for this phone's processor. */
