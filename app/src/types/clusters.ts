@@ -70,6 +70,7 @@ export type Cluster = {
 export type SettingsInfo = {
   cluster: Cluster
   browsers: string[]
+  chrome_window: { value: string; offered: boolean }  // our own Chrome window's vpn.browser value
   protocols: string[]
   agents: { id: AgentId; name: string; remote_label: string; remote_hint: string
     options: { key: keyof AgentSettings; label: string; choices: [string, string][] }[] }[]
@@ -113,17 +114,19 @@ export type Limits = {
 export type ChromeProfile = { name: string; email: string }
 
 /** A question a login asks (hpc_hub/api/hub.py). pick-browser: where to sign in to the VPN (answer "" for the
- * app's window or a profile name). browser-login: signing in in Chrome (answer "again", "in-app" or null).
+ * app's window, chrome_window for our Chrome window, or a profile name). browser-login: signing in in Chrome
+ * (answer "again", "in-app" or null). chrome-window: signing in in our Chrome window (answer "in-app" or null).
  * web-login: the app's sign-in window (app/src-tauri/src/sso.rs), answered with JSON {token, error}. */
 export type Question = {
   id: string
-  kind: 'ask' | 'code' | 'pick-browser' | 'browser-login' | 'web-login' | 'confirm'
+  kind: 'ask' | 'code' | 'pick-browser' | 'browser-login' | 'chrome-window' | 'web-login' | 'confirm'
   cluster: string
   name: string
   title?: string  // confirm: answered "yes", or null for no
   prompt?: string
   default?: string
   profiles?: ChromeProfile[]
+  chrome_window?: string  // pick-browser: offered when set
   profile?: string
   login_url?: string
   final_url?: string

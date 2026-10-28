@@ -199,6 +199,7 @@ export const answers: Record<string, unknown> = {
   'question.answer': () => null,
   'cluster_settings.get': ({ cluster }: { cluster: string }): SettingsInfo => ({
     cluster: structuredClone(find(clusters, cluster)), browsers: ['Home', 'Uni'], agents: agentInfo,
+    chrome_window: { value: 'hpc-hub:chrome-window', offered: true },
     protocols: ['anyconnect', 'gp', 'nc', 'pulse', 'f5', 'fortinet', 'array'] }),
   'cluster_settings.save': ({ cluster, changes }: { cluster: string; changes: Partial<Cluster> }) => {
     const c = find(clusters, cluster)
