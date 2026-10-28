@@ -13,6 +13,7 @@ import { AuthenticatorHelp } from './AuthenticatorHelp'
 import { Duration } from './ComputeDialog'
 import { ActionRow, ButtonRow, ComboRow, EntryRow, Group, NumberBox, SpinRow, SwitchRow } from './fields'
 import { KeySetupDialog } from './KeySetupDialog'
+import { CHROME_WINDOW } from './SignIn'
 import { putCluster } from './store'
 import { minutes, slurmTime } from './time'
 
@@ -94,8 +95,13 @@ export function SettingsDialog({ cluster, hint, onClose, start = 'login' }:
   const v = d.vpn
   const code = d.second_factor === 'code'
   const ownVpnLogin = v.enabled && !(v.same_login_as_ssh ?? true)
-  const browsers = info ? [...info.browsers, ...(v.browser && !info.browsers.includes(v.browser) ? [v.browser] : [])]
-    : []
+  const win = info?.chrome_window
+  const signIn: [string, string][] = [['', 'This app (fills your login)'],
+    ...(win && (win.offered || v.browser === win.value) ? [[win.value, CHROME_WINDOW.title] as [string, string]] : []),
+    ...(info?.browsers ?? []).map((b): [string, string] => [b, `Chrome: ${b}`])]
+  if (info && v.browser && !signIn.some(([value]) => value === v.browser)) {
+    signIn.push([v.browser, `Chrome: ${v.browser}`])  // saved before, not in Chrome any more
+  }
 
   function changes() {
     const out: Record<string, unknown> = {
@@ -197,7 +203,7 @@ export function SettingsDialog({ cluster, hint, onClose, start = 'login' }:
           placeholder="vpn.example.edu" />
         <ComboRow label="Sign in with" value={v.browser ?? ''}
           sub="In Chrome you are often signed in already, so it is quicker"
-          options={[['', 'This app (fills your login)'], ...browsers.map((b): [string, string] => [b, `Chrome: ${b}`])]}
+          options={signIn}
           onChange={(browser) => upVpn({ browser })} />
         <ComboRow label="Protocol" value={v.protocol ?? 'anyconnect'} onChange={(protocol) => upVpn({ protocol })}
           options={(info?.protocols ?? [v.protocol ?? 'anyconnect']).map((p): [string, string] => [p, p])} />

@@ -11,6 +11,7 @@ from ...core import browser, credentials
 from ...core.config import VPN_PROTOCOLS, ClusterConfig, ComputeProfile
 from ...core.credentials import Login
 from ...ui.widgets import TARGETS
+from .. import chrome_window
 from ..vpn import split_errors
 from .authenticator_help import AuthenticatorHelp
 
@@ -133,12 +134,15 @@ class ClusterSettingsDialog(Adw.PreferencesDialog):
         self.domains = _entry("VPN domains (its DNS answers these)", v.domains)
         self.routes = _entry("VPN networks (CIDR, space separated)", v.routes)
         self.same_login = _switch("Same login as cluster", v.same_login_as_ssh)
-        self.chrome = [p.name for p in browser.profiles()] if browser.chrome() else []
-        if v.browser and v.browser not in self.chrome:
-            self.chrome.append(v.browser)
-        self.sign_in = Adw.ComboRow(title="Sign in with", model=Gtk.StringList.new(
-            ["This app (fills your login)"] + [f"Chrome: {name}" for name in self.chrome]))
-        self.sign_in.set_selected(self.chrome.index(v.browser) + 1 if v.browser else 0)
+        choices = [("", "This app (fills your login)")]
+        if chrome_window.available() or v.browser == chrome_window.CHOICE:
+            choices.append((chrome_window.CHOICE, chrome_window.TITLE))
+        choices += [(p.name, f"Chrome: {p.name}") for p in (browser.profiles() if browser.chrome() else [])]
+        if v.browser not in [value for value, _ in choices]:
+            choices.append((v.browser, f"Chrome: {v.browser}"))
+        self.sign_in_values = [value for value, _ in choices]
+        self.sign_in = Adw.ComboRow(title="Sign in with", model=Gtk.StringList.new([label for _, label in choices]))
+        self.sign_in.set_selected(self.sign_in_values.index(v.browser))
         self.sign_in.set_subtitle("In Chrome you are often signed in already, so it is quicker")
         self.vpn_user = _entry("VPN username (e.g. first.last@yale.edu)",
                                self.vpn_saved.username if self.vpn_saved else "")
@@ -266,7 +270,7 @@ class ClusterSettingsDialog(Adw.PreferencesDialog):
         v.authgroup = self.authgroup.get_text().strip()
         v.same_login_as_ssh = self.same_login.get_active()
         i = self.sign_in.get_selected()
-        v.browser = self.chrome[i - 1] if 0 < i <= len(self.chrome) else ""
+        v.browser = self.sign_in_values[i] if 0 <= i < len(self.sign_in_values) else ""
         v.split_tunnel = self.split.get_active()
         v.domains = " ".join(self.domains.get_text().split())
         v.routes = " ".join(self.routes.get_text().split())

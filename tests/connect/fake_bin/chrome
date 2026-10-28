@@ -1,0 +1,72 @@
+#!/usr/bin/env python3
+"""Fake Chrome for tests: the DevTools protocol on fds 3 and 4 (--remote-debugging-pipe), no browser.
+
+FAKE_CHROME_LOG: file that gets argv, then every method called, one JSON line each.
+FAKE_CHROME_AFTER: the sign-in cookie shows up on that getCookies call (FAKE_CHROME_ERROR: the error cookie).
+FAKE_CHROME_STALE: a token from an earlier sign-in is there from the start.
+FAKE_CHROME_QUIT: exit on that getCookies call, as if you closed the window.
+FAKE_CHROME_STUBBORN: ignore Browser.close and SIGTERM.
+"""
+import json, os, signal, sys
+
+env = os.environ
+log = open(env["FAKE_CHROME_LOG"], "a")
+log.write(json.dumps(sys.argv[1:]) + "\n")
+log.flush()
+if env.get("FAKE_CHROME_STUBBORN"):
+    signal.signal(signal.SIGTERM, signal.SIG_IGN)
+inp, out = os.fdopen(3, "rb"), os.fdopen(4, "wb")
+after, quit_at = int(env.get("FAKE_CHROME_AFTER", "0")), int(env.get("FAKE_CHROME_QUIT", "0"))
+calls, buf = 0, b""
+
+
+def send(msg):
+    out.write(json.dumps(msg).encode() + b"\0")
+    out.flush()
+
+
+def cookies():
+    jar = [{"name": "acSamlv2Token", "value": "tok-other-site", "domain": "evil.example.com"},
+           {"name": "okta", "value": "x", "domain": ".example.edu"}]
+    if env.get("FAKE_CHROME_STALE"):
+        jar.append({"name": "acSamlv2Token", "value": "tok-old", "domain": "vpn.example.edu"})
+    if after and calls >= after:
+        if env.get("FAKE_CHROME_ERROR"):
+            jar.append({"name": "acSamlv2Error", "value": "Account%20locked", "domain": "vpn.example.edu"})
+        else:
+            jar = [c for c in jar if c["value"] != "tok-old"]
+            jar.append({"name": "acSamlv2Token", "value": "tok-new", "domain": "vpn.example.edu"})
+    return jar
+
+
+while True:
+    chunk = inp.read1(65536)
+    if not chunk:
+        break
+    buf += chunk
+    while b"\0" in buf:
+        raw, buf = buf.split(b"\0", 1)
+        msg = json.loads(raw)
+        method, params = msg["method"], msg.get("params", {})
+        log.write(json.dumps([method, params]) + "\n")
+        log.flush()
+        send({"method": "Target.targetInfoChanged", "params": {}})  # events come in between answers
+        if method == "Target.getTargets":
+            send({"id": msg["id"], "result": {"targetInfos": [{"targetId": "blank", "type": "page"},
+                                                              {"targetId": "sw", "type": "service_worker"}]}})
+        elif method == "Target.createTarget":
+            send({"id": msg["id"], "result": {"targetId": "login"}})
+        elif method == "Storage.getCookies":
+            calls += 1
+            if quit_at and calls >= quit_at:
+                sys.exit(0)
+            send({"id": msg["id"], "result": {"cookies": cookies()}})
+        elif method == "Browser.close":
+            if env.get("FAKE_CHROME_STUBBORN"):
+                continue
+            send({"id": msg["id"], "result": {}})
+            sys.exit(0)
+        elif method == "Nope.fail":
+            send({"id": msg["id"], "error": {"code": -32601, "message": "'Nope.fail' wasn't found"}})
+        else:
+            send({"id": msg["id"], "result": {}})

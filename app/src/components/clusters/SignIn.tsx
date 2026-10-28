@@ -1,5 +1,5 @@
 // VPN web sign-in (prompts.py, browser_login.py, web_login.py): where to sign in, signing in in a Chrome
-// profile, and the app's own sign-in window (app/src-tauri/src/sso.rs, opened here).
+// profile or in our own Chrome window, and the app's own sign-in window (app/src-tauri/src/sso.rs, opened here).
 import { invoke } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
 import { Check, Globe } from 'lucide-react'
@@ -11,13 +11,16 @@ import { Group } from './fields'
 
 export const inTauri = '__TAURI_INTERNALS__' in window
 
+export const CHROME_WINDOW = { title: 'HPC Hub Chrome window (fastest)',
+  sub: 'Real Chrome with its own profile. Done the moment you approve Duo.' }
+
 export function PickBrowser({ q, onAnswer }: { q: Question; onAnswer: (a: string | null) => void }) {
   const profiles = q.profiles ?? []
-  const start = profiles.some((p) => p.name.toLowerCase() === (q.default ?? '').toLowerCase())
-    ? profiles.find((p) => p.name.toLowerCase() === q.default!.toLowerCase())!.name : ''
-  const [picked, setPicked] = useState(start)
   const options = [{ value: '', title: 'HPC Hub window', sub: 'Fills in your username and password' },
+    ...(q.chrome_window ? [{ value: q.chrome_window, ...CHROME_WINDOW }] : []),
     ...profiles.map((p) => ({ value: p.name, title: `Chrome: ${p.name}`, sub: p.email }))]
+  const want = (q.default ?? '').toLowerCase()
+  const [picked, setPicked] = useState(options.find((o) => o.value.toLowerCase() === want)?.value ?? '')
   const cancel = () => onAnswer(null)
   return (
     <Dialog title={`Sign in to the ${q.name} VPN`} onClose={cancel} width={440}
@@ -65,6 +68,21 @@ export function BrowserLogin({ q, onAnswer }: { q: Question; onAnswer: (a: strin
           signed in (Chrome can take up to 30 s)." />
       <div className="mt-4 flex flex-col items-center gap-2">
         <Button round onClick={() => onAnswer('again')}>Open the page again</Button>
+        <Button round kind="flat" onClick={() => onAnswer('in-app')}>Sign in in the app instead</Button>
+      </div>
+    </Dialog>
+  )
+}
+
+/** Signing in in our own Chrome window: the backend sees the sign-in at once and closes the window. */
+export function ChromeWindowLogin({ q, onAnswer }: { q: Question; onAnswer: (a: string | null) => void }) {
+  const cancel = () => onAnswer(null)
+  return (
+    <Dialog title={`${q.name} VPN sign-in`} onClose={cancel} width={460}
+      actions={<Button onClick={cancel}>Cancel</Button>}>
+      <Waiting title="Sign in in the Chrome window"
+        text="Sign in and approve Duo in the Chrome window that opened. It closes by itself once you are signed in." />
+      <div className="mt-4 flex flex-col items-center gap-2">
         <Button round kind="flat" onClick={() => onAnswer('in-app')}>Sign in in the app instead</Button>
       </div>
     </Dialog>

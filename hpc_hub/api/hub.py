@@ -5,10 +5,11 @@ import json
 import secrets
 import threading
 import time
-from concurrent.futures import Future
+from concurrent.futures import Future, InvalidStateError
 from concurrent.futures import TimeoutError as Timeout
 from urllib.parse import urlsplit
 
+from ..connect import chrome_window
 from ..connect.askpass_server import AskpassServer
 from ..connect.session import SSO_PASS, SSO_USER, ClusterSession
 from ..connect.state import State
@@ -86,10 +87,11 @@ class Hub:
         return s
 
     # -- questions ---------------------------------------------------------------------
-    def question(self, kind: str, data: dict) -> str | None:
-        """Ask the UI and wait (worker thread). None: cancelled or no answer in time."""
+    def question(self, kind: str, data: dict, future: Future | None = None) -> str | None:
+        """Ask the UI and wait (worker thread). None: cancelled or no answer in time. Pass a future to answer it
+        from elsewhere too."""
         qid = secrets.token_hex(8)
-        future: Future = Future()
+        future = Future() if future is None else future
         self._questions[qid] = future
         self.emit("question", {"id": qid, "kind": kind, **data})
         try:
@@ -123,23 +125,30 @@ class Hub:
                                          "prompt": text}) == "yes"
 
     def pick_browser(self, s: ClusterSession) -> str | None:
-        """Where to sign in to the VPN: "" = the app's window, else a Chrome profile's name. None: cancelled."""
+        """Where to sign in to the VPN: "" = the app's window, chrome_window.CHOICE = our Chrome window, else a
+        Chrome profile's name. None: cancelled."""
         found = browser.profiles() if browser.chrome() else []
-        if not found:
+        window = chrome_window.CHOICE if chrome_window.available() else ""
+        if not (found or window):
             return ""
         answer = self.question("pick-browser", {"cluster": s.cfg.id, "name": s.cfg.name, "default": s.cfg.vpn.browser,
+                                                "chrome_window": window,
                                                 "profiles": [{"name": p.name, "email": p.email} for p in found]})
-        if answer is None or answer == "":
+        if answer is None or answer == "" or (window and answer == window):
             return answer
         return answer if any(p.name == answer for p in found) else None
 
     def web_login(self, s: ClusterSession, start, login, profile: str = "") -> tuple[str, str]:
         """VPN web sign-in (AnyConnect SAML): (token, error). In a Chrome profile the app picks the token cookie
-        up from Chrome; otherwise in the app's sign-in window (app/src-tauri/src/sso.rs), which gets the saved
-        login from the askpass socket, so the password never reaches the UI."""
+        up from Chrome, in our Chrome window (chrome_window.CHOICE) over the DevTools pipe; otherwise in the app's
+        sign-in window (app/src-tauri/src/sso.rs), which gets the saved login from the askpass socket, so the
+        password never reaches the UI."""
         data = {"cluster": s.cfg.id, "name": s.cfg.name}
         if profile:
-            token, err = self._chrome_login(data, start, profile)
+            if profile == chrome_window.CHOICE:
+                token, err = self._chrome_window_login(data, start)
+            else:
+                token, err = self._chrome_login(data, start, profile)
             if token or err != "in-app":
                 return token, err
         fill = {SSO_USER: login.username, SSO_PASS: login.password}
@@ -160,6 +169,27 @@ class Hub:
             return token, ""
         err = got.get("error") if isinstance(got, dict) else ""
         return "", err if isinstance(err, str) and err else "Sign-in cancelled"
+
+    def _chrome_window_login(self, data: dict, start) -> tuple[str, str]:
+        """Sign in in our own Chrome window (connect/chrome_window.py), which reports the token the moment it is
+        set, while the UI shows "Sign in in the app instead" ("in-app" as the error) and Cancel."""
+        stop, future, got = threading.Event(), Future(), {}
+
+        def work() -> None:
+            got["result"] = chrome_window.sign_in(start, stop.is_set, QUESTION_SECONDS)
+            try:
+                future.set_result("done")
+            except InvalidStateError:  # answered from the UI meanwhile
+                pass
+
+        threading.Thread(target=work, daemon=True).start()
+        try:
+            answer = self.question("chrome-window", data, future)
+        finally:
+            stop.set()  # closes the window if it is still open
+        if answer == "done":
+            return got.get("result", ("", "Sign-in cancelled"))
+        return "", "in-app" if answer == "in-app" else "Sign-in cancelled"
 
     def _chrome_login(self, data: dict, start, profile: str) -> tuple[str, str]:
         """Sign in in a Chrome profile: open the page there and wait for the token cookie, while the UI shows
