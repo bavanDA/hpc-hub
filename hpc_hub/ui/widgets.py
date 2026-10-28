@@ -9,13 +9,13 @@ from ..agents.catalog import AGENTS
 from ..core import browser, layout
 
 
-def profile_choices(first: tuple[str, str, str], found: list[browser.Profile], default: str
+def profile_choices(fixed: list[tuple[str, str, str]], found: list[browser.Profile], default: str
                     ) -> tuple[Gtk.ListBox, Callable[[], str]]:
-    """Radio list: first = (value, title, subtitle), then one row per Chrome profile; default is picked and
-    marked. Returns the list and a function giving the picked value (a profile name, or first's value)."""
+    """Radio list: the fixed (value, title, subtitle) rows, then one per Chrome profile; default is picked and
+    marked. Returns the list and a function giving the picked value (a profile name, or a fixed value)."""
     options = Gtk.ListBox(css_classes=["boxed-list"], selection_mode=Gtk.SelectionMode.NONE)
     checks: list[tuple[str, Gtk.CheckButton]] = []
-    for name, title, subtitle in [first] + [(p.name, f"Chrome: {p.name}", p.email) for p in found]:
+    for name, title, subtitle in fixed + [(p.name, f"Chrome: {p.name}", p.email) for p in found]:
         is_default = name.lower() == default.lower()
         check = Gtk.CheckButton(valign=Gtk.Align.CENTER, active=is_default, group=checks[0][1] if checks else None)
         row = Adw.ActionRow(title=title, subtitle=subtitle, activatable_widget=check)
@@ -40,7 +40,7 @@ def open_uri(widget: Gtk.Widget, uri: str) -> None:
     if not found:
         launch("")
         return
-    options, picked = profile_choices(("", "System browser", ""), found, browser.preferred)
+    options, picked = profile_choices([("", "System browser", "")], found, browser.preferred)
     d = Adw.AlertDialog(heading="Open link", body=uri if len(uri) < 90 else uri[:87] + "…")
     d.set_extra_child(options)
     d.add_response("cancel", "Cancel")

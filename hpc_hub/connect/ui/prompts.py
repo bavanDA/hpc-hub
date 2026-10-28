@@ -6,9 +6,10 @@ from gi.repository import Adw, GLib, Gtk
 
 from ...core import browser
 from ...ui.widgets import profile_choices
+from .. import chrome_window
 from ..session import ClusterSession
 from .authenticator_help import AuthenticatorHelp
-from .browser_login import BrowserLoginDialog
+from .browser_login import BrowserLoginDialog, ChromeWindowDialog
 from .web_login import WebLoginDialog
 
 
@@ -44,6 +45,8 @@ class LoginPromptsMixin:
         def show():
             if not self.window:
                 done.set()
+            elif profile == chrome_window.CHOICE:
+                ChromeWindowDialog(f"{session.cfg.name} VPN sign-in", start, finished, in_app).present(self.window)
             elif profile:
                 BrowserLoginDialog(f"{session.cfg.name} VPN sign-in", start, profile, finished,
                                    in_app).present(self.window)
@@ -57,7 +60,7 @@ class LoginPromptsMixin:
 
     def pick_browser(self, session: ClusterSession) -> str | None:
         found = browser.profiles() if browser.chrome() else []
-        if not found:
+        if not (found or chrome_window.available()):
             return ""
         done = threading.Event()
         result: dict[str, str | None] = {"answer": None}
@@ -87,8 +90,10 @@ class LoginPromptsMixin:
     def _browser_dialog(self, session, found, result, done) -> bool:
         dialog = Adw.AlertDialog(heading=f"Sign in to the {session.cfg.name} VPN",
                                  body="Where do you want to sign in?")
-        options, picked = profile_choices(("", "HPC Hub window", "Fills in your username and password"), found,
-                                          session.cfg.vpn.browser)
+        fixed = [("", "HPC Hub window", "Fills in your username and password")]
+        if chrome_window.available():
+            fixed.append((chrome_window.CHOICE, chrome_window.TITLE, chrome_window.SUBTITLE))
+        options, picked = profile_choices(fixed, found, session.cfg.vpn.browser)
         dialog.set_extra_child(options)
         dialog.add_response("cancel", "Cancel")
         dialog.add_response("ok", "Sign in")
