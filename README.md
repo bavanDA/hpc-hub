@@ -1,6 +1,6 @@
 # HPC Hub
 
-A desktop app for working on HPC clusters from Linux. One click connects you (VPN, SSH, Duo or a code from your
+An app for working on HPC clusters from Linux, Windows and macOS (Android is on the way). One click connects you (VPN, SSH, Duo or a code from your
 authenticator app), gets you a compute node, and opens VS Code, Claude or a terminal there. Files, jobs, Globus
 transfers and LaTeX are in the same window.
 
@@ -36,8 +36,9 @@ Experimental, off until you turn them on in Preferences:
 
 ## Safety
 
-- Usernames and passwords are typed into the app and kept in GNOME Keyring on your computer, never in plain text
-  and never hardcoded. Settings in `~/.config/hpc-hub` hold no secrets.
+- Usernames and passwords are typed into the app and kept in your system's keyring (GNOME Keyring, macOS Keychain,
+  Windows Credential Manager; on Android an encrypted file whose key stays in the phone's Keystore), never in plain
+  text and never hardcoded. Settings in `~/.config/hpc-hub` hold no secrets.
 - Globus sign-in uses OAuth with PKCE in your own browser. Tokens are kept in the keyring.
 - Your saved VPN password is typed only into sign-in pages of your university's own site or a known sign-in
   provider, over https.
@@ -46,7 +47,31 @@ Experimental, off until you turn them on in Preferences:
 
 ## Install
 
-Linux (Fedora, Ubuntu, Debian, Arch, openSUSE and others):
+The Windows and macOS installers come from the [Build](../../actions/workflows/build.yml) workflow: open its latest
+run and download `hpc-hub-Windows` or `hpc-hub-macOS` under Artifacts. They are not signed yet, so your system warns
+you the first time.
+
+### Windows 10 and 11
+
+1. Run the `.msi` (or the `-setup.exe`) from `hpc-hub-Windows`. If Windows says "Windows protected your PC", click
+   **More info**, then **Run anyway**.
+2. Open HPC Hub from the Start menu.
+3. The first time you connect a cluster with a VPN (Wulver, Yale), HPC Hub asks to set up its VPN helper. Click
+   **Set up** and approve the Windows prompt. This happens once.
+
+### macOS (Apple silicon)
+
+1. Open the `.dmg` from `hpc-hub-macOS` and drag HPC Hub to Applications.
+2. Open it. macOS says it can't check the app: go to **System Settings, Privacy & Security**, scroll down and click
+   **Open Anyway**. This happens once.
+3. The first time you connect a cluster with a VPN, approve "Set up the VPN helper" and type your Mac password once.
+
+On Windows and macOS the VPN sends all your DNS through the university while it is up, and Disconnect on Windows
+doesn't sign you out on the VPN server (it ends by itself).
+
+### Linux
+
+Fedora, Ubuntu, Debian, Arch, openSUSE and others:
 
     git clone <this repo> && cd hpc-hub
     ./install.sh
@@ -55,7 +80,10 @@ It checks for GTK 4, libadwaita 1.7+, WebKitGTK, VTE, openconnect and the rest. 
 the install command for your distribution. Then it adds HPC Hub to the app grid and `hpc-hub` to `~/.local/bin`.
 `./install.sh --check` only checks. To run without installing: `./bin/hpc-hub`.
 
-macOS and Windows are not supported yet.
+### Android
+
+Not released yet. To try it, build it yourself (see [docs/design/android.md](docs/design/android.md)). It will come
+to Google Play and F-Droid.
 
 ## Globus
 
