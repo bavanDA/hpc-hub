@@ -58,3 +58,23 @@ def test_fetched_issuer_must_lead_to_a_trusted_root():
     with pytest.raises(ood.PortalError):
         ood.check_chain(fake, evil, "portal.test", [root])  # someone on the network naming their own issuer
     assert ood.system_roots()
+
+
+def test_signed_in_with_cookies_from_the_app_and_keeps_new_ones(monkeypatch):
+    from email.message import Message
+
+    portal = ood.Portal("https://portal.example.edu", cookies={"mod_auth_openidc_session": "s1", "tracker": "x"})
+    sent = []
+
+    def request(path, method="GET", data=None, headers=None):
+        sent.append(dict(portal.cookies))
+        reply = Message()
+        reply["Set-Cookie"] = "_session_id=r2; path=/; HttpOnly"
+        portal._keep(reply)
+        return 200, PAGE
+
+    monkeypatch.setattr(portal, "_request", request)
+    assert portal.signed_in() == ("bdx", "/home/bdx/expanse", "abc&1")
+    assert sent == [{"mod_auth_openidc_session": "s1"}]  # only the portal's own cookies go
+    assert portal.cookies["_session_id"] == "r2"  # the new session goes with its CSRF token
+    assert ood.Portal("https://portal.example.edu", cookies={}).signed_in() == ("", "", "")

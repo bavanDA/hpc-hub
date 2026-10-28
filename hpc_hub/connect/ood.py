@@ -105,13 +105,19 @@ def tls_context(host: str) -> ssl.SSLContext:
 
 
 class Portal:
-    def __init__(self, url: str, chrome_profile: str):
+    """Signed in through a Chrome profile (its cookies are read each time you ask), or with the cookies a sign-in
+    page in the app got (the phone)."""
+
+    def __init__(self, url: str, chrome_profile: str = "", cookies: dict[str, str] | None = None):
         self.base = url.rstrip("/")
         self.host = urllib.parse.urlsplit(self.base).hostname or ""
-        p = browser.find(chrome_profile)
-        if not p:
-            raise PortalError(f"No Chrome profile named {chrome_profile}")
-        self.profile = p.folder
+        self.profile = ""
+        if cookies is None:
+            p = browser.find(chrome_profile)
+            if not p:
+                raise PortalError(f"No Chrome profile named {chrome_profile}")
+            self.profile = p.folder
+        self.given = cookies
         self.ctx: ssl.SSLContext | None = None
         self.cookies: dict[str, str] = {}
 
@@ -123,14 +129,26 @@ class Portal:
         opener = urllib.request.build_opener(urllib.request.HTTPSHandler(context=self.ctx), _NoRedirect)
         try:
             with opener.open(req, timeout=30) as r:
+                self._keep(r.headers)
                 return r.status, r.read().decode(errors="replace")
         except urllib.error.HTTPError as e:
+            self._keep(e.headers)
             return e.code, e.read().decode(errors="replace")
 
+    def _keep(self, headers) -> None:
+        """Cookies the portal sets, like a browser would: a new session's goes with its CSRF token."""
+        for line in headers.get_all("Set-Cookie") or []:
+            name, _, value = line.split(";", 1)[0].partition("=")
+            if name.strip():
+                self.cookies[name.strip()] = value.strip()
+
     def signed_in(self) -> tuple[str, str, str]:
-        """(username, home folder, csrf token) if Chrome is signed in to the portal, else empty strings."""
-        self.cookies = {n: chrome_cookies.read(self.profile, self.host, n) for n in COOKIES}
-        if not self.cookies["mod_auth_openidc_session"]:
+        """(username, home folder, csrf token) if signed in to the portal, else empty strings."""
+        if self.given is not None:
+            self.cookies = {n: v for n, v in self.given.items() if n in COOKIES}
+        else:
+            self.cookies = {n: chrome_cookies.read(self.profile, self.host, n) for n in COOKIES}
+        if not self.cookies.get("mod_auth_openidc_session"):
             return "", "", ""
         status, page = self._request(DASHBOARD)
         user = parse_user(page) if status == 200 else ""
