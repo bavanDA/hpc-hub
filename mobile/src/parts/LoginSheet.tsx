@@ -5,6 +5,7 @@ import { Globe } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
 import { Spinner } from '@shared/components/ui'
+import { copyText } from '@shared/components/terminals/xterm'
 
 import { call } from '@shared/rpc'
 import type { Cluster, Logins } from '@shared/types/clusters'
@@ -50,6 +51,20 @@ export function LoginSheet({ cluster: c, hint, onClose }: { cluster: Cluster; hi
     }
   }
 
+  // a page where you paste your public key yourself (Yale): the key goes to the clipboard first
+  async function addKeyOnWeb() {
+    try {
+      const key = await call<string>('keysetup.device_key')
+      toast(await copyText(key) ? "This phone's key is copied. Paste it on the page, save, then tap Done."
+        : "Could not copy the key")
+      await invoke('web_sign_in', { url: c.key_page, title: `${c.name} SSH keys`, cookies: [], closeIsDone: true })
+      setPassword('')
+      toast('Key added. Type your username below and save. It can take up to 10 minutes to work.')
+    } catch (e) {
+      toast(String((e as Error).message ?? e))
+    }
+  }
+
   async function forget() {
     await call('clusters.forget_logins', { cluster: c.id }).catch((e: Error) => toast(e.message))
     onClose()
@@ -67,6 +82,13 @@ export function LoginSheet({ cluster: c, hint, onClose }: { cluster: Cluster; hi
           <p className="mt-2 text-sm text-dim">Sign in on {c.name}'s portal. The app adds this phone's SSH key to your
             account, so no password is kept. {c.second_factor === 'code' ? 'The cluster still asks for its code.' : ''}</p>
           <p className="mt-5 text-sm font-bold text-dim">Or type your login</p>
+        </div>
+      )}
+      {c.key_page && (
+        <div className="mb-5">
+          <Button kind="primary" icon={Globe} className="w-full" onClick={addKeyOnWeb}>Add this phone's key on the web</Button>
+          <p className="mt-2 text-sm text-dim">Opens {c.name}'s key page (campus or VPN only). Paste the key, save, and
+            tap Done. Then type your username below, no password needed. Duo still asks when you connect.</p>
         </div>
       )}
       <form onSubmit={(e) => { e.preventDefault(); save() }}>

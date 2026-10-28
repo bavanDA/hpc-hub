@@ -8,10 +8,12 @@ use tauri::plugin::{Builder, TauriPlugin};
 use tauri::{AppHandle, Manager, Runtime};
 
 #[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 struct Args {
     url: String,
     title: String,
     cookies: Vec<String>,
+    close_is_done: bool,
 }
 
 #[cfg_attr(not(mobile), allow(dead_code))] // only Android answers
@@ -32,12 +34,14 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
         .build()
 }
 
-/// Blocks (on a worker thread) until you are signed in or close the page.
+/// Blocks (on a worker thread) until you are signed in or close the page. close_is_done: a page you fill in
+/// yourself (a key upload), where closing it is done, not cancelled.
 #[tauri::command]
-pub async fn web_sign_in<R: Runtime>(app: AppHandle<R>, url: String, title: String, cookies: Vec<String>)
-    -> Result<HashMap<String, String>, String> {
+pub async fn web_sign_in<R: Runtime>(app: AppHandle<R>, url: String, title: String, cookies: Vec<String>,
+    close_is_done: Option<bool>) -> Result<HashMap<String, String>, String> {
     let handle = app.try_state::<Handle<R>>().ok_or("Web sign-in needs the Android app")?.0.clone();
-    tauri::async_runtime::spawn_blocking(move || open(handle, Args { url, title, cookies }))
+    let args = Args { url, title, cookies, close_is_done: close_is_done.unwrap_or(false) };
+    tauri::async_runtime::spawn_blocking(move || open(handle, args))
         .await
         .map_err(|e| e.to_string())?
 }
