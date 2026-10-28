@@ -29,7 +29,8 @@ export function ClusterCard({ cluster: c, session: s, log }: { cluster: Cluster;
       await call('clusters.connect', { cluster: c.id, switch: true })
     } catch (e) {
       const msg = (e as Error).message
-      if (/settings|username/i.test(msg)) { setHint(msg); setOpen('login') } else toast(msg)
+      // the desktop's wording points at its settings dialog; here the login sheet is that place
+      if (/username/i.test(msg)) { setHint('Add your username to connect.'); setOpen('login') } else toast(msg)
     }
   }
 
