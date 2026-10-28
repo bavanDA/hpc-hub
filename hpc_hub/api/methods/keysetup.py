@@ -130,6 +130,12 @@ def with_cookies(cluster: str, cookies: dict) -> dict:
     return {"user": user, "added": added}
 
 
+@method("keysetup.device_key")
+def device_key() -> str:
+    """This device's public key, made the first time: to paste on a cluster's key page (Yale)."""
+    return ssh_keys.ensure()
+
+
 @method("keysetup.status")
 def status(cluster: str) -> dict:
     job = _jobs.get(cluster)

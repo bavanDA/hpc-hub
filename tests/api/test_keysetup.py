@@ -123,6 +123,13 @@ def test_stop_and_open(setup, monkeypatch):
     assert keysetup.profiles() == ["Home", "Uni"]
 
 
+def test_device_key_is_for_a_key_page(monkeypatch):
+    monkeypatch.setattr(keysetup.ssh_keys, "ensure", lambda: KEY)
+    assert keysetup.device_key() == KEY
+    yale = next(c for c in config.default_clusters() if c.id == "yale")
+    assert yale.key_page.startswith("https://")
+
+
 def test_phone_adds_its_key_with_the_sign_in_pages_cookies(setup, monkeypatch):
     _, store = setup
     monkeypatch.setattr(keysetup.ssh_keys, "ensure", lambda: KEY)

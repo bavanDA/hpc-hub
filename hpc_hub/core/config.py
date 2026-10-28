@@ -108,6 +108,7 @@ class ClusterConfig:
     second_factor: str = "duo"  # duo (push to your phone) or code (authenticator app, TOTP)
     remember_password: bool = True  # False: the keyring keeps only the username; asked once per run
     portal: str = ""  # web portal where you can add your SSH key after signing in in Chrome
+    key_page: str = ""  # a web page where you paste your SSH public key yourself (Yale's key uploader)
     code_setup: str = ""  # where you set up the authenticator app the cluster asks codes from
     # "partition:qos" queues to choose from, cheapest first: the first that starts within queue_wait seconds
     # wins, else the one that starts soonest. Empty: always use the queue you picked.
@@ -169,6 +170,7 @@ def default_clusters() -> list[ClusterConfig]:
             id="yale",
             name="Yale Bouchet",
             host="bouchet.ycrc.yale.edu",
+            key_page="https://sshkeys.ycrc.yale.edu/",  # on campus or over the Yale VPN; up to 10 min to work
             reuse_running_job=True,
             vpn=VpnSettings(
                 enabled=True,

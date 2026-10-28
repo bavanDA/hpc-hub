@@ -55,6 +55,7 @@ export type Cluster = {
   duo_answer?: string
   second_factor?: 'duo' | 'code'
   portal?: string
+  key_page?: string  // a web page where you paste your SSH public key yourself (Yale)
   code_setup?: string
   queues?: string
   fast?: string  // "partition:qos:time" of the Fast node queue
