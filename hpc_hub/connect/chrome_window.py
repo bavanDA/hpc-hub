@@ -171,7 +171,7 @@ def sign_in(start: SsoStart, cancelled: Callable[[], bool], timeout: float = 600
             folder: Path | None = None, args: Sequence[str] = ()) -> tuple[str, str]:
     """Blocking: open the sign-in page in our Chrome window and wait for the token cookie. (token, error); the
     window is closed either way. A token or error cookie left from an earlier sign-in doesn't count."""
-    binary = binary or shutil.which(browser.chrome() or "google-chrome") or ""
+    binary = binary or shutil.which(browser.chrome() or "") or ""
     if not binary:
         return "", "Google Chrome is not installed"
     host = (urllib.parse.urlsplit(start.final_url or start.login_url).hostname or "").lower()
@@ -180,7 +180,10 @@ def sign_in(start: SsoStart, cancelled: Callable[[], bool], timeout: float = 600
     except OSError as e:
         return "", f"Could not start Chrome: {e}"
     try:
-        old = win.cookies(host)
+        try:
+            old = win.cookies(host)
+        except Closed:  # Chrome handed the page to a window of ours that is still open, and quit
+            return "", "The HPC Hub Chrome window is open already. Close it and try again."
         win.open(start.login_url)
         end = time.monotonic() + timeout
         while not cancelled() and time.monotonic() < end:
@@ -196,7 +199,7 @@ def sign_in(start: SsoStart, cancelled: Callable[[], bool], timeout: float = 600
         return "", "Sign-in cancelled"
     except Closed:
         return "", "The Chrome window was closed"
-    except ChromeError as e:
-        return "", str(e)
+    except (ChromeError, OSError) as e:
+        return "", f"Chrome: {e}"
     finally:
         win.close()

@@ -56,6 +56,7 @@ def test_error_cookie_is_the_error(fake):
 
 def test_closing_the_window_or_cancel(fake):
     assert fake(quit=2)[0] == ("", "The Chrome window was closed")
+    assert "open already" in fake(quit=1)[0][1]  # another of our windows took the page and this one quit
     stop = threading.Event()
     threading.Timer(0.3, stop.set).start()
     began = time.monotonic()
