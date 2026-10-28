@@ -10,6 +10,7 @@ from pathlib import Path
 import pytest
 
 from hpc_hub.api.hub import Hub
+from hpc_hub.connect import chrome_window
 from hpc_hub.connect.session import SSO_PASS, SSO_USER
 from hpc_hub.connect.vpn_sso import SsoStart
 from hpc_hub.core import browser, config
@@ -99,12 +100,78 @@ def test_pick_browser_offers_the_app_window_and_chrome_profiles(hub, monkeypatch
     for answer, want in (("Uni", "Uni"), ("", ""), (None, None), ("Elsewhere", None)):
         t, out = run(hub.pick_browser, s)
         q = next_question(hub)
-        assert q["kind"] == "pick-browser" and q["default"] == "Uni"
+        assert q["kind"] == "pick-browser" and q["default"] == "Uni" and q["chrome_window"] == chrome_window.CHOICE
         assert q["profiles"] == [{"name": "Home", "email": ""}, {"name": "Uni", "email": "jdoe@example.edu"}]
         hub.answer(q["id"], answer)
         t.join(5)
         assert out["result"] == want
         hub.events.clear()
+
+
+def test_pick_browser_offers_the_chrome_window(hub, monkeypatch):
+    monkeypatch.setattr(browser, "chrome", lambda: "/usr/bin/google-chrome")
+    monkeypatch.setattr(browser, "profiles", lambda: [])  # Chrome without profiles yet: still worth asking
+    t, out = run(hub.pick_browser, wulver())
+    q = next_question(hub)
+    assert q["profiles"] == [] and q["chrome_window"] == chrome_window.CHOICE
+    hub.answer(q["id"], chrome_window.CHOICE)
+    t.join(5)
+    assert out["result"] == chrome_window.CHOICE
+
+
+@pytest.fixture
+def window(monkeypatch):
+    """Our Chrome window; it signs in when result["token"] is set, and records that it was stopped."""
+    result, seen = {}, {}
+
+    def sign_in(start, cancelled, timeout=600):
+        seen["start"] = start
+        while not cancelled():
+            if "token" in result:
+                return result["token"], result.get("err", "")
+            time.sleep(0.01)
+        seen["stopped"] = True
+        return "", "Sign-in cancelled"
+    monkeypatch.setattr(chrome_window, "sign_in", sign_in)
+    return result, seen
+
+
+def test_chrome_window_picks_up_the_token(hub, window):
+    result, seen = window
+    t, out = run(hub.web_login, wulver(), START, Login("jdoe", SECRET), chrome_window.CHOICE)
+    q = next_question(hub)
+    assert q["kind"] == "chrome-window" and q["cluster"] == "wulver"
+    result["token"] = "tok-from-window"
+    t.join(5)
+    assert out["result"] == ("tok-from-window", "") and seen["start"] is START
+    wait_done(hub, q["id"])
+    no_secret_in(hub.events)
+
+    hub.events.clear()
+    result.update(token="", err="Account locked")
+    assert hub.web_login(wulver(), START, Login("jdoe", ""), chrome_window.CHOICE) == ("", "Account locked")
+
+
+def test_chrome_window_can_switch_to_the_app_window_or_cancel(hub, window):
+    _, seen = window
+    t, out = run(hub.web_login, wulver(), START, Login("jdoe", SECRET), chrome_window.CHOICE)
+    q = next_question(hub)
+    hub.answer(q["id"], "in-app")
+    q2 = next_question(hub, wait_done(hub, q["id"]))
+    assert q2["kind"] == "web-login"
+    hub.answer(q2["id"], json.dumps({"token": "tok-in-app"}))
+    t.join(5)
+    assert out["result"] == ("tok-in-app", "")
+
+    hub.events.clear()
+    t, out = run(hub.web_login, wulver(), START, Login("jdoe", SECRET), chrome_window.CHOICE)
+    hub.answer(next_question(hub)["id"], None)
+    t.join(5)
+    assert out["result"] == ("", "Sign-in cancelled")
+    end = time.monotonic() + 5
+    while "stopped" not in seen and time.monotonic() < end:
+        time.sleep(0.01)
+    assert seen["stopped"]  # the window is closed, not left open
 
 
 def test_app_window_gets_the_login_from_askpass_not_the_ui(hub):

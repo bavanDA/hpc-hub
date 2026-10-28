@@ -92,3 +92,14 @@ def test_browser_that_is_gone_can_stay(hub):
     cs.save("yale", {"vpn": {"browser": "Old"}})
     cs.save("yale", {"vpn": {"browser": ""}})
     assert c.vpn.browser == "" and hub.saved == 2
+
+
+def test_chrome_window_is_a_choice_where_chrome_is(hub, monkeypatch):
+    from hpc_hub.connect import chrome_window
+    assert cs.get("yale")["chrome_window"] == {"value": chrome_window.CHOICE, "offered": True}
+    cs.save("yale", {"vpn": {"browser": chrome_window.CHOICE}})
+    assert hub.sessions["yale"].cfg.vpn.browser == chrome_window.CHOICE
+    monkeypatch.setattr(browser, "chrome", lambda: "")
+    assert cs.get("wulver")["chrome_window"]["offered"] is False
+    with pytest.raises(ValueError):
+        cs.save("wulver", {"vpn": {"browser": chrome_window.CHOICE}})
