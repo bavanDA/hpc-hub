@@ -60,10 +60,15 @@ def test_fetched_issuer_must_lead_to_a_trusted_root():
     assert ood.system_roots()
 
 
-def test_signed_in_with_cookies_from_the_app_and_keeps_new_ones(monkeypatch):
+def test_signed_in_keeps_the_cookies_the_portal_sets(monkeypatch):
     from email.message import Message
 
-    portal = ood.Portal("https://portal.example.edu", cookies={"mod_auth_openidc_session": "s1", "tracker": "x"})
+    from hpc_hub.core import browser
+
+    monkeypatch.setattr(ood.browser, "find", lambda name: browser.Profile("Default", name))
+    jar = {"mod_auth_openidc_session": "s1"}
+    monkeypatch.setattr(ood.chrome_cookies, "read", lambda folder, host, name: jar.get(name, ""))
+    portal = ood.Portal("https://portal.example.edu", "Uni")
     sent = []
 
     def request(path, method="GET", data=None, headers=None):
@@ -75,6 +80,7 @@ def test_signed_in_with_cookies_from_the_app_and_keeps_new_ones(monkeypatch):
 
     monkeypatch.setattr(portal, "_request", request)
     assert portal.signed_in() == ("bdx", "/home/bdx/expanse", "abc&1")
-    assert sent == [{"mod_auth_openidc_session": "s1"}]  # only the portal's own cookies go
+    assert sent == [{"mod_auth_openidc_session": "s1", "_session_id": ""}]
     assert portal.cookies["_session_id"] == "r2"  # the new session goes with its CSRF token
-    assert ood.Portal("https://portal.example.edu", cookies={}).signed_in() == ("", "", "")
+    jar.clear()
+    assert portal.signed_in() == ("", "", "")

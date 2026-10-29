@@ -1,10 +1,11 @@
 """Set up the phone app from the desktop: the desktop shows your logins as a QR code, the phone scans it and saves
-them in its own vault. Nothing goes over the network. The code is short lived and shown only when you ask."""
+them in its own vault. Clusters that take SSH keys (key_login) get a key for the phone instead of a password
+(ssh_keys.py). Nothing goes over the network. The code is short lived and shown only when you ask."""
 
 import base64
 import json
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from . import credentials
 
@@ -21,32 +22,53 @@ class Entry:
     cluster: str
     username: str
     password: str = ""
+    key: bool = False  # the code's key opens this cluster
 
 
-def code(clusters: list[str], passwords: bool = True, now: float | None = None) -> tuple[str, list[str]]:
-    """The QR text for the SSH logins saved for these clusters, and the clusters it has (those with a login)."""
-    logins = {}
+@dataclass
+class Code:
+    entries: list[Entry] = field(default_factory=list)
+    key: bytes = b""  # the phone's SSH key (ssh_keys.SEED bytes), when an entry uses it
+
+
+def saved(clusters: list[str], passwords: bool = True) -> list[Entry]:
+    """The SSH logins saved for these clusters (those without one are left out)."""
+    out = []
     for cid in clusters:
-        saved = credentials.load(cid, credentials.SSH)
-        if saved and saved.username:
-            logins[cid] = {"user": saved.username, **({"password": saved.password}
-                                                      if passwords and saved.password else {})}
-    body = {"exp": int((time.time() if now is None else now) + LIFETIME), "logins": logins}
-    text = base64.urlsafe_b64encode(json.dumps(body, separators=(",", ":")).encode()).decode().rstrip("=")
-    return PREFIX + text, list(logins)
+        login = credentials.load(cid, credentials.SSH)
+        if login and login.username:
+            out.append(Entry(cid, login.username, login.password if passwords else ""))
+    return out
 
 
-def parse(text: str, now: float | None = None) -> list[Entry]:
+def _b64(data: bytes) -> str:
+    return base64.urlsafe_b64encode(data).decode().rstrip("=")
+
+
+def _unb64(text: str) -> bytes:
+    return base64.urlsafe_b64decode(text + "=" * (-len(text) % 4))
+
+
+def code(c: Code, now: float | None = None) -> str:
+    logins = {e.cluster: {"user": e.username, **({"password": e.password} if e.password and not e.key else {}),
+                          **({"key": True} if e.key else {})} for e in c.entries}
+    body = {"exp": int((time.time() if now is None else now) + LIFETIME), "logins": logins,
+            **({"key": _b64(c.key)} if c.key else {})}
+    return PREFIX + _b64(json.dumps(body, separators=(",", ":")).encode())
+
+
+def parse(text: str, now: float | None = None) -> Code:
     text = text.strip()
     if not text.startswith(PREFIX):
         raise PairingError("This is not an HPC Hub code. Open Set up the phone app on the desktop.")
     try:
-        raw = text[len(PREFIX):]
-        body = json.loads(base64.urlsafe_b64decode(raw + "=" * (-len(raw) % 4)))
+        body = json.loads(_unb64(text[len(PREFIX):]))
         exp, logins = int(body["exp"]), body["logins"]
-        entries = [Entry(str(cid), str(v["user"]), str(v.get("password", ""))) for cid, v in logins.items()]
+        key = _unb64(body["key"]) if body.get("key") else b""
+        entries = [Entry(str(cid), str(v["user"]), str(v.get("password", "")), bool(v.get("key")))
+                   for cid, v in logins.items()]
     except (ValueError, KeyError, TypeError, AttributeError) as e:
         raise PairingError("The code could not be read. Show it again on the desktop.") from e
     if (time.time() if now is None else now) > exp:
         raise PairingError("This code is too old. Show a new one on the desktop.")
-    return [e for e in entries if e.username]
+    return Code([e for e in entries if e.username], key)

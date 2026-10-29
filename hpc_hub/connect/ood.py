@@ -105,19 +105,13 @@ def tls_context(host: str) -> ssl.SSLContext:
 
 
 class Portal:
-    """Signed in through a Chrome profile (its cookies are read each time you ask), or with the cookies a sign-in
-    page in the app got (the phone)."""
-
-    def __init__(self, url: str, chrome_profile: str = "", cookies: dict[str, str] | None = None):
+    def __init__(self, url: str, chrome_profile: str):
         self.base = url.rstrip("/")
         self.host = urllib.parse.urlsplit(self.base).hostname or ""
-        self.profile = ""
-        if cookies is None:
-            p = browser.find(chrome_profile)
-            if not p:
-                raise PortalError(f"No Chrome profile named {chrome_profile}")
-            self.profile = p.folder
-        self.given = cookies
+        p = browser.find(chrome_profile)
+        if not p:
+            raise PortalError(f"No Chrome profile named {chrome_profile}")
+        self.profile = p.folder
         self.ctx: ssl.SSLContext | None = None
         self.cookies: dict[str, str] = {}
 
@@ -143,11 +137,8 @@ class Portal:
                 self.cookies[name.strip()] = value.strip()
 
     def signed_in(self) -> tuple[str, str, str]:
-        """(username, home folder, csrf token) if signed in to the portal, else empty strings."""
-        if self.given is not None:
-            self.cookies = {n: v for n, v in self.given.items() if n in COOKIES}
-        else:
-            self.cookies = {n: chrome_cookies.read(self.profile, self.host, n) for n in COOKIES}
+        """(username, home folder, csrf token) if Chrome is signed in to the portal, else empty strings."""
+        self.cookies = {n: chrome_cookies.read(self.profile, self.host, n) for n in COOKIES}
         if not self.cookies.get("mod_auth_openidc_session"):
             return "", "", ""
         status, page = self._request(DASHBOARD)

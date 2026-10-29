@@ -24,13 +24,10 @@ class FakePortal:
     keys: list = []
     fail = ""
 
-    def __init__(self, url, profile="", cookies=None):
-        self.url, self.profile, self.cookies = url, profile, cookies
+    def __init__(self, url, profile):
+        self.url, self.profile = url, profile
 
     def signed_in(self):
-        if self.cookies is not None:  # the phone's in-app sign-in
-            user = "jdoe" if self.cookies.get("mod_auth_openidc_session") == "ok" else ""
-            return (user, f"/home/{user}", "csrf123") if user else ("", "", "")
         user = self.signed.get(self.profile, "")
         return (user, f"/home/{user}", "csrf123") if user else ("", "", "")
 
@@ -121,21 +118,3 @@ def test_stop_and_open(setup, monkeypatch):
         keysetup.open_portal("sdsc", "Nobody")
     monkeypatch.setattr(browser, "chrome", lambda: "/usr/bin/google-chrome")
     assert keysetup.profiles() == ["Home", "Uni"]
-
-
-def test_device_key_is_for_a_key_page(monkeypatch):
-    monkeypatch.setattr(keysetup.ssh_keys, "ensure", lambda: KEY)
-    assert keysetup.device_key() == KEY
-    yale = next(c for c in config.default_clusters() if c.id == "yale")
-    assert yale.key_page.startswith("https://")
-
-
-def test_phone_adds_its_key_with_the_sign_in_pages_cookies(setup, monkeypatch):
-    _, store = setup
-    monkeypatch.setattr(keysetup.ssh_keys, "ensure", lambda: KEY)
-    assert keysetup.with_cookies("sdsc", {"mod_auth_openidc_session": "ok", "other": "x"}) == \
-        {"user": "jdoe", "added": True}
-    assert FakePortal.keys == [KEY] and store[("sdsc", credentials.SSH)] == Login("jdoe", "")
-    assert keysetup.with_cookies("sdsc", {"mod_auth_openidc_session": "ok"})["added"] is False
-    with pytest.raises(PortalError, match="did not let you in"):
-        keysetup.with_cookies("sdsc", {"mod_auth_openidc_session": "expired"})

@@ -9,7 +9,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from ...connect.ood import Portal, PortalError
-from ...core import browser, config, credentials, ssh_keys
+from ...core import browser, config, credentials
 from ..hub import hub
 from ..server import method
 
@@ -113,27 +113,6 @@ def start(cluster: str) -> dict:
         job = _jobs[cluster] = Job()
     threading.Thread(target=_work, args=(job, cluster, url), daemon=True).start()
     return job.json()
-
-
-@method("keysetup.with_cookies")
-def with_cookies(cluster: str, cookies: dict) -> dict:
-    """The phone's way: a sign-in page in the app got the portal's cookies. Adds this device's key (made the
-    first time) and saves your username, like _work does for a Chrome profile. Answers {user, added}."""
-    portal = Portal(_portal(cluster), cookies={str(k): str(v) for k, v in cookies.items()})
-    user, home, csrf = portal.signed_in()
-    if not user:
-        raise PortalError("The portal did not let you in. Sign in again.")
-    added = portal.add_key(home, csrf, ssh_keys.ensure())
-    saved = credentials.load(cluster, credentials.SSH)
-    password = saved.password if saved and saved.username == user else ""
-    credentials.save(cluster, credentials.SSH, credentials.Login(user, password))
-    return {"user": user, "added": added}
-
-
-@method("keysetup.device_key")
-def device_key() -> str:
-    """This device's public key, made the first time: to paste on a cluster's key page (Yale)."""
-    return ssh_keys.ensure()
 
 
 @method("keysetup.status")

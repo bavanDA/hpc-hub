@@ -109,6 +109,7 @@ class ClusterConfig:
     remember_password: bool = True  # False: the keyring keeps only the username; asked once per run
     portal: str = ""  # web portal where you can add your SSH key after signing in in Chrome
     key_page: str = ""  # a web page where you paste your SSH public key yourself (Yale's key uploader)
+    key_login: bool = False  # takes SSH keys from ~/.ssh/authorized_keys: the phone app gets a key (pairing.py)
     code_setup: str = ""  # where you set up the authenticator app the cluster asks codes from
     # "partition:qos" queues to choose from, cheapest first: the first that starts within queue_wait seconds
     # wins, else the one that starts soonest. Empty: always use the queue you picked.
@@ -193,6 +194,7 @@ def default_clusters() -> list[ClusterConfig]:
             host="login.expanse.sdsc.edu",
             second_factor="code",  # ACCESS login: ACCESS password or SSH key, then a TOTP code
             portal="https://portal.expanse.sdsc.edu",
+            key_login=True,
             code_setup="https://passive.sdsc.edu",
             profile=ComputeProfile(cpus=2, mem_gb=16, partition="shared"),
             fast="debug::00:30:00",  # 2 nodes, a short line; shared can wait hours
