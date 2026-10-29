@@ -33,6 +33,11 @@ from the logic is added to `hpc_hub/` as a normal feature, behind a setting or a
   Android; the same path as Windows); `HPC_HUB_VAULT_KEY` (below).
 - **UI link:** `rpc_send` and the `rpc` event, as on the desktop, so `app/src/rpc.ts` works unchanged. Terminals are
   asyncssh PTY channels the backend streams (`terminals.open_channel`), which `pty.ts` already handles.
+- **Logins:** scanned from the desktop. Its menu has Set up the phone app, which shows a QR code with your
+  usernames and passwords (core/pairing.py); a cluster that takes SSH keys (`key_login`, e.g. SDSC) gets a new
+  key for the phone instead, added there over the desktop's connection (core/ssh_keys.py). The code works for 10
+  minutes and hides after a minute. Typing the login on the phone works too. The camera scan is ZXing (open
+  source, for F-Droid), in `ScanPlugin.kt`.
 - **Passwords:** an encrypted file (AES-GCM) in the app's private folder. Its key is random, wrapped by an Android
   Keystore key that never leaves the phone's secure hardware; the shell unwraps it at start and hands it to the
   backend. Backup is off for that file, so it never leaves the phone either.
