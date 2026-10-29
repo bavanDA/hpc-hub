@@ -13,6 +13,7 @@ from .connect.askpass_server import AskpassServer  # noqa: E402
 from .connect.session import ClusterSession, State  # noqa: E402
 from .connect.ui.duo import DuoDialog  # noqa: E402
 from .connect.ui.key_setup import KeySetupDialog  # noqa: E402
+from .connect.ui.phone_pair import PhonePairDialog  # noqa: E402
 from .connect.ui.prompts import LoginPromptsMixin  # noqa: E402
 from .connect.ui.settings import ClusterSettingsDialog  # noqa: E402
 from .core import browser, config, credentials, features, single  # noqa: E402
@@ -72,6 +73,7 @@ class HpcHubApp(LoginPromptsMixin, QuitMixin, Adw.Application):
                 self.app_settings, lambda: config.save_app(self.app_settings),
                 lambda on: self.window.set_experimental(on)).present(self.window),
              ["<primary>comma"]),
+            ("pair-phone", lambda *_: PhonePairDialog(self.clusters).present(self.window), []),
         ):
             action = Gio.SimpleAction.new(name, None)
             action.connect("activate", handler)
