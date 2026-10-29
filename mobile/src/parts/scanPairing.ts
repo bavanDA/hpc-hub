@@ -3,19 +3,19 @@ import { invoke } from '@tauri-apps/api/core'
 
 import { call } from '@shared/rpc'
 
-/** The message to show: what was saved, or why not. Closing the camera says nothing. */
-export async function scanPairing(): Promise<string> {
+/** What to tell you ('' when you closed the camera), and the clusters that got a login. */
+export async function scanPairing(): Promise<{ msg: string; names: string[] }> {
   let text: string
   try {
     text = await invoke<string>('scan_qr')
   } catch (e) {
     const msg = String((e as Error).message ?? e)
-    return /cancelled/i.test(msg) ? '' : msg
+    return { msg: /cancelled/i.test(msg) ? '' : msg, names: [] }
   }
   try {
     const names = await call<string[]>('pairing.apply', { code: text })
-    return `Saved the login for ${names.join(', ')}.`
+    return { msg: `Saved the login for ${names.join(', ')}.`, names }
   } catch (e) {
-    return (e as Error).message
+    return { msg: (e as Error).message, names: [] }
   }
 }

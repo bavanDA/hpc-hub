@@ -32,9 +32,9 @@ export function LoginSheet({ cluster: c, hint, onClose }: { cluster: Cluster; hi
   }
 
   async function scan() {
-    const msg = await scanPairing()
+    const { msg, names } = await scanPairing()
     if (msg) toast(msg)
-    if (msg.startsWith('Saved')) onClose()
+    if (names.length) onClose()
   }
 
   async function forget() {

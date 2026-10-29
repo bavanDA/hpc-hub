@@ -1,5 +1,6 @@
-// One cluster on the phone: state, one big button to connect or disconnect, the compute node, login and log.
-import { KeyRound, Zap } from 'lucide-react'
+// One cluster on the phone: state, Connect (or QR code: scan the desktop's login, then connect), the compute
+// node, login and log.
+import { KeyRound, ScanQrCode, Zap } from 'lucide-react'
 import { useState } from 'react'
 
 import { LogView } from '@shared/components/clusters/LogView'
@@ -10,6 +11,7 @@ import { BUSY, DUO, fastLabel, summary, type Cluster, type Session } from '@shar
 import { Button, Card, Switch, useToast } from '../ui'
 import { LoginSheet } from './LoginSheet'
 import { NodeSheet } from './NodeSheet'
+import { scanPairing } from './scanPairing'
 
 const PILL: Record<string, string> = {
   Connected: 'bg-ok-bg text-ok', Error: 'bg-bad-bg text-bad', Disconnected: 'bg-pill text-dim',
@@ -34,6 +36,12 @@ export function ClusterCard({ cluster: c, session: s, log }: { cluster: Cluster;
     }
   }
 
+  async function scan() {
+    const { msg, names } = await scanPairing()
+    if (names.includes(c.name)) await connect()
+    else if (msg) toast(msg)
+  }
+
   async function wantNode(on: boolean) {
     try {
       putCluster(await call<Cluster>('clusters.update', { cluster: c.id, changes: { request_node_on_connect: on } }))
@@ -53,6 +61,9 @@ export function ClusterCard({ cluster: c, session: s, log }: { cluster: Cluster;
         </div>
         <span className={`shrink-0 rounded-full px-3 py-1 text-xs font-bold ${PILL[s.state] ?? 'bg-warn-bg text-warn'}`}>
           {s.state === DUO ? 'Duo' : s.state}</span>
+        <button aria-label="Login" onClick={() => { setHint(''); setOpen('login') }}
+          className="-mr-2 -mt-2 grid size-11 shrink-0 place-items-center rounded-full text-dim active:bg-hover">
+          <KeyRound size={20} /></button>
       </div>
 
       {(busy || s.detail) && (
@@ -84,7 +95,7 @@ export function ClusterCard({ cluster: c, session: s, log }: { cluster: Cluster;
         checked={c.request_node_on_connect ?? true} onChange={wantNode} />}
 
       <div className="flex gap-2">
-        <Button aria-label="Login" icon={KeyRound} onClick={() => { setHint(''); setOpen('login') }} />
+        {idle && <Button icon={ScanQrCode} className="flex-1" onClick={scan}>QR code</Button>}
         <Button kind={connected ? 'danger' : busy ? 'plain' : 'primary'} className="flex-1"
           disabled={s.state === 'Disconnecting'}
           onClick={() => (busy ? run('clusters.cancel') : connected ? run('clusters.disconnect') : connect())}>
