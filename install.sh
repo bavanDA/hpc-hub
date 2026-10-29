@@ -42,27 +42,28 @@ if [ -n "$missing" ]; then
         *" fedora "*|*" rhel "*|*" centos "*)
             echo "Install with: sudo dnf install python3-gobject python3-cairo python3-cryptography gtk4 libadwaita" \
                  "libsecret webkitgtk6.0 vte291-gtk4 gtksourceview5 poppler-glib openconnect NetworkManager-openconnect" \
-                 "openssh-clients" ;;
+                 "openssh-clients python3-qrcode" ;;
         *" debian "*|*" ubuntu "*)
             echo "Install with: sudo apt install python3-gi python3-gi-cairo python3-cryptography gir1.2-gtk-4.0" \
                  "gir1.2-adw-1 gir1.2-secret-1 gir1.2-webkit-6.0 gir1.2-vte-3.91 gir1.2-gtksource-5" \
-                 "gir1.2-poppler-0.18 openconnect network-manager-openconnect openssh-client" ;;
+                 "gir1.2-poppler-0.18 openconnect network-manager-openconnect openssh-client python3-qrcode" ;;
         *" arch "*)
             echo "Install with: sudo pacman -S python-gobject python-cairo python-cryptography gtk4 libadwaita" \
                  "libsecret webkitgtk-6.0 vte4 gtksourceview5 poppler-glib openconnect networkmanager-openconnect" \
-                 "openssh" ;;
+                 "openssh python-qrcode" ;;
         *" suse "*|*" opensuse "*)
             echo "Install with: sudo zypper install python3-gobject python3-gobject-cairo python3-cryptography" \
                  "typelib-1_0-Gtk-4_0 typelib-1_0-Adw-1 typelib-1_0-Secret-1 typelib-1_0-WebKit-6_0" \
                  "typelib-1_0-Vte-3_91 typelib-1_0-GtkSource-5 typelib-1_0-Poppler-0_18 openconnect" \
-                 "NetworkManager-openconnect openssh-clients" ;;
+                 "NetworkManager-openconnect openssh-clients python3-qrcode" ;;
         *) echo "Install them with your package manager: GTK 4, libadwaita 1.7+, libsecret, WebKitGTK 6," \
                 "VTE for GTK 4, GtkSourceView 5, Poppler GLib, their Python (GObject) bindings, python3-cryptography," \
-                "openconnect, NetworkManager's openconnect plugin and an SSH client." ;;
+                "openconnect, NetworkManager's openconnect plugin, an SSH client and python3-qrcode." ;;
     esac
     exit 1
 fi
 echo "Everything HPC Hub needs is installed."
+python3 -c "import qrcode" 2>/dev/null || echo "Optional: python3-qrcode, for Set up the phone app (a QR code)."
 [ "$1" = "--check" ] && exit 0
 
 mkdir -p "$HOME/.local/share/applications" "$HOME/.local/bin"

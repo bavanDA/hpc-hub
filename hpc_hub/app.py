@@ -73,7 +73,7 @@ class HpcHubApp(LoginPromptsMixin, QuitMixin, Adw.Application):
                 self.app_settings, lambda: config.save_app(self.app_settings),
                 lambda on: self.window.set_experimental(on)).present(self.window),
              ["<primary>comma"]),
-            ("pair-phone", lambda *_: PhonePairDialog(self.clusters).present(self.window), []),
+            ("pair-phone", lambda *_: PhonePairDialog(list(self.sessions.values())).present(self.window), []),
         ):
             action = Gio.SimpleAction.new(name, None)
             action.connect("activate", handler)
