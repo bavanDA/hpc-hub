@@ -84,7 +84,7 @@ the install command for your distribution. Then it adds HPC Hub to the app grid 
 
 Not released yet. To try it, build it yourself (see [docs/design/android.md](docs/design/android.md)). It will come
 to Google Play and F-Droid. To log in, open HPC Hub's menu on your computer, then Set up the phone app, and scan the
-QR code with the phone (the Linux app needs python3-qrcode for it).
+QR code with the phone.
 
 ## Globus
 

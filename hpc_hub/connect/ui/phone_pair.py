@@ -12,18 +12,6 @@ SHOWN = 60
 MODULE = 6  # pixels per QR square
 
 
-def matrix(text: str) -> list[list[bool]] | None:
-    """The QR squares with a quiet border, or None without python3-qrcode."""
-    try:
-        import qrcode
-    except ImportError:
-        return None
-    qr = qrcode.QRCode(error_correction=qrcode.constants.ERROR_CORRECT_M, border=4)
-    qr.add_data(text)
-    qr.make(fit=True)
-    return qr.get_matrix()
-
-
 class PhonePairDialog(Adw.Dialog):
     def __init__(self, sessions: list):
         super().__init__(title="Set up the phone app", content_width=460)
@@ -122,10 +110,7 @@ class PhonePairDialog(Adw.Dialog):
     def _ready(self, c: pairing.Code) -> bool:
         if self.stack.get_visible_child_name() != "code":
             return False  # hidden meanwhile
-        squares = matrix(pairing.code(c))
-        if squares is None:
-            return self._say("Install python3-qrcode",
-                             "The QR code needs it: sudo dnf install python3-qrcode, then open this again.")
+        squares = pairing.matrix(pairing.code(c))
         self._say("Scan it with the phone")
         self.squares = squares
         side = len(squares) * MODULE
@@ -141,7 +126,7 @@ class PhonePairDialog(Adw.Dialog):
             self.timer = 0  # ends by returning False
             self._hide()
             return False
-        self.text.set_label(f"In HPC Hub on the phone, tap Scan on the Clusters screen. Hides in {self.left} s.")
+        self.text.set_label(f"In HPC Hub on the phone, tap QR code on a cluster. Hides in {self.left} s.")
         self.left -= 1
         return True
 

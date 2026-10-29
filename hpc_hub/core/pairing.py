@@ -7,6 +7,7 @@ import json
 import time
 from dataclasses import dataclass, field
 
+from ..vendor.qrcodegen import QrCode
 from . import credentials
 
 PREFIX = "hpchub-pair:1:"
@@ -72,3 +73,11 @@ def parse(text: str, now: float | None = None) -> Code:
     if (time.time() if now is None else now) > exp:
         raise PairingError("This code is too old. Show a new one on the desktop.")
     return Code([e for e in entries if e.username], key)
+
+
+def matrix(text: str, border: int = 4) -> list[list[bool]]:
+    """The QR squares (True: dark), with the quiet border cameras need around them."""
+    qr = QrCode.encode_text(text, QrCode.Ecc.MEDIUM)
+    n = qr.get_size()
+    return [[0 <= x < n and 0 <= y < n and qr.get_module(x, y) for x in range(-border, n + border)]
+            for y in range(-border, n + border)]

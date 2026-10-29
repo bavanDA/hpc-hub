@@ -37,3 +37,14 @@ def test_old_or_wrong_codes():
         pairing.parse("https://example.com")
     with pytest.raises(pairing.PairingError, match="could not be read"):
         pairing.parse(pairing.PREFIX + "bm90IGpzb24")
+
+
+def test_matrix_is_a_qr_code():
+    text = pairing.code(Code([Entry("wulver", "jdoe", "s3cret"), Entry("sdsc", "jdoe2", key=True)], b"k" * 32))
+    m = pairing.matrix(text)
+    size = len(m)
+    assert all(len(row) == size for row in m) and (size - 8 - 17) % 4 == 0  # version n is 17 + 4n squares
+    assert not any(m[0]) and not any(row[0] for row in m)  # the quiet border
+    for x, y in ((4, 4), (size - 11, 4), (4, size - 11)):  # the three finder squares: a dark ring, then light
+        assert all(m[y][x + i] and m[y + 6][x + i] and m[y + i][x] and m[y + i][x + 6] for i in range(7))
+        assert not m[y + 1][x + 1] and m[y + 3][x + 3]
