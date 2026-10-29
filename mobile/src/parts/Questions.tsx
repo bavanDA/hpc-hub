@@ -1,5 +1,7 @@
 // What a login asks while it runs (hpc_hub/api/hub.py): a password, a 6-digit code, a yes or no; and the Duo
-// screen while it waits for your phone. The backend waits on a worker thread until question.answer arrives.
+// screen while it waits for your phone, which opens Duo Mobile for you. The backend waits on a worker thread until
+// question.answer arrives.
+import { invoke } from '@tauri-apps/api/core'
 import { Smartphone } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
@@ -40,6 +42,10 @@ export function Questions() {
   })
 
   const duo = Object.values(sessions).find((s) => s.state === DUO)
+  const openDuo = () => invoke('open_duo').catch((e) => toast(String((e as Error).message ?? e)))
+  useEffect(() => {
+    if (duo) openDuo() // once per push: the push is sent by now, Duo Mobile shows it when it opens
+  }, [duo?.id]) // eslint-disable-line react-hooks/exhaustive-deps
   const q = questions[0]
   if (q) {
     const cancel = () => answer(q, null)
@@ -79,12 +85,14 @@ export function Questions() {
     const name = clusters?.find((c) => c.id === duo.id)?.name ?? duo.id
     return (
       <Sheet title={name} onClose={() => call('clusters.cancel', { cluster: duo.id }).catch(() => {})}
-        actions={<Button className="flex-1" onClick={() => call('clusters.cancel', { cluster: duo.id })
-          .catch((e: Error) => toast(e.message))}>Cancel</Button>}>
+        actions={<>
+          <Button className="flex-1" onClick={() => call('clusters.cancel', { cluster: duo.id })
+            .catch((e: Error) => toast(e.message))}>Cancel</Button>
+          <Button kind="primary" className="flex-1" onClick={openDuo}>Open Duo</Button></>}>
         <div className="flex h-full flex-col items-center justify-center gap-4 text-center">
           <Smartphone size={72} strokeWidth={1.25} className="text-accent-text" />
           <h2 className="text-2xl font-bold">Approve Duo</h2>
-          <p className="text-dim">Open the Duo app and approve the sign-in to {name}, then come back here.</p>
+          <p className="text-dim">Approve the sign-in to {name} in Duo Mobile, then come back here.</p>
         </div>
       </Sheet>
     )
