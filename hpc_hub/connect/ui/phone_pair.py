@@ -13,7 +13,8 @@ MODULE = 6  # pixels per QR square
 
 
 class PhonePairDialog(Adw.Dialog):
-    def __init__(self, sessions: list):
+    def __init__(self, sessions: list, at_once: bool = False):
+        """at_once: show the code right away when every login is ready (a cluster card's Connect phone)."""
         super().__init__(title="Set up the phone app", content_width=460)
         self.sessions = {s.cfg.id: s for s in sessions}
         self.rows: dict[str, Adw.SwitchRow] = {}
@@ -68,6 +69,8 @@ class PhonePairDialog(Adw.Dialog):
         tv.add_top_bar(Adw.HeaderBar())
         self.set_child(tv)
         self.connect("closed", lambda *_: self._hide())
+        if at_once and self.rows and all(r.get_active() for r in self.rows.values()):
+            self._show()
 
     def _show(self) -> None:
         picked = [cid for cid, row in self.rows.items() if row.get_active()]

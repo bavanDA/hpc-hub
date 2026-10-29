@@ -9,6 +9,7 @@ from ...compute.ui.compute_dialog import ComputeDialog
 from ...ui.widgets import open_menu
 from ..session import ClusterSession, State
 from .authenticator_help import AuthenticatorHelp
+from .phone_pair import PhonePairDialog
 
 MAX_LOG_LINES = 1000
 
@@ -63,6 +64,10 @@ class ClusterCard(Gtk.Box):
         gear = Gtk.Button(icon_name="emblem-system-symbolic", valign=Gtk.Align.CENTER, tooltip_text="Settings")
         gear.add_css_class("flat")
         gear.connect("clicked", lambda *_: on_settings(session))
+        phone = Gtk.Button(icon_name="phone-symbolic", valign=Gtk.Align.CENTER, css_classes=["flat"],
+                           tooltip_text="Connect phone: a QR code with this login for HPC Hub on your phone")
+        phone.connect("clicked", lambda *_: PhonePairDialog([session], at_once=True).present(self))
+        head.append(phone)
         head.append(gear)
 
         self.vpn_btn = Gtk.Button(label="VPN only", valign=Gtk.Align.CENTER, css_classes=["pill"],
