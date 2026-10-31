@@ -154,6 +154,7 @@ def test_vpn_only(env, monkeypatch):
     monkeypatch.setattr(session_mod.Vpn, "up", lambda self, auth: calls.append("up"))
     monkeypatch.setattr(session_mod.Vpn, "down", lambda self: calls.append("down"))
     monkeypatch.setattr(session_mod, "reachable", lambda *a, **k: True)
+    monkeypatch.setattr(session_mod.vpn_helper, "needs_helper", lambda: False)  # Linux's tunnel, on any system
     server, _ = env
     cfg = ClusterConfig(id="t", name="Test", host="fake")
     cfg.vpn.enabled, cfg.vpn.gateway = True, "vpn.example"
