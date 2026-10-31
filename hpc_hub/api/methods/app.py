@@ -3,7 +3,6 @@
 from dataclasses import asdict
 
 from ... import __version__
-from ...core import config
 from ..server import method
 
 
@@ -14,8 +13,9 @@ def version() -> dict:
 
 @method("clusters.list")
 def clusters() -> list[dict]:
-    """Your clusters and their settings (no secrets live there)."""
-    return [asdict(c) for c in config.load()]
+    """The clusters you use (setup.choose) and their settings (no secrets live there)."""
+    from ..hub import hub
+    return [asdict(c) for c in hub().clusters]
 
 
 @method("app.status")

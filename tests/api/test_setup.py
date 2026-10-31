@@ -37,3 +37,12 @@ def test_use_clusters_adds_and_drops_sessions(monkeypatch):
     h.sessions["wulver"].state = State.CONNECTED
     with pytest.raises(RuntimeError, match="Disconnect"):
         h.use_clusters(["sdsc"])
+
+
+def test_the_cluster_list_has_only_the_chosen_ones(monkeypatch):
+    from hpc_hub.api import hub as hub_mod
+    from hpc_hub.api.methods import app
+    h = Hub.__new__(Hub)
+    h.clusters = [c for c in config.default_clusters() if c.id == "wulver"]  # picked NJIT only on the first start
+    monkeypatch.setattr(hub_mod, "_hub", h)
+    assert [c["id"] for c in app.clusters()] == ["wulver"]
