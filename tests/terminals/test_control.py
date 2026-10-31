@@ -1,12 +1,9 @@
-import fcntl
 import os
-import pty
 import select
 import shutil
 import struct
 import subprocess
 import sys
-import termios
 import time
 from pathlib import Path
 
@@ -76,6 +73,10 @@ def _read_until(fd: int, want: bytes, seconds: float = 10) -> bytes:
 
 @pytest.mark.skipif(not shutil.which("tmux"), reason="needs tmux")
 def test_bridge_shows_history_and_types(tmp_path):
+    import fcntl  # POSIX only: the rest of this file runs on Windows too
+    import pty
+    import termios
+
     sock = f"hpchub-test-{os.getpid()}"
     tm = ["tmux", "-L", sock, "-f", "/dev/null"]
     env = {**os.environ, "TMUX": "", "HOME": str(tmp_path), "PS1": "$ "}

@@ -42,6 +42,16 @@ POSIX = {
     "files/test_remote_fs.py", "files/test_transfer.py", "latex/test_latex_git.py",
     "projects/test_projects.py", "terminals/test_tmux.py",
 }
+# single posix tests in files that otherwise run on Windows
+POSIX_TESTS = {
+    "agents/test_agents.py::test_claude_start_reads_its_program_first",  # runs bash
+    "core/test_ssh_keys.py::test_saved_key_matches_its_public_line",  # 0600 mode: the key is saved on the phone
+    "core/test_ssh_keys.py::test_authorize_replaces_the_last_phone_key",  # sh: it runs on the cluster
+    "core/test_vault_file.py::test_saved_encrypted_and_private",  # 0600 mode: the vault is Android only
+    # the HPC Hub Chrome window is Unix only (posix_spawn, fcntl): Windows does not offer it
+    "api/test_sso.py::test_pick_browser_offers_the_app_window_and_chrome_profiles",
+    "api/test_sso.py::test_pick_browser_offers_the_chrome_window",
+}
 
 GNU_TOOLS = {
     "agents/test_schedules.py::test_next_run_picks_the_next_matching_day",
@@ -90,7 +100,8 @@ def pytest_report_header(config):
     if not HAVE_GTK:
         lines.append(f"gtk: no PyGObject, not collected: {', '.join(sorted(GTK_FILES))}")
     if WINDOWS:
-        lines.append(f"posix: skipped on Windows: {len(POSIX)} files (see tests/conftest.py)")
+        lines.append(f"posix: skipped on Windows: {len(POSIX)} files, {len(POSIX_TESTS)} tests "
+                     "(see tests/conftest.py)")
     if MACOS:
         lines.append(f"gnu: skipped on macOS: {len(GNU_TOOLS)} tests (see tests/conftest.py)")
     return lines
@@ -104,7 +115,7 @@ def pytest_collection_modifyitems(config, items):
             item.add_marker(pytest.mark.gtk)
             if not HAVE_GTK:
                 item.add_marker(pytest.mark.skip(reason="gtk: needs PyGObject"))
-        if name in POSIX:
+        if name in POSIX or test in POSIX_TESTS:
             item.add_marker(pytest.mark.posix)
             if WINDOWS:
                 item.add_marker(pytest.mark.skip(reason="posix: the stand-in cluster is the local bash and "
