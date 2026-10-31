@@ -3,7 +3,7 @@
 # loaded from @executable_path/lib), plus vpnc-script, our wrapper and the licenses, in
 # app/src-tauri/vpn/openconnect/. See docs/design/vpn-helper.md.
 #
-#     packaging/fetch_openconnect_macos.sh      (CI: macos-14, arm64)
+#     packaging/fetch_openconnect_macos.sh      (CI: macos-15, arm64)
 set -euo pipefail
 
 OC_VERSION=9.21  # what Homebrew had when this was written; another one only warns
