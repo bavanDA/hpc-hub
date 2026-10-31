@@ -1,6 +1,8 @@
+import os
+import socket
 import subprocess
 
-from hpc_hub.connect.askpass_server import AskpassServer
+from hpc_hub.connect.askpass_server import AskpassServer, peer_uid
 from hpc_hub.core.paths import ASKPASS_BIN
 
 
@@ -26,3 +28,9 @@ def test_round_trip(tmp_path, monkeypatch):
         assert run(server.env(refuse), "x").returncode == 1
     finally:
         server.stop()
+
+
+def test_peer_is_you():
+    a, b = socket.socketpair()
+    with a, b:
+        assert peer_uid(a) == os.getuid()

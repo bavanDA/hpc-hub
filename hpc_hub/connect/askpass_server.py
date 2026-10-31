@@ -18,6 +18,15 @@ from ..core.paths import ASKPASS_BIN, WINDOWS, runtime_dir
 Handler = Callable[[str], str | None]
 
 
+def peer_uid(conn: socket.socket) -> int | None:
+    """Who is on the other end: SO_PEERCRED on Linux, LOCAL_PEERCRED on macOS. None: can't tell, so refuse."""
+    if hasattr(socket, "SO_PEERCRED"):
+        return struct.unpack("3i", conn.getsockopt(socket.SOL_SOCKET, socket.SO_PEERCRED, struct.calcsize("3i")))[1]
+    if hasattr(socket, "LOCAL_PEERCRED"):  # struct xucred: version, uid, ngroups, 16 groups; level 0 is SOL_LOCAL
+        return struct.unpack_from("2I", conn.getsockopt(0, socket.LOCAL_PEERCRED, 76))[1]
+    return None
+
+
 class AskpassServer:
     def __init__(self, name: str = "askpass.sock"):
         self.path = runtime_dir() / name  # each app its own: the GTK app and the Tauri backend can run together
@@ -84,9 +93,7 @@ class AskpassServer:
 
     def _serve(self, conn: socket.socket) -> None:
         with conn:
-            creds = conn.getsockopt(socket.SOL_SOCKET, socket.SO_PEERCRED, struct.calcsize("3i"))
-            _, uid, _ = struct.unpack("3i", creds)
-            if uid != os.getuid():
+            if peer_uid(conn) != os.getuid():
                 return
             try:
                 req = json.loads(conn.makefile("rb").readline() or b"{}")
