@@ -216,7 +216,11 @@ def kill(s: Session) -> str:
 # other disconnect may come back by itself. Prints the link while on, "on" if on without a link yet, else "".
 CLAUDE_LINK = r"""import calendar, glob, json, os, subprocess, sys, time
 name, tag = sys.argv[1], sys.argv[2]
-out = lambda *a: subprocess.run(a, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, universal_newlines=True).stdout
+def out(*a):
+    try:
+        return subprocess.run(a, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, universal_newlines=True).stdout
+    except OSError:  # no tmux or ps here: the tag still finds the chat
+        return ""
 pane = out("tmux", "display-message", "-p", "-t", "=" + name + ":", "#{pane_pid}").strip()
 sid, since, todo = "", 0, [pane]
 rows = [r.split(None, 2) for r in out("ps", "-e", "-o", "pid=,ppid=,comm=").splitlines()]

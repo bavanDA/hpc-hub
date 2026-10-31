@@ -5,9 +5,13 @@
   are not collected; single tests are skipped.
 - posix: tests whose fake cluster is the local bash, coreutils, tmux, fake ssh scripts, Unix sockets or
   symlinks. What they check runs on the Linux cluster, and the Linux job runs them.
+
+macOS runs the posix ones too, except GNU_TOOLS: those need the cluster's GNU find, stat, du or date, which macOS
+has in other forms. Its temporary folders are short there, since Unix socket paths may not pass 104 characters.
 """
 
 import importlib.util
+import os
 import sys
 from pathlib import Path
 
@@ -15,6 +19,7 @@ import pytest
 
 HERE = Path(__file__).parent
 WINDOWS = sys.platform == "win32"
+MACOS = sys.platform == "darwin"
 HAVE_GTK = importlib.util.find_spec("gi") is not None
 
 GTK_FILES = {"files/test_file_menu.py", "latex/test_file_tree.py", "api/test_keysetup.py",
@@ -37,6 +42,38 @@ POSIX = {
     "files/test_remote_fs.py", "files/test_transfer.py", "latex/test_latex_git.py",
     "projects/test_projects.py", "terminals/test_tmux.py",
 }
+# single posix tests in files that otherwise run on Windows
+POSIX_TESTS = {
+    "agents/test_agents.py::test_claude_start_reads_its_program_first",  # runs bash
+    "core/test_ssh_keys.py::test_saved_key_matches_its_public_line",  # 0600 mode: the key is saved on the phone
+    "core/test_ssh_keys.py::test_authorize_replaces_the_last_phone_key",  # sh: it runs on the cluster
+    "core/test_vault_file.py::test_saved_encrypted_and_private",  # 0600 mode: the vault is Android only
+    # the HPC Hub Chrome window is Unix only (posix_spawn, fcntl): Windows does not offer it
+    "api/test_sso.py::test_pick_browser_offers_the_app_window_and_chrome_profiles",
+    "api/test_sso.py::test_pick_browser_offers_the_chrome_window",
+}
+
+GNU_TOOLS = {
+    "agents/test_schedules.py::test_next_run_picks_the_next_matching_day",
+    "api/test_files.py::test_list_sorts_folders_first_and_gives_the_path",
+    "api/test_files.py::test_list_home_and_not_connected",
+    "api/test_files.py::test_zip_extract_and_copy_plan",
+    "api/test_files_local.py::test_download_never_overwrites",
+    "api/test_latex_api.py::test_open_a_tex_file_remembers_the_project_and_lists_the_tree",
+    "api/test_latex_api.py::test_picker_shows_latex_projects_and_saved_papers",
+    "api/test_latex_api.py::test_pdf_info_and_chunks",
+    "api/test_latex_api.py::test_synctex_both_ways",
+    "api/test_projects.py::test_browse_lists_folders_only",
+    "api/test_projects.py::test_copy_plan_sizes_and_chats",
+    "connect/test_session_asyncssh.py::test_duo_login_node_and_disconnect",
+    "core/test_ssh_async.py::test_commands",
+    "core/test_ssh_async.py::test_stopping_the_local_process_closes_the_channel",
+    "files/test_remote_fs.py::test_roundtrip_on_local_shell",
+    "files/test_remote_fs.py::test_list_dir_follows_link",
+    "files/test_remote_fs.py::test_places",
+    "files/test_transfer.py::test_copy_folder_between_shells",
+    "files/test_transfer.py::test_copy_leaves_out_skipped_subfolders",
+}
 
 
 def _name(path: Path) -> str:
@@ -44,6 +81,8 @@ def _name(path: Path) -> str:
 
 
 def pytest_configure(config):
+    if MACOS and not config.option.basetemp:  # /private/var/folders/... is too long for socket paths
+        config.option.basetemp = f"/tmp/hpc-hub-tests-{os.getuid()}"
     config.addinivalue_line("markers", "gtk: needs PyGObject (GTK screens, Poppler, GNOME keyring)")
     config.addinivalue_line("markers", "posix: needs a POSIX system (bash, coreutils, Unix sockets)")
     config.addinivalue_line("markers", "keyring_backends: may call credentials' real backend functions "
@@ -61,7 +100,10 @@ def pytest_report_header(config):
     if not HAVE_GTK:
         lines.append(f"gtk: no PyGObject, not collected: {', '.join(sorted(GTK_FILES))}")
     if WINDOWS:
-        lines.append(f"posix: skipped on Windows: {len(POSIX)} files (see tests/conftest.py)")
+        lines.append(f"posix: skipped on Windows: {len(POSIX)} files, {len(POSIX_TESTS)} tests "
+                     "(see tests/conftest.py)")
+    if MACOS:
+        lines.append(f"gnu: skipped on macOS: {len(GNU_TOOLS)} tests (see tests/conftest.py)")
     return lines
 
 
@@ -73,11 +115,14 @@ def pytest_collection_modifyitems(config, items):
             item.add_marker(pytest.mark.gtk)
             if not HAVE_GTK:
                 item.add_marker(pytest.mark.skip(reason="gtk: needs PyGObject"))
-        if name in POSIX:
+        if name in POSIX or test in POSIX_TESTS:
             item.add_marker(pytest.mark.posix)
             if WINDOWS:
                 item.add_marker(pytest.mark.skip(reason="posix: the stand-in cluster is the local bash and "
                                                         "Unix tools; runs on Linux"))
+        if MACOS and test in GNU_TOOLS:
+            item.add_marker(pytest.mark.skip(reason="gnu: the stand-in cluster needs GNU find, stat, du or date; "
+                                                    "runs on Linux"))
 
 
 @pytest.fixture
