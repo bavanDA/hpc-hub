@@ -1,8 +1,9 @@
-// A cluster's settings, like the GTK app's settings.py, in two tabs: Sign-in (username, password or key; the
-// server and VPN under Advanced) and Compute (the node; queues, the VS Code job and the agents under Advanced).
+// A cluster's settings, like the GTK app's settings.py: sections in a list down the left. Sign-in (username,
+// password or key) and Compute (the node) first; under Advanced the server and VPN, queues, the VS Code job and
+// the agents.
 // Saved with cluster_settings.save, which checks every field; logins with clusters.set_login. Passwords go in
 // and never come back out.
-import { ChevronRight, ExternalLink, KeyRound, Lock } from 'lucide-react'
+import { ExternalLink, KeyRound, Lock } from 'lucide-react'
 import { useEffect, useState, type ReactNode } from 'react'
 
 import { call } from '../../rpc'
@@ -21,21 +22,25 @@ import { CHROME_WINDOW } from './SignIn'
 import { putCluster } from './store'
 import { minutes, slurmTime } from './time'
 
-const TABS = [['login', 'Sign-in'], ['compute', 'Compute']] as const
-export type Tab = typeof TABS[number][0]
-/** The tabs before there were two (a demo link or an old caller): where their settings live now. */
-const MOVED: Record<string, [Tab, boolean]> = { server: ['login', true], vscode: ['compute', true],
-  agents: ['compute', true] }
+const MAIN = [['login', 'Sign-in'], ['compute', 'Compute']] as const
+const ADVANCED = [['server', 'Server and VPN'], ['queues', 'Queues and Slurm'], ['vscode', 'VS Code'],
+  ['agents', 'Agents']] as const
+export type Tab = typeof MAIN[number][0] | typeof ADVANCED[number][0]
+const TABS: readonly (readonly [Tab, string])[] = [...MAIN, ...ADVANCED]
 
-/** A closed section at the bottom of a tab, for settings most people never change. */
-function Advanced({ open, onToggle, children }: { open: boolean; onToggle: () => void; children: ReactNode }) {
+/** Where a caller's start (and its old advanced flag) opens: the advanced part of Sign-in is Server and VPN. */
+function firstTab(start: string, advanced: boolean): Tab {
+  if (!TABS.some(([t]) => t === start)) return advanced ? 'server' : 'login'
+  if (advanced && start === 'login') return 'server'
+  if (advanced && start === 'compute') return 'queues'
+  return start as Tab
+}
+
+function NavItem({ id, label, on, pick }: { id: Tab; label: string; on: boolean; pick: (t: Tab) => void }) {
   return (
-    <div className="mt-2 border-t border-line pt-3">
-      <button type="button" onClick={onToggle} aria-expanded={open}
-        className="-ml-1 flex items-center gap-1.5 rounded-md px-1 py-1 text-md font-semibold hover:bg-hover">
-        <ChevronRight size={16} className={`transition-transform duration-150 ${open ? 'rotate-90' : ''}`} />Advanced</button>
-      {open && <div className="mt-4">{children}</div>}
-    </div>
+    <button type="button" role="tab" aria-selected={on} onClick={() => pick(id)}
+      className={`flex h-8 w-full items-center rounded-md px-3 text-left text-base transition-colors duration-90 ${
+        on ? 'bg-selected font-semibold' : 'text-dim hover:bg-hover hover:text-text'}`}>{label}</button>
   )
 }
 
@@ -87,9 +92,7 @@ function More({ p, set, limits, extra }:
 export function SettingsDialog({ cluster, hint, onClose, start = 'login', advanced = false }:
   { cluster: Cluster; hint?: string; onClose: () => void; start?: string; advanced?: boolean }) {
   const toast = useToast()
-  const [first, firstOpen] = MOVED[start] ?? [start === 'compute' ? 'compute' : 'login', advanced]
-  const [tab, setTab] = useState<Tab>(first)
-  const [more, setMore] = useState(firstOpen)
+  const [tab, setTab] = useState<Tab>(() => firstTab(start, advanced))
   const [d, setD] = useState<Cluster>(cluster)
   const [info, setInfo] = useState<SettingsInfo | null>(null)
   const [saved, setSaved] = useState<Logins | null>(null)
@@ -182,16 +185,20 @@ export function SettingsDialog({ cluster, hint, onClose, start = 'login', advanc
 
   const instead = d.key_page && d.password_too
     ? <div className="-mt-2 mb-5 flex"><PasswordInstead on={usePassword} onChange={setUsePassword} /></div> : null
-  const forgetLink = (what: string) => (
-    <button type="button" onClick={forget}
-      className="rounded px-1 py-1 text-base text-bad hover:underline">Forget {what}</button>
+  // the one destructive thing here: a row of its own at the bottom, with a soft red button
+  const forgetRow = (what: string) => (
+    <Group>
+      <ActionRow label={`Forget ${what}`}>
+        <Button kind="danger" size="sm" type="button" onClick={forget}>Forget</Button>
+      </ActionRow>
+    </Group>
   )
   const keyText = keyHeading(d).text
   const login = d.key_page && !usePassword ? <>
     {keyText && <p className="mb-3 text-base text-dim">{keyText}</p>}
     <div className="mb-3"><KeyPanel cluster={d} user={user} onUser={setUser} /></div>
     {instead}
-    <div className="mb-4 flex">{forgetLink(d.username_label || 'username')}</div>
+    {forgetRow(d.username_label || 'username')}
   </> : <>
     <List>
       <EntryRow label={d.username_label || 'Username'} value={user} onChange={setUser} autoFocus
@@ -217,7 +224,7 @@ export function SettingsDialog({ cluster, hint, onClose, start = 'login', advanc
         <Button type="button" onClick={() => setOpen('key')}>{copy.portal(d)}</Button>
       </div>
     )}
-    <div className="mb-4 flex">{forgetLink('saved password')}</div>
+    {forgetRow('saved password')}
   </>
 
   const server = <>
@@ -316,7 +323,6 @@ export function SettingsDialog({ cluster, hint, onClose, start = 'login', advanc
   </>
 
   const agents = <>
-    <h3 className="mb-1 text-md font-semibold">Agents</h3>
     <p className="mb-3 text-sm text-dim">What each agent starts with. You can change these when you start one
       too.</p>
     {(info?.agents ?? []).map((a) => {
@@ -340,29 +346,30 @@ export function SettingsDialog({ cluster, hint, onClose, start = 'login', advanc
   </>
 
   const pages: Record<Tab, ReactNode> = {
-    login: <>{login}<Advanced open={more} onToggle={() => setMore(!more)}>{server}</Advanced></>,
-    compute: <>{compute}<Advanced open={more} onToggle={() => setMore(!more)}>
-      {queues}{vscode}{agents}</Advanced></>,
+    login, compute, server, queues, vscode: vscode || <p className="text-dim">No VS Code settings here.</p>, agents,
   }
+  const title = TABS.find(([t]) => t === tab)?.[1] ?? ''
   return (
     <>
-      <Dialog title={`${d.name} settings`} onClose={onClose} width={640}
+      <Dialog title={`${d.name} settings`} onClose={onClose} width={780} height={640} bare
         actions={<>
-          <Button onClick={onClose}>Cancel</Button>
-          <Button kind="suggested" disabled={busy || !saved || !info} onClick={save}>Save</Button>
+          <span className="mr-auto text-sm text-dim">Changes apply the next time you connect.</span>
+          <Button kind="ghost" onClick={onClose}>Cancel</Button>
+          <Button kind="primary" disabled={busy || !saved || !info} onClick={save}>Save</Button>
         </>}>
-        <div role="tablist" className="mb-4 flex flex-wrap justify-center gap-1 rounded-full bg-pill p-1">
-          {TABS.map(([t, label]) => (
-            <button key={t} type="button" role="tab" aria-selected={tab === t} onClick={() => { setTab(t); setMore(false) }}
-              className={`h-8 flex-1 whitespace-nowrap rounded-full px-3 text-base font-semibold transition-colors duration-90 ${
-                tab === t ? 'bg-card shadow-[var(--shadow-card)]' : 'text-dim hover:text-[var(--color-text)]'}`}>
-              {label}</button>
-          ))}
+        <nav role="tablist" aria-orientation="vertical" aria-label="Settings sections"
+          className="flex w-48 shrink-0 flex-col gap-0.5 rounded-bl-2xl bg-sidebar p-2">
+          {MAIN.map(([t, label]) => <NavItem key={t} id={t} label={label} on={tab === t} pick={setTab} />)}
+          <p className="mt-4 mb-1 px-3 text-xs font-semibold text-dim">Advanced</p>
+          {ADVANCED.map(([t, label]) => <NavItem key={t} id={t} label={label} on={tab === t} pick={setTab} />)}
+        </nav>
+        <div role="tabpanel" aria-label={title} className="min-w-0 flex-1 overflow-y-auto px-6 py-5">
+          <h3 className="mb-4 text-lg font-semibold">{title}</h3>
+          {hint && <p className="mb-4 rounded-lg bg-warn-bg px-4 py-2.5 text-base font-semibold text-warn">{hint}</p>}
+          {error && <p role="alert" className="mb-4 rounded-lg bg-bad-bg px-4 py-2.5 text-base font-semibold text-bad">
+            {error}</p>}
+          {pages[tab]}
         </div>
-        {hint && <p className="mb-4 rounded-lg bg-warn-bg px-4 py-2.5 text-base font-semibold text-warn">{hint}</p>}
-        {error && <p role="alert" className="mb-4 rounded-lg bg-bad-bg px-4 py-2.5 text-base font-semibold text-bad">
-          {error}</p>}
-        {pages[tab]}
       </Dialog>
       {open === 'key' && <KeySetupDialog cluster={d} onClose={() => setOpen(null)} onDone={keyDone} />}
     </>
