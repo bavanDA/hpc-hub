@@ -98,7 +98,7 @@ export function More() {
         </Card>
       </div>
       {perms && (
-        <Sheet title={`Agent permissions on ${perms.name}`} onClose={() => setPerms(null)}>
+        <Sheet title="Agent permissions" onClose={() => setPerms(null)}>
           <SharedToasts>
             <Suspense fallback={<Spinner />}><Permissions /></Suspense>
           </SharedToasts>
