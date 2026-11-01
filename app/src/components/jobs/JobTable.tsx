@@ -4,7 +4,8 @@ import { ChevronDown, ChevronUp, MoreVertical } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
 import type { Job } from '../../types/jobs'
-import { STATE_PILL, queue, stateName, type SortKey } from './format'
+import { StatusPill } from '../ui'
+import { queue, stateName, type SortKey } from './format'
 
 const COLUMNS: [SortKey, string][] = [
   ['id', 'ID'], ['name', 'Name'], ['queue', 'Partition · QoS'], ['state', 'State'],
@@ -52,8 +53,7 @@ export function JobTable({ jobs, showUser, sort, onSort, onOpen, onCancel }: {
             <td className="px-2 leading-tight whitespace-nowrap" title={queue(j)}>{j.partition}
               {j.qos && <div className="text-xs text-dim">{j.qos}</div>}</td>
             <td className="px-2">
-              <span className={`inline-block whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-semibold ${
-                STATE_PILL[j.state] ?? 'bg-pill'}`}>{stateName(j.state)}</span></td>
+              <StatusPill state={j.state}>{stateName(j.state)}</StatusPill></td>
             <td className="px-2 leading-tight whitespace-nowrap">{j.elapsed}
               <div className="text-xs text-dim">of {j.limit}</div></td>
             <td className="px-2 whitespace-nowrap">{j.cpus} · {j.mem}</td>

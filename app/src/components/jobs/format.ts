@@ -2,10 +2,10 @@
 import type { Job } from '../../types/jobs'
 import type { Account } from '../../types/usage'
 
-/** The state's pill: tinted background, its color for text. */
+/** The phone's pill colors; the desktop uses StatusPill (ui.tsx statusKind), whose five kinds these follow. */
 export const STATE_PILL: Record<string, string> = {
-  RUNNING: 'bg-ok-bg text-ok', PENDING: 'bg-warn-bg text-warn', COMPLETING: 'bg-pill text-accent-text',
-  CANCELLED: 'bg-pill text-dim', COMPLETED: 'bg-pill',
+  RUNNING: 'bg-ok-bg text-ok', PENDING: 'bg-warn-bg text-warn', COMPLETING: 'bg-accent-soft text-accent-text',
+  CANCELLED: 'bg-pill text-dim', COMPLETED: 'bg-pill text-dim',
   FAILED: 'bg-bad-bg text-bad', TIMEOUT: 'bg-bad-bg text-bad', OUT_OF_MEMORY: 'bg-bad-bg text-bad',
   NODE_FAIL: 'bg-bad-bg text-bad',
 }
