@@ -37,11 +37,12 @@ function Status({ s, vpnOnly }: { s: Session; vpnOnly: boolean }) {
   )
 }
 
-function Chip({ icon: Icon, label, onClick }: { icon: LucideIcon; label: string; onClick: () => void }) {
+/** One of the things you open, icon over its name: five fit side by side on a phone. */
+function Open({ icon: Icon, label, onClick }: { icon: LucideIcon; label: string; onClick: () => void }) {
   return (
-    <button onClick={onClick} className="flex h-11 shrink-0 items-center gap-2 rounded-full bg-pill px-4 font-semibold
-      active:bg-selected">
-      <Icon size={18} className="text-accent-text" />{label}</button>
+    <button onClick={onClick} className="flex min-h-16 min-w-0 flex-col items-center justify-center gap-1 rounded-xl
+      bg-pill px-1 text-xs font-semibold active:bg-selected">
+      <Icon size={22} className="text-accent-text" /><span className="max-w-full truncate">{label}</span></button>
   )
 }
 
@@ -130,12 +131,12 @@ export function ClusterCard({ cluster: c, session: s, log }: { cluster: Cluster;
                   <button onClick={() => setOpen('request')} disabled={busy}
                     className="h-11 px-2 font-semibold text-accent-text disabled:opacity-50">Get one</button></>}
           </div>
-          <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1">
-            <Chip icon={SquareTerminal} label="Terminal" onClick={() => go('terminals', { cluster: c.id, new: '1' })} />
-            <Chip icon={FileCode2} label="Code" onClick={() => go('code', { cluster: c.id })} />
-            <Chip icon={Folder} label="Files" onClick={() => go('files', { cluster: c.id })} />
-            <Chip icon={Bot} label="Agents" onClick={() => setOpen('agents')} />
-            <Chip icon={Code} label="VS Code" onClick={() => go('agents', { cluster: c.id, start: 'vscode' })} />
+          <div className="grid grid-cols-5 gap-2">
+            <Open icon={SquareTerminal} label="Terminal" onClick={() => go('terminals', { cluster: c.id, new: '1' })} />
+            <Open icon={FileCode2} label="Code" onClick={() => go('code', { cluster: c.id })} />
+            <Open icon={Folder} label="Files" onClick={() => go('files', { cluster: c.id })} />
+            <Open icon={Bot} label="Agents" onClick={() => setOpen('agents')} />
+            <Open icon={Code} label="VS Code" onClick={() => go('agents', { cluster: c.id, start: 'vscode' })} />
           </div>
         </>
       )}

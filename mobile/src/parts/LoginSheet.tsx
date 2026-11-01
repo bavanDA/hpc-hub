@@ -3,7 +3,7 @@
 import { ScanQrCode } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
-import { copy } from '@shared/components/clusters/loginCopy'
+import { copy, who } from '@shared/components/clusters/loginCopy'
 import { call } from '@shared/rpc'
 import { secondStep, type Cluster, type Logins } from '@shared/types/clusters'
 import { Button, ConfirmSheet, Field, Sheet, Switch, useToast } from '../ui'
@@ -67,12 +67,14 @@ export function LoginSheet({ cluster: c, hint, onClose }: { cluster: Cluster; hi
           onChange={(e) => setPassword(e.target.value)}
           placeholder={saved?.ssh.password ? copy.saved : c.password_only ? '' : 'Empty for an SSH key'} />
       </form>
-      <p className="text-sm text-dim">{copy.passwordNote(c)}</p>
+      <p className="text-sm text-dim">Kept encrypted on this phone. Changing it here doesn't change your {who(c)} password.</p>
       <Switch label={copy.remember} hint={remember ? undefined : copy.rememberOff} checked={remember}
         onChange={setRemember} />
-      <p className="mt-2 text-sm text-dim">{secondStep(c)}</p>
-      {c.second_factor === 'code' && c.code_setup && <button onClick={() => setAsk('code')}
-        className="h-11 font-semibold text-accent-text">{copy.codeSetup}</button>}
+      {c.second_factor === 'code' && <>
+        <p className="mt-2 text-sm text-dim">{secondStep(c)}</p>
+        {c.code_setup && <button onClick={() => setAsk('code')} className="h-11 font-semibold text-accent-text">
+          {copy.codeSetup}</button>}
+      </>}
       {saved?.ssh.password && <button onClick={() => setAsk('forget')}
         className="mt-4 block h-11 font-semibold text-bad">{copy.forget}</button>}
       {ask === 'forget' && <ConfirmSheet title={copy.forgetTitle(c)} text={copy.forgetBody(label)} confirm={copy.forget}

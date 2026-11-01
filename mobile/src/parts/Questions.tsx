@@ -73,7 +73,9 @@ export function Questions() {
     again.current = id
     call('clusters.cancel', { cluster: id }).catch((e: Error) => toast(e.message))
   }
-  const openDuo = () => invoke('open_duo').catch((e) => toast(String((e as Error).message ?? e)))
+  const openDuo = () => {  // only the phone app can open Duo Mobile (not the demo in a browser)
+    if ('__TAURI_INTERNALS__' in window) invoke('open_duo').catch((e) => toast(String((e as Error).message ?? e)))
+  }
   useEffect(() => {
     if (duo) openDuo() // once per push: the push is sent by now, Duo Mobile shows it when it opens
   }, [duo?.id]) // eslint-disable-line react-hooks/exhaustive-deps
