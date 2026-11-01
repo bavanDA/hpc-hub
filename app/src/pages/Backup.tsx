@@ -15,7 +15,7 @@ import { useBackup, type Step } from '../components/backup/useBackup'
 import { NotConnected } from '../components/clusters/NotConnected'
 import { useClusters } from '../components/jobs/clusters'
 import { Button, Card, EmptyState, PageHead, Spinner } from '../components/ui'
-import { useGo } from '../nav'
+import { useGo, usePageParams } from '../nav'
 
 const STEPS: [Step[], string][] = [[['start', 'scanning'], 'Check'], [['risk'], 'At risk'], [['plan'], 'Plan'],
   [['space'], 'Space'], [['copy', 'done'], 'Copy']]
@@ -45,7 +45,7 @@ export function Backup() {
 }
 
 function Flow({ id, name }: { id: string; name: string }) {
-  const b = useBackup(id)
+  const b = useBackup(id, usePageParams().step)
   const go = useGo()
   const [remind, setRemind] = useState(false)
   const s = b.summary

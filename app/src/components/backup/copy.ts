@@ -156,9 +156,9 @@ export const done = {
   notes: 'Notes on what was copied and left out:',
   open: 'Open in Files',
   weekly: 'Check again next week',
-  partial: (copied: number, total: number, busy: number) =>
-    `Copied ${count(copied)} of ${count(total)} files. ${busy} ${busy === 1 ? 'was' : 'were'} busy. `
-    + `${busy === 1 ? 'It is' : 'They are'} in the list below. Copy ${busy === 1 ? 'it' : 'them'} later.`,
+  partial: (copied: number, total: number) => `Copied ${count(copied)} of ${count(total)} files.`,
+  busy: (n: number) => `${count(n)} ${n === 1 ? 'file was' : 'files were'} still being written by a job. `
+    + `Copy ${n === 1 ? 'it' : 'them'} after the job ends.`,
   failed: (n: number) => `${count(n)} ${n === 1 ? 'file' : 'files'} could not be read.`,
   mismatch: (n: number, help: string) => `${count(n)} ${n === 1 ? 'file still does' : 'files still do'} not match. `
     + `Scratch still has them. Try again, or write to ${help}.`,

@@ -6,7 +6,7 @@ import { plan as basePlan, result, summary } from './backup_data'
 const GB = 1024 ** 3
 // ?backup=full (project nearly full), tight (the copy doesn't fit), partial (busy files), mismatch: for design work
 const knob = typeof location === 'undefined' ? '' : new URLSearchParams(location.search).get('backup') ?? ''
-const QUOTA = { full: 1640, tight: 1500 }[knob] ?? summary.destinations[0].quota_gb
+const QUOTA = { full: 1640, tight: 1600 }[knob] ?? summary.destinations[0].quota_gb
 const RESULT = {
   ...result, busy: knob === 'partial' ? result.busy : [], mismatches: knob === 'mismatch' ? 3 : 0,
   failed: knob === 'partial' ? [{ path: 'misc/locked.bin', why: 'No read permission' }] : [],

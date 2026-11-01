@@ -229,7 +229,7 @@ export function Files() {
         onGo={go} onUp={() => path && go(parent(path))} onRefresh={refresh} onNewFolder={newFolder}
         onUpload={upload} />}
       {connected && <ScratchBanner cluster={cluster} path={path} places={places}
-        onOpen={() => goPage('backup', { cluster })} />}
+        onOpen={() => goPage('backup', { cluster, step: 'plan' })} />}
       {clip && <ClipBanner clip={clip} canPaste={connected && !!path} onPaste={paste} onDrop={() => setClip(null)} />}
       <div className="flex min-h-0 flex-1">
         <div className="flex min-w-0 flex-1 flex-col">{body}</div>
