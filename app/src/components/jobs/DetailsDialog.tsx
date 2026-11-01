@@ -24,11 +24,10 @@ export function DetailsDialog({ cluster, job: j, onClose, onCancel }:
   const groups: DetailGroup[] = (details?.groups ?? []).map((g) => g.title === 'Resources' && j.su
     ? { ...g, rows: [...g.rows, { label: 'SU', value: j.su }] } : g)
   const copy = (v: string) => navigator.clipboard.writeText(v).then(() => toast('Path copied'), () => {})
-  // the output file in Files: its folder, with the file picked
+  // the output file in the Code page, to read; while the job runs it follows the file as it grows
   const view = (path: string) => {
     onClose()
-    const cut = path.lastIndexOf('/')
-    go('files', { cluster, path: cut > 0 ? path.slice(0, cut) : '/', select: path.slice(cut + 1) })
+    go('code', { cluster, path, readonly: '1', ...(/running/i.test(j.state) ? { follow: '1' } : {}) })
   }
 
   return (
