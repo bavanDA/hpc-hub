@@ -61,7 +61,8 @@ class ClusterCard(Gtk.Box):
         self.pill.set_valign(Gtk.Align.CENTER)
         head.append(self.pill)
 
-        gear = Gtk.Button(icon_name="emblem-system-symbolic", valign=Gtk.Align.CENTER, tooltip_text=f"{session.cfg.name} settings")
+        gear = Gtk.Button(icon_name="emblem-system-symbolic", valign=Gtk.Align.CENTER,
+                          tooltip_text=f"{session.cfg.name} settings")
         gear.add_css_class("flat")
         gear.connect("clicked", lambda *_: on_settings(session))
         phone = Gtk.Button(icon_name="phone-symbolic", valign=Gtk.Align.CENTER, css_classes=["flat"],
@@ -124,6 +125,7 @@ class ClusterCard(Gtk.Box):
         self.expander = Gtk.Expander(label="Log", child=scroller)
         self.append(self.expander)
 
+        self._asked = False  # the node dialog opened once for this pick (cfg.ask_node)
         self.refresh()
 
     def _on_want_node(self, btn) -> None:
@@ -135,6 +137,10 @@ class ClusterCard(Gtk.Box):
         if s.allocation:
             s.release_node()
             return
+        self._node_dialog()
+
+    def _node_dialog(self) -> None:
+        s = self.session
 
         def go(profile, remember):
             if remember:
@@ -158,7 +164,12 @@ class ClusterCard(Gtk.Box):
         where = cfg.host or "no host set"
         vpn = f"VPN {cfg.vpn.gateway or '(gateway not set)'}" if cfg.vpn.enabled else "no VPN"
         self.subtitle.set_label(f"{where} · {vpn}")
-        self.want_node.set_label(f"Compute node on connect: {cfg.profile.summary()}")
+        asks = ", asks first" if cfg.ask_node else ""
+        self.want_node.set_label(f"Compute node on connect: {cfg.profile.summary()}{asks}")
+        if s.pick_node and not self._asked:
+            self._asked = True
+            self._node_dialog()
+        self._asked = self._asked and s.pick_node
         self.want_node.set_active(cfg.request_node_on_connect)
         self.want_node.set_visible(s.state in (State.DISCONNECTED, State.ERROR))
 
