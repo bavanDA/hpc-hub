@@ -1,13 +1,16 @@
 """Open links in a chosen Chrome profile (e.g. your "Uni" one), or the system browser."""
 
 import json
+import os
 import shutil
 import subprocess
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 
-CHROME_DIRS = [Path.home() / ".config" / "google-chrome", Path.home() / ".config" / "chromium"]
-CHROME_BINS = ["google-chrome", "google-chrome-stable", "chromium-browser", "chromium"]
+CHROME_BINS = ["google-chrome", "google-chrome-stable", "chromium-browser", "chromium"]  # Linux, on PATH
+MAC_APPS = ["Google Chrome.app/Contents/MacOS/Google Chrome", "Chromium.app/Contents/MacOS/Chromium"]
+WINDOWS_EXE = r"Google\Chrome\Application\chrome.exe"
 preferred = ""  # Chrome profile name for every link the app opens; "" = system browser (set by the app)
 
 
@@ -18,8 +21,38 @@ class Profile:
     email: str = ""
 
 
+def chrome_dirs(platform: str = sys.platform, env=os.environ, home: Path | None = None) -> list[Path]:
+    """Where Chrome keeps its profiles (for their names, to open links in one)."""
+    home = home or Path.home()
+    if platform == "darwin":
+        base = home / "Library" / "Application Support"
+        return [base / "Google" / "Chrome", base / "Chromium"]
+    if platform == "win32":
+        local = Path(env.get("LOCALAPPDATA") or home / "AppData" / "Local")
+        return [local / "Google" / "Chrome" / "User Data", local / "Chromium" / "User Data"]
+    return [home / ".config" / "google-chrome", home / ".config" / "chromium"]
+
+
+CHROME_DIRS = chrome_dirs()
+
+
+def chrome_candidates(platform: str = sys.platform, env=os.environ, home: Path | None = None) -> list[str]:
+    """Full paths where Chrome is installed on macOS and Windows; on Linux, names looked up on PATH."""
+    home = home or Path.home()
+    if platform == "darwin":
+        return [str(d / app) for d in (Path("/Applications"), home / "Applications") for app in MAC_APPS]
+    if platform == "win32":
+        roots = [env.get(v) for v in ("ProgramFiles", "ProgramFiles(x86)", "LOCALAPPDATA")]
+        return [str(Path(r) / WINDOWS_EXE) for r in roots if r]
+    return CHROME_BINS
+
+
 def chrome() -> str:
-    return next((b for b in CHROME_BINS if shutil.which(b)), "")
+    """Chrome's program (a full path, or a name on PATH), or "" if it isn't installed."""
+    for c in chrome_candidates():
+        if os.path.isabs(c) and os.path.isfile(c) or not os.path.isabs(c) and shutil.which(c):
+            return c
+    return ""
 
 
 def profiles(config_dir: Path | None = None) -> list[Profile]:

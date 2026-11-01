@@ -75,7 +75,8 @@ class ClusterSession(NodesMixin):
 
     @property
     def connected(self) -> bool:
-        return self.state == State.CONNECTED and self.ssh is not None
+        """Logged in over SSH, so nodes, jobs and terminals work. VPN only is not connected in this sense."""
+        return self.state == State.CONNECTED and self.ssh is not None and not self.vpn_only
 
     @property
     def vpn(self) -> Vpn:
