@@ -37,17 +37,17 @@ export function LinkPicker() {
     <Dialog title="Open link" onClose={close} width={460}
       actions={<>
         <Button onClick={close}>Cancel</Button>
-        <Button onClick={copy}><Copy size={15} />Copy link</Button>
-        <Button kind="suggested" onClick={() => go()} autoFocus><ExternalLink size={15} />Open</Button>
+        <Button onClick={copy}><Copy size={16} />Copy link</Button>
+        <Button kind="suggested" onClick={() => go()} autoFocus><ExternalLink size={16} />Open</Button>
       </>}>
-      <p className="mb-4 break-all text-center text-[13px] text-dim" title={shown.url}>{short(shown.url)}</p>
+      <p className="mb-4 break-all text-center text-sm text-dim" title={shown.url}>{short(shown.url)}</p>
       <List>
         {options.map(([name, title, email]) => (
           <button key={name || '-'} onClick={() => setPicked(name)} onDoubleClick={() => go(name)}
             onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); go(name) } }}
             role="radio" aria-checked={picked === name} className="block w-full text-left">
             <Row title={title} subtitle={email || undefined} onClick={() => {}}
-              suffix={picked === name ? <Check size={18} className="text-accent-text" /> : <span className="w-[18px]" />} />
+              suffix={picked === name ? <Check size={20} className="text-accent-text" /> : <span className="w-[18px]" />} />
           </button>
         ))}
       </List>

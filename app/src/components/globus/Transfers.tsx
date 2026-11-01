@@ -30,7 +30,7 @@ function Progress({ t }: { t: Task }) {
   const part = t.files ? Math.min(1, t.files_done / t.files) : 0
   return (
     <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-pill">
-      {t.files ? <div className="h-full rounded-full bg-accent transition-all" style={{ width: `${part * 100}%` }} />
+      {t.files ? <div className="h-full rounded-full bg-accent transition-[width] duration-220" style={{ width: `${part * 100}%` }} />
         : <div className="h-full w-1/3 animate-pulse rounded-full bg-accent/60" />}
     </div>
   )
@@ -45,7 +45,7 @@ function TaskRow({ t, onCancel, names }:
   const failed = t.status === 'FAILED' && !t.cancelled
   return (
     <Row prefix={<Icon t={t} />}
-      title={<span className="font-bold">{t.label.replace(/^HPC Hub /, '')}</span>}
+      title={<span className="font-semibold">{t.label.replace(/^HPC Hub /, '')}</span>}
       subtitle={<>
         <span>{names[t.source] ?? t.source} → {names[t.destination] ?? t.destination}</span>
         <span className="block">{failed ? `Failed: ${reason(t)}`
@@ -65,12 +65,12 @@ export function Transfers({ tasks, error, onRefresh, onCancel, names = {} }:
   return (
     <div className="flex min-h-0 flex-col gap-2">
       <div className="flex items-center gap-2 px-1">
-        <h2 className="flex-1 font-bold">Recent transfers</h2>
+        <h2 className="flex-1 font-semibold">Recent transfers</h2>
         <IconButton icon={RefreshCw} label="Refresh" size={16} onClick={onRefresh} />
       </div>
       <div className="max-h-[168px] min-h-0 overflow-auto rounded-xl">
         <List>
-          {error ? <p className="p-4 text-center text-[13px] text-bad">{error}</p>
+          {error ? <p className="p-4 text-center text-sm text-bad">{error}</p>
             : !tasks?.length ? <p className="p-4 text-center text-dim">{tasks ? 'No transfers yet' : 'Loading…'}</p>
             : tasks.map((t) => <TaskRow key={t.task_id} t={t} onCancel={onCancel} names={names} />)}
         </List>

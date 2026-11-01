@@ -66,7 +66,7 @@ export function Usage() {
           <div role="tablist" className="inline-flex rounded-lg bg-pill p-0.5">
             {TABS.map(([key, title, Icon]) => (
               <button key={key} role="tab" aria-selected={tab === key} onClick={() => setTab(key)}
-                className={`flex h-8 items-center gap-2 rounded-md px-4 font-bold ${
+                className={`flex h-8 items-center gap-2 rounded-md px-4 font-semibold ${
                   tab === key ? 'bg-card shadow-[var(--shadow-card)]' : 'text-dim hover:text-text'}`}>
                 <Icon size={16} />{title}
               </button>

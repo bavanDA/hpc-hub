@@ -26,12 +26,12 @@ function build(entries: TreeEntry[]): Node[] {
 function Icon({ node, open }: { node: Node; open: boolean }) {
   const x = ext(node.name)
   const cls = 'shrink-0'
-  if (node.dir) return open ? <FolderOpen size={15} className={`${cls} text-accent-text`} />
-    : <Folder size={15} className={`${cls} text-accent-text`} />
-  if (x === '.tex') return <FileText size={15} className={`${cls} text-ok`} />
-  if (x === '.bib') return <BookOpen size={15} className={`${cls} text-warn`} />
-  if (IMAGE_EXT.includes(x) || x === '.pdf' || x === '.eps') return <Image size={15} className={`${cls} text-dim`} />
-  return <File size={15} className={`${cls} text-dim`} />
+  if (node.dir) return open ? <FolderOpen size={16} className={`${cls} text-accent-text`} />
+    : <Folder size={16} className={`${cls} text-accent-text`} />
+  if (x === '.tex') return <FileText size={16} className={`${cls} text-ok`} />
+  if (x === '.bib') return <BookOpen size={16} className={`${cls} text-warn`} />
+  if (IMAGE_EXT.includes(x) || x === '.pdf' || x === '.eps') return <Image size={16} className={`${cls} text-dim`} />
+  return <File size={16} className={`${cls} text-dim`} />
 }
 
 // Open folders by project, kept while you visit other pages
@@ -100,13 +100,13 @@ export function FileTree({ id, entries, current, main, actions }:
             node: n }) }}
           title={n.path === main ? 'Main file: Build compiles this' : n.path}
           style={{ paddingLeft: 8 + depth * 14 }}
-          className={`flex h-[30px] items-center gap-1.5 rounded-md pr-2 text-[13.5px] ${
+          className={`flex h-[30px] items-center gap-1.5 rounded-md pr-2 text-sm ${
             active ? 'bg-accent/15 text-accent-text' : picked === n.path ? 'bg-selected' : 'hover:bg-hover'} ${
             over === n.path && n.dir ? 'ring-2 ring-accent ring-inset' : ''}`}>
-          {n.dir ? <ChevronRight size={13} className={`shrink-0 text-dim transition-transform ${isOpen ? 'rotate-90' : ''}`} />
+          {n.dir ? <ChevronRight size={14} className={`shrink-0 text-dim transition-transform ${isOpen ? 'rotate-90' : ''}`} />
             : <span className="w-[13px] shrink-0" />}
           <Icon node={n} open={isOpen} />
-          <span className={`truncate ${n.path === main ? 'font-bold' : ''}`}>{n.name}</span>
+          <span className={`truncate ${n.path === main ? 'font-semibold' : ''}`}>{n.name}</span>
         </div>
         {n.dir && isOpen && n.children.map((c) => row(c, depth + 1))}
       </div>
@@ -129,13 +129,13 @@ export function FileTree({ id, entries, current, main, actions }:
   return (
     <div className="flex h-full flex-col bg-sidebar">
       <div className="flex h-10 shrink-0 items-center gap-0.5 border-b border-line pl-3 pr-1">
-        <span className="flex-1 text-[13px] font-bold text-dim">Files</span>
+        <span className="flex-1 text-sm font-semibold text-dim">Files</span>
         {([[FilePlus, 'New file', () => actions.newFile(pickedDir)],
           [FolderPlus, 'New folder', () => actions.newFolder(pickedDir)],
           [RefreshCw, 'Refresh', actions.refresh]] as const).map(([I, label, fn]) => (
           <button key={label} aria-label={label} title={label} onClick={fn}
             className="grid size-7 place-items-center rounded-md text-dim hover:bg-hover hover:text-text">
-            <I size={15} /></button>
+            <I size={16} /></button>
         ))}
       </div>
       <div className={`min-h-0 flex-1 overflow-y-auto p-1.5 ${over === '' ? 'bg-accent/5' : ''}`}
@@ -145,7 +145,7 @@ export function FileTree({ id, entries, current, main, actions }:
           setMenu({ x: e.clientX, y: e.clientY, node: null }) } }}>
         {nodes.map((n) => row(n, 0))}
       </div>
-      <p className="shrink-0 px-3 pb-3 pt-1 text-[12px] leading-4 text-dim">Drag files to move them. Right-click for more.</p>
+      <p className="shrink-0 px-3 pb-3 pt-1 text-xs leading-4 text-dim">Drag files to move them. Right-click for more.</p>
       {menu && <ContextMenu x={menu.x} y={menu.y} sections={items(menu.node)} onClose={() => setMenu(null)} />}
     </div>
   )

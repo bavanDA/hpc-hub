@@ -12,10 +12,10 @@ import { Field, looksLikeCode, pastedCode } from './parts'
 function Step({ n, title, text }: { n: number; title: string; text: string }) {
   return (
     <div className="flex items-center gap-4 px-4 py-3">
-      <span className="w-5 shrink-0 text-center text-xl font-bold text-accent-text">{n}</span>
+      <span className="w-5 shrink-0 text-center text-xl font-semibold text-accent-text">{n}</span>
       <div className="min-w-0">
         <div>{title}</div>
-        <div className="text-[13px] text-dim">{text}</div>
+        <div className="text-sm text-dim">{text}</div>
       </div>
     </div>
   )
@@ -86,18 +86,18 @@ export function LoginDialog({ start, onClose, onDone }:
           </List>
           <div className="flex items-center gap-2">
             <div title={login.url}
-              className="h-9 min-w-0 flex-1 truncate rounded-md bg-pill px-3 font-mono text-[13px] leading-9 text-dim">
+              className="h-9 min-w-0 flex-1 truncate rounded-md bg-pill px-3 font-mono text-sm leading-9 text-dim">
               {login.url}</div>
-            <Button onClick={copy}><Copy size={15} />{copied ? 'Copied' : 'Copy'}</Button>
+            <Button onClick={copy}><Copy size={16} />{copied ? 'Copied' : 'Copy'}</Button>
             <Button kind="suggested" onClick={() => openLink(login.url)}>
-              <ExternalLink size={15} />Open</Button>
+              <ExternalLink size={16} />Open</Button>
           </div>
           <label className="flex flex-col gap-1.5">
-            <span className="text-[13px] font-bold text-dim">Code from Globus</span>
+            <span className="text-sm font-semibold text-dim">Code from Globus</span>
             <Field autoFocus value={code} placeholder="Paste the code, or the whole page address"
               onChange={(e) => setCode(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && finish()} />
           </label>
-          {error && <p className="text-[13px] text-bad">{error}</p>}
+          {error && <p className="text-sm text-bad">{error}</p>}
         </div>
       )}
     </Dialog>

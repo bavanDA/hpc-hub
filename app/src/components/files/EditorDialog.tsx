@@ -48,7 +48,7 @@ export function EditorDialog({ cluster, clusterName, path, onClose }:
     <>
       <Dialog title={`${name}${dirty ? ' •' : ''}`} onClose={close} width={860}
         actions={<>
-          <span className="mr-auto self-center truncate text-[13px] text-dim">{clusterName}: {path}</span>
+          <span className="mr-auto self-center truncate text-sm text-dim">{clusterName}: {path}</span>
           <Button onClick={close}>Close</Button>
           <Button kind="suggested" disabled={!dirty || saving} onClick={() => save()}>
             {saving && <Spinner size={14} />} Save</Button>
@@ -67,8 +67,8 @@ export function EditorDialog({ cluster, clusterName, path, onClose }:
                   setDirty(true)
                 }
               }}
-              className="mt-1 h-[60vh] w-full resize-none rounded-lg bg-view p-3 font-mono text-[13px] leading-5
-                select-text outline-none ring-1 ring-line focus:ring-2 focus:ring-accent" />}
+              className="mt-1 h-[60vh] w-full resize-none rounded-lg bg-view p-3 font-mono text-sm leading-5
+                select-text outline-none ring-1 ring-line focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus" />}
       </Dialog>
       {asking && (
         <Dialog title={`Save changes to ${name}?`} onClose={() => setAsking(false)} width={420}

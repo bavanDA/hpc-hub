@@ -33,8 +33,8 @@ export function PdfDialog({ cluster, path, subtitle, onClose }:
         <div className="flex h-12 shrink-0 items-center gap-2 px-2">
           <div className="w-9" />
           <div className="min-w-0 flex-1 text-center">
-            <div className="truncate text-[15px] font-bold">{name}</div>
-            {subtitle && <div className="truncate text-[12px] text-dim">{subtitle}</div>}
+            <div className="truncate text-md font-semibold">{name}</div>
+            {subtitle && <div className="truncate text-xs text-dim">{subtitle}</div>}
           </div>
           <button aria-label="Close" title="Close" onClick={onClose}
             className="grid size-9 place-items-center rounded-full hover:bg-hover"><X size={16} /></button>

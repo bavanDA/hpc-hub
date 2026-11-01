@@ -12,7 +12,7 @@ function Flat({ icon: Icon, label, disabled, onClick, danger = false }:
     <button title={label} aria-label={label} disabled={disabled} onClick={onClick}
       className={`grid size-9 place-items-center rounded-md hover:bg-hover disabled:pointer-events-none
         disabled:opacity-35 ${danger ? 'hover:text-bad' : ''}`}>
-      <Icon size={18} />
+      <Icon size={20} />
     </button>
   )
 }
@@ -28,9 +28,9 @@ export function ActionBar({ entry, onAction }: { entry: Entry | null; onAction: 
       <Flat icon={archive ? Package : FileArchive} label={archive ? 'Extract here' : 'Zip on the cluster'}
         disabled={none} onClick={() => onAction('zip')} />
       <Flat icon={Trash2} label="Delete" disabled={none} danger onClick={() => onAction('delete')} />
-      <span className="min-w-0 flex-1 truncate px-2 text-[13px] text-dim">{entry?.name ?? ''}</span>
+      <span className="min-w-0 flex-1 truncate px-2 text-sm text-dim">{entry?.name ?? ''}</span>
       <button disabled={none} onClick={() => onAction('copy')} title="Copy, then paste it on any cluster"
-        className="flex h-9 items-center gap-2 rounded-md bg-pill px-3 font-bold hover:bg-selected
+        className="flex h-9 items-center gap-2 rounded-md bg-pill px-3 font-semibold hover:bg-selected
           disabled:pointer-events-none disabled:opacity-35">
         <Copy size={16} /> Copy
       </button>

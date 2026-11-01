@@ -21,8 +21,8 @@ export function Bar({ value, mine, share = false, className = 'w-40' }:
 export function Section({ title, note, children }: { title: string; note?: ReactNode; children: ReactNode }) {
   return (
     <section className="flex flex-col gap-2">
-      <h2 className="font-bold">{title}</h2>
-      {note && <p className="text-[13px] text-dim">{note}</p>}
+      <h2 className="font-semibold">{title}</h2>
+      {note && <p className="text-sm text-dim">{note}</p>}
       {children}
     </section>
   )

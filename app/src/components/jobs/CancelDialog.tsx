@@ -47,7 +47,7 @@ export function CancelDialog({ cluster, job: j, appJob, onClose, onDone }: {
         : "It's still waiting in the queue. Nothing has started yet."}</p>
       {inside && inside.sessions.length > 0 && <p>These stop too: {inside.sessions.join(', ')}.</p>}
       {appNode && <p>HPC Hub runs your terminals on this node, so you'll be left without one.</p>}
-      {!inside && <p className="flex items-center gap-2 text-[13px]"><Spinner size={14} />Checking what runs in it…</p>}
+      {!inside && <p className="flex items-center gap-2 text-sm"><Spinner size={14} />Checking what runs in it…</p>}
     </AlertDialog>
   )
 }

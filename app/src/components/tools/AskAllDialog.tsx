@@ -57,7 +57,7 @@ export function AskAllDialog({ setup, folder: start = '', onClose }:
   return (
     <Dialog title={`Ask all on ${setup.name}`} onClose={onClose} width={620}
       actions={<>
-        {note && <span className="mr-auto self-center text-[13px] text-bad">{note}</span>}
+        {note && <span className="mr-auto self-center text-sm text-bad">{note}</span>}
         <Button onClick={onClose}>Cancel</Button>
         <Button kind="suggested" onClick={ask}>Ask all</Button>
       </>}>
@@ -80,7 +80,7 @@ export function AskAllDialog({ setup, folder: start = '', onClose }:
           sub="Round 2: each reads the others' answers and writes a second one, like claude.round2.md" />
       </Group>
       {setup.node ? (
-        <p className="mb-4 text-[13px] text-dim">Runs on your node {setup.node} (job {setup.job}).</p>
+        <p className="mb-4 text-sm text-dim">Runs on your node {setup.node} (job {setup.job}).</p>
       ) : (
         <>
           <ComputeGroup cluster={setup.id} value={profile} onChange={setProfile}

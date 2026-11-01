@@ -22,7 +22,7 @@ function BarButton({ icon: Icon, label, active, badge, onClick }:
       className={`relative grid size-10 place-items-center rounded-lg ${active ? 'bg-selected' : 'hover:bg-hover'}`}>
       <Icon size={20} />
       {!!badge && <span className="absolute right-0.5 bottom-0.5 grid min-w-4 place-items-center rounded-full
-        bg-accent px-1 text-[11px] font-bold text-white">{badge}</span>}
+        bg-accent px-1 text-xs font-semibold text-white">{badge}</span>}
     </button>
   )
 }
@@ -58,7 +58,7 @@ export function Terminals() {
             <div className="flex min-h-0 flex-1 flex-col">
               <PanelHead title="Logs" />
               <div className="min-h-0 flex-1 overflow-auto px-2">
-                {!logs.length && <p className="px-2 text-[13px] text-dim">VS Code job logs show up here.</p>}
+                {!logs.length && <p className="px-2 text-sm text-dim">VS Code job logs show up here.</p>}
                 {logs.map((t) => (
                   <div key={t.key} onClick={() => select(t.key)}
                     className={`flex items-center gap-2.5 rounded-md px-3 py-2 ${

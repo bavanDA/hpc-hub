@@ -26,8 +26,8 @@ export function Duration({ total, onChange, limits }:
           <label key={unit} className="flex items-center gap-1.5">
             <input aria-label={label} type="number" min={0} max={max} value={value}
               onChange={(e) => onChange(Math.min(max, Math.max(0, parseInt(e.target.value || '0', 10) || 0)))}
-              className="h-8 w-14 rounded-md bg-pill pl-2 text-center tabular-nums outline-none focus:ring-2
-                focus:ring-accent" />
+              className="h-8 w-14 rounded-md bg-pill pl-2 text-center tabular-nums outline-none focus-visible:ring-2 focus-visible:ring-inset
+                focus-visible:ring-focus" />
             <span className="mr-1.5 text-dim">{unit}</span>
           </label>
         ))}
@@ -91,7 +91,7 @@ export function ComputeDialog({ cluster: c, onClose }: { cluster: Cluster; onClo
           className="flex min-h-[56px] w-full items-center gap-3 px-4 py-2 text-left hover:bg-hover">
           <div className="min-w-0 flex-1">
             <div>Partition, account and QOS</div>
-            <div className="truncate text-[13px] text-dim">{queue}</div>
+            <div className="truncate text-sm text-dim">{queue}</div>
           </div>
           {more ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
         </button>

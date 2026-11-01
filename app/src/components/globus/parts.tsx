@@ -9,7 +9,7 @@ const REDIRECT = 'https://auth.globus.org/v2/web/auth-code'
 
 export function Field({ className = '', ...props }: InputHTMLAttributes<HTMLInputElement>) {
   return <input {...props} spellCheck={false}
-    className={`h-9 min-w-0 rounded-md bg-pill px-3 outline-none placeholder:text-dim focus:ring-2 focus:ring-accent ${
+    className={`h-9 min-w-0 rounded-md bg-pill px-3 outline-none placeholder:text-dim focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus ${
       className}`} />
 }
 

@@ -16,8 +16,8 @@ export function Banner({ wants, onClick }: { wants: Want[]; onClick: () => void 
     : `Globus needs permission to use ${names(allow)}.`
   return (
     <div className="flex items-center gap-3 rounded-xl bg-accent/15 px-4 py-2.5">
-      <KeyRound size={18} className="shrink-0 text-accent-text" />
-      <span className="min-w-0 flex-1 font-bold">{text}</span>
+      <KeyRound size={20} className="shrink-0 text-accent-text" />
+      <span className="min-w-0 flex-1 font-semibold">{text}</span>
       <Button kind="suggested" onClick={onClick}>{domain ? 'Sign in' : 'Allow'}</Button>
     </div>
   )

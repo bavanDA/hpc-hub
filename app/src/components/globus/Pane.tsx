@@ -16,10 +16,10 @@ function Empty({ icon: Icon, title, text, button, onClick }:
   { icon: LucideIcon; title: string; text?: string; button?: string; onClick?: () => void }) {
   return (
     <div className="flex min-h-full flex-col items-center justify-center gap-2 p-6 text-center">
-      <Icon size={44} strokeWidth={1.25} className="text-dim" />
-      <h3 className="text-lg font-bold leading-snug">{title}</h3>
-      {text && <p className="max-w-xs text-[13px] text-dim">{text}</p>}
-      {button && <Button kind="suggested" round className="mt-2 !h-9 !px-5" onClick={onClick}>{button}</Button>}
+      <Icon size={40} strokeWidth={1.25} className="text-dim" />
+      <h3 className="text-lg font-semibold leading-snug">{title}</h3>
+      {text && <p className="max-w-xs text-sm text-dim">{text}</p>}
+      {button && <Button kind="primary" onClick={onClick}>{button}</Button>}
     </div>
   )
 }
@@ -49,8 +49,8 @@ function ItemRow({ it, selected, onSelect, onOpen }:
         <Icon size={16} className={`shrink-0 ${it.is_dir ? 'text-accent-text' : 'text-dim'}`} />
         <span className="truncate">{it.name}</span>
       </span>
-      <span className="text-right text-[13px] tabular-nums text-dim">{it.is_dir ? '' : formatSize(it.size)}</span>
-      <span className="truncate text-[13px] tabular-nums text-dim">{shortDate(it.modified)}</span>
+      <span className="text-right text-sm tabular-nums text-dim">{it.is_dir ? '' : formatSize(it.size)}</span>
+      <span className="truncate text-sm tabular-nums text-dim">{shortDate(it.modified)}</span>
     </div>
   )
 }
@@ -92,7 +92,7 @@ export function Pane({ pane, clusters, onChoose, onConsent, onStart }: {
   else if (!l.items.length) body = <Empty icon={FolderOpen} title="Empty folder" />
   else body = (
     <div className="flex flex-col px-2 pb-2">
-      <div className="sticky top-0 grid grid-cols-[1fr_64px_96px] gap-2 bg-card px-2 py-1.5 text-[12px] font-bold
+      <div className="sticky top-0 grid grid-cols-[1fr_64px_96px] gap-2 bg-card px-2 py-1.5 text-xs font-semibold
         text-dim">
         <span className="pl-6">Name</span><span className="text-right">Size</span><span>Modified</span>
       </div>
@@ -110,7 +110,7 @@ export function Pane({ pane, clusters, onChoose, onConsent, onStart }: {
       <div className="flex flex-col gap-2 border-b border-line p-2">
         <div className="flex items-center gap-1">
           <select value={pane.cluster} onChange={(e) => pane.pick(e.target.value)} aria-label="Cluster"
-            className="h-9 min-w-0 flex-1 truncate rounded-md bg-pill px-2 font-bold outline-none hover:bg-selected">
+            className="h-9 min-w-0 flex-1 truncate rounded-md bg-pill px-2 font-semibold outline-none hover:bg-selected">
             {clusters.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
           <IconButton icon={ArrowUp} label="Up" size={16} onClick={() => browsing && pane.go(parentPath(pane.path))} />
@@ -118,14 +118,14 @@ export function Pane({ pane, clusters, onChoose, onConsent, onStart }: {
           <IconButton icon={RefreshCw} label="Refresh" size={16} onClick={pane.reload} />
           <IconButton icon={FolderPlus} label="New folder" size={16} onClick={() => browsing && setNaming(true)} />
         </div>
-        <Field value={location} placeholder="/path" className="font-mono text-[13px]"
+        <Field value={location} placeholder="/path" className="font-mono text-sm"
           onChange={(e) => setLocation(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && pane.go(location.trim())} />
       </div>
       <div className="min-h-0 flex-1 overflow-auto">{body}</div>
-      <div className="flex h-8 shrink-0 items-center gap-2 border-t border-line px-3 text-[12px] text-dim">
+      <div className="flex h-8 shrink-0 items-center gap-2 border-t border-line px-3 text-xs text-dim">
         <span className="flex-1" />
-        {pane.loading ? <><Spinner size={12} />Loading…</> : l?.state === 'ok' && `${l.items.length} items`}
+        {pane.loading ? <><Spinner size={14} />Loading…</> : l?.state === 'ok' && `${l.items.length} items`}
       </div>
       {naming && <NewFolder onClose={() => setNaming(false)} onCreate={mkdir} />}
     </Card>

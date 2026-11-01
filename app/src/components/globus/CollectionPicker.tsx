@@ -52,7 +52,7 @@ export function CollectionPicker({ cluster, onClose, onPicked }:
       <div className="flex flex-col gap-3 pt-1">
         <label className="flex h-9 items-center gap-2 rounded-md bg-pill px-3 focus-within:ring-2
           focus-within:ring-accent">
-          <Search size={15} className="text-dim" />
+          <Search size={16} className="text-dim" />
           <input autoFocus value={query} spellCheck={false} placeholder="Search, e.g. Expanse, Wulver, Bouchet"
             onChange={(e) => setQuery(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && run(query.trim())}
             className="min-w-0 flex-1 bg-transparent outline-none placeholder:text-dim" />
@@ -65,8 +65,8 @@ export function CollectionPicker({ cluster, onClose, onPicked }:
               <List>
                 {results.map((c) => (
                   <Row key={c.id} title={c.name} subtitle={`${c.owner || 'No owner'} · ${c.id}`} onClick={() => pick(c)}
-                    suffix={c.best ? <span className="text-[13px] font-bold text-accent-text">Best match</span>
-                      : c.mine ? <span className="text-[13px] text-dim">Yours</span> : undefined} />
+                    suffix={c.best ? <span className="text-sm font-semibold text-accent-text">Best match</span>
+                      : c.mine ? <span className="text-sm text-dim">Yours</span> : undefined} />
                 ))}
               </List>
             )}

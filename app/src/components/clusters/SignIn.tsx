@@ -31,10 +31,10 @@ export function PickBrowser({ q, onAnswer }: { q: Question; onAnswer: (a: string
             className="flex min-h-[56px] w-full items-center gap-3 px-4 py-2 text-left hover:bg-hover">
             <span className={`grid size-5 shrink-0 place-items-center rounded-full ${
               picked === o.value ? 'bg-accent text-white' : 'border-2 border-line'}`}>
-              {picked === o.value && <Check size={13} />}</span>
+              {picked === o.value && <Check size={14} />}</span>
             <div className="min-w-0 flex-1">
               <div>{o.title}</div>
-              {o.sub && <div className="truncate text-[13px] text-dim">{o.sub}</div>}
+              {o.sub && <div className="truncate text-sm text-dim">{o.sub}</div>}
             </div>
           </button>
         ))}
@@ -46,10 +46,10 @@ export function PickBrowser({ q, onAnswer }: { q: Question; onAnswer: (a: string
 function Waiting({ title, text }: { title: string; text: string }) {
   return (
     <div className="flex flex-col items-center gap-3 py-2 text-center">
-      <Globe size={48} strokeWidth={1.25} className="text-dim" />
-      <h3 className="text-xl font-bold">{title}</h3>
+      <Globe size={40} strokeWidth={1.25} className="text-dim" />
+      <h3 className="text-xl font-semibold">{title}</h3>
       <p className="max-w-sm text-dim">{text}</p>
-      <Spinner size={28} />
+      <Spinner size={24} />
     </div>
   )
 }
@@ -63,7 +63,7 @@ export function ChromeWindowLogin({ q, onAnswer }: { q: Question; onAnswer: (a: 
       <Waiting title="Sign in in the Chrome window"
         text="Sign in and approve Duo in the Chrome window that opened. It closes by itself once you are signed in." />
       <div className="mt-4 flex flex-col items-center gap-2">
-        <Button round kind="flat" onClick={() => onAnswer('in-app')}>Sign in in the app instead</Button>
+        <Button kind="ghost" onClick={() => onAnswer('in-app')}>Sign in in the app instead</Button>
       </div>
     </Dialog>
   )
@@ -101,10 +101,10 @@ export function WebLogin({ q, onAnswer }: { q: Question; onAnswer: (a: string | 
         {!error && <Button kind="suggested" onClick={() => inTauri && invoke('sso_show', { id: q.id })}>
           Show sign-in window</Button>}</>}>
       {error
-        ? <p className="rounded-lg bg-bad-bg px-4 py-2.5 text-center font-bold text-bad">
+        ? <p className="rounded-lg bg-bad-bg px-4 py-2.5 text-center font-semibold text-bad">
             Could not open the sign-in window: {error}</p>
         : <Waiting title="Sign in in the window that opened" text={status} />}
-      {!error && <p className="mt-3 text-center text-[13px] text-dim">
+      {!error && <p className="mt-3 text-center text-sm text-dim">
         {q.note ?? (q.fill ? 'Your saved username and password are filled in there. If you click a link, you type '
           + 'from then on.' : 'No password is saved for this VPN, so you type it there.')}</p>}
     </Dialog>

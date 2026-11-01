@@ -20,7 +20,7 @@ function ago(ts: number): string {
 export function PanelHead({ title, children }: { title: string; children?: React.ReactNode }) {
   return (
     <div className="flex h-12 shrink-0 items-center gap-1 pr-2 pl-4">
-      <h2 className="flex-1 font-bold">{title}</h2>
+      <h2 className="flex-1 font-semibold">{title}</h2>
       {children}
     </div>
   )
@@ -43,7 +43,7 @@ export function SessionList({ live, listings, tabs, current, onRefresh, onNew }:
             onRefresh={onRefresh} />
         ))}
       </div>
-      <p className="px-4 pb-3 text-[13px] text-dim">
+      <p className="px-4 pb-3 text-sm text-dim">
         Sessions keep running when you close a tab.
       </p>
     </div>
@@ -51,7 +51,7 @@ export function SessionList({ live, listings, tabs, current, onRefresh, onNew }:
 }
 
 function Note({ children }: { children: React.ReactNode }) {
-  return <p className="px-2 py-1 text-[13px] text-dim">{children}</p>
+  return <p className="px-2 py-1 text-sm text-dim">{children}</p>
 }
 
 function ClusterSessions({ cluster, listed, tabs, current, onRefresh }:
@@ -69,7 +69,7 @@ function ClusterSessions({ cluster, listed, tabs, current, onRefresh }:
     `their compute node and end with its job; older sessions may still be on ${listing.host}.` : undefined
   return (
     <div className="mb-2">
-      <h3 title={tip} className="px-2 pt-3 pb-1 text-[13px] font-bold text-dim">{cluster.name}</h3>
+      <h3 title={tip} className="px-2 pt-3 pb-1 text-sm font-semibold text-dim">{cluster.name}</h3>
       {!listing && listed?.error && <Note>{listed.error}</Note>}
       {!listing && !listed?.error && !items.length && <Note>Loading…</Note>}
       {listing && !listing.has_tmux && !items.length && <Note>tmux is not installed here.</Note>}
@@ -108,12 +108,12 @@ function SessionRow({ cluster, s, nodes, open, selected, onRefresh }: {
       <Dot color={s.color} />
       <div className="min-w-0 flex-1">
         <div className="truncate">{s.title.startsWith(`${what} · `) ? s.title.slice(what.length + 3) : s.title}</div>
-        <div className="truncate text-[13px] text-dim">{bits.join(' · ')}</div>
+        <div className="truncate text-sm text-dim">{bits.join(' · ')}</div>
       </div>
       {(code || s.remote.startsWith('http')) && (
         <button onClick={(e) => { e.stopPropagation(); remoteAction() }}
           title={code ? `Copy pairing code ${s.remote.slice(5)}` : `Open remote: ${s.remote}`}
-          className="rounded-md px-2 py-1 text-[13px] font-bold text-accent-text hover:bg-hover">
+          className="rounded-md px-2 py-1 text-sm font-semibold text-accent-text hover:bg-hover">
           {code ? 'Copy code' : 'Open'}</button>
       )}
       <SessionMenu target={{ cluster, name: s.name, kind: s.kind, node: s.node, title: s.title }} onChanged={onRefresh} />

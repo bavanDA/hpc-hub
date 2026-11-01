@@ -34,10 +34,10 @@ export function Preview({ cluster, dir, entry, onOpen, onEdit }:
   return (
     <aside className="flex w-[340px] shrink-0 flex-col border-l border-line bg-window">
       <div className="flex items-center gap-3 border-b border-line px-4 py-3">
-        <FileIcon entry={entry} size={32} />
+        <FileIcon entry={entry} size={40} />
         <div className="min-w-0 flex-1">
-          <div className="truncate font-bold" title={entry.name}>{entry.name}</div>
-          <div className="truncate text-[13px] text-dim">{size(entry.size)} · {when(entry.mtime)}</div>
+          <div className="truncate font-semibold" title={entry.name}>{entry.name}</div>
+          <div className="truncate text-sm text-dim">{size(entry.size)} · {when(entry.mtime)}</div>
         </div>
       </div>
       <div className="relative min-h-0 flex-1 overflow-hidden">
@@ -67,7 +67,7 @@ function Content({ data }: { data: FileData }) {
   }
   if (data.kind === 'binary') return <Note icon={FileQuestion} title="Binary file" text="Nothing to show as text." />
   return (
-    <pre className="h-full overflow-auto whitespace-pre-wrap bg-view p-3 font-mono text-[12px] leading-[18px]
+    <pre className="h-full overflow-auto whitespace-pre-wrap bg-view p-3 font-mono text-xs leading-[18px]
       select-text [overflow-wrap:anywhere]">
       {data.text}{data.cut && <span className="text-dim">{'\n'}… first 512 kB only</span>}
     </pre>
@@ -104,9 +104,9 @@ function Note({ icon: Icon, title, text, action }:
   { icon: typeof FileType; title: string; text: string; action?: React.ReactNode }) {
   return (
     <div className="flex h-full flex-col items-center justify-center gap-2 p-6 text-center">
-      <Icon size={48} strokeWidth={1.25} className="text-dim" />
-      <div className="font-bold">{title}</div>
-      <p className="text-[13px] text-dim">{text}</p>
+      <Icon size={40} strokeWidth={1.25} className="text-dim" />
+      <div className="font-semibold">{title}</div>
+      <p className="text-sm text-dim">{text}</p>
       {action}
     </div>
   )

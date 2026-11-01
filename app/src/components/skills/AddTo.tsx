@@ -25,8 +25,8 @@ export function AddTo({ name, targets, has, busy, onAdd }:
       <button ref={button} onMouseDown={(e) => at && e.stopPropagation()} disabled={busy}
         onClick={(e) => { e.stopPropagation(); if (at) close(); else open() }}
         aria-label={`Add ${name} to`} className={`inline-flex h-9 shrink-0 items-center gap-1.5 rounded-md px-3
-          font-bold hover:bg-hover disabled:opacity-50 ${at ? 'bg-selected' : ''}`}>
-        {busy && <Spinner size={14} />}Add to<ChevronDown size={15} />
+          font-semibold hover:bg-hover disabled:opacity-50 ${at ? 'bg-selected' : ''}`}>
+        {busy && <Spinner size={14} />}Add to<ChevronDown size={16} />
       </button>
       {at && (
         <Popover x={at.x} y={at.y} onClose={close}>
@@ -35,7 +35,7 @@ export function AddTo({ name, targets, has, busy, onAdd }:
               <label key={t.id} className="flex h-9 items-center gap-2.5 rounded-md px-2 hover:bg-hover">
                 <Check on={picked.includes(t.id)} onChange={(v) => tick(t.id, v)} label={t.label} />
                 <span className="flex-1">{t.label}</span>
-                {has.includes(t.id) && <span className="text-[13px] text-dim">has it</span>}
+                {has.includes(t.id) && <span className="text-sm text-dim">has it</span>}
               </label>
             ))}
             <Button kind="suggested" className="mt-1.5" disabled={!picked.length}

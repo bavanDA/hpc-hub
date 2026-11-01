@@ -37,13 +37,13 @@ export function AuthenticatorHelp({ cluster: c, onClose }: { cluster: Cluster; o
   }
   return (
     <Dialog title="Google Authenticator" onClose={onClose} width={540}
-      actions={url && <Button kind="suggested" onClick={copy}><Copy size={15} /> Copy link to {site}</Button>}>
+      actions={url && <Button kind="suggested" onClick={copy}><Copy size={16} /> Copy link to {site}</Button>}>
       <Group title={`Set up codes for ${c.name}`}
         description={`${c.name} asks for a 6-digit code from your phone at every login. You set this up once.`}>
         {steps.map(([title, sub], i) => (
           <Row key={i} title={<span className="whitespace-normal">{title}</span>}
             subtitle={<span className="whitespace-normal">{sub}</span>}
-            prefix={<span className="w-6 text-xl font-bold text-accent-text">{i + 1}</span>} />
+            prefix={<span className="w-6 text-xl font-semibold text-accent-text">{i + 1}</span>} />
         ))}
       </Group>
       <Group title="If a code is refused">

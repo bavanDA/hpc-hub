@@ -25,7 +25,7 @@ export function Welcome({ status, onDone }: { status: SetupStatus; onDone: (chos
   return (
     <div className="flex h-full flex-col items-center justify-center gap-8 overflow-auto p-8">
       <div className="text-center">
-        <h1 className="text-3xl font-bold">Welcome to HPC Hub</h1>
+        <h1 className="text-2xl font-bold">Welcome to HPC Hub</h1>
         <p className="mt-2 text-dim">Which clusters do you use?</p>
       </div>
       <div className="grid w-full max-w-[640px] grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-4">
@@ -34,16 +34,16 @@ export function Welcome({ status, onDone }: { status: SetupStatus; onDone: (chos
           const uni = university(c)
           return (
             <button key={c.id} onClick={() => toggle(c.id)} aria-pressed={on}
-              className={`relative flex flex-col items-start gap-4 rounded-2xl p-5 text-left transition
+              className={`relative flex flex-col items-start gap-4 rounded-2xl p-5 text-left transition-colors duration-150
                 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent
                 ${on ? 'bg-accent/10 ring-2 ring-accent' : 'bg-card shadow-[var(--shadow-card)] hover:bg-hover'}`}>
               <span className={`grid size-11 place-items-center rounded-xl ${
-                on ? 'bg-accent text-white' : 'bg-pill text-accent-text'}`}><Server size={22} /></span>
+                on ? 'bg-accent text-white' : 'bg-pill text-accent-text'}`}><Server size={20} /></span>
               <span>
-                <span className="block text-lg font-bold leading-tight">{uni ? shortName(c) : c.name}</span>
-                <span className="block text-[13px] text-dim">{uni || ' '}</span>
+                <span className="block text-lg font-semibold leading-tight">{uni ? shortName(c) : c.name}</span>
+                <span className="block text-sm text-dim">{uni || ' '}</span>
               </span>
-              <span className={`absolute right-4 top-4 grid size-6 place-items-center rounded-full border-2 transition ${
+              <span className={`absolute right-4 top-4 grid size-6 place-items-center rounded-full border-2 transition-colors duration-150 ${
                 on ? 'border-accent bg-accent text-white' : 'border-line'}`}>{on && <Check size={14} strokeWidth={3} />}</span>
             </button>
           )
@@ -51,8 +51,8 @@ export function Welcome({ status, onDone }: { status: SetupStatus; onDone: (chos
       </div>
       {error && <p className="text-bad">{error}</p>}
       <div className="flex w-full max-w-[640px] items-center justify-between gap-4">
-        <p className="text-[13px] text-dim">You can change this later in Settings.</p>
-        <Button kind="suggested" round disabled={!picked.length} onClick={go}>Continue</Button>
+        <p className="text-sm text-dim">You can change this later in Settings.</p>
+        <Button kind="primary" pill disabled={!picked.length} onClick={go}>Continue</Button>
       </div>
     </div>
   )

@@ -67,12 +67,12 @@ function useStats(cluster: string, node: string, active: boolean): MonitorStats 
   return stats
 }
 
-const COLORS: Record<Level, string> = { '': '', warn: 'text-orange', high: 'font-bold text-bad' }
+const COLORS: Record<Level, string> = { '': '', warn: 'text-orange', high: 'font-semibold text-bad' }
 
 function Item({ icon: Icon, text, tip, level = '' }: { icon: LucideIcon; text: string; tip: string; level?: Level }) {
   return (
     <span title={tip} className={`flex shrink-0 items-center gap-1 ${COLORS[level]}`}>
-      <Icon size={12} strokeWidth={2.25} className="shrink-0 opacity-80" />
+      <Icon size={14} strokeWidth={2.25} className="shrink-0 opacity-80" />
       {text}
     </span>
   )
@@ -87,7 +87,7 @@ export function MonitorBar({ cluster, node, shown }: { cluster: string; node: st
   const nets = st?.nets.length ? ` (${st.nets.join(', ')})` : ''
   return (
     <div className="flex h-6 shrink-0 items-center gap-3.5 overflow-hidden border-t border-line bg-view px-2.5
-      font-mono text-[11px] whitespace-nowrap text-dim tabular-nums">
+      font-mono text-xs whitespace-nowrap text-dim tabular-nums">
       <Item icon={Server} text={host} tip={`Host: ${host}`} />
       <Item icon={Cpu} text={st?.cpu == null ? '...' : `${Math.round(st.cpu)}%`} level={level(st?.cpu ?? null)}
         tip={st?.cpu == null ? 'CPU: waiting for a second sample' : `CPU: ${st.cpu.toFixed(1)}% of all cores in use`} />

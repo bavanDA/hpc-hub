@@ -32,8 +32,8 @@ function Advanced({ open, onToggle, children }: { open: boolean; onToggle: () =>
   return (
     <div className="mt-2 border-t border-line pt-3">
       <button type="button" onClick={onToggle} aria-expanded={open}
-        className="-ml-1 flex items-center gap-1.5 rounded-md px-1 py-1 text-[15px] font-bold hover:bg-hover">
-        <ChevronRight size={16} className={`transition ${open ? 'rotate-90' : ''}`} />Advanced</button>
+        className="-ml-1 flex items-center gap-1.5 rounded-md px-1 py-1 text-md font-semibold hover:bg-hover">
+        <ChevronRight size={16} className={`transition-transform duration-150 ${open ? 'rotate-90' : ''}`} />Advanced</button>
       {open && <div className="mt-4">{children}</div>}
     </div>
   )
@@ -184,11 +184,11 @@ export function SettingsDialog({ cluster, hint, onClose, start = 'login', advanc
     ? <div className="-mt-2 mb-5 flex"><PasswordInstead on={usePassword} onChange={setUsePassword} /></div> : null
   const forgetLink = (what: string) => (
     <button type="button" onClick={forget}
-      className="rounded px-1 py-1 text-[14px] text-bad hover:underline">Forget {what}</button>
+      className="rounded px-1 py-1 text-base text-bad hover:underline">Forget {what}</button>
   )
   const keyText = keyHeading(d).text
   const login = d.key_page && !usePassword ? <>
-    {keyText && <p className="mb-3 text-[14px] text-dim">{keyText}</p>}
+    {keyText && <p className="mb-3 text-base text-dim">{keyText}</p>}
     <div className="mb-3"><KeyPanel cluster={d} user={user} onUser={setUser} /></div>
     {instead}
     <div className="mb-4 flex">{forgetLink(d.username_label || 'username')}</div>
@@ -201,18 +201,18 @@ export function SettingsDialog({ cluster, hint, onClose, start = 'login', advanc
       <SwitchRow label={copy.remember} checked={remember} onChange={setRemember}
         sub={remember ? undefined : copy.rememberOff} />
     </List>
-    <div className="mb-5 mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 px-1 text-[13px] text-dim">
-      {remember && <span className="flex items-center gap-1.5"><Lock size={13} />{copy.savedIn(keyStore)}</span>}
+    <div className="mb-5 mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 px-1 text-sm text-dim">
+      {remember && <span className="flex items-center gap-1.5"><Lock size={14} />{copy.savedIn(keyStore)}</span>}
       <span>{secondStep(d)}</span>
       {code && d.code_setup && <button type="button" onClick={() => openSystem(d.code_setup!)}
-        className="inline-flex items-center gap-1 font-bold text-accent-text hover:underline">
-        {copy.codeSetup}<ExternalLink size={12} /></button>}
+        className="inline-flex items-center gap-1 font-semibold text-accent-text hover:underline">
+        {copy.codeSetup}<ExternalLink size={14} /></button>}
     </div>
     {instead}
     {d.portal && (
       <div className="mb-5 flex items-center gap-4 rounded-xl bg-card px-4 py-3 shadow-[var(--shadow-card)]">
-        <KeyRound size={18} className="shrink-0 text-accent-text" />
-        <p className="min-w-0 flex-1 text-[14px]">Skip the password: add this computer's SSH key through the portal.
+        <KeyRound size={20} className="shrink-0 text-accent-text" />
+        <p className="min-w-0 flex-1 text-base">Skip the password: add this computer's SSH key through the portal.
           <span className="text-dim"> You'll still need the code.</span></p>
         <Button type="button" onClick={() => setOpen('key')}>{copy.portal(d)}</Button>
       </div>
@@ -316,8 +316,8 @@ export function SettingsDialog({ cluster, hint, onClose, start = 'login', advanc
   </>
 
   const agents = <>
-    <h3 className="mb-1 text-[15px] font-bold">Agents</h3>
-    <p className="mb-3 text-[13px] text-dim">What each agent starts with. You can change these when you start one
+    <h3 className="mb-1 text-md font-semibold">Agents</h3>
+    <p className="mb-3 text-sm text-dim">What each agent starts with. You can change these when you start one
       too.</p>
     {(info?.agents ?? []).map((a) => {
       const s = d[a.id]
@@ -354,13 +354,13 @@ export function SettingsDialog({ cluster, hint, onClose, start = 'login', advanc
         <div role="tablist" className="mb-4 flex flex-wrap justify-center gap-1 rounded-full bg-pill p-1">
           {TABS.map(([t, label]) => (
             <button key={t} type="button" role="tab" aria-selected={tab === t} onClick={() => { setTab(t); setMore(false) }}
-              className={`h-8 flex-1 whitespace-nowrap rounded-full px-3 text-[14px] font-bold transition ${
+              className={`h-8 flex-1 whitespace-nowrap rounded-full px-3 text-base font-semibold transition-colors duration-90 ${
                 tab === t ? 'bg-card shadow-[var(--shadow-card)]' : 'text-dim hover:text-[var(--color-text)]'}`}>
               {label}</button>
           ))}
         </div>
-        {hint && <p className="mb-4 rounded-lg bg-warn-bg px-4 py-2.5 text-[14px] font-bold text-warn">{hint}</p>}
-        {error && <p role="alert" className="mb-4 rounded-lg bg-bad-bg px-4 py-2.5 text-[14px] font-bold text-bad">
+        {hint && <p className="mb-4 rounded-lg bg-warn-bg px-4 py-2.5 text-base font-semibold text-warn">{hint}</p>}
+        {error && <p role="alert" className="mb-4 rounded-lg bg-bad-bg px-4 py-2.5 text-base font-semibold text-bad">
           {error}</p>}
         {pages[tab]}
       </Dialog>

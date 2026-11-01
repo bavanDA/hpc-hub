@@ -12,8 +12,8 @@ export function Group({ title, description, children }: { title?: string; descri
     <section className="flex flex-col gap-2">
       {(title || description) && (
         <div className="px-1">
-          {title && <h2 className="font-bold">{title}</h2>}
-          {description && <p className="text-[13px] text-dim">{description}</p>}
+          {title && <h2 className="font-semibold">{title}</h2>}
+          {description && <p className="text-sm text-dim">{description}</p>}
         </div>
       )}
       <List>{children}</List>
@@ -51,7 +51,7 @@ export function StepperRow({ title, subtitle, value, min, max, onChange }: {
         <input type="number" value={value} min={min} max={max} aria-label={title}
           onChange={(e) => set(Number(e.target.value))}
           className="h-8 w-14 rounded-md bg-pill text-center tabular-nums outline-none [appearance:textfield]
-            focus:ring-2 focus:ring-accent [&::-webkit-inner-spin-button]:appearance-none" />
+            focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus [&::-webkit-inner-spin-button]:appearance-none" />
         <button aria-label="Less" className={btn} disabled={value <= min} onClick={() => set(value - 1)}>
           <Minus size={14} /></button>
         <button aria-label="More" className={btn} disabled={value >= max} onClick={() => set(value + 1)}>

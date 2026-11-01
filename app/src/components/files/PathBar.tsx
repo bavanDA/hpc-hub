@@ -40,7 +40,7 @@ export function PathBar(p: Props) {
       <div className="flex items-center gap-1 px-2 pt-2">
         <div className="relative shrink-0">
           <select value={p.cluster} onChange={(e) => p.onCluster(e.target.value)} aria-label="Cluster"
-            className="h-9 appearance-none rounded-md bg-pill pl-3 pr-8 font-bold outline-none hover:bg-selected
+            className="h-9 appearance-none rounded-md bg-pill pl-3 pr-8 font-semibold outline-none hover:bg-selected
               focus-visible:ring-2 focus-visible:ring-accent">
             {p.clusters.map((c) => (
               <option key={c.id} value={c.id}>
@@ -61,8 +61,8 @@ export function PathBar(p: Props) {
               if (e.key === 'Enter') p.onGo(text.trim())
               if (e.key === 'Escape') { setText(p.path); e.currentTarget.blur() }
             }}
-            className="h-9 w-full rounded-md bg-pill px-3 pr-9 font-mono text-[13px] outline-none select-text
-              focus:bg-view focus:ring-2 focus:ring-accent disabled:opacity-50" />
+            className="h-9 w-full rounded-md bg-pill px-3 pr-9 font-mono text-sm outline-none select-text
+              focus:bg-view focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus disabled:opacity-50" />
           {p.loading && <span className="absolute right-2.5 top-1/2 -translate-y-1/2"><Spinner size={16} /></span>}
         </div>
         <IconButton icon={FolderPlus} label="New folder" onClick={p.onNewFolder} />
@@ -70,7 +70,7 @@ export function PathBar(p: Props) {
         <button onClick={p.onPreview} aria-label="Preview" title="Preview a file when you select it"
           aria-pressed={p.preview}
           className={`grid size-9 place-items-center rounded-full ${p.preview ? 'bg-selected' : 'hover:bg-hover'}`}>
-          <PanelRight size={18} />
+          <PanelRight size={20} />
         </button>
       </div>
       {p.connected ? <div className="flex h-11 items-center gap-1.5 overflow-x-auto px-3">
@@ -79,13 +79,13 @@ export function PathBar(p: Props) {
           const on = pl === here
           return (
             <button key={pl.path} onClick={() => p.onGo(pl.path)} title={pl.path}
-              className={`flex h-7 shrink-0 items-center gap-1.5 rounded-full px-3 text-[13px] font-bold ${
+              className={`flex h-7 shrink-0 items-center gap-1.5 rounded-full px-3 text-sm font-semibold ${
                 on ? 'bg-accent text-white' : 'bg-pill hover:bg-selected'}`}>
               <Icon size={14} /> {pl.label}
             </button>
           )
         })}
-        <span className="ml-auto shrink-0 pl-2 text-[13px] text-dim">
+        <span className="ml-auto shrink-0 pl-2 text-sm text-dim">
           {p.count === null ? '' : p.count === 1 ? '1 item' : `${p.count} items`}
         </span>
       </div> : <div className="h-2" />}

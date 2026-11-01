@@ -32,11 +32,11 @@ export function DetailsDialog({ cluster, job: j, onClose, onCancel }:
       <div className="flex flex-col gap-5 pb-2">
         {groups.filter((g) => g.rows.length).map((g) => (
           <section key={g.title} className="flex flex-col gap-2">
-            <h3 className="font-bold">{g.title}</h3>
+            <h3 className="font-semibold">{g.title}</h3>
             <List>
               {g.rows.map((r) => g.title === 'Files'
-                ? <Row key={r.label} title={<span className="text-[13px] text-dim">{r.label}</span>}
-                    subtitle={<span className="font-mono text-[13px] text-text select-text" title={r.value}>
+                ? <Row key={r.label} title={<span className="text-sm text-dim">{r.label}</span>}
+                    subtitle={<span className="font-mono text-sm text-text select-text" title={r.value}>
                       {r.value}</span>}
                     suffix={<IconButton icon={Copy} label="Copy path" size={16} onClick={() => copy(r.value)} />} />
                 : <div key={r.label} className="flex min-h-11 items-center gap-4 px-4 py-2">
@@ -48,7 +48,7 @@ export function DetailsDialog({ cluster, job: j, onClose, onCancel }:
         ))}
         {details && (
           <section>
-            <button onClick={() => setAll(!all)} className="flex items-center gap-1 font-bold">
+            <button onClick={() => setAll(!all)} className="flex items-center gap-1 font-semibold">
               {all ? <ChevronDown size={16} /> : <ChevronRight size={16} />} All fields
             </button>
             {all && <pre className="mt-2 rounded-md bg-view p-3 font-mono text-xs break-all whitespace-pre-wrap

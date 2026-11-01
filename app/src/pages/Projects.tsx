@@ -53,7 +53,7 @@ export function Projects() {
   }
 
   if (error) return <p className="p-8 text-bad">Could not load projects: {error}</p>
-  if (!data) return loading ? <div className="grid h-full place-items-center"><Spinner size={28} /></div> : null
+  if (!data) return loading ? <div className="grid h-full place-items-center"><Spinner size={24} /></div> : null
 
   const words = query.toLowerCase().split(/\s+/).filter(Boolean)
   const shown = data.projects.filter((p) => {
@@ -70,13 +70,13 @@ export function Projects() {
           text="Add a folder you already have on a cluster (myproj, thesis, a paper…) or create a new one. Then open it
             in VS Code, Claude, Files or LaTeX."
           action={<div className="mt-2 flex gap-2">
-            <Button round onClick={add}>Add folder</Button>
-            <Button round kind="suggested" onClick={create}>New project</Button>
+            <Button onClick={add}>Add folder</Button>
+            <Button kind="primary" onClick={create}>New project</Button>
           </div>} />
       ) : (
         <div className="mx-auto flex max-w-[900px] flex-col gap-3 px-4 pt-[18px] pb-6">
           <div className="flex items-center gap-2 pb-1">
-            <h1 className="flex-1 text-[26px] font-extrabold">Projects</h1>
+            <h1 className="flex-1 text-2xl font-extrabold">Projects</h1>
             <Button onClick={add} title="Use a folder that is already on a cluster">
               <FolderOpen size={16} /> Add folder</Button>
             <Button kind="suggested" onClick={create}><Plus size={16} /> New project</Button>

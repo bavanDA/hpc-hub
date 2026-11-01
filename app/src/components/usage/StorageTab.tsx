@@ -18,14 +18,14 @@ function Quota({ r }: { r: StorageRow }) {
         className={`flex min-h-[56px] items-center gap-3 px-4 py-2 ${people.length ? 'hover:bg-hover' : ''}`}>
         <div className="min-w-0 flex-1">
           <div className="truncate">{r.label}</div>
-          <div className="truncate text-[13px] text-dim">{size}{yours}</div>
+          <div className="truncate text-sm text-dim">{size}{yours}</div>
         </div>
         <Bar value={r.quota ? r.used / r.quota : 0} mine={r.quota && r.mine != null ? r.mine / r.quota : null} />
         <span className="w-4 text-dim">
           {people.length > 0 && (open ? <ChevronDown size={16} /> : <ChevronRight size={16} />)}</span>
       </div>
       {open && people.map(([user, gb]) => (
-        <div key={user} className="flex h-11 items-center border-t border-line pr-11 pl-8 text-[14px]">
+        <div key={user} className="flex h-11 items-center border-t border-line pr-11 pl-8 text-base">
           <span className="flex-1">{user}</span>
           <span className="tabular-nums">{n(gb, 1)} GB · <span className="text-dim">{pct(gb, r.used)}</span></span>
         </div>
@@ -40,7 +40,7 @@ export function StorageTab({ storage, error }: { storage: Storage | null; error:
   return (
     <Section title="Storage" note={note}>
       {storage && storage.rows.length > 0 && <List>{storage.rows.map((r) => <Quota key={r.label} r={r} />)}</List>}
-      {storage?.raw && <pre className="overflow-auto rounded-xl bg-view p-4 font-mono text-[13px] select-text">
+      {storage?.raw && <pre className="overflow-auto rounded-xl bg-view p-4 font-mono text-sm select-text">
         {storage.raw}</pre>}
     </Section>
   )

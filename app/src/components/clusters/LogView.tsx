@@ -13,7 +13,7 @@ export function LogView({ lines }: { lines: string[] }) {
   return (
     <div>
       <button onClick={() => setOpen(!open)} aria-expanded={open}
-        className="flex w-fit items-center gap-1 rounded-md py-1 pr-2 text-[15px] hover:bg-hover">
+        className="flex w-fit items-center gap-1 rounded-md py-1 pr-2 text-md hover:bg-hover">
         {open ? <ChevronDown size={14} /> : <ChevronRight size={14} />} Log
       </button>
       {open && (
@@ -22,7 +22,7 @@ export function LogView({ lines }: { lines: string[] }) {
           pinned.current = el.scrollHeight - el.scrollTop - el.clientHeight < 24
         }}
           className="mt-1 h-40 select-text overflow-auto whitespace-pre-wrap break-all rounded-lg bg-view p-3
-            font-mono text-[12px] leading-[1.45] text-text shadow-[inset_0_0_0_1px_var(--color-line)]">
+            font-mono text-xs leading-[1.45] text-text shadow-[inset_0_0_0_1px_var(--color-line)]">
           {lines.length ? lines.join('\n') : <span className="text-dim">Nothing yet</span>}
         </pre>
       )}

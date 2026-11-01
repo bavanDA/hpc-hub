@@ -48,7 +48,7 @@ export function FileTable({ entries, sort, onSort, selected, onSelect, onOpen, o
 
   return (
     <div className="flex min-h-0 flex-1 flex-col outline-none" tabIndex={0} onKeyDown={key}>
-      <div className="flex h-9 shrink-0 items-center gap-4 border-b border-line px-4 text-[13px] font-bold text-dim">
+      <div className="flex h-9 shrink-0 items-center gap-4 border-b border-line px-4 text-sm font-semibold text-dim">
         <div className="w-5" />
         {COLUMNS.map(([k, title, cls]) => (
           <button key={k} onClick={() => onSort({ key: k, desc: sort.key === k ? !sort.desc : false })}
@@ -70,8 +70,8 @@ export function FileTable({ entries, sort, onSort, selected, onSelect, onOpen, o
                 on ? 'bg-accent/20 dark:bg-accent/30' : 'hover:bg-hover'}`}>
               <FileIcon entry={e} />
               <span className="min-w-0 flex-1 truncate">{e.name}</span>
-              <span className="w-24 text-right text-[13px] tabular-nums text-dim">{isDir(e) ? '' : size(e.size)}</span>
-              <span className="w-36 text-[13px] tabular-nums text-dim">{when(e.mtime)}</span>
+              <span className="w-24 text-right text-sm tabular-nums text-dim">{isDir(e) ? '' : size(e.size)}</span>
+              <span className="w-36 text-sm tabular-nums text-dim">{when(e.mtime)}</span>
             </div>
           )
         })}

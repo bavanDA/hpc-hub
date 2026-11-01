@@ -2,7 +2,7 @@
 // the next thing to do (Connect, Cancel); once connected, the things you open (Terminal, VS Code, Files, Agents)
 // sit in one row and the rest (node, VPN only, Disconnect) in the ⋮ menu. With Ask every time (ask_node) the node
 // dialog opens by itself once connected.
-import { Bot, ChevronDown, Code, Cpu, Folder, MoreVertical, Plug, Power, Settings, SquareTerminal, Users,
+import { Bot, ChevronDown, Code, Cpu, Folder, MoreVertical, Plug, Power, Server, Settings, SquareTerminal, Users,
   Zap, type LucideIcon } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
@@ -12,13 +12,12 @@ import { BUSY, DUO, fastLabel, summary, type Cluster, type Session } from '../ty
 import { ComputeDialog } from './clusters/ComputeDialog'
 import { LogView } from './clusters/LogView'
 import { who } from './clusters/loginCopy'
-import { ServerIcon } from './clusters/ServerIcon'
 import { SettingsDialog } from './clusters/SettingsDialog'
 import { putCluster } from './clusters/store'
 import { Menu, type MenuItem } from './projects/Menu'
 import { useToast } from './toast'
 import { useTools } from './tools/useTools'
-import { Button, Dialog, IconButton, Spinner } from './ui'
+import { Button, Dialog, IconButton, IconTile, Spinner } from './ui'
 
 type Open = null | 'settings' | 'compute' | { switch: { id: string; name: string }; vpnOnly: boolean }
 
@@ -32,7 +31,7 @@ function Status({ s, vpnOnly }: { s: Session; vpnOnly: boolean }) {
       : s.state === 'Disconnected' ? ['Not connected', 'bg-dim/50', 'text-dim']
         : [s.state === DUO ? 'Approve Duo' : s.state, 'bg-warn animate-pulse', 'text-warn']
   return (
-    <span className={`flex items-center gap-2 whitespace-nowrap text-[13px] font-bold ${look}`}>
+    <span className={`flex items-center gap-2 whitespace-nowrap text-sm font-semibold ${look}`}>
       <span className={`size-2 rounded-full ${dot}`} />{text}</span>
   )
 }
@@ -40,9 +39,9 @@ function Status({ s, vpnOnly }: { s: Session; vpnOnly: boolean }) {
 function Action({ icon: Icon, label, onClick }: { icon: LucideIcon; label: string; onClick: () => void }) {
   return (
     <button type="button" onClick={onClick}
-      className="flex h-10 items-center gap-2 rounded-lg bg-pill px-3.5 font-bold hover:bg-selected
+      className="flex h-10 items-center gap-2 rounded-lg bg-pill px-3.5 font-semibold hover:bg-selected
         focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent">
-      <Icon size={17} className="text-accent-text" />{label}</button>
+      <Icon size={16} className="text-accent-text" />{label}</button>
   )
 }
 
@@ -102,44 +101,44 @@ export function ClusterCard({ cluster: c, session: s, log }: { cluster: Cluster;
   return (
     <section className="flex flex-col rounded-xl bg-card shadow-[var(--shadow-card)]">
       <div className="flex items-center gap-3 px-5 pt-4">
-        <ServerIcon />
+        <IconTile icon={Server} />
         <div className="min-w-0 flex-1">
-          <h2 className="text-lg font-bold leading-tight">{c.name}</h2>
-          <p className="truncate text-[13px] text-dim">{c.host || 'No host set'}{c.vpn.enabled ? ` · ${who(c)} VPN` : ''}</p>
+          <h2 className="text-lg font-semibold leading-tight">{c.name}</h2>
+          <p className="truncate text-sm text-dim">{c.host || 'No host set'}{c.vpn.enabled ? ` · ${who(c)} VPN` : ''}</p>
         </div>
         <Status s={s} vpnOnly={vpnOnly} />
         <IconButton icon={Settings} label={`${c.name} settings`} onClick={() => { setHint(''); setOpen('settings') }} />
-        {more.some((g) => g.length) && <Menu groups={more} label="More" trigger={<MoreVertical size={18} />}
+        {more.some((g) => g.length) && <Menu groups={more} label="More" trigger={<MoreVertical size={20} />}
           className="grid size-9 shrink-0 place-items-center rounded-full hover:bg-hover" />}
       </div>
 
       <div className="flex flex-col gap-3 px-5 pb-4 pt-3">
         {(busy || (s.detail && !vpnOnly)) && (
-          <div className={`flex items-center gap-2 text-[14px] ${s.state === 'Error' ? 'text-bad' : ''}`}>
+          <div className={`flex items-center gap-2 text-base ${s.state === 'Error' ? 'text-bad' : ''}`}>
             {busy && <Spinner />}
-            <span className={`min-w-0 break-words ${s.state === DUO ? 'font-bold text-accent-text' : ''}`}>
+            <span className={`min-w-0 break-words ${s.state === DUO ? 'font-semibold text-accent-text' : ''}`}>
               {s.detail}</span>
           </div>
         )}
 
         {connected && (
           <>
-            <div className="flex items-center gap-2.5 text-[14px]">
+            <div className="flex items-center gap-2.5 text-base">
               <Cpu size={16} className="shrink-0 text-dim" />
               {a
                 ? <span className="select-text">On node <b>{a.node}</b> <span className="text-dim">· job {a.job}
                     {a.owned ? '' : ', started elsewhere'}</span></span>
                 : <><span className="text-dim">No compute node</span>
                     <button type="button" onClick={() => setOpen('compute')} disabled={busy}
-                      className="font-bold text-accent-text hover:underline disabled:opacity-50">Get one</button></>}
+                      className="font-semibold text-accent-text hover:underline disabled:opacity-50">Get one</button></>}
             </div>
             <div className="flex flex-wrap gap-2">
               <Action icon={SquareTerminal} label="Terminal" onClick={() => go('terminals', { cluster: c.id, new: '1' })} />
               <Action icon={Code} label="VS Code" onClick={() => tools.open(c.id, c.name, 'vscode')} />
               <Action icon={Folder} label="Files" onClick={() => tools.open(c.id, c.name, 'files')} />
-              <Menu groups={agents} label="Agents" trigger={<><Bot size={17} className="text-accent-text" />Agents
-                <ChevronDown size={15} className="text-dim" /></>}
-                className="flex h-10 items-center gap-2 rounded-lg bg-pill px-3.5 font-bold hover:bg-selected" />
+              <Menu groups={agents} label="Agents" trigger={<><Bot size={16} className="text-accent-text" />Agents
+                <ChevronDown size={16} className="text-dim" /></>}
+                className="flex h-10 items-center gap-2 rounded-lg bg-pill px-3.5 font-semibold hover:bg-selected" />
             </div>
           </>
         )}
@@ -147,7 +146,7 @@ export function ClusterCard({ cluster: c, session: s, log }: { cluster: Cluster;
         {(idle || busy || vpnOnly) && (
           <div className="flex items-center gap-3">
             {idle ? (
-              <label className="flex min-w-0 flex-1 cursor-pointer items-center gap-2.5 text-[14px]"
+              <label className="flex min-w-0 flex-1 cursor-pointer items-center gap-2.5 text-base"
                 title="Ask Slurm for a compute node when you connect">
                 <input type="checkbox" checked={c.request_node_on_connect ?? true}
                   onChange={(e) => wantNode(e.target.checked)}
@@ -157,11 +156,11 @@ export function ClusterCard({ cluster: c, session: s, log }: { cluster: Cluster;
               </label>
             ) : <span className="flex-1" />}
             {busy
-              ? <Button round onClick={() => run('clusters.cancel')} disabled={s.state === 'Disconnecting'}>
+              ? <Button onClick={() => run('clusters.cancel')} disabled={s.state === 'Disconnecting'}>
                   {s.state === 'Disconnecting' ? 'Disconnecting…' : 'Cancel'}</Button>
               : vpnOnly
-                ? <Button round onClick={() => run('clusters.disconnect')}>Disconnect</Button>
-                : <Button kind="suggested" round className="min-w-[120px]" onClick={() => connect()}>
+                ? <Button onClick={() => run('clusters.disconnect')}>Disconnect</Button>
+                : <Button kind="primary" className="min-w-[120px]" onClick={() => connect()}>
                     {s.state === 'Error' ? 'Try again' : 'Connect'}</Button>}
           </div>
         )}

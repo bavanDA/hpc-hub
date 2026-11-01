@@ -35,7 +35,7 @@ export function MenuButton({ icon, label, hint, onClick, disabled }:
       className="flex h-9 w-full items-center gap-3 rounded-md px-3 text-left hover:bg-hover disabled:opacity-50">
       <span className="text-dim">{icon}</span>
       <span className="flex-1">{label}</span>
-      {hint && <span className="text-[12px] text-dim">{hint}</span>}
+      {hint && <span className="text-xs text-dim">{hint}</span>}
     </button>
   )
 }

@@ -14,14 +14,14 @@ export function LoadTab({ name, parts, error }: { name: string; parts: Partition
     <Section title="Partitions" note={note}>
       {parts && parts.length > 0 && (
         <Card className="overflow-x-auto">
-          <table className="w-full border-collapse text-[14px] tabular-nums">
+          <table className="w-full border-collapse text-base tabular-nums">
             <thead>
-              <tr className="border-b border-line text-left text-[13px] whitespace-nowrap text-dim">
-                <th className="py-2.5 pr-2 pl-4 font-bold">Partition</th>
-                <th className="px-2 font-bold">CPUs busy</th>
-                {gpus && <th className="px-2 text-right font-bold">GPUs</th>}
-                <th className="px-2 text-right font-bold">Running</th>
-                <th className="pr-4 pl-2 text-right font-bold">Waiting</th>
+              <tr className="border-b border-line text-left text-sm whitespace-nowrap text-dim">
+                <th className="py-2.5 pr-2 pl-4 font-semibold">Partition</th>
+                <th className="px-2 font-semibold">CPUs busy</th>
+                {gpus && <th className="px-2 text-right font-semibold">GPUs</th>}
+                <th className="px-2 text-right font-semibold">Running</th>
+                <th className="pr-4 pl-2 text-right font-semibold">Waiting</th>
               </tr>
             </thead>
             <tbody>
@@ -29,7 +29,7 @@ export function LoadTab({ name, parts, error }: { name: string; parts: Partition
                 <tr key={p.name} className="h-14 border-b border-line last:border-0">
                   <td className="pr-2 pl-4 whitespace-nowrap">
                     <div className={p.up ? '' : 'text-dim'}>{p.name}{!p.up && ' (down)'}</div>
-                    <div className="text-[13px] text-dim">{n(p.nodes)} nodes</div>
+                    <div className="text-sm text-dim">{n(p.nodes)} nodes</div>
                   </td>
                   <td className="w-full px-2">
                     <div className="flex items-center gap-3">
@@ -41,7 +41,7 @@ export function LoadTab({ name, parts, error }: { name: string; parts: Partition
                   {gpus && <td className="px-2 text-right whitespace-nowrap">
                     {p.gpus_total ? `${p.gpus_used} of ${p.gpus_total}` : <span className="text-dim">none</span>}</td>}
                   <td className="px-2 text-right">{n(p.running)}</td>
-                  <td className={`pr-4 pl-2 text-right ${p.pending > p.running ? 'font-bold text-warn' : ''}`}>
+                  <td className={`pr-4 pl-2 text-right ${p.pending > p.running ? 'font-semibold text-warn' : ''}`}>
                     {n(p.pending)}</td>
                 </tr>
               ))}

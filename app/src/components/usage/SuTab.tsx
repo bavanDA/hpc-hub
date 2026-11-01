@@ -40,7 +40,7 @@ export function SuTab({ account, people, error, loading, period }: {
       <Section title="Account"><Summary a={account} /></Section>
       {account && (
         <Section title="Who used it" note={<span className="inline-flex items-center gap-2">
-          {loading && people && <Spinner size={12} />}{note}</span>}>
+          {loading && people && <Spinner size={14} />}{note}</span>}>
           {people && (
             <List>
               {active.map((p) => (
@@ -49,7 +49,7 @@ export function SuTab({ account, people, error, loading, period }: {
                     {p.user === people.me && <Pill kind="ok">you</Pill>}</span>}
                   subtitle={`${p.user} · ${n(p.hours)} core hours`}
                   suffix={<>
-                    <span className="w-36 text-right text-[14px] tabular-nums">
+                    <span className="w-36 text-right text-base tabular-nums">
                       {n(p.charged)} SU · <span className="text-dim">{pct(p.charged, total)}</span></span>
                     <Bar value={total ? p.charged / total : 0} share />
                   </>} />
@@ -61,7 +61,7 @@ export function SuTab({ account, people, error, loading, period }: {
       )}
       {idle.length > 0 && (
         <section className="flex flex-col gap-2">
-          <button onClick={() => setIdleOpen(!idleOpen)} className="flex w-fit items-center gap-1 font-bold">
+          <button onClick={() => setIdleOpen(!idleOpen)} className="flex w-fit items-center gap-1 font-semibold">
             {idleOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />} No usage in this period ({idle.length})
           </button>
           {idleOpen && <List>{idle.map((p) => <Row key={p.user} title={p.name || p.user} subtitle={p.user} />)}</List>}

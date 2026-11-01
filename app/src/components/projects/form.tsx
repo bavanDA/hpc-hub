@@ -10,13 +10,13 @@ export function Group({ title, description, suffix, children }:
       {(title || suffix) && (
         <div className="flex items-end gap-3 px-1">
           <div className="min-w-0 flex-1">
-            {title && <h3 className="text-[15px] font-bold">{title}</h3>}
-            {description && <p className="text-[13px] text-dim">{description}</p>}
+            {title && <h3 className="text-md font-semibold">{title}</h3>}
+            {description && <p className="text-sm text-dim">{description}</p>}
           </div>
           {suffix}
         </div>
       )}
-      {!title && description && <p className="px-1 text-[13px] text-dim">{description}</p>}
+      {!title && description && <p className="px-1 text-sm text-dim">{description}</p>}
       {Children.toArray(children).length > 0 && <List>{children}</List>}
     </div>
   )
@@ -28,9 +28,9 @@ export function EntryRow({ title, value, onChange, suffix, autoFocus, mono }:
   return (
     <label className="flex min-h-[56px] items-center gap-3 px-4 focus-within:bg-hover">
       <div className="flex min-w-0 flex-1 flex-col py-1.5">
-        <span className="text-[12px] text-dim">{title}</span>
+        <span className="text-xs text-dim">{title}</span>
         <input value={value} onChange={(e) => onChange(e.target.value)} autoFocus={autoFocus} spellCheck={false}
-          className={`w-full bg-transparent outline-none ${mono ? 'font-mono text-[14px]' : ''}`} />
+          className={`w-full bg-transparent outline-none ${mono ? 'font-mono text-base' : ''}`} />
       </div>
       {suffix}
     </label>
@@ -43,10 +43,10 @@ export function SelectRow<T extends string>({ title, subtitle, value, options, o
     <label className="flex min-h-[56px] items-center gap-3 px-4 py-2">
       <div className="min-w-0 flex-1">
         <div>{title}</div>
-        {subtitle && <div className="text-[13px] text-dim">{subtitle}</div>}
+        {subtitle && <div className="text-sm text-dim">{subtitle}</div>}
       </div>
       <select value={value} onChange={(e) => onChange(e.target.value as T)}
-        className="h-9 max-w-[60%] rounded-md bg-pill px-2 font-bold outline-none hover:bg-selected">
+        className="h-9 max-w-[60%] rounded-md bg-pill px-2 font-semibold outline-none hover:bg-selected">
         {options.map((o) => <option key={o.value} value={o.value} className="bg-window text-text">{o.label}</option>)}
       </select>
     </label>
@@ -70,7 +70,7 @@ export function SwitchRow({ title, on, onChange }: { title: string; on: boolean;
 export function PropertyRow({ title, value }: { title: string; value: ReactNode }) {
   return (
     <div className="flex min-h-[56px] flex-col justify-center px-4 py-2">
-      <span className="text-[12px] text-dim">{title}</span>
+      <span className="text-xs text-dim">{title}</span>
       <span className="select-text break-all">{value}</span>
     </div>
   )
@@ -95,7 +95,7 @@ export function Toggles({ items, active, onPick }:
     <div className="flex shrink-0 rounded-lg bg-pill p-[3px]">
       {items.map((t) => (
         <button key={t.name} title={t.tip} onClick={() => onPick(t.name)}
-          className={`h-[30px] rounded-md px-3 text-[14px] font-bold ${
+          className={`h-[30px] rounded-md px-3 text-base font-semibold ${
             t.name === active ? 'bg-card shadow-sm' : 'hover:bg-hover'}`}>{t.name}</button>
       ))}
     </div>
@@ -103,5 +103,5 @@ export function Toggles({ items, active, onPick }:
 }
 
 export function ErrorText({ text }: { text: string }) {
-  return text ? <p className="select-text px-1 text-[14px] text-bad">{text}</p> : null
+  return text ? <p className="select-text px-1 text-base text-bad">{text}</p> : null
 }

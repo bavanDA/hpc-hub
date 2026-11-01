@@ -44,13 +44,13 @@ export function KeySetupDialog({ cluster: c, onClose, onDone }:
     <Dialog title={`Sign in to ${c.name}`} onClose={onClose} width={480}
       actions={<Button onClick={onClose}>{s.state === 'done' ? 'Close' : 'Cancel'}</Button>}>
       <div className="flex flex-col items-center gap-3 py-2 text-center">
-        <Icon size={48} strokeWidth={1.25}
+        <Icon size={40} strokeWidth={1.25}
           className={s.state === 'done' ? 'text-ok' : s.state === 'failed' ? 'text-bad' : 'text-dim'} />
-        <h3 className="text-xl font-bold">{s.title || 'Sign in to the portal'}</h3>
+        <h3 className="text-xl font-semibold">{s.title || 'Sign in to the portal'}</h3>
         <p className="max-w-sm text-dim">{s.text}</p>
-        {busy && <Spinner size={28} />}
+        {busy && <Spinner size={24} />}
       </div>
-      <p className="mt-4 text-center text-[13px] text-dim">
+      <p className="mt-4 text-center text-sm text-dim">
         No password is saved{c.second_factor === 'code'
           ? `. ${c.name} still asks for the code from your authenticator app when you connect.` : '.'}</p>
     </Dialog>

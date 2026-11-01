@@ -11,7 +11,7 @@ export function DaysRow({ names, days, onChange }: { names: string[]; days: numb
       <div className="flex overflow-hidden rounded-md">
         {names.map((n, i) => (
           <button key={n} type="button" aria-pressed={days.includes(i + 1)} title={n} onClick={() => flip(i + 1)}
-            className={`h-9 w-10 text-[14px] font-bold transition ${i ? 'border-l border-line' : ''} ${
+            className={`h-9 w-10 text-base font-semibold transition-colors duration-90 ${i ? 'border-l border-line' : ''} ${
               days.includes(i + 1) ? 'bg-accent text-white' : 'bg-pill hover:bg-selected'}`}>{n.slice(0, 2)}</button>
         ))}
       </div>
@@ -40,8 +40,8 @@ export function DurationRow({ total, limits, onChange }:
           <label key={unit} className="flex items-center gap-1.5">
             <input aria-label={label} type="number" min={0} max={max} value={value}
               onChange={(e) => change(Math.min(max, Math.max(0, parseInt(e.target.value || '0', 10) || 0)))}
-              className="h-8 w-14 rounded-md bg-pill pl-2 text-center tabular-nums outline-none focus:ring-2
-                focus:ring-accent" />
+              className="h-8 w-14 rounded-md bg-pill pl-2 text-center tabular-nums outline-none focus-visible:ring-2 focus-visible:ring-inset
+                focus-visible:ring-focus" />
             <span className="mr-1.5 text-dim">{unit}</span>
           </label>
         ))}

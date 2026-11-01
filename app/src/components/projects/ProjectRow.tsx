@@ -39,20 +39,20 @@ export function ProjectRow({ p, experimental, act }: { p: Project; experimental:
     () => call<Project>('projects.opened', { id: p.id }).then((x) => x.path, () => p.path))
   return (
     <div className="flex min-h-[56px] items-center gap-3 py-2 pr-3 pl-4">
-      <Icon size={22} strokeWidth={1.75} className="shrink-0" />
+      <Icon size={20} strokeWidth={1.75} className="shrink-0" />
       <div className="min-w-0 flex-1">
         <div className="truncate">{p.name}</div>
-        <div className="truncate text-[13px] text-dim" title={p.path}>
+        <div className="truncate text-sm text-dim" title={p.path}>
           {known ? p.cluster_name : `${p.cluster} (unknown cluster)`} · {p.path}
         </div>
       </div>
       {known && (
         <div className="flex shrink-0 items-center gap-1">
           <Menu label="VS Code, Claude and more" groups={openGroups(open, experimental)}
-            className="flex h-9 items-center gap-2 rounded-md bg-pill px-3 font-bold hover:bg-selected"
+            className="flex h-9 items-center gap-2 rounded-md bg-pill px-3 font-semibold hover:bg-selected"
             trigger={<><LayoutGrid size={14} /> Open <ChevronDown size={16} /></>} />
           <Menu label="More" className="grid size-9 place-items-center rounded-full hover:bg-hover"
-            trigger={<EllipsisVertical size={18} />}
+            trigger={<EllipsisVertical size={20} />}
             groups={[[
               { label: 'Copy or sync to another cluster', onClick: () => act.copy(p) },
               { label: 'Edit', onClick: () => act.edit(p) },

@@ -67,19 +67,19 @@ export function AddSkillsDialog({ cluster, name, targets, repo, onClose, onDone 
       </Group>
       <div className="mb-2 flex items-end gap-3 px-1">
         <div className="min-w-0 flex-1">
-          <h3 className="text-[15px] font-bold">Skills in it</h3>
-          <p className="text-[13px] text-dim">{note}</p>
+          <h3 className="text-md font-semibold">Skills in it</h3>
+          <p className="text-sm text-dim">{note}</p>
         </div>
         {(found?.length ?? 0) > 8 && (
           <label className="flex h-9 w-48 items-center gap-2 rounded-md bg-pill px-2.5 focus-within:ring-2
             focus-within:ring-accent">
-            <Search size={15} className="shrink-0 text-dim" />
+            <Search size={16} className="shrink-0 text-dim" />
             <input value={filter} onChange={(e) => setFilter(e.target.value)} placeholder="Filter"
               className="min-w-0 flex-1 bg-transparent outline-none placeholder:text-dim" />
           </label>
         )}
       </div>
-      {loading && <div className="grid h-24 place-items-center"><Spinner size={22} /></div>}
+      {loading && <div className="grid h-24 place-items-center"><Spinner size={20} /></div>}
       {!!shown.length && (
         <div className="mb-5"><Group>
           {shown.map((k) => (
@@ -87,7 +87,7 @@ export function AddSkillsDialog({ cluster, name, targets, repo, onClose, onDone 
               <Check on={picked.includes(k.path)} onChange={(v) => tick(k.path, v)} label={k.name} />
               <div className="min-w-0 flex-1">
                 <div className="truncate">{k.name}</div>
-                {k.description && <div className="line-clamp-2 text-[13px] text-dim">{k.description}</div>}
+                {k.description && <div className="line-clamp-2 text-sm text-dim">{k.description}</div>}
               </div>
             </label>
           ))}

@@ -75,7 +75,7 @@ export function Skills() {
       <Group title="HPC Hub skills" description="Ready to use. Add them to your favourite agents.">
         {list.catalog.map((k) => (
           <SkillRow key={k.folder} name={k.name} description={k.on.length
-            ? <><span className="font-bold text-ok">In {k.on.map(label).join(', ')}</span> · {k.description}</>
+            ? <><span className="font-semibold text-ok">In {k.on.map(label).join(', ')}</span> · {k.description}</>
             : k.description}
             suffix={<AddTo name={k.name} targets={list.targets} has={k.on} busy={adding === k.folder}
               onAdd={(t) => addOwn(k.folder, k.name, t)} />} />

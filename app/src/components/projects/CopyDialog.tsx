@@ -117,7 +117,7 @@ export function CopyDialog({ p, onClose, onStarted }:
               <div className="flex min-h-[56px] items-center gap-3 px-4 py-2">
                 <div className="min-w-0 flex-1">
                   <div>Where</div>
-                  <div className="text-[13px] text-dim">
+                  <div className="text-sm text-dim">
                     {!dst?.connected ? `Connect to ${dst?.name} on the Clusters page to choose Home, Project or Scratch`
                       : spot?.label.startsWith('Scratch')
                         ? 'Scratch may be cleaned up after a while. Keep work you need in Project.' : ''}
@@ -132,7 +132,7 @@ export function CopyDialog({ p, onClose, onStarted }:
                 suffix={<IconButton icon={FolderOpen} label="Choose folder"
                   onClick={() => dst?.connected ? setPicking(true) : setError(`Connect to ${dst?.name} first`)} />} />
               <PropertyRow title="Will be"
-                value={<span className="font-mono text-[14px]">
+                value={<span className="font-mono text-base">
                   {dst?.name}:{intoPath.replace(/\/+$/, '')}/{info.name}</span>} />
             </Group>
 
@@ -141,10 +141,10 @@ export function CopyDialog({ p, onClose, onStarted }:
                 onChange={setHow} options={HOW} />
               {missing && (
                 <div className="flex items-center gap-3 bg-warn-bg px-4 py-3 text-warn">
-                  <TriangleAlert size={18} className="shrink-0" />
+                  <TriangleAlert size={20} className="shrink-0" />
                   <div>
-                    <div className="font-bold">Globus is not ready</div>
-                    <div className="text-[13px]">Needs {missing}. Set it up on the Globus page.</div>
+                    <div className="font-semibold">Globus is not ready</div>
+                    <div className="text-sm">Needs {missing}. Set it up on the Globus page.</div>
                   </div>
                 </div>
               )}
@@ -154,13 +154,13 @@ export function CopyDialog({ p, onClose, onStarted }:
               {plan?.parts.map((x) => (
                 <CheckRow key={x.name} title={x.name} checked={!!keep[x.name]}
                   onChange={(v) => setKeep({ ...keep, [x.name]: v })}
-                  suffix={<span className="text-[14px] text-dim tabular-nums">{formatSize(x.size)}</span>} />
+                  suffix={<span className="text-base text-dim tabular-nums">{formatSize(x.size)}</span>} />
               ))}
             </Group>
 
             <Group title="Claude chats in this project" description={talk}
               suffix={plan && plan.chats.length > 0 && (
-                <label className="flex shrink-0 items-center gap-2 text-[14px]">
+                <label className="flex shrink-0 items-center gap-2 text-base">
                   <input type="checkbox" checked={allChats} className="size-[16px] accent-[var(--color-accent)]"
                     onChange={(e) => setChats(Object.fromEntries(plan.chats.map((c) => [c.id, e.target.checked])))} />
                   Select all
@@ -169,10 +169,10 @@ export function CopyDialog({ p, onClose, onStarted }:
               {plan?.chats.map((c) => (
                 <CheckRow key={c.id} title={c.name} checked={!!chats[c.id]}
                   onChange={(v) => setChats({ ...chats, [c.id]: v })}
-                  suffix={<span className="text-[14px] text-dim tabular-nums">{formatSize(c.size)}</span>} />
+                  suffix={<span className="text-base text-dim tabular-nums">{formatSize(c.size)}</span>} />
               ))}
             </Group>
-            {error && <p className="select-text px-1 text-[14px] text-bad">{error}</p>}
+            {error && <p className="select-text px-1 text-base text-bad">{error}</p>}
           </div>
         )}
       </Dialog>

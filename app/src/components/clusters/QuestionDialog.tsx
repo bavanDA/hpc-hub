@@ -43,11 +43,11 @@ export function QuestionDialog({ q, cluster, onAnswer }:
             <input autoFocus inputMode="numeric" maxLength={8} placeholder="123456" value={text}
               onChange={(e) => typed(e.target.value)} aria-label="Code"
               className="h-14 w-full rounded-xl bg-pill text-center text-3xl font-bold tracking-[0.2em] tabular-nums
-                outline-none placeholder:text-dim focus:ring-2 focus:ring-accent" />
+                outline-none placeholder:text-dim focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus" />
           </form>
           {cluster && (
             <button type="button" onClick={() => setHelp(true)}
-              className="mx-auto mt-3 block rounded-md px-3 py-1.5 font-bold hover:bg-hover">
+              className="mx-auto mt-3 block rounded-md px-3 py-1.5 font-semibold hover:bg-hover">
               No code yet? How to set it up</button>
           )}
         </Dialog>

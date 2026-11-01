@@ -12,9 +12,9 @@ import { openNew } from './tabs'
 function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
   return (
     <label className="flex flex-col gap-1.5">
-      <span className="text-[13px] font-bold text-dim">{label}</span>
+      <span className="text-sm font-semibold text-dim">{label}</span>
       {children}
-      {hint && <span className="text-[13px] text-dim">{hint}</span>}
+      {hint && <span className="text-sm text-dim">{hint}</span>}
     </label>
   )
 }
@@ -76,7 +76,7 @@ export function NewTerminalDialog({ live, cluster: start = '', onClose, onOpened
         </Field>
       </div>
       <div className="mt-6 mb-2 flex justify-center">
-        <Button kind="suggested" round disabled={!cluster} onClick={create}>Open terminal</Button>
+        <Button kind="primary" disabled={!cluster} onClick={create}>Open terminal</Button>
       </div>
     </Dialog>
   )

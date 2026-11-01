@@ -76,11 +76,11 @@ export function ProjectDialog({ mode, project, clusters, projects, onClose, onSa
               <SelectRow title="Start with" value={template} onChange={setTemplate}
                 options={TEMPLATES.map((t) => ({ value: t, label: t }))} />
               <SwitchRow title="Make it a git repository" on={git} onChange={setGit} />
-              <PropertyRow title="Will create" value={<span className="font-mono text-[14px]">{target}</span>} />
+              <PropertyRow title="Will create" value={<span className="font-mono text-base">{target}</span>} />
             </Group>
           )}
           {!create && c && !c.connected && !error && (
-            <p className="px-1 text-[13px] text-dim">
+            <p className="px-1 text-sm text-dim">
               {c.name} is not connected. The folder is checked the first time you open the project.</p>
           )}
           <ErrorText text={error} />

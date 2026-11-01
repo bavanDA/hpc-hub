@@ -259,9 +259,9 @@ export function Project({ project, onClose }: { project: Opened; onClose: () => 
 
   const editorPane = (
     <div className="flex h-full flex-col">
-      <div className="flex h-10 shrink-0 items-center gap-2 border-b border-line bg-header pl-3 pr-1.5 text-[13px]">
+      <div className="flex h-10 shrink-0 items-center gap-2 border-b border-line bg-header pl-3 pr-1.5 text-sm">
         <FileText size={14} className="shrink-0 text-dim" />
-        <span className="truncate font-bold" title={doc?.path}>{docRel || basename(main)}</span>
+        <span className="truncate font-semibold" title={doc?.path}>{docRel || basename(main)}</span>
         {dirty && <span className="size-2 shrink-0 rounded-full bg-accent" title="Not saved yet" />}
         <span className="flex-1" />
         <button onClick={() => editor.current && toPdf(editor.current.line())} title="Show this line in the PDF (Ctrl+J)"
@@ -269,7 +269,7 @@ export function Project({ project, onClose }: { project: Opened; onClose: () => 
           To PDF <ArrowRight size={14} /></button>
       </div>
       <div className="min-h-0 flex-1">
-        {docError ? <p className="p-6 text-center text-[13px] text-bad">{docError}</p>
+        {docError ? <p className="p-6 text-center text-sm text-bad">{docError}</p>
           : !doc ? <div className="grid h-full place-items-center"><Spinner size={24} /></div>
           : <Suspense fallback={<div className="grid h-full place-items-center"><Spinner size={24} /></div>}>
               <CodeEditor key={`${doc.path}:${doc.version}`} path={doc.path} version={doc.version} text={doc.text}
@@ -283,10 +283,10 @@ export function Project({ project, onClose }: { project: Opened; onClose: () => 
 
   const logsButton = (
     <button onClick={() => setLogsOpen(!logsOpen)} title="Logs and issues"
-      className={`flex h-7 items-center gap-1.5 rounded-md px-2 text-[13px] ${logsOpen ? 'bg-selected' : 'hover:bg-hover'}`}>
+      className={`flex h-7 items-center gap-1.5 rounded-md px-2 text-sm ${logsOpen ? 'bg-selected' : 'hover:bg-hover'}`}>
       <ScrollText size={14} />
-      {errors > 0 && <span className="rounded-full bg-bad px-1.5 text-[11px] font-bold text-white">{errors}</span>}
-      {warnings > 0 && <span className="rounded-full bg-warn px-1.5 text-[11px] font-bold text-white
+      {errors > 0 && <span className="rounded-full bg-bad px-1.5 text-xs font-semibold text-white">{errors}</span>}
+      {warnings > 0 && <span className="rounded-full bg-warn px-1.5 text-xs font-semibold text-white
         dark:text-black">{warnings}</span>}
     </button>
   )
@@ -306,16 +306,16 @@ export function Project({ project, onClose }: { project: Opened; onClose: () => 
           className={`grid size-8 place-items-center rounded-md ${showTree ? 'bg-selected' : 'hover:bg-hover'}`}>
           <PanelLeft size={16} /></button>
         <div className="min-w-0 flex-1 leading-tight">
-          <div className="truncate text-[14px] font-bold">{project.name}</div>
-          <div className="truncate text-[12px] text-dim">{project.cluster_name} · {rel(folder, main)}
+          <div className="truncate text-base font-semibold">{project.name}</div>
+          <div className="truncate text-xs text-dim">{project.cluster_name} · {rel(folder, main)}
             <span className="ml-2">{saving ? 'Saving…' : dirty ? 'Not saved' : 'Saved'}</span></div>
         </div>
         <div className="flex rounded-lg bg-pill p-0.5">
           {([['editor', 'Editor', FileText], ['split', 'Both', Columns2], ['pdf', 'PDF', ScrollText]] as const)
             .map(([v, label, I]) => (
               <button key={v} onClick={() => setView(v)} title={label}
-                className={`flex h-7 items-center gap-1.5 rounded-md px-2.5 text-[13px] ${view === v
-                  ? 'bg-card font-bold shadow-sm' : 'text-dim hover:text-text'}`}><I size={14} /> {label}</button>
+                className={`flex h-7 items-center gap-1.5 rounded-md px-2.5 text-sm ${view === v
+                  ? 'bg-card font-semibold shadow-sm' : 'text-dim hover:text-text'}`}><I size={14} /> {label}</button>
             ))}
         </div>
         <div className="flex flex-1 items-center justify-end gap-1.5">
@@ -343,9 +343,9 @@ export function Project({ project, onClose }: { project: Opened; onClose: () => 
 function Empty({ title, text }: { title: string; text: string }) {
   return (
     <div className="flex max-w-xs flex-col items-center gap-2">
-      <ScrollText size={44} strokeWidth={1.25} className="text-dim" />
-      <div className="font-bold">{title}</div>
-      <p className="text-[13px] text-dim">{text}</p>
+      <ScrollText size={40} strokeWidth={1.25} className="text-dim" />
+      <div className="font-semibold">{title}</div>
+      <p className="text-sm text-dim">{text}</p>
     </div>
   )
 }

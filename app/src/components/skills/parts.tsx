@@ -10,7 +10,7 @@ export function SkillRow({ name, description, path, suffix }:
     <div title={path || undefined} className="flex min-h-[56px] items-center gap-3 px-4 py-2">
       <div className="min-w-0 flex-1">
         <div className="truncate">{name}</div>
-        {description && <div className="line-clamp-2 text-[13px] text-dim">{description}</div>}
+        {description && <div className="line-clamp-2 text-sm text-dim">{description}</div>}
       </div>
       {suffix}
     </div>
@@ -26,7 +26,7 @@ export function BuiltIn({ label, skills }: { label: string; skills: Skill[] }) {
         className="flex min-h-[56px] w-full items-center gap-3 px-4 py-2 text-left hover:bg-hover">
         <div className="min-w-0 flex-1">
           <div>Built in or synced ({skills.length})</div>
-          <div className="text-[13px] text-dim">Managed by {label} itself</div>
+          <div className="text-sm text-dim">Managed by {label} itself</div>
         </div>
         {open ? <ChevronDown size={16} className="text-dim" /> : <ChevronRight size={16} className="text-dim" />}
       </button>

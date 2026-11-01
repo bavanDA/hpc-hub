@@ -57,17 +57,17 @@ export function LockSetupDialog({ cluster, name, onClose, onDone }:
           <p>Scan this with Google Authenticator (or any authenticator app).</p>
           {setup.qr && <img src={setup.qr} alt="QR code"
             className="size-48 rounded-lg bg-white p-1 [image-rendering:pixelated]" />}
-          <div className="text-[13px] text-dim">
+          <div className="text-sm text-dim">
             Or add it by hand, time based:
-            <div className="mt-1 select-text font-mono text-[15px] tracking-wide text-text">{setup.key}</div>
+            <div className="mt-1 select-text font-mono text-md tracking-wide text-text">{setup.key}</div>
           </div>
           <input autoFocus inputMode="numeric" maxLength={7} value={code} placeholder="Code from the app"
             onChange={(e) => setCode(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && turnOn()}
-            className="h-12 w-56 rounded-md bg-pill text-center text-xl font-bold tracking-widest outline-none
+            className="h-12 w-56 rounded-md bg-pill text-center text-xl font-semibold tracking-widest outline-none
               placeholder:text-base placeholder:font-normal placeholder:tracking-normal placeholder:text-dim
-              focus:ring-2 focus:ring-accent" />
-          {error && <p className="text-[13px] text-bad">{error}</p>}
-          <Button kind="suggested" round disabled={busy || !code.trim()} onClick={turnOn}>
+              focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus" />
+          {error && <p className="text-sm text-bad">{error}</p>}
+          <Button kind="primary" disabled={busy || !code.trim()} onClick={turnOn}>
             {busy && <Spinner size={14} />}Turn on</Button>
         </div>
       )}
@@ -83,9 +83,9 @@ function Activity({ status }: { status: LockStatus }) {
         onClick={() => setOpen(!open)} suffix={open ? <ChevronDown size={16} className="text-dim" />
           : <ChevronRight size={16} className="text-dim" />} />
       {open && (
-        <div className="max-h-56 overflow-auto border-t border-line bg-view/40 px-4 py-2 font-mono text-[12px]">
+        <div className="max-h-56 overflow-auto border-t border-line bg-view/40 px-4 py-2 font-mono text-xs">
           {status.log.length ? status.log.map((l, i) => <div key={i} className="select-text py-0.5">{l}</div>)
-            : <p className="py-1 font-sans text-[13px] text-dim">Nothing yet</p>}
+            : <p className="py-1 font-sans text-sm text-dim">Nothing yet</p>}
         </div>
       )}
     </div>
@@ -98,8 +98,8 @@ export function LockGroup({ status, config, onConfig, onSetUp, onUnlock, onOff }
 }) {
   if (!status.set_up) return (
     <Group title="Passcode lock" description={ABOUT}>
-      <Row title={<span className="font-bold text-accent-text">Set up with Google Authenticator</span>}
-        prefix={<ShieldCheck size={18} className="text-accent-text" />} onClick={onSetUp} />
+      <Row title={<span className="font-semibold text-accent-text">Set up with Google Authenticator</span>}
+        prefix={<ShieldCheck size={20} className="text-accent-text" />} onClick={onSetUp} />
     </Group>
   )
   const set = (part: Partial<LockConfig>) => onConfig({ ...config, ...part })
@@ -107,9 +107,9 @@ export function LockGroup({ status, config, onConfig, onSetUp, onUnlock, onOff }
     <Group title="Passcode lock" description={ABOUT}>
       {status.locked && (
         <div className="bg-bad-bg">
-          <Row title={<span className="font-bold text-bad">Locked after too many wrong codes</span>}
+          <Row title={<span className="font-semibold text-bad">Locked after too many wrong codes</span>}
             subtitle="Someone typed wrong codes. Check Recent activity"
-            prefix={<ShieldAlert size={18} className="text-bad" />}
+            prefix={<ShieldAlert size={20} className="text-bad" />}
             suffix={<Button onClick={onUnlock}>Unlock</Button>} />
         </div>
       )}
@@ -122,7 +122,7 @@ export function LockGroup({ status, config, onConfig, onSetUp, onUnlock, onOff }
       <SwitchRow title="Then cancel Claude's job" on={config.scancel} onChange={(scancel) => set({ scancel })} />
       <Activity status={status} />
       <button onClick={onOff}
-        className="flex h-[52px] w-full items-center justify-center font-bold text-bad hover:bg-hover">
+        className="flex h-[52px] w-full items-center justify-center font-semibold text-bad hover:bg-hover">
         Turn off passcode lock</button>
     </Group>
   )

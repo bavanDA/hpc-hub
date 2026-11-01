@@ -103,7 +103,7 @@ export function Permissions() {
         onUnlock={() => lockAction('permissions.lock_reset', 'Unlocked')} />
       <Commands groups={perm.groups} custom={draft.custom} allowed={allowed} onChange={tick}
         onAdd={(cmd) => edit({ custom: [...draft.custom, cmd], allowed: [...draft.allowed, cmd].sort() })} />
-      <p className="px-1 text-[13px] text-dim">ChatGPT and Antigravity ask before running commands.</p>
+      <p className="px-1 text-sm text-dim">ChatGPT and Antigravity ask before running commands.</p>
     </div>
   )
 

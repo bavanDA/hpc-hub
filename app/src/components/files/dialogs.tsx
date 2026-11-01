@@ -20,8 +20,8 @@ export function NameDialog({ title, action, initial = '', onDone, onClose }:
           const dot = initial.lastIndexOf('.')
           e.target.setSelectionRange(0, dot > 0 ? dot : initial.length)
         }}
-        className="h-10 w-full rounded-md bg-pill px-3 outline-none focus:ring-2 focus:ring-accent" />
-      {name.includes('/') && <p className="mt-2 text-[13px] text-bad">A name can't have / in it.</p>}
+        className="h-10 w-full rounded-md bg-pill px-3 outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus" />
+      {name.includes('/') && <p className="mt-2 text-sm text-bad">A name can't have / in it.</p>}
     </Dialog>
   )
 }

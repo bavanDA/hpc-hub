@@ -48,13 +48,13 @@ export function HeaderBar({ title, onSidebar, sidebar, onExperimental }:
         isMac && !sidebar ? 'pl-[78px]' : ''}`}>
       <button onClick={onSidebar} aria-label="Show or hide the sidebar"
         className="grid size-8 place-items-center rounded-md hover:bg-hover"><PanelLeft size={16} /></button>
-      <div data-drag className="flex-1 truncate text-center text-[15px] font-bold">{title}</div>
+      <div data-drag className="flex-1 truncate text-center text-md font-semibold">{title}</div>
       <AppMenu onExperimental={onExperimental} />
       {!isMac && (
         <div className="ml-2 flex gap-3 pr-1">
-          <Round label="Minimize" onClick={() => win('minimize')}><Minus size={12} strokeWidth={2.5} /></Round>
-          <Round label="Maximize" onClick={() => win('toggleMaximize')}><Square size={9} strokeWidth={2.5} /></Round>
-          <Round label="Close" onClick={() => win('close')}><X size={12} strokeWidth={2.5} /></Round>
+          <Round label="Minimize" onClick={() => win('minimize')}><Minus size={14} strokeWidth={2.5} /></Round>
+          <Round label="Maximize" onClick={() => win('toggleMaximize')}><Square size={14} strokeWidth={2.5} /></Round>
+          <Round label="Close" onClick={() => win('close')}><X size={14} strokeWidth={2.5} /></Round>
         </div>
       )}
     </header>

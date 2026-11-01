@@ -33,7 +33,7 @@ export function Onboarding({ ids, onDone }: { ids: string[]; onDone: () => void 
   }, [ids])
 
   const step = steps?.[at]
-  if (!steps || !step) return <div className="grid h-full place-items-center"><Spinner size={28} /></div>
+  if (!steps || !step) return <div className="grid h-full place-items-center"><Spinner size={24} /></div>
   const next = () => (at + 1 < steps.length ? setAt(at + 1) : onDone())
   const last = at + 1 === steps.length
   return (
@@ -52,7 +52,7 @@ function Progress({ steps, at }: { steps: Step[]; at: number }) {
   const clusters = steps.filter((s) => s.kind === 'login')
   const which = clusters.findIndex((s) => s.cluster.id === steps[at].cluster.id) + 1
   return (
-    <div className="flex items-center gap-3 text-[13px] text-dim">
+    <div className="flex items-center gap-3 text-sm text-dim">
       <span>{steps[at].cluster.name}{clusters.length > 1 ? ` · cluster ${which} of ${clusters.length}` : ''}</span>
       <div className="flex flex-1 gap-1.5" aria-label={`Step ${at + 1} of ${steps.length}`}>
         {steps.map((_, i) => (
@@ -80,7 +80,7 @@ function Footer({ onSkip, children }: { onSkip?: () => void; children: ReactNode
   return (
     <div className="flex items-center justify-between gap-3">
       {onSkip ? <button type="button" onClick={onSkip}
-        className="rounded px-1 py-1 text-[14px] text-dim underline-offset-2 hover:text-text hover:underline">
+        className="rounded px-1 py-1 text-base text-dim underline-offset-2 hover:text-text hover:underline">
         {copy.skip}</button> : <span />}
       {children}
     </div>
@@ -90,8 +90,8 @@ function Footer({ onSkip, children }: { onSkip?: () => void; children: ReactNode
 /** The lock line under a password, or what turning Remember off means. */
 function RememberNote({ remember }: { remember: boolean }) {
   return (
-    <p className="flex items-center gap-1.5 px-1 text-[13px] text-dim">
-      {remember ? <><Lock size={13} className="shrink-0" />{copy.savedIn(keyStore)}</> : copy.rememberOff}</p>
+    <p className="flex items-center gap-1.5 px-1 text-sm text-dim">
+      {remember ? <><Lock size={14} className="shrink-0" />{copy.savedIn(keyStore)}</> : copy.rememberOff}</p>
   )
 }
 
@@ -134,13 +134,13 @@ function LoginStep({ cluster: c, onNext }: { cluster: Cluster; onNext: () => voi
     const skip = () => (user.trim() ? save() : onNext())
     return (
       <form className="flex flex-col gap-6" onSubmit={(e) => { e.preventDefault(); if (works) save() }}>
-        <Heading icon={<KeyRound size={22} />} title={head.title} text={head.text} />
+        <Heading icon={<KeyRound size={20} />} title={head.title} text={head.text} />
         {loaded ? <KeyPanel cluster={c} user={user} onUser={setUser} onTested={setWorks} />
           : <div className="grid h-40 place-items-center"><Spinner size={24} /></div>}
         {instead}
         {error && <p className="text-bad">{error}</p>}
         <Footer onSkip={works ? undefined : skip}>
-          <Button kind="suggested" round type="submit" disabled={!works || busy}>{copy.continue}</Button>
+          <Button kind="primary" pill type="submit" disabled={!works || busy}>{copy.continue}</Button>
         </Footer>
       </form>
     )
@@ -148,15 +148,15 @@ function LoginStep({ cluster: c, onNext }: { cluster: Cluster; onNext: () => voi
   const label = c.username_label || 'Username'
   return (
     <form className="flex flex-col gap-6" onSubmit={(e) => { e.preventDefault(); if (user.trim()) save() }}>
-      <Heading icon={<KeyRound size={22} />} title={copy.signIn(c)}
+      <Heading icon={<KeyRound size={20} />} title={copy.signIn(c)}
         text={c.second_factor === 'code' ? <>{secondStep(c)}{c.code_setup && <> <button type="button"
-          onClick={() => openSystem(c.code_setup!)} className="inline-flex items-center gap-1 font-bold
-          text-accent-text hover:underline">{copy.codeSetup}<ExternalLink size={13} /></button></>}</> : undefined} />
+          onClick={() => openSystem(c.code_setup!)} className="inline-flex items-center gap-1 font-semibold
+          text-accent-text hover:underline">{copy.codeSetup}<ExternalLink size={14} /></button></>}</> : undefined} />
       {c.portal && (
         <div className="flex flex-col gap-3">
-          <Button kind="suggested" round type="button" onClick={() => setPortal(true)}>
+          <Button kind="primary" pill type="button" onClick={() => setPortal(true)}>
             <Globe size={16} /> {copy.portal(c)}</Button>
-          <p className="text-[13px] text-dim">{copy.orPassword}</p>
+          <p className="text-sm text-dim">{copy.orPassword}</p>
         </div>
       )}
       <div className="flex flex-col gap-3">
@@ -171,7 +171,7 @@ function LoginStep({ cluster: c, onNext }: { cluster: Cluster; onNext: () => voi
       {instead}
       {error && <p className="text-bad">{error}</p>}
       <Footer onSkip={onNext}>
-        <Button kind={c.portal ? 'pill' : 'suggested'} round type="submit" disabled={!user.trim() || busy}>
+        <Button kind={c.portal ? 'secondary' : 'primary'} pill type="submit" disabled={!user.trim() || busy}>
           {copy.continue}</Button>
       </Footer>
       {portal && <KeySetupDialog cluster={c} onClose={() => setPortal(false)}
@@ -200,13 +200,13 @@ function NodeStep({ cluster: c, onNext, last }: { cluster: Cluster; onNext: () =
 
   return (
     <form className="flex flex-col gap-6" onSubmit={(e) => { e.preventDefault(); save() }}>
-      <Heading icon={<Cpu size={22} />} title="Compute node"
+      <Heading icon={<Cpu size={20} />} title="Compute node"
         text="Your terminals and agents run on a compute node, not the busy login node." />
       <div className="overflow-hidden rounded-xl bg-card shadow-[var(--shadow-card)]">
         <label className="flex cursor-pointer items-center gap-4 px-5 py-4">
           <span className="min-w-0 flex-1">
-            <span className="block text-[15px] font-bold">Get a compute node when I connect</span>
-            <span className="block text-[13px] text-dim">
+            <span className="block text-md font-semibold">Get a compute node when I connect</span>
+            <span className="block text-sm text-dim">
               {want ? 'HPC Hub asks Slurm for one right after you sign in.' : 'You can still get one from the cluster card.'}
             </span>
           </span>
@@ -217,10 +217,10 @@ function NodeStep({ cluster: c, onNext, last }: { cluster: Cluster; onNext: () =
             {!editing ? (
               <div className="flex items-center gap-4">
                 <div className="grid size-10 shrink-0 place-items-center rounded-lg bg-pill text-accent-text">
-                  <Cpu size={18} /></div>
+                  <Cpu size={20} /></div>
                 <div className="min-w-0 flex-1">
-                  <div className="text-[15px] font-bold">{summary(p)}</div>
-                  <div className="text-[13px] text-dim">The usual size for {shortName(c)}</div>
+                  <div className="text-md font-semibold">{summary(p)}</div>
+                  <div className="text-sm text-dim">The usual size for {shortName(c)}</div>
                 </div>
                 <Button type="button" kind="pill" onClick={() => setEditing(true)}>Change</Button>
               </div>
@@ -235,7 +235,7 @@ function NodeStep({ cluster: c, onNext, last }: { cluster: Cluster; onNext: () =
                 </List>
               </div>
             )}
-            <label className="mt-4 flex cursor-pointer items-center gap-2.5 text-[14px]">
+            <label className="mt-4 flex cursor-pointer items-center gap-2.5 text-base">
               <input type="checkbox" checked={ask} onChange={(e) => setAsk(e.target.checked)}
                 className="size-4 accent-[var(--color-accent)]" />
               Review these before each request
@@ -243,10 +243,10 @@ function NodeStep({ cluster: c, onNext, last }: { cluster: Cluster; onNext: () =
           </div>
         )}
       </div>
-      <p className="-mt-3 px-1 text-[13px] text-dim">You can change this later in Settings.</p>
+      <p className="-mt-3 px-1 text-sm text-dim">You can change this later in Settings.</p>
       {error && <p className="text-bad">{error}</p>}
       <Footer>
-        <Button kind="suggested" round type="submit">{last ? 'Done' : copy.continue}</Button>
+        <Button kind="primary" pill type="submit">{last ? 'Done' : copy.continue}</Button>
       </Footer>
     </form>
   )

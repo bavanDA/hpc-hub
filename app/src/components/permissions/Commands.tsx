@@ -23,7 +23,7 @@ function Expander({ title, note, commands, allowed, onChange, opens = 0 }: {
           label={`All of ${title}`} onChange={(v) => onChange(commands, v)} />
         <div className="min-w-0 flex-1">
           <div>{title}</div>
-          <div className="text-[13px] text-dim">{note ? `${count}. ${note}` : count}</div>
+          <div className="text-sm text-dim">{note ? `${count}. ${note}` : count}</div>
         </div>
         {open ? <ChevronDown size={16} className="text-dim" /> : <ChevronRight size={16} className="text-dim" />}
       </div>
@@ -33,9 +33,9 @@ function Expander({ title, note, commands, allowed, onChange, opens = 0 }: {
           {commands.length ? commands.map((c) => (
             <label key={c} className="flex h-8 items-center gap-2.5 rounded-md px-1.5 hover:bg-hover">
               <Check on={allowed.has(c)} onChange={(v) => onChange([c], v)} label={c} />
-              <span className="truncate font-mono text-[13px]">{c}</span>
+              <span className="truncate font-mono text-sm">{c}</span>
             </label>
-          )) : <p className="col-span-full text-[13px] text-dim">None yet. Add one below.</p>}
+          )) : <p className="col-span-full text-sm text-dim">None yet. Add one below.</p>}
         </div>
       )}
     </div>
@@ -66,9 +66,9 @@ export function Commands({ groups, custom, allowed, onChange, onAdd }: {
       <div className="flex items-center gap-2 px-4 py-3">
         <input value={text} spellCheck={false} placeholder="Add a command, like conda or ./run.sh"
           onChange={(e) => setText(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && add()}
-          className="h-9 min-w-0 flex-1 rounded-md bg-pill px-3 outline-none placeholder:text-dim focus:ring-2
-            focus:ring-accent" />
-        <Button disabled={!text.trim()} onClick={add}><Plus size={15} />Add</Button>
+          className="h-9 min-w-0 flex-1 rounded-md bg-pill px-3 outline-none placeholder:text-dim focus-visible:ring-2 focus-visible:ring-inset
+            focus-visible:ring-focus" />
+        <Button disabled={!text.trim()} onClick={add}><Plus size={16} />Add</Button>
       </div>
     </Group>
   )

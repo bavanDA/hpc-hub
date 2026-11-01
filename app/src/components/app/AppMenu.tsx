@@ -49,7 +49,7 @@ export function AppMenu({ onExperimental }: { onExperimental: (on: boolean) => v
                 <button key={label} role="menuitem" onClick={() => { setOpen(false); run() }}
                   className="flex h-9 w-full items-center gap-6 whitespace-nowrap rounded-md px-3 text-left hover:bg-hover">
                   <span className="flex-1">{label}</span>
-                  {keys && <span className="text-[13px] text-dim">{keys}</span>}
+                  {keys && <span className="text-sm text-dim">{keys}</span>}
                 </button>
               ))}
             </div>

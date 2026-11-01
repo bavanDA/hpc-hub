@@ -9,7 +9,7 @@ import { human, minutes, slurmTime } from '../clusters/time'
 import { FolderPicker } from '../projects/FolderPicker'
 import { IconButton } from '../ui'
 
-export const selectClass = 'h-8 max-w-[260px] rounded-md bg-pill px-2 outline-none focus:ring-2 focus:ring-accent'
+export const selectClass = 'h-8 max-w-[260px] rounded-md bg-pill px-2 outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus'
 
 /** Like Adw.EntryRow with a Choose folder button. */
 export function FolderRow({ cluster, label = 'Folder', value, onChange }:
@@ -18,9 +18,9 @@ export function FolderRow({ cluster, label = 'Folder', value, onChange }:
   return (
     <div className="flex min-h-[56px] items-center gap-2 py-1.5 pr-2 pl-4 focus-within:bg-hover">
       <label className="min-w-0 flex-1">
-        <div className="text-[12px] text-dim">{label}</div>
+        <div className="text-xs text-dim">{label}</div>
         <input value={value} onChange={(e) => onChange(e.target.value)} spellCheck={false} autoComplete="off"
-          className="w-full bg-transparent text-[15px] outline-none" />
+          className="w-full bg-transparent text-md outline-none" />
       </label>
       <IconButton icon={FolderOpen} label="Choose folder" onClick={() => setPicking(true)} />
       {picking && <FolderPicker cluster={{ ...cluster, connected: true }} start={value.trim() || '~'}
@@ -46,7 +46,7 @@ export function TextBox({ value, onChange, rows = 3, placeholder, autoFocus }:
     <textarea value={value} onChange={(e) => onChange(e.target.value)} rows={rows} placeholder={placeholder}
       autoFocus={autoFocus}
       className="block w-full resize-y rounded-xl bg-card px-3 py-2.5 shadow-[var(--shadow-card)] outline-none
-        placeholder:text-dim focus:ring-2 focus:ring-accent" />
+        placeholder:text-dim focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus" />
   )
 }
 
@@ -54,8 +54,8 @@ export function Section({ title, description, children }:
   { title?: string; description?: ReactNode; children: ReactNode }) {
   return (
     <div className="mb-5">
-      {title && <h3 className="mb-1 text-[15px] font-bold">{title}</h3>}
-      {description && <p className="mb-2 text-[13px] text-dim">{description}</p>}
+      {title && <h3 className="mb-1 text-md font-semibold">{title}</h3>}
+      {description && <p className="mb-2 text-sm text-dim">{description}</p>}
       {children}
     </div>
   )
@@ -83,7 +83,7 @@ export function ComputeGroup({ cluster, value, onChange, disabled = false, descr
   const sub = !limits?.known ? 'Max shown after you connect'
     : limits.longest ? `Longest allowed: ${human(limits.longest)} (${limits.why})` : 'No time limit here'
   const queue = [partition, value.account ?? '', qos].filter((x) => x.trim()).join(' · ') || "The cluster's defaults"
-  const time = 'h-8 w-12 rounded-md bg-pill text-center tabular-nums outline-none focus:ring-2 focus:ring-accent'
+  const time = 'h-8 w-12 rounded-md bg-pill text-center tabular-nums outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus'
   const unit = (label: string, short: string, v: number, max: number, to: (n: number) => number) => (
     <label key={short} className="flex items-center gap-1">
       <input aria-label={label} type="number" min={0} max={max} value={v} className={time}
@@ -112,7 +112,7 @@ export function ComputeGroup({ cluster, value, onChange, disabled = false, descr
           className="flex min-h-[56px] w-full items-center gap-3 px-4 py-2 text-left hover:bg-hover">
           <div className="min-w-0 flex-1">
             <div>Partition, account and QOS</div>
-            <div className="truncate text-[13px] text-dim">{queue}</div>
+            <div className="truncate text-sm text-dim">{queue}</div>
           </div>
           {more ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
         </button>

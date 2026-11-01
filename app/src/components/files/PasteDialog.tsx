@@ -41,13 +41,13 @@ export function PasteDialog({ clip, dstName, dstDir, onGo, onClose }:
         <Button kind="suggested" disabled={!ready}
           onClick={() => { onClose(); onGo([...left], how, total) }}>Copy</Button>
       </>}>
-      <p className="truncate text-[13px] text-dim" title={clip.path}>From {clip.clusterName}: {clip.path}</p>
-      <p className="mb-3 truncate text-[13px] text-dim" title={dstDir}>Into {dstName}: {dstDir}</p>
+      <p className="truncate text-sm text-dim" title={clip.path}>From {clip.clusterName}: {clip.path}</p>
+      <p className="mb-3 truncate text-sm text-dim" title={dstDir}>Into {dstName}: {dstDir}</p>
 
       {clip.folder && (
         <>
-          <h3 className="mb-1 font-bold">What to copy</h3>
-          <p className="mb-2 text-[13px] text-dim">
+          <h3 className="mb-1 font-semibold">What to copy</h3>
+          <p className="mb-2 text-sm text-dim">
             {error ? `Could not measure it: ${error}` : !plan ? 'Measuring sizes…'
               : `${size(total)} will be copied. Untick what to leave behind.`}
             {total > BIG && how === 'laptop' && ' That is big: Globus copies it cluster to cluster, much faster.'}
@@ -55,20 +55,20 @@ export function PasteDialog({ clip, dstName, dstDir, onGo, onClose }:
           <div className="mb-4 max-h-[280px] divide-y divide-line overflow-auto rounded-xl bg-card
             shadow-[var(--shadow-card)]">
             {!plan && !error && <div className="grid h-14 place-items-center"><Spinner /></div>}
-            {plan && !plan.sizes.length && <p className="p-3 text-[13px] text-dim">The folder is empty.</p>}
+            {plan && !plan.sizes.length && <p className="p-3 text-sm text-dim">The folder is empty.</p>}
             {plan?.sizes.map((s) => (
               <label key={s.name} className="flex h-11 items-center gap-3 px-3 hover:bg-hover">
                 <input type="checkbox" checked={!left.has(s.name)} onChange={() => flip(s.name)}
                   className="size-[18px] accent-[var(--color-accent)]" />
                 <span className="min-w-0 flex-1 truncate">{s.name}</span>
-                <span className="text-[13px] tabular-nums text-dim">{size(s.size)}</span>
+                <span className="text-sm tabular-nums text-dim">{size(s.size)}</span>
               </label>
             ))}
           </div>
         </>
       )}
 
-      <h3 className="mb-2 font-bold">How</h3>
+      <h3 className="mb-2 font-semibold">How</h3>
       <div className="grid grid-cols-2 gap-2">
         {([['laptop', Laptop, 'Through this laptop', 'Streams it, no setup'],
           ['globus', Globe, 'Globus', 'Cluster to cluster, only what changed']] as const).map(([k, Icon, t, sub]) => (
@@ -77,8 +77,8 @@ export function PasteDialog({ clip, dstName, dstDir, onGo, onClose }:
               how === k ? 'bg-accent/15 ring-2 ring-accent' : 'ring-line hover:bg-hover'}`}>
             <Icon size={20} className={`mt-0.5 shrink-0 ${how === k ? 'text-accent-text' : 'text-dim'}`} />
             <span>
-              <span className="block font-bold">{t}</span>
-              <span className="block text-[13px] text-dim">{sub}</span>
+              <span className="block font-semibold">{t}</span>
+              <span className="block text-sm text-dim">{sub}</span>
             </span>
           </button>
         ))}

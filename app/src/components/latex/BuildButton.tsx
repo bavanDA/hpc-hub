@@ -23,7 +23,7 @@ export function BuildButton({ cluster, clusterName, running, settings, onSetting
   return (
     <div className="flex">
       <Button kind="suggested" onClick={onBuild} disabled={running} title="Save and build (Ctrl+Enter)"
-        className="!h-8 rounded-r-none !px-3 text-[13px]">
+        className="!h-8 rounded-r-none !px-3 text-sm">
         {running ? <Spinner size={14} /> : <RefreshCw size={14} />} {running ? 'Compiling' : 'Recompile'}</Button>
       <Popover width={330} button={(open, toggle) => (
         <button onClick={() => { if (!open) setDraft(settings); toggle() }} aria-label="Build settings"
@@ -32,13 +32,13 @@ export function BuildButton({ cluster, clusterName, running, settings, onSetting
             hover:brightness-110"><ChevronDown size={14} /></button>
       )}>
         {(close) => (
-          <div className="flex flex-col gap-3 p-2 text-[13px]">
+          <div className="flex flex-col gap-3 p-2 text-sm">
             <label className="flex items-center gap-2">
               <input type="checkbox" checked={auto} onChange={(e) => onAuto(e.target.checked)} className="accent-accent" />
               Build each time you save
             </label>
             <div className="border-t border-line" />
-            <div className="font-bold">Build on {clusterName}</div>
+            <div className="font-semibold">Build on {clusterName}</div>
             <label className="flex flex-col gap-1">
               <span className="text-dim">Engine</span>
               <select value={draft.engine} onChange={(e) => setDraft({ ...draft, engine: e.target.value as Settings['engine'] })}
@@ -50,7 +50,7 @@ export function BuildButton({ cluster, clusterName, running, settings, onSetting
               <span className="text-dim">Before the build</span>
               <input value={draft.setup} placeholder="module load texlive"
                 onChange={(e) => setDraft({ ...draft, setup: e.target.value })}
-                className="h-8 rounded-md bg-pill px-2 font-mono text-[12.5px] outline-none focus:ring-2 focus:ring-accent" />
+                className="h-8 rounded-md bg-pill px-2 font-mono text-xs outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus" />
             </label>
             <label className="flex items-center gap-2">
               <input type="checkbox" checked={draft.on_node} className="accent-accent"
@@ -58,7 +58,7 @@ export function BuildButton({ cluster, clusterName, running, settings, onSetting
               Build on my compute node, if I have one
             </label>
             <div className="flex justify-end">
-              <Button kind="suggested" className="!h-8 text-[13px]" onClick={() => save(close)}>Save settings</Button>
+              <Button kind="suggested" className="!h-8 text-sm" onClick={() => save(close)}>Save settings</Button>
             </div>
           </div>
         )}

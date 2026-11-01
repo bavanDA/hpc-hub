@@ -72,7 +72,7 @@ export function Schedules() {
   else if (!list) body = <div className="grid h-64 place-items-center"><Spinner size={24} /></div>
   else if (!list.length) body = <div className="h-[60vh]"><EmptyState icon={AlarmClock} title="No scheduled agents yet"
     text={`An agent can work on a task on ${name} by itself, every night or on the days you pick.`}
-    action={<Button kind="suggested" round disabled={!options} onClick={() => setOpen({ kind: 'edit', st: null })}>
+    action={<Button kind="primary" disabled={!options} onClick={() => setOpen({ kind: 'edit', st: null })}>
       New schedule</Button>} /></div>
   else body = (
     <>
@@ -81,7 +81,7 @@ export function Schedules() {
           onToggle={(on) => toggle(st, on)} onRun={() => runNow(st)} onLog={() => setOpen({ kind: 'log', st })}
           onEdit={() => setOpen({ kind: 'edit', st })} onDelete={() => setOpen({ kind: 'delete', st })} />)}
       </List>
-      <p className="px-1 text-[13px] text-dim">
+      <p className="px-1 text-sm text-dim">
         Each schedule is a Slurm job that waits for its time, runs the agent once, then queues the next run. It
         keeps going with your laptop off. Answers are saved in its logs folder.</p>
     </>

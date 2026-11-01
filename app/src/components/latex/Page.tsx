@@ -50,11 +50,11 @@ export default function LatexPage() {
   return (
     <>
       <Picker data={picker.data} onOpen={open} onReload={reload} />
-      {opening && <div className="fixed inset-0 z-30 grid place-items-center bg-black/10"><Spinner size={28} /></div>}
+      {opening && <div className="fixed inset-0 z-30 grid place-items-center bg-black/10"><Spinner size={24} /></div>}
       {choices && (
         <Dialog title="Which file builds the PDF?" onClose={() => setChoices(null)} width={420}>
           <div className="flex flex-col gap-1 pb-2">
-            <p className="mb-2 text-center text-[13px] text-dim">More than one .tex file in {choices.folder} has
+            <p className="mb-2 text-center text-sm text-dim">More than one .tex file in {choices.folder} has
               \documentclass.</p>
             {choices.choices.map((c) => (
               <Button key={c} kind="flat" className="justify-start font-mono font-normal"

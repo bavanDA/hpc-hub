@@ -108,7 +108,7 @@ export function Jobs() {
       </div>
       <div className="@container min-h-0 flex-1 overflow-auto scheme-light-dark">{body}</div>
       {!off && !error && <footer className="flex h-11 shrink-0 items-center gap-4 border-t border-line bg-header px-4
-        text-[13px]">
+        text-sm">
         <span className="shrink-0 text-dim">
           {list ? `${list.jobs.length} jobs · updated ${got.updated}` : 'Loading…'}</span>
         <span className="min-w-0 flex-1 truncate text-right" title={usage &&

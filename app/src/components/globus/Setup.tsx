@@ -15,7 +15,7 @@ function ClientId({ value, onSaved }: { value: string; onSaved: (s: GlobusStatus
     .catch((e: Error) => toast(`Could not save: ${e.message}`))
   return (
     <div className="flex w-full gap-2">
-      <Field className="flex-1 font-mono text-[13px]" placeholder="Client ID" value={id}
+      <Field className="flex-1 font-mono text-sm" placeholder="Client ID" value={id}
         onChange={(e) => setId(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && id.trim() && save()} />
       <Button kind="suggested" disabled={!id.trim() || id.trim() === value} onClick={save}>Save</Button>
     </div>
@@ -33,7 +33,7 @@ export function SignIn({ onSignIn }: { onSignIn: () => void }) {
   return (
     <EmptyState icon={ArrowLeftRight} title="Sign in to Globus"
       text="Use your university login. Globus then moves files between clusters for you."
-      action={<Button kind="suggested" round className="mt-2" onClick={onSignIn}><LogIn size={16} />Sign in</Button>} />
+      action={<Button kind="primary" onClick={onSignIn}><LogIn size={16} />Sign in</Button>} />
   )
 }
 
@@ -48,8 +48,8 @@ export function SettingsDialog({ status, onClose, onChange, onSignIn, onChoose }
     <Dialog title="Globus" onClose={onClose} width={560}>
       <div className="flex flex-col gap-5 pt-1">
         <section className="flex flex-col gap-2">
-          <h3 className="font-bold">Account</h3>
-          <p className="text-[13px] text-dim">{HELP}</p>
+          <h3 className="font-semibold">Account</h3>
+          <p className="text-sm text-dim">{HELP}</p>
           <ClientId value={status.client_id} onSaved={onChange} />
           <List>
             <Row title="Status" subtitle={status.signed_in ? 'Signed in' : 'Not signed in'}
@@ -59,8 +59,8 @@ export function SettingsDialog({ status, onClose, onChange, onSignIn, onChoose }
           </List>
         </section>
         <section className={`flex flex-col gap-2 ${status.signed_in ? '' : 'pointer-events-none opacity-50'}`}>
-          <h3 className="font-bold">Collections</h3>
-          <p className="text-[13px] text-dim">Pick the Globus collection that holds each cluster's files.</p>
+          <h3 className="font-semibold">Collections</h3>
+          <p className="text-sm text-dim">Pick the Globus collection that holds each cluster's files.</p>
           <List>
             {status.clusters.map((c) => (
               <Row key={c.id} title={c.name}

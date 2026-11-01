@@ -8,8 +8,8 @@ export function Group({ title, description, children }:
   { title?: string; description?: string; children: ReactNode }) {
   return (
     <div className="mb-5">
-      {title && <h3 className="mb-1 text-[15px] font-bold">{title}</h3>}
-      {description && <p className="mb-2 text-[13px] text-dim">{description}</p>}
+      {title && <h3 className="mb-1 text-md font-semibold">{title}</h3>}
+      {description && <p className="mb-2 text-sm text-dim">{description}</p>}
       <List>{children}</List>
     </div>
   )
@@ -20,7 +20,7 @@ function RowBox({ label, sub, children }: { label: ReactNode; sub?: ReactNode; c
     <div className="flex min-h-[56px] items-center gap-3 px-4 py-2">
       <div className="min-w-0 flex-1">
         <div>{label}</div>
-        {sub && <div className="text-[13px] text-dim">{sub}</div>}
+        {sub && <div className="text-sm text-dim">{sub}</div>}
       </div>
       {children}
     </div>
@@ -37,11 +37,11 @@ export function EntryRow({ label, value, onChange, placeholder, password, list, 
     <label className="flex min-h-[56px] items-center gap-2 px-4 py-1.5
       focus-within:shadow-[inset_3px_0_0_var(--color-accent)]">
       <div className="min-w-0 flex-1">
-        <div className="text-[12px] text-dim">{label}</div>
+        <div className="text-xs text-dim">{label}</div>
         <input value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder}
           type={password && !shown ? 'password' : 'text'} list={id} autoFocus={autoFocus} spellCheck={false}
           autoComplete="off"
-          className="w-full bg-transparent text-[15px] outline-none placeholder:text-dim
+          className="w-full bg-transparent text-md outline-none placeholder:text-dim
             [&::-webkit-calendar-picker-indicator]:opacity-40" />
         {list && <datalist id={id}>{list.map((x) => <option key={x} value={x} />)}</datalist>}
       </div>
@@ -65,7 +65,7 @@ export function NumberBox({ value, onChange, min, max, label, width = 56 }:
         onClick={() => onChange(clamp(value - 1))}><Minus size={14} /></button>
       <input aria-label={label} inputMode="numeric" value={value} style={{ width }}
         onChange={(e) => onChange(clamp(parseInt(e.target.value || '0', 10)))}
-        className="h-8 rounded-md bg-pill text-center tabular-nums outline-none focus:ring-2 focus:ring-accent" />
+        className="h-8 rounded-md bg-pill text-center tabular-nums outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus" />
       <button type="button" aria-label={`More ${label}`} className={step} disabled={value >= max}
         onClick={() => onChange(clamp(value + 1))}><Plus size={14} /></button>
     </div>
@@ -96,7 +96,7 @@ export function CheckRow({ label, sub, checked, onChange }:
         className="size-[18px] shrink-0 accent-[var(--color-accent)]" />
       <div className="min-w-0 flex-1">
         <div>{label}</div>
-        {sub && <div className="text-[13px] text-dim">{sub}</div>}
+        {sub && <div className="text-sm text-dim">{sub}</div>}
       </div>
     </label>
   )
@@ -112,7 +112,7 @@ export function ComboRow({ label, sub, value, onChange, options }:
   return (
     <RowBox label={label} sub={sub}>
       <select value={value} onChange={(e) => onChange(e.target.value)} aria-label={label}
-        className="h-9 max-w-[300px] rounded-md bg-pill px-2 outline-none focus:ring-2 focus:ring-accent">
+        className="h-9 max-w-[300px] rounded-md bg-pill px-2 outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus">
         {options.map(([v, text]) => <option key={v} value={v}>{text}</option>)}
       </select>
     </RowBox>
@@ -124,7 +124,7 @@ export function ButtonRow({ label, onClick, tone = 'accent', icon }:
   { label: string; onClick: () => void; tone?: 'accent' | 'bad'; icon?: ReactNode }) {
   return (
     <button type="button" onClick={onClick}
-      className={`flex min-h-[52px] w-full items-center justify-center gap-2 px-4 font-bold hover:bg-hover ${
+      className={`flex min-h-[52px] w-full items-center justify-center gap-2 px-4 font-semibold hover:bg-hover ${
         tone === 'bad' ? 'text-bad' : 'text-accent-text'}`}>
       {icon}{label}
     </button>

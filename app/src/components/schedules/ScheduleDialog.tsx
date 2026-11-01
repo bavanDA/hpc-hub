@@ -107,12 +107,12 @@ export function ScheduleDialog({ cluster, clusterName, options: o, editing, onCl
         </div>
         <EntryRow label="Name" value={name} onChange={setName} />
       </Group>
-      <h3 className="mb-1 text-[15px] font-bold">Task</h3>
-      <p className="mb-2 text-[13px] text-dim">What the agent does on each run.</p>
+      <h3 className="mb-1 text-md font-semibold">Task</h3>
+      <p className="mb-2 text-sm text-dim">What the agent does on each run.</p>
       <textarea value={task} onChange={(e) => setTask(e.target.value)} rows={6} spellCheck={false}
         placeholder="Tell the agent what to do, like: update the plots in figures/ with the newest results"
         className="mb-5 w-full resize-y rounded-xl bg-card px-4 py-3 shadow-[var(--shadow-card)] outline-none
-          placeholder:text-dim focus:ring-2 focus:ring-accent" />
+          placeholder:text-dim focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus" />
       <Group title="When">
         <EntryRow label="Time (24 h, cluster time)" value={time} onChange={setTime} placeholder="02:00" />
         <DaysRow names={o.days} days={days} onChange={setDays} />

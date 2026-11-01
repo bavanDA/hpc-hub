@@ -21,12 +21,12 @@ export function JobTable({ jobs, showUser, sort, onSort, onOpen, onCancel }: {
   const cols = COLUMNS.map(([k, t]) => [k, k === 'name' && showUser ? 'Name · user' : t] as const)
   const anyCancel = jobs.some((j) => j.cancellable)
   return (
-    <table className="w-full border-collapse text-[13.5px] tabular-nums">
+    <table className="w-full border-collapse text-sm tabular-nums">
       <thead className="sticky top-0 z-10 bg-card shadow-[inset_0_-1px_0_var(--color-line)]">
-        <tr className="text-left text-[13px] text-dim">
+        <tr className="text-left text-sm text-dim">
           {cols.map(([key, title]) => (
             <th key={key} aria-sort={sort.key === key ? (sort.desc ? 'descending' : 'ascending') : undefined}
-              className={`p-0 font-bold ${key === 'name' ? 'w-full' : ''} ${key === 'id' ? 'pl-2' : ''}`}>
+              className={`p-0 font-semibold ${key === 'name' ? 'w-full' : ''} ${key === 'id' ? 'pl-2' : ''}`}>
               <button onClick={() => onSort({ key, desc: sort.key === key ? !sort.desc : key === 'id' })}
                 className="flex h-9 w-full items-center gap-1 px-2 whitespace-nowrap hover:text-text">
                 {title}
@@ -46,19 +46,19 @@ export function JobTable({ jobs, showUser, sort, onSort, onOpen, onCancel }: {
             <td className="pr-2 pl-4 whitespace-nowrap">{j.job_id}</td>
             <td className="max-w-0 min-w-[100px] px-2">
               <div className="truncate leading-tight" title={j.name}>{j.name}</div>
-              {(showUser || j.from_app) && <div className="truncate text-[12px] leading-tight text-dim">
+              {(showUser || j.from_app) && <div className="truncate text-xs leading-tight text-dim">
                 {[showUser && j.user, j.from_app && 'started by HPC Hub'].filter(Boolean).join(' · ')}</div>}
             </td>
             <td className="px-2 leading-tight whitespace-nowrap" title={queue(j)}>{j.partition}
-              {j.qos && <div className="text-[12px] text-dim">{j.qos}</div>}</td>
+              {j.qos && <div className="text-xs text-dim">{j.qos}</div>}</td>
             <td className="px-2">
-              <span className={`inline-block whitespace-nowrap rounded-full px-2.5 py-0.5 text-[12px] font-bold ${
+              <span className={`inline-block whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-semibold ${
                 STATE_PILL[j.state] ?? 'bg-pill'}`}>{stateName(j.state)}</span></td>
             <td className="px-2 leading-tight whitespace-nowrap">{j.elapsed}
-              <div className="text-[12px] text-dim">of {j.limit}</div></td>
+              <div className="text-xs text-dim">of {j.limit}</div></td>
             <td className="px-2 whitespace-nowrap">{j.cpus} · {j.mem}</td>
             <td className={`px-2 leading-tight whitespace-nowrap ${j.su === 'free' ? 'text-dim' : ''}`}>{spent}
-              {max && <div className="text-[12px] text-dim">of {max}</div>}</td>
+              {max && <div className="text-xs text-dim">of {max}</div>}</td>
             <td className="max-w-[160px] truncate px-2 whitespace-nowrap" title={j.where}>{j.where}</td>
             {anyCancel && (
               <td className="pr-2 pl-1 text-right">
@@ -89,14 +89,14 @@ function RowMenu({ onDetails, onCancel }: { onDetails: () => void; onCancel: () 
   return (
     <div ref={box} className="relative inline-block" onClick={(e) => e.stopPropagation()}>
       <button aria-label="Job actions" title="Job actions" aria-expanded={open} onClick={() => setOpen(!open)}
-        className="grid size-8 place-items-center rounded-md hover:bg-selected"><MoreVertical size={17} /></button>
+        className="grid size-8 place-items-center rounded-md hover:bg-selected"><MoreVertical size={16} /></button>
       {open && (
         <div role="menu" className="absolute right-0 top-full z-30 mt-1 min-w-[160px] rounded-xl bg-card p-1 text-left
           shadow-[0_0_0_1px_var(--color-line),0_6px_20px_rgb(0_0_0/0.25)]">
           <button role="menuitem" onClick={pick(onDetails)}
             className="flex h-9 w-full items-center rounded-md px-3 hover:bg-hover">Details</button>
           <button role="menuitem" onClick={pick(onCancel)}
-            className="flex h-9 w-full items-center rounded-md px-3 font-bold text-bad hover:bg-hover">Cancel job…</button>
+            className="flex h-9 w-full items-center rounded-md px-3 font-semibold text-bad hover:bg-hover">Cancel job…</button>
         </div>
       )}
     </div>

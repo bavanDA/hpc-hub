@@ -24,8 +24,8 @@ export function keyHeading(c: Cluster): { title: string; text: ReactNode } {
 export function KeyHelpLink({ cluster, label }: { cluster: Cluster; label?: string }) {
   return (
     <button type="button" onClick={() => openSystem(keyHelp(cluster))} title={keyHelp(cluster)}
-      className="inline-flex items-center gap-1 font-bold text-accent-text hover:underline">
-      {label ?? copy.whatsAKey}<ExternalLink size={13} /></button>
+      className="inline-flex items-center gap-1 font-semibold text-accent-text hover:underline">
+      {label ?? copy.whatsAKey}<ExternalLink size={14} /></button>
   )
 }
 
@@ -116,7 +116,7 @@ export function KeyPanel(props: PanelProps) {
         change={S.CHANGE} onOpen={() => setOpen(KEY)}>
         {s.key === undefined ? <Spinner /> : (
           <>
-            {s.key && <p className="text-[13px] text-dim">{keyLine}</p>}
+            {s.key && <p className="text-sm text-dim">{keyLine}</p>}
             <div className="flex flex-wrap items-center gap-2">
               {!s.key && <Button kind="suggested" type="button" onClick={s.make} disabled={s.busy}>
                 {s.busy ? <Spinner /> : <KeyRound size={16} />}{S.CREATE_KEY}</Button>}
@@ -130,43 +130,43 @@ export function KeyPanel(props: PanelProps) {
         onOpen={() => setOpen(ADD)}>
         {s.key && <>
           <div className="flex items-center gap-2 rounded-lg border border-line bg-pill py-1 pl-3 pr-1">
-            <code className="min-w-0 flex-1 truncate font-mono text-[12px] text-dim" title={s.key.public}>
+            <code className="min-w-0 flex-1 truncate font-mono text-xs text-dim" title={s.key.public}>
               {s.key.public}</code>
-            <Button type="button" kind="flat" onClick={s.copyKey} className="shrink-0 text-[13px]">
-              {s.copied ? <><Check size={15} className="text-ok" />{S.COPIED}</> : <><Copy size={15} />{S.COPY_KEY}</>}
+            <Button type="button" kind="flat" onClick={s.copyKey} className="shrink-0 text-sm">
+              {s.copied ? <><Check size={16} className="text-ok" />{S.COPIED}</> : <><Copy size={16} />{S.COPY_KEY}</>}
             </Button>
           </div>
           <p>{fill(S.PASTE_IT, { who: org })}</p>
           <div className="flex flex-wrap items-center gap-2">
-            <Button kind="suggested" type="button" onClick={s.openPage}>{S.OPEN_PAGE}<ExternalLink size={15} /></Button>
+            <Button kind="suggested" type="button" onClick={s.openPage}>{S.OPEN_PAGE}<ExternalLink size={16} /></Button>
             <Button kind="flat" type="button" onClick={toTest}>{S.PASTED_IT}</Button>
           </div>
-          {c.key_page_note && <p className="flex gap-2 text-[13px] text-dim">
+          {c.key_page_note && <p className="flex gap-2 text-sm text-dim">
             <Info size={14} className="mt-[3px] shrink-0" />{c.key_page_note}</p>}
           <button type="button" onClick={toTest}
-            className="self-start text-[13px] text-dim underline-offset-2 hover:text-text hover:underline">
+            className="self-start text-sm text-dim underline-offset-2 hover:text-text hover:underline">
             {fill(S.ALREADY_ON, { who: org })}</button>
         </>}
       </Step>
       <Step n={3} state={state(TEST)} title={S.STEP_TEST} done={fill(S.SIGNED_IN_AS, { user: user.trim() })} last>
         <div className="flex flex-col gap-1.5">
-          <label htmlFor="key-user" className="text-[13px] font-bold">{c.username_label || 'Username'}</label>
+          <label htmlFor="key-user" className="text-sm font-semibold">{c.username_label || 'Username'}</label>
           <div className="flex gap-2">
             <input id="key-user" value={user} placeholder={copy.usernameHint} spellCheck={false}
               autoComplete="username" autoFocus
               onChange={(e) => { onUser(e.target.value); s.clearTest() }}
               onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); if (user.trim()) s.check() } }}
               className="h-9 min-w-0 flex-1 rounded-md border border-line bg-pill px-3 outline-none
-                placeholder:text-dim focus:border-accent focus:ring-2 focus:ring-accent/30" />
+                placeholder:text-dim focus-visible:border-focus focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus" />
             <Button kind="suggested" type="button" onClick={s.check} disabled={!user.trim() || s.busy}>
               {s.busy && <Spinner />}{s.test && !works ? S.TRY_AGAIN : S.TRY}</Button>
           </div>
         </div>
-        {s.busy && c.second_factor !== 'code' && <p className="text-[13px] text-dim">{S.DUO_NOW}</p>}
+        {s.busy && c.second_factor !== 'code' && <p className="text-sm text-dim">{S.DUO_NOW}</p>}
         {s.test && !works && <Result test={s.test} text={said(s.test, org)} />}
       </Step>
       {works && <div className="pb-3"><Result test={s.test!} text={said(s.test!, org)} /></div>}
-      {s.error && <p className="pb-2 text-[13px] text-bad">{s.error}</p>}
+      {s.error && <p className="pb-2 text-sm text-bad">{s.error}</p>}
     </div>
   )
 }
@@ -180,18 +180,18 @@ function Step({ n, state, title, done, change, onOpen, last, children }: {
   return (
     <div className="flex gap-4 py-3">
       <div className="flex flex-col items-center">
-        <span className={`grid size-7 shrink-0 place-items-center rounded-full text-[13px] font-bold ${mark}`}>
-          {state === 'done' ? <Check size={15} strokeWidth={3} /> : n}</span>
+        <span className={`grid size-7 shrink-0 place-items-center rounded-full text-sm font-semibold ${mark}`}>
+          {state === 'done' ? <Check size={16} strokeWidth={3} /> : n}</span>
         {!last && <span className="-mb-3 mt-1 w-px flex-1 bg-line" />}
       </div>
       <div className="min-w-0 flex-1 pt-0.5">
         <div className="flex items-baseline gap-3">
-          <div className={`min-w-0 flex-1 ${state === 'open' ? 'font-bold' : state === 'later' ? 'text-dim' : ''}`}>
+          <div className={`min-w-0 flex-1 ${state === 'open' ? 'font-semibold' : state === 'later' ? 'text-dim' : ''}`}>
             {title}</div>
           {state === 'done' && onOpen && change && <button type="button" onClick={onOpen}
-            className="-my-1 rounded px-2 py-1 text-[14px] font-bold text-accent-text hover:bg-hover">{change}</button>}
+            className="-my-1 rounded px-2 py-1 text-base font-semibold text-accent-text hover:bg-hover">{change}</button>}
         </div>
-        {state === 'done' && done && <div className="text-[13px] text-dim">{done}</div>}
+        {state === 'done' && done && <div className="text-sm text-dim">{done}</div>}
         {state === 'open' && <div className="mt-3 flex flex-col gap-3 pb-1">{children}</div>}
       </div>
     </div>
@@ -205,8 +205,8 @@ const TONE = {
 export function Result({ test, text }: { test: KeyTest; text: string }) {
   const [look, Icon] = TONE[test.kind ?? (test.ok ? 'ok' : 'error')]
   return (
-    <div role="status" className={`flex gap-2.5 rounded-lg px-3 py-2.5 text-[14px] ${look}`}>
-      <Icon size={17} className="mt-[2px] shrink-0" /><span>{text}</span>
+    <div role="status" className={`flex gap-2.5 rounded-lg px-3 py-2.5 text-base ${look}`}>
+      <Icon size={16} className="mt-[2px] shrink-0" /><span>{text}</span>
     </div>
   )
 }
@@ -215,7 +215,7 @@ export function Result({ test, text }: { test: KeyTest; text: string }) {
 export function PasswordInstead({ on, onChange }: { on: boolean; onChange: (on: boolean) => void }) {
   return (
     <button type="button" onClick={() => onChange(!on)}
-      className="self-start text-[13px] font-bold text-accent-text hover:underline">
+      className="self-start text-sm font-semibold text-accent-text hover:underline">
       {on ? copy.useKey : copy.usePassword}</button>
   )
 }
