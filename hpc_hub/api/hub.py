@@ -123,15 +123,13 @@ class Hub:
         return self.question("confirm", {"cluster": s.cfg.id, "name": s.cfg.name, "title": title,
                                          "prompt": text}) == "yes"
 
-    def pick_browser(self, s: ClusterSession) -> str | None:
-        """Where to sign in to the VPN: "" = the app's window, chrome_window.CHOICE = our Chrome window (asked
-        where there is one). None: cancelled. Never your own Chrome profile: nothing reads its cookies."""
-        if not chrome_window.available():
-            return ""
-        answer = self.question("pick-browser", {"cluster": s.cfg.id, "name": s.cfg.name, "who": s.cfg.who,
-                                                "label": s.cfg.username_label, "default": s.cfg.vpn.browser,
-                                                "chrome_window": chrome_window.CHOICE})
-        return answer if answer in ("", chrome_window.CHOICE) else None
+    def pick_browser(self, s: ClusterSession) -> str:
+        """Where to sign in to the VPN: the choice saved in the cluster's settings (vpn.browser), never a question
+        in the middle of connecting. "" = the app's window, chrome_window.CHOICE = our Chrome window (when there is
+        one). Never your own Chrome profile: nothing reads its cookies."""
+        if s.cfg.vpn.browser == chrome_window.CHOICE and chrome_window.available():
+            return chrome_window.CHOICE
+        return ""
 
     def web_login(self, s: ClusterSession, start, login, profile: str = "", title: str = "",
                   note: str = "") -> tuple[str, str]:

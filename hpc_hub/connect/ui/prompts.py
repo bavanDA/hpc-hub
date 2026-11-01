@@ -4,7 +4,6 @@ import threading
 
 from gi.repository import Adw, GLib, Gtk
 
-from ...ui.widgets import profile_choices
 from .. import chrome_window
 from ..session import ClusterSession
 from .authenticator_help import AuthenticatorHelp
@@ -56,15 +55,11 @@ class LoginPromptsMixin:
         done.wait()
         return result["token"], result["err"]
 
-    def pick_browser(self, session: ClusterSession) -> str | None:
-        """The app's window, or our Chrome window where there is one. Never your own Chrome profile."""
-        if not chrome_window.available():
-            return ""
-        done = threading.Event()
-        result: dict[str, str | None] = {"answer": None}
-        GLib.idle_add(self._browser_dialog, session, result, done)
-        done.wait()
-        return result["answer"]
+    def pick_browser(self, session: ClusterSession) -> str:
+        """The choice saved in the cluster's settings, never a question while connecting. Never your own Chrome."""
+        if session.cfg.vpn.browser == chrome_window.CHOICE and chrome_window.available():
+            return chrome_window.CHOICE
+        return ""
 
     # -- main-thread dialogs ---------------------------------------------------------
     def _ask_dialog(self, session, prompt, result, done) -> bool:
@@ -79,26 +74,6 @@ class LoginPromptsMixin:
 
         def on_response(_d, response):
             result["answer"] = entry.get_text() if response == "ok" else None
-            done.set()
-
-        dialog.connect("response", on_response)
-        dialog.present(self.window)
-        return False
-
-    def _browser_dialog(self, session, result, done) -> bool:
-        dialog = Adw.AlertDialog(heading=f"Sign in to the {session.cfg.who} VPN")
-        fixed = [("", "Built-in window", f"Fills in your {session.cfg.username_label} and password"),
-                 (chrome_window.CHOICE, chrome_window.TITLE, chrome_window.SUBTITLE)]
-        options, picked = profile_choices(fixed, [], session.cfg.vpn.browser)
-        dialog.set_extra_child(options)
-        dialog.add_response("cancel", "Cancel")
-        dialog.add_response("ok", "Sign in")
-        dialog.set_response_appearance("ok", Adw.ResponseAppearance.SUGGESTED)
-        dialog.set_default_response("ok")
-        dialog.set_close_response("cancel")
-
-        def on_response(_d, response):
-            result["answer"] = picked() if response == "ok" else None
             done.set()
 
         dialog.connect("response", on_response)

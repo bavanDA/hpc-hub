@@ -33,7 +33,7 @@ class Listener(Protocol):
     def code(self, session: "ClusterSession", prompt: str) -> str | None: ...
     def web_login(self, session: "ClusterSession", start: vpn_sso.SsoStart, login: Login,
                   profile: str = "", title: str = "", note: str = "") -> tuple[str, str]: ...  # profile: "" or CHOICE
-    def pick_browser(self, session: "ClusterSession") -> str | None: ...  # "" = app window, see vpn.browser
+    def pick_browser(self, session: "ClusterSession") -> str: ...  # "" = app window, see vpn.browser
     def confirm(self, session: "ClusterSession", title: str, text: str) -> bool: ...  # yes or no
 
 
@@ -299,8 +299,6 @@ class ClusterSession(NodesMixin):
                 raise VpnError("VPN server did not offer web sign-in")
             self._log("vpn: web sign-in")
             profile = self.listener.pick_browser(self)
-            if profile is None:
-                raise VpnError("Sign-in cancelled")
             if profile == chrome_window.CHOICE:
                 self._set(State.DUO, "Sign in in the Chrome window, then approve Duo on your phone")
             else:
