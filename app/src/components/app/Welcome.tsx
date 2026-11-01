@@ -1,19 +1,18 @@
 // The first start: which clusters do you use? Only those show up in the app (Settings changes it later).
-// Then Onboarding.tsx asks each one's login and compute node.
+// Then Onboarding.tsx asks each one's sign-in and compute node.
 import { Check, Server } from 'lucide-react'
 import { useState } from 'react'
 
 import { call } from '../../rpc'
+import { shortName } from '../clusters/loginCopy'
 import { Button } from '../ui'
 
 export type Choice = { id: string; name: string; org?: string; host: string; vpn: boolean; second_factor: string }
 export type SetupStatus = { first_run: boolean; chosen: string[]; choices: Choice[] }
 
-/** "NJIT · VPN and Duo", "SDSC · Authenticator code". */
-export function describe(c: Choice): string {
-  const second = c.second_factor === 'code' ? 'authenticator code' : 'Duo'
-  const how = c.vpn ? `VPN and ${second}` : second.charAt(0).toUpperCase() + second.slice(1)
-  return `${c.org || c.host} · ${how}`
+/** "NJIT" under "Wulver"; nothing when the name says it already ("Yale Bouchet", "SDSC Expanse"). */
+export function university(c: Choice): string {
+  return c.org && !c.name.includes(c.org) ? c.org : ''
 }
 
 export function Welcome({ status, onDone }: { status: SetupStatus; onDone: (chosen: string[]) => void }) {
@@ -24,31 +23,35 @@ export function Welcome({ status, onDone }: { status: SetupStatus; onDone: (chos
     { ids: status.choices.map((c) => c.id).filter((id) => picked.includes(id)) })
     .then((s) => onDone(s.chosen)).catch((e: Error) => setError(e.message))
   return (
-    <div className="flex h-full flex-col items-center justify-center gap-6 overflow-auto p-8">
+    <div className="flex h-full flex-col items-center justify-center gap-8 overflow-auto p-8">
       <div className="text-center">
         <h1 className="text-3xl font-bold">Welcome to HPC Hub</h1>
-        <p className="mt-2 text-dim">Which clusters do you use? You can change this later in Settings.</p>
+        <p className="mt-2 text-dim">Which clusters do you use?</p>
       </div>
-      <div className="flex w-full max-w-[560px] flex-col gap-3">
+      <div className="grid w-full max-w-[640px] grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-4">
         {status.choices.map((c) => {
           const on = picked.includes(c.id)
+          const uni = university(c)
           return (
             <button key={c.id} onClick={() => toggle(c.id)} aria-pressed={on}
-              className={`flex items-center gap-4 rounded-xl bg-card p-4 text-left shadow-[var(--shadow-card)] transition
-                ${on ? 'ring-2 ring-accent' : 'hover:bg-hover'}`}>
-              <Server size={30} strokeWidth={1.5} className="shrink-0" />
-              <div className="min-w-0 flex-1">
-                <div className="text-lg font-bold">{c.name}</div>
-                <div className="truncate text-[13px] text-dim">{describe(c)}</div>
-              </div>
-              <span className={`grid size-6 place-items-center rounded-full border-2 ${
-                on ? 'border-accent bg-accent text-white' : 'border-line'}`}>{on && <Check size={14} />}</span>
+              className={`relative flex flex-col items-start gap-4 rounded-2xl p-5 text-left transition
+                focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent
+                ${on ? 'bg-accent/10 ring-2 ring-accent' : 'bg-card shadow-[var(--shadow-card)] hover:bg-hover'}`}>
+              <span className={`grid size-11 place-items-center rounded-xl ${
+                on ? 'bg-accent text-white' : 'bg-pill text-accent-text'}`}><Server size={22} /></span>
+              <span>
+                <span className="block text-lg font-bold leading-tight">{uni ? shortName(c) : c.name}</span>
+                <span className="block text-[13px] text-dim">{uni || ' '}</span>
+              </span>
+              <span className={`absolute right-4 top-4 grid size-6 place-items-center rounded-full border-2 transition ${
+                on ? 'border-accent bg-accent text-white' : 'border-line'}`}>{on && <Check size={14} strokeWidth={3} />}</span>
             </button>
           )
         })}
       </div>
       {error && <p className="text-bad">{error}</p>}
-      <div className="flex w-full max-w-[560px] justify-end">
+      <div className="flex w-full max-w-[640px] items-center justify-between gap-4">
+        <p className="text-[13px] text-dim">You can change this later in Settings.</p>
         <Button kind="suggested" round disabled={!picked.length} onClick={go}>Continue</Button>
       </div>
     </div>

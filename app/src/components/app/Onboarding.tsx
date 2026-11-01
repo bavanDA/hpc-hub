@@ -1,17 +1,18 @@
-// After the first start's cluster picker: for each cluster you chose, its login, then its compute node.
-// Each step can be skipped, and all of it changed later in the cluster's Settings.
-import { Cpu, Globe, KeyRound, Lock } from 'lucide-react'
+// After the first start's cluster picker: for each cluster you chose, its sign-in, then its compute node.
+// A sign-in can wait ("Do this later": asked on the first Connect); all of it changes later in the cluster's Settings.
+import { Cpu, ExternalLink, Globe, KeyRound, Lock } from 'lucide-react'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 
 import { call } from '../../rpc'
-import { secondStep, type Cluster, type Logins, type Profile } from '../../types/clusters'
+import { secondStep, summary, type Cluster, type Logins, type Profile } from '../../types/clusters'
 import { Duration } from '../clusters/ComputeDialog'
-import { CheckRow, EntryRow, Group, SpinRow, SwitchRow } from '../clusters/fields'
+import { EntryRow, SpinRow, SwitchRow, Toggle } from '../clusters/fields'
 import { KeyPanel, keyHeading, PasswordInstead } from '../clusters/KeyPanel'
 import { KeySetupDialog } from '../clusters/KeySetupDialog'
-import { copy } from '../clusters/loginCopy'
+import { copy, shortName } from '../clusters/loginCopy'
 import { minutes, slurmTime } from '../clusters/time'
 import { Button, List, Spinner } from '../ui'
+import { openSystem } from './openLink'
 import { keyStore } from './platform'
 
 type Step = { cluster: Cluster; kind: 'login' | 'node' }
@@ -74,13 +75,23 @@ function Heading({ icon, title, text }: { icon: ReactNode; title: string; text?:
   )
 }
 
-/** onSkip absent: no "Skip for now" (the step is done, Continue is the way on). */
+/** onSkip: a quiet "Do this later" link on the left (asked again on the first Connect). */
 function Footer({ onSkip, children }: { onSkip?: () => void; children: ReactNode }) {
   return (
     <div className="flex items-center justify-between gap-3">
-      {onSkip ? <Button kind="flat" type="button" onClick={onSkip}>{copy.skip}</Button> : <span />}
+      {onSkip ? <button type="button" onClick={onSkip}
+        className="rounded px-1 py-1 text-[14px] text-dim underline-offset-2 hover:text-text hover:underline">
+        {copy.skip}</button> : <span />}
       {children}
     </div>
+  )
+}
+
+/** The lock line under a password, or what turning Remember off means. */
+function RememberNote({ remember }: { remember: boolean }) {
+  return (
+    <p className="flex items-center gap-1.5 px-1 text-[13px] text-dim">
+      {remember ? <><Lock size={13} className="shrink-0" />{copy.savedIn(keyStore)}</> : copy.rememberOff}</p>
   )
 }
 
@@ -138,7 +149,9 @@ function LoginStep({ cluster: c, onNext }: { cluster: Cluster; onNext: () => voi
   return (
     <form className="flex flex-col gap-6" onSubmit={(e) => { e.preventDefault(); if (user.trim()) save() }}>
       <Heading icon={<KeyRound size={22} />} title={copy.signIn(c)}
-        text={c.second_factor === 'code' ? secondStep(c) : undefined} />
+        text={c.second_factor === 'code' ? <>{secondStep(c)}{c.code_setup && <> <button type="button"
+          onClick={() => openSystem(c.code_setup!)} className="inline-flex items-center gap-1 font-bold
+          text-accent-text hover:underline">{copy.codeSetup}<ExternalLink size={13} /></button></>}</> : undefined} />
       {c.portal && (
         <div className="flex flex-col gap-3">
           <Button kind="suggested" round type="button" onClick={() => setPortal(true)}>
@@ -153,8 +166,7 @@ function LoginStep({ cluster: c, onNext }: { cluster: Cluster; onNext: () => voi
             placeholder={saved ? copy.saved : undefined} />
           <SwitchRow label={copy.remember} checked={remember} onChange={setRemember} />
         </List>
-        <p className="flex items-center gap-1.5 px-1 text-[13px] text-dim">
-          <Lock size={13} className="shrink-0" />{copy.savedIn(keyStore)}</p>
+        <RememberNote remember={remember} />
       </div>
       {instead}
       {error && <p className="text-bad">{error}</p>}
@@ -172,6 +184,7 @@ function NodeStep({ cluster: c, onNext, last }: { cluster: Cluster; onNext: () =
   const [want, setWant] = useState(c.request_node_on_connect ?? true)
   const [ask, setAsk] = useState(c.ask_node ?? false)
   const [p, setP] = useState<Profile>(c.profile)
+  const [editing, setEditing] = useState(false)
   const [error, setError] = useState('')
   const set = (change: Partial<Profile>) => setP((x) => ({ ...x, ...change }))
 
@@ -186,26 +199,53 @@ function NodeStep({ cluster: c, onNext, last }: { cluster: Cluster; onNext: () =
   }
 
   return (
-    <form className="flex flex-col gap-5" onSubmit={(e) => { e.preventDefault(); save() }}>
+    <form className="flex flex-col gap-6" onSubmit={(e) => { e.preventDefault(); save() }}>
       <Heading icon={<Cpu size={22} />} title="Compute node"
-        text="Your terminals and agents can run on a compute node instead of the login node." />
-      <div>
-        <Group>
-          <SwitchRow label="Get a compute node when I connect" checked={want} onChange={setWant} />
-          {want && <>
-            <SpinRow label="CPU cores" value={p.cpus} onChange={(cpus) => set({ cpus })} min={1} max={512} />
-            <SpinRow label="Memory (GB)" value={p.mem_gb} onChange={(mem_gb) => set({ mem_gb })} min={1} max={4096} />
-            <Duration total={minutes(p.time) ?? 240} onChange={(m) => set({ time: slurmTime(m) })} limits={null} />
-            {c.profile.partition && <EntryRow label="Partition" value={p.partition}
-              onChange={(partition) => set({ partition })} />}
-            <CheckRow label="Ask every time" sub="Review these before each request"
-              checked={ask} onChange={setAsk} />
-          </>}
-        </Group>
-        <p className="-mt-3 px-1 text-[13px] text-dim">You can change this later in Settings.</p>
+        text="Your terminals and agents run on a compute node, not the busy login node." />
+      <div className="overflow-hidden rounded-xl bg-card shadow-[var(--shadow-card)]">
+        <label className="flex cursor-pointer items-center gap-4 px-5 py-4">
+          <span className="min-w-0 flex-1">
+            <span className="block text-[15px] font-bold">Get a compute node when I connect</span>
+            <span className="block text-[13px] text-dim">
+              {want ? 'HPC Hub asks Slurm for one right after you sign in.' : 'You can still get one from the cluster card.'}
+            </span>
+          </span>
+          <Toggle checked={want} onChange={setWant} label="Get a compute node when I connect" />
+        </label>
+        {want && (
+          <div className="border-t border-line px-5 py-4">
+            {!editing ? (
+              <div className="flex items-center gap-4">
+                <div className="grid size-10 shrink-0 place-items-center rounded-lg bg-pill text-accent-text">
+                  <Cpu size={18} /></div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-[15px] font-bold">{summary(p)}</div>
+                  <div className="text-[13px] text-dim">The usual size for {shortName(c)}</div>
+                </div>
+                <Button type="button" kind="pill" onClick={() => setEditing(true)}>Change</Button>
+              </div>
+            ) : (
+              <div className="-mx-5 -my-4">
+                <List>
+                  <SpinRow label="CPU cores" value={p.cpus} onChange={(cpus) => set({ cpus })} min={1} max={512} />
+                  <SpinRow label="Memory (GB)" value={p.mem_gb} onChange={(mem_gb) => set({ mem_gb })} min={1} max={4096} />
+                  <Duration total={minutes(p.time) ?? 240} onChange={(m) => set({ time: slurmTime(m) })} limits={null} />
+                  {c.profile.partition && <EntryRow label="Partition" value={p.partition}
+                    onChange={(partition) => set({ partition })} />}
+                </List>
+              </div>
+            )}
+            <label className="mt-4 flex cursor-pointer items-center gap-2.5 text-[14px]">
+              <input type="checkbox" checked={ask} onChange={(e) => setAsk(e.target.checked)}
+                className="size-4 accent-[var(--color-accent)]" />
+              Review these before each request
+            </label>
+          </div>
+        )}
       </div>
+      <p className="-mt-3 px-1 text-[13px] text-dim">You can change this later in Settings.</p>
       {error && <p className="text-bad">{error}</p>}
-      <Footer onSkip={onNext}>
+      <Footer>
         <Button kind="suggested" round type="submit">{last ? 'Done' : copy.continue}</Button>
       </Footer>
     </form>
