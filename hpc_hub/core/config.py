@@ -117,6 +117,7 @@ class ClusterConfig:
     # Fast node: "partition:qos:time" of a short queue that starts quickly (debug); empty: no Fast node button
     fast: str = ""
     request_node_on_connect: bool = True
+    ask_node: bool = False  # with request_node_on_connect: show the node's settings first instead of asking Slurm
     reuse_running_job: bool = False
     vpn: VpnSettings = field(default_factory=VpnSettings)
     profile: ComputeProfile = field(default_factory=ComputeProfile)
@@ -145,6 +146,12 @@ class ClusterConfig:
         h, m = (int(x) if x.isdigit() else 0 for x in (hms.split(":") + ["0", "0"])[:2])
         minutes = (int(days) if days.isdigit() else 0) * 1440 + h * 60 + m
         return f"Fast node ({minutes} min)" if minutes < 60 else f"Fast node ({minutes / 60:g} h)"
+
+    def second_step(self) -> str:
+        """What the cluster asks after the password. Its admins decide, so the app says it, never asks it."""
+        if self.second_factor == "code":
+            return f"{self.name} asks for a code from your authenticator app."
+        return f"{self.name} asks for Duo on your phone."
 
     @property
     def vpn_connection_name(self) -> str:

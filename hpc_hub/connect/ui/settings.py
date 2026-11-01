@@ -2,7 +2,7 @@
 
 from collections.abc import Callable
 
-from gi.repository import Adw, Gtk
+from gi.repository import Adw, GObject, Gtk
 
 from ...compute.limits import Limits, minutes, slurm_time
 from ...compute.slurm import validate
@@ -14,8 +14,6 @@ from ...ui.widgets import TARGETS
 from .. import chrome_window
 from ..vpn import split_errors
 from .authenticator_help import AuthenticatorHelp
-
-FACTORS = [("duo", "Duo push on your phone"), ("code", "Code from an authenticator app")]
 
 
 def _entry(title: str, text: str = "") -> Adw.EntryRow:
@@ -86,22 +84,18 @@ class ClusterSettingsDialog(Adw.PreferencesDialog):
 
     def _login_page(self) -> Adw.PreferencesPage:
         page = Adw.PreferencesPage(name="login", title="Login", icon_name="dialog-password-symbolic")
-        group = Adw.PreferencesGroup(
-            title="Cluster login",
-            description="Stored only in GNOME Keyring. Leave the password empty if you log in with an SSH key.",
-        )
+        group = Adw.PreferencesGroup(title="Cluster login",
+                                     description="Saved encrypted in your system keyring, never in plain text.")
         self.user = _entry("Username", self.ssh_saved.username if self.ssh_saved else "")
         self.password = self._password_row(self.ssh_saved)
-        self.factor = Adw.ComboRow(title="Second step", model=Gtk.StringList.new([f[1] for f in FACTORS]))
-        self.factor.set_selected(next((i for i, f in enumerate(FACTORS) if f[0] == self.cfg.second_factor), 0))
-        self.factor.connect("notify::selected", lambda *_: self._sync_factor())
-        self.duo = _entry("Duo answer (push, push2, phone, 1)", self.cfg.duo_answer)
-        self.code_help = Adw.ButtonRow(title="How to set up Google Authenticator",
-                                       start_icon_name="help-about-symbolic")
-        self.code_help.connect("activated", lambda *_: AuthenticatorHelp(self.cfg).present(self))
-        for row in (self.user, self.password, self.factor, self.code_help, self.duo):
-            group.add(row)
-        self._sync_factor()
+        group.add(self.user)
+        group.add(self.password)
+        # the second step is the cluster's (its admins decide), so it is said, not chosen
+        group.add(Adw.ActionRow(title=self.cfg.second_step(), subtitle="Set by the cluster's admins"))
+        if self.cfg.second_factor == "code":
+            help_row = Adw.ButtonRow(title="How to set up Google Authenticator", start_icon_name="help-about-symbolic")
+            help_row.connect("activated", lambda *_: AuthenticatorHelp(self.cfg).present(self))
+            group.add(help_row)
         page.add(group)
 
         forget_group = Adw.PreferencesGroup()
@@ -167,10 +161,12 @@ class ClusterSettingsDialog(Adw.PreferencesDialog):
         group = Adw.PreferencesGroup(title="Compute node",
                                      description="Requested with salloc after you connect. Claude runs here.")
         self.on_connect = _switch("Request node on connect", self.cfg.request_node_on_connect)
+        self.ask_node = _switch("Ask every time", self.cfg.ask_node, "Show the node's settings before each request")
+        self.on_connect.bind_property("active", self.ask_node, "visible", GObject.BindingFlags.SYNC_CREATE)
         self.reuse = _switch("Use my running job", self.cfg.reuse_running_job,
                              "If you already have a node (e.g. for Claude), use it instead of a new one")
         self.node = ProfileRows(self.cfg.profile, "Extra salloc arguments", self.limits)
-        for row in (self.on_connect, self.reuse, *self.node.rows):
+        for row in (self.on_connect, self.ask_node, self.reuse, *self.node.rows):
             group.add(row)
         page.add(group)
         return page
@@ -209,12 +205,6 @@ class ClusterSettingsDialog(Adw.PreferencesDialog):
         return page
 
     # -- behaviour ---------------------------------------------------------------
-    def _sync_factor(self) -> None:
-        code = FACTORS[self.factor.get_selected()][0] == "code"
-        self.duo.set_visible(not code)
-        self.code_help.set_visible(code)
-        self.factor.set_subtitle("The app asks you for the code each time you log in" if code else "")
-
     def _sync_vpn(self) -> None:
         on = self.vpn_on.get_active()
         for row in (self.gateway, self.sign_in, self.protocol, self.useragent, self.authgroup, self.same_login,
@@ -258,11 +248,10 @@ class ClusterSettingsDialog(Adw.PreferencesDialog):
         c.vscode.open_links = self.vs_links.get_active()
         c.vscode.open_in = TARGETS[self.vs_open_in.get_selected()][0]
         c.request_node_on_connect = self.on_connect.get_active()
+        c.ask_node = self.ask_node.get_active()
         c.reuse_running_job = self.reuse.get_active()
         c.host = self.host.get_text().strip().rpartition("@")[2]  # username lives in Login
         c.port = int(self.port.get_value())
-        c.duo_answer = self.duo.get_text().strip() or "push"
-        c.second_factor = FACTORS[self.factor.get_selected()][0]
         v.enabled = self.vpn_on.get_active()
         v.gateway = self.gateway.get_text().strip()
         v.protocol = VPN_PROTOCOLS[self.protocol.get_selected()]

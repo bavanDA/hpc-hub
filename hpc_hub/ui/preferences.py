@@ -1,4 +1,4 @@
-"""App preferences: which browser opens links, terminal settings, and experimental features."""
+"""The app's Settings: which browser opens links, terminal settings, and experimental features."""
 
 from collections.abc import Callable
 
@@ -12,7 +12,7 @@ from ..terminals.ui import monitor_bar
 class PreferencesDialog(Adw.PreferencesDialog):
     def __init__(self, app: AppSettings, save: Callable[[], None],
                  on_experimental: Callable[[bool], None] = lambda on: None):
-        super().__init__(title="Preferences", search_enabled=False)
+        super().__init__(title="Settings", search_enabled=False)
         self.app, self.save, self.on_experimental = app, save, on_experimental
         self.found = browser.profiles() if browser.chrome() else []
         page = Adw.PreferencesPage()

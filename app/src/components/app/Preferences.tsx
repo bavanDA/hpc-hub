@@ -1,4 +1,4 @@
-// Preferences (hpc_hub/ui/preferences.py): which browser opens links, terminal settings, and the experimental pages.
+// The app's Settings (hpc_hub/ui/preferences.py): the browser for links, terminals, experimental pages.
 import { useEffect, useState } from 'react'
 
 import { call } from '../../rpc'
@@ -40,7 +40,7 @@ export function PreferencesDialog({ onClose, onExperimental }:
   const options: [string, string][] = [['', 'System browser'],
     ...profiles.map((p): [string, string] => [p.name, `Chrome: ${p.name}${p.email ? ` (${p.email})` : ''}`])]
   return (
-    <Dialog title="Preferences" onClose={onClose} width={560}>
+    <Dialog title="Settings" onClose={onClose} width={560}>
       {!prefs || !found ? <div className="grid h-40 place-items-center"><Spinner size={24} /></div> : <>
         <Group title="Links" description="Every link asks which browser opens it. This one is picked for you.">
           <ActionRow label={<span className="whitespace-nowrap">Default for links</span>}>

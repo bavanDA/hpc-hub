@@ -77,6 +77,7 @@ class NodesMixin:
         """Ask for a node on an already connected session (profile: what you picked, else the saved one)."""
         if self.state != State.CONNECTED or self.allocation:
             return
+        self.pick_node = False
         self._cancel.clear()
         self._thread = threading.Thread(target=self._allocate_safely, args=(profile,), daemon=True)
         self._thread.start()
@@ -86,6 +87,7 @@ class NodesMixin:
         fast = self.cfg.fast_profile()
         if not fast or self.state != State.CONNECTED or self.allocation:
             return
+        self.pick_node = False
         self._cancel.clear()
         self._thread = threading.Thread(target=self._allocate_safely, args=(fast, False), daemon=True)
         self._thread.start()

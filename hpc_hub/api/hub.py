@@ -21,7 +21,8 @@ QUESTION_SECONDS = 600
 def session_json(s: ClusterSession) -> dict:
     a = s.allocation
     return {"id": s.cfg.id, "state": s.state.value, "detail": s.detail, "connected": s.connected,
-            "node": a.node if a else "", "job": a.job_id if a else "", "owned": a.owned if a else False}
+            "node": a.node if a else "", "job": a.job_id if a else "", "owned": a.owned if a else False,
+            "pick_node": s.pick_node}
 
 
 class Hub:
@@ -55,7 +56,7 @@ class Hub:
                 pass
 
     def use_clusters(self, ids: list[str]) -> None:
-        """Change which clusters the app shows (first run, or Preferences). A connected one can't be dropped."""
+        """Change which clusters the app shows (first run, or Settings). A connected one can't be dropped."""
         everything = {c.id: c for c in config.load()}
         kept = {c.id: c for c in self.clusters}
         for cid, s in self.sessions.items():

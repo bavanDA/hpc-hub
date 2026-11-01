@@ -56,7 +56,8 @@ export function LoginSheet({ cluster: c, hint, onClose }: { cluster: Cluster; hi
         <Field label="Password" type="password" value={password} onChange={(e) => setPassword(e.target.value)}
           placeholder={saved?.ssh.password ? 'Saved, leave empty to keep it' : 'Empty for an SSH key'} />
       </form>
-      <Switch label="Remember the password" hint="Kept encrypted on this phone. Off: asked once per start."
+      <p className="mb-1 text-sm text-dim">Saved encrypted on this phone, never in plain text.</p>
+      <Switch label="Remember the password" hint="Off: asked once each time the app starts."
         checked={remember} onChange={setRemember} />
     </Sheet>
   )

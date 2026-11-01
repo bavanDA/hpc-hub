@@ -12,7 +12,7 @@ _bars: "weakref.WeakSet[MonitorBar]" = weakref.WeakSet()
 
 
 def show_all(on: bool) -> None:
-    """Preferences: Monitoring bar. A hidden bar is unmapped, so it stops watching."""
+    """Settings: Monitoring bar. A hidden bar is unmapped, so it stops watching."""
     for bar in list(_bars):
         bar.set_visible(on)
 

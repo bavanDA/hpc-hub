@@ -55,6 +55,7 @@ class ClusterSession(NodesMixin):
         self._thread: threading.Thread | None = None
         self.limits = limits.cached(cfg.id)  # longest time per partition and QoS
         self.default_account: str | None = None  # looked up once per login
+        self.pick_node = False  # connected and waiting for you to pick a node (cfg.ask_node)
 
     # -- state -------------------------------------------------------------
     def _set(self, state: State, detail: str = "") -> None:
@@ -127,6 +128,7 @@ class ClusterSession(NodesMixin):
 
     def disconnect(self, on_done=None) -> None:
         self._cancel.set()
+        self.pick_node = False
 
         def run():
             if self._thread and self._thread is not threading.current_thread():
@@ -250,6 +252,10 @@ class ClusterSession(NodesMixin):
             self._log(f"Reusing job {self.allocation.job_id} on {self.allocation.node}")
             self._set(State.CONNECTED)
         elif self._reuse_running_job():
+            self._set(State.CONNECTED)
+        elif self.cfg.request_node_on_connect and self.cfg.ask_node:
+            self.allocation = None
+            self.pick_node = True  # the UI shows the node's settings; request_node goes on from there
             self._set(State.CONNECTED)
         elif self.cfg.request_node_on_connect:
             self.allocation = None

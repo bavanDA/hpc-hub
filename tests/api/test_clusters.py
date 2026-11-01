@@ -109,10 +109,12 @@ def test_disconnect_cancel_and_nodes(hub):
 
 
 def test_update_saves_only_safe_settings(hub):
-    out = clusters.update("wulver", {"request_node_on_connect": False, "profile": {"cpus": 6, "partition": "debug"},
+    out = clusters.update("wulver", {"request_node_on_connect": False, "ask_node": True,
+                                     "profile": {"cpus": 6, "partition": "debug"},
                                      "vpn": {"same_login_as_ssh": False}})
     cfg = hub.sessions["wulver"].cfg
-    assert not cfg.request_node_on_connect and cfg.profile.cpus == 6 and cfg.profile.partition == "debug"
+    assert not cfg.request_node_on_connect and cfg.ask_node and cfg.profile.cpus == 6
+    assert cfg.profile.partition == "debug"
     assert not cfg.vpn.same_login_as_ssh and out["profile"]["cpus"] == 6 and hub.saved == 1
     for bad in ({"host": "evil"}, {"profile": {"extra_args": "--x"}}, {"profile": {"cpus": 0}},
                 {"profile": {"cpus": "4"}}, {"profile": {"partition": "a;b"}}, {"profile": {"time": "soon"}},

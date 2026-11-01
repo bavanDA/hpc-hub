@@ -1,7 +1,7 @@
 // One cluster on the phone: state, Connect (or QR code: scan the desktop's login, then connect), the compute
 // node, login and log.
 import { KeyRound, ScanQrCode, Zap } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 import { LogView } from '@shared/components/clusters/LogView'
 import { putCluster } from '@shared/components/clusters/store'
@@ -25,6 +25,11 @@ export function ClusterCard({ cluster: c, session: s, log }: { cluster: Cluster;
   const idle = s.state === 'Disconnected' || s.state === 'Error'
   const connected = s.connected ?? s.state === 'Connected'
   const run = (method: string) => call(method, { cluster: c.id }).catch((e: Error) => toast(e.message))
+  const [asked, setAsked] = useState(false)  // Ask every time: the node sheet opened once for this pick
+  useEffect(() => {
+    if (s.pick_node && !asked) { setAsked(true); setOpen('node') }
+    if (!s.pick_node && asked) setAsked(false)
+  }, [s.pick_node, asked])
 
   async function connect() {
     try {
@@ -42,9 +47,9 @@ export function ClusterCard({ cluster: c, session: s, log }: { cluster: Cluster;
     else if (msg) toast(msg)
   }
 
-  async function wantNode(on: boolean) {
+  async function change(changes: Partial<Cluster>) {
     try {
-      putCluster(await call<Cluster>('clusters.update', { cluster: c.id, changes: { request_node_on_connect: on } }))
+      putCluster(await call<Cluster>('clusters.update', { cluster: c.id, changes }))
     } catch (e) {
       toast((e as Error).message)
     }
@@ -92,7 +97,10 @@ export function ClusterCard({ cluster: c, session: s, log }: { cluster: Cluster;
       )}
 
       {idle && <Switch label="Compute node on connect" hint={summary(c.profile)}
-        checked={c.request_node_on_connect ?? true} onChange={wantNode} />}
+        checked={c.request_node_on_connect ?? true} onChange={(on) => change({ request_node_on_connect: on })} />}
+      {idle && (c.request_node_on_connect ?? true) && <Switch label="Ask every time"
+        hint="Show the node's settings before each request" checked={c.ask_node ?? false}
+        onChange={(on) => change({ ask_node: on })} />}
 
       <div className="flex gap-2">
         {idle && <Button icon={ScanQrCode} className="flex-1" onClick={scan}>QR code</Button>}

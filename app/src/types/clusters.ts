@@ -60,6 +60,7 @@ export type Cluster = {
   fast?: string  // "partition:qos:time" of the Fast node queue
   queue_wait?: number
   request_node_on_connect?: boolean
+  ask_node?: boolean  // with request_node_on_connect: show the node's settings first
   reuse_running_job?: boolean
   vpn: Vpn
   profile: Profile
@@ -95,6 +96,7 @@ export type Session = {
   node?: string
   job?: string
   owned?: boolean
+  pick_node?: boolean  // connected, waiting for you to pick a node (ask_node)
 }
 
 /** Saved usernames; password only says whether one is saved, it never comes back. */
@@ -138,6 +140,12 @@ export type Question = {
 export const BUSY: State[] = ['Connecting VPN', 'Signing in', 'Approve Duo on your phone', 'Requesting compute node',
   'Disconnecting']
 export const DUO: State = 'Approve Duo on your phone'
+
+/** The cluster's second step, decided by its admins: "Wulver asks for Duo on your phone." */
+export function secondStep(c: Pick<Cluster, 'name' | 'second_factor'>) {
+  return c.second_factor === 'code' ? `${c.name} asks for a code from your authenticator app.`
+    : `${c.name} asks for Duo on your phone.`
+}
 
 export function summary(p: Profile) {
   return [`${p.cpus} cores`, `${p.mem_gb} GB`, p.time, p.gpus ? `${p.gpus} GPU` : '', p.partition]

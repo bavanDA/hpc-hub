@@ -25,7 +25,8 @@ GATEWAY = re.compile(r"(https://)?[A-Za-z0-9.-]+(:\d{1,5})?(/[A-Za-z0-9._~/+-]*)
 NAME = re.compile(r"[A-Za-z0-9_.-]+")
 GROUP = re.compile(r"[A-Za-z0-9 _.-]*")
 NUMBERS = {"cpus": (1, 512), "mem_gb": (1, 4096), "gpus": (0, 16)}
-TOP = {"host", "port", "second_factor", "duo_answer", "request_node_on_connect", "reuse_running_job", "queues",
+TOP = {"host", "port", "second_factor", "duo_answer", "request_node_on_connect", "ask_node", "reuse_running_job",
+       "queues",
        "queue_wait", "vpn", "profile", "vscode", *BY_ID}
 VPN = {"enabled", "gateway", "protocol", "useragent", "authgroup", "same_login_as_ssh", "split_tunnel", "domains",
        "routes", "browser"}
@@ -153,7 +154,7 @@ def apply(cfg, changes: dict, browsers: list[str]):
             c.second_factor = x
         elif k == "duo_answer":
             c.duo_answer = _match(x, "Duo answer", NAME, 20) or "push"
-        elif k in ("request_node_on_connect", "reuse_running_job"):
+        elif k in ("request_node_on_connect", "ask_node", "reuse_running_job"):
             setattr(c, k, _bool(x, k))
         elif k == "queues":
             c.queues = _queues(x)

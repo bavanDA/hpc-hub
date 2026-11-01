@@ -27,7 +27,7 @@ It comes set up for NJIT Wulver, Yale Bouchet and SDSC Expanse. You can add othe
 - **Globus**: sign in once. The app finds each cluster's collection by itself and asks only for the permissions
   Globus needs.
 
-Experimental, off until you turn them on in Preferences:
+Experimental, off until you turn them on in Settings:
 
 - **LaTeX**: an Overleaf-like editor for projects on the cluster. Build with latexmk, jump between source and PDF,
   see git history, pull and push.

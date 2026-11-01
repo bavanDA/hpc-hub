@@ -1,4 +1,4 @@
-"""Which clusters you use: asked on the first start, changed later in Preferences."""
+"""Which clusters you use: asked on the first start, changed later in Settings."""
 
 from ...core import config
 from ..hub import hub

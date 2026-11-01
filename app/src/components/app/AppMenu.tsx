@@ -1,5 +1,5 @@
-// The ☰ menu in the header (hpc_hub/ui/window.py _menu): Preferences, About, and the two ways to quit.
-// Ctrl+, opens Preferences and Ctrl+Q quits, as in the GTK app (Cmd on macOS).
+// The ☰ menu in the header (hpc_hub/ui/window.py _menu): Settings, About, and the two ways to quit.
+// Ctrl+, opens Settings and Ctrl+Q quits, as in the GTK app (Cmd on macOS).
 import { Menu } from 'lucide-react'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 
@@ -30,7 +30,7 @@ export function AppMenu({ onExperimental }: { onExperimental: (on: boolean) => v
   })
 
   const items: [string, () => void, string?][][] = [
-    [['Preferences…', prefs, isMac ? '⌘,' : 'Ctrl+,'], ['About HPC Hub', () => setDialog(<AboutDialog onClose={close} />)]],
+    [['Settings…', prefs, isMac ? '⌘,' : 'Ctrl+,'], ['About HPC Hub', () => setDialog(<AboutDialog onClose={close} />)]],
     [['Disconnect all and quit…', quit.disconnectAndQuit],
       ['Quit (keep everything running)', quit.quit, isMac ? '⌘Q' : 'Ctrl+Q']],
   ]

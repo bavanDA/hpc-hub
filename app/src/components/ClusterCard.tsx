@@ -1,6 +1,7 @@
 // One card per cluster, like the GTK app's (cluster_card.py): status, connect, compute node, Open, log.
+// With Ask every time (ask_node) the node dialog opens by itself once connected.
 import { Info, Settings } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 import { call } from '../rpc'
 import { BUSY, DUO, fastLabel, fastSummary, summary, type Cluster, type Session } from '../types/clusters'
@@ -27,6 +28,11 @@ export function ClusterCard({ cluster: c, session: s, log }: { cluster: Cluster;
   const busy = BUSY.includes(s.state)
   const idle = s.state === 'Disconnected' || s.state === 'Error'
   const connected = s.connected ?? s.state === 'Connected'
+  const [asked, setAsked] = useState(false)  // the dialog opened once for this pick
+  useEffect(() => {
+    if (s.pick_node && !asked) { setAsked(true); setOpen('compute') }
+    if (!s.pick_node && asked) setAsked(false)
+  }, [s.pick_node, asked])
 
   const run = (method: string, params: Record<string, unknown> = {}) =>
     call(method, { cluster: c.id, ...params }).catch((e: Error) => toast(e.message))
@@ -70,7 +76,7 @@ export function ClusterCard({ cluster: c, session: s, log }: { cluster: Cluster;
         </div>
         <span className={`whitespace-nowrap rounded-full px-2.5 py-0.5 text-[12px] font-bold ${
           PILL[s.state] ?? 'bg-warn-bg text-warn'}`}>{s.state === DUO ? 'Duo' : s.state}</span>
-        <IconButton icon={Settings} label="Settings" onClick={() => { setHint(''); setOpen('settings') }} />
+        <IconButton icon={Settings} label={`${c.name} settings`} onClick={() => { setHint(''); setOpen('settings') }} />
         {c.vpn.enabled && idle && (
           <Button round className="px-5" title="Just the VPN tunnel, no SSH or compute node"
             onClick={() => connect(true)}>VPN only</Button>
@@ -91,7 +97,7 @@ export function ClusterCard({ cluster: c, session: s, log }: { cluster: Cluster;
           <input type="checkbox" checked={c.request_node_on_connect ?? true}
             onChange={(e) => wantNode(e.target.checked)}
             className="size-[18px] accent-[var(--color-accent)]" />
-          Compute node on connect: {summary(c.profile)}
+          Compute node on connect: {summary(c.profile)}{c.ask_node ? ', asks first' : ''}
         </label>
       )}
 
