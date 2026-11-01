@@ -103,8 +103,9 @@ class ClusterSettingsDialog(Adw.PreferencesDialog):
             group = Adw.PreferencesGroup(title="Cluster login", description=note)
             group.add(self.user)
             group.add(self.password)
-        # the second step is the cluster's (its admins decide), so it is said, not chosen
-        group.add(Adw.ActionRow(title=self.cfg.second_step(), subtitle="Set by the cluster's admins"))
+        # the second step is the cluster's (its admins decide), so it is said, not chosen (key steps say it themselves)
+        if not c.key_page:
+            group.add(Adw.ActionRow(title=self.cfg.second_step(), subtitle="Set by the cluster's admins"))
         if self.cfg.second_factor == "code":
             help_row = Adw.ButtonRow(title="How to set up Google Authenticator", start_icon_name="help-about-symbolic")
             help_row.connect("activated", lambda *_: AuthenticatorHelp(self.cfg).present(self))

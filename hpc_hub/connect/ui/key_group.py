@@ -50,9 +50,9 @@ class KeyGroup(Adw.PreferencesGroup):
         super().__init__(**kwargs)
         self.cfg, self.user, self.password = cfg, user, password
         self.key = my_key.find()
-        self.added = bool(user.get_text().strip())  # set up before: start at the test
-        help_link = Gtk.Button(label=C.WHATS_A_KEY, css_classes=["flat"], valign=Gtk.Align.CENTER,
-                               tooltip_text=cfg.key_help_url)
+        self.added = bool(self.key and user.get_text().strip())  # a key and a username from before: at the test
+        help_link = _button(C.WHATS_A_KEY, "flat", "accent", icon="adw-external-link-symbolic")
+        help_link.set_tooltip_text(cfg.key_help_url)
         help_link.connect("clicked", lambda *_: open_uri(self, cfg.key_help_url))
         self.set_header_suffix(help_link)
         who = cfg.who
