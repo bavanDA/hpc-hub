@@ -1,8 +1,10 @@
 // Files on the clusters, like GNOME Files: a folder as a table, a preview beside it, copy and paste between
 // clusters with progress below. Spec: hpc_hub/files/ui/.
-import { FolderOpen, FolderX, Unplug } from 'lucide-react'
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
+import { FolderOpen, FolderX } from 'lucide-react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 
+import { setActiveCluster, useActiveCluster } from '../components/clusters/active'
+import { NotConnected } from '../components/clusters/NotConnected'
 import { ActionBar, type Action } from '../components/files/ActionBar'
 import { ClipBanner } from '../components/files/ClipBanner'
 import { ContextMenu } from '../components/files/ContextMenu'
@@ -22,10 +24,8 @@ import { PdfDialog } from '../components/pdf/PdfDialog'
 import { useToast } from '../components/toast'
 import { useTools } from '../components/tools/useTools'
 import { EmptyState, Spinner } from '../components/ui'
-import { useEvent } from '../hooks'
 import { usePageParams } from '../nav'
 import { call } from '../rpc'
-import type { Cluster, Session } from '../types'
 import type { Clip, Entry, Listing, Place, Sort, Transfer } from '../types/files'
 
 // Kept while you visit other pages: where you were, what you copied, how you sort
@@ -34,13 +34,13 @@ const memory = { cluster: '', paths: {} as Record<string, string>, clip: null as
 
 export function Files() {
   const toast = useToast()
-  const [clusters, setClusters] = useState<Cluster[] | null>(null)
-  const [sessions, setSessions] = useState<Record<string, Session>>({})
   const params = usePageParams()  // opened from elsewhere: an Open menu, Ask all's answers
-  const [cluster, setClusterState] = useState(() => {
+  useLayoutEffect(() => {  // opened for a cluster and folder: go there
     if (params.cluster && params.path) memory.paths[params.cluster] = params.path
-    return (memory.cluster = params.cluster || memory.cluster)
-  })
+    if (params.cluster) setActiveCluster(params.cluster)
+  }, [params.cluster, params.path])
+  const { clusters, sessions, cluster: active, error: clustersError } = useActiveCluster()
+  const cluster = memory.cluster = active?.id ?? ''
   const [listing, setListing] = useState<Listing | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -55,27 +55,12 @@ export function Files() {
   const asked = useRef(0)  // the newest listing asked for; older answers are dropped
   const dests = useRef(new Map<string, { cluster: string; dir: string }>())
 
-  const setCluster = (id: string) => { memory.cluster = id; setClusterState(id) }
   const setSort = (s: Sort) => { memory.sort = s; setSortState(s) }
   const setClip = (c: Clip | null) => { memory.clip = c; setClipState(c) }
   const close = useCallback(() => setDialog(null), [])
 
-  useEffect(() => {
-    call<Cluster[]>('clusters.list').then((all) => {
-      setClusters(all)
-      call<Session[]>('sessions.list').then((list) => {
-        const byId = Object.fromEntries(list.map((s) => [s.id, s]))
-        setSessions(byId)
-        if (!memory.cluster || !all.some((c) => c.id === memory.cluster)) {
-          setCluster((all.find((c) => byId[c.id]?.state === 'Connected') ?? all[0])?.id ?? '')
-        }
-      }).catch(() => { if (!memory.cluster && all[0]) setCluster(all[0].id) })
-    }).catch((e: Error) => setError(e.message))
-  }, [])
-  useEvent<Session>('session', (s) => setSessions((now) => ({ ...now, [s.id]: s })))
-
-  const info = clusters?.find((c) => c.id === cluster)
-  const connected = sessions[cluster]?.state === 'Connected'
+  const info = active ?? undefined
+  const connected = !!sessions[cluster]?.connected
   const path = listing?.path ?? ''
   const shown = useRef(path)
   useEffect(() => { shown.current = path }, [path])
@@ -188,7 +173,7 @@ export function Files() {
   const paste = () => {
     if (!clip) return
     if (!connected || !path) { toast('Open a folder to paste into first'); return }
-    if (sessions[clip.cluster]?.state !== 'Connected') {
+    if (!sessions[clip.cluster]?.connected) {
       toast(`Connect to ${clip.clusterName} first, the copy comes from there`)
       return
     }
@@ -218,13 +203,12 @@ export function Files() {
     claude: () => tools.open(cluster, info?.name ?? cluster, 'agent:claude', folderOf(menu.entry)),
   })
 
-  if (error && !clusters) return <p className="p-8 text-bad">Could not load clusters: {error}</p>
-  if (!clusters) return <div className="grid h-full place-items-center"><Spinner size={24} /></div>
+  if (clustersError && !clusters) return <p className="p-8 text-bad">Could not load clusters: {clustersError}</p>
+  if (!clusters || !active) return <div className="grid h-full place-items-center"><Spinner size={24} /></div>
 
   let body: ReactNode
   if (!connected) {
-    body = <EmptyState icon={Unplug} title="Not connected"
-      text={`Connect to ${info?.name ?? 'a cluster'} to browse files.`} />
+    body = <NotConnected cluster={active} session={sessions[cluster]} what="files" />
   } else if (!listing) {
     body = error ? <EmptyState icon={FolderX} title="Could not open folder" text={error} />
       : <div className="grid h-full place-items-center"><Spinner size={24} /></div>
@@ -238,11 +222,11 @@ export function Files() {
 
   return (
     <div className="flex h-full flex-col bg-view">
-      <PathBar clusters={clusters} sessions={sessions} cluster={cluster} onCluster={setCluster} path={path}
+      {connected && <PathBar path={path}
         connected={connected} loading={loading} places={places} count={listing ? entries.length : null}
         preview={preview} onPreview={() => { memory.preview = !preview; setPreview(!preview) }}
         onGo={go} onUp={() => path && go(parent(path))} onRefresh={refresh} onNewFolder={newFolder}
-        onUpload={upload} />
+        onUpload={upload} />}
       {clip && <ClipBanner clip={clip} canPaste={connected && !!path} onPaste={paste} onDrop={() => setClip(null)} />}
       <div className="flex min-h-0 flex-1">
         <div className="flex min-w-0 flex-1 flex-col">{body}</div>
@@ -251,7 +235,7 @@ export function Files() {
         )}
       </div>
       {connected && <ActionBar entry={entry} onAction={(a) => act(a)} />}
-      <Transfers items={transfers.items} onX={transfers.x} />
+      <Transfers items={transfers.items.filter((t) => !t.finished)} onX={transfers.x} />
       {items && <ContextMenu x={menu.x} y={menu.y} sections={items} onClose={() => setMenu(null)} />}
       {dialog}
       {tools.dialog}

@@ -1,5 +1,5 @@
 // Desktop notifications while the window is in the background (hpc_hub/app.py _notify): Duo is waiting, or a
-// cluster just connected.
+// cluster just connected. watch.ts adds node time, jobs that end and finished copies.
 import { useEffect, useRef } from 'react'
 
 import { useEvent } from '../../hooks'
@@ -9,7 +9,7 @@ import { inTauri } from './platform'
 
 let allowed: Promise<boolean> | null = null
 
-async function notify(title: string, body: string) {
+export async function notify(title: string, body: string) {
   if (!inTauri || document.hasFocus()) return
   const n = await import('@tauri-apps/plugin-notification')
   allowed ??= n.isPermissionGranted().then((ok) => ok || n.requestPermission().then((p) => p === 'granted'))

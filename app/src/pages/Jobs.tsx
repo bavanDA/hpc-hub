@@ -1,9 +1,10 @@
 // Jobs: my jobs, my history or all jobs on one cluster, with filters, details and cancel.
-import { CircleAlert, ListChecks, RefreshCw, Search, WifiOff } from 'lucide-react'
+import { CircleAlert, ListChecks, RefreshCw, Search } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
+import { NotConnected } from '../components/clusters/NotConnected'
 import { CancelDialog } from '../components/jobs/CancelDialog'
-import { notConnected, useClusters } from '../components/jobs/clusters'
+import { useClusters } from '../components/jobs/clusters'
 import { DetailsDialog } from '../components/jobs/DetailsDialog'
 import { sortJobs, usageText } from '../components/jobs/format'
 import { JobTable, type Sort } from '../components/jobs/JobTable'
@@ -20,7 +21,7 @@ const STATES = [['', 'Any state'], ...['RUNNING', 'PENDING', 'COMPLETED', 'FAILE
   .map((s) => [s, s] as const)] as const
 
 export function Jobs() {
-  const { clusters, cluster, session, connected, setCluster, error: clustersError } = useClusters()
+  const { clusters, cluster, session, connected, error: clustersError } = useClusters()
   const [scope, setScope] = useState<Scope>('mine')
   const [state, setState] = useState('')
   const [query, setQuery] = useState('')
@@ -70,9 +71,9 @@ export function Jobs() {
   if (clustersError) return <EmptyState icon={CircleAlert} title="Could not load clusters" text={clustersError} />
   if (!clusters || !cluster) return <div className="grid h-full place-items-center"><Spinner size={24} /></div>
 
-  const off = !connected && notConnected(cluster.name, session, 'jobs')
+  const off = !connected
   let body
-  if (off) body = <EmptyState icon={WifiOff} title={off.title} text={off.text} />
+  if (off) body = <NotConnected cluster={cluster} session={session} what="jobs" />
   else if (error) body = <EmptyState icon={CircleAlert} title="Could not load jobs" text={error} />
   else if (!list) body = <div className="grid h-full place-items-center"><Spinner size={24} /></div>
   else if (!list.jobs.length) body = <EmptyState icon={ListChecks} title="No jobs" text={NO_JOBS} />
@@ -89,9 +90,7 @@ export function Jobs() {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex shrink-0 items-center gap-2 p-3">
-        <Select label="Cluster" value={cluster.id} onChange={setCluster}
-          options={clusters.map((c) => [c.id, c.name] as const)} />
+      {!off && <div className="flex shrink-0 items-center gap-2 p-3">
         <Select label="Which jobs" value={scope} onChange={setScope} options={SCOPES} />
         <Select label="State" value={state} onChange={setState} options={STATES} />
         <label className="flex h-9 min-w-0 flex-1 items-center gap-2 rounded-md bg-pill px-3
@@ -105,7 +104,7 @@ export function Jobs() {
           className="grid size-9 shrink-0 place-items-center rounded-md bg-pill hover:bg-selected disabled:opacity-50">
           <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
         </button>
-      </div>
+      </div>}
       <div className="@container min-h-0 flex-1 overflow-auto scheme-light-dark">{body}</div>
       {!off && !error && <footer className="flex h-11 shrink-0 items-center gap-4 border-t border-line bg-header px-4
         text-sm">

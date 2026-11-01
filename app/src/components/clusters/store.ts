@@ -13,9 +13,10 @@ type Snapshot = {
   sessions: Record<string, Session>
   logs: Record<string, string[]>
   error: string
+  ready: boolean  // sessions are in: until then "not connected" would only flash
 }
 
-let snap: Snapshot = { clusters: null, sessions: {}, logs: {}, error: '' }
+let snap: Snapshot = { clusters: null, sessions: {}, logs: {}, error: '', ready: false }
 const subs = new Set<() => void>()
 
 function set(change: Partial<Snapshot>) {
@@ -41,8 +42,8 @@ import.meta.hot?.dispose(() => stop.forEach((fn) => fn()))
 
 export function refreshSessions() {
   call<Session[]>('sessions.list')
-    .then((all) => set({ sessions: Object.fromEntries(all.map((s) => [s.id, s])) }))
-    .catch(() => {})
+    .then((all) => set({ sessions: Object.fromEntries(all.map((s) => [s.id, s])), ready: true }))
+    .catch(() => set({ ready: true }))
 }
 
 let loaded = false

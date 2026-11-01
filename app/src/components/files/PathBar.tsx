@@ -1,16 +1,12 @@
-// Above the table: the cluster, Up / Home / Refresh / New folder, the path you can type into, and the places.
-import { ArrowUp, ChevronDown, FolderPlus, HardDrive, House, PanelRight, RefreshCw, Upload, Zap } from 'lucide-react'
+// Above the table: Up / Home / Refresh / New folder, the path you can type into, and the places. The cluster is
+// picked in the header (clusters/ClusterPicker.tsx).
+import { ArrowUp, FolderPlus, HardDrive, House, PanelRight, RefreshCw, Upload, Zap } from 'lucide-react'
 import { useState } from 'react'
 
-import type { Cluster, Session } from '../../types'
 import type { Place } from '../../types/files'
 import { IconButton, Spinner } from '../ui'
 
 type Props = {
-  clusters: Cluster[]
-  sessions: Record<string, Session>
-  cluster: string
-  onCluster: (id: string) => void
   path: string
   connected: boolean
   loading: boolean
@@ -38,19 +34,6 @@ export function PathBar(p: Props) {
   return (
     <div className="shrink-0 border-b border-line bg-window">
       <div className="flex items-center gap-1 px-2 pt-2">
-        <div className="relative shrink-0">
-          <select value={p.cluster} onChange={(e) => p.onCluster(e.target.value)} aria-label="Cluster"
-            className="h-9 appearance-none rounded-md bg-pill pl-3 pr-8 font-semibold outline-none hover:bg-selected
-              focus-visible:ring-2 focus-visible:ring-accent">
-            {p.clusters.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}{p.sessions[c.id]?.state === 'Connected' ? '' : ' (not connected)'}
-              </option>
-            ))}
-          </select>
-          <ChevronDown size={14} className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2" />
-        </div>
-        <div className="mx-1 h-5 w-px bg-line" />
         <IconButton icon={ArrowUp} label="Up" onClick={p.onUp} />
         <IconButton icon={House} label="Home" onClick={() => p.onGo('')} />
         <IconButton icon={RefreshCw} label="Refresh" onClick={p.onRefresh} />

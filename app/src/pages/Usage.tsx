@@ -1,8 +1,9 @@
 // Usage: SU per person in your account, storage quotas and how busy the cluster is.
-import { CircleAlert, Coins, Cpu, HardDrive, RefreshCw, WifiOff } from 'lucide-react'
+import { CircleAlert, Coins, Cpu, HardDrive, RefreshCw } from 'lucide-react'
 import { useState } from 'react'
 
-import { notConnected, useClusters } from '../components/jobs/clusters'
+import { NotConnected } from '../components/clusters/NotConnected'
+import { useClusters } from '../components/jobs/clusters'
 import { Select } from '../components/jobs/Select'
 import { EmptyState, Spinner } from '../components/ui'
 import { LoadTab } from '../components/usage/LoadTab'
@@ -16,7 +17,7 @@ type Tab = 'su' | 'storage' | 'load'
 const TABS = [['su', 'SU', Coins], ['storage', 'Storage', HardDrive], ['load', 'Load', Cpu]] as const
 
 export function Usage() {
-  const { clusters, cluster, session, connected, setCluster, error: clustersError } = useClusters()
+  const { clusters, cluster, session, connected, error: clustersError } = useClusters()
   const [tab, setTab] = useState<Tab>('su')
   const [days, setDays] = useState<string>('30')
   const [pick, setPick] = useState('')
@@ -37,10 +38,10 @@ export function Usage() {
   if (clustersError) return <EmptyState icon={CircleAlert} title="Could not load clusters" text={clustersError} />
   if (!clusters || !cluster) return <div className="grid h-full place-items-center"><Spinner size={24} /></div>
 
-  const off = !connected && notConnected(cluster.name, session, 'its usage')
+  const off = !connected
   const loading = accounts.loading || people.loading || storage.loading || load.loading
   let body
-  if (off) body = <EmptyState icon={WifiOff} title={off.title} text={off.text} />
+  if (off) body = <NotConnected cluster={cluster} session={session} what="usage" />
   else if (accounts.error) {
     body = <EmptyState icon={CircleAlert} title="Could not read accounts" text={accounts.error} />
   }
@@ -56,9 +57,7 @@ export function Usage() {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex shrink-0 items-center gap-2 p-3">
-        <Select label="Cluster" value={cluster.id} onChange={setCluster}
-          options={clusters.map((c) => [c.id, c.name] as const)} />
+      {!off && <div className="flex shrink-0 items-center gap-2 p-3">
         <Select label="Account" value={name} onChange={setPick} disabled={!list.length}
           options={list.length ? list.map((a) => [a.account, a.account] as const) : [['', '(no account)'] as const]} />
         <Select label="Period" value={days} onChange={setDays} options={PERIODS} />
@@ -77,7 +76,7 @@ export function Usage() {
           className="grid size-9 shrink-0 place-items-center rounded-md bg-pill hover:bg-selected disabled:opacity-50">
           <RefreshCw size={16} className={loading && accounts.data ? 'animate-spin' : ''} />
         </button>
-      </div>
+      </div>}
       <div className="min-h-0 flex-1 overflow-auto scheme-light-dark">{body}</div>
     </div>
   )
