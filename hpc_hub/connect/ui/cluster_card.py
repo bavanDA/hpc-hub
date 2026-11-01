@@ -79,7 +79,7 @@ class ClusterCard(Gtk.Box):
         head.append(gear)
 
         actions = Gio.SimpleActionGroup()
-        for name, fn in (("end-node", lambda: session.release_node()), ("get-node", self._node_dialog),
+        for name, fn in (("release-node", self._release_node), ("get-node", self._node_dialog),
                          ("fast-node", lambda: session.request_fast_node()),
                          ("vpn-only", lambda: on_connect(session, True)),
                          ("disconnect", lambda: on_disconnect(session))):
@@ -179,6 +179,23 @@ class ClusterCard(Gtk.Box):
             s.request_node(profile)
         ComputeDialog(f"Compute node on {s.cfg.name}", s, s.cfg.profile, go, go_label="Request").present(self)
 
+    def _release_node(self) -> None:
+        """Your own node: ask first, since whatever runs there stops. Someone else's: just stop using it."""
+        s, a = self.session, self.session.allocation
+        if not a or not a.owned:
+            s.release_node()
+            return
+        dialog = Adw.AlertDialog(heading=f"Release node {a.node}?", prefer_wide_layout=True,
+                                 body=f"Job {a.job_id} ends and the node goes back to the cluster. Anything running "
+                                      "there stops.\n\nYou stay connected, and your files stay where they are.")
+        dialog.add_response("keep", "Keep it")
+        dialog.add_response("release", "Release node")
+        dialog.set_response_appearance("release", Adw.ResponseAppearance.DESTRUCTIVE)
+        dialog.set_default_response("keep")
+        dialog.set_close_response("keep")
+        dialog.connect("response", lambda _d, r: s.release_node() if r == "release" else None)
+        dialog.present(self)
+
     def _on_action(self, *_):
         state = self.session.state
         if state.busy:
@@ -196,7 +213,7 @@ class ClusterCard(Gtk.Box):
             node = Gio.Menu()
             a = s.allocation
             if a:
-                node.append("End node" if a.owned else "Stop using this node", "card.end-node")
+                node.append("Release node…" if a.owned else "Stop using this node", "card.release-node")
             else:
                 node.append("Get a node…", "card.get-node")
                 if cfg.fast_profile():

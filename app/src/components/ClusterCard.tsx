@@ -18,9 +18,9 @@ import { putCluster } from './clusters/store'
 import { Menu, type MenuItem } from './projects/Menu'
 import { useToast } from './toast'
 import { useTools } from './tools/useTools'
-import { Button, Dialog, IconButton, IconTile, Spinner } from './ui'
+import { AlertDialog, Button, Dialog, IconButton, IconTile, Spinner } from './ui'
 
-type Open = null | 'settings' | 'compute' | 'size' | 'phone' | { switch: { id: string; name: string }; vpnOnly: boolean }
+type Open = null | 'settings' | 'compute' | 'size' | 'phone' | 'release' | { switch: { id: string; name: string }; vpnOnly: boolean }
 
 const WAITING = 'Requesting compute node'
 
@@ -90,8 +90,8 @@ export function ClusterCard({ cluster: c, session: s, log }: { cluster: Cluster;
   const fast = fastLabel(c)
   const more: MenuItem[][] = [
     connected ? (a
-      ? [{ label: a.owned ? 'End node' : 'Stop using this node', icon: Power,
-          onClick: () => run('clusters.release_node') }]
+      ? [{ label: a.owned ? 'Release node…' : 'Stop using this node', icon: Power,
+          onClick: () => (a.owned ? setOpen('release') : run('clusters.release_node')) }]
       : [{ label: 'Get a node…', icon: Cpu, onClick: () => setOpen('compute') },
           ...(fast ? [{ label: fast, icon: Zap, onClick: () => run('clusters.request_fast_node') }] : [])]) : [],
     idle && c.vpn.enabled ? [{ label: 'Connect VPN only', icon: Plug, onClick: () => connect(true) }] : [],
@@ -183,6 +183,11 @@ export function ClusterCard({ cluster: c, session: s, log }: { cluster: Cluster;
       {open === 'compute' && <ComputeDialog cluster={c} onClose={() => setOpen(null)} />}
       {open === 'size' && <ComputeDialog cluster={c} saveOnly onClose={() => setOpen(null)} />}
       {open === 'phone' && <PairPhoneDialog only={[c.id]} onClose={() => setOpen(null)} />}
+      {open === 'release' && a && <AlertDialog title={`Release node ${a.node}?`} keep="Keep it" act="Release node"
+        onAct={() => { setOpen(null); run('clusters.release_node') }} onClose={() => setOpen(null)}>
+        <p>Job {a.job} ends and the node goes back to the cluster. Anything running there stops.</p>
+        <p>You stay connected, and your files stay where they are.</p>
+      </AlertDialog>}
       {open && typeof open === 'object' && (
         <Dialog title={`Disconnect ${open.switch.name}?`} onClose={() => setOpen(null)} width={420}
           actions={<>
