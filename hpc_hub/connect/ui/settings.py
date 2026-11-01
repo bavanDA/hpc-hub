@@ -94,7 +94,7 @@ class ClusterSettingsDialog(Adw.PreferencesDialog):
         return row
 
     def _login_page(self) -> Adw.PreferencesPage:
-        page = Adw.PreferencesPage(name="login", title="Sign-in")
+        page = Adw.PreferencesPage(name="login", title="Sign-in", icon_name="dialog-password-symbolic")
         c = self.cfg
         self.user = _entry(c.username_label, self.ssh_saved.username if self.ssh_saved else "")
         self.password = self._password_row(self.ssh_saved)
@@ -122,7 +122,7 @@ class ClusterSettingsDialog(Adw.PreferencesDialog):
         return page
 
     def _server_page(self) -> Adw.PreferencesPage:
-        page = Adw.PreferencesPage(name="server", title="Server")
+        page = Adw.PreferencesPage(name="server", title="Server", icon_name="network-server-symbolic")
         server = Adw.PreferencesGroup(title="Server")
         self.host = _entry("Login host", self.cfg.host)
         self.port = _spin("SSH port", self.cfg.port, 1, 65535)
@@ -167,7 +167,7 @@ class ClusterSettingsDialog(Adw.PreferencesDialog):
         return page
 
     def _compute_page(self) -> Adw.PreferencesPage:
-        page = Adw.PreferencesPage(name="compute", title="Compute")
+        page = Adw.PreferencesPage(name="compute", title="Compute", icon_name="system-run-symbolic")
         group = Adw.PreferencesGroup(title="Compute node", description="Agents and terminals run on this node.")
         self.on_connect = _switch("Get a compute node when I connect", self.cfg.request_node_on_connect)
         self.ask_node = _switch("Ask every time", self.cfg.ask_node, "Review these before each request")
@@ -181,7 +181,7 @@ class ClusterSettingsDialog(Adw.PreferencesDialog):
 
     def _vscode_page(self) -> Adw.PreferencesPage:
         v = self.cfg.vscode
-        page = Adw.PreferencesPage(name="vscode", title="VS Code")
+        page = Adw.PreferencesPage(name="vscode", title="VS Code", icon_name="text-editor-symbolic")
         start = Adw.PreferencesGroup(
             title="VS Code job",
             description="The VS Code button submits this as its own batch job (sbatch) and shows its log. "

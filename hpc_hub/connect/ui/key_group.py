@@ -74,7 +74,7 @@ class KeyGroup(Adw.PreferencesGroup):
         self.steps[KEY].row.add_suffix(create)
         self.steps[KEY].body = [create]
 
-        self.copy_row = Adw.ActionRow(subtitle_lines=1)
+        self.copy_row = Adw.ActionRow(title_lines=1)
         self.copy = _button(C.COPY_KEY, "flat", icon="edit-copy-symbolic")
         self.copy.connect("clicked", lambda *_: self._copy())
         self.copy_row.add_suffix(self.copy)
