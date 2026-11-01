@@ -7,15 +7,16 @@ from collections.abc import Callable
 from gi.repository import Adw, Gio, GLib, Gtk, Pango
 
 from ....connect.session import ClusterSession, State
-from ...jobs import ALL, HISTORY, MINE, JobInfo, list_jobs
+from ...jobs import ALL, GROUP, HISTORY, MINE, JobInfo, list_jobs, reason_text
 from ...usage import AccountUsage, account_usage
 from .cancel import CancelMixin
 from .columns import JobItem, add_columns
 from .details import DetailsMixin
 
 REFRESH_SECONDS = 15
-SCOPES = [(MINE, "My jobs"), (HISTORY, "My history (7 days)"), (ALL, "All jobs")]
-STATES = ["Any state", "RUNNING", "PENDING", "COMPLETED", "FAILED", "CANCELLED", "TIMEOUT"]
+SCOPES = [(MINE, "My jobs"), (GROUP, "My group"), (HISTORY, "My history (7 days)"), (ALL, "All jobs")]
+STATES = [("", "Any state")] + [(s, s.capitalize()) for s in
+                                 ("RUNNING", "PENDING", "COMPLETED", "FAILED", "CANCELLED", "TIMEOUT")]
 
 
 def usage_text(accounts: list[AccountUsage]) -> str:
@@ -37,7 +38,7 @@ class JobsPage(DetailsMixin, CancelMixin, Gtk.Box):
         bar = Gtk.Box(spacing=8, margin_top=12, margin_bottom=12, margin_start=12, margin_end=12)
         self.cluster = Gtk.DropDown.new_from_strings([s.cfg.name for s in sessions])
         self.scope = Gtk.DropDown.new_from_strings([label for _, label in SCOPES])
-        self.state = Gtk.DropDown.new_from_strings(STATES)
+        self.state = Gtk.DropDown.new_from_strings([label for _, label in STATES])
         self.search = Gtk.SearchEntry(placeholder_text="Filter by id, name, user, partition", hexpand=True)
         self.refresh_btn = Gtk.Button(icon_name="view-refresh-symbolic", tooltip_text="Refresh")
         for w in (self.cluster, self.scope, self.state, self.search, self.refresh_btn):
@@ -115,7 +116,7 @@ class JobsPage(DetailsMixin, CancelMixin, Gtk.Box):
         if not quiet:
             self.updated.set_label("Loading…")
         scope = SCOPES[self.scope.get_selected()][0]
-        self.user_col.set_visible(scope == ALL)
+        self.user_col.set_visible(scope in (ALL, GROUP))
 
         def work():
             try:
@@ -174,11 +175,11 @@ class JobsPage(DetailsMixin, CancelMixin, Gtk.Box):
 
     def _match(self, item: JobItem) -> bool:
         j = item.job
-        state = STATES[self.state.get_selected()]
-        if self.state.get_selected() and j.state != state:
+        state = STATES[self.state.get_selected()][0]
+        if state and j.state != state:
             return False
         q = self.search.get_text().strip().lower()
-        return not q or any(q in v.lower() for v in (j.job_id, j.name, j.user, j.partition))
+        return not q or any(q in v.lower() for v in (j.job_id, j.name, j.user, j.partition, reason_text(j.where)))
 
     # -- selection & actions -------------------------------------------------------
     def _job_at(self, pos: int) -> JobInfo | None:

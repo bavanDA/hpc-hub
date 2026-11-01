@@ -38,6 +38,18 @@ CSS = """
 levelbar block.ok { background: @accent_bg_color; }
 levelbar block.warn { background: @warning_bg_color; }
 levelbar block.over { background: @error_bg_color; }
+/* Time used in the job table: blue, amber from 85%, red when out of time (compute/ui/jobs/columns.py) */
+levelbar.time-bar trough { min-height: 6px; border-radius: 999px; }
+levelbar.time-bar block { min-height: 6px; border-radius: 999px; }
+levelbar.time-bar block.filled { background: @accent_bg_color; }
+levelbar.time-bar.warn block.filled { background: @warning_bg_color; }
+levelbar.time-bar.over block.filled { background: @error_bg_color; }
+/* The cluster card's status: a real colored dot (connect/ui/cluster_card.py) */
+.state-dot { min-width: 8px; min-height: 8px; border-radius: 999px; background: alpha(@window_fg_color, 0.35); }
+.state-dot.success { background: @success_color; }
+.state-dot.info { background: @accent_color; }
+.state-dot.warning { background: @warning_color; }
+.state-dot.error { background: @error_color; }
 .monitor-bar { min-height: 24px; padding: 0 10px; border-top: 1px solid alpha(currentColor, 0.12);
                background: @view_bg_color; font-size: 11px; }
 .monitor-item { opacity: 0.8; }
