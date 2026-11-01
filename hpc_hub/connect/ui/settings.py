@@ -8,12 +8,14 @@ from ...compute.limits import Limits, minutes, slurm_time
 from ...compute.slurm import validate
 from ...compute.ui.duration import DurationRow
 from ...core import credentials
+from ...core import login_copy as C
 from ...core.config import VPN_PROTOCOLS, ClusterConfig, ComputeProfile
 from ...core.credentials import Login
 from ...ui.widgets import TARGETS
 from .. import chrome_window
 from ..vpn import split_errors
 from .authenticator_help import AuthenticatorHelp
+from .key_group import KeyGroup
 
 
 def _entry(title: str, text: str = "") -> Adw.EntryRow:
@@ -84,12 +86,21 @@ class ClusterSettingsDialog(Adw.PreferencesDialog):
 
     def _login_page(self) -> Adw.PreferencesPage:
         page = Adw.PreferencesPage(name="login", title="Login", icon_name="dialog-password-symbolic")
-        group = Adw.PreferencesGroup(title="Cluster login",
-                                     description="Saved encrypted in your system keyring, never in plain text.")
+        c = self.cfg
+        if c.key_page:
+            note = C.KEY_INTRO.format(who=c.who)
+        elif c.password_only:
+            note = c.password_note()
+        else:
+            note = C.SAVED_IN.format(store="your system keyring")
         self.user = _entry("Username", self.ssh_saved.username if self.ssh_saved else "")
         self.password = self._password_row(self.ssh_saved)
-        group.add(self.user)
-        group.add(self.password)
+        if c.key_page:
+            group = KeyGroup(c, self.user, self.password, title="Cluster login", description=note)
+        else:
+            group = Adw.PreferencesGroup(title="Cluster login", description=note)
+            group.add(self.user)
+            group.add(self.password)
         # the second step is the cluster's (its admins decide), so it is said, not chosen
         group.add(Adw.ActionRow(title=self.cfg.second_step(), subtitle="Set by the cluster's admins"))
         if self.cfg.second_factor == "code":

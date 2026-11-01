@@ -1,6 +1,10 @@
 """Every sentence the login screens say about passwords and SSH keys, in one place so the wording can change in
 one go. The desktop app keeps its own copy in app/src/components/clusters/loginCopy.ts; keep the two alike."""
 
+# connecting before there is a login
+FIRST_PASSWORD = "Enter your username and password first"
+FIRST_KEY = "Set up your SSH key and username first"
+
 # a cluster that takes only passwords (Wulver); name: "Wulver"
 PASSWORD_NOTE = "{name} only takes passwords, not SSH keys. HPC Hub keeps yours encrypted on this computer."
 SAVED_IN = "Saved encrypted in {store}."

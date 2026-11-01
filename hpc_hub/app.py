@@ -17,7 +17,7 @@ from .connect.ui.key_setup import KeySetupDialog  # noqa: E402
 from .connect.ui.phone_pair import PhonePairDialog  # noqa: E402
 from .connect.ui.prompts import LoginPromptsMixin  # noqa: E402
 from .connect.ui.settings import ClusterSettingsDialog  # noqa: E402
-from .core import browser, config, credentials, features, single  # noqa: E402
+from .core import browser, config, credentials, features, login_copy, single  # noqa: E402
 from .core.paths import runtime_dir  # noqa: E402
 from .globus import api as globus  # noqa: E402
 from .globus.ui import GlobusPage  # noqa: E402
@@ -255,7 +255,7 @@ class HpcHubApp(LoginPromptsMixin, QuitMixin, Adw.Application):
                            lambda user: self._key_login(session, user)).present(self.window)
             return
         if not ssh_login or not ssh_login.username:
-            self.open_settings(session, "Enter your username and password first")
+            self.open_settings(session, login_copy.FIRST_KEY if cfg.key_page else login_copy.FIRST_PASSWORD)
             return
         vpn_login = None
         if cfg.vpn.enabled:
