@@ -1,9 +1,9 @@
-// Jobs: yours, your last week, or everyone's, on one cluster; tap one for details and to cancel it.
+// Jobs: yours, your group's, your last week, or everyone's, on one cluster; tap one for details and to cancel it.
 import { ListChecks, RefreshCw, WifiOff } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
-import { STATE_PILL, stateName, usageText } from '@shared/components/jobs/format'
-import { EmptyState, Spinner } from '@shared/components/ui'
+import { stateName, usageText } from '@shared/components/jobs/format'
+import { EmptyState, Meter, Spinner, StatusPill } from '@shared/components/ui'
 import { call } from '@shared/rpc'
 import type { Job, JobList, Scope } from '@shared/types/jobs'
 import { Header } from '../parts/Header'
@@ -12,7 +12,7 @@ import { useConnected } from '../parts/useConnected'
 import { Segments } from '../ui'
 
 const REFRESH_MS = 15_000
-const SCOPES = [['mine', 'Mine'], ['history', '7 days'], ['all', 'Everyone']] as const
+const SCOPES = [['mine', 'Mine'], ['group', 'Group'], ['history', '7 days'], ['all', 'Everyone']] as const
 
 export function Jobs() {
   const { live, current, pick } = useConnected()
@@ -63,13 +63,19 @@ export function Jobs() {
                 <button key={j.job_id} onClick={() => setOpen(j)}
                   className="rounded-2xl bg-card p-4 text-left shadow-[var(--shadow-card)] active:bg-hover">
                   <div className="flex items-center gap-2">
-                    <span className="min-w-0 flex-1 truncate font-bold">{j.name}</span>
-                    <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${STATE_PILL[j.state] ?? 'bg-pill'}`}>
-                      {stateName(j.state)}</span>
+                    <span className="min-w-0 flex-1 truncate font-semibold">{j.name}</span>
+                    <StatusPill state={j.state}>{stateName(j.state)}</StatusPill>
                   </div>
-                  <p className="mt-1 truncate text-sm text-dim">
-                    {[j.job_id, scope === 'all' ? j.user : '', j.elapsed, `${j.cpus} cores`, j.where]
-                      .filter(Boolean).join(' · ')}</p>
+                  {j.reason
+                    ? <p className="mt-1 truncate text-sm text-dim">{j.reason}</p>
+                    : <div className="mt-2 flex items-center gap-2 text-sm">
+                        {j.limit_seconds > 0 && <Meter value={j.state === 'TIMEOUT' ? 1 : j.seconds / j.limit_seconds}
+                          label="Time used" className="w-10 shrink-0" />}
+                        <span>{j.elapsed_text}</span><span className="text-dim">of {j.limit_text}</span>
+                      </div>}
+                  <p className="mt-1 truncate text-sm text-dim tabular-nums">
+                    {[j.job_id, scope === 'all' || scope === 'group' ? j.user : '', `${j.cpus} cores`,
+                      j.reason ? '' : j.where].filter(Boolean).join(' · ')}</p>
                 </button>
               ))}
             </div>

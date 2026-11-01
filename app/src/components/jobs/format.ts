@@ -1,14 +1,6 @@
-// How jobs read: state colors, sort keys, and the SU line of your accounts.
+// How jobs read: state names, memory, sort keys, and the SU line of your accounts.
 import type { Job } from '../../types/jobs'
 import type { Account } from '../../types/usage'
-
-/** The phone's pill colors; the desktop uses StatusPill (ui.tsx statusKind), whose five kinds these follow. */
-export const STATE_PILL: Record<string, string> = {
-  RUNNING: 'bg-ok-bg text-ok', PENDING: 'bg-warn-bg text-warn', COMPLETING: 'bg-accent-soft text-accent-text',
-  CANCELLED: 'bg-pill text-dim', COMPLETED: 'bg-pill text-dim',
-  FAILED: 'bg-bad-bg text-bad', TIMEOUT: 'bg-bad-bg text-bad', OUT_OF_MEMORY: 'bg-bad-bg text-bad',
-  NODE_FAIL: 'bg-bad-bg text-bad',
-}
 
 /** "Running", "Out of memory" for Slurm's RUNNING, OUT_OF_MEMORY. */
 export const stateName = (s: string) => s.charAt(0) + s.slice(1).toLowerCase().replaceAll('_', ' ')
