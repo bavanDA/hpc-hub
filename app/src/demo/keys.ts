@@ -19,5 +19,7 @@ function result(): KeyTest {
 export const answers = {
   'keys.mine': () => mine,
   'keys.create': () => (mine ??= sample),
+  'keys.use': ({ path }: { path: string }) => (mine = { ...sample, path, file: path.split('/').pop() ?? path,
+    made_on: 'Mar 2025', public: 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIExampleOnlyAKeyYouHadBefore jdoe@lab' }),
   'keys.test': () => new Promise<KeyTest>((done) => setTimeout(() => done(result()), Number(q.get('keywait') ?? 300))),
 }

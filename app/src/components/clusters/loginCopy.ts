@@ -20,6 +20,8 @@ export const copy = {
   password: S.PASSWORD,
   saved: S.SAVED,
   remember: S.REMEMBER,
+  rememberOff: S.REMEMBER_OFF,
+  codeSetup: S.CODE_SETUP,
   savedIn: (store: string) => fill(S.SAVED_IN, { store }),
   skip: S.SKIP,
   continue: S.CONTINUE,

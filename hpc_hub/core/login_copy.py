@@ -17,13 +17,15 @@ USERNAME_HINT = "e.g. ab123"
 PASSWORD = "Password"
 SAVED = "Saved"  # the password field's placeholder when one is saved
 REMEMBER = "Remember password"
+REMEMBER_OFF = "You'll type it each time you open HPC Hub."  # under the switch, only while it's off
 SAVED_IN = "Saved in {store}."
-SKIP = "Skip for now"
+SKIP = "Do this later"
 CONTINUE = "Continue"
 
 # the second step, decided by the cluster's admins (ClusterConfig.second_step)
 SECOND_DUO = "Uses Duo"
 SECOND_CODE = "You'll need a code from your authenticator app."
+CODE_SETUP = "Set up your authenticator app"
 DUO_NOW = "Check your phone for a Duo push."
 
 # a cluster with a web portal that adds your key (SDSC)
@@ -37,8 +39,12 @@ KEY_HELP = "https://docs.github.com/en/authentication/connecting-to-github-with-
 STEP_KEY = "Make a key"
 STEP_KEY_DONE = "Key"
 CREATE_KEY = "Create key"
+USE_MINE = "Use a key I already have"
+PICK_KEY = "Pick your private SSH key"  # the file dialog's title
 KEY_FOUND = "Found on this computer ({file})"
 KEY_MADE = "Made just now ({file})"
+KEY_PICKED = "Your key ({file})"
+ALREADY_ON = "Already on {who}? Try it"
 STEP_ADD = "Give it to {who}"
 COPY_KEY = "Copy"
 COPIED = "Copied"

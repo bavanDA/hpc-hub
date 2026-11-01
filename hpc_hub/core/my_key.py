@@ -40,7 +40,7 @@ def ssh_dir() -> Path:
     return Path.home() / ".ssh"
 
 
-SKIP = {"known_hosts", "known_hosts.old", "authorized_keys", "config", "environment"}
+NOT_KEYS = {"known_hosts", "known_hosts.old", "authorized_keys", "config", "environment"}
 
 
 def _kind(public: str) -> str:
@@ -92,7 +92,7 @@ def find(chosen: str = "") -> MyKey | None:
         pubs = []
     for pub in pubs:
         key = pub.with_suffix("")
-        if key.name in SKIP or not key.is_file():
+        if key.name in NOT_KEYS or not key.is_file():
             continue
         line = pub.read_text(errors="replace").strip()
         if line:

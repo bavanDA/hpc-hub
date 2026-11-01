@@ -6,7 +6,6 @@ from pathlib import Path
 from hpc_hub.core import login_copy
 
 APP = Path(__file__).resolve().parents[2] / "app" / "src" / "components" / "clusters"
-VARIANTS = APP / "signInVariants.ts"  # the other directions, kept until one is picked
 
 
 def _all(value) -> list[str]:
@@ -35,8 +34,6 @@ def test_house_rules():
     assert sum(s.count("{name}") for s in strings) == 1  # the full name only in the title
 
 
-def test_house_rules_in_the_other_directions():
-    if not VARIANTS.exists():
-        return  # one direction picked, the others gone
-    bad = {s: _broken(s) for s in _ts_strings(VARIANTS) if " " in s and _broken(s)}
+def test_house_rules_in_the_key_panel():
+    bad = {s: _broken(s) for s in _ts_strings(APP / "KeyPanel.tsx") if " " in s and _broken(s)}
     assert not bad
