@@ -114,8 +114,7 @@ export function LockGroup({ status, config, onConfig, onSetUp, onUnlock, onOff }
         </div>
       )}
       <StepperRow title="Minutes a code keeps a session open" min={0} max={240} value={config.minutes}
-        subtitle={'0: a code with every message. Safest, since an open session takes messages from anyone in ' +
-          'your account'}
+        subtitle="0 asks for a code on every message (safest)"
         onChange={(minutes) => set({ minutes })} />
       <StepperRow title="Wrong codes before Claude is stopped" min={1} max={10} value={config.tries}
         onChange={(tries) => set({ tries })} />

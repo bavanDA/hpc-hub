@@ -71,16 +71,14 @@ class PermissionsPage(Gtk.Box):
         self.perm, self.lock = p, lock_status
         self.save_btn.set_sensitive(True)
 
-        main = self._group(title=f"Claude on {s.cfg.name}",
-                           description="Saved in ~/.claude/settings.json. ChatGPT and Antigravity ask before "
-                                       "running commands.")
+        main = self._group(title="Claude", description="Saved in ~/.claude/settings.json")
         self.edits = Adw.SwitchRow(title="Edit files without asking", active=p.accept_edits)
         self.trash = Adw.SwitchRow(title="Use trash instead of rm", active=p.trash,
                                    subtitle="rm is blocked. Deleted files stay in .trash for 7 days")
         main.add(self.edits)
         main.add(self.trash)
 
-        ask = self._group(title="Always ask first", description="Even when the command is ticked below")
+        ask = self._group(title="Always ask first", description="Even when allowed below")
         self.asks: dict[str, Adw.SwitchRow] = {}
         for key, label in ASKS:
             row = Adw.SwitchRow(title=label, active=key in p.ask)
@@ -97,6 +95,7 @@ class PermissionsPage(Gtk.Box):
         add = Adw.EntryRow(title="Add a command, like conda or ./run.sh", show_apply_button=True)
         add.connect("apply", lambda row: self._add(row))
         allow.add(add)
+        self._group(description="ChatGPT and Antigravity ask before running commands.")
 
     def _lock_group(self, s: ClusterSession, st: dict) -> None:
         g = self._group(title="Passcode lock",
@@ -118,8 +117,7 @@ class PermissionsPage(Gtk.Box):
             g.add(row)
         self.minutes = Adw.SpinRow.new_with_range(0, 240, 1)
         self.minutes.set_title("Minutes a code keeps a session open")
-        self.minutes.set_subtitle("0: a code with every message. Safest, since an open session takes "
-                                  "messages from anyone in your account")
+        self.minutes.set_subtitle("0 asks for a code on every message (safest)")
         self.minutes.set_value(conf.get("minutes", 10))
         self.tries = Adw.SpinRow.new_with_range(1, 10, 1)
         self.tries.set_title("Wrong codes before Claude is stopped")

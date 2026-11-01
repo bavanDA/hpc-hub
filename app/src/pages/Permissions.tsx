@@ -2,6 +2,7 @@
 import { CircleAlert, RefreshCw, Unplug } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
+import { Select } from '../components/jobs/Select'
 import { Commands } from '../components/permissions/Commands'
 import { Group, SwitchRow } from '../components/permissions/controls'
 import { LockGroup, LockSetupDialog, lockConfig } from '../components/permissions/Lock'
@@ -85,14 +86,13 @@ export function Permissions() {
   else if (!perm || !draft) body = <div className="grid h-64 place-items-center"><Spinner size={24} /></div>
   else body = (
     <div className="flex flex-col gap-6">
-      <Group title={`Claude on ${perm.name}`}
-        description="Saved in ~/.claude/settings.json. ChatGPT and Antigravity ask before running commands.">
+      <Group title="Claude" description="Saved in ~/.claude/settings.json">
         <SwitchRow title="Edit files without asking" on={draft.accept_edits}
           onChange={(v) => edit({ accept_edits: v })} />
         <SwitchRow title="Use trash instead of rm" subtitle="rm is blocked. Deleted files stay in .trash for 7 days"
           on={draft.trash} onChange={(v) => edit({ trash: v })} />
       </Group>
-      <Group title="Always ask first" description="Even when the command is ticked below">
+      <Group title="Always ask first" description="Even when allowed below">
         {perm.asks.map((a) => (
           <SwitchRow key={a.key} title={a.label} on={draft.ask.includes(a.key)}
             onChange={(v) => edit({ ask: v ? [...draft.ask, a.key].sort() : draft.ask.filter((k) => k !== a.key) })} />
@@ -103,16 +103,15 @@ export function Permissions() {
         onUnlock={() => lockAction('permissions.lock_reset', 'Unlocked')} />
       <Commands groups={perm.groups} custom={draft.custom} allowed={allowed} onChange={tick}
         onAdd={(cmd) => edit({ custom: [...draft.custom, cmd], allowed: [...draft.allowed, cmd].sort() })} />
+      <p className="px-1 text-[13px] text-dim">ChatGPT and Antigravity ask before running commands.</p>
     </div>
   )
 
   return (
     <div className="mx-auto flex max-w-[760px] flex-col gap-5 px-4 py-6">
       <div className="flex items-center gap-2">
-        <select value={cluster} onChange={(e) => { setCluster(e.target.value); setPerm(null); setError('') }}
-          aria-label="Cluster" className="h-9 rounded-md bg-pill px-2 font-bold outline-none hover:bg-selected">
-          {clusters.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-        </select>
+        <Select label="Cluster" value={cluster} options={clusters.map((c) => [c.id, c.name] as const)}
+          onChange={(id) => { setCluster(id); setPerm(null); setError('') }} />
         <span className="flex-1" />
         {loading && <Spinner />}
         <IconButton icon={RefreshCw} label="Reload from the cluster" size={16} onClick={load} />
