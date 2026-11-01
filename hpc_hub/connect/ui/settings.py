@@ -74,6 +74,7 @@ class ClusterSettingsDialog(Adw.PreferencesDialog):
         self.edit_remote = edit_remote
         self.ssh_saved = credentials.load(cfg.id, credentials.SSH)
         self.vpn_saved = credentials.load(cfg.id, credentials.VPN)
+        self.saved_hints: list[Gtk.Label] = []
         self.add(self._login_page())
         self.add(self._server_page())
         self.add(self._compute_page())
@@ -82,46 +83,46 @@ class ClusterSettingsDialog(Adw.PreferencesDialog):
         self.connect("close-attempt", self._on_close_attempt)
 
     # -- pages -----------------------------------------------------------------
-    def _password_row(self, saved: Login | None) -> Adw.PasswordEntryRow:
-        title = "Password (saved, leave empty to keep)" if saved and saved.password else "Password"
-        return Adw.PasswordEntryRow(title=title)
+    def _password_row(self, saved: Login | None, title: str = C.PASSWORD) -> Adw.PasswordEntryRow:
+        """With a quiet "Saved" while it's empty and a password is saved (leave it empty to keep that one)."""
+        row = Adw.PasswordEntryRow(title=title)
+        if saved and saved.password:
+            hint = Gtk.Label(label=C.SAVED, css_classes=["dim-label"])
+            row.add_suffix(hint)
+            row.connect("changed", lambda r: hint.set_visible(not r.get_text()))
+            self.saved_hints.append(hint)
+        return row
 
     def _login_page(self) -> Adw.PreferencesPage:
-        page = Adw.PreferencesPage(name="login", title="Login", icon_name="dialog-password-symbolic")
+        page = Adw.PreferencesPage(name="login", title="Sign-in")
         c = self.cfg
-        if c.key_page:
-            note = c.key_intro()
-        elif c.password_only:
-            note = c.password_note(STORE)
-        else:
-            note = C.SAVED_IN.format(store=STORE)
         self.user = _entry(c.username_label, self.ssh_saved.username if self.ssh_saved else "")
         self.password = self._password_row(self.ssh_saved)
         if c.key_page:
-            group = KeyGroup(c, self.user, self.password, title="Cluster login", description=note)
+            group = KeyGroup(c, self.user, self.password, description=c.key_intro())
         else:
-            group = Adw.PreferencesGroup(title="Cluster login", description=note)
+            group = Adw.PreferencesGroup(description=C.SAVED_IN.format(store=STORE))
             group.add(self.user)
             group.add(self.password)
-        # the second step is the cluster's (its admins decide), so it is said, not chosen (key steps say it themselves)
-        if not c.key_page:
-            group.add(Adw.ActionRow(title=self.cfg.second_step(), subtitle="Set by the cluster's admins"))
         if self.cfg.second_factor == "code":
             help_row = Adw.ButtonRow(title="How to set up Google Authenticator", start_icon_name="help-about-symbolic")
             help_row.connect("activated", lambda *_: AuthenticatorHelp(self.cfg).present(self))
             group.add(help_row)
         page.add(group)
+        # the second step is the cluster's (its admins decide), so it is said, not chosen (key steps say it themselves)
+        if not c.key_page:
+            page.add(Adw.PreferencesGroup(description=self.cfg.second_step()))
 
         forget_group = Adw.PreferencesGroup()
-        forget = Adw.ButtonRow(title="Forget saved logins")
-        forget.add_css_class("destructive-action")
-        forget.connect("activated", self._forget)
+        forget = Gtk.Button(label=f"Forget {c.username_label if c.key_page else 'saved password'}",
+                            css_classes=["flat", "error"], halign=Gtk.Align.START)
+        forget.connect("clicked", self._forget)
         forget_group.add(forget)
         page.add(forget_group)
         return page
 
     def _server_page(self) -> Adw.PreferencesPage:
-        page = Adw.PreferencesPage(name="server", title="Server & VPN", icon_name="network-server-symbolic")
+        page = Adw.PreferencesPage(name="server", title="Server")
         server = Adw.PreferencesGroup(title="Server")
         self.host = _entry("Login host", self.cfg.host)
         self.port = _spin("SSH port", self.cfg.port, 1, 65535)
@@ -151,11 +152,9 @@ class ClusterSettingsDialog(Adw.PreferencesDialog):
         self.sign_in.set_subtitle("Both are HPC Hub's own windows, never your own browser")
         self.vpn_user = _entry("VPN username (e.g. first.last@yale.edu)",
                                self.vpn_saved.username if self.vpn_saved else "")
-        self.vpn_password = self._password_row(self.vpn_saved)
-        if not (self.vpn_saved and self.vpn_saved.password):
-            self.vpn_password.set_title("VPN password (empty = cluster password)")
-        else:
-            self.vpn_password.set_title("VPN " + self.vpn_password.get_title().lower())
+        self.vpn_password = self._password_row(
+            self.vpn_saved, "VPN password" if self.vpn_saved and self.vpn_saved.password
+            else "VPN password (empty = cluster password)")
         for row in (self.vpn_on, self.gateway, self.sign_in, self.protocol, self.useragent, self.authgroup,
                     self.split, self.domains, self.routes, self.same_login, self.vpn_user, self.vpn_password):
             vpn.add(row)
@@ -168,14 +167,12 @@ class ClusterSettingsDialog(Adw.PreferencesDialog):
         return page
 
     def _compute_page(self) -> Adw.PreferencesPage:
-        page = Adw.PreferencesPage(name="compute", title="Compute", icon_name="system-run-symbolic")
-        group = Adw.PreferencesGroup(title="Compute node",
-                                     description="Requested with salloc after you connect. Claude runs here.")
-        self.on_connect = _switch("Request node on connect", self.cfg.request_node_on_connect)
-        self.ask_node = _switch("Ask every time", self.cfg.ask_node, "Show the node's settings before each request")
+        page = Adw.PreferencesPage(name="compute", title="Compute")
+        group = Adw.PreferencesGroup(title="Compute node", description="Agents and terminals run on this node.")
+        self.on_connect = _switch("Get a compute node when I connect", self.cfg.request_node_on_connect)
+        self.ask_node = _switch("Ask every time", self.cfg.ask_node, "Review these before each request")
         self.on_connect.bind_property("active", self.ask_node, "visible", GObject.BindingFlags.SYNC_CREATE)
-        self.reuse = _switch("Use my running job", self.cfg.reuse_running_job,
-                             "If you already have a node (e.g. for Claude), use it instead of a new one")
+        self.reuse = _switch("Use my running job", self.cfg.reuse_running_job, "Reuse a node you already have")
         self.node = ProfileRows(self.cfg.profile, "Extra salloc arguments", self.limits)
         for row in (self.on_connect, self.ask_node, self.reuse, *self.node.rows):
             group.add(row)
@@ -184,7 +181,7 @@ class ClusterSettingsDialog(Adw.PreferencesDialog):
 
     def _vscode_page(self) -> Adw.PreferencesPage:
         v = self.cfg.vscode
-        page = Adw.PreferencesPage(name="vscode", title="VS Code", icon_name="text-editor-symbolic")
+        page = Adw.PreferencesPage(name="vscode", title="VS Code")
         start = Adw.PreferencesGroup(
             title="VS Code job",
             description="The VS Code button submits this as its own batch job (sbatch) and shows its log. "
@@ -233,9 +230,10 @@ class ClusterSettingsDialog(Adw.PreferencesDialog):
         self.ssh_saved = self.vpn_saved = None
         self.user.set_text("")
         self.vpn_user.set_text("")
-        self.password.set_title("Password")
+        for hint in self.saved_hints:
+            hint.set_visible(False)
         self.vpn_password.set_title("VPN password (empty = cluster password)")
-        self.add_toast(Adw.Toast(title="Saved logins removed"))
+        self.add_toast(Adw.Toast(title="Saved password removed"))
 
     def _apply(self) -> list[str]:
         c, v = self.cfg, self.cfg.vpn

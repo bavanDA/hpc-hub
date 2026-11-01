@@ -4,6 +4,8 @@
 from gi.repository import Gdk, Gtk
 
 CSS = """
+/* Adwaita dims secondary text to 0.55, about 3:1; 0.72 reads at WCAG AA in both themes */
+.dim-label, .dimmed, row .subtitle, preferencesgroup .description { opacity: 0.72; }
 .cluster-card { padding: 18px; }
 .status-pill { padding: 2px 10px; border-radius: 999px; font-weight: bold; font-size: smaller;
                background: alpha(currentColor, 0.1); }
