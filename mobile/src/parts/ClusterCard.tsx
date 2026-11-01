@@ -132,7 +132,7 @@ export function ClusterCard({ cluster: c, session: s, log }: { cluster: Cluster;
               ? <span className="min-w-0 flex-1 select-text"><span className="block font-semibold">Node {s.node}
                   {left !== null && <span className="font-normal text-dim"> · {leftText(left)}</span>}</span>
                   <span className="block text-sm text-dim">Job {s.job}</span></span>
-              : <><span className="flex-1 text-dim">No compute node yet</span>
+              : <><span className="flex-1 text-dim">No compute node</span>
                   <button onClick={() => setOpen('request')} disabled={busy}
                     className="-mr-2 h-12 rounded-full px-4 font-semibold text-accent-text active:bg-hover
                       disabled:opacity-50">Get one</button></>}
