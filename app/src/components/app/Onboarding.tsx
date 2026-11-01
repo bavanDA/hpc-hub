@@ -151,14 +151,10 @@ function LoginStep({ cluster: c, onNext }: { cluster: Cluster; onNext: () => voi
           <EntryRow label={label} value={user} onChange={setUser} autoFocus={!c.portal} placeholder={copy.usernameHint} />
           <EntryRow label={copy.password} value={password} onChange={setPassword} password
             placeholder={saved ? copy.saved : undefined} />
+          <SwitchRow label={copy.remember} checked={remember} onChange={setRemember} />
         </List>
         <p className="flex items-center gap-1.5 px-1 text-[13px] text-dim">
           <Lock size={13} className="shrink-0" />{copy.savedIn(keyStore)}</p>
-        <label className="flex cursor-pointer items-center gap-2 self-start px-1 text-[14px]">
-          <input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)}
-            className="size-4 accent-[var(--color-accent)]" />
-          {copy.remember}
-        </label>
       </div>
       {instead}
       {error && <p className="text-bad">{error}</p>}

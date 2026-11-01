@@ -34,7 +34,8 @@ export function EntryRow({ label, value, onChange, placeholder, password, list, 
   const [shown, setShown] = useState(false)
   const id = list ? `list-${label.replace(/\W/g, '')}` : undefined
   return (
-    <label className="flex min-h-[56px] items-center gap-2 px-4 py-1.5 focus-within:bg-hover">
+    <label className="flex min-h-[56px] items-center gap-2 px-4 py-1.5
+      focus-within:shadow-[inset_3px_0_0_var(--color-accent)]">
       <div className="min-w-0 flex-1">
         <div className="text-[12px] text-dim">{label}</div>
         <input value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder}
