@@ -17,6 +17,10 @@ export type StorageRow = {
   quota: number // GB, 0 = no quota
   mine: number | null // GB you use in it
   people: Record<string, number> // user -> GB
+  files?: number // 0 = not known
+  file_limit?: number
+  backup?: string // Yes or No, as the quota tool says
+  purged?: number // days before files are deleted, 0 = never or not said
 }
 export type Storage = { rows: StorageRow[]; raw: string }
 

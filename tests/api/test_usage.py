@@ -55,6 +55,7 @@ def test_people_storage_load(fake):
                                                       "hours": 140.0}]
     rows = m.storage("wulver", "mygroup")
     assert rows["raw"] == "" and rows["rows"][0] == {"label": "mygroup project", "used": 1463, "quota": 2048,
-                                                     "mine": 31, "people": {}}
+                                                     "mine": 31, "people": {}, "files": 0, "file_limit": 0,
+                                                     "backup": "", "purged": 0}
     part = m.load("wulver")[0]
     assert (part["name"], part["cpus_used"], part["running"], part["pending"]) == ("general", 11682, 211, 102)

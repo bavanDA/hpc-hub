@@ -65,6 +65,10 @@ class Storage:
     quota: int = 0  # GB, 0 = no quota
     mine: int | None = None  # GB you use in it
     people: dict[str, float] = field(default_factory=dict)  # user -> GB
+    files: int = 0  # files in it, 0 = not known
+    file_limit: int = 0
+    backup: str = ""  # Yes or No, as the quota tool says; "" = not said
+    purged: int = 0  # days before files are deleted, 0 = never or not said (Yale's getquota)
 
 
 @dataclass
@@ -140,12 +144,14 @@ def parse_getquota(lines: list[str]) -> list[Storage]:
         s = line.strip()
         if m := re.match(r"Quota Summary for (\S+) group", s):
             group = m.group(1)
-        elif m := re.fullmatch(r"(\w+)\s+(GRP|USR)\s+(\d+)\s+(\d+)\b.*", s):
+        elif m := re.fullmatch(r"(\w+)\s+(GRP|USR)\s+(\d+)\s+(\d+)\b(.*)", s):
             name, kind, used, quota = m.group(1), m.group(2), int(m.group(3)), int(m.group(4))
-            if kind == "USR":
-                rows.append(Storage("Home" if name == "home" else name, used, quota, used))
-            else:
-                rows.append(Storage(f"{group} {name}".strip(), used, quota, mine.get(name)))
+            row = Storage("Home" if kind == "USR" and name == "home" else name if kind == "USR"
+                          else f"{group} {name}".strip(), used, quota, used if kind == "USR" else mine.get(name))
+            if more := re.fullmatch(r"\s+([\d,]+)\s+([\d,]+)\s+(Yes|No)\s+(?:(\d+)\s+days?|No)\s*", m.group(5)):
+                row.files, row.file_limit = (int(x.replace(",", "")) for x in more.group(1, 2))
+                row.backup, row.purged = more.group(3), int(more.group(4) or 0)
+            rows.append(row)
         elif m := re.fullmatch(r"(\w+)\s+\S+\s+(\d+)\s+[\d,]+", s):  # usage details: fileset, you, GiB, files
             mine[m.group(1)] = int(m.group(2))
     return rows
