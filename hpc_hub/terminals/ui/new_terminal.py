@@ -10,7 +10,7 @@ from .. import tmux
 
 
 class NewTerminalDialog(Adw.Dialog):
-    def __init__(self, live: list[ClusterSession], on_create):
+    def __init__(self, live: list[ClusterSession], on_create, start: ClusterSession | None = None):
         super().__init__(title="New terminal", content_width=480)
         self.live, self.on_create = live, on_create
         self.color = tmux.COLORS[0]
@@ -37,6 +37,8 @@ class NewTerminalDialog(Adw.Dialog):
         for row in (self.name, self.cluster, self.where, self.folder, colors):
             group.add(row)
         page.add(group)
+        if start in live:
+            self.cluster.set_selected(live.index(start))
         self.cluster.connect("notify::selected", lambda *_: self._sync())
         create = Gtk.Button(label="Open terminal", css_classes=["suggested-action", "pill"], halign=Gtk.Align.CENTER,
                             margin_bottom=18)

@@ -305,12 +305,13 @@ class TerminalsPage(SessionListMixin, SessionMenuMixin, Gtk.Box):
         listing = self.listings.get(key[0])
         return next((t for t in listing.sessions if t.name == key[1]), None) if listing else None
 
-    def new_terminal(self) -> None:
+    def new_terminal(self, start: ClusterSession | None = None) -> None:
+        """start: the cluster picked in the dialog (a cluster card's Terminal button)."""
         live = [s for s in self.sessions if s.connected]
         if not live:
             self.toast("Connect a cluster first")
             return
-        NewTerminalDialog(live, self._create).present(self.get_root())
+        NewTerminalDialog(live, self._create, start).present(self.get_root())
 
     def _create(self, s: ClusterSession, on_node: bool, label: str, color: str, folder: str) -> None:
         name = f"hpchub-term-{time.strftime('%m%d-%H%M%S')}"

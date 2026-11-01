@@ -225,6 +225,9 @@ class HpcHubApp(LoginPromptsMixin, QuitMixin, Adw.Application):
         elif tool == "files":
             self.window.files.show_cluster(session)
             self.window.stack.set_visible_child_name("files")
+        elif tool == "terminal":
+            self.window.stack.set_visible_child_name("terminals")
+            self.window.terminals.new_terminal(session)
 
     def _tool_in_folder(self, session: ClusterSession, tool: str, folder: str) -> None:
         if tool == "vscode":

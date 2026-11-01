@@ -7,6 +7,8 @@ CSS = """
 /* Adwaita dims secondary text to 0.55, about 3:1; 0.72 reads at WCAG AA in both themes */
 .dim-label, .dimmed, row .subtitle, preferencesgroup .description { opacity: 0.72; }
 .cluster-card { padding: 18px; }
+.open-action { padding: 6px 14px; font-weight: bold; }
+.open-action image { color: @accent_color; }
 .status-pill { padding: 2px 10px; border-radius: 999px; font-weight: bold; font-size: smaller;
                background: alpha(currentColor, 0.1); }
 .log-view { font-size: smaller; padding: 6px; }

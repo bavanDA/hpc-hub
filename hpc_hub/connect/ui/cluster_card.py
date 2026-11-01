@@ -1,22 +1,23 @@
-"""One card per cluster: status, connect button, node info, log."""
+"""One card per cluster, like the desktop app's ClusterCard.tsx. The status says where you are; the main button is
+the next thing to do (Connect, Cancel); once connected, the things you open (Terminal, VS Code, Files, Agents) sit
+in one row and the rest (the node, VPN only, Disconnect) in the ⋮ menu."""
 
 import time
 from collections.abc import Callable
 
-from gi.repository import Adw, Gtk, Pango
+from gi.repository import Adw, Gio, GLib, Gtk, Pango
 
+from ...agents.catalog import AGENTS
 from ...compute.ui.compute_dialog import ComputeDialog
-from ...ui.widgets import open_menu
 from ..session import ClusterSession, State
-from .authenticator_help import AuthenticatorHelp
 from .phone_pair import PhonePairDialog
 
 MAX_LOG_LINES = 1000
 
-PILL_CLASS = {
-    State.CONNECTED: "success",
-    State.ERROR: "error",
-    State.DISCONNECTED: "dim-label",
+STATUS = {  # state: (words, style class)
+    State.CONNECTED: ("Connected", "success"),
+    State.ERROR: ("Error", "error"),
+    State.DISCONNECTED: ("Not connected", "dim-label"),
 }
 
 
@@ -25,6 +26,10 @@ def _label(text: str = "", *classes: str, xalign: float = 0) -> Gtk.Label:
     for c in classes:
         label.add_css_class(c)
     return label
+
+
+def _open_button(label: str, icon: str) -> Gtk.Button:
+    return Gtk.Button(child=Adw.ButtonContent(label=label, icon_name=icon), css_classes=["open-action"])
 
 
 class ClusterCard(Gtk.Box):
@@ -37,10 +42,11 @@ class ClusterCard(Gtk.Box):
         on_tool: Callable[[ClusterSession, str], None] = lambda s, t: None,
         save: Callable[[], None] = lambda: None,
     ):
-        super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=6)
+        super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=10)
         self.session = session
         self.on_connect = on_connect
         self.on_disconnect = on_disconnect
+        self.save = save
         self.add_css_class("card")
         self.add_css_class("cluster-card")
 
@@ -48,55 +54,42 @@ class ClusterCard(Gtk.Box):
         icon = Gtk.Image.new_from_icon_name("network-server-symbolic")
         icon.set_pixel_size(32)
         head.append(icon)
-
         titles = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, hexpand=True, valign=Gtk.Align.CENTER)
-        self.title = _label("", "title-3")
+        self.title = _label("", "title-4")
         self.subtitle = _label("", "dim-label", "caption")
         titles.append(self.title)
         titles.append(self.subtitle)
         head.append(titles)
 
-        self.pill = _label("", "status-pill", xalign=0.5)
-        self.pill.set_wrap(False)
-        self.pill.set_valign(Gtk.Align.CENTER)
-        head.append(self.pill)
+        self.status = Gtk.Box(spacing=6, valign=Gtk.Align.CENTER)
+        self.dot = Gtk.Label(label="●", css_classes=["caption"])
+        self.status_text = Gtk.Label(css_classes=["caption-heading"])
+        self.status.append(self.dot)
+        self.status.append(self.status_text)
+        head.append(self.status)
 
-        gear = Gtk.Button(icon_name="emblem-system-symbolic", valign=Gtk.Align.CENTER,
-                          tooltip_text=f"{session.cfg.name} settings")
-        gear.add_css_class("flat")
-        gear.connect("clicked", lambda *_: on_settings(session))
         phone = Gtk.Button(icon_name="phone-symbolic", valign=Gtk.Align.CENTER, css_classes=["flat"],
                            tooltip_text="Connect phone: a QR code with this login for HPC Hub on your phone")
         phone.connect("clicked", lambda *_: PhonePairDialog([session], at_once=True).present(self))
+        gear = Gtk.Button(icon_name="emblem-system-symbolic", valign=Gtk.Align.CENTER, css_classes=["flat"],
+                          tooltip_text=f"{session.cfg.name} settings")
+        gear.connect("clicked", lambda *_: on_settings(session))
         head.append(phone)
         head.append(gear)
 
-        self.vpn_btn = Gtk.Button(label="VPN only", valign=Gtk.Align.CENTER, css_classes=["pill"],
-                                  tooltip_text="Just the VPN tunnel, no SSH or compute node")
-        self.vpn_btn.connect("clicked", lambda *_: on_connect(session, True))
-        head.append(self.vpn_btn)
-        self.code_help = Gtk.Button(label="Code setup", valign=Gtk.Align.CENTER, css_classes=["flat"],
-                                    tooltip_text="How to set up Google Authenticator")
-        self.code_help.connect("clicked", lambda *_: AuthenticatorHelp(session.cfg).present(self))
-        head.append(self.code_help)
-
-        self.action = Gtk.Button(valign=Gtk.Align.CENTER)
-        self.action.add_css_class("pill")
-        self.action.connect("clicked", self._on_action)
-        head.append(self.action)
-        # connected, Open is the card's main action and Disconnect a quiet one
-        self.tools = open_menu(lambda key: on_tool(session, key))
-        self.tools.set_valign(Gtk.Align.CENTER)
-        self.tools.add_css_class("suggested-action")
-        self.tools.add_css_class("pill")
-        head.append(self.tools)
+        actions = Gio.SimpleActionGroup()
+        for name, fn in (("end-node", lambda: session.release_node()), ("get-node", self._node_dialog),
+                         ("fast-node", lambda: session.request_fast_node()),
+                         ("vpn-only", lambda: on_connect(session, True)),
+                         ("disconnect", lambda: on_disconnect(session))):
+            a = Gio.SimpleAction.new(name, None)
+            a.connect("activate", lambda *_, f=fn: f())
+            actions.add_action(a)
+        self.insert_action_group("card", actions)
+        self.more = Gtk.MenuButton(icon_name="view-more-symbolic", valign=Gtk.Align.CENTER, css_classes=["flat"],
+                                   tooltip_text="More")
+        head.append(self.more)
         self.append(head)
-
-        self.save = save
-        self.want_node = Gtk.CheckButton(active=session.cfg.request_node_on_connect,
-                                         tooltip_text="Ask Slurm for a compute node when you connect")
-        self.want_node.connect("toggled", self._on_want_node)
-        self.append(self.want_node)
 
         status = Gtk.Box(spacing=8)
         self.spinner = Adw.Spinner()
@@ -104,20 +97,62 @@ class ClusterCard(Gtk.Box):
         self.detail = _label("")
         self.detail.set_hexpand(True)
         status.append(self.detail)
+        self.status_row = status
         self.append(status)
 
+        # connected: where you are, then what you open
         node_row = Gtk.Box(spacing=8)
-        self.node = _label("", "heading")
+        node_row.append(Gtk.Image(icon_name="computer-symbolic", css_classes=["dim-label"]))
+        self.node = _label("")
         self.node.set_selectable(True)
-        self.node.set_hexpand(True)
-        self.node_btn = Gtk.Button(valign=Gtk.Align.CENTER, css_classes=["pill", "small"])
-        self.node_btn.connect("clicked", self._on_node_btn)
-        self.fast_btn = Gtk.Button(valign=Gtk.Align.CENTER, css_classes=["pill", "small"])
-        self.fast_btn.connect("clicked", lambda *_: self.session.request_fast_node())
         node_row.append(self.node)
-        node_row.append(self.fast_btn)
-        node_row.append(self.node_btn)
+        self.get_one = Gtk.Button(label="Get one", css_classes=["flat", "accent"], valign=Gtk.Align.CENTER)
+        self.get_one.connect("clicked", lambda *_: self._node_dialog())
+        node_row.append(self.get_one)
+        self.node_row = node_row
         self.append(node_row)
+
+        self.open_row = Gtk.Box(spacing=8)
+        for label, icon, key in (("Terminal", "utilities-terminal-symbolic", "terminal"),
+                                 ("VS Code", "text-editor-symbolic", "vscode"),
+                                 ("Files", "folder-symbolic", "files")):
+            b = _open_button(label, icon)
+            b.connect("clicked", lambda *_, k=key: on_tool(session, k))
+            self.open_row.append(b)
+        agents = Gio.Menu()
+        for a in AGENTS:
+            agents.append(a.name, f"card.agent::{a.id}")
+        agents.append("Ask all agents", "card.ask")
+        pick = Gio.SimpleAction.new("agent", GLib.VariantType.new("s"))
+        pick.connect("activate", lambda _a, v: on_tool(session, f"agent:{v.get_string()}"))
+        actions.add_action(pick)
+        ask = Gio.SimpleAction.new("ask", None)
+        ask.connect("activate", lambda *_: on_tool(session, "ask"))
+        actions.add_action(ask)
+        # a plain button that opens the menu, so it looks exactly like its neighbours
+        who = _open_button("Agents", "system-users-symbolic")
+        inner = Gtk.Box(spacing=6)
+        inner.append(Adw.ButtonContent(label="Agents", icon_name="system-users-symbolic"))
+        inner.append(Gtk.Image(icon_name="pan-down-symbolic", css_classes=["dim-label"]))
+        who.set_child(inner)
+        pop = Gtk.PopoverMenu.new_from_model(agents)
+        pop.set_parent(who)
+        who.connect("clicked", lambda *_: pop.popup())
+        self.open_row.append(who)
+        self.append(self.open_row)
+
+        # not connected: the node it asks for, and the next thing to do
+        bottom = Gtk.Box(spacing=12)
+        self.want_node = Gtk.CheckButton(active=session.cfg.request_node_on_connect, hexpand=True,
+                                         tooltip_text="Ask Slurm for a compute node when you connect")
+        self.want_node.connect("toggled", self._on_want_node)
+        bottom.append(self.want_node)
+        self.action = Gtk.Button(valign=Gtk.Align.CENTER, halign=Gtk.Align.END, hexpand=True,
+                                 css_classes=["pill"])
+        self.action.connect("clicked", self._on_action)
+        bottom.append(self.action)
+        self.bottom = bottom
+        self.append(bottom)
 
         self.log_view = Gtk.TextView(editable=False, monospace=True, cursor_visible=False,
                                      wrap_mode=Gtk.WrapMode.WORD_CHAR)
@@ -132,13 +167,6 @@ class ClusterCard(Gtk.Box):
     def _on_want_node(self, btn) -> None:
         self.session.cfg.request_node_on_connect = btn.get_active()
         self.save()
-
-    def _on_node_btn(self, *_):
-        s = self.session
-        if s.allocation:
-            s.release_node()
-            return
-        self._node_dialog()
 
     def _node_dialog(self) -> None:
         s = self.session
@@ -155,73 +183,89 @@ class ClusterCard(Gtk.Box):
         if state.busy:
             self.session.cancel()
         elif state == State.CONNECTED:
-            self.on_disconnect(self.session)
+            self.on_disconnect(self.session)  # VPN only: the one thing left to do
         else:
             self.on_connect(self.session)
 
+    def _menu(self) -> Gio.Menu | None:
+        """The ⋮ menu for this state, or None when it would be empty."""
+        s, cfg = self.session, self.session.cfg
+        menu = Gio.Menu()
+        if s.connected:
+            node = Gio.Menu()
+            a = s.allocation
+            if a:
+                node.append("End node" if a.owned else "Stop using this node", "card.end-node")
+            else:
+                node.append("Get a node…", "card.get-node")
+                if cfg.fast_profile():
+                    node.append(cfg.fast_label(), "card.fast-node")
+            menu.append_section(None, node)
+        if cfg.vpn.enabled and s.state in (State.DISCONNECTED, State.ERROR):
+            menu.append("Connect the VPN only", "card.vpn-only")
+        if s.state == State.CONNECTED:
+            menu.append_section(None, Gio.Menu.new())
+            menu.append("Disconnect", "card.disconnect")
+        return menu if menu.get_n_items() else None
+
     def refresh(self) -> None:
         s, cfg = self.session, self.session.cfg
+        idle = s.state in (State.DISCONNECTED, State.ERROR)
+        vpn_only = s.state == State.CONNECTED and not s.connected
         self.title.set_label(cfg.name)
-        where = cfg.host or "no host set"
-        vpn = f"via {cfg.who} VPN" if cfg.vpn.enabled else "No VPN"
-        self.subtitle.set_label(f"{where} · {vpn}")
+        self.subtitle.set_label((cfg.host or "No host set") + (f" · {cfg.who} VPN" if cfg.vpn.enabled else ""))
         asks = ", asks first" if cfg.ask_node else ""
-        self.want_node.set_label(f"Get a node on connect: {cfg.profile.summary()}{asks}")
+        self.want_node.set_label(f"Get a compute node · {cfg.profile.summary()}{asks}")
         if s.pick_node and not self._asked:
             self._asked = True
             self._node_dialog()
         self._asked = self._asked and s.pick_node
         self.want_node.set_active(cfg.request_node_on_connect)
-        self.want_node.set_visible(s.state in (State.DISCONNECTED, State.ERROR))
 
-        self.pill.set_label(s.state.value if s.state != State.DUO else "Duo")
-        for c in ("success", "error", "warning", "dim-label"):
-            self.pill.remove_css_class(c)
-        self.pill.add_css_class(PILL_CLASS.get(s.state, "warning"))
+        words, tone = STATUS.get(s.state, ("Approve Duo" if s.state == State.DUO else s.state.value, "warning"))
+        if vpn_only:
+            words = "VPN only"
+        self.status_text.set_label(words)
+        for w in (self.dot, self.status_text):
+            for c in ("success", "error", "warning", "dim-label"):
+                w.remove_css_class(c)
+            w.add_css_class(tone)
 
         self.spinner.set_visible(s.state.busy)
         self.detail.set_label(s.detail)
-        self.detail.set_visible(bool(s.detail))
+        self.status_row.set_visible(s.state.busy or (bool(s.detail) and not vpn_only))
+        for c in ("accent", "error"):
+            self.detail.remove_css_class(c)
         if s.state == State.DUO:
             self.detail.add_css_class("accent")
-        else:
-            self.detail.remove_css_class("accent")
+        elif s.state == State.ERROR:
+            self.detail.add_css_class("error")
 
-        self.tools.set_visible(s.connected)
-        self.vpn_btn.set_visible(cfg.vpn.enabled and (s.state in (State.DISCONNECTED, State.ERROR)))
-        self.code_help.set_visible(cfg.second_factor == "code" and s.state in (State.DISCONNECTED, State.ERROR))
         a = s.allocation
-        self.node.set_visible(s.connected)
-        self.node_btn.set_visible(s.connected)
-        fast = cfg.fast_profile()
-        self.fast_btn.set_visible(s.connected and not a and fast is not None)
-        if fast:
-            self.fast_btn.set_label(cfg.fast_label())
-            self.fast_btn.set_tooltip_text(f"Starts sooner, ends sooner: {fast.summary()}")
+        self.node_row.set_visible(s.connected)
+        self.open_row.set_visible(s.connected)
+        self.get_one.set_visible(s.connected and not a)
         if a:
-            self.node.set_label(f"Node {a.node} · Job {a.job_id}" + ("" if a.owned else " (your job)"))
-            self.node_btn.set_label("Release node" if a.owned else "Stop using")
-            self.node_btn.set_tooltip_text("Cancel this job, stay connected" if a.owned
-                                           else "Keep the job running, just stop using it here")
+            self.node.set_markup(f"On node <b>{a.node}</b> <span alpha='70%'>· job {a.job_id}"
+                                 + ("" if a.owned else ", started elsewhere") + "</span>")
         else:
-            self.node.set_label("No node yet")
-            self.node_btn.set_label("Get node")
-            self.node_btn.set_tooltip_text(f"Request {cfg.profile.summary()}")
+            self.node.set_markup("<span alpha='70%'>No compute node</span>")
+        self.more.set_menu_model(self._menu())
+        self.more.set_visible(self.more.get_menu_model() is not None)
 
-        for c in ("suggested-action", "destructive-action", "flat"):
+        self.bottom.set_visible(idle or s.state.busy or vpn_only)
+        self.want_node.set_visible(idle)
+        for c in ("suggested-action", "flat"):
             self.action.remove_css_class(c)
+        self.action.set_sensitive(s.state != State.DISCONNECTING)
         if s.state == State.DISCONNECTING:
             self.action.set_label("Disconnecting…")
-            self.action.set_sensitive(False)
-            return
-        self.action.set_sensitive(True)
-        if s.state.busy:
+        elif s.state.busy:
             self.action.set_label("Cancel")
-        elif s.state == State.CONNECTED:
+        elif vpn_only:
             self.action.set_label("Disconnect")
-            self.action.add_css_class("flat")
         else:
-            self.action.set_label("Reconnect" if s.state == State.ERROR else "Connect")
+            self.action.set_label("Try again" if s.state == State.ERROR else "Connect")
             self.action.add_css_class("suggested-action")
 
     def append_log(self, line: str) -> None:
