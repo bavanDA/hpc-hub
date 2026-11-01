@@ -13,7 +13,7 @@ import { Button, Dialog } from '../ui'
 import { AuthenticatorHelp } from './AuthenticatorHelp'
 import { Duration } from './ComputeDialog'
 import { ActionRow, ButtonRow, ComboRow, EntryRow, Group, NumberBox, SpinRow, SwitchRow } from './fields'
-import { KeyPanel, PasswordInstead } from './KeyPanel'
+import { KeyHelpLink, KeyPanel, PasswordInstead } from './KeyPanel'
 import { KeySetupDialog } from './KeySetupDialog'
 import { copy } from './loginCopy'
 import { CHROME_WINDOW } from './SignIn'
@@ -160,15 +160,18 @@ export function SettingsDialog({ cluster, hint, onClose, start = 'login' }:
   const instead = d.key_page && d.password_too
     ? <div className="-mt-2 mb-5 flex"><PasswordInstead on={usePassword} onChange={setUsePassword} /></div> : null
   const login = d.key_page && !usePassword ? <>
-    <Group title="Cluster login" description={copy.keyIntro(d)}>
-      <ActionRow label={secondStep(d)} sub="Set by the cluster's admins">{null}</ActionRow>
-    </Group>
-    <div className="mb-5"><KeyPanel cluster={d} user={user} onUser={setUser} /></div>
+    <div className="mb-5">
+      <h3 className="mb-1 text-[15px] font-bold">Cluster login</h3>
+      <p className="mb-3 text-[13px] text-dim">{copy.keyIntro(d)} <KeyHelpLink cluster={d} /></p>
+      <KeyPanel cluster={d} user={user} onUser={setUser} />
+    </div>
     {instead}
     <Group><ButtonRow label="Forget saved logins" tone="bad" onClick={forget} /></Group>
   </> : <>
-    <Group title="Cluster login" description={d.password_only ? copy.passwordNote(d) : copy.savedIn(keyStore)}>
-      <EntryRow label="Username" value={user} onChange={setUser} autoFocus placeholder="jdoe" />
+    <Group title="Cluster login"
+      description={d.password_only ? copy.passwordNote(d, keyStore) : copy.savedIn(keyStore)}>
+      <EntryRow label={d.username_label || 'Username'} value={user} onChange={setUser} autoFocus
+        placeholder={copy.usernameHint} />
       <EntryRow label={!remember ? 'Password (optional: asked when you connect)'
         : saved?.ssh.password ? 'Password (saved, leave empty to keep)' : 'Password'}
         value={password} onChange={setPassword} password />

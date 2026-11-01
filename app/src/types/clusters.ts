@@ -58,6 +58,8 @@ export type Cluster = {
   org?: string  // who runs it: "NJIT"
   key_page?: string  // a page where you paste your public SSH key (Yale)
   key_page_note?: string
+  key_help?: string  // a guide to SSH keys for it ("" = GitHub's)
+  username_label?: string  // what it calls your username: UCID, NetID
   password_only?: boolean  // its SSH server takes no keys
   password_too?: boolean  // with key_page: a password works as well
   code_setup?: string
@@ -149,7 +151,9 @@ export function secondStep(c: Pick<Cluster, 'name' | 'second_factor'>) {
 }
 
 /** This computer's SSH key (keys.mine). */
-export type MyKey = { path: string; kind: string; public: string; made: number; made_on: string }
+export type MyKey = { path: string; file: string; kind: string; public: string; made: number; made_on: string }
+/** A login test with only the key (keys.test). kind "wait": the cluster doesn't know the key yet. */
+export type KeyTest = { ok: boolean; text: string; kind: 'ok' | 'wait' | 'error' }
 
 export function summary(p: Profile) {
   return [`${p.cpus} cores`, `${p.mem_gb} GB`, p.time, p.gpus ? `${p.gpus} GPU` : '', p.partition]

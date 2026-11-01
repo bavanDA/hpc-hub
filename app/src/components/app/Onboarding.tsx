@@ -7,11 +7,11 @@ import { call } from '../../rpc'
 import { secondStep, type Cluster, type Logins, type Profile } from '../../types/clusters'
 import { Duration } from '../clusters/ComputeDialog'
 import { CheckRow, EntryRow, Group, SpinRow, SwitchRow } from '../clusters/fields'
-import { KeyPanel, PasswordInstead } from '../clusters/KeyPanel'
+import { KeyHelpLink, KeyPanel, PasswordInstead } from '../clusters/KeyPanel'
 import { KeySetupDialog } from '../clusters/KeySetupDialog'
 import { copy } from '../clusters/loginCopy'
 import { minutes, slurmTime } from '../clusters/time'
-import { Button, Spinner } from '../ui'
+import { Button, List, Spinner } from '../ui'
 import { keyStore } from './platform'
 
 type Step = { cluster: Cluster; kind: 'login' | 'node' }
@@ -61,13 +61,13 @@ function Progress({ steps, at }: { steps: Step[]; at: number }) {
   )
 }
 
-function Heading({ icon, title, text }: { icon: ReactNode; title: string; text: string }) {
+function Heading({ icon, title, text }: { icon: ReactNode; title: string; text?: ReactNode }) {
   return (
-    <div className="flex items-start gap-4">
+    <div className={`flex gap-4 ${text ? 'items-start' : 'items-center'}`}>
       <div className="grid size-12 shrink-0 place-items-center rounded-full bg-pill text-accent-text">{icon}</div>
-      <div>
+      <div className={`min-w-0 ${text ? 'pt-1' : ''}`}>
         <h1 className="text-2xl font-bold">{title}</h1>
-        <p className="mt-1 text-dim">{text}</p>
+        {text && <p className="mt-1 text-dim">{text}</p>}
       </div>
     </div>
   )
@@ -91,12 +91,14 @@ function LoginStep({ cluster: c, onNext }: { cluster: Cluster; onNext: () => voi
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const [usePassword, setUsePassword] = useState(false)  // a key cluster that takes a password too
+  const [works, setWorks] = useState(false)  // the key's login test passed: Continue is the main button
+  const [loaded, setLoaded] = useState(false)
   useEffect(() => {
     call<Logins>('clusters.login', { cluster: c.id }).then((l) => {
       setUser(l.ssh.username)
       setSaved(l.ssh.password)
       setRemember(l.remember ?? true)
-    }).catch(() => {})
+    }).catch(() => {}).finally(() => setLoaded(true))
   }, [c.id])
 
   async function save() {
@@ -116,21 +118,25 @@ function LoginStep({ cluster: c, onNext }: { cluster: Cluster; onNext: () => voi
     ? <PasswordInstead on={usePassword} onChange={setUsePassword} /> : null
   if (c.key_page && !usePassword) {
     return (
-      <form className="flex flex-col gap-5" onSubmit={(e) => { e.preventDefault(); if (user.trim()) save() }}>
-        <Heading icon={<KeyRound size={22} />} title={`Log in to ${c.name}`}
-          text={copy.keyIntro(c)} />
-        <KeyPanel cluster={c} user={user} onUser={setUser} />
+      <form className="flex flex-col gap-6" onSubmit={(e) => { e.preventDefault(); if (user.trim()) save() }}>
+        <Heading icon={<KeyRound size={22} />} title={copy.signIn(c)}
+          text={<>{copy.keyIntro(c)} <KeyHelpLink cluster={c} /></>} />
+        {loaded ? <KeyPanel cluster={c} user={user} onUser={setUser} onTested={setWorks} />
+          : <div className="grid h-40 place-items-center"><Spinner size={24} /></div>}
         {instead}
         {error && <p className="text-bad">{error}</p>}
         <Footer onSkip={onNext} skip="Skip for now">
-          <Button kind="suggested" round type="submit" disabled={!user.trim() || busy}>Continue</Button>
+          <Button kind={works ? 'suggested' : 'pill'} round type="submit" disabled={!user.trim() || busy}>
+            Continue</Button>
         </Footer>
       </form>
     )
   }
+  const label = c.username_label || 'Username'
   return (
-    <form className="flex flex-col gap-5" onSubmit={(e) => { e.preventDefault(); if (user.trim()) save() }}>
-      <Heading icon={<KeyRound size={22} />} title={`Log in to ${c.name}`} text={secondStep(c)} />
+    <form className="flex flex-col gap-6" onSubmit={(e) => { e.preventDefault(); if (user.trim()) save() }}>
+      <Heading icon={<KeyRound size={22} />} title={copy.signIn(c)}
+        text={c.password_only ? undefined : secondStep(c)} />
       {site && (
         <div className="flex flex-col gap-2">
           <Button kind="suggested" round type="button" onClick={() => setPortal(true)}>
@@ -138,21 +144,27 @@ function LoginStep({ cluster: c, onNext }: { cluster: Cluster; onNext: () => voi
           <p className="text-center text-[13px] text-dim">No password needed. Or type your login below.</p>
         </div>
       )}
-      <div>
-        <Group>
-          <EntryRow label="Username" value={user} onChange={setUser} autoFocus={!site} placeholder="Your username" />
+      <div className="flex flex-col gap-3">
+        <List>
+          <EntryRow label={label} value={user} onChange={setUser} autoFocus={!site} placeholder={copy.usernameHint} />
           <EntryRow label={saved ? 'Password (saved, leave empty to keep)' : 'Password'} value={password}
-            onChange={setPassword} password />
-        </Group>
-        <div className="-mt-3 flex flex-wrap items-center justify-between gap-2 px-1 text-[13px] text-dim">
-          <span className="flex items-center gap-1.5"><Lock size={13} className="shrink-0" />
-            {c.password_only ? copy.passwordNote(c) : copy.savedIn(keyStore)}</span>
-          <label className="flex cursor-pointer items-center gap-2">
-            <input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)}
-              className="size-4 accent-[var(--color-accent)]" />
-            Remember my password
-          </label>
-        </div>
+            onChange={setPassword} password placeholder={c.password_only ? copy.passwordHelp(c) : undefined} />
+        </List>
+        {c.password_only
+          ? <div className="flex gap-3 rounded-xl bg-pill px-4 py-3 text-[13px]">
+              <Lock size={16} className="mt-0.5 shrink-0 text-accent-text" />
+              <div className="flex flex-col gap-1">
+                <p>{copy.passwordNote(c, keyStore)}</p>
+                {c.second_factor !== 'code' && <p className="text-dim">{copy.passwordDuo}</p>}
+              </div>
+            </div>
+          : <p className="flex items-center gap-1.5 px-1 text-[13px] text-dim">
+              <Lock size={13} className="shrink-0" />{copy.savedIn(keyStore)}</p>}
+        <label className="flex cursor-pointer items-center gap-2 self-start px-1 text-[14px]">
+          <input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)}
+            className="size-4 accent-[var(--color-accent)]" />
+          {copy.remember}
+        </label>
       </div>
       {instead}
       {error && <p className="text-bad">{error}</p>}
