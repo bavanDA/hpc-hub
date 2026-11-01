@@ -109,15 +109,19 @@ function log(id: string, line: string) {
 }
 
 /** Walk a session through states, one step after another. */
+const timers: Record<string, number[]> = {}  // a cluster's pending steps, dropped when new ones start (Cancel)
+
 function steps(id: string, list: Step[]) {
+  for (const t of timers[id] ?? []) clearTimeout(t)
+  timers[id] = []
   let wait = 0
   for (const [ms, change, line] of list) {
     wait += ms
-    setTimeout(() => {
+    timers[id].push(window.setTimeout(() => {
       const s = find(sessions, id)
       Object.assign(s, { detail: '' }, change)
       if (line) log(id, line)
-    }, wait)
+    }, wait))
   }
 }
 
