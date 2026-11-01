@@ -13,7 +13,9 @@ import { Button, Dialog } from '../ui'
 import { AuthenticatorHelp } from './AuthenticatorHelp'
 import { Duration } from './ComputeDialog'
 import { ActionRow, ButtonRow, ComboRow, EntryRow, Group, NumberBox, SpinRow, SwitchRow } from './fields'
+import { KeyPanel, PasswordInstead } from './KeyPanel'
 import { KeySetupDialog } from './KeySetupDialog'
+import { copy } from './loginCopy'
 import { CHROME_WINDOW } from './SignIn'
 import { putCluster } from './store'
 import { minutes, slurmTime } from './time'
@@ -75,6 +77,7 @@ export function SettingsDialog({ cluster, hint, onClose, start = 'login' }:
   const [remember, setRemember] = useState(true)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
+  const [usePassword, setUsePassword] = useState(false)  // a key cluster that takes a password too
   // no login yet on a cluster with a portal: set it up there, like the GTK app does on Connect
   const [open, setOpen] = useState<null | 'help' | 'key'>(hint && cluster.portal ? 'key' : null)
 
@@ -154,8 +157,17 @@ export function SettingsDialog({ cluster, hint, onClose, start = 'login' }:
     call('clusters.connect', { cluster: d.id }).catch((e: Error) => toast(e.message))
   }
 
-  const login = <>
-    <Group title="Cluster login" description={`Saved encrypted in ${keyStore}, never in plain text.`}>
+  const instead = d.key_page && d.password_too
+    ? <div className="-mt-2 mb-5 flex"><PasswordInstead on={usePassword} onChange={setUsePassword} /></div> : null
+  const login = d.key_page && !usePassword ? <>
+    <Group title="Cluster login" description={copy.keyIntro(d)}>
+      <ActionRow label={secondStep(d)} sub="Set by the cluster's admins">{null}</ActionRow>
+    </Group>
+    <div className="mb-5"><KeyPanel cluster={d} user={user} onUser={setUser} /></div>
+    {instead}
+    <Group><ButtonRow label="Forget saved logins" tone="bad" onClick={forget} /></Group>
+  </> : <>
+    <Group title="Cluster login" description={d.password_only ? copy.passwordNote(d) : copy.savedIn(keyStore)}>
       <EntryRow label="Username" value={user} onChange={setUser} autoFocus placeholder="jdoe" />
       <EntryRow label={!remember ? 'Password (optional: asked when you connect)'
         : saved?.ssh.password ? 'Password (saved, leave empty to keep)' : 'Password'}
@@ -166,6 +178,7 @@ export function SettingsDialog({ cluster, hint, onClose, start = 'login' }:
       {code && <ButtonRow label="How to set up Google Authenticator" icon={<CircleHelp size={16} />}
         onClick={() => setOpen('help')} />}
     </Group>
+    {instead}
     {d.portal && (
       <Group title="Web portal"
         description={`No password yet? Sign in at ${host(d.portal)} in a window HPC Hub opens, and the app adds this

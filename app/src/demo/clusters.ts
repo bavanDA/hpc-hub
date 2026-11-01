@@ -19,13 +19,15 @@ const agent = (command: string): AgentSettings => ({ command, workdir: '~', new_
 const agents = { claude: { ...agent('claude'), model: 'opus', remote: true }, codex: agent('codex'),
   agy: agent('agy'), cursor: agent('cursor-agent') }
 const clusters: Cluster[] = [
-  { id: 'wulver', name: 'Wulver (NJIT)', host: 'wulver.njit.edu', port: 22, duo_answer: 'push', second_factor: 'duo',
+  { id: 'wulver', name: 'Wulver (NJIT)', org: 'NJIT', password_only: true, host: 'wulver.njit.edu', port: 22,
+    duo_answer: 'push', second_factor: 'duo',
     queues: 'general:low,debug:debug,general:standard', queue_wait: 60, fast: 'debug:debug:08:00:00',
     request_node_on_connect: true,
     reuse_running_job: false, vpn: { ...vpn, enabled: true, gateway: 'vpn.njit.edu', same_login_as_ssh: true,
       domains: 'njit.edu', routes: '128.235.0.0/16' }, profile,
     vscode: vscode({ cpus: 16, mem_gb: 64, time: '12:00:00', qos: 'standard' }), ...agents },
-  { id: 'yale', name: 'Yale Bouchet', host: 'bouchet.ycrc.yale.edu', port: 22, duo_answer: 'push',
+  { id: 'yale', name: 'Yale Bouchet', org: 'Yale', host: 'bouchet.ycrc.yale.edu', port: 22, duo_answer: 'push',
+    key_page: 'https://sshkeys.ycrc.yale.edu/', key_page_note: 'Campus or VPN only. Takes up to 10 minutes.',
     second_factor: 'duo', queues: '', queue_wait: 60, request_node_on_connect: true, reuse_running_job: true,
     vpn: { ...vpn, enabled: true, gateway: 'access.yale.edu', same_login_as_ssh: false, authgroup: 'Default',
       domains: 'yale.edu', routes: '130.132.0.0/16 128.36.0.0/16', browser: 'Uni' },

@@ -7,7 +7,9 @@ import { call } from '../../rpc'
 import { secondStep, type Cluster, type Logins, type Profile } from '../../types/clusters'
 import { Duration } from '../clusters/ComputeDialog'
 import { CheckRow, EntryRow, Group, SpinRow, SwitchRow } from '../clusters/fields'
+import { KeyPanel, PasswordInstead } from '../clusters/KeyPanel'
 import { KeySetupDialog } from '../clusters/KeySetupDialog'
+import { copy } from '../clusters/loginCopy'
 import { minutes, slurmTime } from '../clusters/time'
 import { Button, Spinner } from '../ui'
 import { keyStore } from './platform'
@@ -88,6 +90,7 @@ function LoginStep({ cluster: c, onNext }: { cluster: Cluster; onNext: () => voi
   const [portal, setPortal] = useState(false)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
+  const [usePassword, setUsePassword] = useState(false)  // a key cluster that takes a password too
   useEffect(() => {
     call<Logins>('clusters.login', { cluster: c.id }).then((l) => {
       setUser(l.ssh.username)
@@ -109,6 +112,22 @@ function LoginStep({ cluster: c, onNext }: { cluster: Cluster; onNext: () => voi
   }
 
   const site = c.portal ? new URL(c.portal).hostname : ''
+  const instead = c.key_page && c.password_too
+    ? <PasswordInstead on={usePassword} onChange={setUsePassword} /> : null
+  if (c.key_page && !usePassword) {
+    return (
+      <form className="flex flex-col gap-5" onSubmit={(e) => { e.preventDefault(); if (user.trim()) save() }}>
+        <Heading icon={<KeyRound size={22} />} title={`Log in to ${c.name}`}
+          text={copy.keyIntro(c)} />
+        <KeyPanel cluster={c} user={user} onUser={setUser} />
+        {instead}
+        {error && <p className="text-bad">{error}</p>}
+        <Footer onSkip={onNext} skip="Skip for now">
+          <Button kind="suggested" round type="submit" disabled={!user.trim() || busy}>Continue</Button>
+        </Footer>
+      </form>
+    )
+  }
   return (
     <form className="flex flex-col gap-5" onSubmit={(e) => { e.preventDefault(); if (user.trim()) save() }}>
       <Heading icon={<KeyRound size={22} />} title={`Log in to ${c.name}`} text={secondStep(c)} />
@@ -126,8 +145,8 @@ function LoginStep({ cluster: c, onNext }: { cluster: Cluster; onNext: () => voi
             onChange={setPassword} password />
         </Group>
         <div className="-mt-3 flex flex-wrap items-center justify-between gap-2 px-1 text-[13px] text-dim">
-          <span className="flex items-center gap-1.5"><Lock size={13} /> Saved encrypted in {keyStore}, never in
-            plain text.</span>
+          <span className="flex items-center gap-1.5"><Lock size={13} className="shrink-0" />
+            {c.password_only ? copy.passwordNote(c) : copy.savedIn(keyStore)}</span>
           <label className="flex cursor-pointer items-center gap-2">
             <input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)}
               className="size-4 accent-[var(--color-accent)]" />
@@ -135,6 +154,7 @@ function LoginStep({ cluster: c, onNext }: { cluster: Cluster; onNext: () => voi
           </label>
         </div>
       </div>
+      {instead}
       {error && <p className="text-bad">{error}</p>}
       <Footer onSkip={onNext} skip="Skip for now">
         <Button kind={site ? 'pill' : 'suggested'} round type="submit" disabled={!user.trim() || busy}>
