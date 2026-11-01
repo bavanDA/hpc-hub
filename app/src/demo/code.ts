@@ -55,16 +55,20 @@ let version = 0
 const shaOf = (text: string) => `demo${(++version).toString(16).padStart(8, '0')}${text.length.toString(16)}`
 const full = (path: string) => path.replace(/^~/, HOME)
 
+// a job's output from the Jobs demo (any folder, slurm-<id>.out) reads like the log above
+const jobLog = (p: string) => /\/slurm-\d+\.(out|err)$/.test(p) ? FILES[`${HOME}/slurm-123456.out`] : undefined
+
 function get(path: string) {
   const p = full(path)
-  if (!state[p] && FILES[p] !== undefined) state[p] = { text: FILES[p], sha: shaOf(FILES[p]), mtime: now() - 3600 }
+  const text = FILES[p] ?? jobLog(p)
+  if (!state[p] && text !== undefined) state[p] = { text, sha: shaOf(text), mtime: now() - 3600 }
   return state[p]
 }
 
 function opened(path: string): OpenedFile {
   const f = get(path)
   if (!f) throw new Error('No such file')
-  const log = path.endsWith('.out')
+  const log = /\.(out|err|log)$/.test(path)
   return {
     path, text: f.text, sha: f.sha, mtime: f.mtime, size: new TextEncoder().encode(f.text).length, eol: 'lf',
     writable: !log, readonly_reason: log ? 'No write permission' : '', lossy: false,

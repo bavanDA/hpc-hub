@@ -21,7 +21,8 @@ const TREE: Record<string, Entry[]> = {
   ],
   [`${HOME}/projects/climate-model`]: [
     d('src', 5 * HOUR), d('data', 2 * DAY), d('results', 6 * HOUR), d('checkpoints', 6 * HOUR),
-    f('run.slurm', 702, 5 * HOUR), f('README.md', 1_845, 9 * DAY), f('config.yaml', 1_310, 5 * HOUR),
+    f('train.py', 1_204, 30 * 60), f('run.slurm', 702, 5 * HOUR), f('README.md', 1_845, 9 * DAY),
+    f('config.yaml', 1_310, 5 * HOUR),
   ],
   [`${HOME}/notebooks`]: [f('explore.ipynb', 412_004, 2 * HOUR), f('plots.ipynb', 1_204_331, 3 * DAY)],
   [`${HOME}/slurm-logs`]: Array.from({ length: 8 }, (_, i) =>
