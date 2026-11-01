@@ -67,6 +67,26 @@ def test_real_tmux(tmp_path, monkeypatch):
     assert tmux.parse(sh(tmux.LIST)).sessions == []
 
 
+@pytest.mark.skipif(not shutil.which("tmux"), reason="tmux not installed")
+def test_send_text_pastes_several_lines_as_typed(tmp_path, monkeypatch):
+    import time
+
+    monkeypatch.setenv("TMUX_TMPDIR", str(tmp_path))
+    got = tmp_path / "got.txt"
+    subprocess.run(["bash", "-c", tmux.create("hpchub-agent-1", f"cat > {got}")], check=True)
+    text = "In ~/proj/train.py lines 40 to 58:\nwhy is 'lr' \"so\" high? $HOME `x`"
+    subprocess.run(["bash", "-c", tmux.send_text("hpchub-agent-1", text)], check=True)
+    for _ in range(50):
+        if got.exists() and got.read_text().endswith("\n") and "high?" in got.read_text():
+            break
+        time.sleep(0.05)
+    subprocess.run(["tmux", "kill-server"], capture_output=True)
+    assert got.read_text() == text + "\n"
+    with pytest.raises(ValueError, match="too much"):
+        tmux.send_text("x", "a" * (tmux.SEND_MAX + 1))
+    assert "ssh -o BatchMode=yes" in tmux.send_text("x", "hi", node="n0042")
+
+
 def test_open_line_is_valid_shell():
     line = tmux.open_line("hpchub-claude-1-x", "srun --pty bash -ic 'cd ~ && claude'", "Claude · thesis", "#d97757")
     assert subprocess.run(["bash", "-n", "-c", line]).returncode == 0
