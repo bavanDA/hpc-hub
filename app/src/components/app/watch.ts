@@ -54,7 +54,10 @@ export function useWatch() {
           const before = live.current[id]
           if (before) {
             for (const [jid, jname] of before) {
-              if (!now.has(jid)) notify(`${name}: job ${jid} ended`, jname).catch(() => {})
+              if (!now.has(jid)) {
+                notify(`${name}: job ${jid} ended`, jname, { kind: 'job', page: 'jobs', params: { cluster: id } })
+                  .catch(() => {})
+              }
             }
           }
           live.current[id] = now
@@ -66,7 +69,8 @@ export function useWatch() {
             if (seconds <= WARN_SECONDS && !warned.current.has(`${id}:${job}`)) {
               warned.current.add(`${id}:${job}`)
               notify(`${name}: ${leftText(seconds)} on ${mine.where || 'your node'}`,
-                'Save your work. The node ends when its time is up.').catch(() => {})
+                'Save your work. The node ends when its time is up.',
+                { kind: 'node', page: 'clusters', params: { cluster: id } }).catch(() => {})
             }
           } else {
             delete next[id]
@@ -84,7 +88,8 @@ export function useWatch() {
     const was = copies.current.get(t.id)
     copies.current.set(t.id, t.finished)
     if (t.finished && was === false) {
-      notify(t.error ? 'Copy failed' : 'Copy done', t.error || t.title).catch(() => {})
+      notify(t.error ? 'Copy failed' : 'Copy done', t.error || t.title,
+        { kind: 'copy', page: 'files', params: { tab: 'transfers' } }).catch(() => {})
     }
   })
 }
