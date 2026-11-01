@@ -183,9 +183,11 @@ export function Project({ project, onClose }: { project: Opened; onClose: () => 
       .catch((e: Error) => toast(e.message))
   }
   const goIssue = (i: Issue) => {
+    // the log names a file as given to \input: "results.tex" or "sections/results.tex"
+    const same = (path: string) => path === i.file || path.endsWith(`/${i.file}`) || basename(path) === i.file
     const files = tree.filter((e) => e.kind === 'f')
-    const hit = !i.file ? rel(folder, main) : docRef.current && basename(docRef.current.path) === i.file
-      ? rel(folder, docRef.current.path) : files.find((e) => basename(e.path) === i.file)?.path
+    const hit = !i.file ? rel(folder, main) : docRef.current && same(rel(folder, docRef.current.path))
+      ? rel(folder, docRef.current.path) : files.find((e) => same(e.path))?.path
     if (!hit) { toast(`${i.file} is not in the project`); return }
     if (view === 'pdf') setView('split')
     switchTo(abs(hit), i.line || 1)
