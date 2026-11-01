@@ -6,7 +6,7 @@ import { useEffect, useState, useSyncExternalStore } from 'react'
 import { call, on } from '../../rpc'
 import type { MonitorStats } from '../../types/terminals'
 
-// Preferences: Monitoring bar. Read once, then kept up to date by the Preferences dialog.
+// Settings: Monitoring bar. Read once, then kept up to date by the Settings dialog.
 let enabled = true
 const subscribers = new Set<() => void>()
 export const setMonitorBar = (shown: boolean) => { enabled = shown; subscribers.forEach((fn) => fn()) }

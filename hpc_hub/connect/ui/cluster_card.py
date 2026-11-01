@@ -61,7 +61,7 @@ class ClusterCard(Gtk.Box):
         self.pill.set_valign(Gtk.Align.CENTER)
         head.append(self.pill)
 
-        gear = Gtk.Button(icon_name="emblem-system-symbolic", valign=Gtk.Align.CENTER, tooltip_text="Settings")
+        gear = Gtk.Button(icon_name="emblem-system-symbolic", valign=Gtk.Align.CENTER, tooltip_text=f"{session.cfg.name} settings")
         gear.add_css_class("flat")
         gear.connect("clicked", lambda *_: on_settings(session))
         phone = Gtk.Button(icon_name="phone-symbolic", valign=Gtk.Align.CENTER, css_classes=["flat"],

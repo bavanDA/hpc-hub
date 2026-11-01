@@ -1,4 +1,4 @@
-// Demo data for the first start and Preferences' cluster list. ?welcome=1 shows the welcome screen.
+// Demo data for the first start and Settings' cluster list. ?welcome=1 shows the welcome screen.
 const choices = [
   { id: 'wulver', name: 'Wulver (NJIT)', host: 'wulver.njit.edu', vpn: true, second_factor: 'duo' },
   { id: 'yale', name: 'Yale Bouchet', host: 'bouchet.ycrc.yale.edu', vpn: true, second_factor: 'duo' },

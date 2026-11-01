@@ -135,7 +135,7 @@ class MainWindow(Adw.ApplicationWindow):
 
     def _menu(self) -> Gio.Menu:
         menu = Gio.Menu()
-        menu.append("Preferences…", "app.preferences")
+        menu.append("Settings…", "app.preferences")
         menu.append("Set up the phone app…", "app.pair-phone")
         menu.append("About HPC Hub", "app.about")
         menu.append("Disconnect all and quit…", "app.disconnect-quit")

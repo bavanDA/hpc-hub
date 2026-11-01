@@ -125,7 +125,7 @@ class TerminalTab(Gtk.Box):
             self._copy_tmux()
 
     def _selected(self, *_):
-        if features.select_to_copy and self.term.get_has_selection():  # Preferences: Select to copy
+        if features.select_to_copy and self.term.get_has_selection():  # Settings: Select to copy
             self.term.copy_clipboard_format(Vte.Format.TEXT)
 
     def _copy_tmux(self) -> None:

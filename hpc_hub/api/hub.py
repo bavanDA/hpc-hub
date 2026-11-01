@@ -56,7 +56,7 @@ class Hub:
                 pass
 
     def use_clusters(self, ids: list[str]) -> None:
-        """Change which clusters the app shows (first run, or Preferences). A connected one can't be dropped."""
+        """Change which clusters the app shows (first run, or Settings). A connected one can't be dropped."""
         everything = {c.id: c for c in config.load()}
         kept = {c.id: c for c in self.clusters}
         for cid, s in self.sessions.items():
