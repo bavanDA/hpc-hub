@@ -23,7 +23,7 @@ from .globus import api as globus  # noqa: E402
 from .globus.ui import GlobusPage  # noqa: E402
 from .projects.store import ProjectStore  # noqa: E402
 from .projects.ui.page import Actions, ProjectsPage  # noqa: E402
-from .ui import style  # noqa: E402
+from .ui import appearance, style  # noqa: E402
 from .ui.preferences import PreferencesDialog  # noqa: E402
 from .ui.quit import QuitMixin  # noqa: E402
 from .ui.tools import Tools  # noqa: E402
@@ -61,6 +61,7 @@ class HpcHubApp(LoginPromptsMixin, QuitMixin, Adw.Application):
         features.experimental = self.app_settings.experimental
         features.select_to_copy = self.app_settings.select_to_copy
         features.monitor_bar = self.app_settings.monitor_bar
+        appearance.apply(self.app_settings.appearance)
         self.sessions = {c.id: ClusterSession(c, self.askpass, self) for c in self.clusters}
         for leftover in runtime_dir().glob("nm-*"):  # VPN cookie files from a killed run
             leftover.unlink(missing_ok=True)

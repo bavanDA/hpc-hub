@@ -1,4 +1,4 @@
-"""The app's Settings: which browser opens links, terminal settings, and experimental features."""
+"""The app's Settings: light or dark, which browser opens links, terminal settings, and experimental features."""
 
 from collections.abc import Callable
 
@@ -7,6 +7,7 @@ from gi.repository import Adw, GLib, Gtk
 from ..core import browser, features
 from ..core.config import AppSettings
 from ..terminals.ui import monitor_bar
+from . import appearance
 
 
 class PreferencesDialog(Adw.PreferencesDialog):
@@ -16,6 +17,9 @@ class PreferencesDialog(Adw.PreferencesDialog):
         self.app, self.save, self.on_experimental = app, save, on_experimental
         self.found = browser.profiles() if browser.chrome() else []
         page = Adw.PreferencesPage()
+        look = Adw.PreferencesGroup(title="Appearance")
+        look.add(appearance.row(app.appearance, self._appearance))
+        page.add(look)
         group = Adw.PreferencesGroup(
             title="Links", description="Every link asks which browser opens it. This one is picked for you.")
         labels = ["System browser"] + [f"Chrome: {p.name}" + (f" ({p.email})" if p.email else "") for p in self.found]
@@ -57,6 +61,10 @@ class PreferencesDialog(Adw.PreferencesDialog):
 
     def _select(self) -> None:
         self.app.select_to_copy = features.select_to_copy = self.select.get_active()
+        self.save()
+
+    def _appearance(self, name: str) -> None:
+        self.app.appearance = name
         self.save()
 
     def _monitor(self) -> None:
