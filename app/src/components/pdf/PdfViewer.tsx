@@ -233,7 +233,7 @@ export default function PdfViewer({ data, memory, compact, zoom: start = 'page-w
             <Minus size={16} /></Tool>
           <select value={preset ? scale.value : 'custom'} disabled={!has} aria-label="Zoom"
             onChange={(e) => zoom(e.target.value)}
-            className={`h-7 rounded-md bg-pill px-1.5 text-sm outline-none pointer-coarse:h-11 ${compact ? 'w-[86px]' : 'w-[98px]'}`}>
+            className={`h-7 rounded-md bg-pill px-1.5 text-sm outline-none pointer-coarse:h-11 pointer-coarse:w-[116px] ${compact ? 'w-[86px]' : 'w-[98px]'}`}>
             {!preset && <option value="custom">{scale.percent}%</option>}
             {ZOOMS.map(([v, label]) => <option key={v} value={v}>{label}</option>)}
           </select>
