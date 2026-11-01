@@ -73,3 +73,26 @@ def test_ran_for_says_the_time_in_words():
     assert ran_for("1-02:00:00") == "1 d 2 h"
     assert ran_for("12:30") == "12 min"
     assert ran_for("0:00") == "1 min"
+
+
+def test_group_scope_lists_my_accounts_jobs():
+    cmd = jobs.jobs_command(jobs.GROUP)
+    assert "sacctmgr -n -P show assoc user=\"$USER\" format=account" in cmd
+    assert '-A $a' in cmd and '-u $USER' in cmd  # falls back to your own jobs without an account
+
+
+def test_times_and_reasons_read_like_words():
+    assert [jobs.duration_text(s) for s in (259200, 93600, 14400, 4320, 720, 20)] == [
+        "3 days", "1 day 2 h", "4 h", "1 h 12 min", "12 min", "under 1 min"]
+    assert jobs.reason_text("(Priority)") == "Waiting: higher-priority jobs go first"
+    assert jobs.reason_text("(Resources)") == "Waiting: not enough free nodes yet"
+    assert jobs.reason_text("(AssocGrpBillingMinutes)") == "Waiting: your group is out of SUs"
+    assert jobs.reason_text("(DependencyNeverSatisfied)") == "Won't start: the job it waits for failed"
+    assert jobs.reason_text("(SomethingNew)") == "Waiting: SomethingNew"
+    assert jobs.reason_text("n0042") == ""
+
+
+def test_qos_only_when_it_tells_you_something():
+    j = jobs.parse_jobs("1|x|me|general|RUNNING|1:00|4:00:00|2|8G|n1|low\n"
+                        "2|y|me|debug|RUNNING|1:00|30:00|1|4G|n2|debug\n")
+    assert [jobs.shown_qos(x) for x in j] == ["low", ""]

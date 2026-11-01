@@ -29,6 +29,9 @@ def su_text(j: JobInfo) -> str:
 def job_json(j: JobInfo, me: str) -> dict:
     return {**asdict(j), "from_app": j.from_app, "su_spent": round(j.su_spent, 2), "su_max": round(j.su_max, 2),
             "su": su_text(j), "seconds": jobs.seconds(j.elapsed), "limit_seconds": jobs.seconds(j.limit),
+            "elapsed_text": jobs.duration_text(jobs.seconds(j.elapsed)) if j.state != "PENDING" else "",
+            "limit_text": jobs.duration_text(jobs.seconds(j.limit)) if jobs.seconds(j.limit) else "no limit",
+            "reason": jobs.reason_text(j.where) if j.state == "PENDING" else "", "qos_shown": jobs.shown_qos(j),
             "cancellable": bool(me) and j.user == me and j.state in CANCELLABLE}
 
 
@@ -46,8 +49,8 @@ def _accounts(s: ClusterSession) -> list[dict]:
 
 @method("jobs.list")
 def list_jobs(cluster: str, scope: str = jobs.MINE) -> dict:
-    """Jobs of one scope, newest first, plus the SU totals of your accounts."""
-    if scope not in (jobs.MINE, jobs.HISTORY, jobs.ALL):
+    """Jobs of one scope (mine, group, history, all), newest first, plus the SU totals of your accounts."""
+    if scope not in jobs.SCOPES:
         raise ValueError(f"No scope {scope}")
     s = hub().connected(cluster)
     try:
