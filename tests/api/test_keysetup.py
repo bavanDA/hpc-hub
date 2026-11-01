@@ -102,9 +102,15 @@ def test_no_portal_no_key_and_errors(setup, tmp_path):
 
 
 def test_stop(setup):
+    import threading
     _, _, store = setup
+    gate = threading.Event()  # the sign-in window stays open until the test has pressed Stop
+    h = hub_mod._hub
+    shown = h.web_login
+    h.web_login = lambda *a, **k: (gate.wait(5), shown(*a, **k))[1]
     keysetup.start("sdsc")
     keysetup.stop("sdsc")
     assert keysetup.status("sdsc")["state"] == "stopped"
+    gate.set()
     time.sleep(0.05)
     assert keysetup.status("sdsc")["state"] == "stopped" and not store
