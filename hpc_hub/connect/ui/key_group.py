@@ -1,5 +1,5 @@
 """Sign-in with an SSH key you paste on the cluster's key page (Yale), in the cluster's settings: three steps, only
-the current one open (a key, yours or one HPC Hub makes; give it to the cluster; try it; core/my_key.py). The
+the current one open (a key, yours or one HPC Hub makes; send it to the cluster; try it; core/my_key.py). The
 desktop app's KeyPanel.tsx does the same. Its words are in core/login_copy.py."""
 
 import threading

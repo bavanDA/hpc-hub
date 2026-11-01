@@ -37,7 +37,7 @@ export const S = {
   "KEY_MADE": "Made just now ({file})",
   "KEY_PICKED": "Your key ({file})",
   "ALREADY_ON": "Already on {who}? Try it",
-  "STEP_ADD": "Give it to {who}",
+  "STEP_ADD": "Send it to {who}",
   "COPY_KEY": "Copy",
   "COPIED": "Copied",
   "PASTE_IT": "Paste it on {who}'s key page.",
