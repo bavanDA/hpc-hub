@@ -44,9 +44,27 @@ from the logic is added to `hpc_hub/` as a normal feature, behind a setting or a
 
 ## Screens
 
-Bottom tabs: Clusters, Jobs, Terminals, Files, More (Projects, Globus, LaTeX, Usage, Settings). Touch targets at
-least 44 px, dialogs as full-screen sheets, a key row over the keyboard in terminals (Esc, Tab, Ctrl, arrows).
-`npm run dev` in `mobile/` shows them in a browser with the desktop's demo data.
+Bottom tabs: **Clusters, Terminals, Code, Jobs, More**, in the desktop sidebar's order. More is a list of screens
+that open on top with a back arrow: Projects, Agents (running, scheduled, skills, permissions), Papers
+(experimental), Usage, Files (the full file manager), Transfers (copies between clusters, Globus), Settings, About.
+Code is a light editor for files on the cluster that works with the agents (docs/design/code.md); its file drawer is
+where you browse to read or edit, so Files moved under More.
+
+- **Moving around:** `mobile/src/nav.tsx` keeps the tab and the More screen, and gives shared desktop code the same
+  `go(page, params)` as the desktop (`app/src/nav.ts`): each desktop page maps to a tab or a More screen
+  (`placeOf`). Every page that shows one cluster follows the cluster picked anywhere (`clusters/active.ts`).
+- **Back:** Android's Back walks the WebView's history. Each sheet and each screen on top pushes an entry
+  (`useBackLayer`), so Back closes the top one first, then returns to the More list, then to Clusters, and only
+  then leaves the app.
+- **Pieces** (`mobile/src/ui.tsx`): full-screen sheets, bottom sheets for actions, confirms and pickers, list rows,
+  chips, search and text fields. Touch targets are at least 44 px; long-press opens actions instead of a right-click
+  menu; nothing depends on hover.
+- **Terminals** have a key row over the keyboard (Esc, Tab, Ctrl, arrows).
+- **What only Android can do** (pick files, save to Downloads, open or share a file, stay connected in the
+  background) goes through `mobile/src/parts/native.ts`.
+
+`npm run dev` in `mobile/` shows the screens in a browser with the desktop's demo data; `?tab=jobs`, `?tab=usage`
+or any desktop page name opens that screen.
 
 ## VPN (later)
 
