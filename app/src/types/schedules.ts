@@ -14,6 +14,7 @@ export type Schedule = {
   minutes: number  // time limit of each run
   enabled: boolean
   compute: Compute
+  runner?: 'agent' | 'backup'  // backup: the backup agent's weekly scratch check (task holds its settings)
 }
 
 export type ScheduleStatus = Schedule & {
