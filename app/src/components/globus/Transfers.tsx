@@ -13,6 +13,10 @@ function state(t: Task): [string, 'ok' | 'bad' | 'warn' | 'dim'] {
   return ['Running', 'dim']
 }
 
+/** Why a transfer failed, in words: Globus' problem code, else its status line. */
+const reason = (t: Task) =>
+  (t.problem || t.nice_status || 'Globus gave no reason').replace(/_/g, ' ').toLowerCase().replace(/^./, (c) => c.toUpperCase())
+
 function Icon({ t }: { t: Task }) {
   if (t.status === 'SUCCEEDED') return <CircleCheck size={20} className="shrink-0 text-ok" />
   if (t.status === 'FAILED') {
@@ -32,16 +36,20 @@ function Progress({ t }: { t: Task }) {
   )
 }
 
-function TaskRow({ t, onCancel }: { t: Task; onCancel: (id: string) => void }) {
+function TaskRow({ t, onCancel, names }:
+  { t: Task; onCancel: (id: string) => void; names: Record<string, string> }) {
   const [label, kind] = state(t)
-  const files = t.files ? `${t.files_done} of ${t.files} files` : 'Counting files'
+  const files = !t.files ? 'Counting files' : t.files_done === t.files ? `${t.files} file${t.files === 1 ? '' : 's'}`
+    : `${t.files_done} of ${t.files} files`
   const rate = t.active && t.rate ? ` · ${formatSize(t.rate)}/s` : ''
+  const failed = t.status === 'FAILED' && !t.cancelled
   return (
     <Row prefix={<Icon t={t} />}
-      title={<span className="font-bold">{t.label}</span>}
+      title={<span className="font-bold">{t.label.replace(/^HPC Hub /, '')}</span>}
       subtitle={<>
-        <span>{t.source} → {t.destination}</span>
-        <span className="block">{formatSize(t.bytes)} · {files}{rate} · {shortDate(t.request_time)}</span>
+        <span>{names[t.source] ?? t.source} → {names[t.destination] ?? t.destination}</span>
+        <span className="block">{failed ? `Failed: ${reason(t)}`
+          : <>{formatSize(t.bytes)} · {files}{rate} · {shortDate(t.request_time)}</>}</span>
         {t.active && <Progress t={t} />}
       </>}
       suffix={<div className="flex items-center gap-1">
@@ -51,8 +59,9 @@ function TaskRow({ t, onCancel }: { t: Task; onCancel: (id: string) => void }) {
   )
 }
 
-export function Transfers({ tasks, error, onRefresh, onCancel }:
-  { tasks: Task[] | null; error: string; onRefresh: () => void; onCancel: (id: string) => void }) {
+export function Transfers({ tasks, error, onRefresh, onCancel, names = {} }:
+  { tasks: Task[] | null; error: string; onRefresh: () => void; onCancel: (id: string) => void
+    names?: Record<string, string> }) {  // names: Globus collection name -> the app's cluster name
   return (
     <div className="flex min-h-0 flex-col gap-2">
       <div className="flex items-center gap-2 px-1">
@@ -63,7 +72,7 @@ export function Transfers({ tasks, error, onRefresh, onCancel }:
         <List>
           {error ? <p className="p-4 text-center text-[13px] text-bad">{error}</p>
             : !tasks?.length ? <p className="p-4 text-center text-dim">{tasks ? 'No transfers yet' : 'Loading…'}</p>
-            : tasks.map((t) => <TaskRow key={t.task_id} t={t} onCancel={onCancel} />)}
+            : tasks.map((t) => <TaskRow key={t.task_id} t={t} onCancel={onCancel} names={names} />)}
         </List>
       </div>
     </div>

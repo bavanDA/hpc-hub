@@ -173,11 +173,11 @@ class GlobusPage(Gtk.Box):
         allow, domain = self._names(globus.ConsentRequired), self._domain()
         if domain:
             self.banner.set_title(f"{' and '.join(self._names(globus.SessionRequired))} wants you signed in with "
-                                  f"your {domain} account" + (f". {' and '.join(allow)} also needs your OK"
-                                                              if allow else ""))
+                                  f"your {domain} account." + (f" {' and '.join(allow)} also needs permission."
+                                                               if allow else ""))
             self.banner.set_button_label("Sign in")
         elif allow:
-            self.banner.set_title(f"Globus needs your OK to use {' and '.join(allow)}. One time")
+            self.banner.set_title(f"Globus needs permission to use {' and '.join(allow)}.")
             self.banner.set_button_label("Allow")
         self.banner.set_revealed(bool(allow or domain))
 

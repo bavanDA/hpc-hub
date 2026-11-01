@@ -124,7 +124,6 @@ export function Pane({ pane, clusters, onChoose, onConsent, onStart }: {
       </div>
       <div className="min-h-0 flex-1 overflow-auto">{body}</div>
       <div className="flex h-8 shrink-0 items-center gap-2 border-t border-line px-3 text-[12px] text-dim">
-        {cfg?.collection_name && <span className="truncate">{cfg.collection_name}</span>}
         <span className="flex-1" />
         {pane.loading ? <><Spinner size={12} />Loading…</> : l?.state === 'ok' && `${l.items.length} items`}
       </div>

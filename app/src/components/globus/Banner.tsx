@@ -11,9 +11,9 @@ export function Banner({ wants, onClick }: { wants: Want[]; onClick: () => void 
   const domain = domainWants[0]?.domains[0] ?? ''
   if (!allow.length && !domain) return null
   const text = domain
-    ? `${names(domainWants.map((w) => w.name))} wants you signed in with your ${domain} account` +
-      (allow.length ? `. ${names(allow)} also needs your OK` : '')
-    : `Globus needs your OK to use ${names(allow)}. One time`
+    ? `${names(domainWants.map((w) => w.name))} wants you signed in with your ${domain} account.` +
+      (allow.length ? ` ${names(allow)} also needs permission.` : '')
+    : `Globus needs permission to use ${names(allow)}.`
   return (
     <div className="flex items-center gap-3 rounded-xl bg-accent/15 px-4 py-2.5">
       <KeyRound size={18} className="shrink-0 text-accent-text" />

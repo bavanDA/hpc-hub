@@ -137,7 +137,9 @@ export function Globus() {
         <Pane pane={right} clusters={status.clusters} onChoose={setPicking} onStart={startPersonal}
           onConsent={() => setLogin('globus.consent_url')} />
       </div>
-      <Transfers tasks={tasks} error={tasksError} onRefresh={loadTasks} onCancel={cancel} />
+      <Transfers tasks={tasks} error={tasksError} onRefresh={loadTasks} onCancel={cancel}
+        names={Object.fromEntries(status.clusters.filter((c) => c.collection_name)
+          .map((c) => [c.collection_name, c.name]))} />
     </div>
   )
 
