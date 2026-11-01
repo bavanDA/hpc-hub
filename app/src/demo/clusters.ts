@@ -3,6 +3,7 @@ import {
   summary, type AgentSettings, type Cluster, type KeySetup, type Limits, type Logins, type Profile, type Session,
   type SettingsInfo, type State, type VsCode,
 } from '../types/clusters'
+import type { Gpu } from '../components/clusters/gpus'
 
 type Step = [number, Partial<Session> & { state: State }, string?]
 const summaryOf = (c: Cluster) => summary(c.profile)
@@ -98,6 +99,20 @@ const logs: Record<string, string[]> = {
 const limits = {
   partitions: { general: 4320, debug: 480, gpu: 2880, shared: 2880, day: 1440 } as Record<string, number>,
   qos: { low: 1440, standard: 4320 } as Record<string, number> }
+
+const DEMO_GPUS: Record<string, Gpu[]> = {
+  wulver: [
+    { type: 'a100_10g', label: 'A100, 10 GB slice', memory_gb: 10, slice: true, partitions: ['gpu'], max_per_job: 1 },
+    { type: 'a100_20g', label: 'A100, 20 GB slice', memory_gb: 20, slice: true, partitions: ['gpu'], max_per_job: 1 },
+    { type: 'a100_40g', label: 'A100, 40 GB slice', memory_gb: 40, slice: true, partitions: ['gpu'], max_per_job: 1 },
+    { type: 'a100', label: 'A100', memory_gb: 80, slice: false, partitions: ['gpu'], max_per_job: 4 }],
+  yale: [
+    { type: 'a5000', label: 'RTX A5000', memory_gb: 24, slice: false, partitions: ['gpu'], max_per_job: 4 },
+    { type: 'l40s', label: 'L40S', memory_gb: 48, slice: false, partitions: ['gpu'], max_per_job: 4 },
+    { type: 'h100', label: 'H100', memory_gb: 80, slice: false, partitions: ['gpu_h100'], max_per_job: 4 },
+    { type: 'h200', label: 'H200', memory_gb: 141, slice: false, partitions: ['gpu_h200'], max_per_job: 8 }],
+  sdsc: [{ type: '', label: 'V100', memory_gb: 32, slice: false, partitions: ['gpu-shared', 'gpu'], max_per_job: 4 }],
+}
 
 function find<T extends { id: string }>(list: T[], id: string) {
   return list.find((x) => x.id === id)!
@@ -210,6 +225,8 @@ export const answers: Record<string, unknown> = {
     return { known: true, partitions: Object.keys(limits.partitions), default_partition: 'general',
       qos: Object.keys(limits.qos), default_qos: 'low', longest: top?.[0] ?? null, why: top?.[1] ?? '' }
   },
+  // what Slurm's gres column says on each cluster (hpc_hub/compute/gpus.py)
+  'clusters.gpus': ({ cluster }: { cluster: string }) => ({ known: cluster !== 'sdsc', gpus: DEMO_GPUS[cluster] ?? [] }),
   'question.answer': () => null,
   'cluster_settings.get': ({ cluster }: { cluster: string }): SettingsInfo => ({
     cluster: structuredClone(find(clusters, cluster)), agents: agentInfo,

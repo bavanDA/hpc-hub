@@ -9,6 +9,7 @@ export type Profile = {
   account?: string
   qos?: string
   gpus?: number
+  gpu_type?: string  // Slurm's gres type (a100_10g, h100); '' = any GPU
   extra_args?: string
 }
 
@@ -165,8 +166,16 @@ export function shortTime(t: string) {
   return parts.filter(Boolean).join(' ') || t
 }
 
+/** "A100 10 GB slice", "2 × H100", "GPU", or '' without one (the full names come from components/clusters/gpus.ts). */
+export function gpuText(p: Profile) {
+  if (!p.gpus) return ''
+  const name = (p.gpu_type || 'GPU').replace(/_(\d+)g$/, ' $1 GB slice').replace(/_/g, ' ').toUpperCase()
+    .replace(' GB SLICE', ' GB slice')
+  return p.gpus > 1 ? `${p.gpus} × ${name}` : name
+}
+
 export function summary(p: Profile) {
-  return [`${p.cpus} cores`, `${p.mem_gb} GB`, shortTime(p.time), p.gpus ? `${p.gpus} GPU` : '', p.partition]
+  return [`${p.cpus} cores`, `${p.mem_gb} GB`, shortTime(p.time), gpuText(p), p.partition]
     .filter(Boolean).join(' · ')
 }
 

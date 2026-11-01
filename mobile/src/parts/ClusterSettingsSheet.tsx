@@ -16,7 +16,7 @@ import { AskFirst, NodeFields, nodeLine } from './NodeSheet'
 
 type Section = '' | 'signin' | 'compute' | 'server' | 'queues' | 'vscode' | 'agents' | 'code'
 
-const PROFILE_KEYS: (keyof Profile)[] = ['cpus', 'mem_gb', 'gpus', 'time', 'partition', 'account', 'qos', 'extra_args']
+const PROFILE_KEYS: (keyof Profile)[] = ['cpus', 'mem_gb', 'gpus', 'gpu_type', 'time', 'partition', 'account', 'qos', 'extra_args']
 const pick = <T extends object>(o: T, keys: (keyof T)[]) =>
   Object.fromEntries(keys.filter((k) => o[k] !== undefined).map((k) => [k, o[k]]))
 

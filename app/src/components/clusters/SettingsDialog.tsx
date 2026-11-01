@@ -12,7 +12,8 @@ import { secondStep, type AgentId, type AgentSettings, type Cluster, type Limits
 import { openSystem } from '../app/openLink'
 import { useToast } from '../toast'
 import { AlertDialog, Button, Dialog, List } from '../ui'
-import { Duration } from './ComputeDialog'
+import { Duration, GpuPicker } from './ComputeDialog'
+import { useGpus } from './gpus'
 import { ActionRow, ComboRow, EntryRow, Group, NumberBox, SpinRow, SwitchRow } from './fields'
 import { KeyPanel, keyHeading, PasswordInstead } from './KeyPanel'
 import { KeySetupDialog } from './KeySetupDialog'
@@ -44,7 +45,7 @@ function NavItem({ id, label, on, pick }: { id: Tab; label: string; on: boolean;
 }
 
 const TARGETS: [string, string][] = [['desktop', 'VS Code app'], ['browser', 'Browser (vscode.dev)']]
-const PROFILE_KEYS = ['cpus', 'mem_gb', 'time', 'partition', 'account', 'qos', 'gpus', 'extra_args'] as const
+const PROFILE_KEYS = ['cpus', 'mem_gb', 'time', 'partition', 'account', 'qos', 'gpus', 'gpu_type', 'extra_args'] as const
 const VPN_KEYS = ['enabled', 'gateway', 'protocol', 'useragent', 'authgroup', 'same_login_as_ssh', 'split_tunnel',
   'domains', 'routes', 'browser'] as const
 
@@ -64,12 +65,14 @@ function ProfileRows({ cluster, p, onChange, extra, rows = 'all' }:
     return () => clearTimeout(t)
   }, [cluster, p.partition, p.qos])
   const set = (change: Partial<Profile>) => onChange({ ...p, ...change })
+  const { gpus, known } = useGpus(cluster)
   return <>
     {rows !== 'more' && <>
       <SpinRow label="CPU cores" value={p.cpus} onChange={(cpus) => set({ cpus })} min={1} max={512} />
       <SpinRow label="Memory (GB)" value={p.mem_gb} onChange={(mem_gb) => set({ mem_gb })} min={1} max={4096} />
       <Duration total={minutes(p.time) ?? 240} onChange={(m) => set({ time: slurmTime(m) })} limits={limits} />
-      <SpinRow label="GPUs" value={p.gpus ?? 0} onChange={(gpus) => set({ gpus })} min={0} max={16} />
+      <div className="px-4 pt-3 text-sm font-semibold text-dim">GPU</div>
+      <GpuPicker gpus={gpus} known={known} value={p} onChange={onChange} />
       <EntryRow label="Partition" value={p.partition} onChange={(partition) => set({ partition })}
         list={limits?.partitions} placeholder={limits?.default_partition} />
     </>}
