@@ -15,6 +15,13 @@ import { Button, EmptyState, IconButton, List, Spinner } from '../ui'
 
 const STARTABLE = ['claude', 'codex', 'agy', 'cursor'] as const
 
+/** "Claude · thesis" -> "thesis": the agent's name is on the line below. */
+function title(s: TmuxSession): string {
+  const t = s.title || s.name
+  const agent = `${AGENT_NAMES[s.agent]} · `
+  return t.startsWith(agent) ? t.slice(agent.length) : t
+}
+
 function StartMenu({ onStart }: { onStart: (cluster: string, name: string, key: string) => void }) {
   const { clusters, sessions } = useClusters()
   const [open, setOpen] = useState(false)
@@ -85,7 +92,7 @@ export function Running() {
             <div key={`${cluster}/${s.name}`} className="flex items-center gap-3 px-4 py-2.5">
               <Dot color={s.color} />
               <div className="min-w-0 flex-1">
-                <div className="truncate font-semibold">{s.title || s.name}</div>
+                <div className="truncate font-semibold">{title(s)}</div>
                 <div className="truncate text-sm text-dim">
                   {[AGENT_NAMES[s.agent], name, s.node, s.attached ? 'open elsewhere' : ''].filter(Boolean)
                     .join(' · ')}</div>

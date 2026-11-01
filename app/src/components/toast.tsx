@@ -2,7 +2,7 @@
 // An error stays until you close it, and a toast can carry one button:
 // toast('Could not connect', { kind: 'error', action: { label: 'Retry', run: retry } })
 import { CircleAlert, X } from 'lucide-react'
-import { createContext, useCallback, useContext, useState, type ReactNode } from 'react'
+import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react'
 
 export type ToastOptions = { kind?: 'info' | 'error'; action?: { label: string; run: () => void } }
 type Toast = { id: number; text: string } & ToastOptions
@@ -18,6 +18,11 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     setToasts((t) => [...t.filter((x) => x.text !== text), { id, text, ...options }].slice(-4))
     if (options.kind !== 'error') setTimeout(() => drop(id), options.action ? SHOWN_MS * 2 : SHOWN_MS)
   }, [drop])
+  useEffect(() => {  // a plain browser (design work): ?toast=error shows one
+    if ('__TAURI_INTERNALS__' in window || new URLSearchParams(location.search).get('toast') !== 'error') return
+    toast('Could not connect to SDSC Expanse: the login was refused.',
+      { kind: 'error', action: { label: 'Try again', run: () => {} } })
+  }, [toast])
   return (
     <ToastContext.Provider value={toast}>
       {children}
