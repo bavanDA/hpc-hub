@@ -63,6 +63,16 @@ def system_roots() -> list:
             with open(f, "rb") as fh, warnings.catch_warnings():
                 warnings.simplefilter("ignore")  # some system roots predate today's rules (negative serials)
                 return x509.load_pem_x509_certificates(fh.read())
+    roots = []  # no bundle file (Windows): the system's store, which Python's default context loads
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        for der in ssl.create_default_context().get_ca_certs(binary_form=True):
+            try:
+                roots.append(x509.load_der_x509_certificate(der))
+            except ValueError:
+                continue
+    if roots:
+        return roots
     raise PortalError("Can't find this computer's trusted certificate authorities")
 
 
