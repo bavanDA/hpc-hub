@@ -2,10 +2,10 @@
 
 from gi.repository import GObject, Gtk, Pango
 
+from ....ui.status import StatusPill
 from ...jobs import JobInfo
 
-STATE_CLASS = {"RUNNING": "success", "PENDING": "warning", "COMPLETING": "accent",
-               "FAILED": "error", "TIMEOUT": "error", "OUT_OF_MEMORY": "error", "NODE_FAIL": "error"}
+NUMERIC = {"job_id", "time", "res", "su"}  # tabular digits, so the columns line up
 COLUMNS = [  # (title, attribute, expand)
     ("ID", "job_id", False), ("Name", "name", True), ("User", "user", False),
     ("Partition · QoS", "queue", False), ("State", "state", False), ("Time / limit", "time", False),
@@ -30,32 +30,30 @@ class JobItem(GObject.Object):
         self.job = job
 
 
-def _setup(_f, item, shorten: bool):
-    """Only the wide text columns (name, node) shorten; ids, times and numbers stay whole."""
+def _setup(_f, item, shorten: bool, attr: str):
+    """Only the wide text columns (name, node) shorten; ids, times and numbers stay whole. State is a pill."""
+    if attr == "state":
+        item.set_child(StatusPill())
+        return
     label = Gtk.Label(xalign=0, ellipsize=Pango.EllipsizeMode.END if shorten else Pango.EllipsizeMode.NONE,
-                      width_chars=12 if shorten else -1)
+                      width_chars=12 if shorten else -1, css_classes=["numeric"] if attr in NUMERIC else [])
     item.set_child(label)
 
 
 def _binder(attr: str):
     def bind(_f, item):
-        label: Gtk.Label = item.get_child()
         job: JobInfo = item.get_item().job
+        if attr == "state":
+            item.get_child().set(job.state.capitalize().replace("_", " "))  # "Running", "Out of memory"
+            return
+        label: Gtk.Label = item.get_child()
         text = (su_text(job) if attr == "su" else f"{job.elapsed} / {job.limit}" if attr == "time"
                 else f"{job.cpus} · {job.mem}" if attr == "res"
                 else " · ".join(x for x in (job.partition, job.qos) if x) if attr == "queue" else getattr(job, attr))
         if attr == "name" and job.from_app:
             text = f"{text}  (started by HPC Hub)"
-        if attr == "state":
-            text = text.capitalize().replace("_", " ")  # a pill: "Running", "Out of memory"
-            label.add_css_class("status-pill")
-            label.set_halign(Gtk.Align.START)
         label.set_label(text)
         label.set_tooltip_text(text)
-        for c in set(STATE_CLASS.values()):
-            label.remove_css_class(c)
-        if attr == "state" and job.state in STATE_CLASS:
-            label.add_css_class(STATE_CLASS[job.state])
     return bind
 
 
@@ -64,7 +62,7 @@ def add_columns(view: Gtk.ColumnView) -> Gtk.ColumnViewColumn:
     user_col = None
     for title, attr, expand in COLUMNS:
         factory = Gtk.SignalListItemFactory()
-        factory.connect("setup", _setup, expand)
+        factory.connect("setup", _setup, expand, attr)
         factory.connect("bind", _binder(attr))
         col = Gtk.ColumnViewColumn(title=title, factory=factory, expand=expand, resizable=True)
         view.append_column(col)

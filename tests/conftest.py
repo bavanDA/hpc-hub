@@ -21,7 +21,7 @@ WINDOWS = sys.platform == "win32"
 MACOS = sys.platform == "darwin"
 HAVE_GTK = importlib.util.find_spec("gi") is not None
 
-GTK_FILES = {"files/test_file_menu.py", "latex/test_file_tree.py"}
+GTK_FILES = {"files/test_file_menu.py", "latex/test_file_tree.py", "compute/test_status_kind.py"}
 GTK_TESTS = {
     "api/test_sso.py::test_chrome_profile_picks_up_the_token",
     "api/test_sso.py::test_chrome_profile_can_switch_to_the_app_window_or_cancel",

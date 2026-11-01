@@ -9,6 +9,7 @@ from gi.repository import Adw, Gio, GLib, Gtk, Pango
 
 from ...agents.catalog import AGENTS
 from ...compute.ui.compute_dialog import ComputeDialog
+from ...ui.status import TEXT_CLASS, kind_for
 from ..session import ClusterSession, State
 from .phone_pair import PhonePairDialog
 
@@ -51,9 +52,8 @@ class ClusterCard(Gtk.Box):
         self.add_css_class("cluster-card")
 
         head = Gtk.Box(spacing=12)
-        icon = Gtk.Image.new_from_icon_name("network-server-symbolic")
-        icon.set_pixel_size(32)
-        head.append(icon)
+        head.append(Gtk.Image(icon_name="network-server-symbolic", pixel_size=20, valign=Gtk.Align.CENTER,
+                              css_classes=["icon-tile"]))
         titles = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, hexpand=True, valign=Gtk.Align.CENTER)
         self.title = _label("", "title-4")
         self.subtitle = _label("", "dim-label", "caption")
@@ -101,7 +101,7 @@ class ClusterCard(Gtk.Box):
         self.append(status)
 
         # connected: where you are, then what you open
-        node_row = Gtk.Box(spacing=8)
+        node_row = Gtk.Box(spacing=8, css_classes=["node-well"])
         node_row.append(Gtk.Image(icon_name="computer-symbolic", css_classes=["dim-label"]))
         self.node = _label("")
         self.node.set_selectable(True)
@@ -222,12 +222,13 @@ class ClusterCard(Gtk.Box):
         self._asked = self._asked and s.pick_node
         self.want_node.set_active(cfg.request_node_on_connect)
 
-        words, tone = STATUS.get(s.state, ("Approve Duo" if s.state == State.DUO else s.state.value, "warning"))
+        words, tone = STATUS.get(s.state, ("Approve Duo" if s.state == State.DUO else s.state.value, ""))
+        tone = tone or TEXT_CLASS[kind_for(s.state.value)]  # in progress is blue, waiting on you is amber
         if vpn_only:
             words = "VPN only"
         self.status_text.set_label(words)
         for w in (self.dot, self.status_text):
-            for c in ("success", "error", "warning", "dim-label"):
+            for c in set(TEXT_CLASS.values()):
                 w.remove_css_class(c)
             w.add_css_class(tone)
 
