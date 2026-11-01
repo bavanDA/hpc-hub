@@ -10,6 +10,7 @@ import { EmptyState } from '@shared/components/ui'
 import { usePageParams } from '@shared/nav'
 import type { TmuxSession } from '@shared/types/terminals'
 import { Header } from '../parts/Header'
+import { StatusStrip } from '../parts/StatusStrip'
 import { NewTerminalSheet } from '../parts/terminal/NewTerminalSheet'
 import { OpenChips } from '../parts/terminal/OpenTabs'
 import { SessionActions, type Target } from '../parts/terminal/SessionActions'
@@ -29,9 +30,10 @@ export function Terminals({ shown }: { shown: boolean }) {
   const open = tabs.find((t) => t.key === current)
 
   // go('terminals', { cluster, new: '1' }) from a cluster card: the New terminal sheet for that cluster
+  // each go() brings new params, so the same card button opens the sheet again after it was closed
   useEffect(() => {
     if (shown && params.new && params.cluster) setCreating(params.cluster)
-  }, [shown, params.new, params.cluster])
+  }, [shown, params])
 
   if (open) return <TerminalScreen tab={open} shown={shown} onChanged={refresh}
     onBack={() => { select(null); refresh() }} />
@@ -56,6 +58,7 @@ export function Terminals({ shown }: { shown: boolean }) {
         {live.length > 0 && <button aria-label="New terminal" onClick={() => setCreating(live[0].id)}
           className="grid size-12 place-items-center rounded-full active:bg-hover"><Plus size={24} /></button>}
       </Header>
+      <StatusStrip />
       {!live.length && <EmptyState icon={WifiOff} title="Not connected" text="Connect a cluster to open terminals." />}
       <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4">
         <OpenChips tabs={tabs} current={current} />

@@ -113,7 +113,9 @@ export function FilesManager() {
   const reload = () => setStamp((s) => s + 1)
 
   // opened with go('files', { cluster, path }), or another cluster picked
-  useEffect(() => { if (params.path) setPath(params.path) }, [params.path, setPath])
+  // each go() brings new params: the same folder link works again after you browsed away
+  useEffect(() => { if (params.path && (!params.cluster || params.cluster === id)) setPath(params.path) },
+    [params, id, setPath])
   useEffect(() => {
     if (!id) return
     setPathState(params.path && params.cluster === id ? params.path : memory.paths[id] ?? '')

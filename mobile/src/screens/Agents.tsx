@@ -2,7 +2,7 @@
 // and Permissions (what an agent may do on each cluster without asking). Start agent picks a cluster, then Claude,
 // ChatGPT, Antigravity, Cursor, Ask all or VS Code in the browser.
 import { Play, ShieldCheck } from 'lucide-react'
-import { lazy, Suspense, useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 
 import { setActiveCluster } from '@shared/components/clusters/active'
 import { useClusters } from '@shared/components/clusters/store'
@@ -23,6 +23,14 @@ const Permissions = lazy(() => import('@shared/pages/Permissions').then((m) => (
 
 type Part = 'running' | 'scheduled' | 'skills' | 'permissions'
 
+/** The sheet a start param asks for: claude or agent:claude, ask, vscode or vscode:browser (the phone has no app). */
+function startKey(start?: string): string {
+  if (!start) return ''
+  if (start === 'ask' || start.startsWith('agent:')) return start
+  if (start.startsWith('vscode')) return 'vscode'
+  return `agent:${start}`
+}
+
 export function Agents() {
   const params = usePageParams()
   const { clusters } = useClusters()
@@ -32,10 +40,20 @@ export function Agents() {
   const [perms, setPerms] = useState<Cluster | null>(null)
   const [starting, setStarting] = useState(false)
   const start = useStart()
+  const openStart = start.open
 
   useEffect(() => {
     call<{ experimental: boolean }>('preferences.get').then((p) => setExperimental(p.experimental)).catch(() => {})
   }, [])
+  // go('agents', { cluster, folder, start }) from a cluster card, a project or a folder: open that sheet right away
+  const handled = useRef<Record<string, string> | null>(null)
+  useEffect(() => {
+    const key = startKey(params.start)
+    if (!key || !params.cluster || !clusters || handled.current === params) return
+    handled.current = params
+    const name = clusters.find((c) => c.id === params.cluster)?.name ?? params.cluster
+    openStart(params.cluster, name, key, params.folder ?? '')
+  }, [params, clusters, openStart])
   const parts: (readonly [Part, string])[] = [['running', 'Running'],
     ...(experimental ? [['scheduled', 'Scheduled'] as const, ['skills', 'Skills'] as const] : []),
     ['permissions', 'Permissions']]

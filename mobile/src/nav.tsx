@@ -25,7 +25,7 @@ export function placeOf(page: Page | Tab | MoreScreen | string, params: Record<s
     case 'permissions': return { tab: 'more', screen: 'agents', params: { ...p, tab: 'permissions' } }
     case 'skills': return { tab: 'more', screen: 'agents', params: { ...p, tab: 'skills' } }
     case 'schedules': return { tab: 'more', screen: 'agents', params: { ...p, tab: 'scheduled' } }
-    case 'globus': return { tab: 'more', screen: 'transfers', params: p }
+    case 'globus': return { tab: 'more', screen: 'transfers', params: { ...p, view: 'globus' } }
     case 'files':
       return { tab: 'more', screen: p.tab === 'transfers' ? 'transfers' : 'files', params: p }
     default:
