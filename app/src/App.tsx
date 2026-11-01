@@ -13,6 +13,7 @@ import { setActiveCluster } from './components/clusters/active'
 import { ClusterPicker } from './components/clusters/ClusterPicker'
 import { HeaderBar } from './components/HeaderBar'
 import { Questions } from './components/Questions'
+import { useBackupAlertWatch } from './components/backup/alerts'
 import { GROUPS, HOME, Sidebar, type Page } from './components/Sidebar'
 import { ToastProvider } from './components/toast'
 import { EmptyState, Spinner } from './components/ui'
@@ -23,6 +24,7 @@ import { setAppearance } from './theme'
 
 // Pages load the first time you open them, so the app starts fast (Clusters is the first screen)
 const Agents = lazy(() => import('./pages/Agents').then((m) => ({ default: m.Agents })))
+const Backup = lazy(() => import('./pages/Backup').then((m) => ({ default: m.Backup })))
 const Code = lazy(() => import('./pages/Code').then((m) => ({ default: m.Code })))
 const FilesPage = lazy(() => import('./pages/FilesPage').then((m) => ({ default: m.FilesPage })))
 const Jobs = lazy(() => import('./pages/Jobs').then((m) => ({ default: m.Jobs })))
@@ -42,13 +44,13 @@ const MOVED: Partial<Record<Page, [Page, string]>> = {
 }
 
 const PAGES: Partial<Record<Page, ComponentType>> = {
-  clusters: Clusters, projects: Projects, terminals: Terminals, code: Code, jobs: Jobs, usage: Usage,
+  clusters: Clusters, projects: Projects, terminals: Terminals, code: Code, backup: Backup, jobs: Jobs, usage: Usage,
   files: FilesPage, latex: Latex,
 }
 
 /** Pages that show one cluster at a time get the cluster picker in the header (per tab where they have tabs). */
 function picksCluster(page: Page, tab = ''): boolean {
-  if (page === 'jobs' || page === 'usage') return true
+  if (page === 'jobs' || page === 'usage' || page === 'backup') return true
   if (page === 'files') return tab !== 'transfers'
   if (page === 'agents') return !!tab && tab !== 'running'
   return false
@@ -105,6 +107,7 @@ export default function App() {
   }
   useSessionNotifications()
   useWatch()
+  useBackupAlertWatch()
   if (setup?.first_run && !blocked) {
     return (
       <div className="flex h-full flex-col">
