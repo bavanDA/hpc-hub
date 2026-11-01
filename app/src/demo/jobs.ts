@@ -12,6 +12,17 @@ function seconds(t: string): number {
   return Number(d) * 86400 + h * 3600 + m * 60 + s
 }
 
+// what hpc_hub/compute/jobs.py duration_text and reason_text say
+function words(total: number): string {
+  const d = Math.floor(total / 86400), h = Math.floor((total % 86400) / 3600), m = Math.floor((total % 3600) / 60)
+  if (d) return `${d} day${d > 1 ? 's' : ''}${h ? ` ${h} h` : ''}`
+  if (h) return `${h} h${m ? ` ${m} min` : ''}`
+  return m ? `${m} min` : 'under 1 min'
+}
+const REASONS: Record<string, string> = {
+  '(Priority)': 'Waiting: higher-priority jobs go first', '(Resources)': 'Waiting: not enough free nodes yet',
+}
+
 const one = (v: number) => v.toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 })
 
 function job(job_id: string, name: string, user: string, partition: string, qos: string, state: string,
@@ -24,6 +35,9 @@ function job(job_id: string, name: string, user: string, partition: string, qos:
   return { job_id, name, user, partition, qos, state, elapsed, limit, cpus: String(cpus), mem, where, billing, factor,
     from_app: name.startsWith('hpc-hub'), su_spent, su_max, su, seconds: seconds(elapsed),
     limit_seconds: seconds(limit),
+    elapsed_text: state === 'PENDING' ? '' : words(seconds(elapsed)), limit_text: words(seconds(limit)),
+    reason: state === 'PENDING' ? REASONS[where] ?? 'Waiting to start' : '',
+    qos_shown: ['', 'normal', partition].includes(qos) ? '' : qos,
     cancellable: user === ME && ['RUNNING', 'PENDING'].includes(state) }
 }
 
@@ -62,6 +76,9 @@ const WULVER_ALL = [
   }),
 ]
 
+// My group: yours plus the jobs of the people in your Slurm account
+const WULVER_GROUP = [...WULVER_MINE, ...WULVER_ALL.filter((j) => ['asmith', 'bkim'].includes(j.user)).slice(0, 8)]
+
 const YALE_MINE = [
   job('8812345', 'hpc-hub-node', ME, 'day', 'normal', 'RUNNING', '0:24:51', '4:00:00', 2, '16G', 'r812u03n02'),
   job('8812391', 'alphafold', ME, 'gpu', 'normal', 'PENDING', '0:00', '1-00:00:00', 8, '64G', '(Resources)', 24),
@@ -78,8 +95,8 @@ const ACCOUNTS: Record<string, Account[]> = {
 }
 
 const JOBS: Record<string, Record<string, Job[]>> = {
-  wulver: { mine: WULVER_MINE, history: WULVER_HISTORY, all: WULVER_ALL },
-  yale: { mine: YALE_MINE, history: YALE_HISTORY, all: YALE_MINE },
+  wulver: { mine: WULVER_MINE, group: WULVER_GROUP, history: WULVER_HISTORY, all: WULVER_ALL },
+  yale: { mine: YALE_MINE, group: YALE_MINE, history: YALE_HISTORY, all: YALE_MINE },
 }
 
 function find(cluster: string, id: string): Job | undefined {

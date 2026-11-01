@@ -213,20 +213,24 @@ function useEscape(onClose: () => void) {
 }
 
 /** A dialog over the window. Escape or the X closes it. Actions go in the footer: Cancel (ghost) then the primary. */
-export function Dialog({ title, onClose, children, actions, width = 480 }:
-  { title: string; onClose: () => void; children: ReactNode; actions?: ReactNode; width?: number }) {
+export function Dialog({ title, onClose, children, actions, width = 480, height, bare = false }:
+  { title: string; onClose: () => void; children: ReactNode; actions?: ReactNode; width?: number; height?: number
+    bare?: boolean }) {
   useEscape(onClose)
   return (
     <div className="dialog-scrim fixed inset-0 z-40 grid place-items-center bg-scrim p-4" onMouseDown={onClose}>
-      <div role="dialog" aria-modal="true" aria-label={title} onMouseDown={(e) => e.stopPropagation()} style={{ width }}
+      <div role="dialog" aria-modal="true" aria-label={title} onMouseDown={(e) => e.stopPropagation()}
+        style={{ width, height }}
         className="dialog-in flex max-h-[90vh] max-w-full flex-col rounded-2xl bg-raised shadow-[var(--shadow-dialog)]">
         <div className="flex h-12 shrink-0 items-center px-2">
           <div className="w-[34px]" />
           <h2 className="flex-1 text-center text-base font-semibold">{title}</h2>
           <IconButton icon={X} label="Close" onClick={onClose} />
         </div>
-        <div className="overflow-auto px-6 pb-4">{children}</div>
-        {actions && <div className="flex justify-end gap-2 border-t border-line px-6 pb-5 pt-4">{actions}</div>}
+        {/* bare: the children lay out and scroll the body themselves (a dialog with side navigation) */}
+        <div className={bare ? 'flex min-h-0 flex-1 border-t border-line' : 'overflow-auto px-6 pb-4'}>{children}</div>
+        {actions && <div className="flex items-center justify-end gap-2 border-t border-line px-6 pb-5 pt-4">
+          {actions}</div>}
       </div>
     </div>
   )

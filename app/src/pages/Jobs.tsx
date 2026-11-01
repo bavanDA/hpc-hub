@@ -6,19 +6,20 @@ import { NotConnected } from '../components/clusters/NotConnected'
 import { CancelDialog } from '../components/jobs/CancelDialog'
 import { useClusters } from '../components/jobs/clusters'
 import { DetailsDialog } from '../components/jobs/DetailsDialog'
-import { sortJobs, usageText } from '../components/jobs/format'
+import { sortJobs, stateName, usageText } from '../components/jobs/format'
 import { JobTable, type Sort } from '../components/jobs/JobTable'
 import { Select } from '../components/jobs/Select'
-import { Card, EmptyState, Spinner } from '../components/ui'
+import { Card, EmptyState, SkeletonRows, Spinner } from '../components/ui'
 import { call } from '../rpc'
 import type { Job, JobList, Scope } from '../types/jobs'
 
 const REFRESH_MS = 15_000
 const NO_JOBS = 'Nothing to show for this view.'
 const NO_MATCH = 'Try another state or filter.'
-const SCOPES = [['mine', 'My jobs'], ['history', 'My history (7 days)'], ['all', 'All jobs']] as const
+const SCOPES = [['mine', 'My jobs'], ['group', 'My group'], ['history', 'My history (7 days)'],
+  ['all', 'All jobs']] as const
 const STATES = [['', 'Any state'], ...['RUNNING', 'PENDING', 'COMPLETED', 'FAILED', 'CANCELLED', 'TIMEOUT']
-  .map((s) => [s, s] as const)] as const
+  .map((s) => [s, stateName(s)] as const)] as const
 
 export function Jobs() {
   const { clusters, cluster, session, connected, error: clustersError } = useClusters()
@@ -64,7 +65,7 @@ export function Jobs() {
   const shown = useMemo(() => {
     const q = query.trim().toLowerCase()
     const jobs = (list?.jobs ?? []).filter((j) => (!state || j.state === state) &&
-      (!q || [j.job_id, j.name, j.user, j.partition].some((v) => v.toLowerCase().includes(q))))
+      (!q || [j.job_id, j.name, j.user, j.partition, j.reason].some((v) => v.toLowerCase().includes(q))))
     return sortJobs(jobs, sort.key, sort.desc)
   }, [list, state, query, sort])
 
@@ -75,13 +76,14 @@ export function Jobs() {
   let body
   if (off) body = <NotConnected cluster={cluster} session={session} what="jobs" />
   else if (error) body = <EmptyState icon={CircleAlert} title="Could not load jobs" text={error} />
-  else if (!list) body = <div className="grid h-full place-items-center"><Spinner size={24} /></div>
+  else if (!list) body = <div className="px-3 pb-3"><Card className="overflow-clip"><SkeletonRows rows={6} /></Card></div>
   else if (!list.jobs.length) body = <EmptyState icon={ListChecks} title="No jobs" text={NO_JOBS} />
   else if (!shown.length) body = <EmptyState icon={Search} title="No matching jobs" text={NO_MATCH} />
   else body = (
-    <div className="min-w-fit px-3 pb-3">
-      <Card className="overflow-clip">
-        <JobTable jobs={shown} showUser={scope === 'all'} sort={sort} onSort={setSort} onOpen={setOpen}
+    <div className="px-3 pb-3">
+      {/* scrolls sideways itself, so the ⋮ column can stay pinned on the right */}
+      <Card className="overflow-x-auto">
+        <JobTable jobs={shown} showUser={scope === 'all' || scope === 'group'} sort={sort} onSort={setSort} onOpen={setOpen}
           onCancel={setCancel} />
       </Card>
     </div>

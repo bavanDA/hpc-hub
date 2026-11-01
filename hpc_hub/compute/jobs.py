@@ -8,7 +8,8 @@ from dataclasses import dataclass
 from ..core.ssh import SshMaster
 from .slurm import SlurmError
 
-MINE, HISTORY, ALL = "mine", "history", "all"
+MINE, HISTORY, ALL, GROUP = "mine", "history", "all", "group"
+SCOPES = (MINE, GROUP, HISTORY, ALL)
 SQUEUE_FORMAT = "%i|%j|%u|%P|%T|%M|%l|%C|%m|%R|%q"
 SACCT_FIELDS = "JobID,JobName,User,Partition,State,Elapsed,Timelimit,AllocCPUS,ReqMem,NodeList,QOS,AllocTRES"
 MAX_ROWS = 5000
@@ -64,10 +65,17 @@ def seconds(text: str) -> int:
     return days * 86400 + (a * 3600 if m.group(1) else a * 60)
 
 
+# The Slurm accounts you're in, comma separated: "My group" shows every job charged to them
+MY_ACCOUNTS = 'a=$(sacctmgr -n -P show assoc user="$USER" format=account 2>/dev/null | sort -u | paste -sd, -); '
+
+
 def jobs_command(scope: str, days: int = 7) -> str:
     if scope == HISTORY:
         return (f'sacct -n -P -X -u "$USER" -S now-{int(days)}days '
                 f"-o {SACCT_FIELDS} | tail -n {MAX_ROWS}; {QOS_PART}")
+    if scope == GROUP:  # no accounts found: just yours
+        return (f'{MY_ACCOUNTS}squeue -h $([ -n "$a" ] && echo "-A $a" || echo "-u $USER") '
+                f"-o {shlex.quote(SQUEUE_FORMAT)} | head -n {MAX_ROWS}; {BILLING_PART}; {QOS_PART}")
     who = "" if scope == ALL else ' -u "$USER"'
     return f"squeue -h{who} -o {shlex.quote(SQUEUE_FORMAT)} | head -n {MAX_ROWS}; {BILLING_PART}; {QOS_PART}"
 
@@ -141,6 +149,66 @@ def parse_details(text: str) -> dict[str, str]:
         for key, value in FIELD_RE.findall(line.strip()):
             out[key] = value.strip()
     return out
+
+
+def duration_text(total: int) -> str:
+    """How a time reads in the app: "3 days", "1 day 2 h", "4 h", "1 h 12 min", "12 min", "under 1 min"."""
+    days, rest = divmod(max(0, int(total)), 86400)
+    h, rest = divmod(rest, 3600)
+    m = rest // 60
+    if days:
+        return f"{days} day{'s' if days > 1 else ''}" + (f" {h} h" if h else "")
+    if h:
+        return f"{h} h" + (f" {m} min" if m else "")
+    return f"{m} min" if m else "under 1 min"
+
+
+# Slurm's pending reasons, in words: (prefix of the reason, what it means)
+REASONS = [
+    ("Priority", "Waiting: higher-priority jobs go first"),
+    ("Resources", "Waiting: not enough free nodes yet"),
+    ("DependencyNeverSatisfied", "Won't start: the job it waits for failed"),
+    ("Dependency", "Waiting for another job to finish"),
+    ("BeginTime", "Waiting for its start time"),
+    ("JobHeldUser", "On hold by you"),
+    ("JobHeldAdmin", "On hold by the admins"),
+    ("launch failed requeued held", "Held after a failed start"),
+    ("ReqNodeNotAvail", "Waiting: the nodes it needs are down or reserved"),
+    ("Reservation", "Waiting for its reservation"),
+    ("PartitionTimeLimit", "Won't start: longer than this queue allows"),
+    ("PartitionNodeLimit", "Won't start: more nodes than this queue allows"),
+    ("PartitionDown", "Waiting: this queue is down"),
+    ("PartitionInactive", "Waiting: this queue is closed"),
+    ("QOSMaxJobsPerUser", "Waiting: you have the most jobs allowed running"),
+    ("QOSMaxSubmitJobPerUser", "Waiting: you have the most jobs allowed running"),
+    ("AssocMaxJobs", "Waiting: you have the most jobs allowed running"),
+    ("QOSMaxCpuPerUser", "Waiting: you're using the most cores allowed"),
+    ("QOSMaxGRESPerUser", "Waiting: you're using the most GPUs allowed"),
+    ("AssocGrpBilling", "Waiting: your group is out of SUs"),
+    ("QOSGrpBilling", "Waiting: your group is out of SUs"),
+    ("AssocGrp", "Waiting: your group is at its limit"),
+    ("QOSGrp", "Waiting: this queue is at its limit"),
+    ("Nodes required for job are DOWN", "Waiting: the nodes it needs are down"),
+]
+
+
+def reason_text(where: str) -> str:
+    """The pending reason in plain words ("(Priority)" -> "Waiting: higher-priority jobs go first"); "" for none."""
+    raw = where.strip()
+    if not (raw.startswith("(") and raw.endswith(")")):
+        return ""
+    raw = raw[1:-1].strip()
+    if raw in ("", "None", "null"):
+        return "Waiting to start"
+    for prefix, text in REASONS:
+        if raw.startswith(prefix):
+            return text
+    return f"Waiting: {raw}"
+
+
+def shown_qos(j: JobInfo) -> str:
+    """The QoS, when it tells you something: not the usual one (empty, "normal" or the queue's own name)."""
+    return "" if j.qos in ("", "normal", j.partition) else j.qos
 
 
 def ran_for(elapsed: str) -> str:

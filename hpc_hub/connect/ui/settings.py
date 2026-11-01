@@ -1,5 +1,6 @@
-"""Per-cluster settings in two pages, like the desktop app's SettingsDialog.tsx: Sign-in (username, password or
-key; the server and VPN under Advanced) and Compute (the node; Slurm details and the VS Code job under Advanced)."""
+"""Per-cluster settings in three pages, like the desktop app's SettingsDialog.tsx and in the same field order:
+Sign-in (username, password or key), Compute (the node) and Advanced (server, VPN, queues and Slurm details, the
+VS Code job)."""
 
 from collections.abc import Callable
 
@@ -80,6 +81,7 @@ class ClusterSettingsDialog(Adw.PreferencesDialog):
         self.saved_hints: list[Gtk.Label] = []
         self.add(self._login_page())
         self.add(self._compute_page())
+        self.add(self._advanced_page())
         self.set_can_close(False)
         self.connect("close-attempt", self._on_close_attempt)
 
@@ -114,27 +116,19 @@ class ClusterSettingsDialog(Adw.PreferencesDialog):
         if not c.key_page:
             page.add(Adw.PreferencesGroup(description=self.cfg.second_step()))
 
+        # the one destructive thing here, in a group of its own at the bottom
         forget_group = Adw.PreferencesGroup()
-        forget = Gtk.Button(label=f"Forget {c.username_label if c.key_page else 'saved password'}",
-                            css_classes=["flat", "error"], halign=Gtk.Align.START)
-        forget.connect("clicked", self._forget)
+        forget = Adw.ButtonRow(title=f"Forget {c.username_label if c.key_page else 'saved password'}",
+                               css_classes=["destructive-action"])
+        forget.connect("activated", self._forget)
         forget_group.add(forget)
         page.add(forget_group)
-
-        advanced = Adw.PreferencesGroup(title="Advanced")
-        server = Adw.ExpanderRow(title="Server", subtitle=f"{self.cfg.host}, port {self.cfg.port}")
-        self.host = _entry("Login host", self.cfg.host)
-        self.port = _spin("SSH port", self.cfg.port, 1, 65535)
-        server.add_row(self.host)
-        server.add_row(self.port)
-        advanced.add(server)
-        advanced.add(self._vpn_rows())
-        page.add(advanced)
         return page
 
-    def _vpn_rows(self) -> Adw.ExpanderRow:
+    def _vpn_groups(self) -> list[Adw.PreferencesGroup]:
         v = self.cfg.vpn
-        vpn = Adw.ExpanderRow(title="VPN", subtitle=f"{self.cfg.who} VPN" if v.enabled else "Off")
+        vpn = Adw.PreferencesGroup(title="VPN", description="Web sign-in opens in HPC Hub's own window, never your "
+                                   "own browser.")
         self.vpn_on = _switch("Use VPN", v.enabled)
         self.gateway = _entry("Gateway", v.gateway)
         self.protocol = Adw.ComboRow(title="Protocol", model=Gtk.StringList.new(VPN_PROTOCOLS))
@@ -145,28 +139,33 @@ class ClusterSettingsDialog(Adw.PreferencesDialog):
                              "Only these networks and domains use this VPN, so other VPNs can run too")
         self.domains = _entry("VPN domains (its DNS answers these)", v.domains)
         self.routes = _entry("VPN networks (CIDR, space separated)", v.routes)
-        self.same_login = _switch("Same login as cluster", v.same_login_as_ssh)
         choices = [("", "Built-in window")]
         if chrome_window.available() or v.browser == chrome_window.CHOICE:
             choices.append((chrome_window.CHOICE, chrome_window.TITLE))
         self.sign_in_values = [value for value, _ in choices]
         self.sign_in = Adw.ComboRow(title="Sign in with", model=Gtk.StringList.new([label for _, label in choices]))
         self.sign_in.set_selected(self.sign_in_values.index(v.browser) if v.browser in self.sign_in_values else 0)
-        self.sign_in.set_subtitle("Both are HPC Hub's own windows, never your own browser")
+        self.sign_in.set_subtitle("The Chrome window remembers your sign-in, so it is quicker")
+        for row in (self.vpn_on, self.gateway, self.sign_in, self.protocol, self.useragent, self.authgroup,
+                    self.split, self.domains, self.routes):
+            vpn.add(row)
+
+        login = Adw.PreferencesGroup(title="VPN login")
+        self.same_login = _switch("Same login as cluster", v.same_login_as_ssh)
         self.vpn_user = _entry("VPN username (e.g. first.last@yale.edu)",
                                self.vpn_saved.username if self.vpn_saved else "")
         self.vpn_password = self._password_row(
             self.vpn_saved, "VPN password" if self.vpn_saved and self.vpn_saved.password
             else "VPN password (empty = cluster password)")
-        for row in (self.vpn_on, self.gateway, self.sign_in, self.protocol, self.useragent, self.authgroup,
-                    self.split, self.domains, self.routes, self.same_login, self.vpn_user, self.vpn_password):
-            vpn.add_row(row)
+        for row in (self.same_login, self.vpn_user, self.vpn_password):
+            login.add(row)
+        self.vpn_login = login
 
         self.vpn_on.connect("notify::active", lambda *_: self._sync_vpn())
         self.same_login.connect("notify::active", lambda *_: self._sync_vpn())
         self.split.connect("notify::active", lambda *_: self._sync_vpn())
         self._sync_vpn()
-        return vpn
+        return [vpn, login]
 
     def _compute_page(self) -> Adw.PreferencesPage:
         page = Adw.PreferencesPage(name="compute", title="Compute", icon_name="system-run-symbolic")
@@ -185,38 +184,59 @@ class ClusterSettingsDialog(Adw.PreferencesDialog):
         for row in self.node.size_rows:
             size.add(row)
         page.add(size)
-
-        advanced = Adw.PreferencesGroup(title="Advanced")
-        slurm = Adw.ExpanderRow(title="Slurm details", subtitle="Account, QOS and extra salloc arguments")
-        for row in self.node.more_rows:
-            slurm.add_row(row)
-        advanced.add(slurm)
-        advanced.add(self._vscode_rows())
-        page.add(advanced)
         return page
 
-    def _vscode_rows(self) -> Adw.ExpanderRow:
+    def _advanced_page(self) -> Adw.PreferencesPage:
+        """What most people never change: the server and VPN, queues and Slurm details, the VS Code job."""
+        page = Adw.PreferencesPage(name="advanced", title="Advanced", icon_name="preferences-other-symbolic")
+        server = Adw.PreferencesGroup(title="Server")
+        self.host = _entry("Login host", self.cfg.host)
+        self.port = _spin("SSH port", self.cfg.port, 1, 65535)
+        server.add(self.host)
+        server.add(self.port)
+        page.add(server)
+        for group in self._vpn_groups():
+            page.add(group)
+
+        slurm = Adw.PreferencesGroup(title="Queues and Slurm",
+                                     description="Queues to choose from, cheapest first. The first that starts in "
+                                     "time wins, else the one that starts soonest. Empty: always the partition and "
+                                     "QOS of the node size.")
+        for row in self.node.more_rows:
+            slurm.add(row)
+        self.queues = _entry("Queues (partition:qos, comma separated)", self.cfg.queues)
+        self.queue_wait = _spin("Wait for a cheaper queue (seconds)", self.cfg.queue_wait, 0, 3600)
+        slurm.add(self.queues)
+        slurm.add(self.queue_wait)
+        page.add(slurm)
+        for group in self._vscode_groups():
+            page.add(group)
+        return page
+
+    def _vscode_groups(self) -> list[Adw.PreferencesGroup]:
         v = self.cfg.vscode
-        start = Adw.ExpanderRow(title="VS Code job",
-                                subtitle="Runs as its own batch job; an open one is reused")
-        self.vs_setup = _entry("Run first (e.g. module load VSCode)", v.setup)
+        start = Adw.PreferencesGroup(title="VS Code job", description="The VS Code button submits this as its own "
+                                     "batch job and shows its log. A VS Code job that is already running is used "
+                                     "instead.")
+        self.vs_setup = _entry("Run first (for example module load VSCode)", v.setup)
         self.vs_command = _entry("Command", v.command)
         self.vs_workdir = _entry("Start in folder", v.workdir)
-        self.vs_links = _switch("Open automatically", v.open_links,
-                                "When the tunnel is ready, and the GitHub sign-in page")
         self.vs_open_in = Adw.ComboRow(title="Open in", model=Gtk.StringList.new([t[1] for t in TARGETS]))
         self.vs_open_in.set_selected(next((i for i, t in enumerate(TARGETS) if t[0] == v.open_in), 0))
+        self.vs_links = _switch("Open automatically", v.open_links,
+                                "When the tunnel is ready, and the GitHub sign-in page")
         for row in (self.vs_setup, self.vs_command, self.vs_workdir, self.vs_open_in, self.vs_links):
-            start.add_row(row)
-        self.vs_job = ProfileRows(v.compute, "Extra sbatch arguments", self.limits)
-        for row in self.vs_job.rows:
-            start.add_row(row)
+            start.add(row)
         if self.edit_remote:
             edit = Adw.ButtonRow(title="Edit remote settings.json", end_icon_name="document-edit-symbolic")
             edit.connect("activated", lambda *_: self.edit_remote(
                 "~/.vscode-server/data/Machine/settings.json", "{\n}\n"))
-            start.add_row(edit)
-        return start
+            start.add(edit)
+        res = Adw.PreferencesGroup(title="Job resources")
+        self.vs_job = ProfileRows(v.compute, "Extra sbatch arguments", self.limits)
+        for row in self.vs_job.rows:
+            res.add(row)
+        return [start, res]
 
     # -- behaviour ---------------------------------------------------------------
     def _sync_vpn(self) -> None:
@@ -227,6 +247,7 @@ class ClusterSettingsDialog(Adw.PreferencesDialog):
         for row in (self.domains, self.routes):
             row.set_sensitive(on and self.split.get_active())
         own = on and not self.same_login.get_active()
+        self.vpn_login.set_visible(on)
         self.vpn_user.set_visible(own)
         self.vpn_password.set_visible(own)
 
@@ -265,6 +286,8 @@ class ClusterSettingsDialog(Adw.PreferencesDialog):
         c.request_node_on_connect = self.on_connect.get_active()
         c.ask_node = self.ask_node.get_active()
         c.reuse_running_job = self.reuse.get_active()
+        c.queues = ",".join(q.strip() for q in self.queues.get_text().split(",") if q.strip())
+        c.queue_wait = int(self.queue_wait.get_value())
         c.host = self.host.get_text().strip().rpartition("@")[2]  # username lives in Login
         c.port = int(self.port.get_value())
         v.enabled = self.vpn_on.get_active()
