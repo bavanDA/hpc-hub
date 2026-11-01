@@ -3,6 +3,7 @@
 import { FolderOpen, FolderX } from 'lucide-react'
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 
+import { ScratchBanner } from '../components/backup/ScratchBanner'
 import { setActiveCluster, useActiveCluster } from '../components/clusters/active'
 import { NotConnected } from '../components/clusters/NotConnected'
 import { ActionBar, type Action } from '../components/files/ActionBar'
@@ -227,6 +228,8 @@ export function Files() {
         preview={preview} onPreview={() => { memory.preview = !preview; setPreview(!preview) }}
         onGo={go} onUp={() => path && go(parent(path))} onRefresh={refresh} onNewFolder={newFolder}
         onUpload={upload} />}
+      {connected && <ScratchBanner cluster={cluster} path={path} places={places}
+        onOpen={() => goPage('backup', { cluster })} />}
       {clip && <ClipBanner clip={clip} canPaste={connected && !!path} onPaste={paste} onDrop={() => setClip(null)} />}
       <div className="flex min-h-0 flex-1">
         <div className="flex min-w-0 flex-1 flex-col">{body}</div>

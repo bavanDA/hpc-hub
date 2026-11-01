@@ -28,14 +28,14 @@ const STORAGE: Record<string, Storage> = {
   wulver: { raw: '', rows: [
     { label: 'mygroup project', used: 1463, quota: 2048, mine: 312,
       people: { asmith: 640.2, jdoe: 312.4, bkim: 288.9, cwong: 221.5 } },
-    { label: 'mygroup scratch', used: 9310, quota: 10240, mine: 4120,
+    { label: 'mygroup scratch', used: 9310, quota: 10240, mine: 4120, purged: 30,
       people: { jdoe: 4120.0, asmith: 3011.7, cwong: 2178.3 } },
     { label: 'Home', used: 38, quota: 50, mine: 38, people: {} },
   ] },
   yale: { raw: '', rows: [
     { label: 'Home', used: 61, quota: 125, mine: 61, people: {} },
     { label: 'mygroup project', used: 2210, quota: 5120, mine: 640, people: {} },
-    { label: 'mygroup scratch', used: 4800, quota: 10240, mine: 1210, people: {} },
+    { label: 'mygroup scratch', used: 4800, quota: 10240, mine: 1210, people: {}, purged: 30 },
   ] },
 }
 

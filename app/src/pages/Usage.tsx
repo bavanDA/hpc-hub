@@ -53,7 +53,8 @@ export function Usage() {
       {tab === 'su' && <SuTab account={account} people={people.data} error={people.error} loading={people.loading}
         period={PERIODS.find(([d]) => d === days)![1]}
         onPerson={(user) => go('jobs', { cluster: cluster.id, user })} />}
-      {tab === 'storage' && <StorageTab storage={storage.data} error={storage.error} />}
+      {tab === 'storage' && <StorageTab storage={storage.data} error={storage.error}
+        onBackup={() => go('backup', { cluster: cluster.id })} />}
       {tab === 'load' && <LoadTab name={cluster.name} parts={load.data} error={load.error} />}
     </div>
   )

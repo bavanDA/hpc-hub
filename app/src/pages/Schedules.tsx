@@ -7,10 +7,11 @@ import { useActiveCluster } from '../components/clusters/active'
 import { NotConnected } from '../components/clusters/NotConnected'
 import { LogDialog } from '../components/schedules/LogDialog'
 import { ScheduleDialog } from '../components/schedules/ScheduleDialog'
-import { ScheduleRow } from '../components/schedules/ScheduleRow'
+import { isBackupCheck, ScheduleRow } from '../components/schedules/ScheduleRow'
 import { useToast } from '../components/toast'
 import { Button, Dialog, EmptyState, IconButton, List, Spinner } from '../components/ui'
 import { useEvent } from '../hooks'
+import { useGo } from '../nav'
 import { call } from '../rpc'
 import type { Session } from '../types'
 import type { ScheduleOptions, ScheduleStatus } from '../types/schedules'
@@ -21,6 +22,7 @@ export function Schedules() {
   const toast = useToast()
   const { cluster: active, session, connected } = useActiveCluster()
   const cluster = active?.id ?? ''
+  const goPage = useGo()
   const [list, setList] = useState<ScheduleStatus[] | null>(null)
   const [options, setOptions] = useState<ScheduleOptions | null>(null)
   const [error, setError] = useState('')
@@ -72,7 +74,7 @@ export function Schedules() {
       <List>
         {list.map((st) => <ScheduleRow key={st.name} st={st} busy={busy === st.name}
           onToggle={(on) => toggle(st, on)} onRun={() => runNow(st)} onLog={() => setOpen({ kind: 'log', st })}
-          onEdit={() => setOpen({ kind: 'edit', st })} onDelete={() => setOpen({ kind: 'delete', st })} />)}
+          onEdit={() => isBackupCheck(st) ? goPage('backup', { cluster }) : setOpen({ kind: 'edit', st })} onDelete={() => setOpen({ kind: 'delete', st })} />)}
       </List>
       <p className="px-1 text-sm text-dim">
         Each schedule is a Slurm job that waits for its time, runs the agent once, then queues the next run. It
