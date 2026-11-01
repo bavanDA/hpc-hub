@@ -10,7 +10,10 @@ function demoAppearance(): Preferences['appearance'] {
   return a === 'light' || a === 'dark' ? a : 'system'
 }
 
-const prefs: Preferences = { browser_profile: 'Uni', experimental: false, select_to_copy: true, monitor_bar: true,
+// ?experimental shows the experimental parts (design work)
+const prefs: Preferences = { browser_profile: 'Uni',
+  experimental: typeof location !== 'undefined' && new URLSearchParams(location.search).has('experimental'),
+  select_to_copy: true, monitor_bar: true,
   appearance: demoAppearance() }
 
 const profiles: Profiles = {

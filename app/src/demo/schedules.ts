@@ -50,6 +50,9 @@ const lists: Record<string, ScheduleStatus[]> = {
       last_log: '/home/jdoe/.hpc-hub/schedules/bugs-solver/logs/2026-10-23-0330.md' }),
     status({ ...base, name: 'jobs-home', agent: 'claude', folder: '~', task: presets[2].task, time: '06:00',
       enabled: false, minutes: 60 }),
+    status({ ...base, name: 'backup-check', agent: 'claude', folder: '/scratch/jdoe', task: '', time: '03:00',
+      days: [1], minutes: 30, runner: 'backup' },
+    { job_id: '812500', state: 'PENDING', start: '2026-11-02T03:00:00', last_run: ago(7 * 24) }),
   ],
   yale: [],
 }

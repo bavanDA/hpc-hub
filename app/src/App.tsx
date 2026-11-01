@@ -70,13 +70,16 @@ function useNarrow() {
 }
 
 export default function App() {
-  // ?page=jobs&tab=… opens a page directly (handy for screenshots of the browser preview)
+  // ?page=jobs&tab=… opens a page directly, with cluster, path and step too (screenshots of the browser preview)
   const search = new URLSearchParams(location.search)
   const startAsked = search.get('page') as Page | null
   const [start, startTab] = startAsked && MOVED[startAsked] ? MOVED[startAsked]!
     : [startAsked && startAsked in TITLES ? startAsked : 'clusters', search.get('tab') ?? '']
   const [page, setPage] = useState<Page>(start as Page)
-  const [params, setParams] = useState<Record<string, string>>(startTab ? { tab: startTab } : {})
+  const [params, setParams] = useState<Record<string, string>>(() => ({
+    ...Object.fromEntries([...search].filter(([k]) => ['cluster', 'path', 'step'].includes(k))),
+    ...(startTab ? { tab: startTab } : {}),
+  }))
   const narrow = useNarrow()
   const [sidebarWanted, setSidebar] = useState(true)
   const [floating, setFloating] = useState(false)  // narrow window: the sidebar shown over the page
