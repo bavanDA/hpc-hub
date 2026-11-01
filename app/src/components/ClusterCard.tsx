@@ -19,7 +19,9 @@ import { useToast } from './toast'
 import { useTools } from './tools/useTools'
 import { Button, Dialog, IconButton, IconTile, Spinner } from './ui'
 
-type Open = null | 'settings' | 'compute' | { switch: { id: string; name: string }; vpnOnly: boolean }
+type Open = null | 'settings' | 'compute' | 'size' | { switch: { id: string; name: string }; vpnOnly: boolean }
+
+const WAITING = 'Requesting compute node'
 
 const AGENTS: [string, string, LucideIcon][] = [['agent:claude', 'Claude', Bot], ['agent:codex', 'ChatGPT', Bot],
   ['agent:agy', 'Antigravity', Bot], ['agent:cursor', 'Cursor', Bot], ['ask', 'Ask all agents', Users]]
@@ -27,7 +29,7 @@ const AGENTS: [string, string, LucideIcon][] = [['agent:claude', 'Claude', Bot],
 function Status({ s, vpnOnly }: { s: Session; vpnOnly: boolean }) {
   const [text, dot, look] = s.state === 'Connected'
     ? [vpnOnly ? 'VPN only' : 'Connected', 'bg-ok', 'text-ok']
-    : s.state === 'Error' ? ['Error', 'bg-bad', 'text-bad']
+    : s.state === 'Error' ? ["Didn't connect", 'bg-bad', 'text-bad']
       : s.state === 'Disconnected' ? ['Not connected', 'bg-dim/50', 'text-dim']
         : [s.state === DUO ? 'Approve Duo' : s.state, 'bg-warn animate-pulse', 'text-warn']
   return (
@@ -91,7 +93,7 @@ export function ClusterCard({ cluster: c, session: s, log }: { cluster: Cluster;
           onClick: () => run('clusters.release_node') }]
       : [{ label: 'Get a node…', icon: Cpu, onClick: () => setOpen('compute') },
           ...(fast ? [{ label: fast, icon: Zap, onClick: () => run('clusters.request_fast_node') }] : [])]) : [],
-    idle && c.vpn.enabled ? [{ label: 'Connect the VPN only', icon: Plug, onClick: () => connect(true) }] : [],
+    idle && c.vpn.enabled ? [{ label: 'Connect VPN only', icon: Plug, onClick: () => connect(true) }] : [],
     s.state === 'Connected' ? [{ label: 'Disconnect', icon: Power, danger: true, onClick: () => run('clusters.disconnect') }]
       : [],
   ]
@@ -120,6 +122,8 @@ export function ClusterCard({ cluster: c, session: s, log }: { cluster: Cluster;
               {s.detail}</span>
           </div>
         )}
+        {s.state === WAITING && <p className="-mt-1 text-sm text-dim">
+          Waiting for a free node. Usually under a minute, longer when the cluster is busy.</p>}
 
         {connected && (
           <>
@@ -146,18 +150,22 @@ export function ClusterCard({ cluster: c, session: s, log }: { cluster: Cluster;
         {(idle || busy || vpnOnly) && (
           <div className="flex items-center gap-3">
             {idle ? (
-              <label className="flex min-w-0 flex-1 cursor-pointer items-center gap-2.5 text-base"
-                title="Ask Slurm for a compute node when you connect">
-                <input type="checkbox" checked={c.request_node_on_connect ?? true}
-                  onChange={(e) => wantNode(e.target.checked)}
-                  className="size-4 shrink-0 accent-[var(--color-accent)]" />
-                <span className="truncate">Get a compute node <span className="text-dim">
-                  · {summary(c.profile)}{c.ask_node ? ', asks first' : ''}</span></span>
-              </label>
+              <div className="flex min-w-0 flex-1 items-center gap-2.5 text-base">
+                <label className="flex min-w-0 cursor-pointer items-center gap-2.5"
+                  title="Ask Slurm for a compute node when you connect">
+                  <input type="checkbox" checked={c.request_node_on_connect ?? true}
+                    onChange={(e) => wantNode(e.target.checked)}
+                    className="size-4 shrink-0 accent-[var(--color-accent)]" />
+                  <span className="truncate">Get a compute node <span className="text-dim">
+                    · {summary(c.profile)}{c.ask_node ? ', asks first' : ''}</span></span>
+                </label>
+                <button type="button" onClick={() => setOpen('size')}
+                  className="shrink-0 font-semibold text-accent-text hover:underline">Change</button>
+              </div>
             ) : <span className="flex-1" />}
             {busy
               ? <Button onClick={() => run('clusters.cancel')} disabled={s.state === 'Disconnecting'}>
-                  {s.state === 'Disconnecting' ? 'Disconnecting…' : 'Cancel'}</Button>
+                  {s.state === 'Disconnecting' ? 'Disconnecting…' : s.state === WAITING ? 'Stop waiting' : 'Cancel'}</Button>
               : vpnOnly
                 ? <Button onClick={() => run('clusters.disconnect')}>Disconnect</Button>
                 : <Button kind="primary" className="min-w-[120px]" onClick={() => connect()}>
@@ -171,6 +179,7 @@ export function ClusterCard({ cluster: c, session: s, log }: { cluster: Cluster;
       {tools.dialog}
       {open === 'settings' && <SettingsDialog cluster={c} hint={hint} onClose={() => setOpen(null)} />}
       {open === 'compute' && <ComputeDialog cluster={c} onClose={() => setOpen(null)} />}
+      {open === 'size' && <ComputeDialog cluster={c} saveOnly onClose={() => setOpen(null)} />}
       {open && typeof open === 'object' && (
         <Dialog title={`Disconnect ${open.switch.name}?`} onClose={() => setOpen(null)} width={420}
           actions={<>
