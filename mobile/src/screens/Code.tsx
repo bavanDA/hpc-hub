@@ -129,10 +129,14 @@ export function Code() {
     }
     vv?.addEventListener('resize', check)
     document.addEventListener('focusin', check)
-    document.addEventListener('focusout', () => setTimeout(check, 50))
+    let later = 0
+    const left = () => { later = window.setTimeout(check, 50) }
+    document.addEventListener('focusout', left)
     return () => {
       vv?.removeEventListener('resize', check)
       document.removeEventListener('focusin', check)
+      document.removeEventListener('focusout', left)
+      clearTimeout(later)
       style.remove()
       delete document.documentElement.dataset.codeKeyboard
     }
