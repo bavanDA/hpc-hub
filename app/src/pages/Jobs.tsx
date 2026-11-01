@@ -10,6 +10,7 @@ import { sortJobs, stateName, usageText } from '../components/jobs/format'
 import { JobTable, type Sort } from '../components/jobs/JobTable'
 import { Select } from '../components/jobs/Select'
 import { Card, EmptyState, SkeletonRows, Spinner } from '../components/ui'
+import { usePageParams } from '../nav'
 import { call } from '../rpc'
 import type { Job, JobList, Scope } from '../types/jobs'
 
@@ -22,10 +23,15 @@ const STATES = [['', 'Any state'], ...['RUNNING', 'PENDING', 'COMPLETED', 'FAILE
   .map((s) => [s, stateName(s)] as const)] as const
 
 export function Jobs() {
-  const { clusters, cluster, session, connected, error: clustersError } = useClusters()
-  const [scope, setScope] = useState<Scope>('mine')
+  const { clusters, cluster, session, connected, setCluster, error: clustersError } = useClusters()
+  const params = usePageParams()  // from Usage: { cluster, user } shows that person's jobs
+  const [scope, setScope] = useState<Scope>(params.user ? 'all' : 'mine')
   const [state, setState] = useState('')
-  const [query, setQuery] = useState('')
+  const [query, setQuery] = useState(params.user ?? '')
+  useEffect(() => {
+    if (params.cluster) setCluster(params.cluster)
+    if (params.user) { setScope('all'); setQuery(params.user) }
+  }, [params.cluster, params.user])  // eslint-disable-line react-hooks/exhaustive-deps
   const [sort, setSort] = useState<Sort>({ key: 'id', desc: true })
   // the last answer, for one cluster and scope: another view shows nothing until its own answer is in
   const [got, setGot] = useState({ key: '', list: null as JobList | null, error: '', updated: '' })

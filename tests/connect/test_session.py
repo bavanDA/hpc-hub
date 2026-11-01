@@ -66,7 +66,8 @@ def test_wrong_password(env):
     server, _ = env
     s, rec = connect(server, "nope")
     assert s.state == State.ERROR
-    assert "Permission denied" in s.detail
+    assert "didn't accept your Username or password" in s.detail  # plain words on the card
+    assert any("Permission denied" in line for line in rec.lines)  # the raw error stays in the log
 
 
 def test_skips_vpn_when_reachable(env, monkeypatch):

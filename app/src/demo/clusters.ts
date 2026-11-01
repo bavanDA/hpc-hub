@@ -109,15 +109,19 @@ function log(id: string, line: string) {
 }
 
 /** Walk a session through states, one step after another. */
+const timers: Record<string, number[]> = {}  // a cluster's pending steps, dropped when new ones start (Cancel)
+
 function steps(id: string, list: Step[]) {
+  for (const t of timers[id] ?? []) clearTimeout(t)
+  timers[id] = []
   let wait = 0
   for (const [ms, change, line] of list) {
     wait += ms
-    setTimeout(() => {
+    timers[id].push(window.setTimeout(() => {
       const s = find(sessions, id)
       Object.assign(s, { detail: '' }, change)
       if (line) log(id, line)
-    }, wait)
+    }, wait))
   }
 }
 
@@ -155,7 +159,13 @@ export const answers: Record<string, unknown> = {
     return null
   },
   'clusters.cancel': ({ cluster }: { cluster: string }) => {
-    steps(cluster, [[300, { state: 'Error', connected: false, detail: 'Cancelled' }, 'Cancelled']])
+    if (find(sessions, cluster).state === 'Requesting compute node') {
+      steps(cluster, [[300, { state: 'Connected', connected: true, detail: 'You stopped waiting for a node.' },
+        'You stopped waiting for a node.']])
+    } else {
+      steps(cluster, [[300, { state: 'Disconnected', connected: false, detail: 'You cancelled the sign-in.' },
+        'You cancelled the sign-in.']])
+    }
     return null
   },
   'clusters.request_node': ({ cluster, profile: p, remember }:

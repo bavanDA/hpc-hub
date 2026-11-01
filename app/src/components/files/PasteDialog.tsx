@@ -23,7 +23,11 @@ export function PasteDialog({ clip, dstName, dstDir, onGo, onClose }:
   useEffect(() => {
     if (!clip.folder) return
     call<CopyPlan>('files.copy_plan', { cluster: clip.cluster, path: clip.path })
-      .then(setPlan).catch((e: Error) => setError(e.message))
+      .then((p) => {
+        setPlan(p)
+        if (p.sizes.reduce((n, s) => n + s.size, 0) > BIG) setHow('globus')  // big: cluster to cluster
+      })
+      .catch((e: Error) => setError(e.message))
   }, [clip])
 
   const total = plan ? plan.sizes.filter((s) => !left.has(s.name)).reduce((n, s) => n + s.size, 0) : 0
@@ -50,7 +54,7 @@ export function PasteDialog({ clip, dstName, dstDir, onGo, onClose }:
           <p className="mb-2 text-sm text-dim">
             {error ? `Could not measure it: ${error}` : !plan ? 'Measuring sizes…'
               : `${size(total)} will be copied. Untick what to leave behind.`}
-            {total > BIG && how === 'laptop' && ' That is big: Globus copies it cluster to cluster, much faster.'}
+            {total > BIG && how === 'laptop' && ' That is big. Globus copies it cluster to cluster, much faster.'}
           </p>
           <div className="mb-4 max-h-[280px] divide-y divide-line overflow-auto rounded-xl bg-card
             shadow-[var(--shadow-card)]">
@@ -70,8 +74,8 @@ export function PasteDialog({ clip, dstName, dstDir, onGo, onClose }:
 
       <h3 className="mb-2 font-semibold">How</h3>
       <div className="grid grid-cols-2 gap-2">
-        {([['laptop', Laptop, 'Through this laptop', 'Streams it, no setup'],
-          ['globus', Globe, 'Globus', 'Cluster to cluster, only what changed']] as const).map(([k, Icon, t, sub]) => (
+        {([['laptop', Laptop, 'Through this laptop', 'Keep HPC Hub open and this computer awake until done'],
+          ['globus', Globe, 'Globus', 'Cluster to cluster, keeps going with the app closed']] as const).map(([k, Icon, t, sub]) => (
           <button key={k} onClick={() => setHow(k)}
             className={`flex items-start gap-3 rounded-xl p-3 text-left ring-1 ${
               how === k ? 'bg-accent/15 ring-2 ring-accent' : 'ring-line hover:bg-hover'}`}>

@@ -89,7 +89,7 @@ function SessionRow({ cluster, s, nodes, open, selected, onRefresh }: {
   onRefresh: () => void
 }) {
   const toast = useToast()
-  let state = open ? 'open' : s.attached ? 'open elsewhere' : 'running'
+  let state = open ? 'open' : s.attached ? 'open in another window' : 'running'
   let node = s.node
   if (!node && s.job && nodes) {
     node = nodes[s.job] ?? 'node ended'

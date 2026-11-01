@@ -10,9 +10,8 @@ import { call } from '../../rpc'
 import { secondStep, type AgentId, type AgentSettings, type Cluster, type Limits, type Logins, type Profile,
   type SettingsInfo, type VsCode } from '../../types/clusters'
 import { openSystem } from '../app/openLink'
-import { keyStore } from '../app/platform'
 import { useToast } from '../toast'
-import { Button, Dialog, List } from '../ui'
+import { AlertDialog, Button, Dialog, List } from '../ui'
 import { Duration } from './ComputeDialog'
 import { ActionRow, ComboRow, EntryRow, Group, NumberBox, SpinRow, SwitchRow } from './fields'
 import { KeyPanel, keyHeading, PasswordInstead } from './KeyPanel'
@@ -165,11 +164,18 @@ export function SettingsDialog({ cluster, hint, onClose, start = 'login', advanc
     }
   }
 
+  const [forgetting, setForgetting] = useState(false)
   async function forget() {
+    setForgetting(false)
     try {
-      await call('clusters.forget_logins', { cluster: d.id })
-      setSaved({ ssh: { username: '', password: false }, vpn: { username: '', password: false } })
-      setUser(''); setPassword(''); setVpnUser(''); setVpnPassword('')
+      const keep = !d.key_page  // a key cluster has no password: forgetting means the username
+      await call('clusters.forget_logins', { cluster: d.id, keep_username: keep })
+      if (keep) setSaved((s) => s && { ssh: { ...s.ssh, password: false }, vpn: { ...s.vpn, password: false } })
+      else {
+        setSaved({ ssh: { username: '', password: false }, vpn: { username: '', password: false } })
+        setUser(''); setVpnUser('')
+      }
+      setPassword(''); setVpnPassword('')
       toast('Saved password removed')
     } catch (e) {
       toast((e as Error).message)
@@ -185,11 +191,11 @@ export function SettingsDialog({ cluster, hint, onClose, start = 'login', advanc
 
   const instead = d.key_page && d.password_too
     ? <div className="-mt-2 mb-5 flex"><PasswordInstead on={usePassword} onChange={setUsePassword} /></div> : null
-  // the one destructive thing here: a row of its own at the bottom, with a soft red button
+  // the one destructive thing here: a row of its own at the bottom, with a soft red button that asks first
   const forgetRow = (what: string) => (
     <Group>
       <ActionRow label={`Forget ${what}`}>
-        <Button kind="danger" size="sm" type="button" onClick={forget}>Forget</Button>
+        <Button kind="danger" size="sm" type="button" onClick={() => setForgetting(true)}>Forget</Button>
       </ActionRow>
     </Group>
   )
@@ -209,7 +215,7 @@ export function SettingsDialog({ cluster, hint, onClose, start = 'login', advanc
         sub={remember ? undefined : copy.rememberOff} />
     </List>
     <div className="mb-5 mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 px-1 text-sm text-dim">
-      {remember && <span className="flex items-center gap-1.5"><Lock size={14} />{copy.savedIn(keyStore)}</span>}
+      {remember && <span className="flex items-center gap-1.5"><Lock size={14} />{copy.passwordNote(d)}</span>}
       <span>{secondStep(d)}</span>
       {code && d.code_setup && <button type="button" onClick={() => openSystem(d.code_setup!)}
         className="inline-flex items-center gap-1 font-semibold text-accent-text hover:underline">
@@ -372,6 +378,11 @@ export function SettingsDialog({ cluster, hint, onClose, start = 'login', advanc
         </div>
       </Dialog>
       {open === 'key' && <KeySetupDialog cluster={d} onClose={() => setOpen(null)} onDone={keyDone} />}
+      {forgetting && <AlertDialog title={d.key_page ? `Forget your ${d.username_label || 'username'}?`
+        : copy.forgetTitle(d)} keep={copy.keep} act={d.key_page ? 'Forget' : copy.forget}
+        onAct={forget} onClose={() => setForgetting(false)}>
+        {d.key_page ? "You'll type it next time you connect. Your key stays on this computer."
+          : copy.forgetBody(d.username_label || 'username')}</AlertDialog>}
     </>
   )
 }

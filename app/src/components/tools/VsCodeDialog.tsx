@@ -30,7 +30,6 @@ export function VsCodeDialog({ setup, found, folder: start = '', target: wanted,
       remember_folder: !start }, v.open_links, go)
   }
 
-  const stopNote = 'Off: stop it and start one with the settings below'
   return (
     <Dialog title={`VS Code on ${setup.name}`} onClose={onClose} width={600}
       actions={<>
@@ -38,8 +37,10 @@ export function VsCodeDialog({ setup, found, folder: start = '', target: wanted,
         <Button kind="suggested" onClick={open}>Open</Button>
       </>}>
       <Group title="VS Code">
-        {job && <SwitchRow label={`Use the running VS Code job (${job.node || 'waiting in the queue'})`}
-          sub={job.resources ? `${job.resources}. ${stopNote}` : stopNote} checked={keep} onChange={setKeep} />}
+        {job && <SelectRow label={job.node ? `VS Code is already running on node ${job.node}`
+          : 'A VS Code job is waiting in the queue'} sub={job.resources || undefined}
+          value={keep ? 'keep' : 'new'} choices={[['keep', 'Use it'], ['new', 'Start a new one']]}
+          onChange={(v) => setKeep(v === 'keep')} />}
         <FolderRow cluster={setup} value={folder} onChange={setFolder} />
         <SelectRow label="Open in" value={target} choices={TARGETS} onChange={(t) => setTarget(t as Target)} />
       </Group>

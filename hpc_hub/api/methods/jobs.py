@@ -17,6 +17,18 @@ USAGE_SECONDS = 300  # account totals change slowly
 _usage: dict[str, tuple[float, list[dict]]] = {}  # cluster -> (when, accounts)
 
 
+def exit_text(code: str) -> str:
+    """Slurm's "1:0" (exit code:signal) in words."""
+    if not code:
+        return ""
+    main, _, signal = code.partition(":")
+    if signal not in ("", "0"):
+        return f"Stopped by signal {signal}"
+    if main == "0":
+        return "0, finished without errors"
+    return f"{main}, the program reported an error"
+
+
 def su_text(j: JobInfo) -> str:
     """SU = core hours charged. Free QoS (usage factor 0) costs nothing."""
     if j.factor == 0:
@@ -92,7 +104,7 @@ def detail_groups(d: dict[str, str]) -> list[dict]:
             ("Started", when("StartTime", "Start")),
             ("Ends" if active else "Ended", when("EndTime", "End")),
             ("Submitted", when("SubmitTime", "Submit")),
-            ("Exit code", "" if active else get("ExitCode")),
+            ("Exit code", "" if active else exit_text(get("ExitCode"))),
         ]),
         ("Resources", [
             ("Node", get("NodeList")),

@@ -82,5 +82,5 @@ def test_wrong_password_stops_asking(cluster):
     s = ClusterSession(cfg, askpass, rec)
     s.connect(Login("u", "nope"), None)
     assert rec.done.wait(30)
-    assert s.state == State.ERROR and "Permission denied" in s.detail
+    assert s.state == State.ERROR and "didn't accept" in s.detail
     assert any("password asked again" in line for line in rec.lines)  # the session's lockout guard

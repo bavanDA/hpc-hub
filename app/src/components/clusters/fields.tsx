@@ -1,6 +1,6 @@
 // Form rows for the cluster dialogs, shaped like Adwaita's preference rows (entry, spin, switch).
 import { Eye, EyeOff, Minus, Plus } from 'lucide-react'
-import { useState, type ReactNode } from 'react'
+import { useId, useState, type ReactNode } from 'react'
 
 import { List, Switch } from '../ui'
 
@@ -29,10 +29,11 @@ function RowBox({ label, sub, children }: { label: ReactNode; sub?: ReactNode; c
 
 /** A text field with its title above the text, like Adw.EntryRow. */
 export function EntryRow({ label, value, onChange, placeholder, password, list, autoFocus }:
-  { label: string; value: string; onChange: (v: string) => void; placeholder?: string; password?: boolean;
+  { label: ReactNode; value: string; onChange: (v: string) => void; placeholder?: string; password?: boolean;
     list?: string[]; autoFocus?: boolean }) {
   const [shown, setShown] = useState(false)
-  const id = list ? `list-${label.replace(/\W/g, '')}` : undefined
+  const listId = useId()
+  const id = list ? listId : undefined
   return (
     <label className="flex min-h-[56px] items-center gap-2 px-4 py-1.5
       focus-within:shadow-[inset_3px_0_0_var(--color-accent)]">

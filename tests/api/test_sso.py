@@ -87,23 +87,15 @@ def no_secret_in(events):
     assert SECRET not in json.dumps(events, default=str)
 
 
-def test_pick_browser_offers_the_app_window_and_the_chrome_window(hub, monkeypatch):
-    monkeypatch.setattr(browser, "chrome", lambda: "")
-    assert hub.pick_browser(wulver()) == ""  # no Chrome: the app's window, nothing asked
-    assert hub.events == []
-
-    monkeypatch.setattr(browser, "chrome", lambda: "/usr/bin/google-chrome")
+def test_pick_browser_uses_the_saved_choice_and_never_asks(hub, monkeypatch):
     s = wulver()
+    monkeypatch.setattr(browser, "chrome", lambda: "/usr/bin/google-chrome")
+    assert hub.pick_browser(s) == ""  # nothing saved: the app's window
     s.cfg.vpn.browser = chrome_window.CHOICE
-    for answer, want in ((chrome_window.CHOICE, chrome_window.CHOICE), ("", ""), (None, None), ("Uni", None)):
-        t, out = run(hub.pick_browser, s)
-        q = next_question(hub)
-        assert q["kind"] == "pick-browser" and q["default"] == chrome_window.CHOICE
-        assert q["chrome_window"] == chrome_window.CHOICE and "profiles" not in q  # never your own Chrome
-        hub.answer(q["id"], answer)
-        t.join(5)
-        assert out["result"] == want
-        hub.events.clear()
+    assert hub.pick_browser(s) == chrome_window.CHOICE
+    monkeypatch.setattr(browser, "chrome", lambda: "")
+    assert hub.pick_browser(s) == ""  # Chrome gone: the app's window
+    assert hub.events == []  # never a question while connecting
 
 
 @pytest.fixture

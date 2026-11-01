@@ -15,11 +15,17 @@ FIRST = "Finish signing in to {short} first."
 SIGN_IN = "Sign in to {name}"
 USERNAME_HINT = "e.g. ab123"
 PASSWORD = "Password"
-SAVED = "Saved"  # the password field's placeholder when one is saved
+SAVED = "Saved (type to replace)"  # the password field's placeholder when one is saved
 REMEMBER = "Remember password"
 REMEMBER_OFF = "You'll type it each time you open HPC Hub."  # under the switch, only while it's off
 SAVED_IN = "Saved in {store}."
 SKIP = "Do this later"
+USED_ON_CONNECT = "HPC Hub uses this when you click Connect."  # first start: saving isn't signing in yet
+PASSWORD_NOTE = "Kept in this computer's password store. Changing it here doesn't change your {who} password."
+FORGET_TITLE = "Forget the saved {short} password?"
+FORGET_BODY = "You'll type it next time you connect. Your {label} stays."
+FORGET = "Forget password"
+KEEP = "Keep it"
 CONTINUE = "Continue"
 
 # the second step, decided by the cluster's admins (ClusterConfig.second_step)
@@ -27,10 +33,13 @@ SECOND_DUO = "Uses Duo"
 SECOND_CODE = "You'll need a code from your authenticator app."
 CODE_SETUP = "Set up your authenticator app"
 DUO_NOW = "Check your phone for a Duo push."
+DUO_LATE = "No answer from Duo yet. Pushes expire after about a minute."
+NEW_PUSH = "Send a new push"
 
 # a cluster with a web portal that adds your key (SDSC)
 PORTAL = "Sign in with the {short} portal"
 OR_PASSWORD = "Or use your username and password:"
+PORTAL_NOTE = "Recommended. No password is stored."
 
 # a cluster you sign in to with a key you paste on its key page (Yale)
 KEY_INTRO = "{who} uses an SSH key instead of a password."
@@ -55,6 +64,7 @@ PASTED = "Pasted"
 STEP_TEST = "Try it"
 TRY = "Try it"
 TRY_AGAIN = "Try again"
+CONNECT_VPN = "Connect {who} VPN"
 SIGNED_IN_AS = "Signed in as {user}"
 CHANGE = "Change"
 USE_PASSWORD = "Use a password instead"

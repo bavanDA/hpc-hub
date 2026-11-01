@@ -3,28 +3,33 @@ import { ChevronDown, ChevronRight } from 'lucide-react'
 import { useState } from 'react'
 
 import type { Account, People } from '../../types/usage'
+import { Term } from '../Term'
 import { Card, List, Pill, Row, Spinner } from '../ui'
 import { n, pct } from './format'
 import { Bar, Section } from './parts'
 
 function Summary({ a }: { a: Account | null }) {
   if (!a) return <Card className="p-4 text-dim">No Slurm account found.</Card>
-  const cost = a.rate ? ` · about $${n(a.used * a.rate)} at $${a.rate} per SU` : ''
+  const cost = a.rate ? ` About $${n(a.used * a.rate)} at $${a.rate} per SU.` : ''
+  const span = a.period ? ` in ${a.period}` : ''
   return (
     <Card className="flex flex-col gap-3 p-4">
-      <p>
-        <b>{a.account}</b>: {a.quota
-          ? `${n(a.used)} of ${n(a.quota)} SU used (${pct(a.used, a.quota)}) · ${n(a.quota - a.used)} left · ` +
-            `yours ${n(a.mine)}`
-          : `${n(a.used)} SU used${a.period ? ` in ${a.period}` : ''}, no limit${cost} · yours ${n(a.mine)}`}
+      {a.quota > 0
+        ? <p className="text-2xl font-bold tabular-nums">{n(Math.max(0, a.quota - a.used))} <Term name="su">SU</Term> left</p>
+        : <p className="text-2xl font-bold tabular-nums">{n(a.used)} <Term name="su">SU</Term> used{span}</p>}
+      <p className="text-dim">
+        {a.quota > 0
+          ? `${a.account} used ${n(a.used)} of ${n(a.quota)} (${pct(a.used, a.quota)})${span}. You used ${n(a.mine)} of it.`
+          : `${a.account} has no SU limit${span}. You used ${n(a.mine)}.${cost}`}
       </p>
       {a.quota > 0 && <Bar value={a.used / a.quota} mine={a.mine / a.quota} className="w-full" />}
     </Card>
   )
 }
 
-export function SuTab({ account, people, error, loading, period }: {
+export function SuTab({ account, people, error, loading, period, onPerson }: {
   account: Account | null; people: People | null; error: string; loading: boolean; period: string
+  onPerson?: (user: string) => void
 }) {
   const [idleOpen, setIdleOpen] = useState(false)
   const all = people?.people ?? []
@@ -33,18 +38,18 @@ export function SuTab({ account, people, error, loading, period }: {
   const total = all.reduce((s, p) => s + p.charged, 0)
   const hours = all.reduce((s, p) => s + p.hours, 0)
   const note = error ? `Could not load: ${error}` : !people ? `${period}. Loading…`
-    : `${period}: ${n(total)} SU across ${n(hours)} core hours (free QoS included).`
+    : `${n(total)} SU across ${n(hours)} core hours, free queues included. Click a person to see their jobs.`
 
   return (
     <>
       <Section title="Account"><Summary a={account} /></Section>
       {account && (
-        <Section title="Who used it" note={<span className="inline-flex items-center gap-2">
+        <Section title={`Who used it, ${period.toLowerCase()}`} note={<span className="inline-flex items-center gap-2">
           {loading && people && <Spinner size={14} />}{note}</span>}>
           {people && (
             <List>
               {active.map((p) => (
-                <Row key={p.user}
+                <Row key={p.user} onClick={onPerson ? () => onPerson(p.user) : undefined}
                   title={<span className="flex items-center gap-2">{p.name || p.user}
                     {p.user === people.me && <Pill kind="ok">you</Pill>}</span>}
                   subtitle={`${p.user} · ${n(p.hours)} core hours`}

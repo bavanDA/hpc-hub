@@ -42,7 +42,7 @@ export function PreferencesDialog({ onClose, onExperimental }:
   return (
     <Dialog title="Settings" onClose={onClose} width={560}>
       {!prefs || !found ? <div className="grid h-40 place-items-center"><Spinner size={24} /></div> : <>
-        <Group title="Links" description="Every link asks which browser opens it. This one is picked for you.">
+        <Group title="Links" description="Links open in this browser. You can pick another each time.">
           <ActionRow label={<span className="whitespace-nowrap">Default for links</span>}>
             <Select label="Default for links" value={current} options={options}
               onChange={(v) => save({ browser_profile: v })} disabled={!profiles.length} />

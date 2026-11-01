@@ -16,6 +16,7 @@ from ..core.paths import log_dir
 from ..core.ssh import SshError, SshMaster, new_master
 from . import chrome_window, prompts, vpn_helper, vpn_sso
 from .askpass_server import AskpassServer
+from .messages import CANCELLED, plain
 from .network import link_works, network_name, reachable, route_device
 from .nodes import NodesMixin
 from .state import State
@@ -32,7 +33,7 @@ class Listener(Protocol):
     def code(self, session: "ClusterSession", prompt: str) -> str | None: ...
     def web_login(self, session: "ClusterSession", start: vpn_sso.SsoStart, login: Login,
                   profile: str = "", title: str = "", note: str = "") -> tuple[str, str]: ...  # profile: "" or CHOICE
-    def pick_browser(self, session: "ClusterSession") -> str | None: ...  # "" = app window, see vpn.browser
+    def pick_browser(self, session: "ClusterSession") -> str: ...  # "" = app window, see vpn.browser
     def confirm(self, session: "ClusterSession", title: str, text: str) -> bool: ...  # yes or no
 
 
@@ -226,12 +227,12 @@ class ClusterSession(NodesMixin):
                 return
             self._set(State.SIGNING_IN, f"{ssh_login.username}@{self.cfg.host}")
             if not self.cfg.host:
-                raise SshError("Login host is empty. Set it in Settings → Server & VPN.")
+                raise SshError("The login address is empty. Set it in this cluster's Settings, under Advanced.")
             self.ssh = new_master(self.cfg, ssh_login.username, self.askpass.env(token), self._log, ask=on_prompt)
             self.ssh.start(cancelled=self._cancel.is_set)
             self._log("SSH session ready")
         except (VpnError, SshError, OSError) as e:
-            self._fail(self._no_code_hint(str(e), asked))
+            self._fail(plain(self._no_code_hint(str(e), asked), self.cfg))
             return
         finally:
             self.askpass.unregister(token)
@@ -298,8 +299,6 @@ class ClusterSession(NodesMixin):
                 raise VpnError("VPN server did not offer web sign-in")
             self._log("vpn: web sign-in")
             profile = self.listener.pick_browser(self)
-            if profile is None:
-                raise VpnError("Sign-in cancelled")
             if profile == chrome_window.CHOICE:
                 self._set(State.DUO, "Sign in in the Chrome window, then approve Duo on your phone")
             else:
@@ -321,7 +320,8 @@ class ClusterSession(NodesMixin):
             self.ssh.stop()
             self.ssh = None
         if self._cancel.is_set():
-            self._set(State.DISCONNECTED)
+            self._log(CANCELLED)
+            self._set(State.DISCONNECTED, CANCELLED)
         else:
             self._set(State.ERROR, message)
 

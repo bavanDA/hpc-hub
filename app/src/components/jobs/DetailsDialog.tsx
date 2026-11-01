@@ -1,7 +1,8 @@
 // Job details: the fields people look at, grouped, and all of them behind "All fields".
-import { ChevronDown, ChevronRight, Copy } from 'lucide-react'
+import { ChevronDown, ChevronRight, Copy, FileText } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
+import { useGo } from '../../nav'
 import { call } from '../../rpc'
 import type { DetailGroup, Job, JobDetails } from '../../types/jobs'
 import { useToast } from '../toast'
@@ -10,6 +11,7 @@ import { Button, Dialog, IconButton, List, Row, Spinner } from '../ui'
 export function DetailsDialog({ cluster, job: j, onClose, onCancel }:
   { cluster: string; job: Job; onClose: () => void; onCancel: () => void }) {
   const toast = useToast()
+  const go = useGo()
   const [details, setDetails] = useState<JobDetails | null>(null)
   const [error, setError] = useState('')
   const [all, setAll] = useState(false)
@@ -22,6 +24,12 @@ export function DetailsDialog({ cluster, job: j, onClose, onCancel }:
   const groups: DetailGroup[] = (details?.groups ?? []).map((g) => g.title === 'Resources' && j.su
     ? { ...g, rows: [...g.rows, { label: 'SU', value: j.su }] } : g)
   const copy = (v: string) => navigator.clipboard.writeText(v).then(() => toast('Path copied'), () => {})
+  // the output file in Files: its folder, with the file picked
+  const view = (path: string) => {
+    onClose()
+    const cut = path.lastIndexOf('/')
+    go('files', { cluster, path: cut > 0 ? path.slice(0, cut) : '/', select: path.slice(cut + 1) })
+  }
 
   return (
     <Dialog title={`Job ${j.job_id} · ${j.name}`} onClose={onClose} width={600}
@@ -38,7 +46,11 @@ export function DetailsDialog({ cluster, job: j, onClose, onCancel }:
                 ? <Row key={r.label} title={<span className="text-sm text-dim">{r.label}</span>}
                     subtitle={<span className="font-mono text-sm text-text select-text" title={r.value}>
                       {r.value}</span>}
-                    suffix={<IconButton icon={Copy} label="Copy path" size={16} onClick={() => copy(r.value)} />} />
+                    suffix={<>
+                      {r.label !== 'Work folder' && <Button kind="secondary" size="sm" onClick={() => view(r.value)}>
+                        <FileText size={14} /> View {r.label === 'Errors' ? 'errors' : 'output'}</Button>}
+                      <IconButton icon={Copy} label="Copy path" size={16} onClick={() => copy(r.value)} />
+                    </>} />
                 : <div key={r.label} className="flex min-h-11 items-center gap-4 px-4 py-2">
                     <span className="flex-1">{r.label}</span>
                     <span className="text-right text-dim select-text">{r.value}</span>
