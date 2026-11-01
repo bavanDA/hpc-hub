@@ -23,6 +23,7 @@ import { setAppearance } from './theme'
 
 // Pages load the first time you open them, so the app starts fast (Clusters is the first screen)
 const Agents = lazy(() => import('./pages/Agents').then((m) => ({ default: m.Agents })))
+const Code = lazy(() => import('./pages/Code').then((m) => ({ default: m.Code })))
 const FilesPage = lazy(() => import('./pages/FilesPage').then((m) => ({ default: m.FilesPage })))
 const Jobs = lazy(() => import('./pages/Jobs').then((m) => ({ default: m.Jobs })))
 const Latex = lazy(() => import('./pages/Latex').then((m) => ({ default: m.Latex })))
@@ -41,8 +42,8 @@ const MOVED: Partial<Record<Page, [Page, string]>> = {
 }
 
 const PAGES: Partial<Record<Page, ComponentType>> = {
-  clusters: Clusters, projects: Projects, terminals: Terminals, jobs: Jobs, usage: Usage, files: FilesPage,
-  latex: Latex,
+  clusters: Clusters, projects: Projects, terminals: Terminals, code: Code, jobs: Jobs, usage: Usage,
+  files: FilesPage, latex: Latex,
 }
 
 /** Pages that show one cluster at a time get the cluster picker in the header (per tab where they have tabs). */
