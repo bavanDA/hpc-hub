@@ -9,7 +9,7 @@ const DETAIL = `${ITEM} @max-[620px]:hidden`
 
 export function StatusLine({ file, clusterName, look }: { file: OpenFile; clusterName: string; look: Look }) {
   const dirty = isDirty(file)
-  const state = file.loading ? 'Opening' : !file.writable ? (file.readonlyReason || 'Read-only')
+  const state = file.loading ? 'Opening' : file.error ? '' : !file.writable ? (file.readonlyReason || 'Read-only')
     : dirty ? 'Not saved' : 'Saved'
   return (
     <div className="@container shrink-0 border-t border-line bg-window">
