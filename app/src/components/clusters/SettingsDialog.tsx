@@ -5,8 +5,9 @@ import { CircleHelp, KeyRound } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
 import { call } from '../../rpc'
-import type { AgentId, AgentSettings, Cluster, Limits, Logins, Profile, SettingsInfo, VsCode } from
-  '../../types/clusters'
+import { secondStep, type AgentId, type AgentSettings, type Cluster, type Limits, type Logins, type Profile,
+  type SettingsInfo, type VsCode } from '../../types/clusters'
+import { keyStore } from '../app/platform'
 import { useToast } from '../toast'
 import { Button, Dialog } from '../ui'
 import { AuthenticatorHelp } from './AuthenticatorHelp'
@@ -21,7 +22,6 @@ const TABS = [['login', 'Login'], ['server', 'Server & VPN'], ['compute', 'Compu
   ['agents', 'Agents']] as const
 export type Tab = typeof TABS[number][0]
 
-const FACTORS: [string, string][] = [['duo', 'Duo push on your phone'], ['code', 'Code from an authenticator app']]
 const TARGETS: [string, string][] = [['desktop', 'VS Code app'], ['browser', 'Browser (vscode.dev)']]
 const PROFILE_KEYS = ['cpus', 'mem_gb', 'time', 'partition', 'account', 'qos', 'gpus', 'extra_args'] as const
 const VPN_KEYS = ['enabled', 'gateway', 'protocol', 'useragent', 'authgroup', 'same_login_as_ssh', 'split_tunnel',
@@ -105,8 +105,8 @@ export function SettingsDialog({ cluster, hint, onClose, start = 'login' }:
 
   function changes() {
     const out: Record<string, unknown> = {
-      host: d.host, port: d.port, second_factor: d.second_factor, duo_answer: d.duo_answer,
-      request_node_on_connect: d.request_node_on_connect, reuse_running_job: d.reuse_running_job,
+      host: d.host, port: d.port,
+      request_node_on_connect: d.request_node_on_connect, ask_node: d.ask_node, reuse_running_job: d.reuse_running_job,
       queues: d.queues, queue_wait: d.queue_wait, vpn: pick(d.vpn, VPN_KEYS), profile: pick(d.profile, PROFILE_KEYS),
     }
     if (d.vscode) {
@@ -159,23 +159,16 @@ export function SettingsDialog({ cluster, hint, onClose, start = 'login' }:
   }
 
   const login = <>
-    <Group title="Cluster login"
-      description="Stored only in your system keyring. Leave the password empty if you log in with an SSH key.">
+    <Group title="Cluster login" description={`Saved encrypted in ${keyStore}, never in plain text.`}>
       <EntryRow label="Username" value={user} onChange={setUser} autoFocus placeholder="jdoe" />
       <EntryRow label={!remember ? 'Password (optional: asked when you connect)'
         : saved?.ssh.password ? 'Password (saved, leave empty to keep)' : 'Password'}
         value={password} onChange={setPassword} password />
       <SwitchRow label="Remember my password" checked={remember} onChange={setRemember}
-        sub={remember ? 'Kept in your system keyring, so connecting needs only Duo'
-          : 'Not saved anywhere. HPC Hub asks once after it starts and forgets it when you quit'} />
-      <ComboRow label="Second step" value={d.second_factor ?? 'duo'} options={FACTORS}
-        sub={code ? 'The app asks you for the code each time you log in' : undefined}
-        onChange={(x) => up({ second_factor: x as Cluster['second_factor'] })} />
-      {code
-        ? <ButtonRow label="How to set up Google Authenticator" icon={<CircleHelp size={16} />}
-            onClick={() => setOpen('help')} />
-        : <EntryRow label="Duo answer (push, push2, phone, 1)" value={d.duo_answer ?? 'push'}
-            onChange={(duo_answer) => up({ duo_answer })} />}
+        sub={remember ? undefined : 'Not saved. HPC Hub asks once after it starts and forgets it when you quit'} />
+      <ActionRow label={secondStep(d)} sub="Set by the cluster's admins">{null}</ActionRow>
+      {code && <ButtonRow label="How to set up Google Authenticator" icon={<CircleHelp size={16} />}
+        onClick={() => setOpen('help')} />}
     </Group>
     {d.portal && (
       <Group title="Web portal"
@@ -237,6 +230,10 @@ export function SettingsDialog({ cluster, hint, onClose, start = 'login' }:
     <Group title="Compute node" description="Requested with salloc after you connect. Agents run here.">
       <SwitchRow label="Request node on connect" checked={d.request_node_on_connect ?? true}
         onChange={(request_node_on_connect) => up({ request_node_on_connect })} />
+      {(d.request_node_on_connect ?? true) && (
+        <SwitchRow label="Ask every time" sub="Show the node's settings before each request"
+          checked={d.ask_node ?? false} onChange={(ask_node) => up({ ask_node })} />
+      )}
       <SwitchRow label="Use my running job" checked={d.reuse_running_job ?? false}
         sub="If you already have a node (for an agent, say), use it instead of a new one"
         onChange={(reuse_running_job) => up({ reuse_running_job })} />
