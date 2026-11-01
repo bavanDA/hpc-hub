@@ -180,10 +180,11 @@ class SessionListMixin:
         box = Gtk.Box(spacing=8, margin_top=4, margin_bottom=4)
         box.append(color_dot(t.color or tmux.AGENT_COLORS.get(t.agent, "")))
         text = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, hexpand=True)
-        text.append(Gtk.Label(label=t.title, xalign=0, ellipsize=Pango.EllipsizeMode.END))
         here = self.current is not None and self.current.key == (s.cfg.id, t.name)
-        state = "open" if here else "in use elsewhere" if t.attached else "running"
+        state = "open" if here else "open elsewhere" if t.attached else "running"
         what = AGENT_NAMES.get(t.agent, "screen" if t.kind == "screen" else t.command or "tmux")
+        title = t.title.removeprefix(f"{what} · ")  # the line below says which agent
+        text.append(Gtk.Label(label=title, xalign=0, ellipsize=Pango.EllipsizeMode.END))
         if t.node:
             node = t.node
         elif t.job and nodes is not None:

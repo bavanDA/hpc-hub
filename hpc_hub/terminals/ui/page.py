@@ -130,9 +130,7 @@ class TerminalsPage(SessionListMixin, SessionMenuMixin, Gtk.Box):
         self.list = Gtk.ListBox(css_classes=["navigation-sidebar"], selection_mode=Gtk.SelectionMode.SINGLE)
         self.list.connect("row-activated", lambda _l, row: getattr(row, "open", None) and row.open())
         box.append(Gtk.ScrolledWindow(child=self.list, vexpand=True, hscrollbar_policy=Gtk.PolicyType.NEVER))
-        box.append(Gtk.Label(label="Switching or closing only detaches. Sessions keep running on the cluster.\n"
-                                   "Highlight text to copy it. Paste: Ctrl+Shift+V or right click. "
-                                   "Click a link to open it.",
+        box.append(Gtk.Label(label="Sessions keep running when you close a tab.",
                              wrap=True, xalign=0, css_classes=["dim-label", "caption"], margin_start=10,
                              margin_end=10, margin_bottom=10))
         return box

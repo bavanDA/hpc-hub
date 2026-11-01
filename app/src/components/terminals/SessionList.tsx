@@ -44,7 +44,7 @@ export function SessionList({ live, listings, tabs, current, onRefresh, onNew }:
         ))}
       </div>
       <p className="px-4 pb-3 text-[13px] text-dim">
-        Closing a tab only detaches. Sessions keep running on the cluster. Paste: Ctrl+Shift+V or right click.
+        Sessions keep running when you close a tab.
       </p>
     </div>
   )
@@ -88,7 +88,7 @@ function SessionRow({ cluster, s, nodes, open, selected, onRefresh }: {
   onRefresh: () => void
 }) {
   const toast = useToast()
-  let state = open ? 'open' : s.attached ? 'in use elsewhere' : 'running'
+  let state = open ? 'open' : s.attached ? 'open elsewhere' : 'running'
   let node = s.node
   if (!node && s.job && nodes) {
     node = nodes[s.job] ?? 'node ended'
@@ -107,7 +107,7 @@ function SessionRow({ cluster, s, nodes, open, selected, onRefresh }: {
       className={`flex items-center gap-2.5 rounded-md py-1.5 pr-1 pl-3 ${selected ? 'bg-selected' : 'hover:bg-hover'}`}>
       <Dot color={s.color} />
       <div className="min-w-0 flex-1">
-        <div className="truncate">{s.title}</div>
+        <div className="truncate">{s.title.startsWith(`${what} · `) ? s.title.slice(what.length + 3) : s.title}</div>
         <div className="truncate text-[13px] text-dim">{bits.join(' · ')}</div>
       </div>
       {(code || s.remote.startsWith('http')) && (
