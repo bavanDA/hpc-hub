@@ -350,6 +350,10 @@ class AppSettings:
     clusters: str = ""  # ids of the clusters you use, comma separated; empty = all of them
     select_to_copy: bool = True  # highlighting text in a terminal copies it
     monitor_bar: bool = True  # CPU, memory and network of the host under each terminal
+    appearance: str = "system"  # system (follows the computer), light or dark
+
+
+APPEARANCES = ("system", "light", "dark")
 
 
 def load_app(path: Path = APP_FILE) -> AppSettings:
@@ -357,6 +361,8 @@ def load_app(path: Path = APP_FILE) -> AppSettings:
     if path.exists():
         with open(path, "rb") as fh:
             _merge(app, tomllib.load(fh).get("app", {}))
+    if app.appearance not in APPEARANCES:
+        app.appearance = "system"
     return app
 
 
