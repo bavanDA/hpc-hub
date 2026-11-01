@@ -1,8 +1,10 @@
-// The job table: sortable columns, state in color, a Cancel button on your own running or waiting jobs.
-import { ChevronDown, ChevronUp, X } from 'lucide-react'
+// The job table: sortable columns, the state as a pill, and a ⋮ menu (details, cancel) on your own running or
+// waiting jobs. Cancelling always asks first (CancelDialog).
+import { ChevronDown, ChevronUp, MoreVertical } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
 
 import type { Job } from '../../types/jobs'
-import { STATE_COLOR, queue, type SortKey } from './format'
+import { STATE_PILL, queue, stateName, type SortKey } from './format'
 
 const COLUMNS: [SortKey, string][] = [
   ['id', 'ID'], ['name', 'Name'], ['queue', 'Partition · QoS'], ['state', 'State'],
@@ -49,8 +51,9 @@ export function JobTable({ jobs, showUser, sort, onSort, onOpen, onCancel }: {
             </td>
             <td className="px-2 leading-tight whitespace-nowrap" title={queue(j)}>{j.partition}
               {j.qos && <div className="text-[12px] text-dim">{j.qos}</div>}</td>
-            <td className={`max-w-28 px-2 leading-tight font-bold ${STATE_COLOR[j.state] ?? ''}`}>
-              {j.state.replaceAll('_', ' ')}</td>
+            <td className="px-2">
+              <span className={`inline-block whitespace-nowrap rounded-full px-2.5 py-0.5 text-[12px] font-bold ${
+                STATE_PILL[j.state] ?? 'bg-pill'}`}>{stateName(j.state)}</span></td>
             <td className="px-2 leading-tight whitespace-nowrap">{j.elapsed}
               <div className="text-[12px] text-dim">of {j.limit}</div></td>
             <td className="px-2 whitespace-nowrap">{j.cpus} · {j.mem}</td>
@@ -58,13 +61,8 @@ export function JobTable({ jobs, showUser, sort, onSort, onOpen, onCancel }: {
               {max && <div className="text-[12px] text-dim">of {max}</div>}</td>
             <td className="max-w-[160px] truncate px-2 whitespace-nowrap" title={j.where}>{j.where}</td>
             {anyCancel && (
-              <td className="pr-3 pl-2 text-right">
-                {j.cancellable && (
-                  <button onClick={(e) => { e.stopPropagation(); onCancel(j) }} title="Cancel this job…"
-                    aria-label="Cancel this job" className="inline-flex h-7 min-w-7 items-center justify-center gap-1
-                      rounded-md bg-bad-bg px-1.5 text-[13px] font-bold text-bad hover:brightness-110 @[920px]:px-2.5">
-                    <X size={15} strokeWidth={2.5} /><span className="hidden @[920px]:inline">Cancel</span></button>
-                )}
+              <td className="pr-2 pl-1 text-right">
+                {j.cancellable && <RowMenu onDetails={() => onOpen(j)} onCancel={() => onCancel(j)} />}
               </td>
             )}
           </tr>
@@ -72,5 +70,35 @@ export function JobTable({ jobs, showUser, sort, onSort, onOpen, onCancel }: {
         })}
       </tbody>
     </table>
+  )
+}
+
+/** ⋮ on a row: details, and cancel (which asks first). */
+function RowMenu({ onDetails, onCancel }: { onDetails: () => void; onCancel: () => void }) {
+  const [open, setOpen] = useState(false)
+  const box = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!open) return
+    const away = (e: MouseEvent) => !box.current?.contains(e.target as Node) && setOpen(false)
+    const key = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false)
+    window.addEventListener('mousedown', away)
+    window.addEventListener('keydown', key)
+    return () => { window.removeEventListener('mousedown', away); window.removeEventListener('keydown', key) }
+  }, [open])
+  const pick = (fn: () => void) => (e: React.MouseEvent) => { e.stopPropagation(); setOpen(false); fn() }
+  return (
+    <div ref={box} className="relative inline-block" onClick={(e) => e.stopPropagation()}>
+      <button aria-label="Job actions" title="Job actions" aria-expanded={open} onClick={() => setOpen(!open)}
+        className="grid size-8 place-items-center rounded-md hover:bg-selected"><MoreVertical size={17} /></button>
+      {open && (
+        <div role="menu" className="absolute right-0 top-full z-30 mt-1 min-w-[160px] rounded-xl bg-card p-1 text-left
+          shadow-[0_0_0_1px_var(--color-line),0_6px_20px_rgb(0_0_0/0.25)]">
+          <button role="menuitem" onClick={pick(onDetails)}
+            className="flex h-9 w-full items-center rounded-md px-3 hover:bg-hover">Details</button>
+          <button role="menuitem" onClick={pick(onCancel)}
+            className="flex h-9 w-full items-center rounded-md px-3 font-bold text-bad hover:bg-hover">Cancel job…</button>
+        </div>
+      )}
+    </div>
   )
 }

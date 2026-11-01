@@ -46,12 +46,16 @@ def _binder(attr: str):
                 else " · ".join(x for x in (job.partition, job.qos) if x) if attr == "queue" else getattr(job, attr))
         if attr == "name" and job.from_app:
             text = f"{text}  (started by HPC Hub)"
+        if attr == "state":
+            text = text.capitalize().replace("_", " ")  # a pill: "Running", "Out of memory"
+            label.add_css_class("status-pill")
+            label.set_halign(Gtk.Align.START)
         label.set_label(text)
         label.set_tooltip_text(text)
         for c in set(STATE_CLASS.values()):
             label.remove_css_class(c)
-        if attr == "state" and text in STATE_CLASS:
-            label.add_css_class(STATE_CLASS[text])
+        if attr == "state" and job.state in STATE_CLASS:
+            label.add_css_class(STATE_CLASS[job.state])
     return bind
 
 

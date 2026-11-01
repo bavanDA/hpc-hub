@@ -38,7 +38,7 @@ export function CancelDialog({ cluster, job: j, appJob, onClose, onDone }: {
   }
 
   return (
-    <Dialog title={`Cancel job ${j.job_id}?`} onClose={onClose} width={440} actions={<>
+    <Dialog title={`Cancel ${j.name || `job ${j.job_id}`}?`} onClose={onClose} width={440} actions={<>
       <Button autoFocus onClick={onClose}>{running ? 'Keep running' : 'Keep waiting'}</Button>
       <Button kind="destructive" disabled={!inside} onClick={confirm}>Cancel job</Button>
     </>}>

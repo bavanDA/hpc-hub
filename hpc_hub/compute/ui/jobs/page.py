@@ -20,7 +20,8 @@ STATES = ["Any state", "RUNNING", "PENDING", "COMPLETED", "FAILED", "CANCELLED",
 
 def usage_text(accounts: list[AccountUsage]) -> str:
     used = [a for a in accounts if a.used or a.mine] or accounts[:1]
-    return " · ".join(f"{a.account}: {a.used:,} of {a.quota:,} SU used ({100 * a.used // a.quota}%), yours {a.mine:,}"
+    return " · ".join(f"{a.account}: {a.used:,} of {a.quota:,} SU used ({100 * a.used / a.quota:.1f}%), "
+                      f"yours {a.mine:,}"
                       if a.quota else f"{a.account}: {a.used:,} SU used{' in ' + a.period if a.period else ''}, "
                       f"yours {a.mine:,}" for a in used)
 
@@ -48,11 +49,7 @@ class JobsPage(DetailsMixin, CancelMixin, Gtk.Box):
         self.selection = Gtk.SingleSelection(model=filtered, autoselect=False, can_unselect=True)
         self.view = Gtk.ColumnView(model=self.selection, show_row_separators=True, reorderable=False)
         self.view.add_css_class("data-table")
-        self.user_col = add_columns(self.view)
-        stop = Gtk.SignalListItemFactory()
-        stop.connect("setup", self._stop_setup)
-        stop.connect("bind", self._stop_bind)
-        self.view.append_column(Gtk.ColumnViewColumn(title="", factory=stop, fixed_width=96))
+        self.user_col = add_columns(self.view)  # cancel is one place only: select a job, then Cancel job (asks first)
         self.view.connect("activate", lambda _v, pos: self._details(self._job_at(pos)))
 
         self.empty = Adw.StatusPage(icon_name="view-list-symbolic")
@@ -69,7 +66,7 @@ class JobsPage(DetailsMixin, CancelMixin, Gtk.Box):
                                             "A QoS that charges 0 (like low on Wulver) is free.")
         self.usage_of: dict[str, tuple[float, list[AccountUsage]]] = {}  # cluster -> (when, accounts)
         actions.set_center_widget(self.usage)
-        self.cancel_btn = Gtk.Button(label="Cancel job", css_classes=["destructive-action"], sensitive=False)
+        self.cancel_btn = Gtk.Button(label="Cancel job…", sensitive=False)
         self.details_btn = Gtk.Button(label="Details", sensitive=False)
         actions.pack_end(self.cancel_btn)
         actions.pack_end(self.details_btn)
@@ -204,19 +201,6 @@ class JobsPage(DetailsMixin, CancelMixin, Gtk.Box):
         s = self.session
         mine = bool(s.ssh) and j is not None and j.user == s.ssh.username
         return mine and j.state in ("RUNNING", "PENDING", "SUSPENDED", "REQUEUED")
-
-    def _stop_setup(self, _f, item) -> None:
-        b = Gtk.Button(label="Cancel", css_classes=["error"], tooltip_text="Cancel this job…",
-                       halign=Gtk.Align.CENTER, valign=Gtk.Align.CENTER)
-        b.connect("clicked", lambda btn: self._confirm_cancel(btn.job))
-        item.set_child(b)
-
-    def _stop_bind(self, _f, item) -> None:
-        b, job = item.get_child(), item.get_item().job
-        b.job = job
-        ok = self._cancellable(job)
-        b.set_opacity(1 if ok else 0)  # keep its space so every row is the same height
-        b.set_can_target(ok)
 
     def _sync_buttons(self) -> None:
         j = self._selected()

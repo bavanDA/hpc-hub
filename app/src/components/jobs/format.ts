@@ -2,10 +2,16 @@
 import type { Job } from '../../types/jobs'
 import type { Account } from '../../types/usage'
 
-export const STATE_COLOR: Record<string, string> = {
-  RUNNING: 'text-ok', PENDING: 'text-warn', COMPLETING: 'text-accent-text', CANCELLED: 'text-dim',
-  FAILED: 'text-bad', TIMEOUT: 'text-bad', OUT_OF_MEMORY: 'text-bad', NODE_FAIL: 'text-bad',
+/** The state's pill: tinted background, its color for text. */
+export const STATE_PILL: Record<string, string> = {
+  RUNNING: 'bg-ok-bg text-ok', PENDING: 'bg-warn-bg text-warn', COMPLETING: 'bg-pill text-accent-text',
+  CANCELLED: 'bg-pill text-dim', COMPLETED: 'bg-pill',
+  FAILED: 'bg-bad-bg text-bad', TIMEOUT: 'bg-bad-bg text-bad', OUT_OF_MEMORY: 'bg-bad-bg text-bad',
+  NODE_FAIL: 'bg-bad-bg text-bad',
 }
+
+/** "Running", "Out of memory" for Slurm's RUNNING, OUT_OF_MEMORY. */
+export const stateName = (s: string) => s.charAt(0) + s.slice(1).toLowerCase().replaceAll('_', ' ')
 
 export const queue = (j: Job) => [j.partition, j.qos].filter(Boolean).join(' · ')
 
@@ -32,7 +38,7 @@ const n = (v: number) => v.toLocaleString('en-US')
 export function usageText(accounts: Account[]): string {
   const used = accounts.filter((a) => a.used || a.mine)
   return (used.length ? used : accounts.slice(0, 1)).map((a) => a.quota
-    ? `${a.account}: ${n(a.used)} of ${n(a.quota)} SU used (${Math.floor((100 * a.used) / a.quota)}%), ` +
+    ? `${a.account}: ${n(a.used)} of ${n(a.quota)} SU used (${((100 * a.used) / a.quota).toFixed(1)}%), ` +
       `yours ${n(a.mine)}`
     : `${a.account}: ${n(a.used)} SU used${a.period ? ` in ${a.period}` : ''}, yours ${n(a.mine)}`).join(' · ')
 }
