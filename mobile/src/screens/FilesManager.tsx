@@ -14,6 +14,7 @@ import { EmptyState, Spinner } from '@shared/components/ui'
 import { useGo, usePageParams } from '@shared/nav'
 import { call } from '@shared/rpc'
 import type { Entry, Listing, Place, Sort } from '@shared/types/files'
+import { ScratchBanner } from '../parts/backup/ScratchBanner'
 import { ClipBanner } from '../parts/files/ClipBanner'
 import { setClip, useClip } from '../parts/files/clip'
 import { download, setLocalNotify, upload } from '../parts/files/local'
@@ -214,6 +215,8 @@ export function FilesManager() {
         {live.length > 1 && <Segments value={id} options={live.map((c) => [c.id, c.name] as const)} onChange={pick} />}
         {places.length > 0 && <Segments value={places.find((p) => p.path === here)?.path ?? ''}
           options={places.map((p) => [p.path, p.label] as const)} onChange={setPath} />}
+        <ScratchBanner cluster={id} path={here} places={places}
+          onOpen={() => go('backup', { cluster: id, step: 'plan' })} />
         <div className="flex items-center gap-2">
           <button aria-label="Up" disabled={!here || here === '/'} onClick={() => setPath(parent(here))}
             className="grid size-11 shrink-0 place-items-center rounded-full bg-pill disabled:opacity-40">

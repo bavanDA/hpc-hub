@@ -7,6 +7,7 @@ import { createElement, useEffect, useRef, useState, useSyncExternalStore } from
 import { setNotifier, useSessionNotifications, type Notice, type NoticeKind } from '@shared/components/app/notify'
 import { useWatch } from '@shared/components/app/watch'
 import type { Page } from '@shared/components/Sidebar'
+import { useBackupAlertWatch } from '@shared/components/backup/alerts'
 import { agentName, isRunning, useAsks } from '@shared/components/code/ask'
 import { useClusters } from '@shared/components/clusters/store'
 import { placeOf, usePhoneNav, type Place } from '../nav'
@@ -16,7 +17,7 @@ import { ConfirmSheet } from '../ui'
 // -- your choices, kept on this phone ----------------------------------------------------------------------------
 export const KINDS: [NoticeKind, string][] = [['duo', 'Duo is waiting'], ['connected', 'A cluster connected'],
   ['node', 'Your node is about to end'], ['job', 'A job ended'], ['copy', 'A copy finished'],
-  ['ask', 'An agent answered']]
+  ['ask', 'An agent answered'], ['backup', 'Scratch files are about to be deleted'], ['backup_done', 'A backup finished']]
 
 export type PhonePrefs = { notify: boolean; kinds: Record<NoticeKind, boolean>; keep: boolean; asked: boolean }
 
@@ -152,6 +153,7 @@ export function PhoneWatch() {
   useSessionNotifications()
   useWatch()  // node time, jobs and copies, wherever you are in the app
   useAskNotifications()
+  useBackupAlertWatch()  // scratch files about to be deleted (the last check's numbers)
   useKeepAlive(p.keep)
 
   // tapping a notification: the place it's about

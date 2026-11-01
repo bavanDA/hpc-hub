@@ -1,6 +1,6 @@
 // More: everything that isn't a tab, as a list. Each row opens its screen on top (nav.tsx), with a back arrow.
 import {
-  ArrowLeftRight, Bot, FileText, FolderOpen, Gauge, Info, LayoutGrid, Settings as Gear, type LucideIcon,
+  ArchiveRestore, ArrowLeftRight, Bot, FileText, FolderOpen, Gauge, Info, LayoutGrid, Settings as Gear, type LucideIcon,
 } from 'lucide-react'
 import { lazy, Suspense, useEffect, useState, type ComponentType } from 'react'
 
@@ -16,6 +16,7 @@ const named = <K extends string>(load: () => Promise<Record<K, ComponentType>>, 
 const SCREENS: Record<MoreScreen, ComponentType> = {
   projects: named(() => import('./Projects'), 'Projects'),
   agents: named(() => import('./Agents'), 'Agents'),
+  backup: named(() => import('./Backup'), 'Backup'),
   files: named(() => import('./FilesManager'), 'FilesManager'),
   transfers: named(() => import('./Transfers'), 'Transfers'),
   papers: named(() => import('./Papers'), 'Papers'),
@@ -31,6 +32,8 @@ const GROUPS: [string, Row[]][] = [
   ['Work', [
     { screen: 'projects', title: 'Projects', subtitle: 'Your folders on every cluster', icon: LayoutGrid },
     { screen: 'agents', title: 'Agents', subtitle: 'Running, scheduled, skills and permissions', icon: Bot },
+    { screen: 'backup', title: 'Backup agent', subtitle: 'Save scratch files before they are deleted',
+      icon: ArchiveRestore },
     { screen: 'papers', title: 'Papers', subtitle: 'LaTeX next to your code', icon: FileText, experimental: true },
   ]],
   ['Cluster', [

@@ -9,11 +9,13 @@ import type { Page } from '@shared/components/Sidebar'
 import { NavContext, type Go } from '@shared/nav'
 
 export type Tab = 'clusters' | 'terminals' | 'code' | 'jobs' | 'more'
-export type MoreScreen = 'projects' | 'agents' | 'files' | 'transfers' | 'papers' | 'usage' | 'settings' | 'about'
+export type MoreScreen = 'projects' | 'agents' | 'backup' | 'files' | 'transfers' | 'papers' | 'usage' | 'settings' |
+  'about'
 export type Place = { tab: Tab; screen?: MoreScreen; params: Record<string, string> }
 
 export const TABS: Tab[] = ['clusters', 'terminals', 'code', 'jobs', 'more']
-export const SCREENS: MoreScreen[] = ['projects', 'agents', 'files', 'transfers', 'papers', 'usage', 'settings', 'about']
+export const SCREENS: MoreScreen[] = ['projects', 'agents', 'backup', 'files', 'transfers', 'papers', 'usage', 'settings',
+  'about']
 
 /** A desktop page (and its tab param) on the phone. Unknown pages land on Clusters. */
 export function placeOf(page: Page | Tab | MoreScreen | string, params: Record<string, string> = {}): Place {
