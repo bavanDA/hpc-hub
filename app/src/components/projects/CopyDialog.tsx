@@ -144,7 +144,7 @@ export function CopyDialog({ p, onClose, onStarted }:
                   <TriangleAlert size={20} className="shrink-0" />
                   <div>
                     <div className="font-semibold">Globus is not ready</div>
-                    <div className="text-sm">Needs {missing}. Set it up on the Globus page.</div>
+                    <div className="text-sm">Needs {missing}. Set it up in Files, Transfers.</div>
                   </div>
                 </div>
               )}
