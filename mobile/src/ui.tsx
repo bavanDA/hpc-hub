@@ -243,3 +243,27 @@ export const useToast = () => useContext(ToastContext)
 
 /** The panel from the bottom on its own, for sheets that need more than a list or a yes/no (cancel a job). */
 export { BottomSheet }
+
+/** Ask for one line of text (a new name, a folder to go to): a field, Cancel and the action. */
+export function PromptSheet({ title, label, value = '', placeholder, confirm, onSubmit, onClose }: {
+  title: string; label: string; value?: string; placeholder?: string; confirm: string
+  onSubmit: (text: string) => void; onClose: () => void
+}) {
+  const [text, setText] = useState(value)
+  const send = () => { if (text.trim()) { onClose(); onSubmit(text.trim()) } }
+  return (
+    <BottomSheet onClose={onClose}>
+      <h2 className="px-1 text-lg font-bold">{title}</h2>
+      <form onSubmit={(e) => { e.preventDefault(); send() }}>
+        <Field label={label} value={text} placeholder={placeholder} autoFocus autoCapitalize="none"
+          autoCorrect="off" spellCheck={false} onChange={(e) => setText(e.target.value)}
+          onFocus={(e) => e.target.select()} />
+      </form>
+      <div className="mt-2 flex gap-3">
+        <Button className="flex-1" onClick={onClose}>Cancel</Button>
+        <Button kind="primary" className="flex-1" disabled={!text.trim() || text.trim() === value.trim()}
+          onClick={send}>{confirm}</Button>
+      </div>
+    </BottomSheet>
+  )
+}
