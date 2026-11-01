@@ -195,7 +195,7 @@ class ClusterConfig:
 
 
 def default_clusters() -> list[ClusterConfig]:
-    return [
+    clusters = [
         ClusterConfig(
             id="wulver",
             queues="general:low,debug:debug,general:standard",  # free, free (4 cores, 8 h), costs SUs
@@ -253,6 +253,9 @@ def default_clusters() -> list[ClusterConfig]:
                                   compute=ComputeProfile(cpus=2, mem_gb=8, time="08:00:00", partition="shared")),
         ),
     ]
+    for c in clusters:
+        c.ask_node = True  # new users see the node's size before each request, so they can change it
+    return clusters
 
 
 def _merge(obj, data: dict):
