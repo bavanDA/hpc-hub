@@ -1,7 +1,7 @@
 {
   "$schema": "../gen/schemas/mobile-schema.json",
   "identifier": "default",
-  "description": "The app's one window: the backend link and its events, and opening links",
+  "description": "The app's one window: the backend link and its events, opening links, notifications",
   "windows": ["main"],
-  "permissions": ["core:default", "opener:allow-open-url", "opener:allow-default-urls"]
+  "permissions": ["core:default", "opener:allow-open-url", "opener:allow-default-urls", "notification:default"]
 }
