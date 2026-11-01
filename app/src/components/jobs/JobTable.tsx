@@ -13,12 +13,12 @@ type Column = { key: SortKey; title: string; right?: boolean; hide?: string; gro
 const COLUMNS: Column[] = [
   { key: 'id', title: 'ID' },
   { key: 'name', title: 'Name', grow: true },
-  { key: 'user', title: 'User', hide: '@max-[620px]:hidden' },
+  { key: 'user', title: 'User', hide: '@max-[760px]:hidden' },
   { key: 'state', title: 'State' },
   { key: 'time', title: 'Time used' },
-  { key: 'res', title: 'CPUs · memory', right: true, hide: '@max-[900px]:hidden' },
-  { key: 'su', title: 'SU', right: true, hide: '@max-[780px]:hidden' },
-  { key: 'where', title: 'Node or reason', hide: '@max-[700px]:hidden' },
+  { key: 'res', title: 'CPUs · memory', right: true, hide: '@max-[1180px]:hidden' },
+  { key: 'su', title: 'SU', right: true, hide: '@max-[1000px]:hidden' },
+  { key: 'where', title: 'Node or reason', hide: '@max-[640px]:hidden' },
 ]
 
 export type Sort = { key: SortKey; desc: boolean }
@@ -44,7 +44,8 @@ export function JobTable({ jobs, showUser, sort, onSort, onOpen, onCancel }: {
               </button>
             </th>
           ))}
-          {anyCancel && <th aria-label="Actions" className="sticky right-0 w-10 bg-card" />}
+          {anyCancel && <th aria-label="Actions"
+            className="sticky right-0 w-10 bg-card shadow-[inset_0_-1px_0_var(--color-line)]" />}
         </tr>
       </thead>
       <tbody>
@@ -64,8 +65,9 @@ function JobRow({ job: j, cols, anyCancel, onOpen, onCancel }: {
       case 'id': return <span className="text-dim">{j.job_id}</span>
       case 'name': return (
         <span className="flex min-w-0 items-baseline gap-2">
-          <span className="truncate" title={j.name}>{j.name}</span>
-          <span className="shrink-0 text-sm text-dim">
+          <span className="min-w-[7ch] truncate" title={j.name}>{j.name}</span>
+          {/* the queue gives way first, so the name stays readable */}
+          <span className="min-w-0 shrink-[4] truncate text-sm text-dim">
             {[j.partition, j.qos_shown, j.from_app && 'HPC Hub'].filter(Boolean).join(' · ')}</span>
         </span>)
       case 'user': return <span className="text-dim">{j.user}</span>
@@ -74,7 +76,7 @@ function JobRow({ job: j, cols, anyCancel, onOpen, onCancel }: {
       case 'res': return <>{j.cpus} · {memText(j.mem)}</>
       case 'su': return <span className={j.su === 'free' ? 'text-dim' : ''}>{j.su}</span>
       case 'where': return j.reason
-        ? <span className="block max-w-[260px] truncate text-dim" title={j.reason}>{j.reason}</span>
+        ? <span className="block max-w-[200px] truncate text-dim" title={j.reason}>{j.reason}</span>
         : <span className="block max-w-[180px] truncate font-mono text-sm" title={j.where}>{j.where}</span>
       default: return null
     }
@@ -103,7 +105,7 @@ function TimeUsed({ job: j }: { job: Job }) {
     <span className="flex items-center gap-2" title={`${j.elapsed_text} of ${j.limit_text}`}>
       {j.limit_seconds > 0 && <Meter value={share} label="Time used" className="w-9 shrink-0" />}
       <span>{j.elapsed_text}</span>
-      <span className="text-sm text-dim">of {j.limit_text}</span>
+      <span className="text-sm text-dim @max-[700px]:hidden">of {j.limit_text}</span>
     </span>
   )
 }

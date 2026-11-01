@@ -80,7 +80,8 @@ export function Jobs() {
   else if (!shown.length) body = <EmptyState icon={Search} title="No matching jobs" text={NO_MATCH} />
   else body = (
     <div className="px-3 pb-3">
-      <Card className="overflow-clip">
+      {/* scrolls sideways itself, so the ⋮ column can stay pinned on the right */}
+      <Card className="overflow-x-auto">
         <JobTable jobs={shown} showUser={scope === 'all' || scope === 'group'} sort={sort} onSort={setSort} onOpen={setOpen}
           onCancel={setCancel} />
       </Card>
