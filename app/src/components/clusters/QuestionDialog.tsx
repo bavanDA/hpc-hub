@@ -5,7 +5,7 @@ import type { Cluster, Question } from '../../types/clusters'
 import { Button, Dialog } from '../ui'
 import { AuthenticatorHelp } from './AuthenticatorHelp'
 import { EntryRow, Group } from './fields'
-import { BrowserLogin, ChromeWindowLogin, PickBrowser, WebLogin } from './SignIn'
+import { ChromeWindowLogin, PickBrowser, WebLogin } from './SignIn'
 
 const digits = (text: string) => text.replace(/\s/g, '')
 
@@ -16,7 +16,6 @@ export function QuestionDialog({ q, cluster, onAnswer }:
   const cancel = () => onAnswer(null)
 
   if (q.kind === 'pick-browser') return <PickBrowser q={q} onAnswer={onAnswer} />
-  if (q.kind === 'browser-login') return <BrowserLogin q={q} onAnswer={onAnswer} />
   if (q.kind === 'chrome-window') return <ChromeWindowLogin q={q} onAnswer={onAnswer} />
   if (q.kind === 'web-login') return <WebLogin q={q} onAnswer={onAnswer} />
   if (q.kind === 'confirm') {

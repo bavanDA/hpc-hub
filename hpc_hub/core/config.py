@@ -12,6 +12,7 @@ APP_FILE = CONFIG_DIR / "app.toml"
 
 LATEX_ENGINES = ["pdf", "xelatex", "lualatex"]
 VPN_PROTOCOLS = ["anyconnect", "gp", "nc", "pulse", "f5", "fortinet", "array"]
+CHROME_WINDOW = "hpc-hub:chrome-window"  # vpn.browser: sign in in HPC Hub's own Chrome window (chrome_window.py)
 
 
 @dataclass
@@ -25,7 +26,7 @@ class VpnSettings:
     split_tunnel: bool = True  # only the networks/domains below use the VPN
     domains: str = ""  # DNS domains answered by the VPN's DNS, space separated
     routes: str = ""  # networks sent through the VPN, space separated CIDRs
-    browser: str = ""  # sign in with this Chrome profile (e.g. "Uni"); "" = the app's own window
+    browser: str = ""  # where the web sign-in happens: "" = the app's own window, CHROME_WINDOW = our Chrome window
 
 
 @dataclass
@@ -239,6 +240,8 @@ def load(path: Path = CONFIG_FILE) -> list[ClusterConfig]:
             _merge(c, saved[c.id])
         c.host = c.host.strip().rpartition("@")[2]  # user@ belongs in the login
         c.vscode.command = c.vscode.command or default.vscode.command  # old configs saved an empty alias
+        if c.vpn.browser not in ("", CHROME_WINDOW):  # a Chrome profile's name, from before: the app's window
+            c.vpn.browser = ""
     return clusters
 
 

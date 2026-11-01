@@ -1,5 +1,6 @@
-// VPN web sign-in (prompts.py, browser_login.py, web_login.py): where to sign in, signing in in a Chrome
-// profile or in our own Chrome window, and the app's own sign-in window (app/src-tauri/src/sso.rs, opened here).
+// Web sign-in, the VPN's or a portal's (prompts.py, browser_login.py, web_login.py): where to sign in, signing
+// in in our own Chrome window, and the app's own sign-in window (app/src-tauri/src/sso.rs, opened here). Never
+// your own Chrome profile.
 import { invoke } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
 import { Check, Globe } from 'lucide-react'
@@ -15,10 +16,8 @@ export const CHROME_WINDOW = { title: 'HPC Hub Chrome window (fastest)',
   sub: 'Real Chrome with its own profile. Done the moment you approve Duo.' }
 
 export function PickBrowser({ q, onAnswer }: { q: Question; onAnswer: (a: string | null) => void }) {
-  const profiles = q.profiles ?? []
   const options = [{ value: '', title: 'HPC Hub window', sub: 'Fills in your username and password' },
-    ...(q.chrome_window ? [{ value: q.chrome_window, ...CHROME_WINDOW }] : []),
-    ...profiles.map((p) => ({ value: p.name, title: `Chrome: ${p.name}`, sub: p.email }))]
+    ...(q.chrome_window ? [{ value: q.chrome_window, ...CHROME_WINDOW }] : [])]
   const want = (q.default ?? '').toLowerCase()
   const [picked, setPicked] = useState(options.find((o) => o.value.toLowerCase() === want)?.value ?? '')
   const cancel = () => onAnswer(null)
@@ -57,28 +56,11 @@ function Waiting({ title, text }: { title: string; text: string }) {
   )
 }
 
-/** Signing in in a Chrome profile: the backend picks the sign-in up from Chrome by itself. */
-export function BrowserLogin({ q, onAnswer }: { q: Question; onAnswer: (a: string | null) => void }) {
-  const cancel = () => onAnswer(null)
-  return (
-    <Dialog title={`${q.name} VPN sign-in`} onClose={cancel} width={460}
-      actions={<Button onClick={cancel}>Cancel</Button>}>
-      <Waiting title={`Sign in in Chrome (${q.profile})`}
-        text="Sign in and approve Duo in the browser. This goes on by itself a few seconds after you are
-          signed in (Chrome can take up to 30 s)." />
-      <div className="mt-4 flex flex-col items-center gap-2">
-        <Button round onClick={() => onAnswer('again')}>Open the page again</Button>
-        <Button round kind="flat" onClick={() => onAnswer('in-app')}>Sign in in the app instead</Button>
-      </div>
-    </Dialog>
-  )
-}
-
 /** Signing in in our own Chrome window: the backend sees the sign-in at once and closes the window. */
 export function ChromeWindowLogin({ q, onAnswer }: { q: Question; onAnswer: (a: string | null) => void }) {
   const cancel = () => onAnswer(null)
   return (
-    <Dialog title={`${q.name} VPN sign-in`} onClose={cancel} width={460}
+    <Dialog title={q.title ?? `${q.name} VPN sign-in`} onClose={cancel} width={460}
       actions={<Button onClick={cancel}>Cancel</Button>}>
       <Waiting title="Sign in in the Chrome window"
         text="Sign in and approve Duo in the Chrome window that opened. It closes by itself once you are signed in." />
@@ -98,7 +80,7 @@ export function WebLogin({ q, onAnswer }: { q: Question; onAnswer: (a: string | 
   useEffect(() => {
     if (!inTauri || opened.current) return
     opened.current = true
-    const req = { id: q.id, title: `${q.name} VPN sign-in`, login_url: q.login_url, final_url: q.final_url,
+    const req = { id: q.id, title: q.title ?? `${q.name} VPN sign-in`, login_url: q.login_url, final_url: q.final_url,
       token_cookie: q.token_cookie, error_cookie: q.error_cookie, fill: q.fill ?? null }
     invoke('sso_open', { req }).catch((e) => setError(String(e)))
   }, [q])
@@ -116,7 +98,7 @@ export function WebLogin({ q, onAnswer }: { q: Question; onAnswer: (a: string | 
     onAnswer(null)
   }
   return (
-    <Dialog title={`${q.name} VPN sign-in`} onClose={cancel} width={460}
+    <Dialog title={q.title ?? `${q.name} VPN sign-in`} onClose={cancel} width={460}
       actions={<><Button onClick={cancel}>Cancel</Button>
         {!error && <Button kind="suggested" onClick={() => inTauri && invoke('sso_show', { id: q.id })}>
           Show sign-in window</Button>}</>}>
@@ -125,8 +107,8 @@ export function WebLogin({ q, onAnswer }: { q: Question; onAnswer: (a: string | 
             Could not open the sign-in window: {error}</p>
         : <Waiting title="Sign in in the window that opened" text={status} />}
       {!error && <p className="mt-3 text-center text-[13px] text-dim">
-        {q.fill ? 'Your saved username and password are filled in there. If you click a link, you type from then on.'
-          : 'No password is saved for this VPN, so you type it there.'}</p>}
+        {q.note ?? (q.fill ? 'Your saved username and password are filled in there. If you click a link, you type '
+          + 'from then on.' : 'No password is saved for this VPN, so you type it there.')}</p>}
     </Dialog>
   )
 }

@@ -31,6 +31,7 @@ class SsoStart:
     token_cookie: str
     error_cookie: str
     opaque: str
+    reuse: bool = False  # a token cookie already there counts (a portal's session), not just a new one
 
 
 def _post(url: str, body: str, useragent: str) -> tuple[str, str]:

@@ -7,7 +7,7 @@ from gi.repository import Adw, GObject, Gtk
 from ...compute.limits import Limits, minutes, slurm_time
 from ...compute.slurm import validate
 from ...compute.ui.duration import DurationRow
-from ...core import browser, credentials
+from ...core import credentials
 from ...core.config import VPN_PROTOCOLS, ClusterConfig, ComputeProfile
 from ...core.credentials import Login
 from ...ui.widgets import TARGETS
@@ -131,13 +131,10 @@ class ClusterSettingsDialog(Adw.PreferencesDialog):
         choices = [("", "This app (fills your login)")]
         if chrome_window.available() or v.browser == chrome_window.CHOICE:
             choices.append((chrome_window.CHOICE, chrome_window.TITLE))
-        choices += [(p.name, f"Chrome: {p.name}") for p in (browser.profiles() if browser.chrome() else [])]
-        if v.browser not in [value for value, _ in choices]:
-            choices.append((v.browser, f"Chrome: {v.browser}"))
         self.sign_in_values = [value for value, _ in choices]
         self.sign_in = Adw.ComboRow(title="Sign in with", model=Gtk.StringList.new([label for _, label in choices]))
-        self.sign_in.set_selected(self.sign_in_values.index(v.browser))
-        self.sign_in.set_subtitle("In Chrome you are often signed in already, so it is quicker")
+        self.sign_in.set_selected(self.sign_in_values.index(v.browser) if v.browser in self.sign_in_values else 0)
+        self.sign_in.set_subtitle("Both are HPC Hub's own windows, never your own browser")
         self.vpn_user = _entry("VPN username (e.g. first.last@yale.edu)",
                                self.vpn_saved.username if self.vpn_saved else "")
         self.vpn_password = self._password_row(self.vpn_saved)

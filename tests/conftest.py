@@ -1,8 +1,7 @@
 """Shared fixtures, and what Windows (CI's windows-latest) leaves out, each with its reason in the report:
 
-- gtk: needs PyGObject, which Windows has not: the GTK app's screens, Poppler, the GTK sign-in window, and
-  Chrome's cookie key from the GNOME keyring (chrome_cookies, so also ood and keysetup). Whole files that import gi
-  are not collected; single tests are skipped.
+- gtk: needs PyGObject, which Windows has not: the GTK app's screens, Poppler and the GTK sign-in window. Whole
+  files that import gi are not collected; single tests are skipped.
 - posix: tests whose fake cluster is the local bash, coreutils, tmux, fake ssh scripts, Unix sockets or
   symlinks. What they check runs on the Linux cluster, and the Linux job runs them.
 
@@ -22,8 +21,7 @@ WINDOWS = sys.platform == "win32"
 MACOS = sys.platform == "darwin"
 HAVE_GTK = importlib.util.find_spec("gi") is not None
 
-GTK_FILES = {"files/test_file_menu.py", "latex/test_file_tree.py", "api/test_keysetup.py",
-             "connect/test_chrome_cookies.py", "connect/test_ood.py"}
+GTK_FILES = {"files/test_file_menu.py", "latex/test_file_tree.py"}
 GTK_TESTS = {
     "api/test_sso.py::test_chrome_profile_picks_up_the_token",
     "api/test_sso.py::test_chrome_profile_can_switch_to_the_app_window_or_cancel",
@@ -49,8 +47,7 @@ POSIX_TESTS = {
     "core/test_ssh_keys.py::test_authorize_replaces_the_last_phone_key",  # sh: it runs on the cluster
     "core/test_vault_file.py::test_saved_encrypted_and_private",  # 0600 mode: the vault is Android only
     # the HPC Hub Chrome window is Unix only (posix_spawn, fcntl): Windows does not offer it
-    "api/test_sso.py::test_pick_browser_offers_the_app_window_and_chrome_profiles",
-    "api/test_sso.py::test_pick_browser_offers_the_chrome_window",
+    "api/test_sso.py::test_pick_browser_offers_the_app_window_and_the_chrome_window",
 }
 
 GNU_TOOLS = {

@@ -9,6 +9,7 @@ gi.require_version("Adw", "1")
 from gi.repository import Adw, Gio, GLib, Gtk  # noqa: E402
 
 from . import APP_ID, APP_NAME, __version__  # noqa: E402
+from .connect import chrome_window  # noqa: E402
 from .connect.askpass_server import AskpassServer  # noqa: E402
 from .connect.session import ClusterSession, State  # noqa: E402
 from .connect.ui.duo import DuoDialog  # noqa: E402
@@ -248,7 +249,10 @@ class HpcHubApp(LoginPromptsMixin, QuitMixin, Adw.Application):
         cfg = session.cfg
         ssh_login = credentials.load(cfg.id, credentials.SSH)
         if (not ssh_login or not ssh_login.username) and cfg.portal:
-            KeySetupDialog(cfg, lambda user: self._key_login(session, user)).present(self.window)
+            where = chrome_window.CHOICE if chrome_window.available() else ""
+            KeySetupDialog(cfg, lambda start: self.web_login(session, start, credentials.Login("", ""), where,
+                                                             f"{cfg.name} portal sign-in"),
+                           lambda user: self._key_login(session, user)).present(self.window)
             return
         if not ssh_login or not ssh_login.username:
             self.open_settings(session, "Enter your username and password first")

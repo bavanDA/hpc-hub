@@ -71,8 +71,8 @@ let keySince = 0
 function keyStatus(): KeySetup {
   const t = Date.now() - keySince
   if (!keySince) return { state: 'stopped', title: '', text: '', user: '' }
-  if (t < 6000) return { state: 'waiting', title: 'Sign in to the portal in Chrome',
-    text: 'Any Chrome profile works. Use ACCESS and your saved logins; the app does the rest by itself.', user: '' }
+  if (t < 6000) return { state: 'waiting', title: 'Sign in to the portal',
+    text: 'Sign in in the window that opened. The app does the rest by itself.', user: '' }
   if (t < 8000) return { state: 'working', title: 'Signed in as jdoe',
     text: "Adding this computer's key to your account…", user: 'jdoe' }
   return { state: 'done', title: 'Signed in as jdoe', text: 'Key added. Connecting…', user: 'jdoe' }
@@ -198,7 +198,7 @@ export const answers: Record<string, unknown> = {
   },
   'question.answer': () => null,
   'cluster_settings.get': ({ cluster }: { cluster: string }): SettingsInfo => ({
-    cluster: structuredClone(find(clusters, cluster)), browsers: ['Home', 'Uni'], agents: agentInfo,
+    cluster: structuredClone(find(clusters, cluster)), agents: agentInfo,
     chrome_window: { value: 'hpc-hub:chrome-window', offered: true },
     protocols: ['anyconnect', 'gp', 'nc', 'pulse', 'f5', 'fortinet', 'array'] }),
   'cluster_settings.save': ({ cluster, changes }: { cluster: string; changes: Partial<Cluster> }) => {
@@ -210,6 +210,4 @@ export const answers: Record<string, unknown> = {
   'keysetup.start': () => { keySince = Date.now(); return keyStatus() },
   'keysetup.status': keyStatus,
   'keysetup.stop': () => { keySince = 0; return null },
-  'keysetup.open': () => null,
-  'keysetup.profiles': ['Home', 'Uni'],
 }

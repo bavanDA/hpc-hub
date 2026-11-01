@@ -31,7 +31,7 @@ class Listener(Protocol):
     def ask(self, session: "ClusterSession", prompt: str) -> str | None: ...
     def code(self, session: "ClusterSession", prompt: str) -> str | None: ...
     def web_login(self, session: "ClusterSession", start: vpn_sso.SsoStart, login: Login,
-                  profile: str = "") -> tuple[str, str]: ...  # profile: that Chrome profile, or CHOICE
+                  profile: str = "", title: str = "", note: str = "") -> tuple[str, str]: ...  # profile: "" or CHOICE
     def pick_browser(self, session: "ClusterSession") -> str | None: ...  # "" = app window, see vpn.browser
     def confirm(self, session: "ClusterSession", title: str, text: str) -> bool: ...  # yes or no
 
@@ -275,8 +275,6 @@ class ClusterSession(NodesMixin):
             raise VpnError(f"Can't reach VPN server {gw.hostname} or {self.cfg.host}. Check your network.")
         vpn.ensure_profile()
         env = self.askpass.env(token)
-        if self.cfg.vpn.browser and self.cfg.vpn.browser != chrome_window.CHOICE:
-            env["HPC_HUB_BROWSER"] = self.cfg.vpn.browser
         try:
             auth = vpn.authenticate(
                 login.username, login.password,
@@ -303,8 +301,6 @@ class ClusterSession(NodesMixin):
                 raise VpnError("Sign-in cancelled")
             if profile == chrome_window.CHOICE:
                 self._set(State.DUO, "Sign in in the Chrome window, then approve Duo on your phone")
-            elif profile:
-                self._set(State.VPN, f"Sign in to the VPN in Chrome ({profile})")
             else:
                 self._set(State.DUO, "Sign in on the page, then approve Duo on your phone")
             began = time.monotonic()

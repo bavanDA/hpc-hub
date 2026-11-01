@@ -1,5 +1,6 @@
-"""VPN web sign-in in real Chrome with a profile of HPC Hub's own, watched over the DevTools protocol, so the
-sign-in is picked up the moment the gateway sets its token cookie (a Chrome profile's cookie file lags ~30 s).
+"""Web sign-in (the VPN, a cluster's portal) in real Chrome with a profile of HPC Hub's own, watched over the
+DevTools protocol, so the sign-in is picked up the moment the site sets its token cookie. Never your own Chrome
+profile: only this window's cookies are read.
 
 Chrome 136+ refuses remote debugging on its default user data dir, hence a folder of ours (web_dir()/chrome).
 Its cookies stay, so Okta remembers you after the first time. The protocol runs over fds 3 and 4
@@ -17,9 +18,10 @@ from collections.abc import Callable, Sequence
 from pathlib import Path
 
 from ..core import browser, paths
+from ..core.config import CHROME_WINDOW
 from .vpn_sso import SsoStart
 
-CHOICE = "hpc-hub:chrome-window"  # vpn.browser for this window; the ":" keeps it apart from profile names
+CHOICE = CHROME_WINDOW  # vpn.browser for this window
 TITLE = "HPC Hub Chrome window (fastest)"
 SUBTITLE = "Real Chrome with its own profile. Done the moment you approve Duo."
 POLL = 0.5
@@ -170,7 +172,8 @@ def _high(fd: int) -> int:
 def sign_in(start: SsoStart, cancelled: Callable[[], bool], timeout: float = 600, binary: str = "",
             folder: Path | None = None, args: Sequence[str] = ()) -> tuple[str, str]:
     """Blocking: open the sign-in page in our Chrome window and wait for the token cookie. (token, error); the
-    window is closed either way. A token or error cookie left from an earlier sign-in doesn't count."""
+    window is closed either way. A token or error cookie left from an earlier sign-in doesn't count, unless
+    start.reuse (a portal session that may still be good)."""
     binary = binary or shutil.which(browser.chrome() or "") or ""
     if not binary:
         return "", "Google Chrome is not installed"
@@ -189,7 +192,7 @@ def sign_in(start: SsoStart, cancelled: Callable[[], bool], timeout: float = 600
         while not cancelled() and time.monotonic() < end:
             jar = win.cookies(host)
             token, err = jar.get(start.token_cookie, ""), jar.get(start.error_cookie, "")
-            if token and token != old.get(start.token_cookie):
+            if token and (start.reuse or token != old.get(start.token_cookie)):
                 return token, ""
             if err and err != old.get(start.error_cookie):
                 return "", urllib.parse.unquote(err)
