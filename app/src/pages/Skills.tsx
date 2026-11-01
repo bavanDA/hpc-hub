@@ -1,9 +1,10 @@
 // Skills (experimental): what Claude, ChatGPT and the other agents know on each cluster. Add HPC Hub's own skills,
 // any from a git repository, and remove the ones you added. Spec: hpc_hub/agents/ui/skills_page.py.
-import { CircleAlert, Plus, RefreshCw, Trash2, Unplug } from 'lucide-react'
+import { CircleAlert, Plus, RefreshCw, Trash2 } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 
-import { Select } from '../components/jobs/Select'
+import { useActiveCluster } from '../components/clusters/active'
+import { NotConnected } from '../components/clusters/NotConnected'
 import { Group } from '../components/permissions/controls'
 import { AddSkillsDialog } from '../components/skills/AddSkillsDialog'
 import { AddTo } from '../components/skills/AddTo'
@@ -12,13 +13,13 @@ import { useToast } from '../components/toast'
 import { Button, Dialog, EmptyState, IconButton, Spinner } from '../components/ui'
 import { useEvent } from '../hooks'
 import { call } from '../rpc'
-import type { Cluster, Session } from '../types'
+import type { Session } from '../types'
 import type { Skill, SkillList } from '../types/skills'
 
 export function Skills() {
   const toast = useToast()
-  const [clusters, setClusters] = useState<Cluster[]>([])
-  const [cluster, setCluster] = useState('')
+  const { cluster: active, session, connected } = useActiveCluster()
+  const cluster = active?.id ?? ''
   const [list, setList] = useState<SkillList | null>(null)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -26,28 +27,18 @@ export function Skills() {
   const [dialog, setDialog] = useState(false)
   const [removing, setRemoving] = useState<Skill | null>(null)
 
-  useEffect(() => {
-    Promise.all([call<Cluster[]>('clusters.list'), call<Session[]>('sessions.list').catch(() => [] as Session[])])
-      .then(([all, sessions]) => {
-        setClusters(all)
-        if (!all.length) setError('No clusters yet. Add one on the Clusters page')
-        const up = sessions.find((s) => s.connected || s.state === 'Connected')
-        setCluster(up?.id ?? all[0]?.id ?? '')
-      }).catch((e: Error) => setError(e.message))
-  }, [])
+  useEffect(() => { setList(null); setError('') }, [cluster])  // another cluster picked
 
   const load = useCallback(() => {
-    if (!cluster) return
+    if (!cluster || !connected) return
     setLoading(true)
     call<SkillList>('skills.list', { cluster })
       .then((l) => { setList(l); setError('') })
       .catch((e: Error) => { setList(null); setError(e.message) })
       .finally(() => setLoading(false))
-  }, [cluster])
+  }, [cluster, connected])
   useEffect(load, [load])
   useEvent<Session>('session', (s) => { if (s.id === cluster && s.state === 'Connected' && !list) load() })
-
-  const name = clusters.find((c) => c.id === cluster)?.name ?? cluster
   const label = (id: string) => list?.targets.find((t) => t.id === id)?.label ?? id
 
   const addOwn = (folder: string, skill: string, targets: string[]) => {
@@ -65,9 +56,9 @@ export function Skills() {
   }
 
   let body
-  if ((!cluster && !error) || (!list && !error)) body = <div className="grid h-64 place-items-center"><Spinner size={24} /></div>
-  else if (error.startsWith('Connect to')) body = <div className="h-[60vh]"><EmptyState icon={Unplug}
-    title={`${name} is not connected`} text={`Connect to ${name} to see its skills.`} /></div>
+  if (active && (!connected || error.startsWith('Connect to'))) body = <div className="h-[60vh]"><NotConnected
+    cluster={active} session={session} what="skills" /></div>
+  else if ((!cluster && !error) || (!list && !error)) body = <div className="grid h-64 place-items-center"><Spinner size={24} /></div>
   else if (error || !list) body = <div className="h-[60vh]"><EmptyState icon={CircleAlert}
     title="Could not read skills" text={error} /></div>
   else body = (
@@ -99,14 +90,12 @@ export function Skills() {
 
   return (
     <div className="mx-auto flex max-w-[760px] flex-col gap-5 px-4 py-6">
-      <div className="flex items-center gap-2">
-        <Select label="Cluster" value={cluster} options={clusters.map((c) => [c.id, c.name] as const)}
-          onChange={(id) => { setCluster(id); setList(null); setError('') }} />
+      {connected && <div className="flex items-center gap-2">
         <span className="flex-1" />
         {loading && list && <Spinner />}
         <IconButton icon={RefreshCw} label="Refresh" size={16} onClick={load} />
         <Button kind="suggested" disabled={!list} onClick={() => setDialog(true)}><Plus size={16} />Add skills</Button>
-      </div>
+      </div>}
       {body}
       {dialog && list && <AddSkillsDialog cluster={cluster} name={list.name} targets={list.targets}
         repo={list.default_repo} onClose={() => setDialog(false)} onDone={load} />}
