@@ -84,7 +84,7 @@ export function Settings() {
           <Title>Clusters you use</Title>
           <Card className="py-1">
             {setup.choices.map((c) => (
-              <Switch key={c.id} label={c.name} hint={university(c) || undefined} checked={setup.chosen.includes(c.id)}
+              <Switch key={c.id} label={c.name.split(' (')[0]} hint={university(c) || undefined} checked={setup.chosen.includes(c.id)}
                 onChange={(on) => use(c.id, on)} />
             ))}
           </Card>
@@ -97,7 +97,7 @@ export function Settings() {
             hint="Keeps your clusters connected while you use other apps, with a notification." checked={keep}
             onChange={stayConnected} />
           <ListRow icon={Bell} title="Notifications"
-            subtitle="Node time running out, finished jobs and copies. In a later update." />
+            subtitle="In a later update" />
         </Card>
 
         <Title>Terminals</Title>
