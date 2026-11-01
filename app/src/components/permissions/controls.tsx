@@ -2,7 +2,7 @@
 import { Minus, Plus } from 'lucide-react'
 import { useEffect, useRef, type ReactNode } from 'react'
 
-import { List, Row } from '../ui'
+import { List, Row, Switch as UiSwitch } from '../ui'
 
 /** Row subtitles are one line; settings explain more. */
 export const wrap = (text?: string) => text && <span className="whitespace-normal">{text}</span>
@@ -22,14 +22,7 @@ export function Group({ title, description, children }: { title?: string; descri
 }
 
 export function Switch({ on, onChange, label }: { on: boolean; onChange: (on: boolean) => void; label?: string }) {
-  return (
-    <button role="switch" aria-checked={on} aria-label={label} onClick={(e) => { e.stopPropagation(); onChange(!on) }}
-      className={`relative h-[26px] w-[48px] shrink-0 rounded-full transition-colors ${
-        on ? 'bg-accent' : 'bg-selected'}`}>
-      <span className={`absolute top-[3px] size-5 rounded-full bg-white shadow transition-all ${
-        on ? 'left-[25px]' : 'left-[3px]'}`} />
-    </button>
-  )
+  return <UiSwitch on={on} onChange={onChange} label={label} stop />
 }
 
 export function SwitchRow({ title, subtitle, on, onChange }:

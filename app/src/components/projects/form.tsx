@@ -1,7 +1,7 @@
 // Rows for settings-like dialogs, in the style of Adwaita's preference groups (boxed lists of rows).
 import { Children, type ReactNode } from 'react'
 
-import { List } from '../ui'
+import { List, Switch as UiSwitch } from '../ui'
 
 export function Group({ title, description, suffix, children }:
   { title?: string; description?: ReactNode; suffix?: ReactNode; children?: ReactNode }) {
@@ -54,13 +54,7 @@ export function SelectRow<T extends string>({ title, subtitle, value, options, o
 }
 
 export function Switch({ on, onChange, label }: { on: boolean; onChange: (v: boolean) => void; label: string }) {
-  return (
-    <button role="switch" aria-checked={on} aria-label={label} onClick={() => onChange(!on)}
-      className={`relative h-[26px] w-[48px] shrink-0 rounded-full transition ${on ? 'bg-accent' : 'bg-selected'}`}>
-      <span className={`absolute top-[3px] size-5 rounded-full bg-white shadow transition-all ${
-        on ? 'left-[25px]' : 'left-[3px]'}`} />
-    </button>
-  )
+  return <UiSwitch on={on} onChange={onChange} label={label} />
 }
 
 export function SwitchRow({ title, on, onChange }: { title: string; on: boolean; onChange: (v: boolean) => void }) {

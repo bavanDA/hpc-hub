@@ -2,7 +2,7 @@
 import { Eye, EyeOff, Minus, Plus } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
 
-import { List } from '../ui'
+import { List, Switch } from '../ui'
 
 export function Group({ title, description, children }:
   { title?: string; description?: string; children: ReactNode }) {
@@ -79,14 +79,7 @@ export function SpinRow({ label, sub, value, onChange, min, max }:
 
 export function Toggle({ checked, onChange, label }:
   { checked: boolean; onChange: (v: boolean) => void; label: string }) {
-  return (
-    <button type="button" role="switch" aria-checked={checked} aria-label={label} onClick={() => onChange(!checked)}
-      className={`relative h-[26px] w-[48px] shrink-0 rounded-full transition ${
-        checked ? 'bg-accent' : 'bg-selected'}`}>
-      <span className={`absolute top-[3px] size-5 rounded-full bg-white shadow transition-all ${
-        checked ? 'left-[25px]' : 'left-[3px]'}`} />
-    </button>
-  )
+  return <Switch on={checked} onChange={onChange} label={label} />
 }
 
 export function SwitchRow({ label, sub, checked, onChange }:
