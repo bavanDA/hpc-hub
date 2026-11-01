@@ -173,17 +173,8 @@ class ClusterConfig:
         """"Yale": the org, else the short name, for copy like "Yale uses an SSH key"."""
         return self.org or self.short_name
 
-    def password_note(self, store: str) -> str:
-        """Said under the password of a cluster that takes no keys. store: where logins are kept."""
-        return login_copy.PASSWORD_NOTE.format(store=store)
-
     def key_intro(self) -> str:
-        return login_copy.KEY_INTRO
-
-    @property
-    def vpn_owner(self) -> str:
-        """Whose VPN it needs, for "Connect to the Yale VPN"; "" without one."""
-        return self.who if self.vpn.enabled else ""
+        return login_copy.KEY_INTRO.format(who=self.who)
 
     @property
     def key_help_url(self) -> str:
@@ -219,8 +210,7 @@ def default_clusters() -> list[ClusterConfig]:
             host="bouchet.ycrc.yale.edu",
             username_label="NetID",
             key_page="https://sshkeys.ycrc.yale.edu/",
-            key_page_note="The page opens only on Yale's network or the Yale VPN. "
-                          "Your key can take up to 10 minutes to start working.",
+            key_page_note="That page only loads on campus or on the VPN.",
             key_help="https://docs.ycrc.yale.edu/clusters-at-yale/access/ssh/",
             reuse_running_job=True,
             vpn=VpnSettings(

@@ -46,24 +46,31 @@ def test_test_argv_uses_only_this_key_and_never_prompts():
     assert argv[argv.index("-i") + 1] == key.path and argv[-3:] == ["--", "login.example.edu", "true"]
 
 
-@pytest.mark.parametrize("output, code, kind, text", [
+@pytest.mark.parametrize("output, code, reason, kind", [
     ('debug1: Authenticated using "publickey" with partial success.\nPermission denied (keyboard-interactive).',
-     255, "ok", C.TEST_OK),
-    ("", 0, "ok", C.TEST_OK),
+     255, "ok", "ok"),
+    ("", 0, "ok", "ok"),
     ("debug1: Next authentication method: publickey\njdoe@login: Permission denied (publickey,keyboard-interactive).",
-     255, "wait", C.TEST_UNKNOWN_KEY.format(who="Yale")),
-    ("ssh: connect to host login.example.edu port 22: Connection timed out", 255, "error",
-     C.TEST_UNREACHABLE_VPN.format(vpn="Yale")),
-    ("Host key verification failed.", 255, "error", C.TEST_HOST_KEY),
-    ("debug1: x\nkex_exchange_identification: read: Connection reset by peer", 255, "error",
-     C.TEST_UNFINISHED.format(last="kex_exchange_identification: read: Connection reset by peer")),
+     255, "not_yet", "wait"),
+    ("ssh: connect to host login.example.edu port 22: Connection timed out", 255, "no_vpn", "error"),
+    ("Host key verification failed.", 255, "host_key", "error"),
+    ("debug1: x\nkex_exchange_identification: read: Connection reset by peer", 255, "unfinished", "error"),
 ])
-def test_verdict(output, code, kind, text):
-    got = my_key.verdict(output, code, "Yale", vpn="Yale")
-    assert (got.kind, got.text, got.ok) == (kind, text, kind == "ok")
-    assert "Connect to the Yale VPN" in my_key.verdict("No route to host", 255, "Yale", "Yale").text
-    assert "Bouchet" not in got.text  # the full name is the title's
+def test_verdict(output, code, reason, kind):
+    got = my_key.verdict(output, code, "Yale", vpn=True)
+    assert (got.reason, got.kind, got.ok) == (reason, kind, kind == "ok")
+    assert got.text and "Bouchet" not in got.text  # the full name is the title's
+    assert got.json()["reason"] == reason
+
+
+def test_sentences():
+    assert my_key.Result("ok", "Yale").text == "You're in."
+    assert my_key.Result("not_yet", "Yale").text.startswith("Yale hasn't picked up your key yet.")
+    assert my_key.verdict("No route to host", 255, "Yale", True).text.startswith("Yale is only reachable on the VPN")
+    last = "kex_exchange_identification: read: Connection reset by peer"
+    assert my_key.Result("unfinished", "Yale", last).text == f"That didn't finish: {last}"
 
 
 def test_no_vpn_no_vpn_question():
-    assert my_key.verdict("ssh: Could not resolve hostname x", 255, "SDSC").text == C.TEST_UNREACHABLE
+    assert my_key.verdict("ssh: Could not resolve hostname x", 255, "SDSC").reason == "unreachable"
+    assert C.TEST["unreachable"].format(who="SDSC") == "Can't get through to SDSC from this network."

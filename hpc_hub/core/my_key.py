@@ -90,42 +90,52 @@ def test_argv(key: MyKey, user: str, host: str, port: int = 22) -> list[str]:
 
 @dataclass
 class Result:
-    ok: bool
-    text: str
-    kind: str = ""  # "ok", "wait" (the key isn't known yet) or "error"; "" = from ok
+    reason: str  # a key of login_copy.TEST: ok, not_yet, no_vpn, unreachable, host_key, unfinished, no_ssh
+    who: str = ""  # "Yale", for the sentence
+    last: str = ""  # ssh's last words, for "unfinished"
 
-    def __post_init__(self):
-        self.kind = self.kind or ("ok" if self.ok else "error")
+    @property
+    def ok(self) -> bool:
+        return self.reason == "ok"
+
+    @property
+    def kind(self) -> str:
+        """"ok", "wait" (the key isn't known yet) or "error": the banner's color."""
+        return "ok" if self.ok else "wait" if self.reason == "not_yet" else "error"
+
+    @property
+    def text(self) -> str:
+        return C.TEST[self.reason].format(who=self.who, last=self.last).strip()
 
     def json(self) -> dict:
-        return {"ok": self.ok, "text": self.text, "kind": self.kind}
+        return {"ok": self.ok, "text": self.text, "kind": self.kind, "reason": self.reason, "last": self.last}
 
 
 UNREACHABLE = re.compile(r"Could not resolve hostname|Connection timed out|No route to host|Network is unreachable|"
                          r"Connection refused|Operation timed out|connect to host .* port \d+:")
 
 
-def verdict(output: str, code: int, who: str, vpn: str = "") -> Result:
-    """What ssh -v said, in words. who: "Yale"; vpn: whose VPN it needs ("Yale"), "" if none."""
+def verdict(output: str, code: int, who: str, vpn: bool = False) -> Result:
+    """What ssh -v said, as a reason. who: "Yale"; vpn: the cluster sits behind a VPN."""
     if code == 0 or re.search(r'Authenticated using "publickey" with partial success|Partial publickey|'
                               r'Authenticated to .* using "publickey"|Authentication succeeded \(publickey\)', output):
-        return Result(True, C.TEST_OK)  # partial success: the key is in, Duo comes next
+        return Result("ok", who)  # partial success: the key is in, Duo comes next
     if UNREACHABLE.search(output):
-        return Result(False, (C.TEST_UNREACHABLE_VPN if vpn else C.TEST_UNREACHABLE).format(vpn=vpn))
+        return Result("no_vpn" if vpn else "unreachable", who)
     if "Host key verification failed" in output or "REMOTE HOST IDENTIFICATION HAS CHANGED" in output:
-        return Result(False, C.TEST_HOST_KEY)
+        return Result("host_key", who)
     if "Permission denied" in output:
-        return Result(False, C.TEST_UNKNOWN_KEY.format(who=who), "wait")
+        return Result("not_yet", who)
     last = next((line for line in reversed(output.splitlines()) if line and not line.startswith("debug")), "")
-    return Result(False, C.TEST_UNFINISHED.format(last=last).strip())
+    return Result("unfinished", who, last)
 
 
-def test(key: MyKey, user: str, host: str, port: int, who: str, vpn: str = "") -> Result:
+def test(key: MyKey, user: str, host: str, port: int, who: str, vpn: bool = False) -> Result:
     try:
         p = subprocess.run(test_argv(key, user, host, port), capture_output=True, text=True, timeout=40,
                            stdin=subprocess.DEVNULL)
     except FileNotFoundError:
-        return Result(False, C.TEST_NO_SSH)
+        return Result("no_ssh", who)
     except subprocess.TimeoutExpired:
         return verdict("Connection timed out", 255, who, vpn)
     return verdict(p.stderr, p.returncode, who, vpn)

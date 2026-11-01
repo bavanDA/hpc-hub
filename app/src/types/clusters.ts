@@ -1,4 +1,6 @@
 // Shapes the Clusters page gets from the backend (see hpc_hub/core/config.py and hpc_hub/api/methods/clusters.py).
+import { S } from '../components/clusters/loginStrings'
+
 export type Profile = {
   cpus: number
   mem_gb: number
@@ -146,14 +148,16 @@ export const DUO: State = 'Approve Duo on your phone'
 
 /** The cluster's second step, decided by its admins, said under its name (login_copy.py SECOND_*). */
 export function secondStep(c: Pick<Cluster, 'second_factor'>) {
-  return c.second_factor === 'code' ? 'This cluster asks for a code from your authenticator app.'
-    : 'This cluster asks for Duo on your phone.'
+  return c.second_factor === 'code' ? S.SECOND_CODE : S.SECOND_DUO
 }
 
 /** This computer's SSH key (keys.mine). */
 export type MyKey = { path: string; file: string; kind: string; public: string; made: number; made_on: string }
 /** A login test with only the key (keys.test). kind "wait": the cluster doesn't know the key yet. */
-export type KeyTest = { ok: boolean; text: string; kind: 'ok' | 'wait' | 'error' }
+export type KeyTest = {
+  ok: boolean; text: string; kind: 'ok' | 'wait' | 'error'
+  reason?: 'ok' | 'not_yet' | 'no_vpn' | 'unreachable' | 'host_key' | 'unfinished' | 'no_ssh'; last?: string
+}
 
 export function summary(p: Profile) {
   return [`${p.cpus} cores`, `${p.mem_gb} GB`, p.time, p.gpus ? `${p.gpus} GPU` : '', p.partition]

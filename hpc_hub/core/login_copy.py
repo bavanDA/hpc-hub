@@ -1,55 +1,83 @@
-"""Every sentence the login screens say about passwords and SSH keys, in one place so the wording can change in
-one go. The desktop app keeps its own copy in app/src/components/clusters/loginCopy.ts; keep the two alike.
-The full cluster name is said once, in the title; after that the org ("Yale", who) or nothing."""
+"""Every sentence the sign-in screens say, in one place. The desktop app's copy is made from this file:
+`python -m hpc_hub.core.login_copy` writes app/src/components/clusters/loginStrings.ts (a test checks it's current).
 
-# connecting before there is a login
-FIRST_PASSWORD = "Enter your username and password first"
-FIRST_KEY = "Set up your SSH key and username first"
+House rules (tests/core/test_login_copy.py checks them): the full cluster name only in the title, after that the
+org ("{who}") or nothing; no "if" (each state says only what is true now); "Sign in", never "Log in"; no dashes.
+"""
+
+import json
+import sys
+from pathlib import Path
+
+# connecting before there is a sign-in
+FIRST = "Finish signing in to {short} first."
 
 SIGN_IN = "Sign in to {name}"
+USERNAME_HINT = "e.g. ab123"
+PASSWORD = "Password"
+SAVED = "Saved"  # the password field's placeholder when one is saved
+REMEMBER = "Remember password"
+SAVED_IN = "Saved in {store}."
+SKIP = "Skip for now"
+CONTINUE = "Continue"
 
 # the second step, decided by the cluster's admins (ClusterConfig.second_step)
-SECOND_DUO = "This cluster asks for Duo on your phone."
-SECOND_CODE = "This cluster asks for a code from your authenticator app."
-USERNAME_HINT = "e.g. ab123"
-REMEMBER = "Remember password"
+SECOND_DUO = "Uses Duo"
+SECOND_CODE = "You'll need a code from your authenticator app."
+DUO_NOW = "Check your phone for a Duo push."
 
-# a cluster that takes only passwords (Wulver)
-PASSWORD_HELP = "Your {who} {label} password."
-PASSWORD_NOTE = ("This cluster doesn't accept SSH keys, so HPC Hub signs in with your password. It's saved encrypted "
-                 "in {store}, the way a browser saves passwords.")
-PASSWORD_DUO = "After you sign in, approve the Duo push on your phone."
-SAVED_IN = "Saved encrypted in {store}."
+# a cluster with a web portal that adds your key (SDSC)
+PORTAL = "Sign in with the {short} portal"
+OR_PASSWORD = "Or use your username and password:"
 
-# a cluster you log in to with a key you paste on its key page (Yale)
-KEY_INTRO = "You need an SSH key to sign in."
+# a cluster you sign in to with a key you paste on its key page (Yale)
+KEY_INTRO = "{who} uses an SSH key instead of a password."
 WHATS_A_KEY = "What's an SSH key?"
 KEY_HELP = "https://docs.github.com/en/authentication/connecting-to-github-with-ssh/about-ssh"  # when none is set
-STEP_KEY = "Your SSH key"
-NO_KEY = "If you don't have one, HPC Hub can make one."
-CREATE_KEY = "Create SSH key"
-HAVE_KEY = "This computer has an SSH key ({file})."
-STEP_ADD = "Add it to {who}"
-COPY_KEY = "Copy public key"
+STEP_KEY = "Make a key"
+STEP_KEY_DONE = "Key"
+CREATE_KEY = "Create key"
+KEY_FOUND = "Found on this computer ({file})"
+KEY_MADE = "Made just now ({file})"
+STEP_ADD = "Give it to {who}"
+COPY_KEY = "Copy"
 COPIED = "Copied"
-PASTE_IT = "Paste it on {who}'s SSH key page."
-OPEN_PAGE = "Open {who} SSH key page"
-ADDED_IT = "I added it"
-ADDED = "Added on {who}'s SSH key page."
-STEP_TEST = "Test your login"
-KEY_DUO = "You'll also get a Duo push on your phone."
-TEST_BUTTON = "Test login"
+PASTE_IT = "Paste it on {who}'s key page."
+OPEN_PAGE = "Open key page"
+PASTED_IT = "I pasted it"
+PASTED = "Pasted"
+STEP_TEST = "Try it"
+TRY = "Try it"
+TRY_AGAIN = "Try again"
+SIGNED_IN_AS = "Signed in as {user}"
 CHANGE = "Change"
 USE_PASSWORD = "Use a password instead"
 USE_KEY = "Use an SSH key instead"
 
-# what the login test found (core/my_key.py verdict)
-TEST_OK = "Login works."
-TEST_UNKNOWN_KEY = "{who} doesn't know this key yet. If you just added it, wait a few minutes and test again."
-TEST_UNREACHABLE_VPN = "Can't reach the cluster. Connect to the {vpn} VPN, then test again."
-TEST_UNREACHABLE = "Can't reach the cluster. Check your connection, then test again."
-TEST_HOST_KEY = "The cluster's server key changed. Ask its admins before you connect."
-TEST_UNFINISHED = "The test didn't finish. {last}"
-TEST_NO_SSH = "No ssh program here to test with."
-TEST_NO_KEY = "Create your SSH key first."
-TEST_NO_USER = "Type your username first."
+# what the sign-in test found (core/my_key.py verdict), by reason
+TEST = {
+    "ok": "You're in.",
+    "not_yet": "{who} hasn't picked up your key yet. It can take up to 10 minutes.",
+    "no_vpn": "{who} is only reachable on the VPN, and you're not on it right now.",
+    "unreachable": "Can't get through to {who} from this network.",
+    "host_key": "{who}'s server looks different from last time. Check with {who}'s HPC team before you connect.",
+    "unfinished": "That didn't finish: {last}",
+    "no_ssh": "This computer has no ssh program, so HPC Hub can't test the key.",
+}
+
+
+def strings() -> dict[str, object]:
+    """The constants above by name, for the desktop app."""
+    return {k: v for k, v in globals().items() if k.isupper() and isinstance(v, (str, dict))}
+
+
+def typescript() -> str:
+    return ("// Made by `python -m hpc_hub.core.login_copy` from hpc_hub/core/login_copy.py. Don't edit by hand.\n"
+            f"export const S = {json.dumps(strings(), indent=2, ensure_ascii=False)} as const\n")
+
+
+TS_FILE = Path(__file__).resolve().parents[2] / "app" / "src" / "components" / "clusters" / "loginStrings.ts"
+
+if __name__ == "__main__":
+    TS_FILE.write_text(typescript(), encoding="utf-8")
+    sys.stdout.write(f"wrote {TS_FILE}\n")

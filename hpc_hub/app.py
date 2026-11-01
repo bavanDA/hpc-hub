@@ -255,7 +255,7 @@ class HpcHubApp(LoginPromptsMixin, QuitMixin, Adw.Application):
                            lambda user: self._key_login(session, user)).present(self.window)
             return
         if not ssh_login or not ssh_login.username:
-            self.open_settings(session, login_copy.FIRST_KEY if cfg.key_page else login_copy.FIRST_PASSWORD)
+            self.open_settings(session, login_copy.FIRST.format(short=cfg.short_name))
             return
         vpn_login = None
         if cfg.vpn.enabled:

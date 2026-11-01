@@ -30,14 +30,17 @@ def test_mine_create_once(home):
 
 
 def test_test_needs_a_key_and_a_name_then_asks_the_cluster(home, monkeypatch):
-    assert keys.test("yale", "jdoe") == {"ok": False, "text": login_copy.TEST_NO_KEY, "kind": "error"}
+    with pytest.raises(ValueError):
+        keys.test("yale", "jdoe")  # no key yet: the screen never asks then
     keys.create()
-    assert keys.test("yale", " ") == {"ok": False, "text": login_copy.TEST_NO_USER, "kind": "error"}
+    with pytest.raises(ValueError):
+        keys.test("yale", " ")
     asked = []
 
     def fake(key, user, host, port, who, vpn):
         asked.append((user, host, port, who, vpn))
-        return my_key.Result(True, "Login works.")
+        return my_key.Result("ok", who)
     monkeypatch.setattr(my_key, "test", fake)
-    assert keys.test("yale", " jdoe ") == {"ok": True, "text": "Login works.", "kind": "ok"}
-    assert asked == [("jdoe", "bouchet.ycrc.yale.edu", 22, "Yale", "Yale")]
+    got = keys.test("yale", " jdoe ")
+    assert (got["ok"], got["kind"], got["reason"], got["text"]) == (True, "ok", "ok", login_copy.TEST["ok"])
+    assert asked == [("jdoe", "bouchet.ycrc.yale.edu", 22, "Yale", True)]

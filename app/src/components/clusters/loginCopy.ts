@@ -1,49 +1,32 @@
-// Every sentence the login screens say about passwords and SSH keys, in one place so the wording can change in
-// one go. Python's are in hpc_hub/core/login_copy.py (also the login test's answers); keep the two alike.
-// The full cluster name is said once, in the title; after that the org ("Yale", who) or nothing.
+// What the sign-in screens say. The words are in loginStrings.ts, made from hpc_hub/core/login_copy.py so the
+// GTK app and this one say the same thing. The full cluster name only in the title; after that the org or nothing.
 import type { Cluster } from '../../types/clusters'
+import { S } from './loginStrings'
 
 type Named = Pick<Cluster, 'name' | 'org'>
 
+/** "Sign in to {name}" with name filled in. */
+export const fill = (t: string, v: Record<string, string> = {}) => t.replace(/\{(\w+)\}/g, (_, k) => v[k] ?? '')
 /** "Wulver" for "Wulver (NJIT)". */
 export const shortName = (c: Pick<Cluster, 'name'>) => c.name.split(' (')[0]
 /** "Yale": the org, else the short name. */
 export const who = (c: Named) => c.org || shortName(c)
 /** Where "What's an SSH key?" goes: the cluster's own guide, else GitHub's. */
-export const keyHelp = (c: Pick<Cluster, 'key_help'>) =>
-  c.key_help || 'https://docs.github.com/en/authentication/connecting-to-github-with-ssh/about-ssh'
+export const keyHelp = (c: Pick<Cluster, 'key_help'>) => c.key_help || S.KEY_HELP
 
 export const copy = {
-  signIn: (c: Named) => `Sign in to ${shortName(c)}`,
-  usernameHint: 'e.g. ab123',
-  remember: 'Remember password',
-
-  // a cluster that takes only passwords (Wulver)
-  passwordHelp: (c: Named & Pick<Cluster, 'username_label'>) => `Your ${who(c)} ${c.username_label ?? ''} password.`,
-  passwordNote: (store: string) =>
-    "This cluster doesn't accept SSH keys, so HPC Hub signs in with your password. It's saved encrypted in " +
-    `${store}, the way a browser saves passwords.`,
-  passwordDuo: 'After you sign in, approve the Duo push on your phone.',
-  savedIn: (store: string) => `Saved encrypted in ${store}.`,
-
-  // a cluster you log in to with a key you paste on its key page (Yale)
-  keyIntro: 'You need an SSH key to sign in.',
-  whatsAKey: "What's an SSH key?",
-  stepKey: 'Your SSH key',
-  noKey: "If you don't have one, HPC Hub can make one.",
-  createKey: 'Create SSH key',
-  haveKey: (file: string) => `This computer has an SSH key (${file}).`,
-  stepAdd: (c: Named) => `Add it to ${who(c)}`,
-  copyKey: 'Copy public key',
-  copied: 'Copied',
-  pasteIt: (c: Named) => `Paste it on ${who(c)}'s SSH key page.`,
-  openPage: (c: Named) => `Open ${who(c)} SSH key page`,
-  addedIt: 'I added it',
-  added: (c: Named) => `Added on ${who(c)}'s SSH key page.`,
-  stepTest: 'Test your login',
-  keyDuo: "You'll also get a Duo push on your phone.",
-  testButton: 'Test login',
-  change: 'Change',
-  usePassword: 'Use a password instead',
-  useKey: 'Use an SSH key instead',
+  signIn: (c: Named) => fill(S.SIGN_IN, { name: c.name }),
+  usernameHint: S.USERNAME_HINT,
+  password: S.PASSWORD,
+  saved: S.SAVED,
+  remember: S.REMEMBER,
+  savedIn: (store: string) => fill(S.SAVED_IN, { store }),
+  skip: S.SKIP,
+  continue: S.CONTINUE,
+  portal: (c: Named) => fill(S.PORTAL, { short: shortName(c) }),
+  orPassword: S.OR_PASSWORD,
+  keyIntro: (c: Named) => fill(S.KEY_INTRO, { who: who(c) }),
+  whatsAKey: S.WHATS_A_KEY,
+  usePassword: S.USE_PASSWORD,
+  useKey: S.USE_KEY,
 }
