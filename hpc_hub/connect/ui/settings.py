@@ -17,6 +17,8 @@ from ..vpn import split_errors
 from .authenticator_help import AuthenticatorHelp
 from .key_group import KeyGroup
 
+STORE = "your system keyring"  # where the GTK app keeps logins (credentials.py: GNOME Keyring)
+
 
 def _entry(title: str, text: str = "") -> Adw.EntryRow:
     row = Adw.EntryRow(title=title)
@@ -88,12 +90,12 @@ class ClusterSettingsDialog(Adw.PreferencesDialog):
         page = Adw.PreferencesPage(name="login", title="Login", icon_name="dialog-password-symbolic")
         c = self.cfg
         if c.key_page:
-            note = C.KEY_INTRO.format(who=c.who)
+            note = c.key_intro()
         elif c.password_only:
-            note = c.password_note()
+            note = c.password_note(STORE)
         else:
-            note = C.SAVED_IN.format(store="your system keyring")
-        self.user = _entry("Username", self.ssh_saved.username if self.ssh_saved else "")
+            note = C.SAVED_IN.format(store=STORE)
+        self.user = _entry(c.username_label, self.ssh_saved.username if self.ssh_saved else "")
         self.password = self._password_row(self.ssh_saved)
         if c.key_page:
             group = KeyGroup(c, self.user, self.password, title="Cluster login", description=note)
