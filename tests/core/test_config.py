@@ -108,3 +108,15 @@ def test_old_chrome_profile_sign_in_falls_back_to_the_app_window(tmp_path):
     path.write_text('[clusters.wulver.vpn]\nbrowser = "Uni"\n[clusters.yale.vpn]\nbrowser = "hpc-hub:chrome-window"\n')
     loaded = {c.id: c for c in config.load(path)}
     assert loaded["wulver"].vpn.browser == "" and loaded["yale"].vpn.browser == config.CHROME_WINDOW
+
+
+def test_how_each_cluster_logs_in_is_said(tmp_path):
+    path = tmp_path / "clusters.toml"
+    path.write_text('[clusters.wulver]\nhost = "wulver.njit.edu"\n')  # saved before these settings existed
+    by_id = {c.id: c for c in config.load(path)}
+    wulver, yale = by_id["wulver"], by_id["yale"]
+    assert wulver.password_only and not wulver.key_page
+    assert wulver.password_note() == ("Wulver only takes passwords, not SSH keys. HPC Hub keeps yours encrypted on "
+                                      "this computer.")
+    assert yale.key_page.startswith("https://") and not yale.password_only
+    assert yale.key_intro() == "Yale uses an SSH key instead of a password."

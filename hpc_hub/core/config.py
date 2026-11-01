@@ -108,7 +108,11 @@ class ClusterConfig:
     duo_answer: str = "push"
     second_factor: str = "duo"  # duo (push to your phone) or code (authenticator app, TOTP)
     remember_password: bool = True  # False: the keyring keeps only the username; asked once per run
+    org: str = ""  # who runs it, for copy like "NJIT doesn't support SSH keys yet"
     portal: str = ""  # web portal where you can add your SSH key after signing in in Chrome
+    key_page: str = ""  # a web page where you paste your SSH public key yourself (Yale's key uploader)
+    key_page_note: str = ""  # what to know about that page, shown under its button
+    password_only: bool = False  # its SSH server takes no keys: the app needs your password (said, not hidden)
     key_login: bool = False  # takes SSH keys from ~/.ssh/authorized_keys: the phone app gets a key (pairing.py)
     code_setup: str = ""  # where you set up the authenticator app the cluster asks codes from
     # "partition:qos" queues to choose from, cheapest first: the first that starts within queue_wait seconds
@@ -155,6 +159,18 @@ class ClusterConfig:
         return f"{self.name} asks for Duo on your phone."
 
     @property
+    def short_name(self) -> str:
+        """"Wulver" for "Wulver (NJIT)"."""
+        return self.name.split(" (")[0]
+
+    def password_note(self) -> str:
+        """Said under the password of a cluster that takes no keys."""
+        return f"{self.short_name} only takes passwords, not SSH keys. HPC Hub keeps yours encrypted on this computer."
+
+    def key_intro(self) -> str:
+        return f"{self.org or self.short_name} uses an SSH key instead of a password."
+
+    @property
     def vpn_connection_name(self) -> str:
         return f"HPC Hub - {self.name}"
 
@@ -166,7 +182,9 @@ def default_clusters() -> list[ClusterConfig]:
             queues="general:low,debug:debug,general:standard",  # free, free (4 cores, 8 h), costs SUs
             fast="debug:debug:08:00:00",  # one job at a time
             name="Wulver (NJIT)",
+            org="NJIT",
             host="wulver.njit.edu",
+            password_only=True,  # its sshd offers no publickey, only a password (or Kerberos), then Duo
             vpn=VpnSettings(enabled=True, gateway="vpn.njit.edu", useragent="AnyConnect Linux_64 4.10.07061",
                              domains="njit.edu", routes="128.235.0.0/16"),
             profile=ComputeProfile(cpus=4, mem_gb=16),
@@ -177,7 +195,10 @@ def default_clusters() -> list[ClusterConfig]:
         ClusterConfig(
             id="yale",
             name="Yale Bouchet",
+            org="Yale",
             host="bouchet.ycrc.yale.edu",
+            key_page="https://sshkeys.ycrc.yale.edu/",
+            key_page_note="Campus or VPN only. Takes up to 10 minutes.",
             reuse_running_job=True,
             vpn=VpnSettings(
                 enabled=True,
@@ -197,6 +218,7 @@ def default_clusters() -> list[ClusterConfig]:
         ClusterConfig(
             id="sdsc",
             name="SDSC Expanse",
+            org="SDSC",
             host="login.expanse.sdsc.edu",
             second_factor="code",  # ACCESS login: ACCESS password or SSH key, then a TOTP code
             portal="https://portal.expanse.sdsc.edu",
