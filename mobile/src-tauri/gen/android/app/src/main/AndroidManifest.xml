@@ -2,6 +2,13 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- notifications: Duo waiting, node time, jobs that end, copies done, and the "stay connected" one -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- KeepAliveService.kt: optional, keeps SSH connections open while you use other apps -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <!-- the notification plugin asks for this to bring back scheduled notifications after a reboot; HPC Hub schedules none -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" tools:node="remove" />
     <!-- DuoPlugin.kt opens Duo Mobile -->
     <queries>
         <package android:name="com.duosecurity.duomobile" />
@@ -30,6 +37,16 @@
             android:name="com.journeyapps.barcodescanner.CaptureActivity"
             android:screenOrientation="fullSensor"
             tools:replace="screenOrientation" />
+
+        <!-- "Keep connected in the background" (KeepAliveService.kt): no standard type fits an SSH session -->
+        <service
+            android:name=".KeepAliveService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Keeps the user's SSH connections to university HPC clusters open while the app is in the background, so terminals and file transfers don't drop. Started and stopped by the user in Settings." />
+        </service>
 
         <provider
           android:name="androidx.core.content.FileProvider"
