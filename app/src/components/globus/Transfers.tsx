@@ -1,7 +1,8 @@
 // Recent transfers: where each is at, with a progress bar and Cancel while it runs.
-import { CircleCheck, CircleX, Loader2, Pause, RefreshCw, X } from 'lucide-react'
+import { CircleCheck, CircleX, ExternalLink, Loader2, Pause, RefreshCw, X } from 'lucide-react'
 
 import type { Task } from '../../types/globus'
+import { openSystem } from '../app/openLink'
 import { IconButton, List, Pill, Row } from '../ui'
 import { formatSize, shortDate } from './parts'
 
@@ -15,7 +16,7 @@ function state(t: Task): [string, 'ok' | 'bad' | 'warn' | 'dim'] {
 
 /** Why a transfer failed, in words: Globus' problem code, else its status line. */
 const reason = (t: Task) =>
-  (t.problem || t.nice_status || 'Globus gave no reason').replace(/_/g, ' ').toLowerCase().replace(/^./, (c) => c.toUpperCase())
+  (t.problem || t.nice_status || 'Globus did not say why').replace(/_/g, ' ').toLowerCase().replace(/^./, (c) => c.toUpperCase())
 
 function Icon({ t }: { t: Task }) {
   if (t.status === 'SUCCEEDED') return <CircleCheck size={20} className="shrink-0 text-ok" />
@@ -55,6 +56,8 @@ function TaskRow({ t, onCancel, names }:
       suffix={<div className="flex items-center gap-1">
         <Pill kind={kind}>{label}</Pill>
         {t.active && <IconButton icon={X} label="Cancel transfer" size={16} onClick={() => onCancel(t.task_id)} />}
+        {failed && <IconButton icon={ExternalLink} label="Open in Globus" size={16}
+          onClick={() => openSystem(`https://app.globus.org/activity/${t.task_id}`)} />}
       </div>} />
   )
 }

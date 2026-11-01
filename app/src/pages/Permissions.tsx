@@ -86,7 +86,8 @@ export function Permissions() {
   else if (!perm || !draft) body = <div className="grid h-64 place-items-center"><Spinner size={24} /></div>
   else body = (
     <div className="flex flex-col gap-6">
-      <Group title="Claude" description="Saved in ~/.claude/settings.json">
+      <Group title="Claude" description="What Claude may do on the cluster without asking you.
+        Saved in ~/.claude/settings.json.">
         <SwitchRow title="Edit files without asking" on={draft.accept_edits}
           onChange={(v) => edit({ accept_edits: v })} />
         <SwitchRow title="Use trash instead of rm" subtitle="rm is blocked. Deleted files stay in .trash for 7 days"
