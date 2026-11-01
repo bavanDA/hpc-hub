@@ -66,7 +66,7 @@ export function ClusterCard({ cluster: c, session: s, log }: { cluster: Cluster;
         </div>
         <span className={`shrink-0 rounded-full px-3 py-1 text-xs font-bold ${PILL[s.state] ?? 'bg-warn-bg text-warn'}`}>
           {s.state === DUO ? 'Duo' : s.state}</span>
-        <button aria-label="Login" onClick={() => { setHint(''); setOpen('login') }}
+        <button aria-label="Sign-in" onClick={() => { setHint(''); setOpen('login') }}
           className="-mr-2 -mt-2 grid size-11 shrink-0 place-items-center rounded-full text-dim active:bg-hover">
           <KeyRound size={20} /></button>
       </div>
@@ -82,7 +82,7 @@ export function ClusterCard({ cluster: c, session: s, log }: { cluster: Cluster;
       {connected && (
         <div className="rounded-xl bg-pill p-3">
           <p className="select-text font-bold">
-            {s.node ? `Node ${s.node} · Job ${s.job}` : 'No compute node'}</p>
+            {s.node ? `Node ${s.node} · Job ${s.job}` : 'No node yet'}</p>
           <div className="mt-2 flex gap-2">
             {s.node
               ? <Button className="flex-1" onClick={() => run('clusters.release_node')}>
@@ -96,10 +96,10 @@ export function ClusterCard({ cluster: c, session: s, log }: { cluster: Cluster;
         </div>
       )}
 
-      {idle && <Switch label="Compute node on connect" hint={summary(c.profile)}
+      {idle && <Switch label="Get a node on connect" hint={summary(c.profile)}
         checked={c.request_node_on_connect ?? true} onChange={(on) => change({ request_node_on_connect: on })} />}
       {idle && (c.request_node_on_connect ?? true) && <Switch label="Ask every time"
-        hint="Show the node's settings before each request" checked={c.ask_node ?? false}
+        hint="Review these before each request" checked={c.ask_node ?? false}
         onChange={(on) => change({ ask_node: on })} />}
 
       <div className="flex gap-2">

@@ -43,8 +43,8 @@ export function LoginSheet({ cluster: c, hint, onClose }: { cluster: Cluster; hi
   }
 
   return (
-    <Sheet title={`${c.name} login`} onClose={onClose} actions={<>
-      <Button className="flex-1" onClick={forget}>Forget</Button>
+    <Sheet title={`Sign in to ${c.name}`} onClose={onClose} actions={<>
+      <Button className="flex-1" onClick={forget}>Forget password</Button>
       <Button kind="primary" className="flex-1" disabled={!user.trim()} onClick={save}>Save</Button></>}>
       {hint && <p className="mb-3 rounded-xl bg-warn-bg p-3 text-warn">{hint}</p>}
       <Button kind="primary" icon={ScanQrCode} className="w-full" onClick={scan}>Scan QR code</Button>
@@ -57,7 +57,7 @@ export function LoginSheet({ cluster: c, hint, onClose }: { cluster: Cluster; hi
           placeholder={saved?.ssh.password ? 'Saved, leave empty to keep it' : 'Empty for an SSH key'} />
       </form>
       <p className="mb-1 text-sm text-dim">Saved encrypted on this phone, never in plain text.</p>
-      <Switch label="Remember the password" hint="Off: asked once each time the app starts."
+      <Switch label="Remember password" hint="Off: asked once each time the app starts."
         checked={remember} onChange={setRemember} />
     </Sheet>
   )
