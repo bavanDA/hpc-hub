@@ -20,12 +20,11 @@ def create() -> dict:
 
 @method("keys.test")
 def test(cluster: str, username: str) -> dict:
-    """Try a login with only the key and no prompts. {ok, text}."""
+    """Try a login with only the key and no prompts. {ok, text, kind}."""
     cfg = hub().session(cluster).cfg
     key = my_key.find()
     if not key:
-        return {"ok": False, "text": login_copy.TEST_NO_KEY}
+        return my_key.Result(False, login_copy.TEST_NO_KEY).json()
     if not username.strip():
-        return {"ok": False, "text": login_copy.TEST_NO_USER}
-    r = my_key.test(key, username.strip(), cfg.host, cfg.port, cfg.who, cfg.vpn.enabled)
-    return {"ok": r.ok, "text": r.text}
+        return my_key.Result(False, login_copy.TEST_NO_USER).json()
+    return my_key.test(key, username.strip(), cfg.host, cfg.port, cfg.short_name, cfg.vpn_owner).json()

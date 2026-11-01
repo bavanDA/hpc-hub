@@ -26,8 +26,14 @@ class MyKey:
     public: str  # the line to paste on the key page
     made: float  # unix time of the file
 
+    @property
+    def file(self) -> str:
+        """"id_ed25519"."""
+        return Path(self.path).name
+
     def json(self) -> dict:
-        return {**asdict(self), "made_on": time.strftime("%b %Y", time.localtime(self.made))}  # "Oct 2026"
+        return {**asdict(self), "file": self.file,
+                "made_on": time.strftime("%b %Y", time.localtime(self.made))}  # "Oct 2026"
 
 
 def ssh_dir() -> Path:
@@ -86,33 +92,40 @@ def test_argv(key: MyKey, user: str, host: str, port: int = 22) -> list[str]:
 class Result:
     ok: bool
     text: str
+    kind: str = ""  # "ok", "wait" (the key isn't known yet) or "error"; "" = from ok
+
+    def __post_init__(self):
+        self.kind = self.kind or ("ok" if self.ok else "error")
+
+    def json(self) -> dict:
+        return {"ok": self.ok, "text": self.text, "kind": self.kind}
 
 
 UNREACHABLE = re.compile(r"Could not resolve hostname|Connection timed out|No route to host|Network is unreachable|"
                          r"Connection refused|Operation timed out|connect to host .* port \d+:")
 
 
-def verdict(output: str, code: int, who: str, vpn: bool) -> Result:
-    """What ssh -v said, in words. who: "Yale"."""
+def verdict(output: str, code: int, name: str, vpn: str = "") -> Result:
+    """What ssh -v said, in words. name: "Yale Bouchet"; vpn: whose VPN it needs ("Yale"), "" if none."""
     if code == 0 or re.search(r'Authenticated using "publickey" with partial success|Partial publickey|'
                               r'Authenticated to .* using "publickey"|Authentication succeeded \(publickey\)', output):
-        return Result(True, C.TEST_OK)  # partial success: the key is in, Duo comes next
+        return Result(True, C.TEST_OK.format(name=name))  # partial success: the key is in, Duo comes next
     if UNREACHABLE.search(output):
-        return Result(False, (C.TEST_UNREACHABLE_VPN if vpn else C.TEST_UNREACHABLE).format(who=who))
+        return Result(False, (C.TEST_UNREACHABLE_VPN if vpn else C.TEST_UNREACHABLE).format(name=name, vpn=vpn))
     if "Host key verification failed" in output or "REMOTE HOST IDENTIFICATION HAS CHANGED" in output:
-        return Result(False, C.TEST_HOST_KEY.format(who=who))
+        return Result(False, C.TEST_HOST_KEY.format(name=name))
     if "Permission denied" in output:
-        return Result(False, C.TEST_UNKNOWN_KEY.format(who=who))
+        return Result(False, C.TEST_UNKNOWN_KEY.format(name=name), "wait")
     last = next((line for line in reversed(output.splitlines()) if line and not line.startswith("debug")), "")
     return Result(False, C.TEST_UNFINISHED.format(last=last).strip())
 
 
-def test(key: MyKey, user: str, host: str, port: int, who: str, vpn: bool = False) -> Result:
+def test(key: MyKey, user: str, host: str, port: int, name: str, vpn: str = "") -> Result:
     try:
         p = subprocess.run(test_argv(key, user, host, port), capture_output=True, text=True, timeout=40,
                            stdin=subprocess.DEVNULL)
     except FileNotFoundError:
         return Result(False, C.TEST_NO_SSH)
     except subprocess.TimeoutExpired:
-        return verdict("Connection timed out", 255, who, vpn)
-    return verdict(p.stderr, p.returncode, who, vpn)
+        return verdict("Connection timed out", 255, name, vpn)
+    return verdict(p.stderr, p.returncode, name, vpn)

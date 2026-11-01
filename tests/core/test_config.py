@@ -116,6 +116,11 @@ def test_how_each_cluster_logs_in_is_said(tmp_path):
     by_id = {c.id: c for c in config.load(path)}
     wulver, yale = by_id["wulver"], by_id["yale"]
     assert wulver.password_only and not wulver.key_page
-    assert "Wulver" in wulver.password_note() and "NJIT" not in wulver.password_note()
+    note = wulver.password_note("your system keyring")
+    assert note.startswith("Wulver doesn't accept SSH keys") and "your system keyring" in note
+    assert wulver.username_label == "UCID" and yale.username_label == "NetID"
     assert yale.key_page.startswith("https://") and not yale.password_only
-    assert yale.who == "Yale" and "Yale" in yale.key_intro() and not yale.password_too
+    assert yale.who == "Yale" and yale.key_intro() == "To sign in to Yale Bouchet, you need an SSH key."
+    assert not yale.password_too and yale.vpn_owner == "Yale"
+    assert yale.key_help_url.startswith("https://docs.ycrc.yale.edu/")  # its own guide
+    assert by_id["sdsc"].key_help_url.startswith("https://docs.github.com/")  # else GitHub's

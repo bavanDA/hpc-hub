@@ -1,39 +1,51 @@
 """Every sentence the login screens say about passwords and SSH keys, in one place so the wording can change in
-one go. The desktop app keeps its own copy in app/src/components/clusters/loginCopy.ts; keep the two alike."""
+one go. The desktop app keeps its own copy in app/src/components/clusters/loginCopy.ts; keep the two alike.
+name: the cluster's short name ("Yale Bouchet", "Wulver"); who: its org ("Yale")."""
 
 # connecting before there is a login
 FIRST_PASSWORD = "Enter your username and password first"
 FIRST_KEY = "Set up your SSH key and username first"
 
-# a cluster that takes only passwords (Wulver); name: "Wulver"
-PASSWORD_NOTE = "{name} only takes passwords, not SSH keys. HPC Hub keeps yours encrypted on this computer."
+SIGN_IN = "Sign in to {name}"
+USERNAME_HINT = "e.g. ab123"
+REMEMBER = "Remember password"
+
+# a cluster that takes only passwords (Wulver)
+PASSWORD_HELP = "Your {who} {label} password."
+PASSWORD_NOTE = ("{name} doesn't accept SSH keys, so HPC Hub signs in with your password. It's saved encrypted in "
+                 "{store}, the way a browser saves passwords.")
+PASSWORD_DUO = "After you sign in, approve the Duo push on your phone."
 SAVED_IN = "Saved encrypted in {store}."
 
-# a cluster you log in to with a key you paste on its key page (Yale); who: "Yale"
-KEY_INTRO = "{who} uses an SSH key instead of a password."
+# a cluster you log in to with a key you paste on its key page (Yale)
+KEY_INTRO = "To sign in to {name}, you need an SSH key."
 WHATS_A_KEY = "What's an SSH key?"
-KEY_EXPLAINED = ("A file on your computer that proves it's you. {who} gets the public half. "
-                 "The private half never leaves this computer.")
-STEP_MAKE = "Make a key"
-HAVE_KEY = "You have a key ({kind}, {made})"
-MAKE_BUTTON = "Make my key"
-STEP_COPY = "Copy it"
-COPY_BUTTON = "Copy"
+KEY_HELP = "https://docs.github.com/en/authentication/connecting-to-github-with-ssh/about-ssh"  # when none is set
+STEP_KEY = "Your SSH key"
+NO_KEY = "If you don't have one, HPC Hub can make one."
+CREATE_KEY = "Create SSH key"
+HAVE_KEY = "This computer has an SSH key ({file})."
+STEP_ADD = "Add it to {who}"
+COPY_KEY = "Copy public key"
 COPIED = "Copied"
-STEP_PASTE = "Paste it on {who}'s key page"
-OPEN_PAGE = "Open key page"
-STEP_USER = "Your username"
+PASTE_IT = "Paste it on {who}'s SSH key page."
+OPEN_PAGE = "Open {who} SSH key page"
+ADDED_IT = "I added it"
+ADDED = "Added on {who}'s SSH key page."
+STEP_TEST = "Test your login"
+KEY_DUO = "{name} also sends a Duo push to your phone."
 TEST_BUTTON = "Test login"
+CHANGE = "Change"
 USE_PASSWORD = "Use a password instead"
 USE_KEY = "Use an SSH key instead"
 
 # what the login test found (core/my_key.py verdict)
-TEST_OK = "It works."
-TEST_UNKNOWN_KEY = "{who} doesn't know this key yet. Wait a few minutes and try again."
-TEST_UNREACHABLE_VPN = "Can't reach {who}. Are you on the VPN?"
-TEST_UNREACHABLE = "Can't reach {who}."
-TEST_HOST_KEY = "{who}'s server key changed. Ask its admins before you connect."
+TEST_OK = "Login works. {name} is ready."
+TEST_UNKNOWN_KEY = "{name} doesn't know this key yet. If you just added it, wait a few minutes and test again."
+TEST_UNREACHABLE_VPN = "Can't reach {name}. Connect to the {vpn} VPN, then test again."
+TEST_UNREACHABLE = "Can't reach {name}. Check your connection, then test again."
+TEST_HOST_KEY = "{name}'s server key changed. Ask its admins before you connect."
 TEST_UNFINISHED = "The test didn't finish. {last}"
 TEST_NO_SSH = "No ssh program here to test with."
-TEST_NO_KEY = "Make your key first."
+TEST_NO_KEY = "Create your SSH key first."
 TEST_NO_USER = "Type your username first."

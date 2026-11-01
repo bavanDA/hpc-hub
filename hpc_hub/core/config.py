@@ -114,6 +114,8 @@ class ClusterConfig:
     portal: str = ""  # web portal where you can add your SSH key after signing in in Chrome
     key_page: str = ""  # a web page where you paste your SSH public key yourself (Yale's key uploader)
     key_page_note: str = ""  # what to know about that page, shown under its button
+    key_help: str = ""  # a guide to SSH keys for this cluster ("What's an SSH key?"); "" = GitHub's
+    username_label: str = "Username"  # what the cluster calls it: UCID, NetID
     password_only: bool = False  # its SSH server takes no keys: the app needs your password (said, not hidden)
     password_too: bool = False  # with key_page: a password works as well, offered as "Use a password instead"
     key_login: bool = False  # takes SSH keys from ~/.ssh/authorized_keys: the phone app gets a key (pairing.py)
@@ -171,12 +173,21 @@ class ClusterConfig:
         """"Yale": the org, else the short name, for copy like "Yale uses an SSH key"."""
         return self.org or self.short_name
 
-    def password_note(self) -> str:
-        """Said under the password of a cluster that takes no keys."""
-        return login_copy.PASSWORD_NOTE.format(name=self.short_name)
+    def password_note(self, store: str) -> str:
+        """Said under the password of a cluster that takes no keys. store: where logins are kept."""
+        return login_copy.PASSWORD_NOTE.format(name=self.short_name, store=store)
 
     def key_intro(self) -> str:
-        return login_copy.KEY_INTRO.format(who=self.who)
+        return login_copy.KEY_INTRO.format(name=self.short_name)
+
+    @property
+    def vpn_owner(self) -> str:
+        """Whose VPN it needs, for "Connect to the Yale VPN"; "" without one."""
+        return self.who if self.vpn.enabled else ""
+
+    @property
+    def key_help_url(self) -> str:
+        return self.key_help or login_copy.KEY_HELP
 
     @property
     def vpn_connection_name(self) -> str:
@@ -191,6 +202,7 @@ def default_clusters() -> list[ClusterConfig]:
             fast="debug:debug:08:00:00",  # one job at a time
             name="Wulver (NJIT)",
             org="NJIT",
+            username_label="UCID",
             host="wulver.njit.edu",
             password_only=True,  # its sshd offers no publickey, only a password (or Kerberos), then Duo
             vpn=VpnSettings(enabled=True, gateway="vpn.njit.edu", useragent="AnyConnect Linux_64 4.10.07061",
@@ -205,8 +217,11 @@ def default_clusters() -> list[ClusterConfig]:
             name="Yale Bouchet",
             org="Yale",
             host="bouchet.ycrc.yale.edu",
+            username_label="NetID",
             key_page="https://sshkeys.ycrc.yale.edu/",
-            key_page_note="Campus or VPN only. Takes up to 10 minutes.",
+            key_page_note="The page opens only on Yale's network or the Yale VPN. "
+                          "Your key can take up to 10 minutes to start working.",
+            key_help="https://docs.ycrc.yale.edu/clusters-at-yale/access/ssh/",
             reuse_running_job=True,
             vpn=VpnSettings(
                 enabled=True,
@@ -227,6 +242,7 @@ def default_clusters() -> list[ClusterConfig]:
             id="sdsc",
             name="SDSC Expanse",
             org="SDSC",
+            username_label="ACCESS username",
             host="login.expanse.sdsc.edu",
             second_factor="code",  # ACCESS login: ACCESS password or SSH key, then a TOTP code
             portal="https://portal.expanse.sdsc.edu",
