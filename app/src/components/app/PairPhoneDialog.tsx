@@ -76,7 +76,7 @@ export function PairPhoneDialog({ only, onClose }: { only?: string[]; onClose: (
   const toggle = (id: string) => setOn((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n })
 
   return (
-    <Dialog title="Set up the phone app" onClose={onClose} width={460} actions={made
+    <Dialog title="Set up the phone app" onClose={onClose} width={520} actions={made
       ? <Button onClick={() => setMade(null)}>Hide</Button>
       : <>
           <Button kind="ghost" onClick={onClose}>Cancel</Button>
