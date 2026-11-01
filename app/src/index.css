@@ -1,53 +1,111 @@
 @import "tailwindcss";
 
-/* Adwaita's palette, so the app sits well next to GNOME apps; it reads as plain and calm on macOS and Windows */
+/* The design system (docs: the round 3 design review). Adwaita's spirit: calm surfaces, one blue, status by color
+   and dot. Every text pair here passes WCAG AA; fg-3 (faint) is for placeholders and separators, never body text.
+   Radii use Tailwind's names: rounded (4) small controls, -md (6) buttons and inputs, -lg (8) wells and tiles,
+   -xl (12) cards and boxed lists, -2xl (16) dialogs, -full pills and switches. */
 @theme {
   --font-sans: "Adwaita Sans", "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
-  --color-window: #fafafb;
+  --font-mono: "Adwaita Mono", "JetBrains Mono", ui-monospace, "SF Mono", Consolas, monospace;
+
+  /* surfaces, back to front */
+  --color-window: #f7f7f8;      /* content area and header */
+  --color-header: #f7f7f8;
+  --color-sidebar: #ededf0;     /* sidebar, dialog side navigation */
+  --color-card: #ffffff;        /* cards, boxed lists, tables */
   --color-view: #ffffff;
-  --color-sidebar: #ebebed;
-  --color-card: #ffffff;
-  --color-header: #ffffff;
+  --color-raised: #ffffff;      /* dialogs, menus, popovers */
+  --color-inset: rgb(0 0 6 / 0.04);    /* wells inside a card (the node line) */
+  --color-control: rgb(0 0 6 / 0.06);  /* secondary buttons, inputs, selects */
+  --color-hover: rgb(0 0 6 / 0.05);
+  --color-pressed: rgb(0 0 6 / 0.09);
+  --color-selected: rgb(0 0 6 / 0.08);
   --color-line: rgb(0 0 6 / 0.09);
-  --color-hover: rgb(0 0 6 / 0.06);
-  --color-selected: rgb(0 0 6 / 0.10);
-  --color-text: rgb(0 0 6 / 0.80);
-  --color-dim: rgb(0 0 6 / 0.62);  /* 4.5:1 or more, on grey boxes too */
-  --color-accent: #1c71d8;  /* white text on it is 4.8:1 (Adwaita's #3584e4 is 3.8:1, below WCAG AA) */
-  --color-accent-text: #1c71d8;
-  --color-ok: #146c43;  /* 5.7:1 on --color-ok-bg */
-  --color-ok-bg: rgb(46 194 126 / 0.14);
-  --color-bad: #c01c28;
-  --color-bad-bg: rgb(224 27 36 / 0.12);
-  --color-pill: rgb(0 0 6 / 0.07);
-  --color-warn: #8a6100;  /* 4.9:1 on --color-warn-bg */
-  --color-warn-bg: rgb(229 165 10 / 0.16);
+  --color-line-strong: rgb(0 0 6 / 0.16);
+  --color-scrim: rgb(0 0 6 / 0.32);
+
+  /* text */
+  --color-text: rgb(0 0 6 / 0.87);   /* 16:1 */
+  --color-dim: rgb(0 0 6 / 0.62);    /* 6.2:1 on cards, 5.9:1 on the sidebar */
+  --color-faint: rgb(0 0 6 / 0.45);  /* 3.35:1: placeholders, separators only */
+
+  /* the one accent */
+  --color-accent: #1c71d8;           /* white on it 4.77:1 */
+  --color-accent-hover: #1a68c8;
+  --color-accent-pressed: #1659ad;
+  --color-accent-text: #1b65c4;      /* links, the active step: 5.3:1 on the window */
+  --color-accent-soft: rgb(28 113 216 / 0.11);
+  --color-focus: #1c71d8;
+
+  /* status: text, soft background, dot */
+  --color-ok: #137140;
+  --color-ok-bg: rgb(38 162 105 / 0.14);
+  --color-ok-dot: #26a269;
+  --color-warn: #875700;
+  --color-warn-bg: rgb(229 165 10 / 0.20);
+  --color-warn-dot: #e5a50a;
+  --color-bad: #b8172a;
+  --color-bad-bg: rgb(224 27 36 / 0.11);
+  --color-bad-dot: #e01b24;
+  --color-bad-fill: #c01c28;         /* destructive confirm buttons only: white on it 6.1:1 */
+  --color-pill: rgb(0 0 6 / 0.07);   /* neutral pill */
   --color-orange: #d45500;
-  --shadow-card: 0 0 0 1px rgb(0 0 6 / 0.03), 0 1px 3px 1px rgb(0 0 6 / 0.07), 0 2px 6px 2px rgb(0 0 6 / 0.03);
+
+  /* type scale: size / line height. 600 for emphasis, 700 only for the 2xl hero. */
+  --text-xs: 12px;   --text-xs--line-height: 16px;   /* table headers, pills, group labels */
+  --text-sm: 13px;   --text-sm--line-height: 18px;   /* subtitles, meta, footers */
+  --text-base: 14px; --text-base--line-height: 20px; /* UI and tables */
+  --text-md: 15px;   --text-md--line-height: 22px;   /* onboarding and dialog body */
+  --text-lg: 17px;   --text-lg--line-height: 24px;   /* card titles */
+  --text-xl: 20px;   --text-xl--line-height: 28px;   /* page titles */
+  --text-2xl: 26px;  --text-2xl--line-height: 32px;  /* the onboarding hero */
+
+  /* elevation; dark mode leans on lighter surfaces instead */
+  --shadow-card: 0 0 0 1px rgb(0 0 6 / 0.06), 0 1px 2px rgb(0 0 6 / 0.05);
+  --shadow-menu: 0 0 0 1px rgb(0 0 6 / 0.08), 0 6px 16px -4px rgb(0 0 6 / 0.14);
+  --shadow-dialog: 0 0 0 1px rgb(0 0 6 / 0.08), 0 24px 48px -12px rgb(0 0 6 / 0.30);
+
+  /* motion: 90ms hover color, 150ms press/switch/tabs, 220ms menus, 300ms dialogs */
+  --ease-enter: cubic-bezier(0.2, 0, 0, 1);
+  --ease-exit: cubic-bezier(0.4, 0, 1, 1);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --color-window: #222226;
-    --color-view: #1d1d20;
-    --color-sidebar: #2e2e32;
-    --color-card: #2e2e32;
-    --color-header: #2e2e32;
+    --color-window: #1e1e21;
+    --color-header: #1e1e21;
+    --color-sidebar: #252528;
+    --color-card: #2a2a2e;
+    --color-view: #2a2a2e;
+    --color-raised: #313136;
+    --color-inset: rgb(255 255 255 / 0.04);
+    --color-control: rgb(255 255 255 / 0.08);
+    --color-hover: rgb(255 255 255 / 0.06);
+    --color-pressed: rgb(255 255 255 / 0.10);
+    --color-selected: rgb(255 255 255 / 0.09);
     --color-line: rgb(255 255 255 / 0.08);
-    --color-hover: rgb(255 255 255 / 0.07);
-    --color-selected: rgb(255 255 255 / 0.10);
-    --color-text: #ffffff;
-    --color-dim: rgb(255 255 255 / 0.66);
-    --color-accent-text: #78aeed;
-    --color-ok: #8ff0a4;
-    --color-ok-bg: rgb(38 162 105 / 0.30);
-    --color-bad: #ff7b63;
-    --color-bad-bg: rgb(192 28 40 / 0.35);
-    --color-pill: rgb(255 255 255 / 0.10);
-    --color-warn: #f8e45c;
-    --color-warn-bg: rgb(205 147 9 / 0.30);
+    --color-line-strong: rgb(255 255 255 / 0.14);
+    --color-scrim: rgb(0 0 0 / 0.50);
+    --color-text: rgb(255 255 255 / 0.94);
+    --color-dim: rgb(255 255 255 / 0.64);
+    --color-faint: rgb(255 255 255 / 0.42);
+    --color-accent-text: #7cb1f0;
+    --color-accent-soft: rgb(53 132 228 / 0.20);
+    --color-focus: #7cb1f0;
+    --color-ok: #6ee69a;
+    --color-ok-bg: rgb(38 162 105 / 0.22);
+    --color-ok-dot: #33d17a;
+    --color-warn: #f5d44a;
+    --color-warn-bg: rgb(229 165 10 / 0.20);
+    --color-warn-dot: #f6d32d;
+    --color-bad: #ff8a78;
+    --color-bad-bg: rgb(224 27 36 / 0.24);
+    --color-bad-dot: #ff7b63;
+    --color-pill: rgb(255 255 255 / 0.09);
     --color-orange: #ffa348;
-    --shadow-card: 0 0 0 1px rgb(0 0 6 / 0.36), 0 1px 3px 1px rgb(0 0 6 / 0.25), 0 2px 6px 2px rgb(0 0 6 / 0.15);
+    --shadow-card: 0 0 0 1px rgb(255 255 255 / 0.06), 0 1px 2px rgb(0 0 0 / 0.30);
+    --shadow-menu: 0 0 0 1px rgb(255 255 255 / 0.08), 0 8px 20px -4px rgb(0 0 0 / 0.50);
+    --shadow-dialog: 0 0 0 1px rgb(255 255 255 / 0.08), 0 24px 56px -12px rgb(0 0 0 / 0.65);
   }
 }
 
@@ -59,9 +117,49 @@ body {
   background: var(--color-window);
   color: var(--color-text);
   font-family: var(--font-sans);
-  font-size: 15px;
+  font-size: var(--text-base);
+  line-height: var(--text-base--line-height);
   -webkit-font-smoothing: antialiased;
   user-select: none;
   cursor: default;
 }
 button { cursor: default; }
+
+/* Keyboard focus only (not on a mouse click): one ring everywhere */
+:where(button, a, [role="switch"], [role="tab"], [role="menuitem"], [tabindex]):focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+/* Lucide icons: 1.75 at 16px and below, 1.5 above. Only icons left at the default 2 change. */
+svg.lucide[stroke-width="2"] { stroke-width: 1.75; }
+svg.lucide[stroke-width="2"]:is([width="20"], [width="24"], [width="40"]) { stroke-width: 1.5; }
+
+/* Loading placeholders: shown after 300ms, so a fast load never flashes */
+@keyframes skeleton-shimmer { 0%, 100% { opacity: 0.6; } 50% { opacity: 1; } }
+.skeleton {
+  background: var(--color-pressed);
+  border-radius: 6px;
+  opacity: 0;  /* until the shimmer starts */
+  animation: skeleton-shimmer 1.4s ease-in-out 300ms infinite;
+}
+
+/* A dot that breathes, for things in progress */
+@keyframes pulse-dot { 0%, 100% { box-shadow: 0 0 0 0 currentColor; } 50% { box-shadow: 0 0 0 3px transparent; } }
+.dot-pulse { animation: pulse-dot 1.6s var(--ease-enter) infinite; }
+
+/* Dialogs and menus come in quickly and settle; they leave faster than they come */
+@keyframes dialog-in { from { opacity: 0; transform: translateY(6px) scale(0.98); } to { opacity: 1; transform: none; } }
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+.dialog-in { animation: dialog-in 300ms var(--ease-enter); }
+.dialog-scrim { animation: fade-in 220ms var(--ease-enter); }
+.menu-in { animation: dialog-in 220ms var(--ease-enter); }
+
+@media (prefers-reduced-motion: reduce) {
+  *:not(.animate-spin), *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

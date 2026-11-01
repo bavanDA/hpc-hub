@@ -4,6 +4,16 @@
 @source '../../app/src/components/clusters';
 @source '../../app/src/components/ui.tsx';
 
+/* A phone reads at arm's length: its text sizes stay a step larger than the desktop scale */
+@theme {
+  --text-xs: 12px;   --text-xs--line-height: 16px;
+  --text-sm: 14px;   --text-sm--line-height: 20px;
+  --text-base: 16px; --text-base--line-height: 24px;
+  --text-lg: 18px;   --text-lg--line-height: 28px;
+  --text-xl: 20px;   --text-xl--line-height: 28px;
+  --text-2xl: 24px;  --text-2xl--line-height: 32px;
+}
+
 /* A phone: no tap flash, no rubber band of the whole page, text you can't select by accident */
 html, body { overscroll-behavior: none; -webkit-tap-highlight-color: transparent; }
 body { font-size: 16px; }
