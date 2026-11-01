@@ -1,6 +1,6 @@
 // One card per cluster, like the GTK app's (cluster_card.py): status, connect, compute node, Open, log.
 // With Ask every time (ask_node) the node dialog opens by itself once connected.
-import { Info, Settings } from 'lucide-react'
+import { Settings } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
 import { call } from '../rpc'
@@ -8,6 +8,7 @@ import { BUSY, DUO, fastLabel, fastSummary, summary, type Cluster, type Session 
 import { AuthenticatorHelp } from './clusters/AuthenticatorHelp'
 import { ComputeDialog } from './clusters/ComputeDialog'
 import { LogView } from './clusters/LogView'
+import { who } from './clusters/loginCopy'
 import { OpenMenu } from './clusters/OpenMenu'
 import { ServerIcon } from './clusters/ServerIcon'
 import { SettingsDialog } from './clusters/SettingsDialog'
@@ -63,7 +64,8 @@ export function ClusterCard({ cluster: c, session: s, log }: { cluster: Cluster;
   }
 
   const a = s.node ? s : null
-  const actionLook = s.state === 'Connected' ? 'destructive' : busy ? 'pill' : 'suggested'
+  // connected: Open is the main action, Disconnect a quiet one
+  const actionLook = s.state === 'Connected' ? 'flat' : busy ? 'pill' : 'suggested'
   return (
     <section className="flex flex-col gap-1.5 rounded-xl bg-card p-[18px] shadow-[var(--shadow-card)]">
       <div className="flex items-center gap-3">
@@ -71,7 +73,7 @@ export function ClusterCard({ cluster: c, session: s, log }: { cluster: Cluster;
         <div className="min-w-0 flex-1">
           <h2 className="text-xl font-bold leading-tight">{c.name}</h2>
           <p className="text-[13px] text-dim">
-            {c.host || 'no host set'} · {c.vpn.enabled ? `VPN ${c.vpn.gateway || '(gateway not set)'}` : 'no VPN'}
+            {c.host || 'no host set'} · {c.vpn.enabled ? `via ${who(c)} VPN` : 'No VPN'}
           </p>
         </div>
         <span className={`whitespace-nowrap rounded-full px-2.5 py-0.5 text-[12px] font-bold ${
@@ -82,13 +84,15 @@ export function ClusterCard({ cluster: c, session: s, log }: { cluster: Cluster;
             onClick={() => connect(true)}>VPN only</Button>
         )}
         {c.second_factor === 'code' && idle && (
-          <IconButton icon={Info} label="How to set up Google Authenticator" onClick={() => setOpen('help')} />
+          <Button kind="flat" title="How to set up Google Authenticator" onClick={() => setOpen('help')}>
+            Code setup</Button>
         )}
         <Button round kind={actionLook} disabled={s.state === 'Disconnecting'} onClick={action}
-          className="min-w-[120px] px-6">
+          className={connected ? 'px-4' : 'min-w-[120px] px-6'}>
           {s.state === 'Disconnecting' ? 'Disconnecting…' : busy ? 'Cancel'
             : s.state === 'Connected' ? 'Disconnect' : s.state === 'Error' ? 'Reconnect' : 'Connect'}
         </Button>
+        {connected && <OpenMenu cluster={c} main />}
       </div>
 
       {idle && (
@@ -97,7 +101,7 @@ export function ClusterCard({ cluster: c, session: s, log }: { cluster: Cluster;
           <input type="checkbox" checked={c.request_node_on_connect ?? true}
             onChange={(e) => wantNode(e.target.checked)}
             className="size-[18px] accent-[var(--color-accent)]" />
-          Compute node on connect: {summary(c.profile)}{c.ask_node ? ', asks first' : ''}
+          Get a node on connect: {summary(c.profile)}{c.ask_node ? ', asks first' : ''}
         </label>
       )}
 
@@ -112,7 +116,7 @@ export function ClusterCard({ cluster: c, session: s, log }: { cluster: Cluster;
       {connected && (
         <div className="mt-1 flex items-center gap-3">
           <span className="flex-1 select-text font-bold">
-            {a ? `Node ${a.node} · Job ${a.job}${a.owned ? '' : ' (your job)'}` : 'No compute node'}
+            {a ? `Node ${a.node} · Job ${a.job}${a.owned ? '' : ' (your job)'}` : 'No node yet'}
           </span>
           {a
             ? <Button round onClick={() => run('clusters.release_node')}
@@ -126,7 +130,6 @@ export function ClusterCard({ cluster: c, session: s, log }: { cluster: Cluster;
               </>}
         </div>
       )}
-      {connected && <div className="mt-2"><OpenMenu cluster={c} /></div>}
 
       <div className="mt-1"><LogView lines={log} /></div>
 

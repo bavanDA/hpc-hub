@@ -12,8 +12,9 @@ const GROUPS: [string, string, LucideIcon][][] = [
     ['agent:agy', 'Antigravity', Bot], ['agent:cursor', 'Cursor', Bot]],
 ]
 
-export function OpenMenu({ onOpen, cluster }:
-  { onOpen?: (key: string) => void; cluster?: { id: string; name: string } }) {
+/** main: the card's main action (blue, round), not a small grey button. */
+export function OpenMenu({ onOpen, cluster, main }:
+  { onOpen?: (key: string) => void; cluster?: { id: string; name: string }; main?: boolean }) {
   const toast = useToast()
   const tools = useTools()
   const [open, setOpen] = useState(false)
@@ -36,14 +37,20 @@ export function OpenMenu({ onOpen, cluster }:
 
   return (
     <div ref={box} className="relative w-fit">
-      <button onClick={() => setOpen(!open)} title="VS Code, Claude and more" aria-expanded={open}
-        className={`flex h-9 items-center gap-2 rounded-md px-3 font-bold hover:bg-selected ${
-          open ? 'bg-selected' : 'bg-pill'}`}>
-        <LayoutGrid size={14} /> Open <ChevronDown size={14} />
-      </button>
+      {main
+        ? <button onClick={() => setOpen(!open)} title="VS Code, Claude and more" aria-expanded={open}
+            className="flex h-[42px] min-w-[120px] items-center justify-center gap-2 rounded-full bg-accent px-6 font-bold
+              text-white transition hover:brightness-110">
+            Open <ChevronDown size={15} />
+          </button>
+        : <button onClick={() => setOpen(!open)} title="VS Code, Claude and more" aria-expanded={open}
+            className={`flex h-9 items-center gap-2 rounded-md px-3 font-bold hover:bg-selected ${
+              open ? 'bg-selected' : 'bg-pill'}`}>
+            <LayoutGrid size={14} /> Open <ChevronDown size={14} />
+          </button>}
       {open && (
-        <div role="menu" className="absolute left-0 top-full z-30 mt-1.5 min-w-[220px] rounded-xl bg-card p-1
-          shadow-[0_0_0_1px_var(--color-line),0_6px_20px_rgb(0_0_0/0.25)]">
+        <div role="menu" className={`absolute top-full z-30 mt-1.5 min-w-[220px] rounded-xl bg-card p-1 ${
+          main ? 'right-0' : 'left-0'} shadow-[0_0_0_1px_var(--color-line),0_6px_20px_rgb(0_0_0/0.25)]`}>
           {GROUPS.map((group, n) => (
             <div key={n} className={n ? 'mt-1 border-t border-line pt-1' : ''}>
               {group.map(([key, label, Icon]) => (

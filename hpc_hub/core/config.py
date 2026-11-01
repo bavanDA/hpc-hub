@@ -31,6 +31,14 @@ class VpnSettings:
     browser: str = ""  # where the web sign-in happens: "" = the app's own window, CHROME_WINDOW = our Chrome window
 
 
+def short_time(t: str) -> str:
+    """"4 h", "30 min", "1 d 12 h" for Slurm's "04:00:00", "00:30:00", "1-12:00:00"."""
+    days, _, hms = t.rpartition("-")
+    h, m = ((int(x) if x.isdigit() else 0) for x in (hms.split(":") + ["0", "0"])[:2])
+    d = int(days) if days.isdigit() else 0
+    return " ".join(p for p in (f"{d} d" if d else "", f"{h} h" if h else "", f"{m} min" if m else "") if p) or t
+
+
 @dataclass
 class ComputeProfile:
     cpus: int = 2
@@ -43,7 +51,7 @@ class ComputeProfile:
     extra_args: str = ""
 
     def summary(self) -> str:
-        parts = [f"{self.cpus} cores", f"{self.mem_gb} GB", self.time]
+        parts = [f"{self.cpus} cores", f"{self.mem_gb} GB", short_time(self.time)]
         if self.gpus:
             parts.append(f"{self.gpus} GPU")
         if self.partition:

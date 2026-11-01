@@ -159,8 +159,16 @@ export type KeyTest = {
   reason?: 'ok' | 'not_yet' | 'no_vpn' | 'unreachable' | 'host_key' | 'unfinished' | 'no_ssh'; last?: string
 }
 
+/** "4 h", "30 min", "1 d 12 h" for Slurm's "04:00:00", "00:30:00", "1-12:00:00". */
+export function shortTime(t: string) {
+  const [d, hms] = t.includes('-') ? t.split('-') : ['0', t]
+  const [h = 0, m = 0] = hms.split(':').map((x) => Number(x) || 0)
+  const parts = [Number(d) ? `${Number(d)} d` : '', h ? `${h} h` : '', m ? `${m} min` : '']
+  return parts.filter(Boolean).join(' ') || t
+}
+
 export function summary(p: Profile) {
-  return [`${p.cpus} cores`, `${p.mem_gb} GB`, p.time, p.gpus ? `${p.gpus} GPU` : '', p.partition]
+  return [`${p.cpus} cores`, `${p.mem_gb} GB`, shortTime(p.time), p.gpus ? `${p.gpus} GPU` : '', p.partition]
     .filter(Boolean).join(' · ')
 }
 

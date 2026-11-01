@@ -75,15 +75,21 @@ class ClusterCard(Gtk.Box):
                                   tooltip_text="Just the VPN tunnel, no SSH or compute node")
         self.vpn_btn.connect("clicked", lambda *_: on_connect(session, True))
         head.append(self.vpn_btn)
-        self.code_help = Gtk.Button(icon_name="help-about-symbolic", valign=Gtk.Align.CENTER, css_classes=["flat"],
+        self.code_help = Gtk.Button(label="Code setup", valign=Gtk.Align.CENTER, css_classes=["flat"],
                                     tooltip_text="How to set up Google Authenticator")
         self.code_help.connect("clicked", lambda *_: AuthenticatorHelp(session.cfg).present(self))
         head.append(self.code_help)
 
-        self.action = Gtk.Button(valign=Gtk.Align.CENTER, width_request=120)
+        self.action = Gtk.Button(valign=Gtk.Align.CENTER)
         self.action.add_css_class("pill")
         self.action.connect("clicked", self._on_action)
         head.append(self.action)
+        # connected, Open is the card's main action and Disconnect a quiet one
+        self.tools = open_menu(lambda key: on_tool(session, key))
+        self.tools.set_valign(Gtk.Align.CENTER)
+        self.tools.add_css_class("suggested-action")
+        self.tools.add_css_class("pill")
+        head.append(self.tools)
         self.append(head)
 
         self.save = save
@@ -112,11 +118,6 @@ class ClusterCard(Gtk.Box):
         node_row.append(self.fast_btn)
         node_row.append(self.node_btn)
         self.append(node_row)
-
-        self.tools = open_menu(lambda key: on_tool(session, key))
-        self.tools.set_halign(Gtk.Align.START)
-        self.tools.set_margin_top(4)
-        self.append(self.tools)
 
         self.log_view = Gtk.TextView(editable=False, monospace=True, cursor_visible=False,
                                      wrap_mode=Gtk.WrapMode.WORD_CHAR)
@@ -162,10 +163,10 @@ class ClusterCard(Gtk.Box):
         s, cfg = self.session, self.session.cfg
         self.title.set_label(cfg.name)
         where = cfg.host or "no host set"
-        vpn = f"VPN {cfg.vpn.gateway or '(gateway not set)'}" if cfg.vpn.enabled else "no VPN"
+        vpn = f"via {cfg.who} VPN" if cfg.vpn.enabled else "No VPN"
         self.subtitle.set_label(f"{where} · {vpn}")
         asks = ", asks first" if cfg.ask_node else ""
-        self.want_node.set_label(f"Compute node on connect: {cfg.profile.summary()}{asks}")
+        self.want_node.set_label(f"Get a node on connect: {cfg.profile.summary()}{asks}")
         if s.pick_node and not self._asked:
             self._asked = True
             self._node_dialog()
@@ -203,11 +204,11 @@ class ClusterCard(Gtk.Box):
             self.node_btn.set_tooltip_text("Cancel this job, stay connected" if a.owned
                                            else "Keep the job running, just stop using it here")
         else:
-            self.node.set_label("No compute node")
+            self.node.set_label("No node yet")
             self.node_btn.set_label("Get node")
             self.node_btn.set_tooltip_text(f"Request {cfg.profile.summary()}")
 
-        for c in ("suggested-action", "destructive-action"):
+        for c in ("suggested-action", "destructive-action", "flat"):
             self.action.remove_css_class(c)
         if s.state == State.DISCONNECTING:
             self.action.set_label("Disconnecting…")
@@ -218,7 +219,7 @@ class ClusterCard(Gtk.Box):
             self.action.set_label("Cancel")
         elif s.state == State.CONNECTED:
             self.action.set_label("Disconnect")
-            self.action.add_css_class("destructive-action")
+            self.action.add_css_class("flat")
         else:
             self.action.set_label("Reconnect" if s.state == State.ERROR else "Connect")
             self.action.add_css_class("suggested-action")
