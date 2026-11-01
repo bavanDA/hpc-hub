@@ -5,6 +5,7 @@ import { lazy, Suspense } from 'react'
 
 import { Spinner } from '@shared/components/ui'
 import { firstPlace, NavProvider, usePhoneNav, type Tab } from './nav'
+import { useEditorKeyboard } from './parts/keyboard'
 import { Questions } from './parts/Questions'
 import { PhoneWatch } from './parts/watchPhone'
 import { Clusters } from './screens/Clusters'
@@ -23,6 +24,7 @@ const TABS: [Tab, string, LucideIcon][] = [['clusters', 'Clusters', Server],
 function Screens() {
   const { place, open } = usePhoneNav()
   const tab = place.tab
+  const typing = useEditorKeyboard() && tab === 'code'  // the editor gets the tabs' room while the keyboard is up
   return (
     <div className="flex h-full flex-col pt-[var(--top)]">
       <main className="relative min-h-0 flex-1">
@@ -35,7 +37,7 @@ function Screens() {
           {tab === 'more' && <More />}
         </Suspense>
       </main>
-      <nav className="flex shrink-0 border-t border-line bg-header pb-[var(--bottom)]">
+      <nav className={`${typing ? 'hidden' : 'flex'} shrink-0 border-t border-line bg-header pb-[var(--bottom)]`}>
         {TABS.map(([id, label, Icon]) => (
           <button key={id} onClick={() => open(id)} aria-current={tab === id}
             className={`flex h-16 min-w-0 flex-1 flex-col items-center justify-center gap-1 text-xs font-bold

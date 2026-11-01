@@ -33,6 +33,7 @@ import { SelectionBar } from '../parts/code/SelectionBar'
 import { Start } from '../parts/code/Start'
 import { blamed, folderOf, isLog, lastError, preloadLanguage, reference, rememberFile, runCommand,
   type Spot } from '../parts/code/util'
+import { useEditorKeyboard } from '../parts/keyboard'
 import { ActionSheet, BottomSheet, Button, ConfirmSheet, PromptSheet, useToast, type SheetAction } from '../ui'
 
 const Editor = lazy(() => import('@shared/components/code/Editor'))
@@ -43,9 +44,6 @@ function prefs(): Prefs {
   try { return { wrap: true, fontSize: 13, ...JSON.parse(localStorage.getItem(PREFS) ?? '{}') } }
   catch { return { wrap: true, fontSize: 13 } }
 }
-
-// The bottom tabs give their room to the editor while the keyboard is up (App.tsx's tab bar).
-const KEYBOARD_CSS = 'html[data-code-keyboard] #root > div > nav { display: none }'
 
 const ICON = 'relative grid size-11 shrink-0 place-items-center rounded-full active:bg-hover disabled:opacity-40'
 
@@ -76,7 +74,7 @@ export function Code() {
   const [view, setView] = useState<Prefs>(prefs)
   const [selection, setSelection] = useState<Selection | null>(null)
   const [tick, setTick] = useState(0)
-  const [keyboard, setKeyboard] = useState(false)
+  const keyboard = useEditorKeyboard()  // App.tsx hides the bottom tabs on the same signal
   const [lang, setLang] = useState<LangId>('plain')
   const [events, setEvents] = useState<Record<string, WatchEvent>>({})
   const [drafts, setDrafts] = useState<Record<string, Draft>>({})
@@ -116,35 +114,6 @@ export function Code() {
     }
   }, [params])  // eslint-disable-line react-hooks/exhaustive-deps
 
-  // the keyboard: the key row shows and the bottom tabs hide while it's up and the editor has the focus
-  useEffect(() => {
-    const style = document.createElement('style')
-    style.textContent = KEYBOARD_CSS
-    document.head.appendChild(style)
-    const vv = window.visualViewport
-    const check = () => {
-      const typing = !!document.activeElement?.closest('.cm-editor')
-      const up = vv ? window.innerHeight - vv.height > 120 : false
-      setKeyboard(typing && (up || !vv))
-    }
-    vv?.addEventListener('resize', check)
-    document.addEventListener('focusin', check)
-    let later = 0
-    const left = () => { later = window.setTimeout(check, 50) }
-    document.addEventListener('focusout', left)
-    return () => {
-      vv?.removeEventListener('resize', check)
-      document.removeEventListener('focusin', check)
-      document.removeEventListener('focusout', left)
-      clearTimeout(later)
-      style.remove()
-      delete document.documentElement.dataset.codeKeyboard
-    }
-  }, [])
-  useEffect(() => {
-    if (keyboard) document.documentElement.dataset.codeKeyboard = '1'
-    else delete document.documentElement.dataset.codeKeyboard
-  }, [keyboard])
 
   // a file that just opened: remember it, get its language ready for diffs, and look for edits from earlier
   useEffect(() => {
