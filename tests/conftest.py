@@ -34,6 +34,7 @@ POSIX = {
     "agents/test_permissions.py", "agents/test_schedules.py", "agents/test_skills.py",
     "api/test_cluster_settings.py", "api/test_files.py", "api/test_files_local.py", "api/test_latex_api.py",
     "api/test_permissions_api.py", "api/test_projects.py", "api/test_schedules_api.py", "api/test_skills_api.py",
+    "api/test_backup.py", "backup/test_flow.py",
     "connect/test_vpn_helper.py",
     "compute/test_slurm.py", "compute/test_usage.py", "connect/test_askpass.py", "connect/test_session.py",
     "connect/test_session_asyncssh.py", "core/test_paths.py", "core/test_remote.py",
@@ -46,6 +47,7 @@ POSIX_TESTS = {
     "core/test_ssh_keys.py::test_saved_key_matches_its_public_line",  # 0600 mode: the key is saved on the phone
     "core/test_ssh_keys.py::test_authorize_replaces_the_last_phone_key",  # sh: it runs on the cluster
     "core/test_vault_file.py::test_saved_encrypted_and_private",  # 0600 mode: the vault is Android only
+    "backup/test_units.py::test_summary_reads_odd_names_and_never_opens_files",  # Linux file name bytes
 }
 
 GNU_TOOLS = {
@@ -68,6 +70,15 @@ GNU_TOOLS = {
     "files/test_remote_fs.py::test_places",
     "files/test_transfer.py::test_copy_folder_between_shells",
     "files/test_transfer.py::test_copy_leaves_out_skipped_subfolders",
+    # the backup's scan is GNU find -printf, its jobs use readlink -f and GNU df
+    *(f"backup/test_flow.py::{t}" for t in (
+        "test_scan_plan_try_copy_check", "test_copy_needs_the_trial_run_of_the_same_plan",
+        "test_refuses_without_space", "test_destination_must_be_from_scratch_outside_scratch",
+        "test_newer_files_in_project_win_and_replaced_ones_are_kept", "test_a_killed_copy_starts_again_where_it_was",
+        "test_the_weekly_check_scans_like_a_scan_by_hand", "test_a_copy_out_of_time_goes_on_in_a_new_job")),
+    *(f"api/test_backup.py::{t}" for t in (
+        "test_scan_plan_try_and_copy", "test_your_choices_are_kept_for_later_scans",
+        "test_reminders_are_a_scheduled_job", "test_cancel_and_not_connected")),
 }
 
 

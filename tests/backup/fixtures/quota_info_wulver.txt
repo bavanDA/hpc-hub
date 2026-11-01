@@ -1,0 +1,7 @@
+Usage for account: mygroup
+   SLURM Service Units: 1 CPU Hours (of 2 CPU Hour quota)
+   PROJECT Storage: 1463 GB (of 2048 GB quota)
+     User jdoe Usage: 31 GB (No quota)
+   SCRATCH Storage: 7574 GB (of 10240 GB quota)
+     User jdoe Usage: 7502 GB (No quota)
+HOME Storage jdoe Usage: 46 GB (of 50 GB quota)

@@ -57,6 +57,7 @@ class Schedule:
     minutes: int = 120  # time limit of each run
     enabled: bool = True
     compute: dict = field(default_factory=dict)  # cores, memory, GPUs, queue; empty = the cluster's node settings
+    runner: str = "agent"  # agent: the task above; backup: the backup agent's scratch check (backup/remind.py)
 
     @property
     def job_name(self) -> str:
@@ -101,7 +102,10 @@ NEXT_RUN = r"""next_run() {  # first matching day and time still ahead, as YYYY-
 
 
 def script(s: Schedule, agent: Agent, settings: AgentSettings, profile: ComputeProfile) -> str:
-    """The batch script: queue the next run, then run the agent on the task once."""
+    """The batch script: queue the next run, then run the agent on the task once (or the scratch check)."""
+    if s.runner == "backup":
+        from ..backup import remind
+        return remind.scheduled_script(s, profile)
     days = " ".join(str(d) for d in (s.days or range(1, 8)))
     body = "\n".join([
         f"DIR={folder_of(s.name)}",

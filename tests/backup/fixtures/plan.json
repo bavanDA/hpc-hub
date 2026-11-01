@@ -1,0 +1,188 @@
+{
+ "scan_id": "20261101-120000-a1b2",
+ "dest": "/project/mygroup/jdoe/from-scratch",
+ "horizon_days": 14,
+ "scope": "at_risk",
+ "items": [
+  {
+   "folder": "runs/sweep-lr",
+   "kind": "code",
+   "keep": true,
+   "files": 14,
+   "bytes": 1073741,
+   "why": "Code.",
+   "by": "rule"
+  },
+  {
+   "folder": "runs/sweep-lr",
+   "kind": "results",
+   "keep": true,
+   "files": 1260,
+   "bytes": 45097156608,
+   "why": "Results. These are the point of the work.",
+   "by": "rule"
+  },
+  {
+   "folder": "proj/mdsim",
+   "kind": "code",
+   "keep": true,
+   "files": 840,
+   "bytes": 322122547,
+   "why": "Part of a git repository. It gets copied whole.",
+   "by": "rule"
+  },
+  {
+   "folder": "proj/mdsim",
+   "kind": "results",
+   "keep": true,
+   "files": 40,
+   "bytes": 2576980377,
+   "why": "Part of a git repository. It gets copied whole.",
+   "by": "rule"
+  },
+  {
+   "folder": "proj/mdsim",
+   "kind": "writing",
+   "keep": true,
+   "files": 12,
+   "bytes": 53687091,
+   "why": "Part of a git repository. It gets copied whole.",
+   "by": "rule"
+  },
+  {
+   "folder": "misc",
+   "kind": "unsure",
+   "keep": true,
+   "files": 77,
+   "bytes": 429496729,
+   "why": "Kind not known. Small, so it is kept.",
+   "by": "rule"
+  }
+ ],
+ "left_out": [
+  {
+   "folder": "runs/sweep-lr",
+   "kind": "checkpoint",
+   "keep": false,
+   "files": 48,
+   "bytes": 193273528320,
+   "why": "Old checkpoints. The newest one is kept.",
+   "by": "rule"
+  },
+  {
+   "folder": "runs/sweep-lr",
+   "kind": "logs",
+   "keep": false,
+   "files": 320,
+   "bytes": 214748364,
+   "why": "Big logs. Turn on to keep.",
+   "by": "rule"
+  },
+  {
+   "folder": "data/raw",
+   "kind": "inputs",
+   "keep": false,
+   "files": 212,
+   "bytes": 128849018880,
+   "why": "Downloaded from a public archive, the fetch script is in proj/mdsim.",
+   "by": "agent"
+  },
+  {
+   "folder": "envs/torch",
+   "kind": "regen",
+   "keep": false,
+   "files": 48210,
+   "bytes": 37580963840,
+   "why": "Can be made again: packages, caches and builds.",
+   "by": "rule"
+  }
+ ],
+ "files": 2243,
+ "bytes": 48480517093,
+ "exact": false,
+ "space": {
+  "dest": "/project/mygroup/jdoe/from-scratch",
+  "before_gb": 1463.0,
+  "after_gb": 1508.2,
+  "quota_gb": 2048.0,
+  "pct_after": 74,
+  "files_after": 4678269,
+  "file_limit": 5000000,
+  "fits": true,
+  "warn": ""
+ },
+ "agent_summary": "Most of the space is checkpoints from one learning rate sweep. The results and the code are small and are kept.",
+ "rules": [
+  {
+   "folder": "runs/sweep-lr",
+   "class": "checkpoint",
+   "keep": false,
+   "except_newest": 1,
+   "to": "project"
+  },
+  {
+   "folder": "runs/sweep-lr",
+   "class": "code",
+   "keep": true,
+   "except_newest": 0,
+   "to": "project"
+  },
+  {
+   "folder": "runs/sweep-lr",
+   "class": "logs",
+   "keep": false,
+   "except_newest": 0,
+   "to": "project"
+  },
+  {
+   "folder": "runs/sweep-lr",
+   "class": "results",
+   "keep": true,
+   "except_newest": 0,
+   "to": "project"
+  },
+  {
+   "folder": "data/raw",
+   "class": "inputs",
+   "keep": false,
+   "except_newest": 0,
+   "to": "project"
+  },
+  {
+   "folder": "envs/torch",
+   "class": "regen",
+   "keep": false,
+   "except_newest": 0,
+   "to": "project"
+  },
+  {
+   "folder": "proj/mdsim",
+   "class": "code",
+   "keep": true,
+   "except_newest": 0,
+   "to": "project"
+  },
+  {
+   "folder": "proj/mdsim",
+   "class": "results",
+   "keep": true,
+   "except_newest": 0,
+   "to": "project"
+  },
+  {
+   "folder": "proj/mdsim",
+   "class": "writing",
+   "keep": true,
+   "except_newest": 0,
+   "to": "project"
+  },
+  {
+   "folder": "misc",
+   "class": "unsure",
+   "keep": true,
+   "except_newest": 0,
+   "to": "project"
+  }
+ ],
+ "hash": "f4ed879be3aa8908"
+}
