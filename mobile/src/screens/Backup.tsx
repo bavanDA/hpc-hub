@@ -37,16 +37,18 @@ export function Backup() {
     <div className="flex h-full flex-col">
       {live.length > 1 && <div className="order-1 px-4 pb-2"><Segments value={current.id}
         options={live.map((c) => [c.id, c.name] as const)} onChange={pick} /></div>}
-      <Flow key={current.id} id={current.id} name={shortName(current.name)} full={current.name} />
+      <Flow key={current.id} id={current.id} name={shortName(current.name)}
+        full={live.length > 1 ? shortName(current.name) : current.name} />
     </div>
   )
 }
 
+// full: the cluster's full name for the first line, unless the cluster picker above already shows it
 function Flow({ id, name, full }: { id: string; name: string; full: string }) {
   const b = useBackup(id, usePageParams().step)
   const go = useGo()
   const [agent, setAgent] = useState(true)
-  const [remind, setRemind] = useState(false)
+  const [remind, setRemind] = useState<'' | 'open' | 'on'>('')  // on: from Check again next week, switched on
   const [stopping, setStopping] = useState(false)
   const s = b.summary
   const plan = b.plan
@@ -58,10 +60,10 @@ function Flow({ id, name, full }: { id: string; name: string; full: string }) {
   let second: React.ReactNode = null
   switch (b.step) {
     case 'start':
-      body = <StartView name={full} policy={b.policy} agent={agent} onAgent={setAgent} />
+      body = <StartView name={full} policy={b.policy} agent={agent} onAgent={setAgent}
+        onLast={b.scan?.state === 'done' ? () => b.setStep('risk') : undefined} />
       main = <Button kind="primary" className="flex-1" disabled={b.busy} onClick={() => b.startScan(false, agent ? 'claude' : '')}>
         {b.policy && b.policy.purge.days <= 0 ? start.anyway : start.check}</Button>
-      if (b.scan?.state === 'done') second = <Button onClick={() => b.setStep('risk')}>{start.seeLast}</Button>
       break
     case 'scanning':
       body = <ScanView scan={b.scan} />
@@ -70,7 +72,7 @@ function Flow({ id, name, full }: { id: string; name: string; full: string }) {
         : <Button className="flex-1" onClick={b.stopScan}>{scanning.stop}</Button>
       break
     case 'risk':
-      body = s ? <RiskView s={s} name={full} noTricks={b.policy?.no_tricks.replace('Clusters do not', `${name} does not`) ?? ''} /> : null
+      body = s ? <RiskView s={s} name={name} noTricks={b.policy?.no_tricks.replace('Clusters do not', `${name} does not`) ?? ''} /> : null
       main = s && (s.at_risk_files > 0 || b.options.everything)
         ? <Button kind="primary" className="flex-1" onClick={b.openPlan}>{risk.plan}</Button> : null
       second = <Button className={main ? '' : 'flex-1'} onClick={() => b.startScan()}>{risk.again}</Button>
@@ -98,7 +100,7 @@ function Flow({ id, name, full }: { id: string; name: string; full: string }) {
     case 'done': {
       const bad = (b.result?.mismatches ?? 0) > 0
       body = <div className="flex flex-col gap-4"><DoneCard cluster={id} result={b.result} />
-        <Button onClick={() => setRemind(true)}>{doneCopy.weekly}</Button>
+        <Button onClick={() => setRemind('on')}>{doneCopy.weekly}</Button>
         <Button onClick={b.restart}>{doneCopy.newCheck}</Button></div>
       main = bad
         ? <Button kind="primary" className="flex-1" onClick={() => b.setStep('space')}>{doneCopy.again}</Button>
@@ -111,7 +113,7 @@ function Flow({ id, name, full }: { id: string; name: string; full: string }) {
   return (
     <>
       <Header title={start.title}>
-        <button aria-label="Weekly check" onClick={() => setRemind(true)}
+        <button aria-label="Weekly check" onClick={() => setRemind('open')}
           className={`grid size-12 place-items-center rounded-full active:bg-hover ${
             b.reminders?.enabled ? 'text-accent-text' : ''}`}><BellRing size={22} /></button>
       </Header>
@@ -124,8 +126,8 @@ function Flow({ id, name, full }: { id: string; name: string; full: string }) {
       )}
       {stopping && <ConfirmSheet title={copying.stopTitle} text={copying.stopText} confirm={copying.stop}
         onConfirm={b.stopCopy} onClose={() => setStopping(false)} />}
-      {remind && <RemindersSheet value={b.reminders} onClose={() => setRemind(false)}
-        onSave={(r) => { b.setReminders(r); setRemind(false) }} />}
+      {remind && <RemindersSheet value={remind === 'on' && b.reminders ? { ...b.reminders, enabled: true } : b.reminders}
+        onClose={() => setRemind('')} onSave={(r) => { b.setReminders(r); setRemind('') }} />}
     </>
   )
 }

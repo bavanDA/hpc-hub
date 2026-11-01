@@ -44,10 +44,10 @@ export function DoneView({ cluster, result, onOpen, onWeekly, onAgain, onNewChec
         <div className="flex items-start gap-4">
           <IconTile icon={bad ? CircleAlert : CircleCheck} size={56} tone={bad ? 'neutral' : 'success'} />
           <div className="flex flex-col gap-1.5">
-            <h2 className="text-xl font-semibold">{bad ? copy.mismatch(result.mismatches, helpFor(cluster))
+            <h2 className="text-xl font-semibold">{bad ? copy.mismatch(result.mismatches)
               : partial ? copy.partial(result.copied_files, result.copied_files + busy + failed)
                 : copy.title(result.copied_files)}</h2>
-            {!bad && <p className="text-md text-dim">{copy.checked(result.verified)}</p>}
+            <p className="text-md text-dim">{bad ? copy.mismatchHelp(helpFor(cluster)) : copy.checked(result.verified)}</p>
             {busy > 0 && <p className="text-md text-dim">{copy.busy(busy)}</p>}
             {failed > 0 && <p className="text-md text-dim">{copy.failed(failed)}</p>}
           </div>

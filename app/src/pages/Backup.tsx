@@ -47,7 +47,7 @@ export function Backup() {
 function Flow({ id, name }: { id: string; name: string }) {
   const b = useBackup(id, usePageParams().step)
   const go = useGo()
-  const [remind, setRemind] = useState(false)
+  const [remind, setRemind] = useState<'' | 'open' | 'on'>('')  // on: from Check again next week, switched on
   const s = b.summary
   let body
   switch (b.step) {
@@ -99,22 +99,22 @@ function Flow({ id, name }: { id: string; name: string }) {
     case 'done':
       body = <DoneView cluster={id} result={b.result}
         onOpen={() => go('files', { cluster: id, path: (b.result?.notes_path ?? '').replace(/\/[^/]*$/, '') })}
-        onWeekly={() => setRemind(true)} onAgain={() => b.setStep('space')} onNewCheck={b.restart} />
+        onWeekly={() => setRemind('on')} onAgain={() => b.setStep('space')} onNewCheck={b.restart} />
       break
   }
   return (
     <div className="h-full overflow-auto">
       <div className="mx-auto max-w-[760px] px-6 pt-6 pb-10">
         <PageHead title={startCopy.title} subtitle={b.policy ? `${name} · ${b.policy.scratch}` : name}
-          actions={<Button kind="ghost" onClick={() => setRemind(true)}>
+          actions={<Button kind="ghost" onClick={() => setRemind('open')}>
             <BellRing size={16} />{b.reminders?.enabled ? 'Weekly check on' : 'Reminders'}</Button>} />
         <Steps step={b.step} />
         {b.error && <p className="mb-4 flex items-start gap-2 rounded-lg bg-bad-bg p-3 text-md text-bad">
           <CircleAlert size={16} className="mt-1 shrink-0" />{b.error}</p>}
         {body}
       </div>
-      {remind && <RemindersDialog value={b.reminders} onClose={() => setRemind(false)}
-        onSave={(r) => { b.setReminders(r); setRemind(false) }} />}
+      {remind && <RemindersDialog value={remind === 'on' && b.reminders ? { ...b.reminders, enabled: true } : b.reminders}
+        onClose={() => setRemind('')} onSave={(r) => { b.setReminders(r); setRemind('') }} />}
     </div>
   )
 }

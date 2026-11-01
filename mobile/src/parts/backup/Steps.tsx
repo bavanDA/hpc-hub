@@ -21,8 +21,9 @@ function Note({ bad = false, children }: { bad?: boolean; children: React.ReactN
   )
 }
 
-export function StartView({ name, policy, agent, onAgent }:
-  { name: string; policy: BackupPolicy | null; agent: boolean; onAgent: (on: boolean) => void }) {
+export function StartView({ name, policy, agent, onAgent, onLast }: {
+  name: string; policy: BackupPolicy | null; agent: boolean; onAgent: (on: boolean) => void; onLast?: () => void
+}) {
   const noTimer = !!policy && policy.purge.days <= 0
   const Icon = noTimer ? TimerOff : ShieldCheck
   return (
@@ -35,6 +36,8 @@ export function StartView({ name, policy, agent, onAgent }:
         <Switch label={start.agent} hint={start.agentHint} checked={agent} onChange={onAgent} />
       </Card>
       <p className="px-1 text-sm text-dim">{start.hint}</p>
+      {onLast && <button onClick={onLast} className="min-h-12 self-start rounded-xl px-1 font-bold text-accent-text
+        active:bg-hover">{start.seeLast}</button>}
     </div>
   )
 }
@@ -200,10 +203,10 @@ export function DoneCard({ cluster, result }: { cluster: string; result: CopyRes
       <Card className="flex flex-col gap-3">
         <div className={`grid size-14 place-items-center rounded-2xl ${bad ? 'bg-pill text-dim' : 'bg-ok-bg text-ok'}`}>
           {bad ? <CircleAlert size={26} /> : <CircleCheck size={26} />}</div>
-        <h2 className="text-xl font-bold">{bad ? doneCopy.mismatch(result.mismatches, helpFor(cluster))
+        <h2 className="text-xl font-bold">{bad ? doneCopy.mismatch(result.mismatches)
           : partial ? doneCopy.partial(result.copied_files, result.copied_files + busy + failed)
             : doneCopy.title(result.copied_files)}</h2>
-        {!bad && <p className="text-dim">{doneCopy.checked(result.verified)}</p>}
+        <p className="text-dim">{bad ? doneCopy.mismatchHelp(helpFor(cluster)) : doneCopy.checked(result.verified)}</p>
         {busy > 0 && <p className="text-dim">{doneCopy.busy(busy)}</p>}
         {failed > 0 && <p className="text-dim">{doneCopy.failed(failed)}</p>}
         {result.notes_path && <p className="flex items-start gap-2 text-sm text-dim"><FileText size={16} className="mt-0.5 shrink-0" />
