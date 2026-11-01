@@ -43,7 +43,8 @@ class PreferencesDialog(Adw.PreferencesDialog):
 
         trial = Adw.PreferencesGroup(title="Experimental")
         self.experimental = Adw.SwitchRow(title="Experimental features", active=app.experimental,
-                                          subtitle="LaTeX, Skills and Scheduled agents. They may change or break.")
+                                          subtitle="Papers, and Scheduled and Skills under Agents. They may change "
+                                                   "or break.")
         self.experimental.connect("notify::active", lambda *_: self._experimental())
         trial.add(self.experimental)
         page.add(trial)

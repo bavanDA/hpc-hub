@@ -12,15 +12,17 @@ from ..files.ui import FilesPage
 from ..latex.ui import LatexPage
 from ..terminals.ui import TerminalsPage
 
-GROUPS = [  # sidebar sections: (heading, [(page, title, icon)])
-    ("Work", [("projects", "Projects", "view-grid-symbolic"), ("latex", "LaTeX", "x-office-document-symbolic"),
+GROUPS = [  # sidebar sections: (heading, [(page, title, icon)]); the same order as the desktop app's sidebar
+    ("", [("clusters", "Clusters", "network-server-symbolic")]),  # home: first, no heading
+    ("Work", [("projects", "Projects", "view-grid-symbolic"),
               ("terminals", "Terminals", "utilities-terminal-symbolic"),
-              ("schedules", "Scheduled agents", "alarm-symbolic"),
-              ("skills", "Skills", "starred-symbolic"),
-              ("permissions", "Permissions", "security-medium-symbolic")]),
-    ("Cluster", [("clusters", "Clusters", "network-server-symbolic"), ("jobs", "Jobs", "view-list-symbolic"),
+              ("latex", "Papers", "x-office-document-symbolic")]),
+    ("Agents", [("permissions", "Permissions", "security-medium-symbolic"),
+                ("schedules", "Scheduled", "alarm-symbolic"),
+                ("skills", "Skills", "starred-symbolic")]),
+    ("Cluster", [("jobs", "Jobs", "view-list-symbolic"),
                  ("usage", "Usage", "power-profile-performance-symbolic")]),
-    ("Data", [("files", "Files", "folder-symbolic"), ("globus", "Globus", "network-transmit-receive-symbolic")]),
+    ("Data", [("files", "Files", "folder-symbolic"), ("globus", "Transfers", "network-transmit-receive-symbolic")]),
 ]
 
 
@@ -64,10 +66,11 @@ class MainWindow(Adw.ApplicationWindow):
             items = [i for i in items if i[0] in pages]
             if not items:
                 continue
-            head = Gtk.ListBoxRow(activatable=False, selectable=False)
-            head.set_child(Gtk.Label(label=group, xalign=0, css_classes=["heading", "dim-label"],
-                                     margin_start=6, margin_top=12 if self.rows else 4, margin_bottom=2))
-            self.sidebar.append(head)
+            if group:
+                head = Gtk.ListBoxRow(activatable=False, selectable=False)
+                head.set_child(Gtk.Label(label=group, xalign=0, css_classes=["heading", "dim-label"],
+                                         margin_start=6, margin_top=12 if self.rows else 4, margin_bottom=2))
+                self.sidebar.append(head)
             for name, title, icon in items:
                 self.stack.add_titled_with_icon(pages[name], name, title, icon)
                 box = Gtk.Box(spacing=12, margin_start=4)
