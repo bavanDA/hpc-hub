@@ -54,8 +54,9 @@ export function SessionRow({ s, open, nodes, extra = '', onOpen, onActions }: {
         </span>
       </button>
       {remote && (
-        <button onClick={onRemote} className="h-11 shrink-0 rounded-xl px-3 text-sm font-bold text-accent-text
-          active:bg-hover">{code ? 'Copy code' : 'Open remote'}</button>
+        <button onClick={onRemote} title={code ? 'Copy the ChatGPT pairing code' : 'Open remote control'}
+          className="h-11 shrink-0 rounded-xl px-3 text-sm font-bold text-accent-text active:bg-hover">
+          {code ? 'Copy code' : 'Remote'}</button>
       )}
       <button aria-label={`Actions for ${shortTitle(s, what)}`} onClick={onActions}
         className="grid size-12 shrink-0 place-items-center rounded-full text-dim active:bg-hover">
