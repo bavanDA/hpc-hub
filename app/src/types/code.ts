@@ -14,7 +14,8 @@ export type OpenedFile = {
   lossy: boolean          // the bytes aren't UTF-8: shown read-only so saving can't damage them
 }
 
-/** code.save(cluster, path, text, base_sha, force?): saves only if the file is still what you opened. */
+/** code.save(cluster, path, text, base_sha, eol?, force?): saves only if the file is still what you opened; eol
+ *  from code.open keeps the line endings. */
 export type SaveResult =
   | { saved: true; sha: string; mtime: number }
   | { saved: false; conflict: true; sha: string; mtime: number }  // changed on the cluster since base_sha
