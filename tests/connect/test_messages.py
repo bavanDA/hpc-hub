@@ -21,3 +21,13 @@ def test_refused_login_names_the_cluster_and_its_label():
 def test_unreachable_and_unknown():
     assert messages.plain("ssh: connect to host x port 22: Connection timed out", WULVER).endswith("Is the VPN on?")
     assert messages.plain("something new", WULVER) == "something new"
+
+
+def test_messages_follow_the_house_rules():
+    said = [messages.CANCELLED, messages.STOPPED_WAITING]
+    for c in (WULVER, YALE, SDSC):
+        for err in ("SSH login timed out", "VPN login timed out", "Permission denied", "Connection timed out"):
+            said.append(messages.plain(err, c))
+    for text in said:
+        assert " if " not in f" {text.lower()} " and "\u2014" not in text and "\u2013" not in text, text
+        assert "Log in" not in text and "Login" not in text, text
