@@ -1,4 +1,5 @@
 import json
+from pathlib import Path
 
 import pytest
 
@@ -54,8 +55,8 @@ def test_chrome_on_each_system(tmp_path):
     assert win[0].replace("/", "\\").endswith(r"Program Files\Google\Chrome\Application\chrome.exe")
     assert len(win) == 3 and "AppData" in win[2]
     mac = browser.chrome_candidates("darwin", {}, tmp_path)
-    assert mac[0] == "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
-    assert str(tmp_path / "Applications" / "Google Chrome.app/Contents/MacOS/Google Chrome") in mac
+    assert Path(mac[0]) == Path("/Applications/Google Chrome.app/Contents/MacOS/Google Chrome")
+    assert tmp_path / "Applications" / "Google Chrome.app/Contents/MacOS/Google Chrome" in map(Path, mac)
     assert browser.chrome_candidates("linux", {}, tmp_path) == browser.CHROME_BINS
     assert browser.chrome_dirs("darwin", {}, tmp_path)[0] == tmp_path / "Library/Application Support/Google/Chrome"
     assert browser.chrome_dirs("win32", env, tmp_path)[0].name == "User Data"
