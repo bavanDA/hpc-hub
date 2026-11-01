@@ -14,6 +14,7 @@ from ..session import ClusterSession, State
 from .phone_pair import PhonePairDialog
 
 MAX_LOG_LINES = 1000
+DOT_CLASS = {"success": "success", "accent": "info", "warning": "warning", "error": "error"}  # .state-dot colors
 
 STATUS = {  # state: (words, style class)
     State.CONNECTED: ("Connected", "success"),
@@ -62,7 +63,7 @@ class ClusterCard(Gtk.Box):
         head.append(titles)
 
         self.status = Gtk.Box(spacing=6, valign=Gtk.Align.CENTER)
-        self.dot = Gtk.Label(label="●", css_classes=["caption"])
+        self.dot = Gtk.Box(css_classes=["state-dot"], valign=Gtk.Align.CENTER)  # a real dot, colored in style.py
         self.status_text = Gtk.Label(css_classes=["caption-heading"])
         self.status.append(self.dot)
         self.status.append(self.status_text)
@@ -227,10 +228,13 @@ class ClusterCard(Gtk.Box):
         if vpn_only:
             words = "VPN only"
         self.status_text.set_label(words)
-        for w in (self.dot, self.status_text):
-            for c in set(TEXT_CLASS.values()):
-                w.remove_css_class(c)
-            w.add_css_class(tone)
+        for c in set(TEXT_CLASS.values()):
+            self.status_text.remove_css_class(c)
+        self.status_text.add_css_class(tone)
+        for c in DOT_CLASS.values():
+            self.dot.remove_css_class(c)
+        if DOT_CLASS.get(tone):
+            self.dot.add_css_class(DOT_CLASS[tone])
 
         self.spinner.set_visible(s.state.busy)
         self.detail.set_label(s.detail)
