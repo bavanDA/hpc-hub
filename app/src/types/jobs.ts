@@ -1,7 +1,7 @@
 // Shapes of what the jobs.* methods send (see hpc_hub/api/methods/jobs.py and hpc_hub/compute/jobs.py).
 import type { Account } from './usage'
 
-export type Scope = 'mine' | 'history' | 'all'
+export type Scope = 'mine' | 'group' | 'history' | 'all'
 
 export type Job = {
   job_id: string
@@ -23,6 +23,10 @@ export type Job = {
   su: string // "9.0 / 24", "free"
   seconds: number
   limit_seconds: number
+  elapsed_text: string // "1 h 12 min"; "" while waiting
+  limit_text: string // "4 h", "3 days"
+  reason: string // why it waits, in words; "" unless pending
+  qos_shown: string // the QoS when it isn't the usual one; else ""
   cancellable: boolean // yours, and still running or waiting
 }
 

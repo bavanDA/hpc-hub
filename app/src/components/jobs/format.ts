@@ -15,12 +15,15 @@ export const stateName = (s: string) => s.charAt(0) + s.slice(1).toLowerCase().r
 
 export const queue = (j: Job) => [j.partition, j.qos].filter(Boolean).join(' · ')
 
+/** "16 GB" for Slurm's "16G", "500 MB" for "500M". */
+export const memText = (mem: string) => mem.replace(/^(\d+(?:\.\d+)?)([KMGT])$/i, (_, n, u) => `${n} ${u.toUpperCase()}B`)
+
 const idNumber = (j: Job) => parseInt(j.job_id, 10) || 0
 
-export type SortKey = 'id' | 'name' | 'queue' | 'state' | 'time' | 'res' | 'su' | 'where'
+export type SortKey = 'id' | 'name' | 'user' | 'queue' | 'state' | 'time' | 'res' | 'su' | 'where'
 export const SORT: Record<SortKey, (j: Job) => string | number> = {
-  id: idNumber, name: (j) => j.name.toLowerCase(), queue, state: (j) => j.state,
-  time: (j) => j.seconds, res: (j) => parseInt(j.cpus, 10) || 0, su: (j) => j.su_spent, where: (j) => j.where,
+  id: idNumber, name: (j) => j.name.toLowerCase(), user: (j) => j.user, queue, state: (j) => j.state,
+  time: (j) => j.seconds, res: (j) => parseInt(j.cpus, 10) || 0, su: (j) => j.su_spent, where: (j) => j.reason || j.where,
 }
 
 export function sortJobs(jobs: Job[], key: SortKey, desc: boolean): Job[] {
