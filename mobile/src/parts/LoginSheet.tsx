@@ -1,11 +1,13 @@
-// The cluster's login: scanned from the desktop app's QR code (scanPairing.ts), or typed here. Kept on the phone
-// in the encrypted vault (vault_file.py).
+// A cluster's sign-in on the phone: scanned from the desktop app's QR code (scanPairing.ts), or typed here. Kept on
+// the phone in the encrypted vault (vault_file.py). The words are the desktop's (loginCopy.ts).
 import { ScanQrCode } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
+import { copy } from '@shared/components/clusters/loginCopy'
 import { call } from '@shared/rpc'
-import type { Cluster, Logins } from '@shared/types/clusters'
-import { Button, Field, Sheet, Switch, useToast } from '../ui'
+import { secondStep, type Cluster, type Logins } from '@shared/types/clusters'
+import { Button, ConfirmSheet, Field, Sheet, Switch, useToast } from '../ui'
+import { AuthenticatorSheet } from './AuthenticatorSheet'
 import { scanPairing } from './scanPairing'
 
 export function LoginSheet({ cluster: c, hint, onClose }: { cluster: Cluster; hint?: string; onClose: () => void }) {
@@ -14,6 +16,8 @@ export function LoginSheet({ cluster: c, hint, onClose }: { cluster: Cluster; hi
   const [user, setUser] = useState('')
   const [password, setPassword] = useState('')
   const [remember, setRemember] = useState(true)
+  const [ask, setAsk] = useState<'' | 'forget' | 'code'>('')
+  const label = c.username_label || 'Username'
   useEffect(() => {
     call<Logins>('clusters.login', { cluster: c.id }).then((l) => {
       setSaved(l)
@@ -38,27 +42,41 @@ export function LoginSheet({ cluster: c, hint, onClose }: { cluster: Cluster; hi
   }
 
   async function forget() {
-    await call('clusters.forget_logins', { cluster: c.id }).catch((e: Error) => toast(e.message))
-    onClose()
+    try {
+      await call('clusters.forget_logins', { cluster: c.id, keep_username: true })
+      setPassword('')
+      setSaved((s) => s && { ...s, ssh: { ...s.ssh, password: false } })
+      toast('Password forgotten')
+    } catch (e) {
+      toast((e as Error).message)
+    }
   }
 
+  if (ask === 'code') return <AuthenticatorSheet cluster={c} onClose={() => setAsk('')} />
   return (
-    <Sheet title={`Sign in to ${c.name}`} onClose={onClose} actions={<>
-      <Button className="flex-1" onClick={forget}>Forget password</Button>
-      <Button kind="primary" className="flex-1" disabled={!user.trim()} onClick={save}>Save</Button></>}>
+    <Sheet title={copy.signIn(c)} onClose={onClose} actions={
+      <Button kind="primary" className="flex-1" disabled={!user.trim()} onClick={save}>Save</Button>}>
       {hint && <p className="mb-3 rounded-xl bg-warn-bg p-3 text-warn">{hint}</p>}
-      <Button kind="primary" icon={ScanQrCode} className="w-full" onClick={scan}>Scan QR code</Button>
+      <Button kind="primary" icon={ScanQrCode} className="w-full" onClick={scan}>Scan from your computer</Button>
       <p className="mt-2 text-sm text-dim">On the computer, open HPC Hub's menu, then Set up the phone app.</p>
-      <p className="mb-2 mt-5 text-sm font-bold text-dim">Or type it</p>
+      <p className="mb-1 mt-6 text-sm font-bold text-dim">Or type it</p>
       <form onSubmit={(e) => { e.preventDefault(); save() }}>
-        <Field label="Username" autoCapitalize="none" autoCorrect="off" spellCheck={false} value={user}
-          onChange={(e) => setUser(e.target.value)} />
-        <Field label="Password" type="password" value={password} onChange={(e) => setPassword(e.target.value)}
-          placeholder={saved?.ssh.password ? 'Saved, leave empty to keep it' : 'Empty for an SSH key'} />
+        <Field label={label} autoCapitalize="none" autoCorrect="off" spellCheck={false} autoComplete="username"
+          placeholder={copy.usernameHint} value={user} onChange={(e) => setUser(e.target.value)} />
+        <Field label={copy.password} type="password" autoComplete="current-password" value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          placeholder={saved?.ssh.password ? copy.saved : c.password_only ? '' : 'Empty for an SSH key'} />
       </form>
-      <p className="mb-1 text-sm text-dim">Saved encrypted on this phone, never in plain text.</p>
-      <Switch label="Remember password" hint="Off: asked once each time the app starts."
-        checked={remember} onChange={setRemember} />
+      <p className="text-sm text-dim">{copy.passwordNote(c)}</p>
+      <Switch label={copy.remember} hint={remember ? undefined : copy.rememberOff} checked={remember}
+        onChange={setRemember} />
+      <p className="mt-2 text-sm text-dim">{secondStep(c)}</p>
+      {c.second_factor === 'code' && c.code_setup && <button onClick={() => setAsk('code')}
+        className="h-11 font-semibold text-accent-text">{copy.codeSetup}</button>}
+      {saved?.ssh.password && <button onClick={() => setAsk('forget')}
+        className="mt-4 block h-11 font-semibold text-bad">{copy.forget}</button>}
+      {ask === 'forget' && <ConfirmSheet title={copy.forgetTitle(c)} text={copy.forgetBody(label)} confirm={copy.forget}
+        danger onConfirm={forget} onClose={() => setAsk('')} />}
     </Sheet>
   )
 }
