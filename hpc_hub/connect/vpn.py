@@ -187,7 +187,7 @@ class Vpn:
 
     def ensure_profile(self) -> None:
         if not self.cfg.vpn.gateway:
-            raise VpnError("VPN gateway is empty. Set it in Settings → Server & VPN.")
+            raise VpnError("The VPN address is empty. Set it in this cluster's Settings, under Advanced.")
         data = nm_vpn_data(self.cfg)
         names = self._nmcli("-t", "-g", "NAME", "connection", "show").stdout.splitlines()
         errors = split_errors(self.cfg)

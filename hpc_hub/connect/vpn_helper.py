@@ -196,7 +196,7 @@ class HelperVpn(Vpn):
 
     def ensure_profile(self) -> None:
         if not self.cfg.vpn.gateway:
-            raise VpnError("VPN gateway is empty. Set it in Settings → Server & VPN.")
+            raise VpnError("The VPN address is empty. Set it in this cluster's Settings, under Advanced.")
         errors = split_errors(self.cfg)
         if errors:
             raise VpnError("; ".join(errors))

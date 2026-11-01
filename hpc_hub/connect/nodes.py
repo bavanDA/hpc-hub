@@ -8,6 +8,7 @@ from ..compute import limits, slurm
 from ..compute.slurm import Allocation, SlurmError
 from ..core.config import ComputeProfile
 from ..core.ssh import SshError
+from .messages import STOPPED_WAITING
 from .state import State
 
 
@@ -195,7 +196,7 @@ class NodesMixin:
             )
         except (SlurmError, OSError, subprocess.SubprocessError) as e:
             self._log(f"Node request failed: {e}")
-            self._set(State.CONNECTED, f"No compute node: {e}")
+            self._set(State.CONNECTED, STOPPED_WAITING if self._cancel.is_set() else f"No compute node: {e}")
             return
         self._set(State.CONNECTED)
 
