@@ -103,6 +103,22 @@ def submit(ssh: SshMaster, p: ComputeProfile, job_name: str, body: str) -> str:
     return job_id
 
 
+SUBMITTED = re.compile(r"Submitted batch job (\d+)")
+
+
+def submit_file(ssh: SshMaster, path: str) -> str:
+    """sbatch a script that is on the cluster, from its own folder (so its relative paths work). The job id."""
+    path = path.strip()
+    if not path:
+        raise SlurmError("Open a job script first")
+    word = f'"$HOME"/{shlex.quote(path[2:])}' if path.startswith("~/") else shlex.quote(path)
+    res = ssh.run(f'f={word}; cd "$(dirname -- "$f")" && sbatch -- "$(basename -- "$f")"', timeout=60)
+    m = SUBMITTED.search(res.stdout)
+    if res.returncode != 0 or not m:
+        raise SlurmError(res.stderr.strip() or res.stdout.strip() or "sbatch failed")
+    return m.group(1)
+
+
 def find_job(ssh: SshMaster, names: list[str]) -> Job | None:
     """Your newest pending or running job with one of these names."""
     res = ssh.run(f'squeue -h -u "$USER" -t PENDING,RUNNING -n {shlex.quote(",".join(names))} '
