@@ -156,7 +156,8 @@ function LoginStep({ cluster: c, onNext }: { cluster: Cluster; onNext: () => voi
         <div className="flex flex-col gap-3">
           <Button kind="primary" pill type="button" onClick={() => setPortal(true)}>
             <Globe size={16} /> {copy.portal(c)}</Button>
-          <p className="text-sm text-dim">{copy.orPassword}</p>
+          <p className="-mt-1 text-center text-sm text-dim">{copy.portalNote}</p>
+          <p className="mt-2 text-sm text-dim">{copy.orPassword}</p>
         </div>
       )}
       <div className="flex flex-col gap-3">
@@ -167,6 +168,7 @@ function LoginStep({ cluster: c, onNext }: { cluster: Cluster; onNext: () => voi
           <SwitchRow label={copy.remember} checked={remember} onChange={setRemember} />
         </List>
         <RememberNote remember={remember} />
+        <p className="text-sm text-dim">{copy.usedOnConnect}</p>
       </div>
       {instead}
       {error && <p className="text-bad">{error}</p>}

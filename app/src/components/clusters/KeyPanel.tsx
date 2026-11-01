@@ -164,6 +164,10 @@ export function KeyPanel(props: PanelProps) {
         </div>
         {s.busy && c.second_factor !== 'code' && <p className="text-sm text-dim">{S.DUO_NOW}</p>}
         {s.test && !works && <Result test={s.test} text={said(s.test, org)} />}
+        {s.test?.reason === 'no_vpn' && c.vpn.enabled && (
+          <div><Button type="button" onClick={() => call('clusters.connect', { cluster: c.id, vpn_only: true })
+            .catch(() => {})}>{copy.connectVpn(c)}</Button></div>
+        )}
       </Step>
       {works && <div className="pb-3"><Result test={s.test!} text={said(s.test!, org)} /></div>}
       {s.error && <p className="pb-2 text-sm text-bad">{s.error}</p>}
