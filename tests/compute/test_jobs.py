@@ -65,3 +65,11 @@ def test_parse_details():
     assert d["UserId"] == "jdoe(12345)" and d["StdOut"] == "/home/x/out-1.out" and d["StdErr"] == ""
     assert d["AllocNode:Sid"] == "login02:3010257"
     assert jobs.parse_details("JobID|State\n5|COMPLETED\n") == {"JobID": "5", "State": "COMPLETED"}
+
+
+def test_ran_for_says_the_time_in_words():
+    from hpc_hub.compute.jobs import ran_for
+    assert ran_for("3:41:10") == "3 h 41 min"
+    assert ran_for("1-02:00:00") == "1 d 2 h"
+    assert ran_for("12:30") == "12 min"
+    assert ran_for("0:00") == "1 min"

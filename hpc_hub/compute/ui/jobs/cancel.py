@@ -1,11 +1,11 @@
-"""Cancel a job, after saying exactly what stops."""
+"""Cancel a job: one short question that says what you lose (time run, what runs in it, HPC Hub's node)."""
 
 from gi.repository import Adw
 
 from ....connect.session import ClusterSession
 from ....terminals import tmux
 from ....ui.widgets import bg
-from ...jobs import JobInfo, cancel_job, wait_gone
+from ...jobs import JobInfo, cancel_job, ran_for, wait_gone
 
 
 class CancelMixin:
@@ -23,19 +23,16 @@ class CancelMixin:
 
     def _ask_cancel(self, s: ClusterSession, j: JobInfo, inside: list[str]) -> None:
         app_node = s.allocation is not None and s.allocation.job_id == j.job_id
-        lines = [f"{j.name} · {j.partition}",
-                 f"Node: {j.where}" if j.state == "RUNNING" else f"Waiting: {j.where}",
-                 f"Running for {j.elapsed} of {j.limit}" if j.state == "RUNNING" else None]
+        running = j.state == "RUNNING"
+        lines = [f"It has run {ran_for(j.elapsed)}. Its output so far stays in your folder." if running
+                 else "It's still waiting in the queue. Nothing has started yet."]
         if inside:
-            lines.append("Running in it: " + ", ".join(inside))
+            lines.append("These stop too: " + ", ".join(inside) + ".")
         if app_node:
-            lines.append("HPC Hub is using this node.")
-        lines.append("")
-        lines.append("Everything running in this job stops right away and can't be brought back."
-                     if j.state == "RUNNING" else "It leaves the queue. Nothing has started yet.")
-        dialog = Adw.AlertDialog(heading=f"Cancel job {j.job_id}?", body="\n".join(x for x in lines if x is not None))
-        dialog.add_response("cancel", "Cancel job")  # stacked buttons show the last one on top
-        dialog.add_response("keep", "Keep running" if j.state == "RUNNING" else "Keep waiting")
+            lines.append("HPC Hub runs your terminals on this node, so you'll be left without one.")
+        dialog = Adw.AlertDialog(heading=f"Cancel {j.name or f'job {j.job_id}'}?", body="\n\n".join(lines))
+        dialog.add_response("keep", "Keep running" if running else "Keep waiting")
+        dialog.add_response("cancel", "Cancel job")  # the risky answer on the right, red
         dialog.set_response_appearance("cancel", Adw.ResponseAppearance.DESTRUCTIVE)
         dialog.set_default_response("keep")
         dialog.set_close_response("keep")
@@ -53,8 +50,8 @@ class CancelMixin:
                 return wait_gone(s.ssh, j.job_id)
 
             def done(gone, err):
-                self.toast(f"Could not cancel job {j.job_id}: {err}" if err
-                           else f"Job {j.job_id} is cancelled and gone from the queue" if gone
+                self.toast(f"Couldn't cancel job {j.job_id}: {err}" if err
+                           else f"Job {j.job_id} is cancelled" if gone
                            else f"Cancel sent. Slurm is still stopping job {j.job_id}")
                 self.refresh(quiet=True)
             bg(work, done)

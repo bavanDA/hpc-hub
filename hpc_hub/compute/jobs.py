@@ -143,6 +143,19 @@ def parse_details(text: str) -> dict[str, str]:
     return out
 
 
+def ran_for(elapsed: str) -> str:
+    """"3 h 41 min" for Slurm's "3:41:10", "1 d 2 h" for "1-02:00:00", "12 min" for "12:30"."""
+    days, _, hms = elapsed.rpartition("-")
+    parts = [int(x) if x.isdigit() else 0 for x in hms.split(":")]
+    h, m = (parts[0], parts[1]) if len(parts) == 3 else (0, parts[0])
+    d = int(days) if days.isdigit() else 0
+    if d:
+        return f"{d} d" + (f" {h} h" if h else "")
+    if h:
+        return f"{h} h" + (f" {m} min" if m else "")
+    return f"{m or 1} min"
+
+
 def wait_gone(ssh: SshMaster, job_id: str, seconds: float = 15) -> bool:
     """After scancel: True once the job no longer runs or waits."""
     end = time.monotonic() + seconds
