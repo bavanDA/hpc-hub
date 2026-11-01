@@ -93,6 +93,21 @@ export function SwitchRow({ label, sub, checked, onChange }:
   return <RowBox label={label} sub={sub}><Toggle {...{ checked, onChange, label }} /></RowBox>
 }
 
+/** A checkbox before its label, for a yes or no that goes with the row above it. */
+export function CheckRow({ label, sub, checked, onChange }:
+  { label: string; sub?: string; checked: boolean; onChange: (v: boolean) => void }) {
+  return (
+    <label className="flex min-h-[56px] cursor-pointer items-center gap-3 px-4 py-2 hover:bg-hover">
+      <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)}
+        className="size-[18px] shrink-0 accent-[var(--color-accent)]" />
+      <div className="min-w-0 flex-1">
+        <div>{label}</div>
+        {sub && <div className="text-[13px] text-dim">{sub}</div>}
+      </div>
+    </label>
+  )
+}
+
 export function ActionRow({ label, sub, children }: { label: ReactNode; sub?: ReactNode; children: ReactNode }) {
   return <RowBox label={label} sub={sub}>{children}</RowBox>
 }

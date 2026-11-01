@@ -1,4 +1,5 @@
-// The first start: which clusters do you use? Only those show up in the app (Preferences changes it later).
+// The first start: which clusters do you use? Only those show up in the app (Settings changes it later).
+// Then Onboarding.tsx asks each one's login and compute node.
 import { Check, Server } from 'lucide-react'
 import { useState } from 'react'
 
@@ -14,17 +15,18 @@ export function describe(c: Choice): string {
   return `${c.host} · ${how}`
 }
 
-export function Welcome({ status, onDone }: { status: SetupStatus; onDone: () => void }) {
+export function Welcome({ status, onDone }: { status: SetupStatus; onDone: (chosen: string[]) => void }) {
   const [picked, setPicked] = useState<string[]>([])
   const [error, setError] = useState('')
   const toggle = (id: string) => setPicked((p) => p.includes(id) ? p.filter((x) => x !== id) : [...p, id])
-  const go = () => call('setup.choose', { ids: status.choices.map((c) => c.id).filter((id) => picked.includes(id)) })
-    .then(onDone).catch((e: Error) => setError(e.message))
+  const go = () => call<SetupStatus>('setup.choose',
+    { ids: status.choices.map((c) => c.id).filter((id) => picked.includes(id)) })
+    .then((s) => onDone(s.chosen)).catch((e: Error) => setError(e.message))
   return (
     <div className="flex h-full flex-col items-center justify-center gap-6 overflow-auto p-8">
       <div className="text-center">
         <h1 className="text-3xl font-bold">Welcome to HPC Hub</h1>
-        <p className="mt-2 text-dim">Which clusters do you use? You can change this later in Preferences.</p>
+        <p className="mt-2 text-dim">Which clusters do you use? You can change this later in Settings.</p>
       </div>
       <div className="flex w-full max-w-[560px] flex-col gap-3">
         {status.choices.map((c) => {
