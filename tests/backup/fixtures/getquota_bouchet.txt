@@ -1,0 +1,10 @@
+Usage Details for pi_abc group (oldest data as of Oct 24 2026 00:00)
+Fileset       User         Usage (GiB)      File Count
+project       jdoe               1371         152,083
+scratch       jdoe                 86         670,344
+Quota Summary for pi_abc group (oldest data as of Oct 24 2026 00:00)
+Fileset       Type   Usage (GiB)   Quota (GiB)     File Count     File Limit   Backup   Purged
+project       GRP           3126          4096      4,676,026      5,000,000   Yes      No
+scratch       GRP             86         10240        670,344     10,000,000   No       30 days
+Notice: project storage usage is at 76% of its quota limit.
+home          USR             10           125         41,222        500,000   Yes      No

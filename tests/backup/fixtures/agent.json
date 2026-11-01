@@ -1,0 +1,12 @@
+{
+ "folders": [
+  {
+   "path": "data/raw",
+   "class": "inputs",
+   "keep": false,
+   "why": "Downloaded from a public archive, the fetch script is in proj/mdsim."
+  }
+ ],
+ "patterns": [],
+ "summary": "Most of the space is checkpoints from one learning rate sweep. The results and the code are small and are kept."
+}

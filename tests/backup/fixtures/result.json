@@ -1,0 +1,11 @@
+{
+ "copied_files": 2243,
+ "bytes": 48480517093,
+ "verified": "checksum",
+ "mismatches": 0,
+ "busy": [
+  "runs/today/results/step_900.csv"
+ ],
+ "failed": [],
+ "notes_path": "/project/mygroup/jdoe/from-scratch/BACKUP-NOTES.md"
+}
