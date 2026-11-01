@@ -13,8 +13,11 @@ export function About() {
       <Header title="About" />
       <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4">
         <Card>
-          <p className="font-bold">HPC Hub {version}</p>
-          <p className="text-sm text-dim">Your HPC clusters in one place. Open source, MIT license.</p>
+          <p className="text-lg font-bold">HPC Hub</p>
+          <p className="text-sm text-dim">{version ? `Version ${version}` : 'Version unknown'}</p>
+          <p className="mt-3">Your HPC clusters in one place: connect, get a compute node, follow your jobs, and work in
+            terminals, files and agents.</p>
+          <p className="mt-3 text-sm text-dim">Open source, MIT license. Your passwords stay encrypted on this phone.</p>
         </Card>
       </div>
     </div>
