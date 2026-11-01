@@ -51,13 +51,13 @@ export function Picker({ data, onOpen, onReload }:
     <div className="h-full overflow-y-auto">
       <div className="mx-auto flex max-w-[860px] flex-col gap-4 px-6 pb-10 pt-7">
         <div className="flex items-center gap-3">
-          <h1 className="flex-1 text-xl font-semibold">LaTeX projects</h1>
+          <span className="flex-1" />
           <div className="relative">
             <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-dim" />
             <input value={filter} onChange={(e) => setFilter(e.target.value)} placeholder="Find a paper"
               className="h-9 w-56 rounded-md bg-pill pl-9 pr-3 outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus" />
           </div>
-          <Button kind="suggested" onClick={() => setCreating(true)}><Plus size={16} /> New project</Button>
+          <Button kind="suggested" onClick={() => setCreating(true)}><Plus size={16} /> New paper</Button>
         </div>
 
         <Card className="divide-y divide-line overflow-hidden">
@@ -154,7 +154,7 @@ function NewProject({ clusters, start, onClose, onMade }: { clusters: LatexClust
   }
   const field = 'h-9 w-full rounded-md bg-pill px-3 outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus'
   return (
-    <Dialog title="New LaTeX project" onClose={onClose} width={440}
+    <Dialog title="New paper" onClose={onClose} width={440}
       actions={<><Button onClick={onClose}>Cancel</Button>
         <Button kind="suggested" disabled={!name.trim() || busy} onClick={go}>{busy && <Spinner size={14} />} Create</Button></>}>
       <div className="flex flex-col gap-3 text-base">

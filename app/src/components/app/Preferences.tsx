@@ -69,7 +69,7 @@ export function PreferencesDialog({ onClose, onExperimental }:
             checked={prefs.monitor_bar} onChange={(on) => save({ monitor_bar: on })} />
         </Group>
         <Group title="Experimental">
-          <SwitchRow label="Experimental features" sub="LaTeX, Skills and Scheduled agents. They may change or break."
+          <SwitchRow label="Experimental features" sub="Papers, and the Scheduled and Skills tabs of Agents. They may change or break."
             checked={prefs.experimental} onChange={(on) => save({ experimental: on })} />
         </Group>
       </>}

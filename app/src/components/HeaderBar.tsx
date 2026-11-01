@@ -39,16 +39,23 @@ function useDrag() {
   }
 }
 
-export function HeaderBar({ title, onSidebar, sidebar, onExperimental }:
-  { title: string; onSidebar: () => void; sidebar: boolean; onExperimental: (on: boolean) => void }) {
+/** chip: the cluster picker, on pages that show one cluster at a time. No onSidebar: no sidebar button (Welcome). */
+export function HeaderBar({ title, onSidebar, sidebar = false, onExperimental, chip }: {
+  title: string; onSidebar?: () => void; sidebar?: boolean; onExperimental: (on: boolean) => void
+  chip?: React.ReactNode
+}) {
   const drag = useDrag()
   return (
     <header {...drag}
       className={`flex h-12 shrink-0 items-center gap-2 border-b border-line bg-header px-2 ${
         isMac && !sidebar ? 'pl-[78px]' : ''}`}>
-      <button onClick={onSidebar} aria-label="Show or hide the sidebar"
+      {onSidebar ? <button onClick={onSidebar} aria-label="Show or hide the sidebar"
         className="grid size-8 place-items-center rounded-md hover:bg-hover"><PanelLeft size={16} /></button>
-      <div data-drag className="flex-1 truncate text-center text-md font-semibold">{title}</div>
+        : <span className="size-8" />}
+      <div data-drag className="flex min-w-0 flex-1 items-center justify-center gap-3">
+        <span data-drag className="truncate text-md font-semibold">{title}</span>
+        {chip}
+      </div>
       <AppMenu onExperimental={onExperimental} />
       {!isMac && (
         <div className="ml-2 flex gap-3 pr-1">
