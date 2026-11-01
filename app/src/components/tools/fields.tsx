@@ -80,7 +80,7 @@ export function ComputeGroup({ cluster, value, onChange, disabled = false, descr
   const top = limits?.longest ?? null
   const setTime = (m: number) => set({ time: slurmTime(Math.max(1, top ? Math.min(m, top) : m)) })
   const d = Math.floor(total / 1440), h = Math.floor((total % 1440) / 60), m = total % 60
-  const sub = !limits?.known ? 'Connect once to see the longest time allowed'
+  const sub = !limits?.known ? 'Max shown after you connect'
     : limits.longest ? `Longest allowed: ${human(limits.longest)} (${limits.why})` : 'No time limit here'
   const queue = [partition, value.account ?? '', qos].filter((x) => x.trim()).join(' · ') || "The cluster's defaults"
   const time = 'h-8 w-12 rounded-md bg-pill text-center tabular-nums outline-none focus:ring-2 focus:ring-accent'

@@ -24,7 +24,7 @@ class KeySetupDialog(Adw.Dialog):
     """on_done(username) once the key is on the cluster. sign_in: the app's web sign-in (prompts.py)."""
 
     def __init__(self, cfg: ClusterConfig, sign_in: SignIn, on_done: Callable[[str], None]):
-        super().__init__(title=f"Log in to {cfg.name}", content_width=480)
+        super().__init__(title=f"Sign in to {cfg.name}", content_width=480)
         self.cfg, self.sign_in, self.on_done = cfg, sign_in, on_done
         self.stop = threading.Event()
         self.page = Adw.StatusPage(icon_name="web-browser-symbolic", title="Sign in to the portal",

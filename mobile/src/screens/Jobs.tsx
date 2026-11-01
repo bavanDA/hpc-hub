@@ -2,7 +2,7 @@
 import { ListChecks, RefreshCw, WifiOff } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
-import { STATE_COLOR, usageText } from '@shared/components/jobs/format'
+import { STATE_PILL, stateName, usageText } from '@shared/components/jobs/format'
 import { EmptyState, Spinner } from '@shared/components/ui'
 import { call } from '@shared/rpc'
 import type { Job, JobList, Scope } from '@shared/types/jobs'
@@ -64,7 +64,8 @@ export function Jobs() {
                   className="rounded-2xl bg-card p-4 text-left shadow-[var(--shadow-card)] active:bg-hover">
                   <div className="flex items-center gap-2">
                     <span className="min-w-0 flex-1 truncate font-bold">{j.name}</span>
-                    <span className={`text-sm font-bold ${STATE_COLOR[j.state] ?? 'text-dim'}`}>{j.state}</span>
+                    <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${STATE_PILL[j.state] ?? 'bg-pill'}`}>
+                      {stateName(j.state)}</span>
                   </div>
                   <p className="mt-1 truncate text-sm text-dim">
                     {[j.job_id, scope === 'all' ? j.user : '', j.elapsed, `${j.cpus} cores`, j.where]

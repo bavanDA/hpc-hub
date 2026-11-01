@@ -38,7 +38,7 @@ class DurationRow(Adw.ActionRow):
         """The partition and QoS the job goes to decide the longest time."""
         if not self.limits:
             self.top = None
-            self.set_subtitle("Connect once to see the longest time allowed")
+            self.set_subtitle("Max shown after you connect")
             return
         self.top, why = self.limits.longest(partition, qos)
         self.set_subtitle(f"Longest allowed: {human(self.top)} ({why})" if self.top else "No time limit here")

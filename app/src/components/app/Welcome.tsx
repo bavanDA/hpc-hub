@@ -6,13 +6,14 @@ import { useState } from 'react'
 import { call } from '../../rpc'
 import { Button } from '../ui'
 
-export type Choice = { id: string; name: string; host: string; vpn: boolean; second_factor: string }
+export type Choice = { id: string; name: string; org?: string; host: string; vpn: boolean; second_factor: string }
 export type SetupStatus = { first_run: boolean; chosen: string[]; choices: Choice[] }
 
+/** "NJIT · VPN and Duo", "SDSC · Authenticator code". */
 export function describe(c: Choice): string {
-  const login = c.second_factor === 'code' ? 'a code from your authenticator app' : 'Duo on your phone'
-  const how = c.vpn ? `VPN and ${login}` : login.charAt(0).toUpperCase() + login.slice(1)
-  return `${c.host} · ${how}`
+  const second = c.second_factor === 'code' ? 'authenticator code' : 'Duo'
+  const how = c.vpn ? `VPN and ${second}` : second.charAt(0).toUpperCase() + second.slice(1)
+  return `${c.org || c.host} · ${how}`
 }
 
 export function Welcome({ status, onDone }: { status: SetupStatus; onDone: (chosen: string[]) => void }) {
@@ -47,7 +48,9 @@ export function Welcome({ status, onDone }: { status: SetupStatus; onDone: (chos
         })}
       </div>
       {error && <p className="text-bad">{error}</p>}
-      <Button kind="suggested" round disabled={!picked.length} onClick={go}>Continue</Button>
+      <div className="flex w-full max-w-[560px] justify-end">
+        <Button kind="suggested" round disabled={!picked.length} onClick={go}>Continue</Button>
+      </div>
     </div>
   )
 }

@@ -41,7 +41,7 @@ export function KeySetupDialog({ cluster: c, onClose, onDone }:
   const busy = s.state === 'working'
   const Icon = s.state === 'done' ? CircleCheck : s.state === 'failed' ? CircleX : Globe
   return (
-    <Dialog title={`Log in to ${c.name}`} onClose={onClose} width={480}
+    <Dialog title={`Sign in to ${c.name}`} onClose={onClose} width={480}
       actions={<Button onClick={onClose}>{s.state === 'done' ? 'Close' : 'Cancel'}</Button>}>
       <div className="flex flex-col items-center gap-3 py-2 text-center">
         <Icon size={48} strokeWidth={1.25}

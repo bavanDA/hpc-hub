@@ -14,7 +14,7 @@ export function Duration({ total, onChange, limits }:
   { total: number; onChange: (m: number) => void; limits: Limits | null }) {
   const d = Math.floor(total / 1440), h = Math.floor((total % 1440) / 60), m = total % 60
   const set = (dd: number, hh: number, mm: number) => onChange(dd * 1440 + hh * 60 + mm)
-  const sub = !limits?.known ? 'Connect once to see the longest time allowed'
+  const sub = !limits?.known ? 'Max shown after you connect'
     : limits.longest ? `Longest allowed: ${human(limits.longest)} (${limits.why})` : 'No time limit here'
   const units: [string, string, number, number, (v: number) => void][] = [
     ['days', 'd', d, 99, (v) => set(v, h, m)], ['hours', 'h', h, 23, (v) => set(d, v, m)],

@@ -28,7 +28,7 @@ export function DurationRow({ total, limits, onChange }:
     const t = Math.max(1, dd * 1440 + hh * 60 + mm)
     onChange(top ? Math.min(t, top) : t)
   }
-  const sub = !limits?.known ? 'Connect once to see the longest time allowed'
+  const sub = !limits?.known ? 'Max shown after you connect'
     : top ? `Longest allowed: ${human(top)} (${limits.why})` : 'No time limit here'
   const units: [string, string, number, number, (v: number) => void][] = [
     ['days', 'd', d, 99, (v) => set(v, h, m)], ['hours', 'h', h, 23, (v) => set(d, v, m)],
