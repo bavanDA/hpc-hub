@@ -11,13 +11,13 @@ import { DUO, type Question, type Session } from '../types/clusters'
 import { DuoDialog } from './clusters/DuoDialog'
 import { QuestionDialog } from './clusters/QuestionDialog'
 import { KeySetupDialog } from './clusters/KeySetupDialog'
-import { SettingsDialog, type Tab } from './clusters/SettingsDialog'
+import { SettingsDialog } from './clusters/SettingsDialog'
 import { inTauri } from './clusters/SignIn'
 import { load, useClusters } from './clusters/store'
 import { useToast } from './toast'
 
 // a plain browser (design work): ?question=pick-browser|chrome-window|web-login or ?show=settings|keysetup,
-// with &cluster=id and &tab=..., opens that dialog with demo data
+// with &cluster=id and &tab=login|compute (&advanced to open Advanced), opens that dialog with demo data
 const demo = inTauri ? null : new URLSearchParams(location.search)
 
 function demoQuestions(): Question[] {
@@ -77,7 +77,7 @@ export function Questions() {
       {q && <QuestionDialog key={q.id} q={q} cluster={clusters?.find((c) => c.id === q.cluster)}
         onAnswer={(a) => answer(q, a)} />}
       {shown === 'settings' && demoCluster && <SettingsDialog cluster={demoCluster} onClose={() => setShown('')}
-        start={(demo?.get('tab') ?? 'login') as Tab} hint={demo?.get('hint') ?? undefined} />}
+        start={demo?.get('tab') ?? 'login'} advanced={demo?.has('advanced')} hint={demo?.get('hint') ?? undefined} />}
       {shown === 'keysetup' && demoCluster && <KeySetupDialog cluster={demoCluster} onClose={() => setShown('')}
         onDone={() => setShown('')} />}
     </>
