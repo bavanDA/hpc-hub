@@ -34,15 +34,49 @@ export function placeOf(page: Page | Tab | MoreScreen | string, params: Record<s
   }
 }
 
-// -- Back: one stack of open layers (sheets, screens on top), each with a history entry -------------------------
+// -- Back: one stack of open layers (sheets, screens on top), one history entry each ----------------------------
+// Layers only say what is open; history follows a moment later (sync), so changes that cancel out cost nothing:
+// React's dev mode mounting twice, or closing one sheet and opening the next in the same tap. While our own
+// history.go() is on its way, nothing else moves; its popstate lands, then the rest is done.
 type Layer = { back: () => void }
 const layers: Layer[] = []
-let ignore = 0  // popstates we caused ourselves (closing a layer from the UI), not Back presses
+let depth = 0  // history entries we pushed above the page's own
+let pending = false  // our history.go() hasn't landed yet
+let queued = false
+
+const depthOf = (state: unknown) =>
+  typeof (state as { hpcDepth?: unknown } | null)?.hpcDepth === 'number' ? (state as { hpcDepth: number }).hpcDepth : 0
+
+function sync() {
+  queued = false
+  if (pending) return
+  while (depth < layers.length) {
+    depth++
+    history.pushState({ hpcDepth: depth }, '')
+  }
+  if (depth > layers.length) {
+    pending = true
+    history.go(layers.length - depth)  // closed from the UI: drop those entries too
+  }
+}
+
+function later() {
+  if (!queued) { queued = true; setTimeout(sync, 0) }
+}
 
 if (typeof window !== 'undefined') {
-  window.addEventListener('popstate', () => {
-    if (ignore > 0) { ignore--; return }
-    layers.pop()?.back()
+  history.replaceState({ ...(history.state ?? {}), hpcDepth: 0 }, '')  // entries from before a reload don't count
+  window.addEventListener('popstate', (e) => {
+    const now = depthOf(e.state)
+    if (pending) {
+      pending = false
+      depth = now
+    } else {
+      // Back (or Forward): close what's above the entry we're on now, top first
+      for (; depth > now; depth--) layers.pop()?.back()
+      depth = now
+    }
+    later()
   })
 }
 
@@ -54,13 +88,12 @@ export function useBackLayer(onBack: () => void, active = true) {
     if (!active) return
     const layer: Layer = { back: () => ref.current() }
     layers.push(layer)
-    history.pushState({ layer: layers.length }, '')
+    later()
     return () => {
       const i = layers.indexOf(layer)
       if (i < 0) return  // Back already took it off
       layers.splice(i, 1)
-      ignore++
-      history.back()  // closed from the UI: drop its history entry too
+      later()
     }
   }, [active])
 }
