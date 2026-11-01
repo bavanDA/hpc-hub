@@ -160,7 +160,8 @@ export const done = {
   busy: (n: number) => `${count(n)} ${n === 1 ? 'file was' : 'files were'} still being written by a job. `
     + `Copy ${n === 1 ? 'it' : 'them'} after the job ends.`,
   failed: (n: number) => `${count(n)} ${n === 1 ? 'file' : 'files'} could not be read.`,
-  mismatch: (n: number) => `${count(n)} ${n === 1 ? 'file does' : 'files do'} not match the one in scratch.`,
+  mismatch: (n: number) => `${count(n)} ${n === 1 ? 'file does not match the one' : 'files do not match the ones'} `
+    + 'in scratch.',
   mismatchHelp: (help: string) => `Scratch still has them. Copy again, or write to ${help}.`,
   again: 'Copy again',
   newCheck: 'Check scratch again',
