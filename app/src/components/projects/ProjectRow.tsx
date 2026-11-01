@@ -1,20 +1,22 @@
 // One project in the list: its Open menu (VS Code, Files, agents, LaTeX) and the ⋮ menu, like the GTK rows.
 import {
-  ChevronDown, Code, EllipsisVertical, FileText, Folder, FolderOpen, Globe, LayoutGrid, MessageSquare,
+  ChevronDown, Code, EllipsisVertical, FileCode2, FileText, Folder, FolderOpen, Globe, LayoutGrid, MessageSquare,
   MousePointer2, Rocket, Sparkles, Users,
 } from 'lucide-react'
 
+import { useGo } from '../../nav'
 import { call } from '../../rpc'
 import type { Project } from '../../types/projects'
 import { useTools } from '../tools/useTools'
 import { Menu, type MenuItem } from './Menu'
 
-/** What Open can open; the keys match the GTK open_menu (vscode:<target>, files, ask, agent:<id>, latex). */
+/** What Open can open; the keys match the GTK open_menu (vscode:<target>, files, ask, agent:<id>, latex), plus code
+ * (the Code page with the project's folder in its tree). */
 function openGroups(open: (key: string) => void, experimental: boolean): MenuItem[][] {
   const item = (key: string, label: string, icon: MenuItem['icon']) => ({ label, icon, onClick: () => open(key) })
   return [
-    [item('vscode:desktop', 'VS Code app', Code), item('vscode:browser', 'VS Code in browser', Globe),
-      item('files', 'Files', FolderOpen)],
+    [item('code', 'Code', FileCode2), item('vscode:desktop', 'VS Code app', Code),
+      item('vscode:browser', 'VS Code in browser', Globe), item('files', 'Files', FolderOpen)],
     [item('ask', 'Ask all agents', Users), item('agent:claude', 'Claude', Sparkles),
       item('agent:codex', 'ChatGPT', MessageSquare), item('agent:agy', 'Antigravity', Rocket),
       item('agent:cursor', 'Cursor', MousePointer2)],
@@ -34,9 +36,18 @@ export function ProjectRow({ p, experimental, act }: { p: Project; experimental:
   const known = Boolean(p.cluster_name)
   const Icon = p.main_tex ? FileText : Folder
   const tools = useTools()
+  const go = useGo()
   // VS Code, Files and the agents open here (connecting first); the page gets the rest (LaTeX)
-  const open = (key: string) => key === 'latex' ? act.open(p, key) : tools.open(p.cluster, p.cluster_name, key, p.path,
-    () => call<Project>('projects.opened', { id: p.id }).then((x) => x.path, () => p.path))
+  const open = (key: string) => {
+    if (key === 'code') {
+      call('projects.opened', { id: p.id }).catch(() => {})
+      go('code', { cluster: p.cluster, folder: p.path })
+      return
+    }
+    if (key === 'latex') act.open(p, key)
+    else tools.open(p.cluster, p.cluster_name, key, p.path,
+      () => call<Project>('projects.opened', { id: p.id }).then((x) => x.path, () => p.path))
+  }
   return (
     <div className="flex min-h-[56px] items-center gap-3 py-2 pr-3 pl-4">
       <Icon size={20} strokeWidth={1.75} className="shrink-0" />

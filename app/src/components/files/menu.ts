@@ -9,6 +9,7 @@ export type MenuActions = {
   paste: () => void
   vscode?: () => void  // in the folder (a file: its folder)
   claude?: () => void
+  code?: () => void    // the folder (a file: its folder) in the Code page's tree
 }
 
 /** VS Code and Claude in the folder, as in hpc_hub/files/ui/menu.py. */
@@ -23,12 +24,14 @@ export function menuFor(entry: Entry | null, canPaste: boolean, a: MenuActions):
       [{ label: 'New folder…', onClick: a.newFolder }, { label: 'Upload files here…', onClick: a.upload },
         ...(canPaste ? [{ label: 'Paste here', onClick: a.paste }] : [])],
       [...tools(a, ['Open this folder in VS Code', 'Claude in this folder']),
+        ...(a.code ? [{ label: 'Open this folder in Code', onClick: a.code }] : []),
         { label: 'Copy path', onClick: a.copyPath }],
     ]
   }
   const dir = entry.kind === 'd'
   return [
-    [{ label: 'Open', onClick: a.open }, ...(isText(entry) ? [{ label: 'Edit', onClick: a.edit }] : [])],
+    [{ label: 'Open', onClick: a.open }, ...(isText(entry) ? [{ label: 'Edit in Code', onClick: a.edit }] : []),
+      ...(dir && a.code ? [{ label: 'Open in Code', onClick: a.code }] : [])],
     [...tools(a, dir ? ['Open in VS Code', 'Claude here'] : ['Open its folder in VS Code', 'Claude in its folder']),
       { label: 'Copy path', onClick: a.copyPath }],
     [{ label: 'Download', onClick: a.download }, { label: 'Rename…', onClick: a.rename },

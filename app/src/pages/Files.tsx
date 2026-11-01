@@ -9,7 +9,6 @@ import { ActionBar, type Action } from '../components/files/ActionBar'
 import { ClipBanner } from '../components/files/ClipBanner'
 import { ContextMenu } from '../components/files/ContextMenu'
 import { ConfirmDialog, NameDialog } from '../components/files/dialogs'
-import { EditorDialog } from '../components/files/EditorDialog'
 import { FileTable } from '../components/files/FileTable'
 import { useLocalFiles } from '../components/files/local'
 import { EDIT_LIMIT, isDir, isText, join, kind, parent, sorted } from '../components/files/format'
@@ -24,7 +23,7 @@ import { PdfDialog } from '../components/pdf/PdfDialog'
 import { useToast } from '../components/toast'
 import { useTools } from '../components/tools/useTools'
 import { EmptyState, Spinner } from '../components/ui'
-import { usePageParams } from '../nav'
+import { useGo, usePageParams } from '../nav'
 import { call } from '../rpc'
 import type { Clip, Entry, Listing, Place, Sort, Transfer } from '../types/files'
 
@@ -34,6 +33,7 @@ const memory = { cluster: '', paths: {} as Record<string, string>, clip: null as
 
 export function Files() {
   const toast = useToast()
+  const goPage = useGo()
   const params = usePageParams()  // opened from elsewhere: an Open menu, Ask all's answers
   useLayoutEffect(() => {  // opened for a cluster and folder: go there
     if (params.cluster && params.path) memory.paths[params.cluster] = params.path
@@ -128,8 +128,7 @@ export function Files() {
     else if (isText(e) && e.size < EDIT_LIMIT) edit(e)
     else local.download(p, true)  // no preview here: download and open it, as the GTK app does
   }
-  const edit = (e: Entry) => setDialog(
-    <EditorDialog cluster={cluster} clusterName={info?.name ?? cluster} path={join(path, e.name)} onClose={close} />)
+  const edit = (e: Entry) => goPage('code', { cluster, path: join(path, e.name) })  // the Code page edits text
   const rename = (e: Entry) => setDialog(
     <NameDialog title={`Rename ${e.name}`} action="Rename" initial={e.name} onClose={close}
       onDone={(n) => call('files.rename', { cluster, path: join(path, e.name), name: n })
@@ -201,6 +200,7 @@ export function Files() {
     newFolder, upload, paste,
     vscode: () => tools.open(cluster, info?.name ?? cluster, 'vscode', folderOf(menu.entry)),
     claude: () => tools.open(cluster, info?.name ?? cluster, 'agent:claude', folderOf(menu.entry)),
+    code: () => goPage('code', { cluster, folder: folderOf(menu.entry) }),
   })
 
   if (clustersError && !clusters) return <p className="p-8 text-bad">Could not load clusters: {clustersError}</p>
