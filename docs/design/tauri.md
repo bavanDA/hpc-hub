@@ -109,9 +109,6 @@ Each step ships with the GTK app still working, until the Tauri app has every pa
       out the gtk tests (no PyGObject) and skips the posix ones (their stand-in cluster is the local bash).
       The asyncssh tests log in to an SSH server inside the test process (`tests/fake_sshd.py`).
     - Still to do:
-      - Blocker, every frozen build too: without PyGObject the backend does not start, because keysetup imports
-        ood, which imports `chrome_cookies`, which imports gi at load. Import gi inside chrome_cookies' functions
-        (then drop the xfail in `tests/conftest.py`).
       - On a real machine: a first login (Duo push, and a code cluster), tmux terminals, uploads, downloads,
         transfers, VS Code links; that no console window flashes when the hidden backend starts the bridge; how
         slow the bridge starts from the one-file frozen backend.
