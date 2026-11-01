@@ -98,3 +98,11 @@ def test_cancel_frees_the_app_node(session, monkeypatch):
     assert m.inside("wulver", "7")["app_node"] and not m.inside("wulver", "9")["app_node"]
     assert m.cancel("wulver", "7") == {"gone": True}
     assert "scancel 7" in session.ssh.ran and session.allocation is None and session.changed == 1
+
+
+def test_exit_codes_in_words():
+    from hpc_hub.api.methods.jobs import exit_text
+    assert exit_text("0:0") == "0, finished without errors"
+    assert exit_text("1:0") == "1, the program reported an error"
+    assert exit_text("0:9") == "Stopped by signal 9"
+    assert exit_text("") == ""
