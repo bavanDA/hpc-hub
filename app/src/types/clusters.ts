@@ -134,6 +134,8 @@ export type Question = {
   prompt?: string
   default?: string
   chrome_window?: string  // pick-browser: offered when set
+  who?: string  // pick-browser: "NJIT", for "Sign in to the NJIT VPN"
+  label?: string  // pick-browser: what the cluster calls your username ("UCID")
   note?: string  // web-login: what to say under the waiting dialog, instead of the VPN's words
   login_url?: string
   final_url?: string

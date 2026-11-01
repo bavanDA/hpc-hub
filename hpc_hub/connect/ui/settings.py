@@ -143,7 +143,7 @@ class ClusterSettingsDialog(Adw.PreferencesDialog):
         self.domains = _entry("VPN domains (its DNS answers these)", v.domains)
         self.routes = _entry("VPN networks (CIDR, space separated)", v.routes)
         self.same_login = _switch("Same login as cluster", v.same_login_as_ssh)
-        choices = [("", "This app (fills your login)")]
+        choices = [("", "Built-in window")]
         if chrome_window.available() or v.browser == chrome_window.CHOICE:
             choices.append((chrome_window.CHOICE, chrome_window.TITLE))
         self.sign_in_values = [value for value, _ in choices]

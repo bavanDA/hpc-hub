@@ -28,8 +28,8 @@ from ..core.websocket import WebSocket
 from .vpn_sso import SsoStart
 
 CHOICE = CHROME_WINDOW  # vpn.browser for this window
-TITLE = "HPC Hub Chrome window (fastest)"
-SUBTITLE = "Real Chrome with its own profile. Done the moment you approve Duo."
+TITLE = "Chrome window (faster)"
+SUBTITLE = "A separate Chrome profile, signs in instantly"
 POLL = 0.5
 CLOSE_WAIT = 5.0
 START_WAIT = 20.0  # seconds for Chrome to write DevToolsActivePort
@@ -283,7 +283,7 @@ def sign_in(start: SsoStart, cancelled: Callable[[], bool], timeout: float = 600
     if not binary:
         return "", "Google Chrome is not installed"
     host = (urllib.parse.urlsplit(start.final_url or start.login_url).hostname or "").lower()
-    open_already = "The HPC Hub Chrome window is open already. Close it and try again."
+    open_already = "The Chrome window is open already. Close it and try again."
     try:
         win = Window(binary, folder or profile_dir(), args)
     except Closed:  # Chrome handed the page to a window of ours that is still open, and quit

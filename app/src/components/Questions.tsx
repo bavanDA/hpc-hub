@@ -23,8 +23,10 @@ const demo = inTauri ? null : new URLSearchParams(location.search)
 function demoQuestions(): Question[] {
   const kind = demo?.get('question') as Question['kind'] | undefined
   const cluster = demo?.get('cluster') ?? 'wulver'
-  return kind ? [{ id: 'demo', kind, cluster, name: cluster === 'yale' ? 'Yale Bouchet' : 'Wulver (NJIT)',
-    default: '', chrome_window: 'hpc-hub:chrome-window', fill: { socket: '', token: '' } }] : []
+  const yale = cluster === 'yale'
+  return kind ? [{ id: 'demo', kind, cluster, name: yale ? 'Yale Bouchet' : 'Wulver (NJIT)', who: yale ? 'Yale' : 'NJIT',
+    label: yale ? 'NetID' : 'UCID', default: '', chrome_window: 'hpc-hub:chrome-window',
+    fill: { socket: '', token: '' } }] : []
 }
 
 export function Questions() {

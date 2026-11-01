@@ -86,9 +86,8 @@ class LoginPromptsMixin:
         return False
 
     def _browser_dialog(self, session, result, done) -> bool:
-        dialog = Adw.AlertDialog(heading=f"Sign in to the {session.cfg.name} VPN",
-                                 body="Where do you want to sign in?")
-        fixed = [("", "HPC Hub window", "Fills in your username and password"),
+        dialog = Adw.AlertDialog(heading=f"Sign in to the {session.cfg.who} VPN")
+        fixed = [("", "Built-in window", f"Fills in your {session.cfg.username_label} and password"),
                  (chrome_window.CHOICE, chrome_window.TITLE, chrome_window.SUBTITLE)]
         options, picked = profile_choices(fixed, [], session.cfg.vpn.browser)
         dialog.set_extra_child(options)

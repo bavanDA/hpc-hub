@@ -12,20 +12,18 @@ import { Group } from './fields'
 
 export const inTauri = '__TAURI_INTERNALS__' in window
 
-export const CHROME_WINDOW = { title: 'HPC Hub Chrome window (fastest)',
-  sub: 'Real Chrome with its own profile. Done the moment you approve Duo.' }
+export const CHROME_WINDOW = { title: 'Chrome window (faster)', sub: 'A separate Chrome profile, signs in instantly' }
 
 export function PickBrowser({ q, onAnswer }: { q: Question; onAnswer: (a: string | null) => void }) {
-  const options = [{ value: '', title: 'HPC Hub window', sub: 'Fills in your username and password' },
+  const options = [{ value: '', title: 'Built-in window', sub: `Fills in your ${q.label || 'username'} and password` },
     ...(q.chrome_window ? [{ value: q.chrome_window, ...CHROME_WINDOW }] : [])]
   const want = (q.default ?? '').toLowerCase()
   const [picked, setPicked] = useState(options.find((o) => o.value.toLowerCase() === want)?.value ?? '')
   const cancel = () => onAnswer(null)
   return (
-    <Dialog title={`Sign in to the ${q.name} VPN`} onClose={cancel} width={440}
+    <Dialog title={`Sign in to the ${q.who || q.name} VPN`} onClose={cancel} width={440}
       actions={<><Button onClick={cancel}>Cancel</Button>
         <Button kind="suggested" onClick={() => onAnswer(picked)}>Sign in</Button></>}>
-      <p className="mb-3 text-center text-dim">Where do you want to sign in?</p>
       <Group>
         {options.map((o) => (
           <button key={o.value} type="button" role="radio" aria-checked={picked === o.value}

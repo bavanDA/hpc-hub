@@ -128,7 +128,8 @@ class Hub:
         where there is one). None: cancelled. Never your own Chrome profile: nothing reads its cookies."""
         if not chrome_window.available():
             return ""
-        answer = self.question("pick-browser", {"cluster": s.cfg.id, "name": s.cfg.name, "default": s.cfg.vpn.browser,
+        answer = self.question("pick-browser", {"cluster": s.cfg.id, "name": s.cfg.name, "who": s.cfg.who,
+                                                "label": s.cfg.username_label, "default": s.cfg.vpn.browser,
                                                 "chrome_window": chrome_window.CHOICE})
         return answer if answer in ("", chrome_window.CHOICE) else None
 

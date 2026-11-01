@@ -96,7 +96,7 @@ export function SettingsDialog({ cluster, hint, onClose, start = 'login' }:
   const code = d.second_factor === 'code'
   const ownVpnLogin = v.enabled && !(v.same_login_as_ssh ?? true)
   const win = info?.chrome_window
-  const signIn: [string, string][] = [['', 'This app (fills your login)'],
+  const signIn: [string, string][] = [['', 'Built-in window'],
     ...(win && (win.offered || v.browser === win.value) ? [[win.value, CHROME_WINDOW.title] as [string, string]] : [])]
 
   function changes() {
