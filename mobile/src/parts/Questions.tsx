@@ -13,7 +13,7 @@ import { Button, Field, Sheet, useToast } from '../ui'
 
 const digits = (text: string) => text.replace(/\s/g, '')
 // the VPN's sign-in pages need the in-app VPN, which the phone doesn't have yet
-const UNSUPPORTED: Question['kind'][] = ['pick-browser', 'chrome-window', 'web-login']
+const UNSUPPORTED: Question['kind'][] = ['chrome-window', 'web-login']
 
 export function Questions() {
   const toast = useToast()

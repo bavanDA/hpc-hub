@@ -16,7 +16,7 @@ import { inTauri } from './clusters/SignIn'
 import { load, useClusters } from './clusters/store'
 import { useToast } from './toast'
 
-// a plain browser (design work): ?question=pick-browser|chrome-window|web-login or ?show=settings|keysetup,
+// a plain browser (design work): ?question=chrome-window|web-login or ?show=settings|keysetup,
 // with &cluster=id and &tab=login|compute (&advanced to open Advanced), opens that dialog with demo data
 const demo = inTauri ? null : new URLSearchParams(location.search)
 
@@ -24,8 +24,7 @@ function demoQuestions(): Question[] {
   const kind = demo?.get('question') as Question['kind'] | undefined
   const cluster = demo?.get('cluster') ?? 'wulver'
   const yale = cluster === 'yale'
-  return kind ? [{ id: 'demo', kind, cluster, name: yale ? 'Yale Bouchet' : 'Wulver (NJIT)', who: yale ? 'Yale' : 'NJIT',
-    label: yale ? 'NetID' : 'UCID', default: '', chrome_window: 'hpc-hub:chrome-window',
+  return kind ? [{ id: 'demo', kind, cluster, name: yale ? 'Yale Bouchet' : 'Wulver (NJIT)', default: '',
     fill: { socket: '', token: '' } }] : []
 }
 

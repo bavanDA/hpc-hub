@@ -1,47 +1,17 @@
-// Web sign-in, the VPN's or a portal's (prompts.py, browser_login.py, web_login.py): where to sign in, signing
-// in in our own Chrome window, and the app's own sign-in window (app/src-tauri/src/sso.rs, opened here). Never
+// Web sign-in, the VPN's or a portal's (prompts.py, browser_login.py, web_login.py): signing in in our own Chrome
+// window, and the app's own sign-in window (app/src-tauri/src/sso.rs, opened here). Never
 // your own Chrome profile.
 import { invoke } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
-import { Check, Globe } from 'lucide-react'
+import { Globe } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
 import type { Question } from '../../types/clusters'
 import { Button, Dialog, Spinner } from '../ui'
-import { Group } from './fields'
 
 export const inTauri = '__TAURI_INTERNALS__' in window
 
 export const CHROME_WINDOW = { title: 'Chrome window (faster)', sub: 'A separate Chrome profile, signs in instantly' }
-
-export function PickBrowser({ q, onAnswer }: { q: Question; onAnswer: (a: string | null) => void }) {
-  const options = [{ value: '', title: 'Built-in window', sub: `Fills in your ${q.label || 'username'} and password` },
-    ...(q.chrome_window ? [{ value: q.chrome_window, ...CHROME_WINDOW }] : [])]
-  const want = (q.default ?? '').toLowerCase()
-  const [picked, setPicked] = useState(options.find((o) => o.value.toLowerCase() === want)?.value ?? '')
-  const cancel = () => onAnswer(null)
-  return (
-    <Dialog title={`Sign in to the ${q.who || q.name} VPN`} onClose={cancel} width={440}
-      actions={<><Button onClick={cancel}>Cancel</Button>
-        <Button kind="suggested" onClick={() => onAnswer(picked)}>Sign in</Button></>}>
-      <Group>
-        {options.map((o) => (
-          <button key={o.value} type="button" role="radio" aria-checked={picked === o.value}
-            onClick={() => setPicked(o.value)} onDoubleClick={() => onAnswer(o.value)}
-            className="flex min-h-[56px] w-full items-center gap-3 px-4 py-2 text-left hover:bg-hover">
-            <span className={`grid size-5 shrink-0 place-items-center rounded-full ${
-              picked === o.value ? 'bg-accent text-white' : 'border-2 border-line'}`}>
-              {picked === o.value && <Check size={14} />}</span>
-            <div className="min-w-0 flex-1">
-              <div>{o.title}</div>
-              {o.sub && <div className="truncate text-sm text-dim">{o.sub}</div>}
-            </div>
-          </button>
-        ))}
-      </Group>
-    </Dialog>
-  )
-}
 
 function Waiting({ title, text }: { title: string; text: string }) {
   return (

@@ -121,21 +121,17 @@ export type Limits = {
   why: string
 }
 
-/** A question a login asks (hpc_hub/api/hub.py). pick-browser: where to sign in to the VPN (answer "" for the
- * app's window, or chrome_window for our Chrome window). chrome-window: signing in in our Chrome window (answer
+/** A question a login asks (hpc_hub/api/hub.py). chrome-window: signing in in our Chrome window (answer
  * "in-app" or null). web-login: the app's sign-in window (app/src-tauri/src/sso.rs), answered with JSON
  * {token, error}. Never your own Chrome profile. */
 export type Question = {
   id: string
-  kind: 'ask' | 'code' | 'pick-browser' | 'chrome-window' | 'web-login' | 'confirm'
+  kind: 'ask' | 'code' | 'chrome-window' | 'web-login' | 'confirm'
   cluster: string
   name: string
   title?: string  // confirm: answered "yes", or null for no; a sign-in that isn't the VPN's (a portal)
   prompt?: string
   default?: string
-  chrome_window?: string  // pick-browser: offered when set
-  who?: string  // pick-browser: "NJIT", for "Sign in to the NJIT VPN"
-  label?: string  // pick-browser: what the cluster calls your username ("UCID")
   note?: string  // web-login: what to say under the waiting dialog, instead of the VPN's words
   login_url?: string
   final_url?: string
