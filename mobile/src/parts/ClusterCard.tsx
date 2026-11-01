@@ -1,8 +1,9 @@
-// One cluster on the phone, like the desktop card: the status says where you are, the big button is the next thing
-// to do (Connect, Cancel, Stop waiting). Before you connect, one quiet line says what node you'll get; tapping it
-// opens the node screen (size, get one on connect, ask first). Once connected, the things you open sit in one row
-// and the rest (node, sign-in, settings, Disconnect) are in ⋮.
-import { Bot, Code, Cpu, FileCode2, Folder, MoreVertical, Power, ScanQrCode, Settings, SquareTerminal, Users, Zap,
+// One cluster on the phone. The status sits under the name; the big button is the next thing to do (Connect,
+// Cancel, Stop waiting, or Open a terminal once connected). Before you connect, one quiet row says what node you'll
+// get; tapping it opens the node screen. Once connected, the node is a line of information and the other things you
+// open are four big tiles (2 x 2, at least 56 px tall); the rest (node, sign-in, settings, Disconnect) are in ⋮.
+import { Bot, ChevronRight, Code, Cpu, FileCode2, Folder, MoreVertical, Power, ScanQrCode, Settings, SquareTerminal,
+  Users, Zap,
   type LucideIcon } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
@@ -12,7 +13,7 @@ import { Spinner } from '@shared/components/ui'
 import { useGo } from '@shared/nav'
 import { call } from '@shared/rpc'
 import { BUSY, DUO, fastLabel, type Cluster, type Session } from '@shared/types/clusters'
-import { ActionSheet, Button, Card, useToast, type SheetAction } from '../ui'
+import { ActionSheet, Button, Card, ConfirmSheet, useToast, type SheetAction } from '../ui'
 import { ClusterSettingsSheet } from './ClusterSettingsSheet'
 import { LoginSheet } from './LoginSheet'
 import { nodeLine, NodeSheet } from './NodeSheet'
@@ -20,7 +21,7 @@ import { scanPairing } from './scanPairing'
 
 const WAITING = 'Requesting compute node'
 
-type Open = '' | 'login' | 'settings' | 'setup' | 'request' | 'more' | 'agents'
+type Open = '' | 'login' | 'settings' | 'setup' | 'request' | 'more' | 'agents' | 'release'
 
 const AGENTS: [string, string][] = [['claude', 'Claude'], ['codex', 'ChatGPT'], ['agy', 'Antigravity'], ['cursor', 'Cursor']]
 
@@ -32,17 +33,17 @@ function Status({ s, vpnOnly }: { s: Session; vpnOnly: boolean }) {
         : [s.state === DUO ? 'Approve Duo' : s.state === WAITING ? 'Getting a node' : s.state, 'bg-warn animate-pulse',
             'text-warn']
   return (
-    <span className={`flex shrink-0 items-center gap-2 text-sm font-semibold ${look}`}>
+    <span className={`inline-flex items-center gap-2 text-sm font-semibold ${look}`}>
       <span className={`size-2 rounded-full ${dot}`} />{text}</span>
   )
 }
 
-/** One of the things you open, icon over its name: five fit side by side on a phone. */
+/** One of the things you open: a big tile with its icon beside its name, two per row. */
 function Open({ icon: Icon, label, onClick }: { icon: LucideIcon; label: string; onClick: () => void }) {
   return (
-    <button onClick={onClick} className="flex min-h-16 min-w-0 flex-col items-center justify-center gap-1 rounded-xl
-      bg-pill px-1 text-xs font-semibold active:bg-selected">
-      <Icon size={22} className="text-accent-text" /><span className="max-w-full truncate">{label}</span></button>
+    <button onClick={onClick} className="flex min-h-14 min-w-0 items-center gap-3 rounded-xl bg-pill px-4
+      text-left font-semibold active:bg-selected">
+      <Icon size={22} className="shrink-0 text-accent-text" /><span className="min-w-0 truncate">{label}</span></button>
   )
 }
 
@@ -83,8 +84,8 @@ export function ClusterCard({ cluster: c, session: s, log }: { cluster: Cluster;
 
   const fast = fastLabel(c)
   const more: SheetAction[] = [
-    ...(connected && s.node ? [{ label: s.owned ? 'End node' : 'Stop using this node', icon: Power,
-      onPick: () => run('clusters.release_node') }] : []),
+    ...(connected && s.node ? [{ label: s.owned ? 'Release node' : 'Stop using this node', icon: Power,
+      onPick: () => (s.owned ? setOpen('release') : run('clusters.release_node')) }] : []),
     ...(connected && !s.node ? [{ label: 'Get a node', icon: Cpu, onPick: () => setOpen('request') },
       ...(fast ? [{ label: fast, icon: Zap, onPick: () => run('clusters.request_fast_node') }] : [])] : []),
     { label: 'Sign-in', icon: ScanQrCode, onPick: () => { setHint(''); setOpen('login') } },
@@ -99,15 +100,17 @@ export function ClusterCard({ cluster: c, session: s, log }: { cluster: Cluster;
 
   return (
     <Card className="flex flex-col gap-3">
-      <div className="flex items-start gap-1">
-        <div className="min-w-0 flex-1 pt-1">
+      <div className="flex items-start gap-2">
+        <div className="min-w-0 flex-1">
           <h2 className="text-xl font-bold leading-tight">{c.name}</h2>
-          <p className="truncate text-sm text-dim">{c.host || 'No host set'}</p>
+          <div className="mt-1 flex min-w-0 flex-wrap items-center gap-x-2 text-sm">
+            <Status s={s} vpnOnly={vpnOnly} />
+            <span className="truncate text-dim">{c.host || 'No host set'}</span>
+          </div>
         </div>
-        <span className="pt-2"><Status s={s} vpnOnly={vpnOnly} /></span>
-        <button aria-label="More" onClick={() => setOpen('more')}
-          className="-mr-2 grid size-11 shrink-0 place-items-center rounded-full text-dim active:bg-hover">
-          <MoreVertical size={20} /></button>
+        <button aria-label={`More for ${c.name}`} onClick={() => setOpen('more')}
+          className="-mr-2 -mt-1 grid size-12 shrink-0 place-items-center rounded-full text-dim active:bg-hover">
+          <MoreVertical size={22} /></button>
       </div>
 
       {(busy || (s.detail && !vpnOnly)) && (
@@ -122,17 +125,20 @@ export function ClusterCard({ cluster: c, session: s, log }: { cluster: Cluster;
 
       {connected && (
         <>
-          <div className="flex items-center gap-2">
-            <Cpu size={18} className="shrink-0 text-dim" />
+          <div className="flex min-h-14 items-center gap-3 rounded-xl bg-inset px-4 py-2">
+            <Cpu size={20} className="shrink-0 text-dim" />
             {s.node
-              ? <span className="min-w-0 flex-1 select-text">On node <b>{s.node}</b>
-                  <span className="text-dim"> · job {s.job}{left !== null ? ` · ${leftText(left)}` : ''}</span></span>
-              : <><span className="flex-1 text-dim">No compute node</span>
+              ? <span className="min-w-0 flex-1 select-text"><span className="block font-semibold">Node {s.node}
+                  {left !== null && <span className="font-normal text-dim"> · {leftText(left)}</span>}</span>
+                  <span className="block text-sm text-dim">Job {s.job}</span></span>
+              : <><span className="flex-1 text-dim">No compute node yet</span>
                   <button onClick={() => setOpen('request')} disabled={busy}
-                    className="h-11 px-2 font-semibold text-accent-text disabled:opacity-50">Get one</button></>}
+                    className="-mr-2 h-12 rounded-full px-4 font-semibold text-accent-text active:bg-hover
+                      disabled:opacity-50">Get one</button></>}
           </div>
-          <div className="grid grid-cols-5 gap-2">
-            <Open icon={SquareTerminal} label="Terminal" onClick={() => go('terminals', { cluster: c.id, new: '1' })} />
+          <Button kind="primary" icon={SquareTerminal} className="w-full"
+            onClick={() => go('terminals', { cluster: c.id, new: '1' })}>Open a terminal</Button>
+          <div className="grid grid-cols-2 gap-2">
             <Open icon={FileCode2} label="Code" onClick={() => go('code', { cluster: c.id })} />
             <Open icon={Folder} label="Files" onClick={() => go('files', { cluster: c.id })} />
             <Open icon={Bot} label="Agents" onClick={() => setOpen('agents')} />
@@ -142,17 +148,19 @@ export function ClusterCard({ cluster: c, session: s, log }: { cluster: Cluster;
       )}
 
       {idle && (
-        <button onClick={() => setOpen('setup')} className="-my-1 flex min-h-11 items-center gap-1 text-left text-sm
-          text-dim active:text-text">
-          <span className="min-w-0 flex-1 truncate">{nodeLine(c)}{c.ask_node && c.request_node_on_connect !== false
+        <button onClick={() => setOpen('setup')} className="flex min-h-14 items-center gap-3 rounded-xl bg-inset px-4
+          text-left text-sm active:bg-hover">
+          <Cpu size={20} className="shrink-0 text-dim" />
+          <span className="min-w-0 flex-1">{nodeLine(c)}{c.ask_node && c.request_node_on_connect !== false
             ? ', asks first' : ''}</span>
-          <span aria-hidden className="text-lg leading-none">›</span>
+          <ChevronRight size={20} className="shrink-0 text-dim" />
         </button>
       )}
 
       {(idle || busy || vpnOnly) && (
         <div className="flex gap-2">
-          {idle && <Button icon={ScanQrCode} className="flex-1" onClick={scan}>QR code</Button>}
+          {idle && <Button icon={ScanQrCode} aria-label="Sign in with a QR code" className="shrink-0" onClick={scan}>
+            QR</Button>}
           {busy
             ? <Button className="flex-1" disabled={s.state === 'Disconnecting'} onClick={() => run('clusters.cancel')}>
                 {s.state === 'Disconnecting' ? 'Disconnecting' : s.state === WAITING ? 'Stop waiting' : 'Cancel'}</Button>
@@ -165,6 +173,10 @@ export function ClusterCard({ cluster: c, session: s, log }: { cluster: Cluster;
 
       <LogView lines={log} />
 
+      {open === 'release' && <ConfirmSheet title={`Release node ${s.node}?`} danger confirm="Release node"
+        text={`Job ${s.job} ends and the node goes back to the cluster. Anything running there stops. `
+          + 'You stay connected, and your files stay where they are.'}
+        onConfirm={() => { close(); run('clusters.release_node') }} onClose={close} />}
       {open === 'more' && <ActionSheet title={c.name} actions={more} onClose={close} />}
       {open === 'agents' && <ActionSheet title={`Start an agent on ${c.name}`} actions={agents} onClose={close} />}
       {open === 'login' && <LoginSheet cluster={c} hint={hint} onClose={close} />}
