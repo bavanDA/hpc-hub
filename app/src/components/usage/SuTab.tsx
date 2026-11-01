@@ -33,8 +33,7 @@ export function SuTab({ account, people, error, loading, period }: {
   const total = all.reduce((s, p) => s + p.charged, 0)
   const hours = all.reduce((s, p) => s + p.hours, 0)
   const note = error ? `Could not load: ${error}` : !people ? `${period}. Loading…`
-    : `${period}: ${n(total)} SU charged, ${n(hours)} core hours in all. ` +
-      "Percent is each person's share of the SU charged."
+    : `${period}: ${n(total)} SU across ${n(hours)} core hours (free QoS included).`
 
   return (
     <>
@@ -48,7 +47,7 @@ export function SuTab({ account, people, error, loading, period }: {
                 <Row key={p.user}
                   title={<span className="flex items-center gap-2">{p.name || p.user}
                     {p.user === people.me && <Pill kind="ok">you</Pill>}</span>}
-                  subtitle={`${p.user} · ${n(p.hours)} core hours, free QoS included`}
+                  subtitle={`${p.user} · ${n(p.hours)} core hours`}
                   suffix={<>
                     <span className="w-36 text-right text-[14px] tabular-nums">
                       {n(p.charged)} SU · <span className="text-dim">{pct(p.charged, total)}</span></span>

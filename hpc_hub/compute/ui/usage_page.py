@@ -177,7 +177,7 @@ class UsagePage(Gtk.Box):
         active = [p for p in people if p.hours > 0]
         for p in active:
             row = Adw.ActionRow(title=GLib.markup_escape_text(f"{p.name or p.user}{'  (you)' if p.user == me else ''}"),
-                                subtitle=f"{p.user} · {p.hours:,.0f} core hours, free QoS included")
+                                subtitle=f"{p.user} · {p.hours:,.0f} core hours")
             row.add_suffix(Gtk.Label(label=f"{p.charged:,.0f} SU · {_pct(p.charged, total)}", xalign=1,
                                      css_classes=["numeric"]))
             share = _bar(p.charged / total if total else 0)
@@ -194,8 +194,7 @@ class UsagePage(Gtk.Box):
         idle = len(people) - len(active)
         self.idle_box.set_label(f"No usage in this period ({idle})")
         self.idle_box.set_visible(idle > 0)
-        self.people_note.set_label(f"{label}: {total:,.0f} SU charged, {hours:,.0f} core hours in all. "
-                                   "Percent is each person's share of the SU charged.")
+        self.people_note.set_label(f"{label}: {total:,.0f} SU across {hours:,.0f} core hours (free QoS included).")
 
     # -- storage ------------------------------------------------------------------------
     def _load_storage(self) -> None:
