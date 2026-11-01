@@ -163,6 +163,9 @@ def test_vpn_only(env, monkeypatch):
     s.connect(Login("u", "pw"), Login("u", "pw"), vpn_only=True)
     assert rec.done.wait(20)
     assert s.state == State.CONNECTED and s.detail == "VPN only" and s.ssh is None, rec.lines
+    s.ssh = object()  # an SSH session left over from before must not bring back the node buttons
+    assert not s.connected
+    s.ssh = None
     assert calls == ["up"] and s.healthy()
     rec.done.clear()
     s.disconnect()
