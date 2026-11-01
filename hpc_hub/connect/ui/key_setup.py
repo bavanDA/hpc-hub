@@ -4,24 +4,20 @@ connects with it. Your own browser is never touched. No password is stored; the 
 
 import threading
 from collections.abc import Callable
-from pathlib import Path
 
 from gi.repository import Adw, GLib
 
+from ...core import my_key
 from ...core.config import ClusterConfig
 from ..ood import PortalError, add_key_signed_in
 from ..vpn_sso import SsoStart
 
-KEYS = ["id_ed25519.pub", "id_ecdsa.pub", "id_rsa.pub"]
 SignIn = Callable[[SsoStart], tuple[str, str]]  # shows a sign-in window (worker thread): (session cookie, error)
 
 
 def public_key() -> str:
-    for name in KEYS:
-        f = Path.home() / ".ssh" / name
-        if f.exists():
-            return f.read_text().strip()
-    return ""
+    key = my_key.find()
+    return key.public if key else ""
 
 
 class KeySetupDialog(Adw.Dialog):

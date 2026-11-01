@@ -6,24 +6,19 @@ stored; the cluster still asks for its code. The UI polls keysetup.status while 
 
 import threading
 from dataclasses import dataclass, field
-from pathlib import Path
 
 from ...connect import chrome_window
 from ...connect.ood import PortalError, add_key_signed_in
-from ...core import credentials
+from ...core import credentials, my_key
 from ..hub import hub
 from ..server import method
 
-KEYS = ["id_ed25519.pub", "id_ecdsa.pub", "id_rsa.pub"]
 NOTE = "Sign in there as you would on the website. HPC Hub keeps only the sign-in, never your password."
 
 
 def public_key() -> str:
-    for name in KEYS:
-        f = Path.home() / ".ssh" / name
-        if f.exists():
-            return f.read_text().strip()
-    return ""
+    key = my_key.find()
+    return key.public if key else ""
 
 
 @dataclass

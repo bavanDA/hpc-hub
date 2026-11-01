@@ -48,9 +48,10 @@ def setup(monkeypatch, tmp_path):
     h.web_login = web_login
     monkeypatch.setattr(hub_mod, "_hub", h)
     monkeypatch.setattr(keysetup, "_jobs", {})
-    monkeypatch.setattr(keysetup.Path, "home", lambda: tmp_path)
+    monkeypatch.setattr(keysetup.my_key.Path, "home", lambda: tmp_path)
     monkeypatch.setattr(chrome_window, "available", lambda: False)
     (tmp_path / ".ssh").mkdir()
+    (tmp_path / ".ssh" / "id_ed25519").write_text("private")
     (tmp_path / ".ssh" / "id_ed25519.pub").write_text(KEY + "\n")
     FakePortal.keys = []
     monkeypatch.setattr(ood, "Portal", FakePortal)
