@@ -30,7 +30,8 @@ class CancelMixin:
             lines.append("These stop too: " + ", ".join(inside) + ".")
         if app_node:
             lines.append("HPC Hub runs your terminals on this node, so you'll be left without one.")
-        dialog = Adw.AlertDialog(heading=f"Cancel {j.name or f'job {j.job_id}'}?", body="\n\n".join(lines))
+        dialog = Adw.AlertDialog(heading=f"Cancel {j.name or f'job {j.job_id}'}?", body="\n\n".join(lines),
+                                 prefer_wide_layout=True)  # the two answers side by side, the safe one first
         dialog.add_response("keep", "Keep running" if running else "Keep waiting")
         dialog.add_response("cancel", "Cancel job")  # the risky answer on the right, red
         dialog.set_response_appearance("cancel", Adw.ResponseAppearance.DESTRUCTIVE)

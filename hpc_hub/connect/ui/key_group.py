@@ -61,6 +61,7 @@ class KeyGroup(Adw.PreferencesGroup):
         self.how = "found"  # found, made or picked: what step 1 says
         self.added = bool(self.key and user.get_text().strip())  # a key and a username from before: at the test
         self.works = False
+        self.testing = self.tested = False
         help_link = _button(C.WHATS_A_KEY, "flat", "accent", icon="adw-external-link-symbolic")
         help_link.set_tooltip_text(cfg.key_help_url)
         help_link.connect("clicked", lambda *_: open_uri(self, cfg.key_help_url))
@@ -133,15 +134,21 @@ class KeyGroup(Adw.PreferencesGroup):
         file = k.file if k else ""
         said = {"made": C.KEY_MADE, "picked": C.KEY_PICKED}.get(self.how, C.KEY_FOUND)
         self.steps[KEY].show("open" if at == KEY else "done", said.format(file=file))
-        self.mine.set_child(Adw.ButtonContent(label=C.USE_MINE if at == KEY else C.CHANGE,
-                                              icon_name="document-open-symbolic"))
+        if at == KEY:
+            self.mine.set_child(Adw.ButtonContent(label=C.USE_MINE, icon_name="document-open-symbolic"))
+            self.mine.set_css_classes(["flat"])
+        else:  # done: picking another key is a quiet Change, like step 2's
+            self.mine.set_label(C.CHANGE)
+            self.mine.set_css_classes(["flat", "accent"])
         self.steps[ADD].show("later" if at == KEY else "open" if at == ADD else "done", C.PASTED)
         self.change.set_visible(at == TEST)
         self.steps[TEST].show("done" if self.works else "open" if at == TEST else "later",
                               C.SIGNED_IN_AS.format(user=self.user.get_text().strip()))
         if self.works:
             self.user.set_visible(True)  # still editable, and the result says you're in
-            self.result.set_visible(True)
+        # these two show only while a test runs or after one, not just because the step is open
+        self.duo.set_visible(self.testing and self.cfg.second_factor == "duo")
+        self.result.set_visible(self.tested)
         if k:
             self.copy_row.set_title(f"<tt>{GLib.markup_escape_text(k.public)}</tt>")
 
@@ -196,8 +203,9 @@ class KeyGroup(Adw.PreferencesGroup):
             return
         self.test.set_sensitive(False)
         self.spinner.set_visible(True)
-        self.duo.set_visible(self.cfg.second_factor == "duo")
+        self.testing = True
         self._show_result(None)
+        self.duo.set_visible(self.cfg.second_factor == "duo")
         c, key = self.cfg, self.key
 
         def work():
@@ -208,7 +216,7 @@ class KeyGroup(Adw.PreferencesGroup):
     def _tested(self, r: my_key.Result) -> bool:
         self.test.set_sensitive(True)
         self.spinner.set_visible(False)
-        self.duo.set_visible(False)
+        self.testing = False
         self.test.set_label(C.TRY if r.ok else C.TRY_AGAIN)
         self._show_result(r)
         self.works = r.ok
@@ -216,7 +224,8 @@ class KeyGroup(Adw.PreferencesGroup):
         return False
 
     def _show_result(self, r: my_key.Result | None) -> None:
-        self.result.set_visible(r is not None)
+        self.tested = r is not None
+        self.result.set_visible(self.tested)
         if r is None:
             self.works = False
         else:
