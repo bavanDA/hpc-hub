@@ -33,7 +33,7 @@ function Tool({ label, onClick, children, on = false, disabled = false }:
   { label: string; onClick: () => void; children: ReactNode; on?: boolean; disabled?: boolean }) {
   return (
     <button aria-label={label} title={label} onClick={onClick} disabled={disabled}
-      className={`grid size-7 shrink-0 place-items-center rounded-md disabled:opacity-40 ${
+      className={`grid size-7 shrink-0 place-items-center rounded-md disabled:opacity-40 pointer-coarse:size-11 ${
         on ? 'bg-selected' : 'hover:bg-hover'}`}>{children}</button>
   )
 }
@@ -220,12 +220,12 @@ export default function PdfViewer({ data, memory, compact, zoom: start = 'page-w
   const preset = ZOOMS.some(([v]) => v === scale.value)
   return (
     <div className="flex h-full min-w-0 flex-col bg-view" onKeyDown={keys}>
-      <div className="flex h-10 shrink-0 items-center gap-1 border-b border-line bg-header px-1.5 text-sm">
+      <div className="flex h-10 shrink-0 items-center gap-1 border-b border-line bg-header px-1.5 text-sm pointer-coarse:h-14 pointer-coarse:overflow-x-auto">
         <div className="flex items-center gap-1 px-1 tabular-nums text-dim">
           <input value={pageText} disabled={!has} aria-label="Page"
             onChange={(e) => setPageText(e.target.value.replace(/\D/g, ''))}
             onKeyDown={(e) => e.key === 'Enter' && toPage()} onBlur={toPage}
-            className="h-7 w-9 rounded-md bg-pill text-center text-text outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus" />
+            className="h-7 w-9 rounded-md bg-pill text-center pointer-coarse:h-11 text-text outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus" />
           <span className="whitespace-nowrap">/ {has ? pages || '…' : '…'}</span>
         </div>
         <div className="mx-auto flex items-center gap-0.5">
@@ -233,7 +233,7 @@ export default function PdfViewer({ data, memory, compact, zoom: start = 'page-w
             <Minus size={16} /></Tool>
           <select value={preset ? scale.value : 'custom'} disabled={!has} aria-label="Zoom"
             onChange={(e) => zoom(e.target.value)}
-            className={`h-7 rounded-md bg-pill px-1.5 text-sm outline-none ${compact ? 'w-[86px]' : 'w-[98px]'}`}>
+            className={`h-7 rounded-md bg-pill px-1.5 text-sm outline-none pointer-coarse:h-11 ${compact ? 'w-[86px]' : 'w-[98px]'}`}>
             {!preset && <option value="custom">{scale.percent}%</option>}
             {ZOOMS.map(([v, label]) => <option key={v} value={v}>{label}</option>)}
           </select>
@@ -260,7 +260,7 @@ export default function PdfViewer({ data, memory, compact, zoom: start = 'page-w
                 if (e.key === 'Enter') { e.preventDefault(); find('again', e.shiftKey) }
                 if (e.key === 'Escape') { e.stopPropagation(); closeSearch() }
               }}
-              className={`h-7 rounded-md bg-pill px-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus ${
+              className={`h-7 rounded-md bg-pill px-2 text-sm outline-none pointer-coarse:h-11 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus ${
                 compact ? 'w-28' : 'w-44'} ${found?.missing && query ? 'ring-2 ring-bad' : ''}`} />
             <span className="min-w-[52px] text-center text-xs tabular-nums text-dim">
               {query && found ? (found.total ? `${found.current} of ${found.total}` : 'None') : ''}</span>
