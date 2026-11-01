@@ -23,7 +23,8 @@ export const copyRunning = (p?: Progress | null) => !!p && COPYING.has(p.state)
 
 export type Options = { horizon: number; whole: boolean; everything: boolean; codeToHome: boolean }
 
-export function useBackup(cluster: string) {
+/** at: 'plan' opens the last finished check's plan (from a notice or the Files banner). */
+export function useBackup(cluster: string, at = '') {
   const mine = kept.get(cluster) ?? { step: 'start' as Step, scan: '', copy: '', job: '', tried: '' }
   const [step, setStepState] = useState<Step>(mine.step)
   const [policy, setPolicy] = useState<BackupPolicy | null>(null)
@@ -65,10 +66,13 @@ export function useBackup(cluster: string) {
       setScan(last)
       setOptionsState((o) => ({ ...o, horizon: last.horizon || o.horizon }))
       if (ref.current.step === 'start' && scanRunning(last)) save({ step: 'scanning', scan: last.id })
+      else if (at === 'plan' && last.state === 'done' && ['start', 'risk'].includes(ref.current.step)) {
+        save({ step: 'plan', scan: last.id })  // a notice or banner about this scratch: straight to its plan
+      }
       else if (!ref.current.scan) save({ scan: last.id })
     }).catch(() => {})
     return () => { live = false }
-  }, [cluster, save])
+  }, [cluster, save, at])
 
   // a check that runs: follow it, then load what it found
   useEffect(() => {
@@ -121,9 +125,10 @@ export function useBackup(cluster: string) {
   }, [step, plan, summary, loadPlan])
 
   // the trial run and the copy both report through backup.progress
+  const watching = step === 'copy' ? ref.current.copy : step === 'space' && ref.current.tried === 'running'
+    ? ref.current.scan : ''
   useEffect(() => {
-    const id = step === 'copy' ? ref.current.copy : step === 'space' && ref.current.tried === 'running'
-      ? ref.current.scan : ''
+    const id = watching
     if (!cluster || !id) return
     let live = true
     const look = () => call<Progress>('backup.progress', { cluster, copy_id: id }).then(async (p) => {
@@ -145,7 +150,7 @@ export function useBackup(cluster: string) {
     look()
     const t = setInterval(look, POLL_MS)
     return () => { live = false; clearInterval(t) }
-  }, [cluster, step, loadPlan, save])
+  }, [cluster, step, watching, loadPlan, save])
 
   return {
     step, policy, scan, summary, plan, progress, result, reminders, options, error, busy,

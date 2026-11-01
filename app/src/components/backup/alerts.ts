@@ -51,7 +51,7 @@ export function useBackupAlertWatch() {
         const key = `${a.cluster}:${a.files}:${a.soonest_days}`
         if (!a.files || told.has(key)) continue
         told.add(key)
-        notify(a.title, a.text, { kind: 'backup', page: 'backup', params: { cluster: a.cluster } }).catch(() => {})
+        notify(a.title, a.text, { kind: 'backup', page: 'backup', params: { cluster: a.cluster, step: 'plan' } }).catch(() => {})
       }
     })
     look()
