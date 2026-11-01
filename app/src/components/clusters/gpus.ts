@@ -30,6 +30,12 @@ export function gpuName(g: Gpu) {
   return g.slice || !g.memory_gb ? g.label : `${g.label}, ${g.memory_gb} GB`
 }
 
+/** The line under its name: what part of a GPU you get and how many one job can have. */
+export function gpuHint(g: Gpu) {
+  return g.slice ? `${g.memory_gb} GB of one GPU. One per job.`
+    : `A whole GPU. Up to ${g.max_per_job} per job.`
+}
+
 /** The GPU a profile asks for, or null for none. */
 export function chosen(p: Profile, gpus: Gpu[]): Gpu | null {
   if (!p.gpus) return null
@@ -57,6 +63,13 @@ export function presets(gpus: Gpu[]): Preset[] {
   if (g) out.push({ id: 'gpu', label: g.slice ? `GPU ${g.memory_gb} GB` : '1 GPU', hint: gpuName(g),
     apply: (p) => withGpu({ ...p, cpus: 4, mem_gb: 16 }, g) })
   return out
+}
+
+/** Whether the profile already is this quick size. */
+export function isPreset(p: Profile, x: Preset) {
+  const q = x.apply(p)
+  return q.cpus === p.cpus && q.mem_gb === p.mem_gb && (q.gpus ?? 0) === (p.gpus ?? 0)
+    && (q.gpu_type ?? '') === (p.gpu_type ?? '')
 }
 
 /** "A100, 10 GB slice" / "2 × H100" / "" for none. */

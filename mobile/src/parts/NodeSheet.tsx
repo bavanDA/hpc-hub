@@ -7,7 +7,9 @@
 import { Check, ChevronDown, ChevronRight, Cpu, Minus, Plus } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
-import { chosen, gpuSummary, presets, useGpus, withGpu, type Gpu } from '@shared/components/clusters/gpus'
+import {
+  chosen, gpuHint, gpuName, gpuSummary, isPreset, presets, useGpus, withGpu, type Gpu,
+} from '@shared/components/clusters/gpus'
 import { human, minutes, slurmTime } from '@shared/components/clusters/time'
 import { putCluster } from '@shared/components/clusters/store'
 import { call } from '@shared/rpc'
@@ -20,15 +22,19 @@ const TIMES: [string, number][] = [['1 h', 60], ['4 h', 240], ['8 h', 480], ['1 
 function Stepper({ label, value, unit = '', step = 1, min, max, onChange }: {
   label: string; value: number; unit?: string; step?: number; min: number; max: number; onChange: (v: number) => void
 }) {
-  const go = (v: number) => onChange(Math.min(max, Math.max(min, v)))
+  // steps land on round numbers: 6 GB goes to 8, then 12
+  const go = (dir: 1 | -1) => {
+    const next = dir > 0 ? Math.floor(value / step) * step + step : Math.ceil(value / step) * step - step
+    onChange(Math.min(max, Math.max(min, next)))
+  }
   return (
     <div className="flex min-h-14 items-center gap-3">
       <span className="min-w-0 flex-1 font-semibold">{label}</span>
-      <button aria-label={`Less ${label}`} disabled={value <= min} onClick={() => go(value - step)}
+      <button aria-label={`Less ${label}`} disabled={value <= min} onClick={() => go(-1)}
         className="grid size-12 place-items-center rounded-full bg-pill active:bg-selected disabled:opacity-40">
         <Minus size={20} /></button>
       <span className="w-20 text-center text-lg font-semibold tabular-nums">{value}{unit}</span>
-      <button aria-label={`More ${label}`} disabled={value >= max} onClick={() => go(value + step)}
+      <button aria-label={`More ${label}`} disabled={value >= max} onClick={() => go(1)}
         className="grid size-12 place-items-center rounded-full bg-pill active:bg-selected disabled:opacity-40">
         <Plus size={20} /></button>
     </div>
@@ -61,14 +67,12 @@ function GpuRow({ title, sub, on, onPick }: { title: string; sub: string; on: bo
 function GpuList({ gpus, known, value: p, onChange }:
   { gpus: Gpu[]; known: boolean; value: Profile; onChange: (p: Profile) => void }) {
   const g = chosen(p, gpus)
-  const sub = (x: Gpu) => x.slice ? `${x.memory_gb} GB of one GPU. One per job.`
-    : `${x.memory_gb ? `${x.memory_gb} GB each. ` : ''}Up to ${x.max_per_job} per job.`
   return (
     <div role="radiogroup" aria-label="GPU" className="flex flex-col gap-2">
       <GpuRow title="No GPU" sub="CPU only" on={!p.gpus} onPick={() => onChange(withGpu(p, null))} />
       {gpus.map((x) => (
-        <GpuRow key={x.type || 'any'} title={x.slice || !x.memory_gb ? x.label : `${x.label}, ${x.memory_gb} GB`}
-          sub={sub(x)} on={!!g && g.type === x.type} onPick={() => onChange(withGpu(p, x, p.gpus || 1))} />
+        <GpuRow key={x.type || 'any'} title={gpuName(x)} sub={gpuHint(x)} on={!!g && g.type === x.type}
+          onPick={() => onChange(withGpu(p, x, p.gpus || 1))} />
       ))}
       {g && !g.slice && g.max_per_job > 1 && <Stepper label="How many" value={p.gpus ?? 1} min={1}
         max={g.max_per_job} onChange={(n) => onChange(withGpu(p, g, n))} />}
@@ -120,11 +124,15 @@ export function NodeFields({ cluster, value: p, onChange }:
         </div>
       </div>
       <div className="-mx-4 mb-5 flex gap-2 overflow-x-auto px-4 pb-1">
-        {presets(gpus).map((x) => (
-          <button key={x.id} onClick={() => onChange(x.apply(p))}
-            className="flex min-h-14 shrink-0 flex-col justify-center rounded-xl bg-pill px-4 text-left active:bg-selected">
-            <span className="font-semibold">{x.label}</span><span className="text-xs text-dim">{x.hint}</span></button>
-        ))}
+        {presets(gpus).map((x) => {
+          const on = isPreset(p, x)
+          return (
+            <button key={x.id} aria-pressed={on} onClick={() => onChange(x.apply(p))}
+              className={`flex min-h-14 shrink-0 flex-col justify-center rounded-xl border-2 px-4 text-left
+                ${on ? 'border-accent bg-accent/10' : 'border-transparent bg-pill active:bg-selected'}`}>
+              <span className="font-semibold">{x.label}</span><span className="text-xs text-dim">{x.hint}</span></button>
+          )
+        })}
       </div>
 
       <Section title="Size">
@@ -232,7 +240,7 @@ export function NodeSheet({ cluster: c, mode, onClose }:
   }
 
   return (
-    <Sheet title={mode === 'setup' ? 'Compute node' : `Get a node on ${c.name}`} onClose={onClose} actions={<>
+    <Sheet title={mode === 'setup' ? `Compute node on ${c.name}` : `Get a node on ${c.name}`} onClose={onClose} actions={<>
       <Button className="flex-1" onClick={onClose}>Cancel</Button>
       <Button kind="primary" className="flex-1" disabled={busy} onClick={done}>
         {mode === 'setup' ? 'Save' : 'Get node'}</Button></>}>

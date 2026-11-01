@@ -10,7 +10,7 @@ import { useToast } from '../toast'
 import { Term } from '../Term'
 import { Button, Dialog } from '../ui'
 import { ActionRow, EntryRow, Group, NumberBox, SpinRow, SwitchRow } from './fields'
-import { chosen, gpuName, gpuSummary, presets, useGpus, withGpu, type Gpu } from './gpus'
+import { chosen, gpuHint, gpuName, gpuSummary, isPreset, presets, useGpus, withGpu, type Gpu } from './gpus'
 import { putCluster } from './store'
 import { human, minutes, slurmTime } from './time'
 
@@ -59,14 +59,12 @@ function GpuChoice({ title, sub, on, onPick }: { title: string; sub: string; on:
 export function GpuPicker({ gpus, known, value: p, onChange }:
   { gpus: Gpu[]; known: boolean; value: Profile; onChange: (p: Profile) => void }) {
   const g = chosen(p, gpus)
-  const subOf = (x: Gpu) => x.slice ? `${x.memory_gb} GB of one GPU. One per job.`
-    : `${x.memory_gb ? `${x.memory_gb} GB each. ` : ''}Up to ${x.max_per_job} per job.`
   return (
     <div className="flex flex-col gap-2 px-4 py-3">
       <div role="radiogroup" aria-label="GPU" className="grid grid-cols-2 gap-2">
         <GpuChoice title="No GPU" sub="CPU only" on={!p.gpus} onPick={() => onChange(withGpu(p, null))} />
         {gpus.map((x) => (
-          <GpuChoice key={x.type || 'any'} title={x.slice ? x.label : gpuName(x)} sub={subOf(x)}
+          <GpuChoice key={x.type || 'any'} title={gpuName(x)} sub={gpuHint(x)}
             on={!!g && g.type === x.type} onPick={() => onChange(withGpu(p, x, p.gpus || 1))} />
         ))}
       </div>
@@ -146,13 +144,17 @@ export function ComputeDialog({ cluster: c, onClose, saveOnly = false }:
         </div>
       </div>
       <div className="mb-4 flex flex-wrap gap-2">
-        {presets(gpus).map((x) => (
-          <button key={x.id} type="button" onClick={() => setP((cur) => x.apply(cur))}
-            className="rounded-lg border border-line px-3 py-1.5 text-left hover:bg-hover">
-            <div className="text-sm font-semibold">{x.label}</div>
-            <div className="text-xs text-dim">{x.hint}</div>
-          </button>
-        ))}
+        {presets(gpus).map((x) => {
+          const on = isPreset(p, x)
+          return (
+            <button key={x.id} type="button" aria-pressed={on} onClick={() => setP((cur) => x.apply(cur))}
+              className={`rounded-lg border px-3 py-1.5 text-left ${on ? 'border-accent bg-accent-soft'
+                : 'border-line hover:bg-hover'}`}>
+              <div className="text-sm font-semibold">{x.label}</div>
+              <div className="text-xs text-dim">{x.hint}</div>
+            </button>
+          )
+        })}
       </div>
       <Group title="Size">
         <SpinRow label="CPU cores" value={p.cpus} onChange={(v) => set({ cpus: v })} min={1} max={512} />
