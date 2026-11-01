@@ -28,7 +28,7 @@ const clusters: Cluster[] = [
     vscode: vscode({ cpus: 16, mem_gb: 64, time: '12:00:00', qos: 'standard' }), ...agents },
   { id: 'yale', name: 'Yale Bouchet', org: 'Yale', host: 'bouchet.ycrc.yale.edu', port: 22, duo_answer: 'push',
     username_label: 'NetID', key_page: 'https://sshkeys.ycrc.yale.edu/',
-    key_page_note: "The page opens only on Yale's network or the Yale VPN. Your key can take up to 10 minutes to start working.",
+    key_page_note: 'That page only loads on campus or on the VPN.',
     key_help: 'https://docs.ycrc.yale.edu/clusters-at-yale/access/ssh/',
     second_factor: 'duo', queues: '', queue_wait: 60, request_node_on_connect: true, reuse_running_job: true,
     vpn: { ...vpn, enabled: true, gateway: 'access.yale.edu', same_login_as_ssh: false, authgroup: 'Default',
@@ -185,7 +185,7 @@ export const answers: Record<string, unknown> = {
     return { ...c }
   },
   'clusters.login': ({ cluster }: { cluster: string }): Logins => ({
-    ssh: { username: 'jdoe', password: cluster !== 'sdsc' },
+    ssh: { username: new URLSearchParams(location.search).has('nouser') ? '' : 'jdoe', password: cluster !== 'sdsc' },
     vpn: { username: cluster === 'yale' ? 'jane.doe@example.edu' : '', password: false },
     remember: true,
   }),
