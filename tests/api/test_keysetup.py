@@ -1,4 +1,4 @@
-"""Adding this computer's key through the portal, with a fake portal, Chrome and keyring."""
+"""Adding this computer's key through the portal, with a fake portal, sign-in window and keyring."""
 
 import time
 
@@ -7,8 +7,8 @@ import pytest
 from hpc_hub.api import hub as hub_mod
 from hpc_hub.api.hub import Hub
 from hpc_hub.api.methods import keysetup
-from hpc_hub.connect.ood import PortalError
-from hpc_hub.core import browser, config, credentials
+from hpc_hub.connect import chrome_window, ood
+from hpc_hub.core import config, credentials
 from hpc_hub.core.credentials import Login
 
 KEY = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFakeKeyForTests jdoe@laptop"
@@ -20,20 +20,15 @@ class Session:
 
 
 class FakePortal:
-    signed = {}  # profile name -> username once signed in
     keys: list = []
-    fail = ""
 
-    def __init__(self, url, profile):
-        self.url, self.profile = url, profile
+    def __init__(self, url, cookies):
+        self.session = cookies.get(ood.SESSION)
 
     def signed_in(self):
-        user = self.signed.get(self.profile, "")
-        return (user, f"/home/{user}", "csrf123") if user else ("", "", "")
+        return ("jdoe", "/home/jdoe", "csrf123") if self.session == "ok" else ("", "", "")
 
     def add_key(self, home, csrf, key):
-        if self.fail:
-            raise PortalError(self.fail)
         if key in self.keys:
             return False
         self.keys.append(key)
@@ -44,22 +39,25 @@ class FakePortal:
 def setup(monkeypatch, tmp_path):
     h = Hub.__new__(Hub)
     h.sessions = {c.id: Session(c) for c in config.default_clusters()}
+    windows = []  # (title, note, where) of each sign-in window shown
+    answer = {"token": "ok", "error": ""}
+
+    def web_login(s, start, login, where="", title="", note=""):
+        windows.append((title, note, where, start.login_url, login.password))
+        return answer["token"], answer["error"]
+    h.web_login = web_login
     monkeypatch.setattr(hub_mod, "_hub", h)
     monkeypatch.setattr(keysetup, "_jobs", {})
-    monkeypatch.setattr(keysetup, "POLL", 0.01)
     monkeypatch.setattr(keysetup.Path, "home", lambda: tmp_path)
+    monkeypatch.setattr(chrome_window, "available", lambda: False)
     (tmp_path / ".ssh").mkdir()
     (tmp_path / ".ssh" / "id_ed25519.pub").write_text(KEY + "\n")
-    FakePortal.signed, FakePortal.keys, FakePortal.fail = {}, [], ""
-    monkeypatch.setattr(keysetup, "Portal", FakePortal)
-    monkeypatch.setattr(browser, "profiles", lambda: [browser.Profile("Default", "Home"),
-                                                      browser.Profile("Profile 2", "Uni")])
-    opened = []
-    monkeypatch.setattr(keysetup, "_open", lambda url, profile="": opened.append((url, profile)))
+    FakePortal.keys = []
+    monkeypatch.setattr(ood, "Portal", FakePortal)
     store = {}
     monkeypatch.setattr(credentials, "load", lambda c, k: store.get((c, k)))
     monkeypatch.setattr(credentials, "save", lambda c, k, login: store.__setitem__((c, k), login))
-    return opened, store
+    return windows, answer, store
 
 
 def wait_state(cluster, *states):
@@ -72,17 +70,15 @@ def wait_state(cluster, *states):
     raise AssertionError(keysetup.status(cluster))
 
 
-def test_key_goes_on_once_chrome_is_signed_in(setup):
-    opened, store = setup
-    assert keysetup.start("sdsc")["state"] == "waiting"
-    assert keysetup.start("sdsc")["state"] == "waiting"  # a second start keeps the same wait
-    time.sleep(0.05)
-    assert opened == [("https://portal.expanse.sdsc.edu", "")]  # opened once, not every look
-    FakePortal.signed["Uni"] = "jdoe"
+def test_key_goes_on_after_signing_in_in_a_window_of_ours(setup):
+    windows, _, store = setup
+    keysetup.start("sdsc")
     got = wait_state("sdsc", "done")
     assert got["user"] == "jdoe" and "Key added" in got["text"]
-    assert FakePortal.keys == [KEY]
-    assert store["sdsc", "ssh"] == Login("jdoe", "")
+    assert FakePortal.keys == [KEY] and store["sdsc", "ssh"] == Login("jdoe", "")
+    title, note, where, url, password = windows[0]
+    assert title == "SDSC Expanse portal sign-in" and note == keysetup.NOTE and where == ""  # no Chrome: the app's
+    assert url == "https://portal.expanse.sdsc.edu/pun/sys/dashboard" and password == ""  # nothing filled in
 
     store["sdsc", "ssh"] = Login("jdoe", "kept")
     keysetup.start("sdsc")  # again: the key is there already, the saved password for jdoe stays
@@ -91,30 +87,23 @@ def test_key_goes_on_once_chrome_is_signed_in(setup):
 
 
 def test_no_portal_no_key_and_errors(setup, tmp_path):
+    _, answer, store = setup
     with pytest.raises(ValueError, match="no web portal"):
         keysetup.start("wulver")
-    FakePortal.signed["Home"] = "jdoe"
-    FakePortal.fail = "The portal refused to save .ssh/authorized_keys (HTTP 403)"
+    answer.update(token="", error="Sign-in cancelled")
     keysetup.start("sdsc")
     got = wait_state("sdsc", "failed")
-    assert got["title"] == "Could not finish" and "403" in got["text"]
+    assert got["title"] == "Could not finish" and got["text"] == "Sign-in cancelled" and not store
 
     (tmp_path / ".ssh" / "id_ed25519.pub").unlink()
     keysetup.start("sdsc")
     assert wait_state("sdsc", "failed")["title"] == "No SSH key on this computer"
 
 
-def test_stop_and_open(setup, monkeypatch):
-    opened, store = setup
+def test_stop(setup):
+    _, _, store = setup
     keysetup.start("sdsc")
     keysetup.stop("sdsc")
     assert keysetup.status("sdsc")["state"] == "stopped"
-    FakePortal.signed["Uni"] = "jdoe"
     time.sleep(0.05)
-    assert keysetup.status("sdsc")["state"] == "stopped" and not store and not FakePortal.keys
-    keysetup.open_portal("sdsc", "Uni")
-    assert opened[-1] == ("https://portal.expanse.sdsc.edu", "Uni")
-    with pytest.raises(ValueError, match="No Chrome profile"):
-        keysetup.open_portal("sdsc", "Nobody")
-    monkeypatch.setattr(browser, "chrome", lambda: "/usr/bin/google-chrome")
-    assert keysetup.profiles() == ["Home", "Uni"]
+    assert keysetup.status("sdsc")["state"] == "stopped" and not store

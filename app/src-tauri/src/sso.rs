@@ -307,7 +307,7 @@ fn loaded(w: &WebviewWindow, run: &Shared, url: &Url) {
                     let token = get(&token_name);
                     let error = decode(&get(&error_name));
                     let error = if token.is_empty() && error.is_empty() {
-                        "No sign-in token from the VPN server".to_string()
+                        "No sign-in token from the site".to_string()
                     } else {
                         error
                     };

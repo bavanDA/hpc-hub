@@ -1,4 +1,5 @@
-"""In-app VPN web sign-in (AnyConnect SAML): fill the login, you approve Duo, we read the token."""
+"""In-app web sign-in (the VPN's AnyConnect SAML, or a portal): fill the login if one is saved, you approve Duo,
+we read the token cookie of this window (never your own browser's)."""
 
 from collections.abc import Callable
 
@@ -55,5 +56,5 @@ class WebLoginDialog(Adw.Dialog):
         else:
             err = GLib.uri_unescape_string(jar.get(self.start.error_cookie, ""), None) or ""
         token = jar.get(self.start.token_cookie, "")
-        self._finish(token, "" if token else (err or "No sign-in token from the VPN server"))
+        self._finish(token, "" if token else (err or "No sign-in token from the site"))
         self.force_close()

@@ -1,5 +1,6 @@
-"""Talk to an Open OnDemand web portal (e.g. the Expanse portal) with the sign-in from your Chrome profile:
-find your username and home folder, and add this computer's SSH key, so the app can log in with it."""
+"""Talk to an Open OnDemand web portal (e.g. the Expanse portal) with a sign-in made in a window HPC Hub controls
+(the app's sign-in window, or our Chrome window): find your username and home folder, and add this computer's
+SSH key, so the app can log in with it. Your own browser's cookies are never read."""
 
 import html
 import json
@@ -10,11 +11,13 @@ import urllib.error
 import urllib.parse
 import urllib.request
 import warnings
+from collections.abc import Callable
+from dataclasses import replace
 
-from ..core import browser
-from . import chrome_cookies
+from .vpn_sso import SsoStart
 
-COOKIES = ("mod_auth_openidc_session", "_session_id")
+SESSION = "mod_auth_openidc_session"  # set once you are signed in; the sign-in window waits for it
+COOKIES = (SESSION, "_session_id")
 DASHBOARD = "/pun/sys/dashboard"
 FILES = DASHBOARD + "/files/fs"
 
@@ -105,13 +108,12 @@ def tls_context(host: str) -> ssl.SSLContext:
 
 
 class Portal:
-    def __init__(self, url: str, chrome_profile: str):
+    """Signed in with the cookies a sign-in window got (only the portal's own are sent)."""
+
+    def __init__(self, url: str, cookies: dict[str, str]):
         self.base = url.rstrip("/")
         self.host = urllib.parse.urlsplit(self.base).hostname or ""
-        p = browser.find(chrome_profile)
-        if not p:
-            raise PortalError(f"No Chrome profile named {chrome_profile}")
-        self.profile = p.folder
+        self.given = {n: v for n, v in cookies.items() if n in COOKIES}
         self.ctx: ssl.SSLContext | None = None
         self.cookies: dict[str, str] = {}
 
@@ -137,9 +139,9 @@ class Portal:
                 self.cookies[name.strip()] = value.strip()
 
     def signed_in(self) -> tuple[str, str, str]:
-        """(username, home folder, csrf token) if Chrome is signed in to the portal, else empty strings."""
-        self.cookies = {n: chrome_cookies.read(self.profile, self.host, n) for n in COOKIES}
-        if not self.cookies.get("mod_auth_openidc_session"):
+        """(username, home folder, csrf token) if signed in to the portal, else empty strings."""
+        self.cookies = dict(self.given)
+        if not self.cookies.get(SESSION):
             return "", "", ""
         status, page = self._request(DASHBOARD)
         user = parse_user(page) if status == 200 else ""
@@ -172,6 +174,33 @@ class Portal:
                                                                  "Content-Type": "text/plain"})
         if status not in (200, 204):
             raise PortalError(f"The portal refused to save {path.split('?')[0]} (HTTP {status})")
+
+
+def sign_in_start(url: str) -> SsoStart:
+    """What a sign-in window opens and waits for: the dashboard, and the portal's session cookie. A session from
+    an earlier sign-in counts (reuse); add_key_signed_in asks again if the portal no longer takes it."""
+    page = url.rstrip("/") + DASHBOARD
+    return SsoStart(gateway_url="", login_url=page, final_url=page, token_cookie=SESSION, error_cookie="",
+                    opaque="", reuse=True)
+
+
+def add_key_signed_in(url: str, sign_in: Callable[[SsoStart], tuple[str, str]], key: str,
+                      signed_in: Callable[[str], None] = lambda user: None) -> tuple[str, bool]:
+    """Sign in to the portal (sign_in shows a window HPC Hub controls and gives (session cookie, error)), then
+    add key to your authorized_keys. (username, added); PortalError if it can't. signed_in(user) before the key
+    goes on, for the dialog."""
+    start = sign_in_start(url)
+    for _ in range(2):
+        token, err = sign_in(start)
+        if not token:
+            raise PortalError(err or "Sign-in cancelled")
+        portal = Portal(url, {SESSION: token})
+        user, home, csrf = portal.signed_in()
+        if user:
+            signed_in(user)
+            return user, portal.add_key(home, csrf, key)
+        start = replace(start, reuse=False)  # a session the portal no longer takes: sign in again
+    raise PortalError("The portal did not let you in. Try again.")
 
 
 class _NoRedirect(urllib.request.HTTPRedirectHandler):
