@@ -13,17 +13,22 @@ export function GoToFile({ cluster, root, onOpen, onClose }:
   const [error, setError] = useState('')
   const [pick, setPick] = useState(0)
   const asked = useRef(0)
+  const waiting = useRef(false)  // Enter while it's still looking: open the first match when it comes
 
   useEffect(() => {
     const n = ++asked.current
     const t = window.setTimeout(() => {
       setFound(null)
       call<FoundFile[]>('code.find_files', { cluster, root, query })
-        .then((f) => { if (n === asked.current) { setFound(f.slice(0, 200)); setPick(0); setError('') } })
+        .then((f) => {
+          if (n !== asked.current) return
+          if (waiting.current && f.length) { onOpen(f[0].path); onClose(); return }
+          setFound(f.slice(0, 200)); setPick(0); setError('')
+        })
         .catch((e: Error) => { if (n === asked.current) { setFound([]); setError(e.message) } })
     }, query ? 200 : 0)
     return () => clearTimeout(t)
-  }, [cluster, root, query])
+  }, [cluster, root, query])  // eslint-disable-line react-hooks/exhaustive-deps
 
   const choose = (f?: FoundFile) => {
     if (!f) return
@@ -34,12 +39,18 @@ export function GoToFile({ cluster, root, onOpen, onClose }:
 
   return (
     <Dialog title="Go to file" onClose={onClose} width={560}>
-      <input autoFocus value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Part of a file name"
+      <input autoFocus value={query} onChange={(e) => { setQuery(e.target.value); setFound(null) }}
+        placeholder="Part of a file name"
         aria-label="File name" className={`${FIELD} w-full`}
         onKeyDown={(e) => {
+          if (e.key !== 'Enter') waiting.current = false
           if (e.key === 'ArrowDown') { e.preventDefault(); setPick((p) => Math.min(p + 1, (found?.length ?? 1) - 1)) }
           if (e.key === 'ArrowUp') { e.preventDefault(); setPick((p) => Math.max(p - 1, 0)) }
-          if (e.key === 'Enter') { e.preventDefault(); choose(found?.[pick]) }
+          if (e.key === 'Enter') {
+            e.preventDefault()
+            if (found) choose(found[pick])
+            else waiting.current = true
+          }
         }} />
       <div className="mt-2 max-h-[50vh] min-h-24 overflow-auto">
         {found === null && <p className="flex items-center gap-2 py-4 text-sm text-dim"><Spinner size={14} /> Looking</p>}
