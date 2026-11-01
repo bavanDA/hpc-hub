@@ -10,6 +10,7 @@ const host = process.env.TAURI_DEV_HOST
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  publicDir: '../app/public',  // theme.js: light or dark before the first paint, shared with the desktop
   resolve: {
     alias: { '@shared': fileURLToPath(new URL('../app/src', import.meta.url)) },
     dedupe: ['react', 'react-dom', '@tauri-apps/api', '@xterm/xterm', '@xterm/addon-fit', 'lucide-react'],

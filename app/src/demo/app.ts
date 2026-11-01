@@ -1,7 +1,17 @@
 // Demo answers for the app menu, Preferences, links, and upload and download.
 import type { Preferences, Profiles } from '../components/app/types'
 
-const prefs: Preferences = { browser_profile: 'Uni', experimental: false, select_to_copy: true, monitor_bar: true }
+// ?theme=light|dark forces one for design work; otherwise the last pick in this browser
+function demoAppearance(): Preferences['appearance'] {
+  const asked = new URLSearchParams(location.search).get('theme')
+  let last: string | null = null
+  try { last = localStorage.getItem('hpchub-appearance') } catch { /* blocked */ }
+  const a = asked ?? last
+  return a === 'light' || a === 'dark' ? a : 'system'
+}
+
+const prefs: Preferences = { browser_profile: 'Uni', experimental: false, select_to_copy: true, monitor_bar: true,
+  appearance: demoAppearance() }
 
 const profiles: Profiles = {
   profiles: [

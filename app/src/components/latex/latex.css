@@ -11,19 +11,17 @@
   --cm-active-line: rgb(53 132 228 / 0.06);
   --cm-selection: rgb(53 132 228 / 0.24);
 }
-@media (prefers-color-scheme: dark) {
-  :root {
-    --cm-command: #78aeed;
-    --cm-arg: #dc8add;
-    --cm-math: #ffa348;
-    --cm-comment: #9a9996;
-    --cm-number: #8ff0a4;
-    --cm-bracket: #9a9996;
-    --cm-string: #8ff0a4;
-    --cm-gutter: rgb(255 255 255 / 0.30);
-    --cm-active-line: rgb(120 174 237 / 0.07);
-    --cm-selection: rgb(120 174 237 / 0.28);
-  }
+:root[data-theme="dark"] {
+  --cm-command: #78aeed;
+  --cm-arg: #dc8add;
+  --cm-math: #ffa348;
+  --cm-comment: #9a9996;
+  --cm-number: #8ff0a4;
+  --cm-bracket: #9a9996;
+  --cm-string: #8ff0a4;
+  --cm-gutter: rgb(255 255 255 / 0.30);
+  --cm-active-line: rgb(120 174 237 / 0.07);
+  --cm-selection: rgb(120 174 237 / 0.28);
 }
 
 .cm-issue-error { background: rgb(224 27 36 / 0.12); box-shadow: inset 3px 0 0 #e01b24; }

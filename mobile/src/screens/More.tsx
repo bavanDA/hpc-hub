@@ -1,4 +1,5 @@
-// More: usage (SU left), agent permissions, settings, and what the app is. The same order as the desktop sidebar.
+// More: usage (SU left), agent permissions, settings (light or dark, the monitoring bar), and what the app is. The
+// same order as the desktop sidebar.
 import { ChevronRight } from 'lucide-react'
 import { lazy, Suspense, useEffect, useState } from 'react'
 
@@ -8,14 +9,17 @@ import { setMonitorBar } from '@shared/components/terminals/MonitorBar'
 import { ToastProvider as SharedToasts } from '@shared/components/toast'
 import { Meter, Spinner } from '@shared/components/ui'
 import { call } from '@shared/rpc'
+import { setAppearance, type Appearance } from '@shared/theme'
 import type { Cluster } from '@shared/types/clusters'
 import type { Account } from '@shared/types/usage'
 import { Header } from '../parts/Header'
-import { Card, Sheet, Switch, useToast } from '../ui'
+import { Card, Segments, Sheet, Switch, useToast } from '../ui'
 
 const Permissions = lazy(() => import('@shared/pages/Permissions').then((m) => ({ default: m.Permissions })))
 
-type Prefs = { monitor_bar: boolean }
+type Prefs = { monitor_bar: boolean; appearance: Appearance }
+
+const THEMES = [['system', 'System'], ['light', 'Light'], ['dark', 'Dark']] as const
 
 const su = (n: number) => Math.round(n).toLocaleString('en-US')
 
@@ -87,6 +91,10 @@ export function More() {
         </Card>
 
         <h2 className="mb-2 text-sm font-bold text-dim">Settings</h2>
+        <div className="mb-3">
+          <Segments value={prefs?.appearance ?? 'system'} options={THEMES}
+            onChange={(appearance) => { setAppearance(appearance); save({ appearance }) }} />
+        </div>
         <Card className="mb-5 py-1">
           <Switch label="Monitoring bar" hint="CPU, memory and network of the host, under each terminal."
             checked={prefs?.monitor_bar ?? true} onChange={(on) => save({ monitor_bar: on })} />

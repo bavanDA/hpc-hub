@@ -61,6 +61,11 @@ def test_app_settings(tmp_path):
     path = tmp_path / "app.toml"
     config.save_app(config.AppSettings(globus_client_id="cid"), path)
     assert config.load_app(path).globus_client_id == "cid"
+    assert config.load_app(path).appearance == "system"
+    config.save_app(config.AppSettings(appearance="light"), path)
+    assert config.load_app(path).appearance == "light"
+    path.write_text('[app]\nappearance = "purple"\n')  # hand-edited: back to following the computer
+    assert config.load_app(path).appearance == "system"
 
 
 def test_split_tunnel_defaults():

@@ -5,4 +5,4 @@ export type ChromeProfile = { folder: string; name: string; email: string }
 export type Profiles = { profiles: ChromeProfile[]; default: string }
 
 export type Preferences = { browser_profile: string; experimental: boolean; select_to_copy: boolean;
-  monitor_bar: boolean }
+  monitor_bar: boolean; appearance: import('../../theme').Appearance }

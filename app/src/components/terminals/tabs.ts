@@ -5,6 +5,7 @@ import { Terminal } from '@xterm/xterm'
 import { useSyncExternalStore } from 'react'
 
 import { call } from '../../rpc'
+import { onThemeChange } from '../../theme'
 import type { Command, Link, NewTerminal, TmuxSession } from '../../types/terminals'
 import { demoShell } from './demoShell'
 import { inTauri, openLink, ptyClose, ptyOpen, ptyResize, ptyWrite } from './pty'
@@ -38,8 +39,8 @@ const subscribers = new Set<() => void>()
 let notify: (text: string) => void = () => {}
 let logs = 0
 
-// Light or dark follows the system, also for terminals already open
-window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+// Light or dark follows Settings, Appearance, also for terminals already open
+onThemeChange(() => {
   for (const t of state.tabs) t.term.options.theme = theme()
 })
 

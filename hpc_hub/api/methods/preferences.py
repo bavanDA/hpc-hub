@@ -1,4 +1,5 @@
-"""Preferences: the default browser for links, terminal settings and the experimental pages, kept in app.toml."""
+"""Preferences: light or dark, the default browser for links, terminal settings and the experimental pages, kept in
+app.toml."""
 
 import threading
 
@@ -10,7 +11,7 @@ _lock = threading.Lock()  # one load, change, save at a time
 
 def _json(app: config.AppSettings) -> dict:
     return {"browser_profile": app.browser_profile, "experimental": app.experimental,
-            "select_to_copy": app.select_to_copy, "monitor_bar": app.monitor_bar}
+            "select_to_copy": app.select_to_copy, "monitor_bar": app.monitor_bar, "appearance": app.appearance}
 
 
 @method("preferences.get")
@@ -20,7 +21,8 @@ def get() -> dict:
 
 @method("preferences.set")
 def set_(browser_profile: str | None = None, experimental: bool | None = None,
-         select_to_copy: bool | None = None, monitor_bar: bool | None = None) -> dict:
+         select_to_copy: bool | None = None, monitor_bar: bool | None = None,
+         appearance: str | None = None) -> dict:
     """Change what is given and save; returns all preferences."""
     with _lock:
         app = config.load_app(config.APP_FILE)
@@ -32,5 +34,9 @@ def set_(browser_profile: str | None = None, experimental: bool | None = None,
             app.select_to_copy = features.select_to_copy = bool(select_to_copy)
         if monitor_bar is not None:
             app.monitor_bar = features.monitor_bar = bool(monitor_bar)
+        if appearance is not None:
+            if appearance not in config.APPEARANCES:
+                raise ValueError(f"Appearance is one of {', '.join(config.APPEARANCES)}")
+            app.appearance = appearance
         config.save_app(app, config.APP_FILE)
         return _json(app)

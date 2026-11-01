@@ -19,6 +19,7 @@ import { EmptyState, Spinner } from './components/ui'
 import { NavContext } from './nav'
 import { Clusters } from './pages/Clusters'
 import { call } from './rpc'
+import { setAppearance } from './theme'
 
 // Pages load the first time you open them, so the app starts fast (Clusters is the first screen)
 const Agents = lazy(() => import('./pages/Agents').then((m) => ({ default: m.Agents })))
@@ -89,7 +90,10 @@ export default function App() {
   const [setup, setSetup] = useState<SetupStatus | null>(null)
   const [onboard, setOnboard] = useState<string[] | null>(null)  // the clusters just chosen, to set up
   useEffect(() => {
-    call<Preferences>('preferences.get').then((p) => setExperimental(p.experimental)).catch(() => {})
+    call<Preferences>('preferences.get').then((p) => {
+      setExperimental(p.experimental)
+      setAppearance(p.appearance)
+    }).catch(() => {})
     call<{ blocked: boolean; message: string }>('app.status').then((s) => setBlocked(s.blocked ? s.message : ''))
       .catch(() => {})
     call<SetupStatus>('setup.status').then(setSetup).catch(() => {})

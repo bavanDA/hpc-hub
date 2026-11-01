@@ -1,4 +1,4 @@
-// The app's Settings (hpc_hub/ui/preferences.py): the browser for links, terminals, experimental pages.
+// The app's Settings (hpc_hub/ui/preferences.py): light or dark, the browser for links, terminals, experimental pages.
 import { useEffect, useState } from 'react'
 
 import { call } from '../../rpc'
@@ -8,6 +8,7 @@ import { setMonitorBar } from '../terminals/MonitorBar'
 import { setSelectToCopy } from '../terminals/xterm'
 import { useToast } from '../toast'
 import { Dialog, Row, Spinner } from '../ui'
+import { AppearanceGroup } from './Appearance'
 import { forgetProfiles, getProfiles } from './openLink'
 import type { Preferences, Profiles } from './types'
 import { university, type SetupStatus } from './Welcome'
@@ -42,6 +43,7 @@ export function PreferencesDialog({ onClose, onExperimental }:
   return (
     <Dialog title="Settings" onClose={onClose} width={560}>
       {!prefs || !found ? <div className="grid h-40 place-items-center"><Spinner size={24} /></div> : <>
+        <AppearanceGroup value={prefs.appearance} onChange={(appearance) => save({ appearance })} />
         <Group title="Links" description="Links open in this browser. You can pick another each time.">
           <ActionRow label={<span className="whitespace-nowrap">Default for links</span>}>
             <Select label="Default for links" value={current} options={options}
