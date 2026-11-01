@@ -2,12 +2,11 @@
 import type { ITheme } from '@xterm/xterm'
 
 import { call } from '../../rpc'
+import { isDark } from '../../theme'
 import type { Tab } from './tabs'
 
-const dark = () => window.matchMedia('(prefers-color-scheme: dark)').matches
-
 export function theme(): ITheme {
-  return dark()
+  return isDark()
     ? { background: '#1d1d20', foreground: '#ffffff', cursor: '#ffffff', selectionBackground: 'rgba(120,174,237,0.35)' }
     : { background: '#ffffff', foreground: '#2e2e33', cursor: '#2e2e33', selectionBackground: 'rgba(53,132,228,0.25)',
       yellow: '#9c6e03', brightYellow: '#b58300', white: '#77767b', brightWhite: '#5e5c64' }

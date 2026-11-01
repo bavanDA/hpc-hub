@@ -7,9 +7,7 @@
   background: var(--pdf-bg);
   outline: none;
 }
-@media (prefers-color-scheme: dark) {
-  .pdf-scroll { --pdf-bg: #18181b; }
-}
+:root[data-theme="dark"] .pdf-scroll { --pdf-bg: #18181b; }
 
 .pdf-scroll .pdfViewer {
   --page-margin: 14px auto 0;

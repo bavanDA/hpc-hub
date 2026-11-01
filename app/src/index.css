@@ -70,46 +70,50 @@
   --ease-exit: cubic-bezier(0.4, 0, 1, 1);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --color-window: #1e1e21;
-    --color-header: #1e1e21;
-    --color-sidebar: #252528;
-    --color-card: #2a2a2e;
-    --color-view: #2a2a2e;
-    --color-raised: #313136;
-    --color-inset: rgb(255 255 255 / 0.04);
-    --color-control: rgb(255 255 255 / 0.08);
-    --color-hover: rgb(255 255 255 / 0.06);
-    --color-pressed: rgb(255 255 255 / 0.10);
-    --color-selected: rgb(255 255 255 / 0.09);
-    --color-line: rgb(255 255 255 / 0.08);
-    --color-line-strong: rgb(255 255 255 / 0.14);
-    --color-scrim: rgb(0 0 0 / 0.50);
-    --color-text: rgb(255 255 255 / 0.94);
-    --color-dim: rgb(255 255 255 / 0.64);
-    --color-faint: rgb(255 255 255 / 0.42);
-    --color-accent-text: #7cb1f0;
-    --color-accent-soft: rgb(53 132 228 / 0.20);
-    --color-focus: #7cb1f0;
-    --color-ok: #6ee69a;
-    --color-ok-bg: rgb(38 162 105 / 0.22);
-    --color-ok-dot: #33d17a;
-    --color-warn: #f5d44a;
-    --color-warn-bg: rgb(229 165 10 / 0.20);
-    --color-warn-dot: #f6d32d;
-    --color-bad: #ff8a78;
-    --color-bad-bg: rgb(224 27 36 / 0.24);
-    --color-bad-dot: #ff7b63;
-    --color-pill: rgb(255 255 255 / 0.09);
-    --color-orange: #ffa348;
-    --shadow-card: 0 0 0 1px rgb(255 255 255 / 0.06), 0 1px 2px rgb(0 0 0 / 0.30);
-    --shadow-menu: 0 0 0 1px rgb(255 255 255 / 0.08), 0 8px 20px -4px rgb(0 0 0 / 0.50);
-    --shadow-dialog: 0 0 0 1px rgb(255 255 255 / 0.08), 0 24px 56px -12px rgb(0 0 0 / 0.65);
-  }
+/* Dark when <html data-theme="dark">: set by public/theme.js and theme.ts from Settings, Appearance (System follows
+   the computer). Tailwind's dark: follows the same attribute. */
+@custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
+
+:root[data-theme="dark"] {
+  --color-window: #1e1e21;
+  --color-header: #1e1e21;
+  --color-sidebar: #252528;
+  --color-card: #2a2a2e;
+  --color-view: #2a2a2e;
+  --color-raised: #313136;
+  --color-inset: rgb(255 255 255 / 0.04);
+  --color-control: rgb(255 255 255 / 0.08);
+  --color-hover: rgb(255 255 255 / 0.06);
+  --color-pressed: rgb(255 255 255 / 0.10);
+  --color-selected: rgb(255 255 255 / 0.09);
+  --color-line: rgb(255 255 255 / 0.08);
+  --color-line-strong: rgb(255 255 255 / 0.14);
+  --color-scrim: rgb(0 0 0 / 0.50);
+  --color-text: rgb(255 255 255 / 0.94);
+  --color-dim: rgb(255 255 255 / 0.64);
+  --color-faint: rgb(255 255 255 / 0.42);
+  --color-accent-text: #7cb1f0;
+  --color-accent-soft: rgb(53 132 228 / 0.20);
+  --color-focus: #7cb1f0;
+  --color-ok: #6ee69a;
+  --color-ok-bg: rgb(38 162 105 / 0.22);
+  --color-ok-dot: #33d17a;
+  --color-warn: #f5d44a;
+  --color-warn-bg: rgb(229 165 10 / 0.20);
+  --color-warn-dot: #f6d32d;
+  --color-bad: #ff8a78;
+  --color-bad-bg: rgb(224 27 36 / 0.24);
+  --color-bad-dot: #ff7b63;
+  --color-pill: rgb(255 255 255 / 0.09);
+  --color-orange: #ffa348;
+  --shadow-card: 0 0 0 1px rgb(255 255 255 / 0.06), 0 1px 2px rgb(0 0 0 / 0.30);
+  --shadow-menu: 0 0 0 1px rgb(255 255 255 / 0.08), 0 8px 20px -4px rgb(0 0 0 / 0.50);
+  --shadow-dialog: 0 0 0 1px rgb(255 255 255 / 0.08), 0 24px 56px -12px rgb(0 0 0 / 0.65);
 }
 
-:root { color-scheme: light dark; }  /* native scrollbars and form controls follow the theme */
+/* native scrollbars and form controls follow the theme */
+:root { color-scheme: light; }
+:root[data-theme="dark"] { color-scheme: dark; }
 
 html, body, #root { height: 100%; }
 body {

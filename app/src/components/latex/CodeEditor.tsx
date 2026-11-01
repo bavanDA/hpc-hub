@@ -14,6 +14,7 @@ import { Decoration, type DecorationSet, drawSelection, EditorView, highlightAct
 import { tags as t } from '@lezer/highlight'
 import { useEffect, useRef } from 'react'
 
+import { isDark } from '../../theme'
 import type { Issue } from '../../types/latex'
 
 export type EditorHandle = { goto: (line: number) => void; line: () => number; text: () => string;
@@ -117,7 +118,7 @@ const theme = EditorView.theme({
     { backgroundColor: 'var(--cm-selection) !important' },
   '.cm-line': { padding: '0 16px 0 10px' },
   '&.cm-focused': { outline: 'none' },
-}, { dark: matchMedia('(prefers-color-scheme: dark)').matches })
+}, { dark: isDark() })
 
 export default function CodeEditor({ path, version, text, line: startLine, issues, words, onChange, onSave, onBuild, onToPdf,
   handle }: Props) {
