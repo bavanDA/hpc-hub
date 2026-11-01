@@ -34,7 +34,7 @@ POSIX = {
     "agents/test_permissions.py", "agents/test_schedules.py", "agents/test_skills.py",
     "api/test_cluster_settings.py", "api/test_files.py", "api/test_files_local.py", "api/test_latex_api.py",
     "api/test_permissions_api.py", "api/test_projects.py", "api/test_schedules_api.py", "api/test_skills_api.py",
-    "connect/test_chrome_window.py", "connect/test_vpn_helper.py",
+    "connect/test_vpn_helper.py",
     "compute/test_slurm.py", "compute/test_usage.py", "connect/test_askpass.py", "connect/test_session.py",
     "connect/test_session_asyncssh.py", "core/test_paths.py", "core/test_remote.py",
     "files/test_remote_fs.py", "files/test_transfer.py", "latex/test_latex_git.py",
@@ -46,8 +46,6 @@ POSIX_TESTS = {
     "core/test_ssh_keys.py::test_saved_key_matches_its_public_line",  # 0600 mode: the key is saved on the phone
     "core/test_ssh_keys.py::test_authorize_replaces_the_last_phone_key",  # sh: it runs on the cluster
     "core/test_vault_file.py::test_saved_encrypted_and_private",  # 0600 mode: the vault is Android only
-    # the HPC Hub Chrome window is Unix only (posix_spawn, fcntl): Windows does not offer it
-    "api/test_sso.py::test_pick_browser_offers_the_app_window_and_the_chrome_window",
 }
 
 GNU_TOOLS = {

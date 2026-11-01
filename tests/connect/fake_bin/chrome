@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Fake Chrome for tests: the DevTools protocol on fds 3 and 4 (--remote-debugging-pipe), no browser.
+"""Fake Chrome for tests: the DevTools protocol, no browser. On fds 3 and 4 (--remote-debugging-pipe), or on a
+websocket on 127.0.0.1 announced in <user-data-dir>/DevToolsActivePort (--remote-debugging-port=0), as Windows.
 
 FAKE_CHROME_LOG: file that gets argv, then every method called, one JSON line each.
 FAKE_CHROME_AFTER: the sign-in cookie shows up on that getCookies call (FAKE_CHROME_ERROR: the error cookie).
@@ -7,7 +8,8 @@ FAKE_CHROME_STALE: a token from an earlier sign-in is there from the start.
 FAKE_CHROME_QUIT: exit on that getCookies call, as if you closed the window.
 FAKE_CHROME_STUBBORN: ignore Browser.close and SIGTERM.
 """
-import json, os, signal, sys
+import base64, hashlib, json, os, signal, socket, struct, sys
+from pathlib import Path
 
 env = os.environ
 log = open(env["FAKE_CHROME_LOG"], "a")
@@ -15,14 +17,81 @@ log.write(json.dumps(sys.argv[1:]) + "\n")
 log.flush()
 if env.get("FAKE_CHROME_STUBBORN"):
     signal.signal(signal.SIGTERM, signal.SIG_IGN)
-inp, out = os.fdopen(3, "rb"), os.fdopen(4, "wb")
 after, quit_at = int(env.get("FAKE_CHROME_AFTER", "0")), int(env.get("FAKE_CHROME_QUIT", "0"))
-calls, buf = 0, b""
+calls = 0
 
 
-def send(msg):
-    out.write(json.dumps(msg).encode() + b"\0")
-    out.flush()
+class Pipe:
+    def __init__(self):
+        self.inp, self.out, self.buf = os.fdopen(3, "rb"), os.fdopen(4, "wb"), b""
+
+    def send(self, msg):
+        self.out.write(json.dumps(msg).encode() + b"\0")
+        self.out.flush()
+
+    def messages(self):
+        while True:
+            chunk = self.inp.read1(65536)
+            if not chunk:
+                return
+            self.buf += chunk
+            while b"\0" in self.buf:
+                raw, self.buf = self.buf.split(b"\0", 1)
+                yield json.loads(raw)
+
+
+class Port:
+    """A websocket server for one client, the way Chrome serves /devtools/browser/<id>."""
+
+    def __init__(self, folder):
+        server = socket.create_server(("127.0.0.1", 0))
+        (folder / "DevToolsActivePort").write_text(f"{server.getsockname()[1]}\n/devtools/browser/fake-id")
+        self.conn, _ = server.accept()
+        self.buf = b""
+        while b"\r\n\r\n" not in self.buf:
+            self.buf += self.conn.recv(4096)
+        head, self.buf = self.buf.split(b"\r\n\r\n", 1)
+        lines = head.decode().split("\r\n")
+        assert lines[0] == "GET /devtools/browser/fake-id HTTP/1.1", lines[0]
+        key = next(v.strip() for k, _, v in (x.partition(":") for x in lines[1:]) if k.lower() == "sec-websocket-key")
+        accept = base64.b64encode(hashlib.sha1(key.encode() + b"258EAFA5-E914-47DA-95CA-C5AB0DC85B11").digest())
+        self.conn.sendall(b"HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n"
+                          b"Sec-WebSocket-Accept: " + accept + b"\r\n\r\n")
+
+    def send(self, msg):
+        data = json.dumps(msg).encode()
+        n = len(data)
+        head = bytes([0x81]) + (bytes([n]) if n < 126 else struct.pack(">BH", 126, n) if n < 65536
+                                else struct.pack(">BQ", 127, n))
+        self.conn.sendall(head + data)
+
+    def _need(self, n):
+        while len(self.buf) < n:
+            chunk = self.conn.recv(65536)
+            if not chunk:
+                raise EOFError
+            self.buf += chunk
+
+    def messages(self):
+        try:
+            while True:
+                self._need(2)
+                op, size, at = self.buf[0] & 0x0F, self.buf[1] & 0x7F, 2
+                assert self.buf[1] & 0x80, "client frames must be masked"
+                if size == 126:
+                    self._need(4)
+                    size, at = struct.unpack(">H", self.buf[2:4])[0], 4
+                elif size == 127:
+                    self._need(10)
+                    size, at = struct.unpack(">Q", self.buf[2:10])[0], 10
+                self._need(at + 4 + size)
+                mask, data = self.buf[at:at + 4], self.buf[at + 4:at + 4 + size]
+                self.buf = self.buf[at + 4 + size:]
+                if op == 0x8:
+                    return
+                yield json.loads(bytes(c ^ mask[i % 4] for i, c in enumerate(data)))
+        except EOFError:
+            return
 
 
 def cookies():
@@ -39,34 +108,30 @@ def cookies():
     return jar
 
 
-while True:
-    chunk = inp.read1(65536)
-    if not chunk:
-        break
-    buf += chunk
-    while b"\0" in buf:
-        raw, buf = buf.split(b"\0", 1)
-        msg = json.loads(raw)
-        method, params = msg["method"], msg.get("params", {})
-        log.write(json.dumps([method, params]) + "\n")
-        log.flush()
-        send({"method": "Target.targetInfoChanged", "params": {}})  # events come in between answers
-        if method == "Target.getTargets":
-            send({"id": msg["id"], "result": {"targetInfos": [{"targetId": "blank", "type": "page"},
-                                                              {"targetId": "sw", "type": "service_worker"}]}})
-        elif method == "Target.createTarget":
-            send({"id": msg["id"], "result": {"targetId": "login"}})
-        elif method == "Storage.getCookies":
-            calls += 1
-            if quit_at and calls >= quit_at:
-                sys.exit(0)
-            send({"id": msg["id"], "result": {"cookies": cookies()}})
-        elif method == "Browser.close":
-            if env.get("FAKE_CHROME_STUBBORN"):
-                continue
-            send({"id": msg["id"], "result": {}})
+folder = next(Path(a.split("=", 1)[1]) for a in sys.argv if a.startswith("--user-data-dir="))
+folder.mkdir(parents=True, exist_ok=True)
+link = Port(folder) if "--remote-debugging-port=0" in sys.argv else Pipe()
+for msg in link.messages():
+    method, params = msg["method"], msg.get("params", {})
+    log.write(json.dumps([method, params]) + "\n")
+    log.flush()
+    link.send({"method": "Target.targetInfoChanged", "params": {}})  # events come in between answers
+    if method == "Target.getTargets":
+        link.send({"id": msg["id"], "result": {"targetInfos": [{"targetId": "blank", "type": "page"},
+                                                               {"targetId": "sw", "type": "service_worker"}]}})
+    elif method == "Target.createTarget":
+        link.send({"id": msg["id"], "result": {"targetId": "login"}})
+    elif method == "Storage.getCookies":
+        calls += 1
+        if quit_at and calls >= quit_at:
             sys.exit(0)
-        elif method == "Nope.fail":
-            send({"id": msg["id"], "error": {"code": -32601, "message": "'Nope.fail' wasn't found"}})
-        else:
-            send({"id": msg["id"], "result": {}})
+        link.send({"id": msg["id"], "result": {"cookies": cookies()}})
+    elif method == "Browser.close":
+        if env.get("FAKE_CHROME_STUBBORN"):
+            continue
+        link.send({"id": msg["id"], "result": {}})
+        sys.exit(0)
+    elif method == "Nope.fail":
+        link.send({"id": msg["id"], "error": {"code": -32601, "message": "'Nope.fail' wasn't found"}})
+    else:
+        link.send({"id": msg["id"], "result": {}})
