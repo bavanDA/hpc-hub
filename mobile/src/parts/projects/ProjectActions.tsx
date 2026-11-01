@@ -2,10 +2,10 @@
 // VS Code open on the Agents screen with the project's folder: go('agents', { cluster, folder, start }), where start
 // is the desktop's open-menu key (agent:claude, ask, vscode:browser). Anything that needs the cluster connects first.
 import {
-  ArrowRightLeft, ClipboardCopy, FileCode, FileText, FolderOpen, Globe, MessageSquare, MousePointer2, Pencil,
-  Rocket, Sparkles, Trash2, Users,
+  ArrowRightLeft, ClipboardCopy, FileCode, FileText, FolderOpen, Globe, Pencil, Trash2, Users,
 } from 'lucide-react'
 
+import { agentIcon } from '@shared/components/agents/AgentIcon'
 import { whenConnected } from '@shared/components/tools/run'
 import { useGo } from '@shared/nav'
 import { call } from '@shared/rpc'
@@ -36,10 +36,10 @@ export function ProjectActions({ p, experimental, act, onClose }:
   const tools: SheetAction[] = known ? [
     { label: 'Code', icon: FileCode, onPick: open('code') },
     { label: 'Files', icon: FolderOpen, onPick: open('files') },
-    { label: 'Claude', icon: Sparkles, onPick: start('agent:claude') },
-    { label: 'ChatGPT', icon: MessageSquare, onPick: start('agent:codex') },
-    { label: 'Antigravity', icon: Rocket, onPick: start('agent:agy') },
-    { label: 'Cursor', icon: MousePointer2, onPick: start('agent:cursor') },
+    { label: 'Claude', icon: agentIcon('claude'), onPick: start('agent:claude') },
+    { label: 'ChatGPT', icon: agentIcon('codex'), onPick: start('agent:codex') },
+    { label: 'Antigravity', icon: agentIcon('agy'), onPick: start('agent:agy') },
+    { label: 'Cursor', icon: agentIcon('cursor'), onPick: start('agent:cursor') },
     { label: 'Ask all agents', icon: Users, onPick: start('ask') },
     { label: 'VS Code in the browser', icon: Globe, onPick: start('vscode:browser') },
     ...(experimental ? [{ label: 'LaTeX', icon: FileText, onPick: paper }] : []),

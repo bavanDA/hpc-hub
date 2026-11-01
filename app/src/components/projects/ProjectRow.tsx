@@ -1,12 +1,12 @@
 // One project in the list: its Open menu (VS Code, Files, agents, LaTeX) and the ⋮ menu, like the GTK rows.
 import {
-  ChevronDown, Code, EllipsisVertical, FileCode2, FileText, Folder, FolderOpen, Globe, LayoutGrid, MessageSquare,
-  MousePointer2, Rocket, Sparkles, Users,
+  ChevronDown, Code, EllipsisVertical, FileCode2, FileText, Folder, FolderOpen, Globe, LayoutGrid, Users,
 } from 'lucide-react'
 
 import { useGo } from '../../nav'
 import { call } from '../../rpc'
 import type { Project } from '../../types/projects'
+import { agentIcon } from '../agents/AgentIcon'
 import { useTools } from '../tools/useTools'
 import { Menu, type MenuItem } from './Menu'
 
@@ -17,9 +17,9 @@ function openGroups(open: (key: string) => void, experimental: boolean): MenuIte
   return [
     [item('code', 'Code', FileCode2), item('vscode:desktop', 'VS Code app', Code),
       item('vscode:browser', 'VS Code in browser', Globe), item('files', 'Files', FolderOpen)],
-    [item('ask', 'Ask all agents', Users), item('agent:claude', 'Claude', Sparkles),
-      item('agent:codex', 'ChatGPT', MessageSquare), item('agent:agy', 'Antigravity', Rocket),
-      item('agent:cursor', 'Cursor', MousePointer2)],
+    [item('ask', 'Ask all agents', Users), item('agent:claude', 'Claude', agentIcon('claude')),
+      item('agent:codex', 'ChatGPT', agentIcon('codex')), item('agent:agy', 'Antigravity', agentIcon('agy')),
+      item('agent:cursor', 'Cursor', agentIcon('cursor'))],
     experimental ? [item('latex', 'LaTeX', FileText)] : [],
   ]
 }

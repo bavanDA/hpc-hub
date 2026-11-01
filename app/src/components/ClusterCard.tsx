@@ -9,6 +9,7 @@ import { useEffect, useState } from 'react'
 import { useGo } from '../nav'
 import { call } from '../rpc'
 import { BUSY, DUO, fastLabel, summary, type Cluster, type Session } from '../types/clusters'
+import { agentIcon } from './agents/AgentIcon'
 import { PairPhoneDialog } from './app/PairPhoneDialog'
 import { ComputeDialog } from './clusters/ComputeDialog'
 import { LogView } from './clusters/LogView'
@@ -24,8 +25,10 @@ type Open = null | 'settings' | 'compute' | 'size' | 'phone' | 'release' | { swi
 
 const WAITING = 'Requesting compute node'
 
-const AGENTS: [string, string, LucideIcon][] = [['agent:claude', 'Claude', Bot], ['agent:codex', 'ChatGPT', Bot],
-  ['agent:agy', 'Antigravity', Bot], ['agent:cursor', 'Cursor', Bot], ['ask', 'Ask all agents', Users]]
+const AGENTS: [string, string, LucideIcon][] = [['agent:claude', 'Claude', agentIcon('claude')],
+  ['agent:codex', 'ChatGPT', agentIcon('codex')],
+  ['agent:agy', 'Antigravity', agentIcon('agy')], ['agent:cursor', 'Cursor', agentIcon('cursor')],
+  ['ask', 'Ask all agents', Users]]
 
 function Status({ s, vpnOnly }: { s: Session; vpnOnly: boolean }) {
   const [text, dot, look] = s.state === 'Connected'

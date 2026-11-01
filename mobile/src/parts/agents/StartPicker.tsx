@@ -1,7 +1,8 @@
 // "Start agent": which cluster (skipped when only one is connected), then what to start there.
-import { Bot, Code, MessagesSquare } from 'lucide-react'
+import { Code, MessagesSquare } from 'lucide-react'
 import { useRef, useState } from 'react'
 
+import { agentIcon } from '@shared/components/agents/AgentIcon'
 import { useClusters } from '@shared/components/clusters/store'
 import { AGENT_NAMES } from '@shared/types/terminals'
 import { ActionSheet, PickerSheet } from '../../ui'
@@ -25,7 +26,7 @@ export function StartPicker({ onStart, onClose }:
   const go = (key: string) => onStart(cluster.id, cluster.name, key)
   return (
     <ActionSheet title={`Start on ${cluster.name}`} onClose={onClose} actions={[
-      ...AGENTS.map((a) => ({ label: AGENT_NAMES[a], icon: Bot, onPick: () => go(`agent:${a}`) })),
+      ...AGENTS.map((a) => ({ label: AGENT_NAMES[a], icon: agentIcon(a), onPick: () => go(`agent:${a}`) })),
       { label: 'Ask all agents', icon: MessagesSquare, onPick: () => go('ask') },
       { label: 'VS Code in the browser', icon: Code, onPick: () => go('vscode') },
     ]} />

@@ -11,6 +11,8 @@ const host = process.env.TAURI_DEV_HOST
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   publicDir: '../app/public',  // theme.js: light or dark before the first paint, shared with the desktop
+  // HPC_HUB_PLAIN_ICONS=1: the stock robot for every agent, no brand logos (app/src/assets/agents/README.md)
+  define: { 'import.meta.env.HPC_HUB_PLAIN_ICONS': JSON.stringify(process.env.HPC_HUB_PLAIN_ICONS ?? '') },
   resolve: {
     alias: { '@shared': fileURLToPath(new URL('../app/src', import.meta.url)) },
     // one copy of each: shared code imports them from app/, phone code from mobile/ (two copies of CodeMirror break it)

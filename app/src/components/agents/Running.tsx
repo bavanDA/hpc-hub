@@ -1,6 +1,6 @@
 // Agents › Running: every agent session on your connected clusters (Claude, ChatGPT, Antigravity, Cursor, Ask all),
 // with Open to see it in Terminals. Start agent opens the same dialog as a cluster card or project.
-import { Bot, ChevronDown, RefreshCw } from 'lucide-react'
+import { Bot, ChevronDown, RefreshCw, Users } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
 import { useGo } from '../../nav'
@@ -12,6 +12,7 @@ import { SessionMenu } from '../terminals/SessionMenu'
 import { openSession } from '../terminals/tabs'
 import { useTools } from '../tools/useTools'
 import { Button, EmptyState, IconButton, List, Spinner } from '../ui'
+import { agentIcon } from './AgentIcon'
 
 const STARTABLE = ['claude', 'codex', 'agy', 'cursor'] as const
 
@@ -44,12 +45,16 @@ function StartMenu({ onStart }: { onStart: (cluster: string, name: string, key: 
           {where.map((c, n) => (
             <div key={c.id} className={n ? 'mt-1 border-t border-line pt-1' : ''}>
               <div className="px-3 pt-1.5 pb-1 text-xs font-semibold text-dim">{c.name}</div>
-              {[...STARTABLE, 'ask'].map((a) => (
-                <button key={a} role="menuitem" onClick={() => { setOpen(false); onStart(c.id, c.name, a === 'ask'
-                  ? 'ask' : `agent:${a}`) }}
-                  className="flex h-9 w-full items-center rounded-md px-3 text-left hover:bg-hover">
-                  {a === 'ask' ? 'Ask all agents…' : `${AGENT_NAMES[a]}…`}</button>
-              ))}
+              {[...STARTABLE, 'ask'].map((a) => {
+                const Icon = a === 'ask' ? Users : agentIcon(a)
+                return (
+                  <button key={a} role="menuitem" onClick={() => { setOpen(false); onStart(c.id, c.name, a === 'ask'
+                    ? 'ask' : `agent:${a}`) }}
+                    className="flex h-9 w-full items-center gap-3 rounded-md px-3 text-left hover:bg-hover">
+                    <Icon size={16} className="shrink-0" />
+                    {a === 'ask' ? 'Ask all agents…' : `${AGENT_NAMES[a]}…`}</button>
+                )
+              })}
             </div>
           ))}
         </div>

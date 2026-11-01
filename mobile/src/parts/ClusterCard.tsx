@@ -8,6 +8,7 @@ import { Bot, ChevronRight, Code, Cpu, FileCode2, Folder, MoreVertical, Power, S
 import { useEffect, useState } from 'react'
 
 import { leftText, useTimeLeft } from '@shared/components/app/watch'
+import { agentIcon } from '@shared/components/agents/AgentIcon'
 import { LogView } from '@shared/components/clusters/LogView'
 import { Spinner } from '@shared/components/ui'
 import { useGo } from '@shared/nav'
@@ -94,7 +95,7 @@ export function ClusterCard({ cluster: c, session: s, log }: { cluster: Cluster;
       onPick: () => run('clusters.disconnect') }] : []),
   ]
   const agents: SheetAction[] = [
-    ...AGENTS.map(([id, label]) => ({ label, icon: Bot, onPick: () => go('agents', { cluster: c.id, start: id }) })),
+    ...AGENTS.map(([id, label]) => ({ label, icon: agentIcon(id), onPick: () => go('agents', { cluster: c.id, start: id }) })),
     { label: 'Ask all agents', icon: Users, onPick: () => go('agents', { cluster: c.id, start: 'ask' }) },
   ]
 
