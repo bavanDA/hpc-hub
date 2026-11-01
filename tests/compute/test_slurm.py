@@ -58,3 +58,26 @@ def test_tunnel_link(tmp_path):
             cmd = cmd.replace(slurm.log_path("7"), f"echo {log}")
             return subprocess.run(["bash", "-c", cmd], capture_output=True, text=True)
     assert slurm.tunnel_link(Ssh(), "7") == "https://vscode.dev/tunnel/n0018/mmfs1/home/jdoe"
+
+
+def test_submit_a_script_from_its_folder(tmp_path, monkeypatch):
+    import pytest
+
+    from tests.helpers import LocalShell
+
+    bin_dir, jobs = tmp_path / "bin", tmp_path / "home" / "proj"
+    bin_dir.mkdir()
+    jobs.mkdir(parents=True)
+    (jobs / "run.sbatch").write_text("#!/bin/bash\n#SBATCH -t 1:00\n")
+    sbatch = bin_dir / "sbatch"
+    sbatch.write_text('#!/bin/bash\n[ -f "$2" ] || { echo "sbatch: no $2" >&2; exit 1; }\n'
+                      'pwd > "$HOME/where"; echo "Submitted batch job 4242"\n')
+    sbatch.chmod(0o755)
+    monkeypatch.setenv("PATH", f"{bin_dir}:/usr/bin:/bin")
+    monkeypatch.setenv("HOME", str(tmp_path / "home"))
+    assert slurm.submit_file(LocalShell(), "~/proj/run.sbatch") == "4242"
+    assert (tmp_path / "home" / "where").read_text().strip() == str(jobs)
+    with pytest.raises(slurm.SlurmError, match="no run2"):
+        slurm.submit_file(LocalShell(), "~/proj/run2.sbatch")
+    with pytest.raises(slurm.SlurmError, match="Open a job script"):
+        slurm.submit_file(LocalShell(), " ")

@@ -82,6 +82,14 @@ def stop(cluster: str, session: str, node: str = "", kind: str = "tmux") -> None
     tmux.run(hub().connected(cluster).ssh, tmux.kill(_target(session, node, kind)))
 
 
+@method("terminals.send")
+def send(cluster: str, session: str, text: str, node: str = "", enter: bool = True) -> None:
+    """Type text into a running tmux session (an agent waiting for you) as one paste, then Enter."""
+    if not text.strip():
+        raise ValueError("Nothing to send")
+    tmux.run(hub().connected(cluster).ssh, tmux.send_text(_target(session, node).name, text, node, enter))
+
+
 @method("terminals.buffer")
 def buffer(cluster: str, node: str = "") -> str:
     """tmux's copy buffer: what a mouse drag inside tmux copied."""

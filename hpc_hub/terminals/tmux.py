@@ -6,8 +6,10 @@ Labels and colors live in the tmux session itself (@hpchub_label, @hpchub_color)
 survive app restarts and show up from any laptop.
 """
 
+import base64
 import json
 import re
+import secrets
 import shlex
 import sys
 import time
@@ -343,6 +345,23 @@ def find_remotes(ssh: SshMaster, sessions: list[Session]) -> dict[str, str]:
 
 def set_remote(t: Session, value: str) -> str:
     return on(t.node, f"tmux set-option -t {_opt(t.name)} @hpchub_remote {shlex.quote(value)}")
+
+
+SEND_MAX = 200_000  # characters pasted into a session at once
+
+
+def send_text(name: str, text: str, node: str = "", enter: bool = True) -> str:
+    """Paste text into a session as one bracketed paste (several lines arrive as one message to an agent),
+    then press Enter. Through a tmux buffer, so quoting and newlines survive."""
+    if len(text) > SEND_MAX:
+        raise ValueError("That's too much text to send at once")
+    buf = "hpchub-send-" + secrets.token_hex(3)
+    data = base64.b64encode(text.encode()).decode()
+    line = (f"printf %s {data} | base64 -d | tmux load-buffer -b {buf} - && "
+            f"tmux paste-buffer -p -d -b {buf} -t {_opt(name)}")
+    if enter:
+        line += f" && tmux send-keys -t {_opt(name)} Enter"
+    return on(node, line)
 
 
 def save_buffer(node: str) -> str:

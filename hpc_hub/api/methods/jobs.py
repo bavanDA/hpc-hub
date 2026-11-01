@@ -1,10 +1,10 @@
-"""The Jobs page: your jobs, history or all jobs, a job's details, and cancel."""
+"""The Jobs page: your jobs, history or all jobs, a job's details, submit a script, and cancel."""
 
 import re
 import time
 from dataclasses import asdict
 
-from ...compute import jobs, usage
+from ...compute import jobs, slurm, usage
 from ...compute.jobs import JobInfo
 from ...connect.session import ClusterSession
 from ...terminals import tmux
@@ -138,6 +138,15 @@ def inside(cluster: str, job_id: str) -> dict:
     except Exception:  # noqa: BLE001 - the dialog still works without them
         titles = []
     return {"sessions": titles, "app_node": s.allocation is not None and s.allocation.job_id == job_id}
+
+
+@method("jobs.submit")
+def submit(cluster: str, path: str) -> dict:
+    """sbatch the job script at path (on the cluster), from its folder. Answers {job_id}."""
+    try:
+        return {"job_id": slurm.submit_file(hub().connected(cluster).ssh, path)}
+    except slurm.SlurmError as e:
+        raise ValueError(str(e)) from e
 
 
 @method("jobs.cancel")

@@ -100,6 +100,15 @@ def test_cancel_frees_the_app_node(session, monkeypatch):
     assert "scancel 7" in session.ssh.ran and session.allocation is None and session.changed == 1
 
 
+def test_submit_answers_the_job_id(session, monkeypatch):
+    from hpc_hub.compute import slurm
+    monkeypatch.setattr(slurm, "submit_file", lambda ssh, path: "4242" if path == "~/run.sbatch" else
+                        (_ for _ in ()).throw(slurm.SlurmError("sbatch: error: invalid partition")))
+    assert m.submit("wulver", "~/run.sbatch") == {"job_id": "4242"}
+    with pytest.raises(ValueError, match="invalid partition"):
+        m.submit("wulver", "~/bad.sbatch")
+
+
 def test_exit_codes_in_words():
     from hpc_hub.api.methods.jobs import exit_text
     assert exit_text("0:0") == "0, finished without errors"

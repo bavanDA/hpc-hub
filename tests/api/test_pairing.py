@@ -38,6 +38,48 @@ def test_apply_saves_the_logins_and_key(store):
     assert ssh_keys.key_path().with_name("id_ed25519.pub").read_text().strip() == ssh_keys.public_line(seed)
 
 
+class KeySsh:
+    def __init__(self, fail=""):
+        self.ran, self.fail = [], fail
+
+    def run(self, command, timeout=60, fast=None):
+        import subprocess
+        self.ran.append(command)
+        return subprocess.CompletedProcess(command, 1 if self.fail else 0, "", self.fail)
+
+
+def test_make_puts_a_key_on_clusters_that_take_keys(store):
+    store["wulver", "ssh"] = Login("jdoe", "s3cret")
+    store["sdsc", "ssh"] = Login("jdoe2", "")
+    sdsc = hub_mod._hub.sessions["sdsc"]
+    sdsc.connected, sdsc.ssh = True, KeySsh()
+    got = methods.make(["wulver", "sdsc", "elsewhere"])
+    assert got["clusters"] == ["Wulver (NJIT)", "SDSC Expanse"] and got["skipped"] == []
+    (line,) = sdsc.ssh.ran
+    assert "authorized_keys" in line and ssh_keys.COMMENT in line
+    back = pairing.parse(got["text"])
+    assert back.key and [e.key for e in back.entries] == [False, True] and back.entries[0].password == "s3cret"
+    assert len(got["matrix"]) == len(got["matrix"][0]) and set("".join(got["matrix"])) == {"0", "1"}
+    assert got["svg"].startswith("<svg") and 'fill="#000"' in got["svg"]
+    nopw = pairing.parse(methods.make(["wulver"], passwords=False)["text"])
+    assert nopw.entries[0].password == "" and not nopw.key
+
+
+def test_make_skips_a_key_cluster_it_cannot_reach(store):
+    store["wulver", "ssh"] = Login("jdoe", "s3cret")
+    store["sdsc", "ssh"] = Login("jdoe2", "")
+    hub_mod._hub.sessions["sdsc"].connected = False
+    got = methods.make(["wulver", "sdsc"])
+    assert got["clusters"] == ["Wulver (NJIT)"] and "Connect it first" in got["skipped"][0]["reason"]
+    sdsc = hub_mod._hub.sessions["sdsc"]
+    sdsc.connected, sdsc.ssh = True, KeySsh(fail="Disk quota exceeded")
+    with pytest.raises(pairing.PairingError, match="Disk quota"):
+        methods.make(["sdsc"])
+    store.clear()
+    with pytest.raises(pairing.PairingError, match="No saved logins"):
+        methods.make()
+
+
 def test_apply_needs_a_known_cluster(store):
     with pytest.raises(pairing.PairingError, match="no login"):
         methods.apply(pairing.code(Code([Entry("elsewhere", "x")])))

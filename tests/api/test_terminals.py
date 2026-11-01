@@ -120,3 +120,11 @@ def test_open_link_only_web(monkeypatch):
     with pytest.raises(ValueError):
         terminals.open_link("file:///etc/passwd")
     assert opened == ["https://vscode.dev/tunnel/abc123"]
+
+
+def test_send_types_into_a_session_on_its_node(ssh):
+    terminals.send("wulver", "hpchub-claude-123-0900", "fix line 3\nplease", node="n0042")
+    (line,) = ssh.ran
+    assert "n0042" in line and "paste-buffer -p" in line and "Enter" in line
+    with pytest.raises(ValueError, match="Nothing"):
+        terminals.send("wulver", "s", "   ")
