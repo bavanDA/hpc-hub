@@ -11,8 +11,10 @@ import { Terminals } from './screens/Terminals'
 import { ToastProvider } from './ui'
 
 type Tab = 'clusters' | 'jobs' | 'terminals' | 'files' | 'more'
-const TABS: [Tab, string, LucideIcon][] = [['clusters', 'Clusters', Server], ['jobs', 'Jobs', ListChecks],
-  ['terminals', 'Terminals', SquareTerminal], ['files', 'Files', Folder], ['more', 'More', Menu]]
+// the desktop sidebar's order: Clusters, then your work, then the cluster's jobs, then data
+const TABS: [Tab, string, LucideIcon][] = [['clusters', 'Clusters', Server],
+  ['terminals', 'Terminals', SquareTerminal], ['jobs', 'Jobs', ListChecks], ['files', 'Files', Folder],
+  ['more', 'More', Menu]]
 // a plain browser (design work with the demo data): ?tab=jobs opens that screen
 const first = ('__TAURI_INTERNALS__' in window ? null : new URLSearchParams(location.search).get('tab')) as Tab | null
 

@@ -3,6 +3,9 @@
 @source '../../app/src/components/terminals';
 @source '../../app/src/components/clusters';
 @source '../../app/src/components/ui.tsx';
+@source '../../app/src/components/toast.tsx';
+@source '../../app/src/components/permissions';
+@source '../../app/src/pages/Permissions.tsx';
 
 /* A phone reads at arm's length: its text sizes stay a step larger than the desktop scale */
 @theme {
