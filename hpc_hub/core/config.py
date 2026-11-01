@@ -147,6 +147,12 @@ class ClusterConfig:
         minutes = (int(days) if days.isdigit() else 0) * 1440 + h * 60 + m
         return f"Fast node ({minutes} min)" if minutes < 60 else f"Fast node ({minutes / 60:g} h)"
 
+    def second_step(self) -> str:
+        """What the cluster asks after the password. Its admins decide, so the app says it, never asks it."""
+        if self.second_factor == "code":
+            return f"{self.name} asks for a code from your authenticator app."
+        return f"{self.name} asks for Duo on your phone."
+
     @property
     def vpn_connection_name(self) -> str:
         return f"HPC Hub - {self.name}"

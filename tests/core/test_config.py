@@ -95,3 +95,9 @@ def test_agent_compute_roundtrip(tmp_path):
     c = config.load(path)[0].claude.compute
     assert (c.cpus, c.mem_gb, c.time, c.gpus) == (8, 32, "02:00:00", 1)
 
+
+
+def test_second_step_is_said_not_chosen():
+    by_id = {c.id: c for c in config.default_clusters()}
+    assert by_id["wulver"].second_step() == "Wulver (NJIT) asks for Duo on your phone."
+    assert by_id["sdsc"].second_step() == "SDSC Expanse asks for a code from your authenticator app."
