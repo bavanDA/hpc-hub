@@ -1,6 +1,6 @@
 // Claude, ChatGPT, Antigravity or Cursor: pick a past chat to resume, or start a new one in a folder
 // (hpc_hub/agents/ui/agent_dialog.py).
-import { ChevronRight, Plus, Search } from 'lucide-react'
+import { ChevronDown, ChevronRight, Cpu, Search } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
 import { useGo } from '../../nav'
@@ -28,6 +28,7 @@ export function AgentDialog({ setup, agent: a, project = '', onClose }:
   const [chats, setChats] = useState<Chats | null>(null)
   const [error, setError] = useState('')
   const [query, setQuery] = useState('')
+  const [more, setMore] = useState(false)
 
   useEffect(() => {
     // the last list at once (reading chats can take seconds on a cold cluster), then the fresh one
@@ -60,40 +61,44 @@ export function AgentDialog({ setup, agent: a, project = '', onClose }:
     : list.length ? `Pick one to continue it.${chats.cached ? ' Checking for newer ones…' : ''}`
       : project ? 'No chats here yet.' : 'No chats yet on this cluster.'
 
+  const nodeLine = asks
+    ? (newNode ? 'Runs on a new compute node' : 'Asks for a compute node first')
+    : `Runs on your node ${setup.node} (no new job needed)`
   return (
-    <Dialog title={`${a.name} ${where}`} onClose={onClose} width={600}>
-      <Group>
-        {a.remote_label && <SwitchRow label={a.remote_label} sub={a.remote_hint} checked={remote}
-          onChange={setRemote} />}
-        <SwitchRow label="Use a new compute node" checked={newNode} onChange={setNewNode}
-          sub={hasNode ? `Off: same node as now (${setup.node}, job ${setup.job})`
-            : 'Off: same node (requested if needed)'} />
-      </Group>
-      {a.options.length > 0 && (
-        <Group title={`${a.name} options`}>
-          {a.options.map((o) => (
-            <SelectRow key={o.key} label={o.label} value={options[o.key] ?? ''} choices={o.choices}
-              onChange={(v) => setOptions({ ...options, [o.key]: v })} />
-          ))}
-        </Group>
-      )}
-      <Section title="Task" description="Optional. What it should work on; it starts right away, in a new chat or one
-        you pick below.">
+    <Dialog title={`${a.name} ${where}`} onClose={onClose} width={600}
+      actions={<>
+        <Button onClick={onClose}>Cancel</Button>
+        <Button kind="primary" onClick={() => run(folder.trim() || '~', '')}>Start</Button>
+      </>}>
+      <Section title="Task" description="Optional. What it should work on.">
         <TextBox value={task} onChange={setTask} placeholder="Fix the failing test in train.py" />
       </Section>
-      {asks ? <ComputeGroup cluster={setup.id} value={profile} onChange={setProfile} description={nodeNote} /> : (
-        <Group title="Compute node">
-          <Row title={`Your node ${setup.node}`} subtitle={`Job ${setup.job}. Nothing to ask for`} />
-        </Group>
-      )}
-      <Group title="New chat">
+      <Group>
         <FolderRow cluster={setup} value={folder} onChange={setFolder} />
-        <div className="flex justify-center p-3">
-          <Button kind="suggested" onClick={() => run(folder.trim() || '~', '')}>
-            <Plus size={16} /> Start new chat</Button>
-        </div>
+        <Row prefix={<Cpu size={16} className="text-dim" />} title={nodeLine}
+          subtitle={asks ? undefined : `Job ${setup.job}`} />
       </Group>
-      <Section title={project ? 'Chats in this project' : 'Recent chats'} description={chatsNote}>
+      <button type="button" onClick={() => setMore(!more)}
+        className="mb-3 flex items-center gap-1 font-semibold">
+        {more ? <ChevronDown size={16} /> : <ChevronRight size={16} />} Options</button>
+      {more && <>
+        <Group>
+          {a.remote_label && <SwitchRow label={a.remote_label} sub={a.remote_hint} checked={remote}
+            onChange={setRemote} />}
+          <SwitchRow label="Use a new compute node" checked={newNode} onChange={setNewNode}
+            sub={hasNode ? `Off: your node ${setup.node}` : 'Off: one is requested when needed'} />
+        </Group>
+        {a.options.length > 0 && (
+          <Group title={`${a.name} options`}>
+            {a.options.map((o) => (
+              <SelectRow key={o.key} label={o.label} value={options[o.key] ?? ''} choices={o.choices}
+                onChange={(v) => setOptions({ ...options, [o.key]: v })} />
+            ))}
+          </Group>
+        )}
+        {asks && <ComputeGroup cluster={setup.id} value={profile} onChange={setProfile} description={nodeNote} />}
+      </>}
+      <Section title={project ? 'Or continue a chat in this project' : 'Or continue a chat'} description={chatsNote}>
         {list.length > 6 && (
           <label className="mb-2 flex h-9 items-center gap-2 rounded-lg bg-pill px-3 focus-within:ring-2
             focus-within:ring-accent">

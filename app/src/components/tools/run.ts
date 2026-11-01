@@ -91,7 +91,7 @@ function onLink(cluster: string, job: string, key: string, openLinks: boolean, o
   return (link: Link) => {
     if (link.kind === 'tunnel' && link.tunnel) {
       const name = link.tunnel, home = tunnelHome(link.url)
-      addBanner(key, 'Open in the VS Code app', 'Open app', () => openTunnel(name, home, 'desktop'))
+      addBanner(key, 'VS Code is ready', 'Open VS Code', () => openTunnel(name, home, openIn))
       const p = pending.get(cluster)
       pending.delete(cluster)
       if (p) openTunnel(name, p.folder, p.target)
@@ -112,13 +112,14 @@ function onLink(cluster: string, job: string, key: string, openLinks: boolean, o
 export type VsRun = { folder: string; target: Target; job: string; replace_job: boolean
   profile: Record<string, unknown> | null; remember: boolean; remember_folder: boolean }
 
-export function startVscode(cluster: string, run: VsRun, openLinks: boolean, go: Go) {
+export function startVscode(cluster: string, run: VsRun, openLinks: boolean, _go?: Go) {
   if (!run.job || run.replace_job) notify(run.job ? `Stopping VS Code job ${run.job}…` : 'Submitting the VS Code job…')
   call<VsStarted>('tools.vscode_start', { cluster, ...run })
     .then((r) => {
       if (r.open) return opened(r.open)
       if (!r.follow) return
-      if (r.submitted) notify(`Submitted VS Code job ${r.submitted}, it opens when the job starts`)
+      notify(r.submitted ? `VS Code job ${r.submitted} is starting. It opens by itself when it's ready.`
+        : "VS Code is starting. It opens by itself when it's ready.")
       pending.set(cluster, { folder: r.folder, target: r.target })
       const f = following.get(cluster)
       if (f && f.job === r.follow.job && getTab(f.key)) {
@@ -129,7 +130,7 @@ export function startVscode(cluster: string, run: VsRun, openLinks: boolean, go:
           (link) => onLink(cluster, job, key, openLinks, r.target)(link))
         following.set(cluster, { job, key })
       }
-      go('terminals')
+      // you stay where you are: the job's log is in Terminals, and the folder opens once the tunnel is up
     })
     .catch(failed)
 }
