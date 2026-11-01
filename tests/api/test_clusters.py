@@ -177,3 +177,18 @@ def test_password_not_remembered_is_asked_once_and_kept_in_memory(monkeypatch):
     m.set_login(cfg.id, "ssh", "jdoe", None, remember=False)
     assert m._logins(cfg)[0].password == "secret" and m._logins(cfg)[0].password == "secret"
     assert len(asked) == 1  # once per run
+
+
+def test_forget_can_keep_the_username(monkeypatch):
+    from hpc_hub.api.methods import clusters as m
+    from hpc_hub.core import config, credentials
+    cfg = config.default_clusters()[0]
+    saved = {(cfg.id, "ssh"): credentials.Login("jdoe", "pw"), (cfg.id, "vpn"): credentials.Login("jdoe", "vpw")}
+    monkeypatch.setattr(credentials, "save", lambda c, k, login: saved.__setitem__((c, k), login))
+    monkeypatch.setattr(credentials, "load", lambda c, k: saved.get((c, k)))
+    monkeypatch.setattr(credentials, "clear", lambda c, k: saved.pop((c, k), None))
+    monkeypatch.setattr(m, "hub", lambda: type("H", (), {"session": lambda self, c: type("S", (), {"cfg": cfg})()})())
+    m.forget_logins(cfg.id, keep_username=True)
+    assert saved == {(cfg.id, "ssh"): credentials.Login("jdoe", ""), (cfg.id, "vpn"): credentials.Login("jdoe", "")}
+    m.forget_logins(cfg.id)
+    assert saved == {}

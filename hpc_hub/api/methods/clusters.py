@@ -204,11 +204,15 @@ def set_login(cluster: str, kind: str, username: str, password: str | None = Non
 
 
 @method("clusters.forget_logins")
-def forget_logins(cluster: str) -> None:
+def forget_logins(cluster: str, keep_username: bool = False) -> None:
+    """Remove the saved passwords. keep_username: the username stays, so only the password is asked next time."""
     cfg = hub().session(cluster).cfg
     for kind in KINDS:
+        saved = credentials.load(cfg.id, kind) if keep_username else None
         credentials.clear(cfg.id, kind)
         _memory().pop((cfg.id, kind), None)
+        if saved and saved.username:
+            credentials.save(cfg.id, kind, credentials.Login(saved.username, ""))
 
 
 @method("clusters.partitions")
