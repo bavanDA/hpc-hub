@@ -1,6 +1,6 @@
-// More › Settings: light or dark, the clusters you use, the monitoring bar, experimental pages, staying connected in
-// the background, and disconnecting everything at once.
-import { Bell, Power } from 'lucide-react'
+// More › Settings: light or dark, the clusters you use, staying connected in the background, which notifications to
+// get (parts/watchPhone.ts), the monitoring bar, experimental pages, and disconnecting everything at once.
+import { Power } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
 import { university, type SetupStatus } from '@shared/components/app/Welcome'
@@ -9,17 +9,12 @@ import { setMonitorBar } from '@shared/components/terminals/MonitorBar'
 import { call } from '@shared/rpc'
 import { setAppearance, type Appearance } from '@shared/theme'
 import { Header } from '../parts/Header'
-import { keepAlive } from '../parts/native'
+import { askForNotifications, EXPLAIN, KINDS, notificationsAllowed, setPhonePrefs, usePhonePrefs } from '../parts/watchPhone'
 import { Card, ConfirmSheet, ListRow, Segments, Switch, useToast } from '../ui'
 
 type Prefs = { monitor_bar: boolean; appearance: Appearance; experimental: boolean }
 
 const THEMES = [['system', 'System'], ['light', 'Light'], ['dark', 'Dark']] as const
-const KEEP = 'hpchub.keep-connected'
-
-function readKeep(): boolean {
-  try { return localStorage.getItem(KEEP) === '1' } catch { return false }
-}
 
 function Title({ children }: { children: string }) {
   return <h2 className="mb-2 mt-5 text-sm font-bold text-dim first:mt-0">{children}</h2>
@@ -30,11 +25,14 @@ export function Settings() {
   const { sessions } = useClusters()
   const [prefs, setPrefs] = useState<Prefs | null>(null)
   const [setup, setSetup] = useState<SetupStatus | null>(null)
-  const [keep, setKeep] = useState(readKeep)
+  const phone = usePhonePrefs()
+  const [allowed, setAllowed] = useState<boolean | null>(null)
+  const [explain, setExplain] = useState(false)
   const [confirm, setConfirm] = useState(false)
   useEffect(() => {
     call<Prefs>('preferences.get').then(setPrefs).catch((e: Error) => toast(e.message))
     call<SetupStatus>('setup.status').then(setSetup).catch(() => {})
+    notificationsAllowed().then(setAllowed).catch(() => setAllowed(false))
   }, [toast])
 
   async function save(change: Partial<Prefs>) {
@@ -56,15 +54,16 @@ export function Settings() {
       .catch((e: Error) => toast(e.message))
   }
 
-  async function stayConnected(on: boolean) {
-    setKeep(on)
-    try {
-      await keepAlive(on)
-      try { localStorage.setItem(KEEP, on ? '1' : '0') } catch { /* private storage: the switch still works now */ }
-    } catch (e) {
-      setKeep(!on)
-      toast((e as Error).message)
-    }
+  // Android asks once; after a no, only its app settings can change it
+  async function allow() {
+    const ok = await askForNotifications().catch(() => false)
+    setAllowed(ok)
+    if (!ok) toast("Android didn't allow notifications. Turn them on in Android's settings for HPC Hub.")
+  }
+
+  function notifications(on: boolean) {
+    setPhonePrefs({ notify: on })
+    if (on && allowed === false) setExplain(true)
   }
 
   const live = Object.values(sessions).filter((s) => s.state !== 'Disconnected' && s.state !== 'Error')
@@ -94,11 +93,24 @@ export function Settings() {
         <Title>On the phone</Title>
         <Card className="py-1">
           <Switch label="Stay connected in the background"
-            hint="Keeps your clusters connected while you use other apps, with a notification." checked={keep}
-            onChange={stayConnected} />
-          <ListRow icon={Bell} title="Notifications"
-            subtitle="In a later update" />
+            hint="Your clusters stay connected while you use other apps. Android shows a small notice, and the phone uses a little more battery while a cluster is connected."
+            checked={phone.keep} onChange={(keep) => setPhonePrefs({ keep })} />
+          <Switch label="Notifications"
+            hint={phone.notify && allowed === false ? 'Android has them off for HPC Hub.'
+              : 'Not while you are already looking at what they are about.'}
+            checked={phone.notify} onChange={notifications} />
+          {phone.notify && allowed === false && (
+            <ListRow title="Allow notifications" subtitle="Android asks you once" onClick={() => setExplain(true)} />
+          )}
         </Card>
+        {phone.notify && (
+          <Card className="mt-3 py-1">
+            {KINDS.map(([kind, label]) => (
+              <Switch key={kind} label={label} checked={phone.kinds[kind]}
+                onChange={(on) => setPhonePrefs({ kinds: { ...phone.kinds, [kind]: on } })} />
+            ))}
+          </Card>
+        )}
 
         <Title>Terminals</Title>
         <Card className="py-1">
@@ -121,6 +133,8 @@ export function Settings() {
           </Card>
         </>}
       </div>
+      {explain && <ConfirmSheet title="Get notifications?" text={EXPLAIN} confirm="Allow" onConfirm={allow}
+        onClose={() => setExplain(false)} />}
       {confirm && <ConfirmSheet title="Disconnect all clusters?" danger confirm="Disconnect all"
         text="Your compute nodes started by HPC Hub end. Sessions in tmux keep running on the clusters."
         onConfirm={disconnectAll} onClose={() => setConfirm(false)} />}
