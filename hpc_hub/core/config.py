@@ -48,12 +48,15 @@ class ComputeProfile:
     account: str = ""
     qos: str = ""
     gpus: int = 0
+    gpu_type: str = ""  # Slurm's gres type (a100_10g, h100); "" = any GPU (compute/gpus.py)
     extra_args: str = ""
 
     def summary(self) -> str:
         parts = [f"{self.cpus} cores", f"{self.mem_gb} GB", short_time(self.time)]
         if self.gpus:
-            parts.append(f"{self.gpus} GPU")
+            from ..compute.gpus import describe
+            name = describe(self.gpu_type)[0] if self.gpu_type else "GPU"
+            parts.append(name if self.gpus == 1 and self.gpu_type else f"{self.gpus} × {name}")
         if self.partition:
             parts.append(self.partition)
         return " · ".join(parts)

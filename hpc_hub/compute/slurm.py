@@ -10,6 +10,7 @@ from dataclasses import dataclass
 
 from ..core.config import ComputeProfile
 from ..core.ssh import SshMaster
+from . import gpus
 
 SAFE = re.compile(r"^[A-Za-z0-9_.,:=+-]*$")
 TIME = re.compile(r"^(\d+-)?\d{1,2}(:\d{2}){0,2}$")
@@ -47,7 +48,8 @@ def validate(p: ComputeProfile) -> list[str]:
         errors.append("Memory must be at least 1 GB")
     if not TIME.match(p.time):
         errors.append("Wall time must look like 04:00:00 or 1-00:00:00")
-    for label, value in (("Partition", p.partition), ("Account", p.account), ("QOS", p.qos)):
+    for label, value in (("Partition", p.partition), ("Account", p.account), ("QOS", p.qos),
+                         ("GPU type", p.gpu_type)):
         if not SAFE.match(value):
             errors.append(f"{label} has invalid characters")
     try:
@@ -67,7 +69,7 @@ def resource_args(p: ComputeProfile) -> list[str]:
     if p.qos:
         args.append(f"--qos={p.qos}")
     if p.gpus:
-        args.append(f"--gres=gpu:{p.gpus}")
+        args.append(gpus.gres_arg(p.gpu_type, p.gpus))
     return args + shlex.split(p.extra_args)
 
 

@@ -3,6 +3,7 @@ kept in the keyring (passwords go in, never out)."""
 
 from dataclasses import asdict, fields, replace
 
+from ...compute import gpus as gpu_list
 from ...compute import slurm
 from ...connect.state import State
 from ...core import credentials
@@ -108,6 +109,10 @@ def _profile(base: ComputeProfile, changes: dict) -> ComputeProfile:
     p = replace(base, **clean)
     if p.gpus < 0:
         raise ValueError("GPUs can't be negative")
+    if not p.gpus:
+        p = replace(p, gpu_type="")
+    elif p.gpu_type and gpu_list.describe(p.gpu_type)[2] and p.gpus > 1:
+        raise ValueError("One GPU slice per job. Pick a bigger slice or a whole GPU")
     errors = slurm.validate(p)
     if errors:
         raise ValueError(". ".join(errors))
@@ -226,6 +231,16 @@ def partitions(cluster: str, partition: str = "", qos: str = "") -> dict:
     longest, why = lim.longest(partition.strip(), qos.strip())
     return {"known": True, "partitions": list(lim.partitions), "default_partition": lim.default_partition,
             "qos": lim.allowed_qos, "default_qos": lim.default_qos, "longest": longest, "why": why}
+
+
+@method("clusters.gpus")
+def gpus(cluster: str) -> dict:
+    """The GPU types this cluster offers, read from Slurm at the last login (known false: the docs' list)."""
+    s = hub().session(cluster)
+    lim = s.limits
+    if lim and lim.gres:
+        return {"known": True, "gpus": gpu_list.as_json(gpu_list.options(lim.gres, s.cfg.id))}
+    return {"known": False, "gpus": gpu_list.as_json(gpu_list.from_docs(s.cfg.id))}
 
 
 @method("clusters.log")

@@ -7,9 +7,11 @@ from dataclasses import asdict, dataclass, field, replace
 
 from ..core.config import ComputeProfile
 from ..core.paths import log_dir
+from . import gpus
 
 FETCH = ("sinfo -h -o '%P|%l'; echo @QOS; sacctmgr -nP show qos format=name,maxwall 2>/dev/null; "
-         "echo @ASSOC; sacctmgr -nP show assoc user=\"$USER\" format=qos,defaultqos 2>/dev/null; true")
+         "echo @ASSOC; sacctmgr -nP show assoc user=\"$USER\" format=qos,defaultqos 2>/dev/null; "
+         "echo @GRES; sinfo -h -o '%P|%G' 2>/dev/null; true")
 SLURM_TIME = re.compile(r"^(?:(\d+)-)?(\d+)(?::(\d+))?(?::(\d+))?$")
 
 
@@ -51,6 +53,7 @@ class Limits:
     qos: dict[str, int | None] = field(default_factory=dict)
     allowed_qos: list[str] = field(default_factory=list)  # the QoS your account may use
     default_qos: str = ""
+    gres: dict[str, list[str]] = field(default_factory=dict)  # partition -> GPU gres ("gpu:a100_10g:2")
 
     def longest(self, partition: str, qos: str) -> tuple[int | None, str]:
         """The longest time a job may ask for, and what sets it ('QoS standard'). (None, '') = no limit."""
@@ -78,9 +81,13 @@ class Limits:
 def parse(text: str) -> Limits:
     out = Limits()
     section = "part"
+    gres_lines = []
     for line in text.splitlines():
-        if line in ("@QOS", "@ASSOC"):
+        if line in ("@QOS", "@ASSOC", "@GRES"):
             section = line[1:].lower()
+            continue
+        if section == "gres":
+            gres_lines.append(line)
             continue
         cells = line.strip().split("|")
         if section == "part" and len(cells) == 2 and cells[0]:
@@ -95,6 +102,7 @@ def parse(text: str) -> Limits:
                 if q and q not in out.allowed_qos:
                     out.allowed_qos.append(q)
             out.default_qos = out.default_qos or cells[1]
+    out.gres = gpus.parse("\n".join(gres_lines))
     return out
 
 
