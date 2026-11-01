@@ -39,7 +39,7 @@ export function NewTerminalDialog({ live, cluster: start = '', onClose, onOpened
 
   return (
     <Dialog title="New terminal" onClose={onClose}>
-      <p className="mb-4 text-dim">Runs in tmux, so it keeps going when you close the tab.</p>
+      <p className="mb-4 text-dim">It keeps running when you close the tab or the app.</p>
       <div className="flex flex-col gap-4">
         <Field label="Name">
           <input autoFocus value={name} onChange={(e) => setName(e.target.value)} className={inputClass}
@@ -53,16 +53,18 @@ export function NewTerminalDialog({ live, cluster: start = '', onClose, onOpened
             {live.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
           </select>
         </Field>
-        <Field label="Run on" hint={c?.node ? undefined : 'No compute node right now. Get one on the cluster card.'}>
+        <Field label="Run on" hint={onNode && c?.node ? 'Your own node, for real work.'
+          : c?.node ? "The login node is for editing and submitting jobs. Don't run heavy work there."
+            : "No compute node right now, so it runs on the login node. Don't run heavy work there."}>
           <select value={onNode && c?.node ? 'node' : 'login'} className={inputClass}
             onChange={(e) => setOnNode(e.target.value === 'node')}>
-            <option value="login">Login node</option>
+            <option value="login">Login node (shared)</option>
             {c?.node && <option value="node">Compute node {c.node} (job {c.job})</option>}
           </select>
         </Field>
         <Field label="Start in">
           <input value={folder} onChange={(e) => setFolder(e.target.value)} className={inputClass}
-            spellCheck={false} placeholder="~" />
+            spellCheck={false} placeholder="~ (your home folder)" />
         </Field>
         <Field label="Color">
           <div className="flex gap-1">

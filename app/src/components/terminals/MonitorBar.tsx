@@ -88,9 +88,10 @@ export function MonitorBar({ cluster, node, shown }: { cluster: string; node: st
   return (
     <div className="flex h-6 shrink-0 items-center gap-3.5 overflow-hidden border-t border-line bg-view px-2.5
       font-mono text-xs whitespace-nowrap text-dim tabular-nums">
-      <Item icon={Server} text={host} tip={`Host: ${host}`} />
+      <Item icon={Server} text={host} tip={`${host}: the whole machine, all users. Not just this terminal.`} />
       <Item icon={Cpu} text={st?.cpu == null ? '...' : `${Math.round(st.cpu)}%`} level={level(st?.cpu ?? null)}
-        tip={st?.cpu == null ? 'CPU: waiting for a second sample' : `CPU: ${st.cpu.toFixed(1)}% of all cores in use`} />
+        tip={st?.cpu == null ? 'CPU: waiting for a second sample'
+          : `CPU: ${st.cpu.toFixed(1)}% of all cores in use, by everyone on ${host}`} />
       <Item icon={MemoryStick} text={st ? usedOf(st.mem_used, st.mem_total) : '...'} level={level(mem)}
         tip={st ? `Memory: ${size(st.mem_used)} of ${size(st.mem_total)} in use${
           mem === null ? '' : ` (${Math.round(mem)}%)`}` : 'Memory'} />

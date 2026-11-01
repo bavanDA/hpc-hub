@@ -105,8 +105,8 @@ export function WebLogin({ q, onAnswer }: { q: Question; onAnswer: (a: string | 
             Could not open the sign-in window: {error}</p>
         : <Waiting title="Sign in in the window that opened" text={status} />}
       {!error && <p className="mt-3 text-center text-sm text-dim">
-        {q.note ?? (q.fill ? 'Your saved username and password are filled in there. If you click a link, you type '
-          + 'from then on.' : 'No password is saved for this VPN, so you type it there.')}</p>}
+        {q.note ?? (q.fill ? 'HPC Hub fills in your username and password on the first page. On any other page, '
+          + 'type them yourself.' : 'No password is saved for this VPN, so you type it there.')}</p>}
     </Dialog>
   )
 }

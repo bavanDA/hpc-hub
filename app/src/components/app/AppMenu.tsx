@@ -32,7 +32,7 @@ export function AppMenu({ onExperimental }: { onExperimental: (on: boolean) => v
   const items: [string, () => void, string?][][] = [
     [['Settings…', prefs, isMac ? '⌘,' : 'Ctrl+,'], ['About HPC Hub', () => setDialog(<AboutDialog onClose={close} />)]],
     [['Disconnect all and quit…', quit.disconnectAndQuit],
-      ['Quit (keep everything running)', quit.quit, isMac ? '⌘Q' : 'Ctrl+Q']],
+      ['Close HPC Hub (nodes and VPN stay on)', quit.quit, isMac ? '⌘Q' : 'Ctrl+Q']],
   ]
   return (
     <div ref={box} className="relative">
