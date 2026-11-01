@@ -49,8 +49,7 @@ POSIX_TESTS = {
     "core/test_ssh_keys.py::test_authorize_replaces_the_last_phone_key",  # sh: it runs on the cluster
     "core/test_vault_file.py::test_saved_encrypted_and_private",  # 0600 mode: the vault is Android only
     # the HPC Hub Chrome window is Unix only (posix_spawn, fcntl): Windows does not offer it
-    "api/test_sso.py::test_pick_browser_offers_the_app_window_and_chrome_profiles",
-    "api/test_sso.py::test_pick_browser_offers_the_chrome_window",
+    "api/test_sso.py::test_pick_browser_offers_the_app_window_and_the_chrome_window",
 }
 
 GNU_TOOLS = {

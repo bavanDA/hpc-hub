@@ -1,5 +1,5 @@
-"""VPN web sign-in from the backend's side: where to sign in, the app's window, and a Chrome profile. Fakes only:
-no Chrome, no keyring, no VPN server."""
+"""Web sign-in from the backend's side: where to sign in, the app's window and our Chrome window. Fakes only: no
+Chrome, no VPN server."""
 
 import json
 import re
@@ -87,36 +87,23 @@ def no_secret_in(events):
     assert SECRET not in json.dumps(events, default=str)
 
 
-def test_pick_browser_offers_the_app_window_and_chrome_profiles(hub, monkeypatch):
+def test_pick_browser_offers_the_app_window_and_the_chrome_window(hub, monkeypatch):
     monkeypatch.setattr(browser, "chrome", lambda: "")
     assert hub.pick_browser(wulver()) == ""  # no Chrome: the app's window, nothing asked
     assert hub.events == []
 
     monkeypatch.setattr(browser, "chrome", lambda: "/usr/bin/google-chrome")
-    monkeypatch.setattr(browser, "profiles", lambda: [browser.Profile("Default", "Home"),
-                                                      browser.Profile("Profile 2", "Uni", "jdoe@example.edu")])
     s = wulver()
-    s.cfg.vpn.browser = "Uni"
-    for answer, want in (("Uni", "Uni"), ("", ""), (None, None), ("Elsewhere", None)):
+    s.cfg.vpn.browser = chrome_window.CHOICE
+    for answer, want in ((chrome_window.CHOICE, chrome_window.CHOICE), ("", ""), (None, None), ("Uni", None)):
         t, out = run(hub.pick_browser, s)
         q = next_question(hub)
-        assert q["kind"] == "pick-browser" and q["default"] == "Uni" and q["chrome_window"] == chrome_window.CHOICE
-        assert q["profiles"] == [{"name": "Home", "email": ""}, {"name": "Uni", "email": "jdoe@example.edu"}]
+        assert q["kind"] == "pick-browser" and q["default"] == chrome_window.CHOICE
+        assert q["chrome_window"] == chrome_window.CHOICE and "profiles" not in q  # never your own Chrome
         hub.answer(q["id"], answer)
         t.join(5)
         assert out["result"] == want
         hub.events.clear()
-
-
-def test_pick_browser_offers_the_chrome_window(hub, monkeypatch):
-    monkeypatch.setattr(browser, "chrome", lambda: "/usr/bin/google-chrome")
-    monkeypatch.setattr(browser, "profiles", lambda: [])  # Chrome without profiles yet: still worth asking
-    t, out = run(hub.pick_browser, wulver())
-    q = next_question(hub)
-    assert q["profiles"] == [] and q["chrome_window"] == chrome_window.CHOICE
-    hub.answer(q["id"], chrome_window.CHOICE)
-    t.join(5)
-    assert out["result"] == chrome_window.CHOICE
 
 
 @pytest.fixture
@@ -206,58 +193,13 @@ def test_app_window_errors(hub, answer, want):
     assert out["result"] == want
 
 
-@pytest.fixture
-def chrome(monkeypatch):
-    """A Chrome with one profile; the token cookie shows up when cookie["token"] is set."""
-    from hpc_hub.connect import chrome_cookies
-    opened, cookie, asked = [], {}, []
-    monkeypatch.setattr(browser, "profiles", lambda: [browser.Profile("Profile 2", "Uni")])
-    monkeypatch.setattr(browser, "open_url", lambda url, name: opened.append((url, name)) or True)
-
-    def wait_for(folder, host, name, since, cancelled, timeout=600):
-        asked.append((folder, host, name))
-        while not cancelled():
-            if cookie.get("token"):
-                return cookie["token"]
-            time.sleep(0.01)
-        return ""
-    monkeypatch.setattr(chrome_cookies, "wait_for", wait_for)
-    return opened, cookie, asked
-
-
-def test_chrome_profile_picks_up_the_token(hub, chrome):
-    opened, cookie, asked = chrome
-    t, out = run(hub.web_login, wulver(), START, Login("jdoe", SECRET), "uni")
+def test_a_portal_sign_in_says_what_it_is(hub):
+    t, out = run(hub.web_login, wulver(), START, Login("", ""), "", "Wulver (NJIT) portal sign-in", "No password")
     q = next_question(hub)
-    assert q["kind"] == "browser-login" and q["profile"] == "Uni"
-    assert opened == [(START.login_url, "Uni")]
-    hub.answer(q["id"], "again")
-    q2 = next_question(hub, wait_done(hub, q["id"]))
-    assert q2["kind"] == "browser-login" and len(opened) == 2
-    cookie["token"] = "tok-from-chrome"
+    assert q["kind"] == "web-login" and q["title"] == "Wulver (NJIT) portal sign-in" and q["note"] == "No password"
+    hub.answer(q["id"], json.dumps({"token": "session-1"}))
     t.join(5)
-    assert out["result"] == ("tok-from-chrome", "")
-    assert asked == [("Profile 2", "vpn.example.edu", "acSamlv2Token")]
-    wait_done(hub, q2["id"])
-    no_secret_in(hub.events)
-
-
-def test_chrome_profile_can_switch_to_the_app_window_or_cancel(hub, chrome):
-    t, out = run(hub.web_login, wulver(), START, Login("jdoe", SECRET), "Uni")
-    q = next_question(hub)
-    hub.answer(q["id"], "in-app")
-    q2 = next_question(hub, wait_done(hub, q["id"]))
-    assert q2["kind"] == "web-login"
-    hub.answer(q2["id"], None)
-    t.join(5)
-    assert out["result"] == ("", "Sign-in cancelled")
-
-    hub.events.clear()
-    t, out = run(hub.web_login, wulver(), START, Login("jdoe", SECRET), "Uni")
-    hub.answer(next_question(hub)["id"], None)
-    t.join(5)
-    assert out["result"] == ("", "Sign-in cancelled")
-    assert hub.web_login(wulver(), START, Login("jdoe", ""), "Nobody") == ("", "No Chrome profile named Nobody")
+    assert out["result"] == ("session-1", "")
 
 
 def _rust_const(name: str) -> str:

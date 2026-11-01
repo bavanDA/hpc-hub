@@ -12,7 +12,6 @@ from ...agents.catalog import AGENTS, BY_ID
 from ...compute import slurm
 from ...connect import chrome_window
 from ...connect.vpn import split_errors
-from ...core import browser
 from ...core.config import VPN_PROTOCOLS, ComputeProfile
 from ..hub import hub
 from ..server import method
@@ -100,7 +99,7 @@ def _queues(v) -> str:
     return ",".join(out)
 
 
-def _vpn(v, changes, browsers: list[str]) -> None:
+def _vpn(v, changes, windows: list[str]) -> None:
     _known(changes, VPN, "VPN")
     for k, x in changes.items():
         if k in ("enabled", "same_login_as_ssh", "split_tunnel"):
@@ -119,8 +118,8 @@ def _vpn(v, changes, browsers: list[str]) -> None:
             setattr(v, k, " ".join(_text(x, f"VPN {k}", 1000).split()))
         elif k == "browser":
             name = _text(x, "Sign in with", 100)
-            if name and name != v.browser and name not in browsers:
-                raise ValueError(f"No Chrome profile named {name}")
+            if name and name != v.browser and name not in windows:
+                raise ValueError(f"Can't sign in with {name}")
             v.browser = name
 
 
@@ -139,8 +138,9 @@ def _agent(a, agent_id: str, changes) -> None:
             setattr(a, k, x)
 
 
-def apply(cfg, changes: dict, browsers: list[str]):
-    """A checked copy of cfg with the changes; ValueError (and cfg untouched) at the first problem."""
+def apply(cfg, changes: dict, windows: list[str]):
+    """A checked copy of cfg with the changes; ValueError (and cfg untouched) at the first problem. windows: the
+    sign-in windows besides the app's own (our Chrome window, where there is Chrome)."""
     _known(changes, TOP, "")
     c = copy.deepcopy(cfg)
     for k, x in changes.items():
@@ -161,7 +161,7 @@ def apply(cfg, changes: dict, browsers: list[str]):
         elif k == "queue_wait":
             c.queue_wait = _int(x, "Queue wait (seconds)", 0, 3600)
         elif k == "vpn":
-            _vpn(c.vpn, x, browsers)
+            _vpn(c.vpn, x, windows)
         elif k == "profile":
             c.profile = _profile(c.profile, x, "Compute node")
         elif k == "vscode":
@@ -190,16 +190,12 @@ def apply(cfg, changes: dict, browsers: list[str]):
     return c
 
 
-def _browsers() -> list[str]:
-    return [p.name for p in browser.profiles()] if browser.chrome() else []
-
-
 @method("cluster_settings.get")
 def get(cluster: str) -> dict:
-    """The cluster's settings, the Chrome profiles to sign in with (and our Chrome window, when Chrome is there),
-    and each agent's options (no secrets)."""
+    """The cluster's settings, whether our Chrome window is there to sign in with, and each agent's options (no
+    secrets)."""
     cfg = hub().session(cluster).cfg
-    return {"cluster": asdict(cfg), "browsers": _browsers(), "protocols": VPN_PROTOCOLS,
+    return {"cluster": asdict(cfg), "protocols": VPN_PROTOCOLS,
             "chrome_window": {"value": chrome_window.CHOICE, "offered": chrome_window.available()},
             "agents": [{"id": a.id, "name": a.name, "remote_label": a.remote_label, "remote_hint": a.remote_hint,
                         "options": [{"key": o.key, "label": o.label, "choices": [list(c) for c in o.choices]}
@@ -210,7 +206,7 @@ def get(cluster: str) -> dict:
 def save(cluster: str, changes: dict) -> dict:
     """Check every change, then save them all; answers the cluster's settings."""
     cfg = hub().session(cluster).cfg
-    new = apply(cfg, changes, _browsers() + ([chrome_window.CHOICE] if chrome_window.available() else []))
+    new = apply(cfg, changes, [chrome_window.CHOICE] if chrome_window.available() else [])
     for f in fields(cfg):  # the session keeps this same object
         setattr(cfg, f.name, getattr(new, f.name))
     hub().save_clusters()

@@ -4,12 +4,11 @@ import threading
 
 from gi.repository import Adw, GLib, Gtk
 
-from ...core import browser
 from ...ui.widgets import profile_choices
 from .. import chrome_window
 from ..session import ClusterSession
 from .authenticator_help import AuthenticatorHelp
-from .browser_login import BrowserLoginDialog, ChromeWindowDialog
+from .browser_login import ChromeWindowDialog
 from .web_login import WebLoginDialog
 
 
@@ -30,7 +29,10 @@ class LoginPromptsMixin:
         done.wait()
         return result["answer"]
 
-    def web_login(self, session: ClusterSession, start, login, profile: str = "") -> tuple[str, str]:
+    def web_login(self, session: ClusterSession, start, login, profile: str = "", title: str = "",
+                  note: str = "") -> tuple[str, str]:
+        """A web sign-in: the VPN's, or a portal's (title says which). note is for the desktop app's dialog."""
+        title = title or f"{session.cfg.name} VPN sign-in"
         done = threading.Event()
         result = {"token": "", "err": "Sign-in cancelled"}
 
@@ -39,17 +41,13 @@ class LoginPromptsMixin:
             done.set()
 
         def in_app():
-            WebLoginDialog(f"{session.cfg.name} VPN sign-in", start, login.username, login.password,
-                           finished).present(self.window)
+            WebLoginDialog(title, start, login.username, login.password, finished).present(self.window)
 
         def show():
             if not self.window:
                 done.set()
             elif profile == chrome_window.CHOICE:
-                ChromeWindowDialog(f"{session.cfg.name} VPN sign-in", start, finished, in_app).present(self.window)
-            elif profile:
-                BrowserLoginDialog(f"{session.cfg.name} VPN sign-in", start, profile, finished,
-                                   in_app).present(self.window)
+                ChromeWindowDialog(title, start, finished, in_app).present(self.window)
             else:
                 in_app()
             return False
@@ -59,12 +57,12 @@ class LoginPromptsMixin:
         return result["token"], result["err"]
 
     def pick_browser(self, session: ClusterSession) -> str | None:
-        found = browser.profiles() if browser.chrome() else []
-        if not (found or chrome_window.available()):
+        """The app's window, or our Chrome window where there is one. Never your own Chrome profile."""
+        if not chrome_window.available():
             return ""
         done = threading.Event()
         result: dict[str, str | None] = {"answer": None}
-        GLib.idle_add(self._browser_dialog, session, found, result, done)
+        GLib.idle_add(self._browser_dialog, session, result, done)
         done.wait()
         return result["answer"]
 
@@ -87,13 +85,12 @@ class LoginPromptsMixin:
         dialog.present(self.window)
         return False
 
-    def _browser_dialog(self, session, found, result, done) -> bool:
+    def _browser_dialog(self, session, result, done) -> bool:
         dialog = Adw.AlertDialog(heading=f"Sign in to the {session.cfg.name} VPN",
                                  body="Where do you want to sign in?")
-        fixed = [("", "HPC Hub window", "Fills in your username and password")]
-        if chrome_window.available():
-            fixed.append((chrome_window.CHOICE, chrome_window.TITLE, chrome_window.SUBTITLE))
-        options, picked = profile_choices(fixed, found, session.cfg.vpn.browser)
+        fixed = [("", "HPC Hub window", "Fills in your username and password"),
+                 (chrome_window.CHOICE, chrome_window.TITLE, chrome_window.SUBTITLE)]
+        options, picked = profile_choices(fixed, [], session.cfg.vpn.browser)
         dialog.set_extra_child(options)
         dialog.add_response("cancel", "Cancel")
         dialog.add_response("ok", "Sign in")

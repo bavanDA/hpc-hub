@@ -101,3 +101,10 @@ def test_second_step_is_said_not_chosen():
     by_id = {c.id: c for c in config.default_clusters()}
     assert by_id["wulver"].second_step() == "Wulver (NJIT) asks for Duo on your phone."
     assert by_id["sdsc"].second_step() == "SDSC Expanse asks for a code from your authenticator app."
+
+
+def test_old_chrome_profile_sign_in_falls_back_to_the_app_window(tmp_path):
+    path = tmp_path / "clusters.toml"
+    path.write_text('[clusters.wulver.vpn]\nbrowser = "Uni"\n[clusters.yale.vpn]\nbrowser = "hpc-hub:chrome-window"\n')
+    loaded = {c.id: c for c in config.load(path)}
+    assert loaded["wulver"].vpn.browser == "" and loaded["yale"].vpn.browser == config.CHROME_WINDOW
