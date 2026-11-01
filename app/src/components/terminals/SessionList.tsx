@@ -1,5 +1,5 @@
 // The Sessions panel: tmux sessions per connected cluster. Click one to open it on the right.
-import { Plus, RefreshCw } from 'lucide-react'
+import { PanelLeftClose, Plus, RefreshCw } from 'lucide-react'
 
 import { AGENT_NAMES, type TmuxSession } from '../../types/terminals'
 import { useToast } from '../toast'
@@ -26,15 +26,16 @@ export function PanelHead({ title, children }: { title: string; children?: React
   )
 }
 
-export function SessionList({ live, listings, tabs, current, onRefresh, onNew }: {
+export function SessionList({ live, listings, tabs, current, onRefresh, onNew, onHide }: {
   live: Live[]; listings: Record<string, Listed>; tabs: Tab[]; current: string | null
-  onRefresh: () => void; onNew: () => void
+  onRefresh: () => void; onNew: () => void; onHide?: () => void
 }) {
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <PanelHead title="Sessions">
         <IconButton icon={RefreshCw} label="Refresh" size={16} onClick={onRefresh} />
         <IconButton icon={Plus} label="New terminal" onClick={onNew} />
+        {onHide && <IconButton icon={PanelLeftClose} label="Hide sessions" onClick={onHide} />}
       </PanelHead>
       <div className="min-h-0 flex-1 overflow-auto px-2 pb-2">
         {!live.length && <Note>Connect a cluster to see its sessions.</Note>}
