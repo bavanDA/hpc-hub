@@ -13,14 +13,14 @@ import { Button, Dialog } from '../ui'
 import { AuthenticatorHelp } from './AuthenticatorHelp'
 import { Duration } from './ComputeDialog'
 import { ActionRow, ButtonRow, ComboRow, EntryRow, Group, NumberBox, SpinRow, SwitchRow } from './fields'
-import { KeyHelpLink, KeyPanel, PasswordInstead } from './KeyPanel'
+import { KeyPanel, keyHeading, PasswordInstead } from './KeyPanel'
 import { KeySetupDialog } from './KeySetupDialog'
 import { copy } from './loginCopy'
 import { CHROME_WINDOW } from './SignIn'
 import { putCluster } from './store'
 import { minutes, slurmTime } from './time'
 
-const TABS = [['login', 'Login'], ['server', 'Server & VPN'], ['compute', 'Compute'], ['vscode', 'VS Code'],
+const TABS = [['login', 'Sign-in'], ['server', 'Server'], ['compute', 'Compute'], ['vscode', 'VS Code'],
   ['agents', 'Agents']] as const
 export type Tab = typeof TABS[number][0]
 
@@ -32,9 +32,6 @@ const VPN_KEYS = ['enabled', 'gateway', 'protocol', 'useragent', 'authgroup', 's
 const pick = <T extends object, K extends keyof T>(o: T, keys: readonly K[]) =>
   Object.fromEntries(keys.filter((k) => o[k] !== undefined).map((k) => [k, o[k]]))
 
-function host(url: string) {
-  try { return new URL(url).hostname } catch { return url }
-}
 
 /** Cores, memory, GPUs, time, partition, account, QOS and extra arguments (settings.py ProfileRows). */
 function ProfileRows({ cluster, p, onChange, extra }:
@@ -51,8 +48,8 @@ function ProfileRows({ cluster, p, onChange, extra }:
   return <>
     <SpinRow label="CPU cores" value={p.cpus} onChange={(cpus) => set({ cpus })} min={1} max={512} />
     <SpinRow label="Memory (GB)" value={p.mem_gb} onChange={(mem_gb) => set({ mem_gb })} min={1} max={4096} />
-    <SpinRow label="GPUs" value={p.gpus ?? 0} onChange={(gpus) => set({ gpus })} min={0} max={16} />
     <Duration total={minutes(p.time) ?? 240} onChange={(m) => set({ time: slurmTime(m) })} limits={limits} />
+    <SpinRow label="GPUs" value={p.gpus ?? 0} onChange={(gpus) => set({ gpus })} min={0} max={16} />
     <EntryRow label="Partition" value={p.partition} onChange={(partition) => set({ partition })}
       list={limits?.partitions} placeholder={limits?.default_partition} />
     <EntryRow label="Account" value={p.account ?? ''} onChange={(account) => set({ account })} />
@@ -144,7 +141,7 @@ export function SettingsDialog({ cluster, hint, onClose, start = 'login' }:
       await call('clusters.forget_logins', { cluster: d.id })
       setSaved({ ssh: { username: '', password: false }, vpn: { username: '', password: false } })
       setUser(''); setPassword(''); setVpnUser(''); setVpnPassword('')
-      toast('Saved logins removed')
+      toast('Saved password removed')
     } catch (e) {
       toast((e as Error).message)
     }
@@ -159,38 +156,38 @@ export function SettingsDialog({ cluster, hint, onClose, start = 'login' }:
 
   const instead = d.key_page && d.password_too
     ? <div className="-mt-2 mb-5 flex"><PasswordInstead on={usePassword} onChange={setUsePassword} /></div> : null
+  const forgetLink = (what: string) => (
+    <button type="button" onClick={forget}
+      className="mt-1 rounded px-1 py-1 text-[14px] font-bold text-bad hover:underline">Forget {what}</button>
+  )
+  const keyText = keyHeading(d).text
   const login = d.key_page && !usePassword ? <>
     <div className="mb-5">
-      <h3 className="mb-1 text-[15px] font-bold">Cluster login</h3>
-      <p className="mb-3 text-[13px] text-dim">{copy.keyIntro} <KeyHelpLink cluster={d} /></p>
+      {keyText && <p className="mb-3 text-[14px] text-dim">{keyText}</p>}
       <KeyPanel cluster={d} user={user} onUser={setUser} />
     </div>
     {instead}
-    <Group><ButtonRow label="Forget saved logins" tone="bad" onClick={forget} /></Group>
+    {forgetLink(d.username_label || 'username')}
   </> : <>
-    <Group title="Cluster login"
-      description={d.password_only ? copy.passwordNote(keyStore) : copy.savedIn(keyStore)}>
+    <Group description={copy.savedIn(keyStore)}>
       <EntryRow label={d.username_label || 'Username'} value={user} onChange={setUser} autoFocus
         placeholder={copy.usernameHint} />
-      <EntryRow label={!remember ? 'Password (optional: asked when you connect)'
-        : saved?.ssh.password ? 'Password (saved, leave empty to keep)' : 'Password'}
-        value={password} onChange={setPassword} password />
-      <SwitchRow label="Remember my password" checked={remember} onChange={setRemember}
+      <EntryRow label={copy.password} value={password} onChange={setPassword} password
+        placeholder={!remember ? 'Asked when you connect' : saved?.ssh.password ? copy.saved : undefined} />
+      <SwitchRow label={copy.remember} checked={remember} onChange={setRemember}
         sub={remember ? undefined : 'Not saved. HPC Hub asks once after it starts and forgets it when you quit'} />
-      <ActionRow label={secondStep(d)} sub="Set by the cluster's admins">{null}</ActionRow>
       {code && <ButtonRow label="How to set up Google Authenticator" icon={<CircleHelp size={16} />}
         onClick={() => setOpen('help')} />}
     </Group>
+    <p className="-mt-3 mb-5 px-1 text-[13px] text-dim">{secondStep(d)}</p>
     {instead}
     {d.portal && (
-      <Group title="Web portal"
-        description={`No password yet? Sign in at ${host(d.portal)} in a window HPC Hub opens, and the app adds this
-          computer's SSH key to your account, then logs in with it.`}>
-        <ButtonRow label={`Log in through ${host(d.portal)}`} icon={<KeyRound size={16} />}
-          onClick={() => setOpen('key')} />
+      <Group description="Add this computer's SSH key through the portal to skip the password. You'll still need
+        the code.">
+        <ButtonRow label={copy.portal(d)} icon={<KeyRound size={16} />} onClick={() => setOpen('key')} />
       </Group>
     )}
-    <Group><ButtonRow label="Forget saved logins" tone="bad" onClick={forget} /></Group>
+    {forgetLink('saved password')}
   </>
 
   const server = <>
@@ -239,15 +236,15 @@ export function SettingsDialog({ cluster, hint, onClose, start = 'login' }:
   </>
 
   const compute = <>
-    <Group title="Compute node" description="Requested with salloc after you connect. Agents run here.">
-      <SwitchRow label="Request node on connect" checked={d.request_node_on_connect ?? true}
+    <Group title="Compute node" description="Agents and terminals run on this node.">
+      <SwitchRow label="Get a compute node when I connect" checked={d.request_node_on_connect ?? true}
         onChange={(request_node_on_connect) => up({ request_node_on_connect })} />
       {(d.request_node_on_connect ?? true) && (
-        <SwitchRow label="Ask every time" sub="Show the node's settings before each request"
+        <SwitchRow label="Ask every time" sub="Review these before each request"
           checked={d.ask_node ?? false} onChange={(ask_node) => up({ ask_node })} />
       )}
       <SwitchRow label="Use my running job" checked={d.reuse_running_job ?? false}
-        sub="If you already have a node (for an agent, say), use it instead of a new one"
+        sub="Reuse a node you already have"
         onChange={(reuse_running_job) => up({ reuse_running_job })} />
       <ProfileRows cluster={d.id} p={d.profile} onChange={(profile) => up({ profile })}
         extra="Extra salloc arguments" />

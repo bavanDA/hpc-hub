@@ -86,7 +86,7 @@ export function Dialog({ title, onClose, children, actions, width = 480 }:
           <IconButton icon={X} label="Close" onClick={onClose} size={16} />
         </div>
         <div className="overflow-auto px-6 pb-4">{children}</div>
-        {actions && <div className="flex justify-end gap-2 px-6 pb-5">{actions}</div>}
+        {actions && <div className="flex justify-end gap-2 border-t border-line px-6 pb-5 pt-4">{actions}</div>}
       </div>
     </div>
   )
