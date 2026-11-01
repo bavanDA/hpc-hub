@@ -123,6 +123,7 @@ class ClusterConfig:
     key_page: str = ""  # a web page where you paste your SSH public key yourself (Yale's key uploader)
     key_page_note: str = ""  # what to know about that page, shown under its button
     key_help: str = ""  # a guide to SSH keys for this cluster ("What's an SSH key?"); "" = GitHub's
+    ssh_key: str = ""  # the private key to sign in with, picked by you; "" = the ones ssh tries by itself
     username_label: str = "Username"  # what the cluster calls it: UCID, NetID
     password_only: bool = False  # its SSH server takes no keys: the app needs your password (said, not hidden)
     password_too: bool = False  # with key_page: a password works as well, offered as "Use a password instead"

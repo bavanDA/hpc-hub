@@ -62,7 +62,9 @@ class SshMaster:
         if self.alive():
             return
         self.control_path.unlink(missing_ok=True)
-        argv = ["ssh", "-M", "-N", "-o", "ControlMaster=yes", "-o", "ControlPersist=no", *COMMON, *self._target()]
+        key = ["-i", self.cfg.ssh_key] if self.cfg.ssh_key else []  # the key you picked, besides ssh's own
+        argv = ["ssh", "-M", "-N", "-o", "ControlMaster=yes", "-o", "ControlPersist=no", *COMMON, *key,
+                *self._target()]
         self.proc = subprocess.Popen(
             argv, env=self.env, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
             stderr=subprocess.PIPE, text=True, start_new_session=True,

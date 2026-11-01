@@ -29,6 +29,21 @@ def test_mine_create_once(home):
     assert keys.create() == made == keys.mine()  # a second create gives the same key
 
 
+def test_use_a_key_you_already_have(home):
+    h = hub_mod._hub
+    h.save_clusters = lambda: setattr(h, "saved", True)
+    mine = home / "keys" / "lab_ed25519"
+    mine.parent.mkdir()
+    mine.write_text("private")
+    (home / "keys" / "lab_ed25519.pub").write_text("ssh-ed25519 AAAAC3 jdoe@lab\n")
+    got = keys.use("yale", str(mine))
+    assert got["file"] == "lab_ed25519" and h.sessions["yale"].cfg.ssh_key == str(mine) and h.saved
+    assert keys.mine("yale")["public"] == "ssh-ed25519 AAAAC3 jdoe@lab"
+    assert keys.mine() is None  # other clusters still use ssh's own keys (none here)
+    with pytest.raises(ValueError):
+        keys.use("yale", str(home / "nothing"))
+
+
 def test_test_needs_a_key_and_a_name_then_asks_the_cluster(home, monkeypatch):
     with pytest.raises(ValueError):
         keys.test("yale", "jdoe")  # no key yet: the screen never asks then

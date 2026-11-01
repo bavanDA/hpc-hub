@@ -39,6 +39,33 @@ def test_finds_an_older_key_and_needs_both_halves(home):
     assert key.json()["made_on"]
 
 
+def test_finds_a_key_with_another_name_ed25519_first(home):
+    d = home / ".ssh"
+    d.mkdir()
+    for name, line in (("work_rsa", "ssh-rsa AAAAB3 jdoe@lab"), ("yale_ed", "ssh-ed25519 AAAAC3 jdoe@lab")):
+        (d / name).write_text("private")
+        (d / f"{name}.pub").write_text(line + "\n")
+    (d / "known_hosts").write_text("x")
+    key = my_key.find()
+    assert key.file == "yale_ed" and key.kind == "ed25519"
+
+
+def test_load_a_picked_key(home):
+    made = my_key.create()
+    (home / ".ssh" / "id_ed25519.pub").unlink()  # no .pub: the public half comes from the key itself
+    got = my_key.load(made.path)
+    assert got.public.split()[:2] == made.public.split()[:2] and got.kind == "ed25519"
+    assert my_key.load(made.path + ".pub").path == made.path  # picking the .pub means its private key
+    other = home / "elsewhere"
+    other.write_text("not a key")
+    with pytest.raises(ValueError, match="isn't an SSH private key"):
+        my_key.load(other)
+    with pytest.raises(ValueError, match="Can't find"):
+        my_key.load(home / "nothing")
+    (home / ".ssh" / "id_ed25519.pub").write_text(made.public + "\n")
+    assert my_key.find(str(home / "nothing")).path == made.path  # a picked key that's gone: back to the usual one
+
+
 def test_test_argv_uses_only_this_key_and_never_prompts():
     key = my_key.MyKey("/home/jdoe/.ssh/id_ed25519", "ed25519", "ssh-ed25519 AAAA", 0)
     argv = my_key.test_argv(key, "jdoe", "login.example.edu", 2222)

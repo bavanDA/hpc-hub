@@ -258,10 +258,11 @@ class AsyncSshMaster(SshMaster):
         KNOWN_HOSTS.parent.mkdir(parents=True, exist_ok=True)
         KNOWN_HOSTS.touch(exist_ok=True)
         self._lost = False
+        keys = {"client_keys": [self.cfg.ssh_key]} if self.cfg.ssh_key else {}  # the key you picked
         conn, _ = await asyncssh.create_connection(
             lambda: _Client(self), self.cfg.host, self.cfg.port, username=self.username,
             known_hosts=str(KNOWN_HOSTS), preferred_auth=AUTH, keepalive_interval=30, keepalive_count_max=3,
-            connect_timeout=30, login_timeout=timeout, **OPTIONS)
+            connect_timeout=30, login_timeout=timeout, **{**keys, **OPTIONS})
         try:
             self._bridge = await asyncio.start_server(self._serve_bridge, "127.0.0.1", 0)
         except OSError:

@@ -40,15 +40,65 @@ def ssh_dir() -> Path:
     return Path.home() / ".ssh"
 
 
-def find() -> MyKey | None:
-    """The first key ssh would use that has both halves."""
+SKIP = {"known_hosts", "known_hosts.old", "authorized_keys", "config", "environment"}
+
+
+def _kind(public: str) -> str:
+    """"ed25519" for "ssh-ed25519 AAAA...", "ecdsa" for "ecdsa-sha2-nistp256 ...", "rsa" for "ssh-rsa ..."."""
+    t = public.split(" ", 1)[0]
+    return "ed25519" if "ed25519" in t else "ecdsa" if t.startswith("ecdsa") else "rsa" if "rsa" in t else t
+
+
+def load(path: str | Path) -> MyKey:
+    """A private key you picked yourself. Its public half comes from the .pub next to it, or from the key itself
+    when it has no passphrase. ValueError with a plain reason otherwise."""
+    key = Path(path).expanduser()
+    if key.suffix == ".pub":  # picked the public half: the private one sits next to it
+        key = key.with_suffix("")
+    if not key.is_file():
+        raise ValueError(f"Can't find the private key {key.name}")
+    pub = key.with_name(key.name + ".pub")
+    line = pub.read_text(errors="replace").strip() if pub.is_file() else ""
+    if not line:
+        from cryptography.hazmat.primitives import serialization as s
+        try:
+            private = s.load_ssh_private_key(key.read_bytes(), password=None)
+        except TypeError as e:
+            raise ValueError(f"{key.name} has a passphrase. Put {key.name}.pub next to it and pick it again.") from e
+        except ValueError as e:
+            raise ValueError(f"{key.name} isn't an SSH private key") from e
+        line = private.public_key().public_bytes(s.Encoding.OpenSSH, s.PublicFormat.OpenSSH).decode()
+    return MyKey(str(key), _kind(line), line, key.stat().st_mtime)
+
+
+def find(chosen: str = "") -> MyKey | None:
+    """The key to use: the one you picked, else the first one ssh tries by itself, else any other key in ~/.ssh
+    with both halves (Ed25519 first)."""
+    if chosen:
+        try:
+            return load(chosen)
+        except (ValueError, OSError):
+            pass
     for name in NAMES:
         key, pub = ssh_dir() / name, ssh_dir() / f"{name}.pub"
         if key.exists() and pub.exists():
             line = pub.read_text(errors="replace").strip()
             if line:
                 return MyKey(str(key), name.removeprefix("id_"), line, key.stat().st_mtime)
-    return None
+    others = []
+    try:
+        pubs = sorted(ssh_dir().glob("*.pub"))
+    except OSError:
+        pubs = []
+    for pub in pubs:
+        key = pub.with_suffix("")
+        if key.name in SKIP or not key.is_file():
+            continue
+        line = pub.read_text(errors="replace").strip()
+        if line:
+            others.append(MyKey(str(key), _kind(line), line, key.stat().st_mtime))
+    others.sort(key=lambda k: k.kind != "ed25519")
+    return others[0] if others else None
 
 
 def comment() -> str:

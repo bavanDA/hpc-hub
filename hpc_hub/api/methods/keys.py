@@ -5,9 +5,14 @@ from ..hub import hub
 from ..server import method
 
 
+def _chosen(cluster: str) -> str:
+    return hub().session(cluster).cfg.ssh_key if cluster else ""
+
+
 @method("keys.mine")
-def mine() -> dict | None:
-    key = my_key.find()
+def mine(cluster: str = "") -> dict | None:
+    """The key this cluster signs in with: the one you picked for it, else the one ssh finds by itself."""
+    key = my_key.find(_chosen(cluster))
     return key.json() if key else None
 
 
@@ -18,12 +23,21 @@ def create() -> dict:
     return (key or my_key.create()).json()
 
 
+@method("keys.use")
+def use(cluster: str, path: str) -> dict:
+    """Sign in to this cluster with a key you already have (its private key file). Saved with the cluster."""
+    key = my_key.load(path)
+    hub().session(cluster).cfg.ssh_key = key.path
+    hub().save_clusters()
+    return key.json()
+
+
 @method("keys.test")
 def test(cluster: str, username: str) -> dict:
     """Try a sign-in with only the key and no prompts. {ok, text, kind, reason, last}. The screen only asks once
     there are a key and a username."""
     cfg = hub().session(cluster).cfg
-    key = my_key.find()
+    key = my_key.find(cfg.ssh_key)
     if not key or not username.strip():
         raise ValueError("Make a key and type your username first")
     return my_key.test(key, username.strip(), cfg.host, cfg.port, cfg.who, cfg.vpn.enabled).json()
