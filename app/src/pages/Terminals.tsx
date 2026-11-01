@@ -11,6 +11,7 @@ import { select, setNotify, useTabs } from '../components/terminals/tabs'
 import { TerminalView } from '../components/terminals/TerminalView'
 import { useToast } from '../components/toast'
 import { EmptyState } from '../components/ui'
+import { usePageParams } from '../nav'
 
 type Panel = 'sessions' | 'logs'
 
@@ -33,7 +34,8 @@ export function Terminals() {
   const live = useLive()
   const { listings, refresh } = useListings(live)
   const [panel, setPanel] = useState<Panel | null>('sessions')
-  const [creating, setCreating] = useState(false)
+  const params = usePageParams()  // { cluster, new: '1' }: a cluster card's Terminal button
+  const [creating, setCreating] = useState(params.new === '1')
   const logs = tabs.filter((t) => !t.session)
   const toggle = (p: Panel) => setPanel(panel === p ? null : p)
   const newTerminal = () => (live.length ? setCreating(true) : toast('Connect a cluster first'))
@@ -80,7 +82,8 @@ export function Terminals() {
           )}
         </div>
       </section>
-      {creating && <NewTerminalDialog live={live} onClose={() => setCreating(false)}
+      {creating && live.length > 0 && <NewTerminalDialog live={live} cluster={params.cluster}
+        onClose={() => setCreating(false)}
         onOpened={() => setTimeout(refresh, 2000)} />}
     </div>
   )

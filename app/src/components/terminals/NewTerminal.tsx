@@ -19,11 +19,11 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
   )
 }
 
-export function NewTerminalDialog({ live, onClose, onOpened }:
-  { live: Live[]; onClose: () => void; onOpened: () => void }) {
+export function NewTerminalDialog({ live, cluster: start = '', onClose, onOpened }:
+  { live: Live[]; cluster?: string; onClose: () => void; onOpened: () => void }) {
   const toast = useToast()
   const [name, setName] = useState(() => `Terminal ${new Date().toTimeString().slice(0, 5)}`)
-  const [picked, setCluster] = useState('')
+  const [picked, setCluster] = useState(start)
   const c = live.find((x) => x.id === picked) ?? live[0]
   const cluster = c?.id ?? ''
   const [node, setOnNode] = useState<boolean | null>(null)  // null: the compute node when there is one

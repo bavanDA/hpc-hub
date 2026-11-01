@@ -3,7 +3,7 @@
 import type { LucideIcon } from 'lucide-react'
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 
-export type MenuItem = { label: string; icon?: LucideIcon; onClick: () => void }
+export type MenuItem = { label: string; icon?: LucideIcon; onClick: () => void; danger?: boolean }
 
 /** groups: items between separators; trigger: what the button shows. */
 export function Menu({ groups, trigger, label, className = '' }:
@@ -45,9 +45,10 @@ export function Menu({ groups, trigger, label, className = '' }:
             ring-1 ring-line">
           {groups.filter((g) => g.length).map((g, n) => (
             <div key={n} className={n ? 'mt-1.5 border-t border-line pt-1.5' : ''}>
-              {g.map(({ label: text, icon: Icon, onClick }) => (
+              {g.map(({ label: text, icon: Icon, onClick, danger }) => (
                 <button key={text} role="menuitem" onClick={() => { setOpen(false); onClick() }}
-                  className="flex h-9 w-full items-center gap-3 rounded-md px-2.5 text-left hover:bg-hover">
+                  className={`flex h-9 w-full items-center gap-3 rounded-md px-2.5 text-left hover:bg-hover ${
+                    danger ? 'text-bad' : ''}`}>
                   {Icon && <Icon size={16} className="shrink-0" />}
                   <span className="truncate">{text}</span>
                 </button>
