@@ -13,7 +13,12 @@ export default defineConfig({
   publicDir: '../app/public',  // theme.js: light or dark before the first paint, shared with the desktop
   resolve: {
     alias: { '@shared': fileURLToPath(new URL('../app/src', import.meta.url)) },
-    dedupe: ['react', 'react-dom', '@tauri-apps/api', '@xterm/xterm', '@xterm/addon-fit', 'lucide-react'],
+    // one copy of each: shared code imports them from app/, phone code from mobile/ (two copies of CodeMirror break it)
+    dedupe: ['react', 'react-dom', '@tauri-apps/api', '@xterm/xterm', '@xterm/addon-fit', 'lucide-react',
+      '@codemirror/autocomplete', '@codemirror/commands', '@codemirror/lang-cpp', '@codemirror/lang-json',
+      '@codemirror/lang-markdown', '@codemirror/lang-python', '@codemirror/lang-yaml', '@codemirror/language',
+      '@codemirror/legacy-modes', '@codemirror/merge', '@codemirror/search', '@codemirror/state', '@codemirror/view',
+      '@lezer/common', '@lezer/highlight', '@lezer/lr', 'pdfjs-dist', '@tauri-apps/plugin-notification'],
   },
   clearScreen: false,
   server: {
