@@ -6,6 +6,7 @@ import { lazy, Suspense } from 'react'
 import { Spinner } from '@shared/components/ui'
 import { firstPlace, NavProvider, usePhoneNav, type Tab } from './nav'
 import { Questions } from './parts/Questions'
+import { PhoneWatch } from './parts/watchPhone'
 import { Clusters } from './screens/Clusters'
 import { More } from './screens/More'
 import { Terminals } from './screens/Terminals'
@@ -55,6 +56,7 @@ export default function App() {
       <NavProvider first={firstPlace()}>
         <Screens />
         <Questions />
+        <PhoneWatch />
       </NavProvider>
     </ToastProvider>
   )
