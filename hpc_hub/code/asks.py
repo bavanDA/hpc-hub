@@ -147,9 +147,12 @@ def script(a: Ask, agent_cmd: str) -> str:
         f'P=$(printf %s {_b64(prompt(a))} | base64 -d)',
         r'P=${P//\$OUT/$OUT}; P=${P//\$ROOT/$ROOT}; P=${P//\$REL/$REL}',
         'printf "%s\\n" "$P" > "$OUT/prompt.md"',
+        '[ -f "$OUT/cancelled" ] && { state cancelled; exit 0; }',
         'state running',
-        f'bash -c {shlex.quote(agent_cmd)} > "$OUT/log" 2>&1 < /dev/null',
-        'rc=$?',
+        # its own process group, so cancel stops the agent and everything it started, and this script goes on
+        'S=; command -v setsid > /dev/null && S=setsid',
+        f'$S bash -c {shlex.quote(agent_cmd)} > "$OUT/log" 2>&1 < /dev/null &',
+        'echo $! > "$OUT/pid"; wait $!; rc=$?',
         # safety net 1: the asked file was edited in place
         'if [ -f "$OUT/snapshot/$REL" ] && ! cmp -s "$OUT/snapshot/$REL" "$ABS"; then',
         '  if [ ! -e "$OUT/proposed/$REL" ]; then mkdir -p "$OUT/proposed/$(dirname -- "$REL")"; '
@@ -198,18 +201,23 @@ def set_state_command(ask_id: str, state: str) -> str:
     return f"[ -d {out} ] && printf %s {shlex.quote(state)} > {out}/state"
 
 
-def cancel_mark(ask_id: str) -> str:
+def cancel_command(ask_id: str) -> str:
+    """Run where the ask runs (its node): mark it cancelled and stop the agent. run.sh then puts back any file
+    the agent touched and ends as cancelled."""
     out = f'"$HOME"/{ROOT}/{check_id(ask_id)}'
-    return f"[ -d {out} ] && touch {out}/cancelled && printf cancelled > {out}/state"
+    return (f"[ -d {out} ] || exit 0; touch {out}/cancelled; p=$(cat {out}/pid 2>/dev/null); "
+            f"if [ -n \"$p\" ]; then kill -TERM -- -\"$p\" 2>/dev/null || kill -TERM \"$p\" 2>/dev/null; "
+            f"else printf cancelled > {out}/state; fi; true")
 
 
 # -- reading back ---------------------------------------------------------------------------------------------------
 LIST_SEP = "\x1e"
 
 
-def list_command(limit: int = 30) -> str:
-    """meta.json and state of the newest asks, separated by LIST_SEP."""
-    return (f'cd "$HOME"/{ROOT} 2>/dev/null && ls -1d */ 2>/dev/null | sort -r | head -n {int(limit)} | '
+def list_command(limit: int = 30, ask_id: str = "") -> str:
+    """meta.json and state of the newest asks (or only ask_id), separated by LIST_SEP."""
+    pick = f"echo {check_id(ask_id)}/" if ask_id else f"ls -1d */ 2>/dev/null | sort -r | head -n {int(limit)}"
+    return (f'cd "$HOME"/{ROOT} 2>/dev/null && {pick} | '
             f"while read -r d; do d=${{d%/}}; [ -f \"$d/meta.json\" ] || continue; cat \"$d/meta.json\"; "
             f"printf '\\n{LIST_SEP}'; cat \"$d/state\" 2>/dev/null; echo; "
             f"tail -n 1 \"$d/log\" 2>/dev/null | cut -c1-200; "

@@ -5,6 +5,7 @@ import json
 import shutil
 import subprocess
 import sys
+import time
 
 import pytest
 
@@ -108,3 +109,22 @@ def test_a_failing_agent_and_claude_json(repo):
 def test_a_missing_folder_fails_cleanly(repo):
     r = run(repo, "true", path="~/nowhere/x.py")
     assert r.state == "failed"
+
+
+def test_cancel_stops_the_agent_and_puts_files_back(repo):
+    a = make_ask(id="20261101-120002-cafe")
+    env = {"HOME": str(repo), "PATH": "/usr/bin:/bin"}
+    agent = 'printf "lr = 9\\n" > src/train.py; sleep 30'
+    proc = subprocess.Popen(["bash", "-c", asks.start_command(a, asks.script(a, agent), asks.run_line(a))], env=env)
+    out = repo / asks.ROOT / a.id
+    for _ in range(200):
+        if (out / "pid").exists() and (repo / "proj/src/train.py").read_text() == "lr = 9\n":
+            break
+        time.sleep(0.05)
+    subprocess.run(["bash", "-c", asks.cancel_command(a.id)], env=env, check=True)
+    assert proc.wait(timeout=10) == 0
+    assert (out / "state").read_text() == "cancelled"
+    assert (repo / "proj/src/train.py").read_text() == "lr = 0.1\n"  # put back even though it was stopped
+    (st,) = asks.parse_list(subprocess.run(["bash", "-c", asks.list_command(ask_id=a.id)], env=env,
+                                           capture_output=True, text=True).stdout)
+    assert st.state == "cancelled" and st.detail == "Stopped"
