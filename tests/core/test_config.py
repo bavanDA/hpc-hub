@@ -116,7 +116,6 @@ def test_how_each_cluster_logs_in_is_said(tmp_path):
     by_id = {c.id: c for c in config.load(path)}
     wulver, yale = by_id["wulver"], by_id["yale"]
     assert wulver.password_only and not wulver.key_page
-    assert wulver.password_note() == ("Wulver only takes passwords, not SSH keys. HPC Hub keeps yours encrypted on "
-                                      "this computer.")
+    assert "Wulver" in wulver.password_note() and "NJIT" not in wulver.password_note()
     assert yale.key_page.startswith("https://") and not yale.password_only
-    assert yale.key_intro() == "Yale uses an SSH key instead of a password."
+    assert yale.who == "Yale" and "Yale" in yale.key_intro() and not yale.password_too

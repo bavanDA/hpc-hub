@@ -1,0 +1,35 @@
+"""Every sentence the login screens say about passwords and SSH keys, in one place so the wording can change in
+one go. The desktop app keeps its own copy in app/src/components/clusters/loginCopy.ts; keep the two alike."""
+
+# a cluster that takes only passwords (Wulver); name: "Wulver"
+PASSWORD_NOTE = "{name} only takes passwords, not SSH keys. HPC Hub keeps yours encrypted on this computer."
+SAVED_IN = "Saved encrypted in {store}."
+
+# a cluster you log in to with a key you paste on its key page (Yale); who: "Yale"
+KEY_INTRO = "{who} uses an SSH key instead of a password."
+WHATS_A_KEY = "What's an SSH key?"
+KEY_EXPLAINED = ("A file on your computer that proves it's you. {who} gets the public half. "
+                 "The private half never leaves this computer.")
+STEP_MAKE = "Make a key"
+HAVE_KEY = "You have a key ({kind}, {made})"
+MAKE_BUTTON = "Make my key"
+STEP_COPY = "Copy it"
+COPY_BUTTON = "Copy"
+COPIED = "Copied"
+STEP_PASTE = "Paste it on {who}'s key page"
+OPEN_PAGE = "Open key page"
+STEP_USER = "Your username"
+TEST_BUTTON = "Test login"
+USE_PASSWORD = "Use a password instead"
+USE_KEY = "Use an SSH key instead"
+
+# what the login test found (core/my_key.py verdict)
+TEST_OK = "It works."
+TEST_UNKNOWN_KEY = "{who} doesn't know this key yet. Wait a few minutes and try again."
+TEST_UNREACHABLE_VPN = "Can't reach {who}. Are you on the VPN?"
+TEST_UNREACHABLE = "Can't reach {who}."
+TEST_HOST_KEY = "{who}'s server key changed. Ask its admins before you connect."
+TEST_UNFINISHED = "The test didn't finish. {last}"
+TEST_NO_SSH = "No ssh program here to test with."
+TEST_NO_KEY = "Make your key first."
+TEST_NO_USER = "Type your username first."

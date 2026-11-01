@@ -1,6 +1,6 @@
 """This computer's SSH key, for clusters you log in to with one (core/my_key.py): show it, make it, test it."""
 
-from ...core import my_key
+from ...core import login_copy, my_key
 from ..hub import hub
 from ..server import method
 
@@ -24,8 +24,8 @@ def test(cluster: str, username: str) -> dict:
     cfg = hub().session(cluster).cfg
     key = my_key.find()
     if not key:
-        return {"ok": False, "text": "Make your key first."}
+        return {"ok": False, "text": login_copy.TEST_NO_KEY}
     if not username.strip():
-        return {"ok": False, "text": "Type your username first."}
-    r = my_key.test(key, username.strip(), cfg.host, cfg.port, cfg.org or cfg.short_name, cfg.vpn.enabled)
+        return {"ok": False, "text": login_copy.TEST_NO_USER}
+    r = my_key.test(key, username.strip(), cfg.host, cfg.port, cfg.who, cfg.vpn.enabled)
     return {"ok": r.ok, "text": r.text}

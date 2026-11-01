@@ -14,6 +14,8 @@ import time
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
+from . import login_copy as C
+
 NAMES = ("id_ed25519", "id_ecdsa", "id_rsa")  # the ones ssh tries by itself, best first
 
 
@@ -94,15 +96,15 @@ def verdict(output: str, code: int, who: str, vpn: bool) -> Result:
     """What ssh -v said, in words. who: "Yale"."""
     if code == 0 or re.search(r'Authenticated using "publickey" with partial success|Partial publickey|'
                               r'Authenticated to .* using "publickey"|Authentication succeeded \(publickey\)', output):
-        return Result(True, "It works.")  # partial success: the key is in, Duo comes next
+        return Result(True, C.TEST_OK)  # partial success: the key is in, Duo comes next
     if UNREACHABLE.search(output):
-        return Result(False, f"Can't reach {who}. Are you on the VPN?" if vpn else f"Can't reach {who}.")
+        return Result(False, (C.TEST_UNREACHABLE_VPN if vpn else C.TEST_UNREACHABLE).format(who=who))
     if "Host key verification failed" in output or "REMOTE HOST IDENTIFICATION HAS CHANGED" in output:
-        return Result(False, f"{who}'s server key changed. Ask its admins before you connect.")
+        return Result(False, C.TEST_HOST_KEY.format(who=who))
     if "Permission denied" in output:
-        return Result(False, f"{who} doesn't know this key yet. Wait a few minutes and try again.")
+        return Result(False, C.TEST_UNKNOWN_KEY.format(who=who))
     last = next((line for line in reversed(output.splitlines()) if line and not line.startswith("debug")), "")
-    return Result(False, f"The test didn't finish. {last}".strip())
+    return Result(False, C.TEST_UNFINISHED.format(last=last).strip())
 
 
 def test(key: MyKey, user: str, host: str, port: int, who: str, vpn: bool = False) -> Result:
@@ -110,7 +112,7 @@ def test(key: MyKey, user: str, host: str, port: int, who: str, vpn: bool = Fals
         p = subprocess.run(test_argv(key, user, host, port), capture_output=True, text=True, timeout=40,
                            stdin=subprocess.DEVNULL)
     except FileNotFoundError:
-        return Result(False, "No ssh program here to test with.")
+        return Result(False, C.TEST_NO_SSH)
     except subprocess.TimeoutExpired:
         return verdict("Connection timed out", 255, who, vpn)
     return verdict(p.stderr, p.returncode, who, vpn)

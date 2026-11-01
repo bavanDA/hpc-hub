@@ -5,6 +5,7 @@ import stat
 
 import pytest
 
+from hpc_hub.core import login_copy as C
 from hpc_hub.core import my_key
 
 
@@ -47,19 +48,20 @@ def test_test_argv_uses_only_this_key_and_never_prompts():
 
 @pytest.mark.parametrize("output, code, ok, text", [
     ('debug1: Authenticated using "publickey" with partial success.\nPermission denied (keyboard-interactive).',
-     255, True, "It works."),
-    ("", 0, True, "It works."),
+     255, True, C.TEST_OK),
+    ("", 0, True, C.TEST_OK),
     ("debug1: Next authentication method: publickey\njdoe@login: Permission denied (publickey,keyboard-interactive).",
-     255, False, "Yale doesn't know this key yet. Wait a few minutes and try again."),
+     255, False, C.TEST_UNKNOWN_KEY.format(who="Yale")),
     ("ssh: connect to host login.example.edu port 22: Connection timed out", 255, False,
-     "Can't reach Yale. Are you on the VPN?"),
-    ("Host key verification failed.", 255, False, "Yale's server key changed. Ask its admins before you connect."),
+     C.TEST_UNREACHABLE_VPN.format(who="Yale")),
+    ("Host key verification failed.", 255, False, C.TEST_HOST_KEY.format(who="Yale")),
     ("debug1: x\nkex_exchange_identification: read: Connection reset by peer", 255, False,
-     "The test didn't finish. kex_exchange_identification: read: Connection reset by peer"),
+     C.TEST_UNFINISHED.format(last="kex_exchange_identification: read: Connection reset by peer")),
 ])
 def test_verdict(output, code, ok, text):
     assert my_key.verdict(output, code, "Yale", vpn=True) == my_key.Result(ok, text)
 
 
 def test_no_vpn_no_vpn_question():
-    assert my_key.verdict("ssh: Could not resolve hostname x", 255, "SDSC", vpn=False).text == "Can't reach SDSC."
+    assert my_key.verdict("ssh: Could not resolve hostname x", 255, "SDSC", vpn=False).text == \
+        C.TEST_UNREACHABLE.format(who="SDSC")

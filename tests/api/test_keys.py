@@ -5,7 +5,7 @@ import pytest
 from hpc_hub.api import hub as hub_mod
 from hpc_hub.api.hub import Hub
 from hpc_hub.api.methods import keys
-from hpc_hub.core import config, my_key
+from hpc_hub.core import config, login_copy, my_key
 
 
 class Session:
@@ -30,9 +30,9 @@ def test_mine_create_once(home):
 
 
 def test_test_needs_a_key_and_a_name_then_asks_the_cluster(home, monkeypatch):
-    assert keys.test("yale", "jdoe") == {"ok": False, "text": "Make your key first."}
+    assert keys.test("yale", "jdoe") == {"ok": False, "text": login_copy.TEST_NO_KEY}
     keys.create()
-    assert keys.test("yale", " ") == {"ok": False, "text": "Type your username first."}
+    assert keys.test("yale", " ") == {"ok": False, "text": login_copy.TEST_NO_USER}
     asked = []
 
     def fake(key, user, host, port, who, vpn):

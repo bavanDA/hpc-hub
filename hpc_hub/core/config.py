@@ -6,6 +6,8 @@ import tomllib
 from dataclasses import asdict, dataclass, field, fields, replace
 from pathlib import Path
 
+from . import login_copy
+
 CONFIG_DIR = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config")) / "hpc-hub"
 CONFIG_FILE = CONFIG_DIR / "clusters.toml"
 APP_FILE = CONFIG_DIR / "app.toml"
@@ -113,6 +115,7 @@ class ClusterConfig:
     key_page: str = ""  # a web page where you paste your SSH public key yourself (Yale's key uploader)
     key_page_note: str = ""  # what to know about that page, shown under its button
     password_only: bool = False  # its SSH server takes no keys: the app needs your password (said, not hidden)
+    password_too: bool = False  # with key_page: a password works as well, offered as "Use a password instead"
     key_login: bool = False  # takes SSH keys from ~/.ssh/authorized_keys: the phone app gets a key (pairing.py)
     code_setup: str = ""  # where you set up the authenticator app the cluster asks codes from
     # "partition:qos" queues to choose from, cheapest first: the first that starts within queue_wait seconds
@@ -163,12 +166,17 @@ class ClusterConfig:
         """"Wulver" for "Wulver (NJIT)"."""
         return self.name.split(" (")[0]
 
+    @property
+    def who(self) -> str:
+        """"Yale": the org, else the short name, for copy like "Yale uses an SSH key"."""
+        return self.org or self.short_name
+
     def password_note(self) -> str:
         """Said under the password of a cluster that takes no keys."""
-        return f"{self.short_name} only takes passwords, not SSH keys. HPC Hub keeps yours encrypted on this computer."
+        return login_copy.PASSWORD_NOTE.format(name=self.short_name)
 
     def key_intro(self) -> str:
-        return f"{self.org or self.short_name} uses an SSH key instead of a password."
+        return login_copy.KEY_INTRO.format(who=self.who)
 
     @property
     def vpn_connection_name(self) -> str:
