@@ -7,7 +7,7 @@ import { call } from '../../rpc'
 import { secondStep, type Cluster, type Logins, type Profile } from '../../types/clusters'
 import { Duration } from '../clusters/ComputeDialog'
 import { CheckRow, EntryRow, Group, SpinRow, SwitchRow } from '../clusters/fields'
-import { KeyHelpLink, KeyPanel, PasswordInstead } from '../clusters/KeyPanel'
+import { KeyPanel, keyHeading, PasswordInstead } from '../clusters/KeyPanel'
 import { KeySetupDialog } from '../clusters/KeySetupDialog'
 import { copy } from '../clusters/loginCopy'
 import { minutes, slurmTime } from '../clusters/time'
@@ -48,15 +48,16 @@ export function Onboarding({ ids, onDone }: { ids: string[]; onDone: () => void 
 }
 
 function Progress({ steps, at }: { steps: Step[]; at: number }) {
+  const clusters = steps.filter((s) => s.kind === 'login')
+  const which = clusters.findIndex((s) => s.cluster.id === steps[at].cluster.id) + 1
   return (
     <div className="flex items-center gap-3 text-[13px] text-dim">
-      <span>{steps[at].cluster.name}</span>
+      <span>{steps[at].cluster.name}{clusters.length > 1 ? ` · cluster ${which} of ${clusters.length}` : ''}</span>
       <div className="flex flex-1 gap-1.5" aria-label={`Step ${at + 1} of ${steps.length}`}>
         {steps.map((_, i) => (
           <span key={i} className={`h-1.5 flex-1 rounded-full ${i <= at ? 'bg-accent' : 'bg-selected'}`} />
         ))}
       </div>
-      <span>{at + 1} of {steps.length}</span>
     </div>
   )
 }
@@ -73,10 +74,11 @@ function Heading({ icon, title, text }: { icon: ReactNode; title: string; text?:
   )
 }
 
-function Footer({ onSkip, skip, children }: { onSkip: () => void; skip: string; children: ReactNode }) {
+/** onSkip absent: no "Skip for now" (the step is done, Continue is the way on). */
+function Footer({ onSkip, children }: { onSkip?: () => void; children: ReactNode }) {
   return (
     <div className="flex items-center justify-between gap-3">
-      <Button kind="flat" type="button" onClick={onSkip}>{skip}</Button>
+      {onSkip ? <Button kind="flat" type="button" onClick={onSkip}>{copy.skip}</Button> : <span />}
       {children}
     </div>
   )
@@ -113,21 +115,21 @@ function LoginStep({ cluster: c, onNext }: { cluster: Cluster; onNext: () => voi
     }
   }
 
-  const site = c.portal ? new URL(c.portal).hostname : ''
   const instead = c.key_page && c.password_too
     ? <PasswordInstead on={usePassword} onChange={setUsePassword} /> : null
   if (c.key_page && !usePassword) {
+    const head = keyHeading(c)
+    // Skip keeps a username you typed: the key is on disk either way
+    const skip = () => (user.trim() ? save() : onNext())
     return (
-      <form className="flex flex-col gap-6" onSubmit={(e) => { e.preventDefault(); if (user.trim()) save() }}>
-        <Heading icon={<KeyRound size={22} />} title={copy.signIn(c)}
-          text={<>{copy.keyIntro} <KeyHelpLink cluster={c} /></>} />
+      <form className="flex flex-col gap-6" onSubmit={(e) => { e.preventDefault(); if (works) save() }}>
+        <Heading icon={<KeyRound size={22} />} title={head.title} text={head.text} />
         {loaded ? <KeyPanel cluster={c} user={user} onUser={setUser} onTested={setWorks} />
           : <div className="grid h-40 place-items-center"><Spinner size={24} /></div>}
         {instead}
         {error && <p className="text-bad">{error}</p>}
-        <Footer onSkip={onNext} skip="Skip for now">
-          <Button kind={works ? 'suggested' : 'pill'} round type="submit" disabled={!user.trim() || busy}>
-            Continue</Button>
+        <Footer onSkip={works ? undefined : skip}>
+          <Button kind="suggested" round type="submit" disabled={!works || busy}>{copy.continue}</Button>
         </Footer>
       </form>
     )
@@ -136,30 +138,22 @@ function LoginStep({ cluster: c, onNext }: { cluster: Cluster; onNext: () => voi
   return (
     <form className="flex flex-col gap-6" onSubmit={(e) => { e.preventDefault(); if (user.trim()) save() }}>
       <Heading icon={<KeyRound size={22} />} title={copy.signIn(c)}
-        text={c.password_only ? undefined : secondStep(c)} />
-      {site && (
-        <div className="flex flex-col gap-2">
+        text={c.second_factor === 'code' ? secondStep(c) : undefined} />
+      {c.portal && (
+        <div className="flex flex-col gap-3">
           <Button kind="suggested" round type="button" onClick={() => setPortal(true)}>
-            <Globe size={16} /> Log in through {site}</Button>
-          <p className="text-center text-[13px] text-dim">No password needed. Or type your login below.</p>
+            <Globe size={16} /> {copy.portal(c)}</Button>
+          <p className="text-[13px] text-dim">{copy.orPassword}</p>
         </div>
       )}
       <div className="flex flex-col gap-3">
         <List>
-          <EntryRow label={label} value={user} onChange={setUser} autoFocus={!site} placeholder={copy.usernameHint} />
-          <EntryRow label={saved ? 'Password (saved, leave empty to keep)' : 'Password'} value={password}
-            onChange={setPassword} password placeholder={c.password_only ? copy.passwordHelp(c) : undefined} />
+          <EntryRow label={label} value={user} onChange={setUser} autoFocus={!c.portal} placeholder={copy.usernameHint} />
+          <EntryRow label={copy.password} value={password} onChange={setPassword} password
+            placeholder={saved ? copy.saved : undefined} />
         </List>
-        {c.password_only
-          ? <div className="flex gap-3 rounded-xl bg-pill px-4 py-3 text-[13px]">
-              <Lock size={16} className="mt-0.5 shrink-0 text-accent-text" />
-              <div className="flex flex-col gap-1">
-                <p>{copy.passwordNote(keyStore)}</p>
-                {c.second_factor !== 'code' && <p className="text-dim">{copy.passwordDuo}</p>}
-              </div>
-            </div>
-          : <p className="flex items-center gap-1.5 px-1 text-[13px] text-dim">
-              <Lock size={13} className="shrink-0" />{copy.savedIn(keyStore)}</p>}
+        <p className="flex items-center gap-1.5 px-1 text-[13px] text-dim">
+          <Lock size={13} className="shrink-0" />{copy.savedIn(keyStore)}</p>
         <label className="flex cursor-pointer items-center gap-2 self-start px-1 text-[14px]">
           <input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)}
             className="size-4 accent-[var(--color-accent)]" />
@@ -168,9 +162,9 @@ function LoginStep({ cluster: c, onNext }: { cluster: Cluster; onNext: () => voi
       </div>
       {instead}
       {error && <p className="text-bad">{error}</p>}
-      <Footer onSkip={onNext} skip="Skip for now">
-        <Button kind={site ? 'pill' : 'suggested'} round type="submit" disabled={!user.trim() || busy}>
-          Continue</Button>
+      <Footer onSkip={onNext}>
+        <Button kind={c.portal ? 'pill' : 'suggested'} round type="submit" disabled={!user.trim() || busy}>
+          {copy.continue}</Button>
       </Footer>
       {portal && <KeySetupDialog cluster={c} onClose={() => setPortal(false)}
         onDone={() => { setPortal(false); onNext() }} />}
@@ -197,26 +191,26 @@ function NodeStep({ cluster: c, onNext, last }: { cluster: Cluster; onNext: () =
 
   return (
     <form className="flex flex-col gap-5" onSubmit={(e) => { e.preventDefault(); save() }}>
-      <Heading icon={<Cpu size={22} />} title={`Compute node on ${c.name}`}
-        text="HPC Hub can ask Slurm for a node when you connect, so your terminals and agents run there." />
+      <Heading icon={<Cpu size={22} />} title="Compute node"
+        text="Your terminals and agents can run on a compute node instead of the login node." />
       <div>
         <Group>
-          <SwitchRow label="Get a node when I connect" checked={want} onChange={setWant} />
+          <SwitchRow label="Get a compute node when I connect" checked={want} onChange={setWant} />
           {want && <>
             <SpinRow label="CPU cores" value={p.cpus} onChange={(cpus) => set({ cpus })} min={1} max={512} />
             <SpinRow label="Memory (GB)" value={p.mem_gb} onChange={(mem_gb) => set({ mem_gb })} min={1} max={4096} />
             <Duration total={minutes(p.time) ?? 240} onChange={(m) => set({ time: slurmTime(m) })} limits={null} />
             {c.profile.partition && <EntryRow label="Partition" value={p.partition}
               onChange={(partition) => set({ partition })} />}
-            <CheckRow label="Ask every time" sub="Show these before each request, so you can change them"
+            <CheckRow label="Ask every time" sub="Review these before each request"
               checked={ask} onChange={setAsk} />
           </>}
         </Group>
         <p className="-mt-3 px-1 text-[13px] text-dim">You can change this later in Settings.</p>
       </div>
       {error && <p className="text-bad">{error}</p>}
-      <Footer onSkip={onNext} skip="Skip">
-        <Button kind="suggested" round type="submit">{last ? 'Done' : 'Continue'}</Button>
+      <Footer onSkip={onNext}>
+        <Button kind="suggested" round type="submit">{last ? 'Done' : copy.continue}</Button>
       </Footer>
     </form>
   )

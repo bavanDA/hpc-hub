@@ -1,14 +1,23 @@
-// This computer's SSH key (methods/keys.py). ?nokey starts without one, to show "Create SSH key".
-import type { MyKey } from '../types/clusters'
+// This computer's SSH key (methods/keys.py). ?nokey starts without one, to show "Create key". ?keytest=not_yet|
+// no_vpn|unreachable|host_key picks what "Try it" finds (else it works); ?keywait=ms holds the answer back, to show
+// the test running.
+import { fill } from '../components/clusters/loginCopy'
+import { S } from '../components/clusters/loginStrings'
+import type { KeyTest, MyKey } from '../types/clusters'
 
 const sample: MyKey = { path: '/home/jdoe/.ssh/id_ed25519', file: 'id_ed25519', kind: 'ed25519', made: 1793000000, made_on: 'Oct 2026',
   public: 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIExampleOnlyNotARealKeyJustForTheDemo jdoe@laptop (HPC Hub)' }
-let mine: MyKey | null = new URLSearchParams(location.search).has('nokey') ? null : sample
+const q = new URLSearchParams(location.search)
+let mine: MyKey | null = q.has('nokey') ? null : sample
+
+function result(): KeyTest {
+  const reason = (q.get('keytest') ?? 'ok') as keyof typeof S.TEST
+  const kind = reason === 'ok' ? 'ok' : reason === 'not_yet' ? 'wait' : 'error'
+  return { ok: reason === 'ok', kind, reason, last: '', text: fill(S.TEST[reason] ?? S.TEST.ok, { who: 'Yale' }) }
+}
 
 export const answers = {
   'keys.mine': () => mine,
   'keys.create': () => (mine ??= sample),
-  'keys.test': ({ username }: { username: string }) => username.trim()
-    ? { ok: true, kind: 'ok', text: 'Login works.' }
-    : { ok: false, kind: 'error', text: 'Type your username first.' },
+  'keys.test': () => new Promise<KeyTest>((done) => setTimeout(() => done(result()), Number(q.get('keywait') ?? 300))),
 }
