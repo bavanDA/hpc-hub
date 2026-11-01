@@ -47,8 +47,16 @@ the owner's own review notes; the quote is what they said. A rule that can be te
     at 360 dp wide.
     > "the buttons are not mobile friendly, even the navbar on the bottom is very bad"
 
+16. **Any number.** Wherever a number is chosen (cores, memory, GPUs, time), the user can type any value the
+    cluster allows. Presets and steppers are shortcuts, never the only way.
+    > "the design should be in way that user can select any number"
+17. **Professional and relevant.** Neutral colors (greys, white, black); the accent only for the main button and
+    the current choice. No decorative colors, gradients, colored icons or playful styles. Show only what helps the
+    task.
+    > "keep it professional and relevant, no colorful"
+
 ## Process
 
-16. **Show before merging.** Every design goes to the owner on a review page first; nothing merges without it.
-17. **A fix is only done when it shows on screen.** Check every reported fix against the actual screenshot.
-18. **Check the whole app, not just the screen that was commented on.** A rule broken once is checked everywhere.
+18. **Show before merging.** Every design goes to the owner on a review page first; nothing merges without it.
+19. **A fix is only done when it shows on screen.** Check every reported fix against the actual screenshot.
+20. **Check the whole app, not just the screen that was commented on.** A rule broken once is checked everywhere.
