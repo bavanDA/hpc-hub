@@ -1,4 +1,5 @@
-// Files: browse a cluster's folders (Home, Project, Scratch) and look at a file.
+// More › Files: browse a cluster's folders (Home, Project, Scratch) and look at a file. The full file manager
+// (copy, paste, zip, upload, download) is built here next; quick browsing to edit lives in the Code tab.
 import { ArrowUp, File, Folder, FolderX, WifiOff } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
@@ -21,7 +22,7 @@ function size(n: number) {
   return `${i ? n.toFixed(1) : n} ${units[i]}`
 }
 
-export function Files() {
+export function FilesManager() {
   const { live, current, pick } = useConnected()
   const id = current?.id ?? ''
   const [places, setPlaces] = useState<Place[]>([])

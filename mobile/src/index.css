@@ -1,11 +1,25 @@
 @import '../../app/src/index.css';
-/* shared pieces the phone shows (the terminal's monitoring bar, the log) use classes from there */
+/* shared pieces the phone shows use classes from there: Tailwind only makes the classes it finds in these files */
 @source '../../app/src/components/terminals';
 @source '../../app/src/components/clusters';
 @source '../../app/src/components/ui.tsx';
 @source '../../app/src/components/toast.tsx';
+@source '../../app/src/components/Term.tsx';
 @source '../../app/src/components/permissions';
 @source '../../app/src/pages/Permissions.tsx';
+/* used by the screens built next: the code editor, agents, projects, files, transfers, Globus, papers, PDFs */
+@source '../../app/src/components/code';
+@source '../../app/src/components/agents';
+@source '../../app/src/components/tools';
+@source '../../app/src/components/projects';
+@source '../../app/src/components/files';
+@source '../../app/src/components/globus';
+@source '../../app/src/components/latex';
+@source '../../app/src/components/pdf';
+@source '../../app/src/components/jobs';
+@source '../../app/src/components/usage';
+@source '../../app/src/components/schedules';
+@source '../../app/src/components/skills';
 
 /* A phone reads at arm's length: its text sizes stay a step larger than the desktop scale */
 @theme {
