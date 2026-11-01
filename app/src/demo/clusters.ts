@@ -155,7 +155,13 @@ export const answers: Record<string, unknown> = {
     return null
   },
   'clusters.cancel': ({ cluster }: { cluster: string }) => {
-    steps(cluster, [[300, { state: 'Error', connected: false, detail: 'Cancelled' }, 'Cancelled']])
+    if (find(sessions, cluster).state === 'Requesting compute node') {
+      steps(cluster, [[300, { state: 'Connected', connected: true, detail: 'You stopped waiting for a node.' },
+        'You stopped waiting for a node.']])
+    } else {
+      steps(cluster, [[300, { state: 'Disconnected', connected: false, detail: 'You cancelled the sign-in.' },
+        'You cancelled the sign-in.']])
+    }
     return null
   },
   'clusters.request_node': ({ cluster, profile: p, remember }:

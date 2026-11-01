@@ -62,9 +62,21 @@ export function Questions() {
     })
     return () => { stop.then((fn) => fn()) }
   }, [])
+  // "Send a new push": cancel the waiting login, then connect again once it has stopped
+  const again = useRef('')
   useEvent<Session>('session', (s) => {
-    if (s.state === 'Error' && s.detail) toast(`${clusters?.find((c) => c.id === s.id)?.name ?? s.id}: ${s.detail}`)
+    if (s.state === 'Error' && s.detail && again.current !== s.id) {
+      toast(`${clusters?.find((c) => c.id === s.id)?.name ?? s.id}: ${s.detail}`)
+    }
+    if (again.current === s.id && (s.state === 'Disconnected' || s.state === 'Error')) {
+      again.current = ''
+      call('clusters.connect', { cluster: s.id }).catch((e: Error) => toast(e.message))
+    }
   })
+  const retry = (id: string) => {
+    again.current = id
+    call('clusters.cancel', { cluster: id }).catch((e: Error) => toast(e.message))
+  }
 
   const demoCluster = clusters?.find((c) => c.id === (demo?.get('cluster') ?? 'wulver'))
 
@@ -73,7 +85,8 @@ export function Questions() {
   return (
     <>
       {duo && <DuoDialog key={duo.id} name={clusters?.find((c) => c.id === duo.id)?.name ?? duo.id}
-        onCancel={() => call('clusters.cancel', { cluster: duo.id }).catch((e: Error) => toast(e.message))} />}
+        onCancel={() => call('clusters.cancel', { cluster: duo.id }).catch((e: Error) => toast(e.message))}
+        onRetry={() => retry(duo.id)} />}
       {q && <QuestionDialog key={q.id} q={q} cluster={clusters?.find((c) => c.id === q.cluster)}
         onAnswer={(a) => answer(q, a)} />}
       {shown === 'settings' && demoCluster && <SettingsDialog cluster={demoCluster} onClose={() => setShown('')}
