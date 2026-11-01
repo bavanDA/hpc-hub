@@ -1,10 +1,11 @@
 """Sign-in with an SSH key you paste on the cluster's key page (Yale), in the cluster's settings: three steps, only
-the current one open (make a key, give it to the cluster, try it; core/my_key.py). The desktop app's KeyPanel.tsx
-does the same. Its words are in core/login_copy.py."""
+the current one open (a key, yours or one HPC Hub makes; give it to the cluster; try it; core/my_key.py). The
+desktop app's KeyPanel.tsx does the same. Its words are in core/login_copy.py."""
 
 import threading
+from pathlib import Path
 
-from gi.repository import Adw, GLib, Gtk
+from gi.repository import Adw, Gio, GLib, Gtk
 
 from ...core import login_copy as C
 from ...core import my_key
@@ -56,8 +57,8 @@ class KeyGroup(Adw.PreferencesGroup):
     def __init__(self, cfg: ClusterConfig, user: Adw.EntryRow, password: Adw.PasswordEntryRow, **kwargs):
         super().__init__(**kwargs)
         self.cfg, self.user, self.password = cfg, user, password
-        self.key = my_key.find()
-        self.made = False
+        self.key = my_key.find(cfg.ssh_key)
+        self.how = "found"  # found, made or picked: what step 1 says
         self.added = bool(self.key and user.get_text().strip())  # a key and a username from before: at the test
         self.works = False
         help_link = _button(C.WHATS_A_KEY, "flat", "accent", icon="adw-external-link-symbolic")
@@ -71,8 +72,12 @@ class KeyGroup(Adw.PreferencesGroup):
 
         create = _button(C.CREATE_KEY, "suggested-action")
         create.connect("clicked", lambda *_: self._make())
+        mine = _button(C.USE_MINE, "flat", icon="document-open-symbolic")
+        mine.connect("clicked", lambda *_: self._pick())
+        self.steps[KEY].row.add_suffix(mine)
         self.steps[KEY].row.add_suffix(create)
         self.steps[KEY].body = [create]
+        self.mine = mine
 
         self.copy_row = Adw.ActionRow(title_lines=1)
         self.copy = _button(C.COPY_KEY, "flat", icon="edit-copy-symbolic")
@@ -90,7 +95,10 @@ class KeyGroup(Adw.PreferencesGroup):
         change.connect("clicked", lambda *_: self._change())
         self.steps[ADD].row.add_suffix(change)
         self.change = change
-        self.steps[ADD].body = [self.copy_row, page]
+        already = Adw.ActionRow(title=C.ALREADY_ON.format(who=who), activatable=True, css_classes=["dim-label"])
+        already.add_suffix(Gtk.Image(icon_name="go-next-symbolic"))
+        already.connect("activated", lambda *_: self._added())
+        self.steps[ADD].body = [self.copy_row, page, already]
 
         user.set_title(cfg.username_label)
         user.connect("changed", lambda *_: self._show_result(None))
@@ -123,8 +131,10 @@ class KeyGroup(Adw.PreferencesGroup):
         k = self.key
         at = KEY if k is None else ADD if not self.added else TEST
         file = k.file if k else ""
-        self.steps[KEY].show("open" if at == KEY else "done", (C.KEY_MADE if self.made else C.KEY_FOUND).format(
-            file=file))
+        said = {"made": C.KEY_MADE, "picked": C.KEY_PICKED}.get(self.how, C.KEY_FOUND)
+        self.steps[KEY].show("open" if at == KEY else "done", said.format(file=file))
+        self.mine.set_child(Adw.ButtonContent(label=C.USE_MINE if at == KEY else C.CHANGE,
+                                              icon_name="document-open-symbolic"))
         self.steps[ADD].show("later" if at == KEY else "open" if at == ADD else "done", C.PASTED)
         self.change.set_visible(at == TEST)
         self.steps[TEST].show("done" if self.works else "open" if at == TEST else "later",
@@ -141,8 +151,28 @@ class KeyGroup(Adw.PreferencesGroup):
         except OSError as e:
             self.steps[KEY].row.set_subtitle(GLib.markup_escape_text(str(e)))
             return
-        self.made = True
+        self.how = "made"
         self._show()
+
+    def _pick(self) -> None:
+        """A key you already have: the file dialog, starting in ~/.ssh."""
+        dialog = Gtk.FileDialog(title=C.PICK_KEY, initial_folder=Gio.File.new_for_path(str(Path.home() / ".ssh")))
+
+        def done(d, result):
+            try:
+                f = d.open_finish(result)
+            except GLib.Error:
+                return  # closed without picking
+            try:
+                self.key = my_key.load(f.get_path())
+            except (ValueError, OSError) as e:
+                self.steps[KEY].row.set_subtitle(GLib.markup_escape_text(str(e)))
+                return
+            self.cfg.ssh_key = self.key.path  # saved with the rest of the settings
+            self.how = "picked"
+            self._show_result(None)
+            self._show()
+        dialog.open(self.get_root(), None, done)
 
     def _copy(self) -> None:
         self.get_clipboard().set(self.key.public)
