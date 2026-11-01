@@ -1,9 +1,11 @@
-// The ☰ menu in the header (hpc_hub/ui/window.py _menu): Settings, About, and the two ways to quit.
+// The ☰ menu in the header (hpc_hub/ui/window.py _menu): Settings, the phone app's QR code, About, and the two ways
+// to quit.
 // Ctrl+, opens Settings and Ctrl+Q quits, as in the GTK app (Cmd on macOS).
 import { Menu } from 'lucide-react'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 
 import { AboutDialog } from './About'
+import { PairPhoneDialog } from './PairPhoneDialog'
 import { isMac } from './platform'
 import { PreferencesDialog } from './Preferences'
 import { useQuit } from './quit'
@@ -30,7 +32,8 @@ export function AppMenu({ onExperimental }: { onExperimental: (on: boolean) => v
   })
 
   const items: [string, () => void, string?][][] = [
-    [['Settings…', prefs, isMac ? '⌘,' : 'Ctrl+,'], ['About HPC Hub', () => setDialog(<AboutDialog onClose={close} />)]],
+    [['Settings…', prefs, isMac ? '⌘,' : 'Ctrl+,'], ['Set up the phone app…', () => setDialog(<PairPhoneDialog onClose={close} />)],
+      ['About HPC Hub', () => setDialog(<AboutDialog onClose={close} />)]],
     [['Disconnect all and quit…', quit.disconnectAndQuit],
       ['Close HPC Hub (nodes and VPN stay on)', quit.quit, isMac ? '⌘Q' : 'Ctrl+Q']],
   ]

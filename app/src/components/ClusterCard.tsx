@@ -2,13 +2,14 @@
 // the next thing to do (Connect, Cancel); once connected, the things you open (Terminal, VS Code, Files, Agents)
 // sit in one row and the rest (node, VPN only, Disconnect) in the ⋮ menu. With Ask every time (ask_node) the node
 // dialog opens by itself once connected.
-import { Bot, ChevronDown, Code, Cpu, Folder, MoreVertical, Plug, Power, Server, Settings, SquareTerminal, Users,
-  Zap, type LucideIcon } from 'lucide-react'
+import { Bot, ChevronDown, Code, Cpu, Folder, MoreVertical, Plug, Power, Server, Settings, Smartphone, SquareTerminal,
+  Users, Zap, type LucideIcon } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
 import { useGo } from '../nav'
 import { call } from '../rpc'
 import { BUSY, DUO, fastLabel, summary, type Cluster, type Session } from '../types/clusters'
+import { PairPhoneDialog } from './app/PairPhoneDialog'
 import { ComputeDialog } from './clusters/ComputeDialog'
 import { LogView } from './clusters/LogView'
 import { who } from './clusters/loginCopy'
@@ -19,7 +20,7 @@ import { useToast } from './toast'
 import { useTools } from './tools/useTools'
 import { Button, Dialog, IconButton, IconTile, Spinner } from './ui'
 
-type Open = null | 'settings' | 'compute' | 'size' | { switch: { id: string; name: string }; vpnOnly: boolean }
+type Open = null | 'settings' | 'compute' | 'size' | 'phone' | { switch: { id: string; name: string }; vpnOnly: boolean }
 
 const WAITING = 'Requesting compute node'
 
@@ -94,6 +95,7 @@ export function ClusterCard({ cluster: c, session: s, log }: { cluster: Cluster;
       : [{ label: 'Get a node…', icon: Cpu, onClick: () => setOpen('compute') },
           ...(fast ? [{ label: fast, icon: Zap, onClick: () => run('clusters.request_fast_node') }] : [])]) : [],
     idle && c.vpn.enabled ? [{ label: 'Connect VPN only', icon: Plug, onClick: () => connect(true) }] : [],
+    [{ label: 'Connect phone', icon: Smartphone, onClick: () => setOpen('phone') }],
     s.state === 'Connected' ? [{ label: 'Disconnect', icon: Power, danger: true, onClick: () => run('clusters.disconnect') }]
       : [],
   ]
@@ -180,6 +182,7 @@ export function ClusterCard({ cluster: c, session: s, log }: { cluster: Cluster;
       {open === 'settings' && <SettingsDialog cluster={c} hint={hint} onClose={() => setOpen(null)} />}
       {open === 'compute' && <ComputeDialog cluster={c} onClose={() => setOpen(null)} />}
       {open === 'size' && <ComputeDialog cluster={c} saveOnly onClose={() => setOpen(null)} />}
+      {open === 'phone' && <PairPhoneDialog only={[c.id]} onClose={() => setOpen(null)} />}
       {open && typeof open === 'object' && (
         <Dialog title={`Disconnect ${open.switch.name}?`} onClose={() => setOpen(null)} width={420}
           actions={<>
