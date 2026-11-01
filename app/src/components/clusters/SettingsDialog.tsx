@@ -97,11 +97,7 @@ export function SettingsDialog({ cluster, hint, onClose, start = 'login' }:
   const ownVpnLogin = v.enabled && !(v.same_login_as_ssh ?? true)
   const win = info?.chrome_window
   const signIn: [string, string][] = [['', 'This app (fills your login)'],
-    ...(win && (win.offered || v.browser === win.value) ? [[win.value, CHROME_WINDOW.title] as [string, string]] : []),
-    ...(info?.browsers ?? []).map((b): [string, string] => [b, `Chrome: ${b}`])]
-  if (info && v.browser && !signIn.some(([value]) => value === v.browser)) {
-    signIn.push([v.browser, `Chrome: ${v.browser}`])  // saved before, not in Chrome any more
-  }
+    ...(win && (win.offered || v.browser === win.value) ? [[win.value, CHROME_WINDOW.title] as [string, string]] : [])]
 
   function changes() {
     const out: Record<string, unknown> = {
@@ -172,8 +168,8 @@ export function SettingsDialog({ cluster, hint, onClose, start = 'login' }:
     </Group>
     {d.portal && (
       <Group title="Web portal"
-        description={`No password yet? Sign in at ${host(d.portal)} in Chrome and the app adds this computer's SSH
-          key to your account, then logs in with it.`}>
+        description={`No password yet? Sign in at ${host(d.portal)} in a window HPC Hub opens, and the app adds this
+          computer's SSH key to your account, then logs in with it.`}>
         <ButtonRow label={`Log in through ${host(d.portal)}`} icon={<KeyRound size={16} />}
           onClick={() => setOpen('key')} />
       </Group>
@@ -189,13 +185,13 @@ export function SettingsDialog({ cluster, hint, onClose, start = 'login' }:
           width={72} />
       </ActionRow>
     </Group>
-    <Group title="VPN" description="Web sign-in (SSO) opens in a window of the app, or in your Chrome profile.">
+    <Group title="VPN" description="Web sign-in (SSO) opens in a window of HPC Hub's own, never your browser.">
       <SwitchRow label="Use VPN" checked={v.enabled} onChange={(enabled) => upVpn({ enabled })} />
       {v.enabled && <>
         <EntryRow label="Gateway" value={v.gateway} onChange={(gateway) => upVpn({ gateway })}
           placeholder="vpn.example.edu" />
         <ComboRow label="Sign in with" value={v.browser ?? ''}
-          sub="In Chrome you are often signed in already, so it is quicker"
+          sub="The Chrome window remembers your sign-in, so it is quicker"
           options={signIn}
           onChange={(browser) => upVpn({ browser })} />
         <ComboRow label="Protocol" value={v.protocol ?? 'anyconnect'} onChange={(protocol) => upVpn({ protocol })}
