@@ -46,27 +46,24 @@ def test_test_argv_uses_only_this_key_and_never_prompts():
     assert argv[argv.index("-i") + 1] == key.path and argv[-3:] == ["--", "login.example.edu", "true"]
 
 
-Y = "Yale Bouchet"
-
-
 @pytest.mark.parametrize("output, code, kind, text", [
     ('debug1: Authenticated using "publickey" with partial success.\nPermission denied (keyboard-interactive).',
-     255, "ok", C.TEST_OK.format(name=Y)),
-    ("", 0, "ok", C.TEST_OK.format(name=Y)),
+     255, "ok", C.TEST_OK),
+    ("", 0, "ok", C.TEST_OK),
     ("debug1: Next authentication method: publickey\njdoe@login: Permission denied (publickey,keyboard-interactive).",
-     255, "wait", C.TEST_UNKNOWN_KEY.format(name=Y)),
+     255, "wait", C.TEST_UNKNOWN_KEY.format(who="Yale")),
     ("ssh: connect to host login.example.edu port 22: Connection timed out", 255, "error",
-     C.TEST_UNREACHABLE_VPN.format(name=Y, vpn="Yale")),
-    ("Host key verification failed.", 255, "error", C.TEST_HOST_KEY.format(name=Y)),
+     C.TEST_UNREACHABLE_VPN.format(vpn="Yale")),
+    ("Host key verification failed.", 255, "error", C.TEST_HOST_KEY),
     ("debug1: x\nkex_exchange_identification: read: Connection reset by peer", 255, "error",
      C.TEST_UNFINISHED.format(last="kex_exchange_identification: read: Connection reset by peer")),
 ])
 def test_verdict(output, code, kind, text):
-    got = my_key.verdict(output, code, Y, vpn="Yale")
+    got = my_key.verdict(output, code, "Yale", vpn="Yale")
     assert (got.kind, got.text, got.ok) == (kind, text, kind == "ok")
-    assert "Connect to the Yale VPN" in my_key.verdict("No route to host", 255, Y, "Yale").text
+    assert "Connect to the Yale VPN" in my_key.verdict("No route to host", 255, "Yale", "Yale").text
+    assert "Bouchet" not in got.text  # the full name is the title's
 
 
 def test_no_vpn_no_vpn_question():
-    assert my_key.verdict("ssh: Could not resolve hostname x", 255, "SDSC Expanse").text == \
-        C.TEST_UNREACHABLE.format(name="SDSC Expanse")
+    assert my_key.verdict("ssh: Could not resolve hostname x", 255, "SDSC").text == C.TEST_UNREACHABLE

@@ -160,8 +160,8 @@ class ClusterConfig:
     def second_step(self) -> str:
         """What the cluster asks after the password. Its admins decide, so the app says it, never asks it."""
         if self.second_factor == "code":
-            return f"{self.name} asks for a code from your authenticator app."
-        return f"{self.name} asks for Duo on your phone."
+            return login_copy.SECOND_CODE
+        return login_copy.SECOND_DUO
 
     @property
     def short_name(self) -> str:
@@ -175,10 +175,10 @@ class ClusterConfig:
 
     def password_note(self, store: str) -> str:
         """Said under the password of a cluster that takes no keys. store: where logins are kept."""
-        return login_copy.PASSWORD_NOTE.format(name=self.short_name, store=store)
+        return login_copy.PASSWORD_NOTE.format(store=store)
 
     def key_intro(self) -> str:
-        return login_copy.KEY_INTRO.format(name=self.short_name)
+        return login_copy.KEY_INTRO
 
     @property
     def vpn_owner(self) -> str:

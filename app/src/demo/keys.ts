@@ -9,6 +9,6 @@ export const answers = {
   'keys.mine': () => mine,
   'keys.create': () => (mine ??= sample),
   'keys.test': ({ username }: { username: string }) => username.trim()
-    ? { ok: true, kind: 'ok', text: 'Login works. Yale Bouchet is ready.' }
+    ? { ok: true, kind: 'ok', text: 'Login works.' }
     : { ok: false, kind: 'error', text: 'Type your username first.' },
 }

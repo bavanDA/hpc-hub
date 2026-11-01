@@ -162,14 +162,14 @@ export function SettingsDialog({ cluster, hint, onClose, start = 'login' }:
   const login = d.key_page && !usePassword ? <>
     <div className="mb-5">
       <h3 className="mb-1 text-[15px] font-bold">Cluster login</h3>
-      <p className="mb-3 text-[13px] text-dim">{copy.keyIntro(d)} <KeyHelpLink cluster={d} /></p>
+      <p className="mb-3 text-[13px] text-dim">{copy.keyIntro} <KeyHelpLink cluster={d} /></p>
       <KeyPanel cluster={d} user={user} onUser={setUser} />
     </div>
     {instead}
     <Group><ButtonRow label="Forget saved logins" tone="bad" onClick={forget} /></Group>
   </> : <>
     <Group title="Cluster login"
-      description={d.password_only ? copy.passwordNote(d, keyStore) : copy.savedIn(keyStore)}>
+      description={d.password_only ? copy.passwordNote(keyStore) : copy.savedIn(keyStore)}>
       <EntryRow label={d.username_label || 'Username'} value={user} onChange={setUser} autoFocus
         placeholder={copy.usernameHint} />
       <EntryRow label={!remember ? 'Password (optional: asked when you connect)'

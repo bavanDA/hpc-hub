@@ -35,9 +35,9 @@ def test_test_needs_a_key_and_a_name_then_asks_the_cluster(home, monkeypatch):
     assert keys.test("yale", " ") == {"ok": False, "text": login_copy.TEST_NO_USER, "kind": "error"}
     asked = []
 
-    def fake(key, user, host, port, name, vpn):
-        asked.append((user, host, port, name, vpn))
+    def fake(key, user, host, port, who, vpn):
+        asked.append((user, host, port, who, vpn))
         return my_key.Result(True, "Login works.")
     monkeypatch.setattr(my_key, "test", fake)
     assert keys.test("yale", " jdoe ") == {"ok": True, "text": "Login works.", "kind": "ok"}
-    assert asked == [("jdoe", "bouchet.ycrc.yale.edu", 22, "Yale Bouchet", "Yale")]
+    assert asked == [("jdoe", "bouchet.ycrc.yale.edu", 22, "Yale", "Yale")]

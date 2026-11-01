@@ -120,7 +120,7 @@ function LoginStep({ cluster: c, onNext }: { cluster: Cluster; onNext: () => voi
     return (
       <form className="flex flex-col gap-6" onSubmit={(e) => { e.preventDefault(); if (user.trim()) save() }}>
         <Heading icon={<KeyRound size={22} />} title={copy.signIn(c)}
-          text={<>{copy.keyIntro(c)} <KeyHelpLink cluster={c} /></>} />
+          text={<>{copy.keyIntro} <KeyHelpLink cluster={c} /></>} />
         {loaded ? <KeyPanel cluster={c} user={user} onUser={setUser} onTested={setWorks} />
           : <div className="grid h-40 place-items-center"><Spinner size={24} /></div>}
         {instead}
@@ -154,7 +154,7 @@ function LoginStep({ cluster: c, onNext }: { cluster: Cluster; onNext: () => voi
           ? <div className="flex gap-3 rounded-xl bg-pill px-4 py-3 text-[13px]">
               <Lock size={16} className="mt-0.5 shrink-0 text-accent-text" />
               <div className="flex flex-col gap-1">
-                <p>{copy.passwordNote(c, keyStore)}</p>
+                <p>{copy.passwordNote(keyStore)}</p>
                 {c.second_factor !== 'code' && <p className="text-dim">{copy.passwordDuo}</p>}
               </div>
             </div>

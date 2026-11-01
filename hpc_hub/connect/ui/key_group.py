@@ -87,7 +87,7 @@ class KeyGroup(Adw.PreferencesGroup):
         user.connect("changed", lambda *_: self._show_result(None))
         self.steps[TEST].row.add_row(user)
         if cfg.second_factor == "duo":
-            self.steps[TEST].row.add_row(Adw.ActionRow(subtitle=C.KEY_DUO.format(name=cfg.short_name)))
+            self.steps[TEST].row.add_row(Adw.ActionRow(subtitle=C.KEY_DUO))
         test_row = Adw.ActionRow()
         self.spinner = Adw.Spinner(visible=False)
         self.test = _button(C.TEST_BUTTON, "suggested-action")
@@ -146,7 +146,7 @@ class KeyGroup(Adw.PreferencesGroup):
         c, key = self.cfg, self.key
 
         def work():
-            r = my_key.test(key, name, c.host, c.port, c.short_name, c.vpn_owner)
+            r = my_key.test(key, name, c.host, c.port, c.who, c.vpn_owner)
             GLib.idle_add(self._tested, r)
         threading.Thread(target=work, daemon=True).start()
 

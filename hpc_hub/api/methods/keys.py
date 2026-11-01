@@ -27,4 +27,4 @@ def test(cluster: str, username: str) -> dict:
         return my_key.Result(False, login_copy.TEST_NO_KEY).json()
     if not username.strip():
         return my_key.Result(False, login_copy.TEST_NO_USER).json()
-    return my_key.test(key, username.strip(), cfg.host, cfg.port, cfg.short_name, cfg.vpn_owner).json()
+    return my_key.test(key, username.strip(), cfg.host, cfg.port, cfg.who, cfg.vpn_owner).json()

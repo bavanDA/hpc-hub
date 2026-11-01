@@ -99,8 +99,8 @@ def test_agent_compute_roundtrip(tmp_path):
 
 def test_second_step_is_said_not_chosen():
     by_id = {c.id: c for c in config.default_clusters()}
-    assert by_id["wulver"].second_step() == "Wulver (NJIT) asks for Duo on your phone."
-    assert by_id["sdsc"].second_step() == "SDSC Expanse asks for a code from your authenticator app."
+    assert by_id["wulver"].second_step() == "This cluster asks for Duo on your phone."
+    assert by_id["sdsc"].second_step() == "This cluster asks for a code from your authenticator app."
 
 
 def test_old_chrome_profile_sign_in_falls_back_to_the_app_window(tmp_path):
@@ -117,10 +117,10 @@ def test_how_each_cluster_logs_in_is_said(tmp_path):
     wulver, yale = by_id["wulver"], by_id["yale"]
     assert wulver.password_only and not wulver.key_page
     note = wulver.password_note("your system keyring")
-    assert note.startswith("Wulver doesn't accept SSH keys") and "your system keyring" in note
+    assert note.startswith("This cluster doesn't accept SSH keys") and "your system keyring" in note
     assert wulver.username_label == "UCID" and yale.username_label == "NetID"
     assert yale.key_page.startswith("https://") and not yale.password_only
-    assert yale.who == "Yale" and yale.key_intro() == "To sign in to Yale Bouchet, you need an SSH key."
+    assert yale.who == "Yale" and yale.key_intro() == "You need an SSH key to sign in."
     assert not yale.password_too and yale.vpn_owner == "Yale"
     assert yale.key_help_url.startswith("https://docs.ycrc.yale.edu/")  # its own guide
     assert by_id["sdsc"].key_help_url.startswith("https://docs.github.com/")  # else GitHub's

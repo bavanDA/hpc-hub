@@ -144,10 +144,10 @@ export const BUSY: State[] = ['Connecting VPN', 'Signing in', 'Approve Duo on yo
   'Disconnecting']
 export const DUO: State = 'Approve Duo on your phone'
 
-/** The cluster's second step, decided by its admins: "Wulver asks for Duo on your phone." */
-export function secondStep(c: Pick<Cluster, 'name' | 'second_factor'>) {
-  return c.second_factor === 'code' ? `${c.name} asks for a code from your authenticator app.`
-    : `${c.name} asks for Duo on your phone.`
+/** The cluster's second step, decided by its admins, said under its name (login_copy.py SECOND_*). */
+export function secondStep(c: Pick<Cluster, 'second_factor'>) {
+  return c.second_factor === 'code' ? 'This cluster asks for a code from your authenticator app.'
+    : 'This cluster asks for Duo on your phone.'
 }
 
 /** This computer's SSH key (keys.mine). */

@@ -1,5 +1,6 @@
 // Every sentence the login screens say about passwords and SSH keys, in one place so the wording can change in
 // one go. Python's are in hpc_hub/core/login_copy.py (also the login test's answers); keep the two alike.
+// The full cluster name is said once, in the title; after that the org ("Yale", who) or nothing.
 import type { Cluster } from '../../types/clusters'
 
 type Named = Pick<Cluster, 'name' | 'org'>
@@ -19,14 +20,14 @@ export const copy = {
 
   // a cluster that takes only passwords (Wulver)
   passwordHelp: (c: Named & Pick<Cluster, 'username_label'>) => `Your ${who(c)} ${c.username_label ?? ''} password.`,
-  passwordNote: (c: Named, store: string) =>
-    `${shortName(c)} doesn't accept SSH keys, so HPC Hub signs in with your password. It's saved encrypted in ` +
+  passwordNote: (store: string) =>
+    "This cluster doesn't accept SSH keys, so HPC Hub signs in with your password. It's saved encrypted in " +
     `${store}, the way a browser saves passwords.`,
   passwordDuo: 'After you sign in, approve the Duo push on your phone.',
   savedIn: (store: string) => `Saved encrypted in ${store}.`,
 
   // a cluster you log in to with a key you paste on its key page (Yale)
-  keyIntro: (c: Named) => `To sign in to ${shortName(c)}, you need an SSH key.`,
+  keyIntro: 'You need an SSH key to sign in.',
   whatsAKey: "What's an SSH key?",
   stepKey: 'Your SSH key',
   noKey: "If you don't have one, HPC Hub can make one.",
@@ -40,7 +41,7 @@ export const copy = {
   addedIt: 'I added it',
   added: (c: Named) => `Added on ${who(c)}'s SSH key page.`,
   stepTest: 'Test your login',
-  keyDuo: (c: Named) => `${shortName(c)} also sends a Duo push to your phone.`,
+  keyDuo: "You'll also get a Duo push on your phone.",
   testButton: 'Test login',
   change: 'Change',
   usePassword: 'Use a password instead',

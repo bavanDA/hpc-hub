@@ -108,7 +108,7 @@ export function KeyPanel({ cluster: c, user, onUser, onTested }:
           </div>
         </div>
         {c.second_factor !== 'code' && <p className="flex gap-2 text-[13px] text-dim">
-          <Smartphone size={14} className="mt-[3px] shrink-0" />{copy.keyDuo(c)}</p>}
+          <Smartphone size={14} className="mt-[3px] shrink-0" />{copy.keyDuo}</p>}
         {test && <Result test={test} />}
       </Step>
       {error && <p className="pb-2 text-[13px] text-bad">{error}</p>}
