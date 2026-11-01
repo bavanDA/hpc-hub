@@ -1,4 +1,5 @@
-"""Per-cluster settings: login (keyring), server & VPN, compute node, VS Code job."""
+"""Per-cluster settings in two pages, like the desktop app's SettingsDialog.tsx: Sign-in (username, password or
+key; the server and VPN under Advanced) and Compute (the node; Slurm details and the VS Code job under Advanced)."""
 
 from collections.abc import Callable
 
@@ -51,7 +52,9 @@ class ProfileRows:
         self.account = _entry("Account", p.account)
         self.qos = _entry("QOS", p.qos)
         self.extra = _entry(extra_title, p.extra_args)
-        self.rows = [self.cpus, self.mem, self.time, self.gpus, self.partition, self.account, self.qos, self.extra]
+        self.size_rows = [self.cpus, self.mem, self.time, self.gpus, self.partition]
+        self.more_rows = [self.account, self.qos, self.extra]
+        self.rows = self.size_rows + self.more_rows
         for row in (self.partition, self.qos):
             row.connect("changed", lambda *_: self.time.set_queue(self.partition.get_text().strip(),
                                                                    self.qos.get_text().strip()))
@@ -76,9 +79,7 @@ class ClusterSettingsDialog(Adw.PreferencesDialog):
         self.vpn_saved = credentials.load(cfg.id, credentials.VPN)
         self.saved_hints: list[Gtk.Label] = []
         self.add(self._login_page())
-        self.add(self._server_page())
         self.add(self._compute_page())
-        self.add(self._vscode_page())
         self.set_can_close(False)
         self.connect("close-attempt", self._on_close_attempt)
 
@@ -105,7 +106,7 @@ class ClusterSettingsDialog(Adw.PreferencesDialog):
             group.add(self.user)
             group.add(self.password)
         if self.cfg.second_factor == "code":
-            help_row = Adw.ButtonRow(title="How to set up Google Authenticator", start_icon_name="help-about-symbolic")
+            help_row = Adw.ButtonRow(title=C.CODE_SETUP, start_icon_name="help-about-symbolic")
             help_row.connect("activated", lambda *_: AuthenticatorHelp(self.cfg).present(self))
             group.add(help_row)
         page.add(group)
@@ -119,19 +120,21 @@ class ClusterSettingsDialog(Adw.PreferencesDialog):
         forget.connect("clicked", self._forget)
         forget_group.add(forget)
         page.add(forget_group)
-        return page
 
-    def _server_page(self) -> Adw.PreferencesPage:
-        page = Adw.PreferencesPage(name="server", title="Server", icon_name="network-server-symbolic")
-        server = Adw.PreferencesGroup(title="Server")
+        advanced = Adw.PreferencesGroup(title="Advanced")
+        server = Adw.ExpanderRow(title="Server", subtitle=f"{self.cfg.host}, port {self.cfg.port}")
         self.host = _entry("Login host", self.cfg.host)
         self.port = _spin("SSH port", self.cfg.port, 1, 65535)
-        server.add(self.host)
-        server.add(self.port)
-        page.add(server)
+        server.add_row(self.host)
+        server.add_row(self.port)
+        advanced.add(server)
+        advanced.add(self._vpn_rows())
+        page.add(advanced)
+        return page
 
+    def _vpn_rows(self) -> Adw.ExpanderRow:
         v = self.cfg.vpn
-        vpn = Adw.PreferencesGroup(title="VPN", description="Browser sign-in (SSO) opens inside the app.")
+        vpn = Adw.ExpanderRow(title="VPN", subtitle=f"{self.cfg.who} VPN" if v.enabled else "Off")
         self.vpn_on = _switch("Use VPN", v.enabled)
         self.gateway = _entry("Gateway", v.gateway)
         self.protocol = Adw.ComboRow(title="Protocol", model=Gtk.StringList.new(VPN_PROTOCOLS))
@@ -157,35 +160,45 @@ class ClusterSettingsDialog(Adw.PreferencesDialog):
             else "VPN password (empty = cluster password)")
         for row in (self.vpn_on, self.gateway, self.sign_in, self.protocol, self.useragent, self.authgroup,
                     self.split, self.domains, self.routes, self.same_login, self.vpn_user, self.vpn_password):
-            vpn.add(row)
-        page.add(vpn)
+            vpn.add_row(row)
 
         self.vpn_on.connect("notify::active", lambda *_: self._sync_vpn())
         self.same_login.connect("notify::active", lambda *_: self._sync_vpn())
         self.split.connect("notify::active", lambda *_: self._sync_vpn())
         self._sync_vpn()
-        return page
+        return vpn
 
     def _compute_page(self) -> Adw.PreferencesPage:
         page = Adw.PreferencesPage(name="compute", title="Compute", icon_name="system-run-symbolic")
-        group = Adw.PreferencesGroup(title="Compute node", description="Agents and terminals run on this node.")
+        group = Adw.PreferencesGroup(
+            description="Your terminals and agents run on a compute node, not the busy login node.")
         self.on_connect = _switch("Get a compute node when I connect", self.cfg.request_node_on_connect)
-        self.ask_node = _switch("Ask every time", self.cfg.ask_node, "Review these before each request")
+        self.ask_node = _switch("Review these before each request", self.cfg.ask_node)
         self.on_connect.bind_property("active", self.ask_node, "visible", GObject.BindingFlags.SYNC_CREATE)
-        self.reuse = _switch("Use my running job", self.cfg.reuse_running_job, "Reuse a node you already have")
-        self.node = ProfileRows(self.cfg.profile, "Extra salloc arguments", self.limits)
-        for row in (self.on_connect, self.ask_node, self.reuse, *self.node.rows):
+        self.reuse = _switch("Reuse a node you already have", self.cfg.reuse_running_job)
+        for row in (self.on_connect, self.ask_node, self.reuse):
             group.add(row)
         page.add(group)
+
+        size = Adw.PreferencesGroup(title="Node size")
+        self.node = ProfileRows(self.cfg.profile, "Extra salloc arguments", self.limits)
+        for row in self.node.size_rows:
+            size.add(row)
+        page.add(size)
+
+        advanced = Adw.PreferencesGroup(title="Advanced")
+        slurm = Adw.ExpanderRow(title="Slurm details", subtitle="Account, QOS and extra salloc arguments")
+        for row in self.node.more_rows:
+            slurm.add_row(row)
+        advanced.add(slurm)
+        advanced.add(self._vscode_rows())
+        page.add(advanced)
         return page
 
-    def _vscode_page(self) -> Adw.PreferencesPage:
+    def _vscode_rows(self) -> Adw.ExpanderRow:
         v = self.cfg.vscode
-        page = Adw.PreferencesPage(name="vscode", title="VS Code", icon_name="text-editor-symbolic")
-        start = Adw.PreferencesGroup(
-            title="VS Code job",
-            description="The VS Code button submits this as its own batch job (sbatch) and shows its log. "
-                        "If a VS Code job is already running, it opens that one instead.")
+        start = Adw.ExpanderRow(title="VS Code job",
+                                subtitle="Runs as its own batch job; an open one is reused")
         self.vs_setup = _entry("Run first (e.g. module load VSCode)", v.setup)
         self.vs_command = _entry("Command", v.command)
         self.vs_workdir = _entry("Start in folder", v.workdir)
@@ -194,23 +207,16 @@ class ClusterSettingsDialog(Adw.PreferencesDialog):
         self.vs_open_in = Adw.ComboRow(title="Open in", model=Gtk.StringList.new([t[1] for t in TARGETS]))
         self.vs_open_in.set_selected(next((i for i, t in enumerate(TARGETS) if t[0] == v.open_in), 0))
         for row in (self.vs_setup, self.vs_command, self.vs_workdir, self.vs_open_in, self.vs_links):
-            start.add(row)
-        page.add(start)
-
-        res = Adw.PreferencesGroup(title="Job resources")
+            start.add_row(row)
         self.vs_job = ProfileRows(v.compute, "Extra sbatch arguments", self.limits)
         for row in self.vs_job.rows:
-            res.add(row)
-        page.add(res)
-
+            start.add_row(row)
         if self.edit_remote:
-            more = Adw.PreferencesGroup(title="Editor settings")
             edit = Adw.ButtonRow(title="Edit remote settings.json", end_icon_name="document-edit-symbolic")
             edit.connect("activated", lambda *_: self.edit_remote(
                 "~/.vscode-server/data/Machine/settings.json", "{\n}\n"))
-            more.add(edit)
-            page.add(more)
-        return page
+            start.add_row(edit)
+        return start
 
     # -- behaviour ---------------------------------------------------------------
     def _sync_vpn(self) -> None:
