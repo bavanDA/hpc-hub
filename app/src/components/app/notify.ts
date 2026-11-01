@@ -8,7 +8,7 @@ import { call } from '../../rpc'
 import type { Cluster, Session } from '../../types'
 import { inTauri } from './platform'
 
-export type NoticeKind = 'duo' | 'connected' | 'node' | 'job' | 'copy' | 'ask'
+export type NoticeKind = 'duo' | 'connected' | 'node' | 'job' | 'copy' | 'ask' | 'backup' | 'backup_done'
 /** What a notification is about: its kind (the phone lets you turn kinds off) and the page tapping it opens. */
 export type Notice = { kind: NoticeKind; page: string; params?: Record<string, string> }
 type Notifier = (title: string, body: string, about?: Notice) => Promise<void>

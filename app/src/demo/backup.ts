@@ -4,12 +4,21 @@ import type { BackupAlert, BackupPolicy, Choice, Plan, PlanItem, Progress, Remin
 import { plan as basePlan, result, summary } from './backup_data'
 
 const GB = 1024 ** 3
+// ?backup=full (project nearly full), tight (the copy doesn't fit), partial (busy files), mismatch: for design work
+const knob = typeof location === 'undefined' ? '' : new URLSearchParams(location.search).get('backup') ?? ''
+const QUOTA = { full: 1640, tight: 1500 }[knob] ?? summary.destinations[0].quota_gb
+const RESULT = {
+  ...result, busy: knob === 'partial' ? result.busy : [], mismatches: knob === 'mismatch' ? 3 : 0,
+  failed: knob === 'partial' ? [{ path: 'misc/locked.bin', why: 'No read permission' }] : [],
+}
 const later = <T>(value: () => T, ms = 300) => new Promise<T>((done, fail) => setTimeout(() => {
   try { done(value()) } catch (e) { fail(e) }
 }, ms))
 
+const destinations = summary.destinations.map((d, i) => i ? d
+  : { ...d, quota_gb: QUOTA, free_gb: Math.max(0, QUOTA - d.used_gb) })
 const policy: BackupPolicy = {
-  scratch: summary.scratch, destinations: summary.destinations, purge: summary.purge,
+  scratch: summary.scratch, destinations, purge: summary.purge,
   scratch_fill_pct: summary.scratch_fill_pct, files_in_scratch: summary.files,
   no_tricks: 'HPC Hub never touches files to keep them longer. Clusters do not allow that.',
 }
@@ -50,7 +59,7 @@ function makePlan(id: string): Plan {
   const items = all.filter((i) => i.keep)
   const bytes = items.reduce((n, i) => n + i.bytes, 0)
   const files = items.reduce((n, i) => n + i.files, 0)
-  const d = summary.destinations[0]
+  const d = destinations[0]
   const after = d.used_gb + bytes / GB
   const pct = Math.round((100 * after) / d.quota_gb)
   const fits = after <= d.quota_gb
@@ -59,8 +68,9 @@ function makePlan(id: string): Plan {
   const h = Object.keys(choices).length ? hash(JSON.stringify(choices)) : basePlan.hash
   return {
     ...basePlan, scan_id: id, items, left_out: all.filter((i) => !i.keep), files, bytes, hash: h,
-    exact: tried[id] === h, will_replace: 0, busy: tried[id] === h ? result.busy : [],
-    space: { ...basePlan.space, after_gb: Math.round(after * 10) / 10, pct_after: pct, fits, warn },
+    exact: tried[id] === h, will_replace: 0, busy: tried[id] === h ? RESULT.busy : [],
+    space: { ...basePlan.space, after_gb: Math.round(after * 10) / 10, quota_gb: d.quota_gb, pct_after: pct, fits,
+      warn },
   }
 }
 
@@ -87,7 +97,7 @@ export const answers: Record<string, unknown> = {
     return { id, job_id: '4242' }
   }),
   'backup.scans': () => later(() => scans.map(scanNow)),
-  'backup.summary': ({ id }: { id: string }) => later(() => ({ ...summary, id })),
+  'backup.summary': ({ id }: { id: string }) => later(() => ({ ...summary, id, destinations })),
   'backup.plan': ({ id, changes = [] }: { id: string; changes?: Choice[] }) => later(() => {
     for (const c of changes) choices[`${c.path}|${c.class ?? ''}`] = c
     return makePlan(id)
@@ -113,7 +123,7 @@ export const answers: Record<string, unknown> = {
   }),
   'backup.result': ({ copy_id }: { copy_id: string }) => later(() => {
     const p = makePlan(copy_id)
-    return { ...result, copied_files: p.files, bytes: p.bytes }
+    return { ...RESULT, copied_files: p.files, bytes: p.bytes }
   }),
   'backup.cancel': ({ id }: { id: string }) => later(() => {
     const s = scans.find((x) => x.id === id)
