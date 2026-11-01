@@ -1,0 +1,115 @@
+// Demo data for the Code page: a few made-up files you can open, edit and save in the browser preview. One file
+// "changes on the cluster" after a while, to show the change banner and a save conflict.
+import type { FileState, FoundFile, GrepHit, OpenedFile, SaveResult } from '../types/code'
+
+const HOME = '/home/jdoe'
+const now = () => Math.floor(Date.now() / 1000)
+
+const FILES: Record<string, string> = {
+  [`${HOME}/projects/climate-model/train.py`]: `import torch
+from model import ClimateNet
+
+LR = 0.001
+EPOCHS = 30
+
+
+def main():
+    net = ClimateNet()
+    opt = torch.optim.Adam(net.parameters(), lr=LR)
+    for epoch in range(EPOCHS):
+        loss = net.step(opt)
+        print(f"epoch {epoch}: loss {loss:.4f}")
+
+
+if __name__ == "__main__":
+    main()
+`,
+  [`${HOME}/projects/climate-model/run.slurm`]: `#!/bin/bash
+#SBATCH --job-name=climate
+#SBATCH --partition=general
+#SBATCH --cpus-per-task=4
+#SBATCH --mem=16G
+#SBATCH --time=04:00:00
+
+module load python
+python train.py
+`,
+  [`${HOME}/projects/climate-model/config.yaml`]: `data: ~/data/processed
+batch_size: 64
+seed: 7
+`,
+  [`${HOME}/projects/climate-model/README.md`]: `# Climate model
+
+Train with \`sbatch run.slurm\`. Results land in \`results/\`.
+`,
+  [`${HOME}/slurm-123456.out`]: Array.from({ length: 40 }, (_, i) => `epoch ${i}: loss ${(1 / (i + 1)).toFixed(4)}\n`)
+    .join('') + `Traceback (most recent call last):
+  File "${HOME}/projects/climate-model/train.py", line 12, in main
+    loss = net.step(opt)
+RuntimeError: CUDA out of memory
+`,
+}
+
+const state: Record<string, { text: string; sha: string; mtime: number }> = {}
+let version = 0
+const shaOf = (text: string) => `demo${(++version).toString(16).padStart(8, '0')}${text.length.toString(16)}`
+const full = (path: string) => path.replace(/^~/, HOME)
+
+function get(path: string) {
+  const p = full(path)
+  if (!state[p] && FILES[p] !== undefined) state[p] = { text: FILES[p], sha: shaOf(FILES[p]), mtime: now() - 3600 }
+  return state[p]
+}
+
+function opened(path: string): OpenedFile {
+  const f = get(path)
+  if (!f) throw new Error('No such file')
+  const log = path.endsWith('.out')
+  return {
+    path, text: f.text, sha: f.sha, mtime: f.mtime, size: new TextEncoder().encode(f.text).length, eol: 'lf',
+    writable: !log, readonly_reason: log ? 'No write permission' : '', lossy: false,
+  }
+}
+
+// After a minute, an "agent" adds a line to train.py, so the preview shows what happens then
+setTimeout(() => {
+  const f = get(`${HOME}/projects/climate-model/train.py`)
+  if (f) Object.assign(f, { text: f.text.replace('EPOCHS = 30', 'EPOCHS = 30\nWARMUP = 2'), mtime: now() })
+  if (f) f.sha = shaOf(f.text)
+}, 60_000)
+
+export const answers = {
+  'code.open': ({ path }: { path: string }): OpenedFile => opened(path),
+  'code.save': ({ path, text, base_sha, force }: { path: string; text: string; base_sha: string; force?: boolean }):
+    SaveResult => {
+    const f = get(path)
+    if (f && f.sha !== base_sha && !force) return { saved: false, conflict: true, sha: f.sha, mtime: f.mtime }
+    const next = { text, sha: shaOf(text), mtime: now() }
+    state[full(path)] = next
+    return { saved: true, sha: next.sha, mtime: next.mtime }
+  },
+  'code.stat': ({ paths }: { paths: string[] }): FileState[] => paths.map((path) => {
+    const f = get(path)
+    return f ? { path, exists: true, sha: f.sha, mtime: f.mtime, size: f.text.length }
+      : { path, exists: false, sha: '', mtime: 0, size: 0 }
+  }),
+  'code.new_file': ({ path, text }: { path: string; text?: string }): OpenedFile => {
+    if (get(path)) throw new Error('A file with that name exists')
+    state[full(path)] = { text: text ?? '', sha: shaOf(text ?? ''), mtime: now() }
+    return opened(path)
+  },
+  'code.find_files': ({ root, query }: { root: string; query?: string }): FoundFile[] => {
+    const q = (query ?? '').toLowerCase()
+    return Object.keys(FILES).filter((p) => p.startsWith(full(root || '~')))
+      .map((path) => ({ path, name: path.slice(path.lastIndexOf('/') + 1) }))
+      .filter((f) => f.name.toLowerCase().includes(q))
+      .sort((a, b) => a.name.length - b.name.length || a.path.localeCompare(b.path))
+  },
+  'code.grep': ({ root, text }: { root: string; text: string }): GrepHit[] => {
+    const needle = text.toLowerCase()
+    if (!needle.trim()) return []
+    return Object.keys(FILES).filter((p) => p.startsWith(full(root || '~'))).flatMap((path) =>
+      (get(path)?.text ?? '').split('\n').flatMap((line, i) =>
+        line.toLowerCase().includes(needle) ? [{ path, line: i + 1, text: line.slice(0, 300) }] : []))
+  },
+}
