@@ -2,6 +2,8 @@
 import { CircleAlert, Coins, Cpu, HardDrive, RefreshCw, WifiOff } from 'lucide-react'
 import { useState } from 'react'
 
+import { useGo } from '../nav'
+
 import { notConnected, useClusters } from '../components/jobs/clusters'
 import { Select } from '../components/jobs/Select'
 import { EmptyState, Spinner } from '../components/ui'
@@ -17,6 +19,7 @@ const TABS = [['su', 'SU', Coins], ['storage', 'Storage', HardDrive], ['load', '
 
 export function Usage() {
   const { clusters, cluster, session, connected, setCluster, error: clustersError } = useClusters()
+  const go = useGo()
   const [tab, setTab] = useState<Tab>('su')
   const [days, setDays] = useState<string>('30')
   const [pick, setPick] = useState('')
@@ -48,7 +51,8 @@ export function Usage() {
   else body = (
     <div className="mx-auto flex max-w-[900px] flex-col gap-6 px-4 pt-3 pb-6">
       {tab === 'su' && <SuTab account={account} people={people.data} error={people.error} loading={people.loading}
-        period={PERIODS.find(([d]) => d === days)![1]} />}
+        period={PERIODS.find(([d]) => d === days)![1]}
+        onPerson={(user) => go('jobs', { cluster: cluster.id, user })} />}
       {tab === 'storage' && <StorageTab storage={storage.data} error={storage.error} />}
       {tab === 'load' && <LoadTab name={cluster.name} parts={load.data} error={load.error} />}
     </div>
@@ -59,9 +63,9 @@ export function Usage() {
       <div className="flex shrink-0 items-center gap-2 p-3">
         <Select label="Cluster" value={cluster.id} onChange={setCluster}
           options={clusters.map((c) => [c.id, c.name] as const)} />
-        <Select label="Account" value={name} onChange={setPick} disabled={!list.length}
-          options={list.length ? list.map((a) => [a.account, a.account] as const) : [['', '(no account)'] as const]} />
-        <Select label="Period" value={days} onChange={setDays} options={PERIODS} />
+        {tab !== 'load' && <Select label="Account" value={name} onChange={setPick} disabled={!list.length}
+          options={list.length ? list.map((a) => [a.account, a.account] as const) : [['', '(no account)'] as const]} />}
+        {tab === 'su' && <Select label="Period" value={days} onChange={setDays} options={PERIODS} />}
         <div className="flex flex-1 justify-center">
           <div role="tablist" className="inline-flex rounded-lg bg-pill p-0.5">
             {TABS.map(([key, title, Icon]) => (
