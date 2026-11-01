@@ -117,6 +117,7 @@ class ClusterConfig:
     # Fast node: "partition:qos:time" of a short queue that starts quickly (debug); empty: no Fast node button
     fast: str = ""
     request_node_on_connect: bool = True
+    ask_node: bool = False  # with request_node_on_connect: show the node's settings first instead of asking Slurm
     reuse_running_job: bool = False
     vpn: VpnSettings = field(default_factory=VpnSettings)
     profile: ComputeProfile = field(default_factory=ComputeProfile)

@@ -38,7 +38,8 @@ def test_get_has_the_settings_profiles_and_agent_options(hub):
 def test_save_changes_everything_the_dialog_edits(hub):
     out = cs.save("wulver", {
         "host": " jdoe@wulver.example.edu ", "port": 2222, "second_factor": "code", "duo_answer": "",
-        "request_node_on_connect": False, "reuse_running_job": True, "queues": " general:low , debug:debug ",
+        "request_node_on_connect": False, "ask_node": True, "reuse_running_job": True,
+        "queues": " general:low , debug:debug ",
         "queue_wait": 90,
         "vpn": {"gateway": "https://vpn.example.edu/group", "protocol": "gp", "useragent": "AnyConnect Linux_64 4.10",
                 "authgroup": "Default Group", "same_login_as_ssh": False, "split_tunnel": True,
@@ -52,7 +53,8 @@ def test_save_changes_everything_the_dialog_edits(hub):
     })
     c = hub.sessions["wulver"].cfg
     assert (c.host, c.port, c.second_factor, c.duo_answer) == ("wulver.example.edu", 2222, "code", "push")
-    assert not c.request_node_on_connect and c.reuse_running_job and c.queues == "general:low,debug:debug"
+    assert not c.request_node_on_connect and c.ask_node and c.reuse_running_job
+    assert c.queues == "general:low,debug:debug"
     assert c.queue_wait == 90 and c.vpn.protocol == "gp" and c.vpn.browser == "Uni"
     assert c.vpn.domains == "example.edu" and c.vpn.routes == "10.0.0.0/8 10.1.0.0/16"
     assert c.profile.cpus == 8 and c.profile.extra_args == "--constraint=a100 --exclusive"

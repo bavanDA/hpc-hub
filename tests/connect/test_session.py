@@ -233,6 +233,26 @@ def test_no_node_then_get_and_release(env):
     assert rec.done.wait(20)
 
 
+def test_ask_every_time_waits_for_your_pick(env):
+    server, tmp = env
+    rec = Recorder()
+    s = ClusterSession(ClusterConfig(id="t", name="Test", host="fake", ask_node=True), server, rec)
+    s.connect(Login("u", "pw"), None)
+    assert rec.done.wait(20)
+    assert s.state == State.CONNECTED and s.allocation is None and s.pick_node
+    log = tmp / "cmds.log"
+    assert "salloc" not in (log.read_text() if log.exists() else "")
+
+    rec.done.clear()
+    s.request_node()  # what the node dialog sends
+    assert not s.pick_node
+    assert rec.done.wait(20)
+    assert s.allocation.job_id == "42"
+    rec.done.clear()
+    s.disconnect()
+    assert rec.done.wait(20)
+
+
 def test_healthy_needs_working_link(env, monkeypatch):
     server, tmp = env
     s, rec = connect(server, "pw")

@@ -142,17 +142,18 @@ def release_node(cluster: str) -> None:
 
 @method("clusters.update")
 def update(cluster: str, changes: dict) -> dict:
-    """Change and save request_node_on_connect, the compute profile, or vpn.same_login_as_ssh."""
+    """Change and save request_node_on_connect, ask_node, the compute profile, or vpn.same_login_as_ssh."""
     cfg = hub().session(cluster).cfg
-    unknown = set(changes) - {"request_node_on_connect", "profile", "vpn"}
+    unknown = set(changes) - {"request_node_on_connect", "ask_node", "profile", "vpn"}
     if unknown:
         raise ValueError(f"Can't change {', '.join(sorted(unknown))}")
     vpn = changes.get("vpn") or {}
     if set(vpn) - {"same_login_as_ssh"}:
         raise ValueError("Only the VPN's same login setting can change here")
     profile = _profile(cfg.profile, changes["profile"]) if "profile" in changes else cfg.profile
-    if "request_node_on_connect" in changes:
-        cfg.request_node_on_connect = bool(changes["request_node_on_connect"])
+    for k in ("request_node_on_connect", "ask_node"):
+        if k in changes:
+            setattr(cfg, k, bool(changes[k]))
     if "same_login_as_ssh" in vpn:
         cfg.vpn.same_login_as_ssh = bool(vpn["same_login_as_ssh"])
     cfg.profile = profile

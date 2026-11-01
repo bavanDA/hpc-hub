@@ -21,7 +21,8 @@ QUESTION_SECONDS = 600
 def session_json(s: ClusterSession) -> dict:
     a = s.allocation
     return {"id": s.cfg.id, "state": s.state.value, "detail": s.detail, "connected": s.connected,
-            "node": a.node if a else "", "job": a.job_id if a else "", "owned": a.owned if a else False}
+            "node": a.node if a else "", "job": a.job_id if a else "", "owned": a.owned if a else False,
+            "pick_node": s.pick_node}
 
 
 class Hub:
