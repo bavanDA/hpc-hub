@@ -149,12 +149,36 @@ def read_bytes(ssh: SshMaster, path: str, limit: int = MAX_READ) -> bytes:
     return data
 
 
-def write_bytes(ssh: SshMaster, path: str, data: bytes) -> None:
-    tmp = posixpath.join(posixpath.dirname(path) or ".", f".{posixpath.basename(path)}.hpchub-tmp")
-    cmd = f"cat > {q(tmp)} && mv -f -- {q(tmp)} {q(path)}"
-    res = subprocess.run(ssh.argv(cmd), input=data, capture_output=True, timeout=300)
+# Shell: `replace_file PATH` puts stdin in the file PATH points to: written to a temp file next to it, then moved
+# over it, so a broken connection never leaves half a file. Through a link (the link stays a link), keeping the
+# file's mode and group (a script stays runnable). A new file gets the usual umask mode. Hard links aren't kept.
+REPLACE_SH = r"""
+replace_file() {
+  target=$(readlink -f -- "$1" 2>/dev/null); [ -n "$target" ] || target=$1
+  tmp=$(mktemp -- "$(dirname -- "$target")/.$(basename -- "$target").hpchub-XXXXXX") || return 1
+  if ! cat > "$tmp"; then rm -f -- "$tmp"; return 1; fi
+  if [ -e "$target" ]; then
+    chmod "$(stat -c %a -- "$target")" -- "$tmp" && { chgrp "$(stat -c %g -- "$target")" -- "$tmp" 2>/dev/null; :; }
+  else
+    chmod "$(printf %o $((0666 & ~$(umask))))" -- "$tmp"
+  fi || { rm -f -- "$tmp"; return 1; }
+  mv -f -- "$tmp" "$target" || { rm -f -- "$tmp"; return 1; }
+}
+"""
+
+
+def pipe(ssh: SshMaster, script: str, args: list[str], data: bytes, timeout: float = 300) -> str:
+    """Run a bash script on the cluster with args, data on its stdin. Its stdout; FsError with its last error."""
+    cmd = f"bash -c {q(script)} _ " + " ".join(q(a) for a in args)
+    res = subprocess.run(ssh.argv(cmd), input=data, capture_output=True, timeout=timeout)
     if res.returncode != 0:
-        raise FsError(res.stderr.decode(errors="replace").strip() or "Could not save file")
+        err = res.stderr.decode(errors="replace").strip().splitlines()
+        raise FsError(err[-1] if err else "Could not save file")
+    return res.stdout.decode(errors="replace")
+
+
+def write_bytes(ssh: SshMaster, path: str, data: bytes) -> None:
+    pipe(ssh, REPLACE_SH + 'replace_file "$1"', [path], data)
 
 
 def mkdir(ssh: SshMaster, path: str) -> None:
