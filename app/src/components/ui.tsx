@@ -92,6 +92,39 @@ export function Dialog({ title, onClose, children, actions, width = 480 }:
   )
 }
 
+/** A short question with two answers (Adwaita's alert dialog): the safe answer has focus, the risky one is red on
+ * the right. Esc or a click outside is the safe answer. */
+export function AlertDialog({ title, children, keep, act, danger = true, disabled, onAct, onClose }: {
+  title: string; children?: ReactNode; keep: string; act: string; danger?: boolean; disabled?: boolean
+  onAct: () => void; onClose: () => void
+}) {
+  useEffect(() => {
+    const me = Symbol('dialog')
+    open.push(me)
+    const key = (e: KeyboardEvent) => e.key === 'Escape' && open[open.length - 1] === me && onClose()
+    window.addEventListener('keydown', key)
+    return () => {
+      window.removeEventListener('keydown', key)
+      open.splice(open.indexOf(me), 1)
+    }
+  }, [onClose])
+  return (
+    <div className="fixed inset-0 z-40 grid place-items-center bg-black/45 p-4" onMouseDown={onClose}>
+      <div role="alertdialog" aria-modal="true" aria-labelledby="alert-title" onMouseDown={(e) => e.stopPropagation()}
+        className="w-[400px] max-w-full rounded-2xl bg-window p-6 shadow-2xl ring-1 ring-line">
+        <h2 id="alert-title" className="text-xl font-bold leading-snug">{title}</h2>
+        {children && <div className="mt-2 flex flex-col gap-2 text-[15px] text-dim">{children}</div>}
+        <div className="mt-6 flex justify-end gap-2">
+          <Button autoFocus onClick={onClose}>{keep}</Button>
+          <Button onClick={onAct} disabled={disabled}
+            className={danger ? '!bg-[#c01c28] !text-white hover:brightness-110' : '!bg-accent !text-white'}>
+            {act}</Button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 /** A list in a card, rows separated by lines (Adwaita's boxed list). */
 export function List({ children }: { children: ReactNode }) {
   return <Card className="divide-y divide-line overflow-hidden">{children}</Card>
