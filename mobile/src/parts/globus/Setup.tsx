@@ -55,7 +55,7 @@ export function AccountSheet({ status, onClose, onChange, onSignIn, onChoose }: 
           : <Row icon={LogIn} label="Sign in to Globus" opens onPress={onSignIn} />}
       </div>
       {status.signed_in && status.clusters.some((c) => c.personal) && (
-        <Section title="Globus Connect" note="Runs on the login node with your home, project and scratch folders.">
+        <Section title="Globus Connect" note="Shares your home, project and scratch folders with your own Globus account.">
           {status.clusters.filter((c) => c.personal).map((c) => (
             <Row key={c.id} icon={RotateCw} label={`Restart on ${shortCluster(c.name)}`} onPress={() => {
               toast(`Restarting Globus Connect on ${shortCluster(c.name)}…`)
