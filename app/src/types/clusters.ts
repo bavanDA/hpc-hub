@@ -120,6 +120,8 @@ export type Limits = {
   default_qos: string
   longest: number | null
   why: string
+  cores?: number | null      // the biggest node on this queue: the most one job can ask for
+  memory_gb?: number | null
 }
 
 /** A question a login asks (hpc_hub/api/hub.py). chrome-window: signing in in our Chrome window (answer

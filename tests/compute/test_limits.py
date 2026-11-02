@@ -39,3 +39,10 @@ def test_fit_cuts_time():
     assert p.time == "3-00:00:00" and "3 days" in note
     p, note = L.fit(ComputeProfile(time="04:00:00", qos="low"))
     assert p.time == "04:00:00" and not note
+
+
+def test_biggest_node():
+    L = limits.parse("general*|infinite|128|515000\ngeneral*|infinite|64+|256000\ngpu|2-00:00:00|64|512000\n"
+                     "debug|8:00:00\n")
+    assert L.biggest("") == (128, 502) and L.biggest("gpu") == (64, 500)
+    assert L.biggest("debug") == (None, None) and "debug" in L.partitions

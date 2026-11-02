@@ -9,7 +9,7 @@ from ..core.config import ComputeProfile
 from ..core.paths import log_dir
 from . import gpus
 
-FETCH = ("sinfo -h -o '%P|%l'; echo @QOS; sacctmgr -nP show qos format=name,maxwall 2>/dev/null; "
+FETCH = ("sinfo -h -o '%P|%l|%c|%m'; echo @QOS; sacctmgr -nP show qos format=name,maxwall 2>/dev/null; "
          "echo @ASSOC; sacctmgr -nP show assoc user=\"$USER\" format=qos,defaultqos 2>/dev/null; "
          "echo @GRES; sinfo -h -o '%P|%G' 2>/dev/null; true")
 SLURM_TIME = re.compile(r"^(?:(\d+)-)?(\d+)(?::(\d+))?(?::(\d+))?$")
@@ -54,6 +54,13 @@ class Limits:
     allowed_qos: list[str] = field(default_factory=list)  # the QoS your account may use
     default_qos: str = ""
     gres: dict[str, list[str]] = field(default_factory=dict)  # partition -> GPU gres ("gpu:a100_10g:2")
+    cores: dict[str, int] = field(default_factory=dict)  # partition -> cores of its biggest node
+    memory_gb: dict[str, int] = field(default_factory=dict)  # partition -> memory of its biggest node
+
+    def biggest(self, partition: str) -> tuple[int | None, int | None]:
+        """Cores and GB of the partition's biggest node: the most one job there can ask for. None = unknown."""
+        part = partition or self.default_partition
+        return self.cores.get(part), self.memory_gb.get(part)
 
     def longest(self, partition: str, qos: str) -> tuple[int | None, str]:
         """The longest time a job may ask for, and what sets it ('QoS standard'). (None, '') = no limit."""
@@ -78,6 +85,12 @@ class Limits:
         return p, ""
 
 
+def _number(text: str) -> int:
+    """sinfo's '128' or '64+' (nodes of 64 and more) -> 128, 64; anything else 0."""
+    m = re.match(r"\d+", text.strip())
+    return int(m.group()) if m else 0
+
+
 def parse(text: str) -> Limits:
     out = Limits()
     section = "part"
@@ -90,11 +103,17 @@ def parse(text: str) -> Limits:
             gres_lines.append(line)
             continue
         cells = line.strip().split("|")
-        if section == "part" and len(cells) == 2 and cells[0]:
+        if section == "part" and len(cells) in (2, 4) and cells[0]:
             name = cells[0].rstrip("*")
             out.partitions[name] = minutes(cells[1])
             if cells[0].endswith("*"):
                 out.default_partition = name
+            if len(cells) == 4:  # one line per kind of node: keep the biggest
+                cores, mb = _number(cells[2]), _number(cells[3])
+                if cores:
+                    out.cores[name] = max(cores, out.cores.get(name, 0))
+                if mb:
+                    out.memory_gb[name] = max(mb // 1024, out.memory_gb.get(name, 0))
         elif section == "qos" and len(cells) == 2 and cells[0]:
             out.qos[cells[0]] = minutes(cells[1]) if cells[1] else None
         elif section == "assoc" and len(cells) == 2:

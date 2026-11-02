@@ -222,15 +222,18 @@ def forget_logins(cluster: str, keep_username: bool = False) -> None:
 
 @method("clusters.partitions")
 def partitions(cluster: str, partition: str = "", qos: str = "") -> dict:
-    """What Slurm allows here (read at the last login): partitions, your QoS, and the longest time (minutes)
-    a job on this partition and QoS may ask for. known is false until you connected once."""
+    """What Slurm allows here (read at the last login): partitions, your QoS, the longest time (minutes) a job on
+    this partition and QoS may ask for, and the cores and GB of its biggest node. known is false until you
+    connected once."""
     lim = hub().session(cluster).limits
     if not lim:
         return {"known": False, "partitions": [], "default_partition": "", "qos": [], "default_qos": "",
-                "longest": None, "why": ""}
+                "longest": None, "why": "", "cores": None, "memory_gb": None}
     longest, why = lim.longest(partition.strip(), qos.strip())
+    cores, memory_gb = lim.biggest(partition.strip())
     return {"known": True, "partitions": list(lim.partitions), "default_partition": lim.default_partition,
-            "qos": lim.allowed_qos, "default_qos": lim.default_qos, "longest": longest, "why": why}
+            "qos": lim.allowed_qos, "default_qos": lim.default_qos, "longest": longest, "why": why,
+            "cores": cores, "memory_gb": memory_gb}
 
 
 @method("clusters.gpus")

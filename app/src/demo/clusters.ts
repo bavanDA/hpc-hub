@@ -98,7 +98,9 @@ const logs: Record<string, string[]> = {
 
 const limits = {
   partitions: { general: 4320, debug: 480, gpu: 2880, shared: 2880, day: 1440 } as Record<string, number>,
-  qos: { low: 1440, standard: 4320 } as Record<string, number> }
+  qos: { low: 1440, standard: 4320 } as Record<string, number>,
+  nodes: { general: [128, 500], debug: [128, 500], gpu: [128, 500], shared: [128, 248], day: [64, 248] } as
+    Record<string, [number, number]> }
 
 const DEMO_GPUS: Record<string, Gpu[]> = {
   wulver: [
@@ -222,8 +224,9 @@ export const answers: Record<string, unknown> = {
     if (limits.partitions[part]) caps.push([limits.partitions[part], `partition ${part}`])
     if (qos && limits.qos[qos]) caps.push([limits.qos[qos], `QoS ${qos}`])
     const top = caps.sort((a, b) => a[0] - b[0])[0]
+    const [cores, memory_gb] = limits.nodes[part] ?? [null, null]
     return { known: true, partitions: Object.keys(limits.partitions), default_partition: 'general',
-      qos: Object.keys(limits.qos), default_qos: 'low', longest: top?.[0] ?? null, why: top?.[1] ?? '' }
+      qos: Object.keys(limits.qos), default_qos: 'low', longest: top?.[0] ?? null, why: top?.[1] ?? '', cores, memory_gb }
   },
   // what Slurm's gres column says on each cluster (hpc_hub/compute/gpus.py)
   'clusters.gpus': ({ cluster }: { cluster: string }) => ({ known: cluster !== 'sdsc', gpus: DEMO_GPUS[cluster] ?? [] }),
