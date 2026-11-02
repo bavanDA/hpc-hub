@@ -5,12 +5,7 @@ import subprocess
 import tempfile
 from pathlib import Path
 
-import gi
-
-gi.require_version("Poppler", "0.18")
-from gi.repository import GLib, Poppler  # noqa: E402
-
-from .text import Word  # noqa: E402
+from .text import Word
 
 WORKER = Path(__file__).with_name("words_worker.py")
 
@@ -26,11 +21,18 @@ def extract(data: bytes, python: Path | None = None) -> list[Word]:
                 return [Word(i, w[0], w[1], tuple(w[2:6])) for i, w in enumerate(json.loads(res.stdout))]
         except (OSError, ValueError, subprocess.TimeoutExpired):
             pass
-    return poppler_words(data)
+    try:
+        return poppler_words(data)
+    except ImportError as e:  # no GTK here (the frozen backend, the phone)
+        raise ValueError("Could not read the words of this PDF") from e
 
 
 def poppler_words(data: bytes) -> list[Word]:
     """Poppler's order mixes up columns in two-column papers; only used when PyMuPDF is not there."""
+    import gi
+    gi.require_version("Poppler", "0.18")
+    from gi.repository import GLib, Poppler
+
     doc = Poppler.Document.new_from_bytes(GLib.Bytes.new(data), None)
     words: list[Word] = []
     for n in range(doc.get_n_pages()):
