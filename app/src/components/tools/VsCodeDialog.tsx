@@ -8,7 +8,7 @@ import { useGo } from '../../nav'
 import type { Target, ToolSetup, VsFound } from '../../types/tools'
 import { shortName } from '../clusters/loginCopy'
 import { human, minutes } from '../clusters/time'
-import { NodeRow } from '../e/NodeFields'
+import { NodeFields } from '../e/NodeFields'
 import { EDialog, Field, MainButton, Section, Segments, ToggleRow } from '../e/ui'
 import { memText } from '../jobs/format'
 import { FolderPicker } from '../projects/FolderPicker'
@@ -39,6 +39,7 @@ export function VsCodeDialog({ setup, found, folder: start = '', target: wanted,
   const [remember, setRemember] = useState(true)
   const [ask, setAsk] = useState(v.ask ?? true)
   const [picking, setPicking] = useState(false)
+  const [fits, setFits] = useState(true)
 
   const open = () => {
     onClose()
@@ -49,7 +50,7 @@ export function VsCodeDialog({ setup, found, folder: start = '', target: wanted,
 
   return (
     <EDialog title={`VS Code on ${shortName(setup)}`} onClose={onClose}
-      actions={<MainButton onClick={open}>{target === 'browser' ? 'Open in the browser' : 'Open in VS Code'}
+      actions={<MainButton disabled={!keep && !fits} onClick={open}>{target === 'browser' ? 'Open in the browser' : 'Open in VS Code'}
       </MainButton>}>
       <div className="flex flex-col gap-3 px-5">
         {job && (
@@ -75,8 +76,12 @@ export function VsCodeDialog({ setup, found, folder: start = '', target: wanted,
           <Segments label="Open in" value={target} onChange={setTarget} options={TARGETS} />
         </div>
       </div>
-      <Section note={keep ? undefined : 'VS Code runs as a job of its own.'}>
-        {!keep && <NodeRow cluster={setup.id} profile={profile} onChange={setProfile} />}
+      {!keep && <section className="pt-5">
+        <h3 className="px-5 pb-1 text-xs font-semibold tracking-wide text-dim uppercase">Compute node</h3>
+        <p className="px-5 pb-2.5 text-sm text-dim">VS Code runs as a job of its own.</p>
+        <NodeFields cluster={setup.id} value={profile} onChange={setProfile} onValid={setFits} />
+      </section>}
+      <Section>
         {!keep && <ToggleRow label="Use these next time" checked={remember} onChange={setRemember} />}
         <ToggleRow label={ASK_VS} sub={ASK_VS_SUB} checked={ask} onChange={setAsk} />
       </Section>

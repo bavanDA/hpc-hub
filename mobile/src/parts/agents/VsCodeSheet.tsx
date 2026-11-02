@@ -12,7 +12,8 @@ import { useGo } from '@shared/nav'
 import type { ToolSetup, VsFound } from '@shared/types/tools'
 import { MainButton, Section, Segments, Sheet, ToggleRow } from '../../ui'
 import { FolderField } from './FolderField'
-import { NodeRow } from './NodeFields'
+import { useClusters } from '@shared/components/clusters/store'
+import { NodeFields } from '../NodeSheet'
 
 /** "2 cores · 8G · 1:12:40 of 8:00:00" (squeue) in words: "2 cores · 8 GB · 1 h 13 min of 8 h". */
 function inWords(resources: string): string {
@@ -32,6 +33,8 @@ export function VsCodeSheet({ setup, found, folder: first = '', onClose }:
   const [profile, setProfile] = useState(v.profile)
   const [remember, setRemember] = useState(true)
   const [ask, setAsk] = useState(v.ask ?? true)
+  const [fits, setFits] = useState(true)
+  const cluster = useClusters().clusters?.find((c) => c.id === setup.id)
 
   const open = () => {
     onClose()
@@ -43,7 +46,7 @@ export function VsCodeSheet({ setup, found, folder: first = '', onClose }:
 
   return (
     <Sheet title={`VS Code on ${shortName({ name: setup.name })}`} flush onClose={onClose}
-      actions={<MainButton icon={Globe} onClick={open}>Open in the browser</MainButton>}>
+      actions={<MainButton icon={Globe} disabled={!keep && !fits} onClick={open}>Open in the browser</MainButton>}>
       <div className="px-4">
         <p className="pb-2 text-dim">It opens at vscode.dev in your browser. The first time, sign in with GitHub
           when it asks.</p>
@@ -58,8 +61,12 @@ export function VsCodeSheet({ setup, found, folder: first = '', onClose }:
         )}
         <FolderField cluster={setup.id} name={setup.name} value={folder} onChange={setFolder} />
       </div>
-      <Section note={keep ? undefined : 'VS Code runs as a job of its own.'}>
-        {!keep && <NodeRow cluster={setup.id} label="Compute node" profile={profile} onChange={setProfile} />}
+      {!keep && cluster && <section className="pt-5">
+        <h3 className="px-4 pb-1 text-xs font-semibold tracking-wide text-dim uppercase">Compute node</h3>
+        <p className="px-4 pb-3 text-sm text-dim">VS Code runs as a job of its own.</p>
+        <NodeFields cluster={cluster} value={profile} onChange={setProfile} onValid={setFits} />
+      </section>}
+      <Section>
         {!keep && <ToggleRow label="Use these next time" checked={remember} onChange={setRemember} />}
         <ToggleRow label="Ask every time" sub="Shows this screen before VS Code starts." checked={ask}
           onChange={setAsk} />
