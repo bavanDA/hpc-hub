@@ -20,12 +20,17 @@ import { useToast } from './toast'
 // with &cluster=id and &tab=login|compute (&advanced to open Advanced), opens that dialog with demo data
 const demo = inTauri ? null : new URLSearchParams(location.search)
 
+const DEMO_NAMES: Record<string, string> = { wulver: 'Wulver (NJIT)', yale: 'Yale Bouchet', sdsc: 'SDSC Expanse' }
+
 function demoQuestions(): Question[] {
   const kind = demo?.get('question') as Question['kind'] | undefined
   const cluster = demo?.get('cluster') ?? 'wulver'
-  const yale = cluster === 'yale'
-  return kind ? [{ id: 'demo', kind, cluster, name: yale ? 'Yale Bouchet' : 'Wulver (NJIT)', default: '',
-    fill: { socket: '', token: '' } }] : []
+  // the same words as vpn_helper.py's one-time question
+  const confirm = kind === 'confirm' ? { title: 'Set up the VPN helper', prompt: 'To connect the VPN, HPC Hub '
+    + 'installs a small helper once. macOS will ask for permission. The helper only starts and stops the VPN to '
+    + "your cluster's servers, for your account." } : {}
+  return kind ? [{ id: 'demo', kind, cluster, name: DEMO_NAMES[cluster] ?? cluster, default: '',
+    fill: { socket: '', token: '' }, ...confirm }] : []
 }
 
 export function Questions() {
