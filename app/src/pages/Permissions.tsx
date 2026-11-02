@@ -85,8 +85,10 @@ export function Permissions() {
       </Group>
       <Group title="Always ask first" description="Even when allowed below">
         {perm.asks.map((a) => (
-          <SwitchRow key={a.key} title={a.label} on={draft.ask.includes(a.key)}
-            onChange={(v) => edit({ ask: v ? [...draft.ask, a.key].sort() : draft.ask.filter((k) => k !== a.key) })} />
+          <div key={a.key} title={a.hint}>
+            <SwitchRow title={a.label} on={draft.ask.includes(a.key)}
+              onChange={(v) => edit({ ask: v ? [...draft.ask, a.key].sort() : draft.ask.filter((k) => k !== a.key) })} />
+          </div>
         ))}
       </Group>
       <LockGroup status={perm.lock} config={draft.lock} onConfig={(lock) => edit({ lock })}

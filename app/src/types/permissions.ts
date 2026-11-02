@@ -19,7 +19,7 @@ export type ClaudePermissions = {
   ask: string[]
   accept_edits: boolean
   groups: CommandGroup[]
-  asks: { key: string; label: string }[]
+  asks: { key: string; label: string; hint?: string }[]
   lock: LockStatus
 }
 

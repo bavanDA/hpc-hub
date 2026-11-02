@@ -7,7 +7,7 @@ import shutil
 import subprocess
 
 from ...agents import lock, permissions
-from ...agents.permissions import ASKS, GROUPS
+from ...agents.permissions import ASKS, COMMANDS, GROUPS
 from ..hub import hub
 from ..server import method
 
@@ -20,7 +20,7 @@ def _json(name: str, p: permissions.Permissions, lock_status: dict) -> dict:
             "trash": p.trash, "ask": sorted(p.ask),
             "accept_edits": p.accept_edits,
             "groups": [{"title": t, "note": n, "commands": c} for t, n, c in GROUPS],
-            "asks": [{"key": k, "label": label} for k, label in ASKS],
+            "asks": [{"key": k, "label": label, "hint": COMMANDS[k]} for k, label in ASKS],
             "lock": {"set_up": bool(lock_status.get("set_up")), "locked": bool(lock_status.get("locked")),
                      "config": lock_status.get("config") or {}, "open": lock_status.get("open", 0),
                      "log": list(reversed((lock_status.get("log") or [])[-10:]))}}

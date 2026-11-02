@@ -12,15 +12,15 @@ const groups: CommandGroup[] = [
   { title: 'Code and builds', note: 'A script can do anything your account can',
     commands: w('python3 python bash sh make cmake gcc g++ nvcc gdb perf') },
   { title: 'LaTeX and PDF', note: '', commands: w('pdflatex latexmk bibtex biber pdftotext pdfinfo pdftoppm') },
-  { title: 'Slurm', note: "Submitting uses your group's SUs",
+  { title: 'Jobs', note: "Submitting uses your group's hours",
     commands: w('squeue sacct sinfo sacctmgr sreport sstat seff sshare sprio scontrol sbatch srun module ml quota') },
-  { title: 'Git', note: 'Force push still asks if that is on below', commands: w('git gh') },
-  { title: 'Network', note: 'Download, copy to and log in to other machines', commands: w('ssh scp rsync curl wget') },
+  { title: 'Git', note: 'Force push has its own switch below', commands: w('git gh') },
+  { title: 'Network', note: 'Download, copy to and sign in to other machines', commands: w('ssh scp rsync curl wget') },
   { title: 'Processes and agents', note: '', commands: w('kill pkill codex claude') },
 ]
-const asks = [{ key: 'scancel', label: 'Cancel jobs (scancel)' },
-  { key: 'force_push', label: 'Force push (git push --force)' },
-  { key: 'discard', label: 'Throw away changes (git reset --hard, git clean -f)' }]
+const asks = [{ key: 'scancel', label: 'Cancel jobs', hint: 'scancel' },
+  { key: 'force_push', label: 'Force push', hint: 'git push --force' },
+  { key: 'discard', label: 'Throw away unsaved changes', hint: 'git reset --hard, git clean -f' }]
 
 const all = groups.flatMap((g) => g.commands)
 const noLock = { set_up: false, locked: false, config: {}, open: 0, log: [] }

@@ -117,7 +117,7 @@ class PermissionsPage(Gtk.Box):
             g.add(row)
         self.minutes = Adw.SpinRow.new_with_range(0, 240, 1)
         self.minutes.set_title("Minutes a code keeps a session open")
-        self.minutes.set_subtitle("0 asks for a code on every message (safest)")
+        self.minutes.set_subtitle("Set to 0 to ask on every message")
         self.minutes.set_value(conf.get("minutes", 10))
         self.tries = Adw.SpinRow.new_with_range(1, 10, 1)
         self.tries.set_title("Wrong codes before Claude is stopped")

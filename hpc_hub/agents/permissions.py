@@ -30,7 +30,7 @@ GROUPS = [
     ("Code and builds", "A script can do anything your account can", "python3 python bash sh make cmake gcc g++ nvcc "
                                                                       "gdb perf"),
     ("LaTeX and PDF", "", "pdflatex latexmk bibtex biber pdftotext pdfinfo pdftoppm"),
-    ("Slurm", "Submitting uses your group's SUs", "squeue sacct sinfo sacctmgr sreport sstat seff sshare sprio "
+    ("Jobs", "Submitting uses your group's hours", "squeue sacct sinfo sacctmgr sreport sstat seff sshare sprio "
                                                   "scontrol sbatch srun module ml quota"),
     ("Git", "Force push has its own switch below", "git gh"),
     ("Network", "Download, copy to and sign in to other machines", "ssh scp rsync curl wget"),
@@ -38,8 +38,8 @@ GROUPS = [
 ]
 GROUPS = [(title, note, cmds.split()) for title, note, cmds in GROUPS]
 KNOWN = {c for _, _, cmds in GROUPS for c in cmds}
-ASKS = [("scancel", "Cancel jobs (scancel)"), ("force_push", "Force push (git push --force)"),
-        ("discard", "Throw away changes (git reset --hard, git clean -f)")]
+ASKS = [("scancel", "Cancel jobs"), ("force_push", "Force push"), ("discard", "Throw away unsaved changes")]
+COMMANDS = {"scancel": "scancel", "force_push": "git push --force", "discard": "git reset --hard, git clean -f"}
 RULE = re.compile(r"^Bash\(([^:() ]+):\*\)$")
 
 
