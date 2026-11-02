@@ -9,8 +9,8 @@ from ..server import method
 def status() -> dict:
     app = config.load_app()
     return {"first_run": config.first_run(app), "chosen": [c.id for c in hub().clusters],
-            "choices": [{"id": c.id, "name": c.name, "org": c.who, "host": c.host, "vpn": c.vpn.enabled,
-                         "second_factor": c.second_factor} for c in config.default_clusters()]}
+            "choices": [{"id": c.id, "name": c.name, "short": c.short_name, "org": c.who, "host": c.host,
+                         "vpn": c.vpn.enabled, "second_factor": c.second_factor} for c in config.default_clusters()]}
 
 
 @method("setup.choose")

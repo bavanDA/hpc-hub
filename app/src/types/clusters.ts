@@ -59,6 +59,7 @@ export type Cluster = {
   second_factor?: 'duo' | 'code'
   portal?: string
   org?: string  // who runs it: "NJIT"
+  short?: string  // "Yale" for "Yale Bouchet" (config.py short); loginCopy shortName falls back to the name
   key_page?: string  // a page where you paste your public SSH key (Yale)
   key_page_note?: string
   key_help?: string  // a guide to SSH keys for it ("" = GitHub's)

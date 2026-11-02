@@ -1,6 +1,7 @@
 // Every sentence of the backup agent's screens, desktop and phone (pages/Backup.tsx, mobile screens/Backup.tsx).
 // Plain words, no "if", no long dashes, the cluster's name once per screen: the rest say "scratch" and "project".
 import type { FileClass, Purge } from '../../types/backup'
+import { shortName as short } from '../clusters/loginCopy'
 
 const GB = 1024 ** 3
 
@@ -22,9 +23,9 @@ export function count(n: number): string {
   return n.toLocaleString('en-US')
 }
 
-/** "Wulver (NJIT)" -> "Wulver" */
+/** "Wulver (NJIT)" -> "Wulver", "Yale Bouchet" -> "Yale" */
 export function shortName(name: string): string {
-  return name.split(' (')[0]
+  return short({ name })
 }
 
 export const CLASS: Record<FileClass, string> = {

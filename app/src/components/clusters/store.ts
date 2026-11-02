@@ -4,6 +4,7 @@ import { useSyncExternalStore } from 'react'
 
 import { call, on } from '../../rpc'
 import type { Cluster, Session } from '../../types/clusters'
+import { rememberShort } from './loginCopy'
 
 const MAX_LOG = 1000
 const inTauri = '__TAURI_INTERNALS__' in window
@@ -54,6 +55,7 @@ export function load() {
   loaded = true
   call<Cluster[]>('clusters.list')
     .then((clusters) => {
+      rememberShort(clusters)
       set({ clusters, error: '' })
       for (const c of clusters) {
         call<string[]>('clusters.log', { cluster: c.id }).then((lines) => addLog(c.id, lines, true)).catch(() => {})

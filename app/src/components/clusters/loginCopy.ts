@@ -7,8 +7,16 @@ type Named = Pick<Cluster, 'name' | 'org'>
 
 /** "Sign in to {name}" with name filled in. */
 export const fill = (t: string, v: Record<string, string> = {}) => t.replace(/\{(\w+)\}/g, (_, k) => v[k] ?? '')
-/** "Wulver" for "Wulver (NJIT)". */
-export const shortName = (c: Pick<Cluster, 'name'>) => c.name.split(' (')[0]
+const SHORT = new Map<string, string>()  // full name -> short, for places that only have the name
+
+/** Learn each cluster's short name (clusters/store.ts does it once the list loads). */
+export function rememberShort(clusters: Pick<Cluster, 'name' | 'short'>[]) {
+  for (const c of clusters) if (c.short) SHORT.set(c.name, c.short)
+}
+
+/** "Wulver", "Yale", "SDSC" for "Wulver (NJIT)", "Yale Bouchet", "SDSC Expanse" (config.py short_name). */
+export const shortName = (c: { name: string; short?: string }) =>
+  c.short || SHORT.get(c.name) || c.name.split(' (')[0]
 /** "Yale": the org, else the short name. */
 export const who = (c: Named) => c.org || shortName(c)
 /** Where "What's an SSH key?" goes: the cluster's own guide, else GitHub's. */

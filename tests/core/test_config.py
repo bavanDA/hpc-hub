@@ -102,6 +102,15 @@ def test_agent_compute_roundtrip(tmp_path):
 
 
 
+def test_short_names(tmp_path):
+    by_id = {c.id: c.short_name for c in config.default_clusters()}
+    assert by_id == {"wulver": "Wulver", "yale": "Yale", "sdsc": "SDSC"}
+    assert config.ClusterConfig(id="x", name="Great Lakes (UMich)").short_name == "Great Lakes"
+    path = tmp_path / "old.toml"  # saved before there was a short field
+    path.write_text('[clusters.yale]\nname = "Yale Bouchet"\nhost = "bouchet.ycrc.yale.edu"\n')
+    assert config.load(path)[1].short_name == "Yale"
+
+
 def test_second_step_is_said_not_chosen():
     by_id = {c.id: c for c in config.default_clusters()}
     assert by_id["wulver"].second_step() == ""  # Duo says nothing: the push explains itself

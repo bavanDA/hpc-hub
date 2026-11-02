@@ -121,6 +121,7 @@ class ClusterConfig:
     second_factor: str = "duo"  # duo (push to your phone) or code (authenticator app, TOTP)
     remember_password: bool = True  # False: the keyring keeps only the username; asked once per run
     org: str = ""  # who runs it, for copy like "NJIT doesn't support SSH keys yet"
+    short: str = ""  # the name after the first mention on a screen ("Yale" for "Yale Bouchet"); "" = from name
     portal: str = ""  # web portal where you can add your SSH key after signing in in Chrome
     key_page: str = ""  # a web page where you paste your SSH public key yourself (Yale's key uploader)
     key_page_note: str = ""  # what to know about that page, shown under its button
@@ -176,8 +177,8 @@ class ClusterConfig:
 
     @property
     def short_name(self) -> str:
-        """"Wulver" for "Wulver (NJIT)"."""
-        return self.name.split(" (")[0]
+        """"Wulver", "Yale", "SDSC": its short field, else the name without "(NJIT)"."""
+        return self.short.strip() or self.name.split(" (")[0]
 
     @property
     def who(self) -> str:
@@ -203,6 +204,7 @@ def default_clusters() -> list[ClusterConfig]:
             queues="general:low,debug:debug,general:standard",  # free, free (4 cores, 8 h), costs SUs
             fast="debug:debug:08:00:00",  # one job at a time
             name="Wulver (NJIT)",
+            short="Wulver",
             org="NJIT",
             username_label="UCID",
             host="wulver.njit.edu",
@@ -217,6 +219,7 @@ def default_clusters() -> list[ClusterConfig]:
         ClusterConfig(
             id="yale",
             name="Yale Bouchet",
+            short="Yale",
             org="Yale",
             host="bouchet.ycrc.yale.edu",
             username_label="NetID",
@@ -242,6 +245,7 @@ def default_clusters() -> list[ClusterConfig]:
         ClusterConfig(
             id="sdsc",
             name="SDSC Expanse",
+            short="SDSC",
             org="SDSC",
             username_label="ACCESS username",
             host="login.expanse.sdsc.edu",
