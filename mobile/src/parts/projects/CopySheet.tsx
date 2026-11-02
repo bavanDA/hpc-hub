@@ -8,9 +8,9 @@ import { Spinner } from '@shared/components/ui'
 import { useEvent } from '@shared/hooks'
 import { call } from '@shared/rpc'
 import type { CopyPlan, CopyTargets, Place, Places, Project } from '@shared/types/projects'
-import { Chips, MainButton, PickerSheet, Row, Segments, Sheet } from '../../ui'
+import { MainButton, PickerSheet, Row, Segments, Sheet } from '../../ui'
 import { shortCluster, wrapPath } from '../code/util'
-import { FolderPicker, folderText } from './FolderPicker'
+import { FolderPicker } from './FolderPicker'
 
 type How = 'globus' | 'phone'
 const BIG = 5 * 1024 ** 3
@@ -104,6 +104,8 @@ export function CopySheet({ p, onClose, onStarted }:
     }).catch((e: Error) => { setError(e.message); setBusy(false) })
   }
 
+  const pickFolder = () => dst?.connected ? setOpen('folder') : setError(`Connect to ${shortCluster(dst?.name ?? '')} first`)
+
   let what = 'Measuring sizes'
   if (planError || plan?.parts_error) what = `Couldn't measure it: ${planError || plan?.parts_error}`
   else if (plan) what = 'Untick what stays behind.'
@@ -121,23 +123,23 @@ export function CopySheet({ p, onClose, onStarted }:
               <div className="border-t border-line">
                 <Row label="Cluster" opens onPress={() => setOpen('to')}
                   value={dst ? (dst.connected ? shortCluster(dst.name) : `${shortCluster(dst.name)}, not connected`) : 'Pick one'} />
-                <Row label="Into" opens value={folderText(intoPath)}
-                  onPress={() => dst?.connected ? setOpen('folder') : setError(`Connect to ${shortCluster(dst?.name ?? '')} first`)} />
               </div>
               {spots.length > 0 && (
-                <div className="px-4 pt-1">
-                  <Chips one value={spot ? [spot.label] : []} options={spots.map((s) => [s.label, s.label] as const)}
-                    onChange={([label]) => {
+                <div className="px-4 pt-3">
+                  <Segments label="Into" value={spot?.label ?? ''} options={spots.map((s) => [s.label, s.label] as const)}
+                    onChange={(label) => {
                       const s = spots.find((x) => x.label === label)
                       if (s && !inside(intoPath, s.path)) setInto(s.path)
                     }} />
                   {spot?.label.startsWith('Scratch') && (
-                    <p className="text-sm text-dim">Scratch gets cleaned up. Keep work you need in Project.</p>
+                    <p className="pt-2 text-sm text-dim">Scratch gets cleaned up. Keep work you need in Project.</p>
                   )}
                 </div>
               )}
-              <p className={NOTE}>It lands in <span className="font-mono break-words">
-                {wrapPath(`${intoPath.replace(/\/+$/, '')}/${info.name}`)}</span></p>
+              <div className="mt-3 border-t border-line">
+                <Row label="Lands in" opens onPress={pickFolder} value={<span className="font-mono text-sm break-words">
+                  {wrapPath(`${intoPath.replace(/\/+$/, '')}/${info.name}`)}</span>} />
+              </div>
             </Step>
 
             <Step title="How">

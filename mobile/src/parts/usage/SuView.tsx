@@ -1,5 +1,6 @@
 // Hours (SU): how many are left (or used, without a limit) first, then who used them in the period. A person opens
 // Jobs on their jobs.
+import { ChevronDown } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
 
 import { n, pct } from '@shared/components/usage/format'
@@ -51,7 +52,8 @@ export function SuView({ account, people, error, top, periodRow, onPerson }: {
         ))}
         {people && !active.length && <Row label="Nobody used it in this period" />}
         {idle.length > 0 && <Row label={idle.length === 1 ? '1 person with no usage' : `${idle.length} people with no usage`}
-          value={<span className="font-normal text-dim">{idleOpen ? 'Hide' : 'Show'}</span>}
+          value={<ChevronDown size={20} aria-label={idleOpen ? 'Hide' : 'Show'}
+            className={`text-dim transition-transform ${idleOpen ? 'rotate-180' : ''}`} />}
           onPress={() => setIdleOpen(!idleOpen)} />}
         {idleOpen && idle.map((p) => <Row key={p.user} label={p.name || p.user}
           sub={p.name ? p.user : undefined} />)}

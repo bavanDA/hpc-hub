@@ -8,7 +8,8 @@ import { putCluster } from '@shared/components/clusters/store'
 import { Spinner } from '@shared/components/ui'
 import { call } from '@shared/rpc'
 import type { AgentId, AgentSettings, Cluster, Limits, Logins, Profile, SettingsInfo, VsCode } from '@shared/types/clusters'
-import { Field, List, MainButton, NumberRow, PickerSheet, Row, Section, Sheet, ToggleRow, useToast } from '../ui'
+import { Field, List, MainButton, NumberRow, PickerSheet, Row, Section, Sheet, ToggleRow, useAskBeforeClose, useToast }
+  from '../ui'
 import { AuthenticatorSheet } from './AuthenticatorSheet'
 import { LoginSheet } from './LoginSheet'
 import { ASK, NodeFields, nodeSize } from './NodeSheet'
@@ -67,7 +68,7 @@ function QueueRows({ cluster, value, onChange }: { cluster: string; value?: stri
   const close = () => { setEdit(null); setPick('') }
   return <>
     <Section title="Tried in this order">
-      {list.map(([q, b], i) => <Row key={`${q}:${b}:${i}`} label={q} value={b || 'Default billing'} opens
+      {list.map(([q, b], i) => <Row key={`${q}:${b}:${i}`} label={q} value={b ? `Billing: ${b}` : 'Default billing'} opens
         onPress={() => setEdit(i)} />)}
       <Row icon={Plus} label="Add a queue" onPress={() => setEdit(list.length)} />
     </Section>
@@ -106,8 +107,8 @@ function AgentRows({ a, value: s, onChange }: { a: SettingsInfo['agents'][number
           onPress={() => setChoosing(o.key)} />
       ))}
       <div className="border-b border-line px-4 pb-2">
-        <Field label="Folder it starts in" {...TEXT} value={s.workdir} placeholder="Your home folder"
-          onChange={(e) => onChange({ workdir: e.target.value })} />
+        <Field label="Folder it starts in" {...TEXT} value={s.workdir === '~' ? '' : s.workdir}
+          placeholder="Home folder" onChange={(e) => onChange({ workdir: e.target.value || '~' })} />
       </div>
       {option && <PickerSheet title={option.label} value={String(s[option.key] ?? '')}
         options={option.choices.map(([value, label]) => ({ value, label }))}
@@ -150,6 +151,7 @@ export function ClusterSettingsSheet({ cluster, onClose }: { cluster: Cluster; o
   }
 
   const want = d.request_node_on_connect ?? true
+  const [close, ask] = useAskBeforeClose(!!info && JSON.stringify(d) !== JSON.stringify(info.cluster), onClose)
 
   if (section === 'signin') return <LoginSheet cluster={d} onClose={back} />
   if (section === 'code') return <AuthenticatorSheet cluster={d} onClose={back} />
@@ -188,8 +190,8 @@ export function ClusterSettingsSheet({ cluster, onClose }: { cluster: Cluster; o
             <Field label="Command" {...TEXT} value={d.vscode.command} onChange={(e) => upVs({ command: e.target.value })} />
             <Field label="Runs first" {...TEXT} value={d.vscode.setup} placeholder="module load VSCode"
               onChange={(e) => upVs({ setup: e.target.value })} />
-            <Field label="Folder it opens" {...TEXT} value={d.vscode.workdir} placeholder="Your home folder"
-              onChange={(e) => upVs({ workdir: e.target.value })} />
+            <Field label="Folder it opens" {...TEXT} value={d.vscode.workdir === '~' ? '' : d.vscode.workdir}
+              placeholder="Home folder" onChange={(e) => upVs({ workdir: e.target.value || '~' })} />
           </div>
           <h3 className="px-4 pt-5 pb-1.5 text-xs font-semibold tracking-wide text-dim uppercase">Its own node</h3>
           <NodeFields cluster={d} value={d.vscode.compute} onChange={(compute) => upVs({ compute })} />
@@ -201,8 +203,8 @@ export function ClusterSettingsSheet({ cluster, onClose }: { cluster: Cluster; o
     )
   }
 
-  return (
-    <Sheet title={`${cluster.name} settings`} onClose={onClose} flush
+  return (<>
+    <Sheet title={`${cluster.name} settings`} onClose={close} flush
       actions={<MainButton disabled={busy || !info} onClick={save}>Save</MainButton>}>
       {!info ? <div className="grid h-40 place-items-center"><Spinner size={28} /></div> : <>
         <List>
@@ -221,5 +223,6 @@ export function ClusterSettingsSheet({ cluster, onClose }: { cluster: Cluster; o
         </Section>
       </>}
     </Sheet>
-  )
+    {ask}
+  </>)
 }

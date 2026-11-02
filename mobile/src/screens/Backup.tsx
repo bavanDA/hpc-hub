@@ -101,7 +101,7 @@ function Flow({ id, name, full }: { id: string; name: string; full: string }) {
       break
     case 'copy':
       body = <CopyCard plan={plan} progress={b.progress} />
-      main = <Button className="flex-1" onClick={() => setStopping(true)}>{copying.stop}</Button>
+      main = <Button className="flex-1" onClick={() => setStopping(true)}>Stop copy</Button>
       break
     case 'done': {
       const bad = (b.result?.mismatches ?? 0) > 0
@@ -129,7 +129,7 @@ function Flow({ id, name, full }: { id: string; name: string; full: string }) {
         <footer className="order-3 flex shrink-0 gap-3 border-t border-line bg-window px-4 py-3">{second}{main}</footer>
       )}
       {stopping && <ConfirmSheet title={copying.stopTitle} text={copying.stopText} keep={copying.keep}
-        confirm={copying.stop} onConfirm={b.stopCopy} onClose={() => setStopping(false)} />}
+        confirm="Stop copy" danger onConfirm={b.stopCopy} onClose={() => setStopping(false)} />}
       {remind && <RemindersSheet value={remind === 'on' && b.reminders ? { ...b.reminders, enabled: true } : b.reminders}
         onClose={() => setRemind('')} onSave={(r) => { b.setReminders(r); setRemind('') }} />}
     </>

@@ -101,6 +101,10 @@ function QueueSheet({ limits, value: p, onChange, onClose }:
   )
 }
 
+/** A whole-GPU quick size names its GPU ("1 × A5000"), so the segment never shows a bare count. */
+const quickLabel = (x: { id: string; label: string; hint: string }) => x.id === 'gpu' && x.label === '1 GPU'
+  ? `1 × ${x.hint.split(',')[0].replace(/^(NVIDIA|RTX|Tesla) /, '')}` : x.label
+
 /** The node's size: quick sizes, then Cores, Memory, GPU, Time, and the queue. Rows run edge to edge.
  *  onValid hears whether every number is allowed, so the screen can turn its button off. */
 export function NodeFields({ cluster, value: p, onChange, onValid }:
@@ -120,7 +124,7 @@ export function NodeFields({ cluster, value: p, onChange, onValid }:
   return (
     <>
       <div className="px-4 pb-5">
-        <Segmented label="Quick sizes" value={on} options={quick.map((x) => [x.id, x.label] as const)}
+        <Segmented label="Quick sizes" value={on} options={quick.map((x) => [x.id, quickLabel(x)] as const)}
           onChange={(id) => onChange(quick.find((x) => x.id === id)!.apply(p))} />
       </div>
       <List>

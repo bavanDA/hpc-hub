@@ -66,8 +66,8 @@ export function TerminalScreen({ tab, shown, onBack, onChanged = () => {} }:
           <TextSelect size={20} /></button>
         <button aria-label="Paste" onClick={() => paste(tab, toast)} className={iconButton}>
           <ClipboardPaste size={20} /></button>
-        <button aria-label="Links" onClick={() => setLinks(screenLinks(tab))} className={iconButton}>
-          <Link size={20} /></button>
+        {!tab.session && <button aria-label="Links" onClick={() => setLinks(screenLinks(tab))} className={iconButton}>
+          <Link size={20} /></button>}
         {tab.session
           ? <button aria-label="Session actions" onClick={() => setSheet('actions')} className={iconButton}>
               <MoreVertical size={20} /></button>
@@ -93,7 +93,7 @@ export function TerminalScreen({ tab, shown, onBack, onChanged = () => {} }:
       {sheet === 'actions' && (
         <SessionActions target={{ cluster: tab.cluster, name: tab.session, kind: tab.kind, node: tab.node,
           title: tab.title }} onClose={() => setSheet('')} onChanged={onChanged}
-          detach={() => { close(tab.key); onBack() }} />
+          detach={() => { close(tab.key); onBack() }} onLinks={() => setLinks(screenLinks(tab))} />
       )}
       {links && (
         <Sheet title="Links on the screen" flush onClose={() => setLinks(null)}>

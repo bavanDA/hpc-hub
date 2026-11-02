@@ -33,8 +33,8 @@ export function SessionRow({ s, open, nodes, here = '', extra = '', onOpen, onAc
   let state = open ? 'open' : s.attached ? 'open elsewhere' : ''
   let node = s.node
   if (!node && s.job && nodes) {
-    node = nodes[s.job] ?? 'node ended'
-    if (node === 'node ended') state = ''
+    node = nodes[s.job] ?? 'node released'
+    if (node === 'node released') state = ''
   }
   const agent = AGENT_NAMES[s.agent] && s.agent !== 'term' ? AGENT_NAMES[s.agent] : ''
   const what = agent || (s.agent === 'vscode' ? 'VS Code' : s.kind === 'screen' ? 'screen' : 'Terminal')

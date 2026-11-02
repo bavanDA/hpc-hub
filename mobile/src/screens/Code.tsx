@@ -330,7 +330,6 @@ export function Code() {
             {!running && unseen > 0 && <span aria-hidden className="size-2 rounded-full bg-text" />}
           </Button>
         )}
-        {f && isDirty(f) && <button aria-label="Save" className={ICON} onClick={() => void save()}><Save size={20} /></button>}
         {f && <button aria-label="More" className={ICON} onClick={() => setMenu(true)}><MoreVertical size={20} /></button>}
       </header>
 
@@ -371,10 +370,13 @@ export function Code() {
           </Suspense>
         )}
       </div>
-      {f && editable && !f.editing && !selection && (
-        <div className="border-t border-line px-4 py-3">
-          <Button kind="primary" icon={Pencil} className="w-full"
-            onClick={() => { setEditing(f.key, true); editor.current?.setEditable(true) }}>Edit</Button>
+      {f && editable && !selection && (
+        <div className="border-t border-line px-4 py-2">
+          {f.editing
+            ? <Button kind="primary" icon={Save} className="w-full" disabled={!isDirty(f)}
+                onClick={() => void save()}>Save</Button>
+            : <Button kind="primary" icon={Pencil} className="w-full"
+                onClick={() => { setEditing(f.key, true); editor.current?.setEditable(true) }}>Edit</Button>}
         </div>
       )}
 

@@ -21,7 +21,7 @@ export const ORDERS: Order[] = [
   { key: 'state', desc: false, label: 'State' },
   { key: 'time', desc: true, label: 'Most time used' },
   { key: 'res', desc: true, label: 'Most cores' },
-  { key: 'su', desc: true, label: 'Most SU' },
+  { key: 'su', desc: true, label: 'Most hours' },
 ]
 
 /** CANCELLED shows as "CANCELLED by 123" in some Slurm versions: the first word is the state. */
