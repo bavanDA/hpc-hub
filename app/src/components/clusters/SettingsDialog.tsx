@@ -111,10 +111,12 @@ export function SettingsDialog({ cluster, hint, onClose, start = 'login', advanc
   const [usePassword, setUsePassword] = useState(false)  // a key cluster that takes a password too
   // no login yet on a cluster with a portal: set it up there, like the GTK app does on Connect
   const [open, setOpen] = useState<null | 'key'>(hint && cluster.portal ? 'key' : null)
+  const [base, setBase] = useState<Cluster | null>(null)  // the settings as loaded, to tell if anything changed
+  const [asking, setAsking] = useState(false)  // "Throw away your changes?"
 
   useEffect(() => {
     call<SettingsInfo>('cluster_settings.get', { cluster: cluster.id })
-      .then((got) => { setInfo(got); setD(got.cluster) }).catch((e: Error) => setError(e.message))
+      .then((got) => { setInfo(got); setD(got.cluster); setBase(got.cluster) }).catch((e: Error) => setError(e.message))
     call<Logins>('clusters.login', { cluster: cluster.id })
       .then((l) => { setSaved(l); setUser(l.ssh.username); setVpnUser(l.vpn.username); setRemember(l.remember ?? true) })
       .catch((e: Error) => setError(e.message))
@@ -125,6 +127,11 @@ export function SettingsDialog({ cluster, hint, onClose, start = 'login', advanc
   const upVs = (change: Partial<VsCode>) => setD((x) => ({ ...x, vscode: { ...x.vscode!, ...change } }))
   const upAgent = (id: AgentId, change: Partial<AgentSettings>) =>
     setD((x) => ({ ...x, [id]: { ...x[id]!, ...change } }))
+
+  const changed = (!!base && JSON.stringify(d) !== JSON.stringify(base)) || !!password || !!vpnPassword
+    || (!!saved && (user !== saved.ssh.username || vpnUser !== saved.vpn.username
+      || remember !== (saved.remember ?? true)))
+  const close = () => (changed ? setAsking(true) : onClose())
 
   const v = d.vpn
   const code = d.second_factor === 'code'
@@ -359,10 +366,10 @@ export function SettingsDialog({ cluster, hint, onClose, start = 'login', advanc
   const title = TABS.find(([t]) => t === tab)?.[1] ?? ''
   return (
     <>
-      <Dialog title={`${d.name} settings`} onClose={onClose} width={780} height={640} bare
+      <Dialog title={`${d.name} settings`} onClose={close} width={780} height={640} bare
         actions={<>
           <span className="mr-auto text-sm text-dim">Changes apply the next time you connect.</span>
-          <Button kind="ghost" onClick={onClose}>Cancel</Button>
+          <Button kind="ghost" onClick={close}>Cancel</Button>
           <Button kind="primary" disabled={busy || !saved || !info} onClick={save}>Save</Button>
         </>}>
         <nav role="tablist" aria-orientation="vertical" aria-label="Settings sections"
@@ -379,6 +386,8 @@ export function SettingsDialog({ cluster, hint, onClose, start = 'login', advanc
           {pages[tab]}
         </div>
       </Dialog>
+      {asking && <AlertDialog title="Throw away your changes?" keep="Keep editing" act="Throw away"
+        onClose={() => setAsking(false)} onAct={onClose} />}
       {open === 'key' && <KeySetupDialog cluster={d} onClose={() => setOpen(null)} onDone={keyDone} />}
       {forgetting && <AlertDialog title={d.key_page ? `Forget your ${d.username_label || 'username'}?`
         : copy.forgetTitle(d)} keep={copy.keep} act={d.key_page ? 'Forget' : copy.forget}

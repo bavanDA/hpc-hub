@@ -17,7 +17,7 @@ import { useBackupAlertWatch } from './components/backup/alerts'
 import { GROUPS, HOME, Sidebar, type Page } from './components/Sidebar'
 import { ToastProvider } from './components/toast'
 import { EmptyState, Spinner } from './components/ui'
-import { NavContext } from './nav'
+import { leave, NavContext } from './nav'
 import { Clusters } from './pages/Clusters'
 import { call } from './rpc'
 import { setAppearance } from './theme'
@@ -86,12 +86,12 @@ export default function App() {
   const sidebar = narrow ? floating : sidebarWanted
   const [experimental, setExperimental] = useState(false)
   const [settings, setSettings] = useState(false)
-  const go = useCallback((p: Page, with_: Record<string, string> = {}) => {
+  const go = useCallback((p: Page, with_: Record<string, string> = {}) => leave(() => {
     const moved = MOVED[p]
     if (with_.cluster) setActiveCluster(with_.cluster)
     if (moved) { setPage(moved[0]); setParams({ ...with_, tab: moved[1] }) } else { setPage(p); setParams(with_) }
     setFloating(false)
-  }, [])
+  }), [])
   const [blocked, setBlocked] = useState('')
   const [setup, setSetup] = useState<SetupStatus | null>(null)
   const [onboard, setOnboard] = useState<string[] | null>(null)  // the clusters just chosen, to set up
