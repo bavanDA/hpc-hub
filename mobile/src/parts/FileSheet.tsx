@@ -6,10 +6,10 @@ import { useEffect, useState } from 'react'
 import { kind, MEDIA_LIMIT } from '@shared/components/files/format'
 import { Pdf } from '@shared/components/pdf'
 import { readFile } from '@shared/components/pdf/load'
-import { EmptyState, Spinner } from '@shared/components/ui'
+import { Spinner } from '@shared/components/ui'
 import { call } from '@shared/rpc'
 import type { FileData } from '@shared/types/files'
-import { Button, Sheet, useToast } from '../ui'
+import { Button, EmptyState, Sheet, useToast } from '../ui'
 
 const TEXT_LIMIT = 2 * 1024 * 1024
 
