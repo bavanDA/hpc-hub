@@ -101,7 +101,7 @@ def test_details_read_like_words():
                             "Partition": "general", "QOS": "low", "Account": "mygroup"})
     status, res = ({r["label"]: r["value"] for r in g["rows"]} for g in rows[:2])
     assert status == {"State": "Waiting: not enough free nodes yet", "Run time": "3 days asked"}
-    assert res == {"Queue": "general", "Billing": "low", "Charged to": "mygroup"}
+    assert res == {"Queue": "general", "Priority": "Low", "Charged to": "mygroup"}
 
 
 def test_cancel_frees_the_app_node(session, monkeypatch):

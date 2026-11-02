@@ -1,4 +1,5 @@
 // Demo data for the Jobs page: made-up jobs on Wulver and Yale, as jobs.list sends them.
+import { priorityName } from '../components/clusters/priority'
 import type { Job, JobDetails, JobList } from '../types/jobs'
 import type { Account } from '../types/usage'
 
@@ -127,7 +128,7 @@ function details({ cluster, job_id }: Record<string, unknown>): JobDetails {
         : '1, the program reported an error']] },
     { title: 'Resources', rows: [
       ['Node', j.state === 'PENDING' ? '' : j.where], ['Cores', j.cpus], ['Memory', j.mem.replace(/G$/, ' GB')],
-      ['GPU', j.partition === 'gpu' ? '2 × A100' : ''], ['Queue', j.partition], ['Billing', j.qos_shown],
+      ['GPU', j.partition === 'gpu' ? '2 × A100' : ''], ['Queue', j.partition], ['Priority', j.qos_shown && priorityName(j.qos_shown)],
       ['Charged to', 'mygroup']] },
     { title: 'Files', rows: [['Work folder', dir], ['Output', `${dir}/slurm-${j.job_id}.out`]] },
   ].map((g) => ({ title: g.title, rows: g.rows.filter(([, v]) => v).map(([label, value]) => ({ label, value })) }))

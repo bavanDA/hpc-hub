@@ -156,7 +156,7 @@ def detail_groups(d: dict[str, str], cluster_id: str = "") -> list[dict]:
             ("Memory", mem_text(mem.group(1) if mem else get("ReqMem"))),
             ("GPU", gpu_names.amount(tres, cluster_id)),
             ("Queue", queue),
-            ("Billing", "" if qos in ("normal", queue) else qos),
+            ("Priority", "" if qos in ("", "normal", queue) else jobs.priority_name(qos)),
             ("Charged to", get("Account")),
         ]),
         ("Files", [

@@ -1,11 +1,13 @@
-// The queues a node request tries, cheapest first: one row per queue with its billing, instead of the raw
+// The queues a node request tries, cheapest first: one row per queue and priority, instead of the raw
 // "general:low,general:standard" text the config keeps (ClusterConfig.queues). Click one to change or remove it.
 import { Plus } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
 import { call } from '../../rpc'
 import type { Limits } from '../../types/clusters'
-import { EDialog, Field, List, MainButton, Row } from '../e/ui'
+import { EDialog, List, MainButton, Row } from '../e/ui'
+import { queueRowName } from './priority'
+import { QueuePickers } from './queues'
 
 type Queue = { queue: string; billing: string }
 
@@ -29,32 +31,26 @@ export function QueueRows({ cluster, value, onChange }:
   const [limits, setLimits] = useState<Limits | null>(null)
   useEffect(() => { call<Limits>('clusters.partitions', { cluster }).then(setLimits).catch(() => {}) }, [cluster])
 
-  const start = (i: number) => { setDraft(rows[i] ?? { queue: '', billing: '' }); setEdit(i) }
+  const start = (i: number) => { setDraft(rows[i] ?? { queue: limits?.default_partition ?? '', billing: '' }); setEdit(i) }
   const put = (q: Queue | null) => {
     const next = [...rows]
     if (q) next[edit!] = q; else next.splice(edit!, 1)
     onChange(queuesText(next))
     setEdit(null)
   }
-  const list = (id: string, xs?: string[]) => xs?.length
-    ? <datalist id={id}>{xs.map((x) => <option key={x} value={x} />)}</datalist> : null
+  const label = (q: Queue) => queueRowName(q.queue, q.billing, limits?.default_partition)
   return (
     <>
       <List>
-        {rows.map((q, i) => <Row key={`${q.queue}:${q.billing}:${i}`} label={q.queue} opens onPress={() => start(i)}
-          value={q.billing ? `Billing: ${q.billing}` : 'Default billing'} />)}
+        {rows.map((q, i) => <Row key={`${q.queue}:${q.billing}:${i}`} label={label(q)} opens
+          onPress={() => start(i)} />)}
         <Row icon={Plus} label="Add a queue" onPress={() => start(rows.length)} />
       </List>
-      {edit !== null && <EDialog title={edit < rows.length ? rows[edit].queue : 'Add a queue'} width={440}
+      {edit !== null && <EDialog title={edit < rows.length ? label(rows[edit]) : 'Add a queue'} width={440}
         onClose={() => setEdit(null)} actions={<MainButton disabled={!draft.queue.trim()}
           onClick={() => put(draft)}>Done</MainButton>}>
-        <div className="px-5 pt-1">
-          <Field label="Queue" list="e-queue-rows" value={draft.queue} autoFocus
-            placeholder={limits?.default_partition || ''} onChange={(e) => setDraft({ ...draft, queue: e.target.value })} />
-          <Field label="Billing" list="e-billing-rows" value={draft.billing} placeholder="Default"
-            onChange={(e) => setDraft({ ...draft, billing: e.target.value })} />
-          {list('e-queue-rows', limits?.partitions)}{list('e-billing-rows', limits?.qos)}
-        </div>
+        <QueuePickers limits={limits} queue={draft.queue} qos={draft.billing} autoFocus
+          onQueue={(queue) => setDraft((d) => ({ ...d, queue }))} onQos={(billing) => setDraft((d) => ({ ...d, billing }))} />
         {edit < rows.length && <div className="pt-5"><List>
           <Row label="Remove this queue" danger onPress={() => put(null)} /></List></div>}
       </EDialog>}

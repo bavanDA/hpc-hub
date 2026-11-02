@@ -211,6 +211,14 @@ def shown_qos(j: JobInfo) -> str:
     return "" if j.qos in ("", "normal", j.partition) else j.qos
 
 
+def priority_name(qos: str) -> str:
+    """Slurm's QoS as a priority in words: "Low", "Standard", "High (mygroup)" for low, standard, high_mygroup
+    (app/src/components/clusters/queues.tsx priorityName)."""
+    if qos.startswith("high_"):
+        return f"High ({qos[5:]})"
+    return qos[:1].upper() + qos[1:].replace("_", " ")
+
+
 def ran_for(elapsed: str) -> str:
     """"3 h 41 min" for Slurm's "3:41:10", "1 d 2 h" for "1-02:00:00", "12 min" for "12:30"."""
     days, _, hms = elapsed.rpartition("-")

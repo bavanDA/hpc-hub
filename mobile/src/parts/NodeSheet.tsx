@@ -10,6 +10,7 @@ import { useEffect, useState } from 'react'
 
 import { shortName } from '@shared/components/clusters/loginCopy'
 import { chosen, gpuName, gpuSummary, isPreset, presets, useGpus, withGpu, type Gpu } from '@shared/components/clusters/gpus'
+import { priorityName, queueText } from '@shared/components/clusters/priority'
 import { human, minutes, slurmTime } from '@shared/components/clusters/time'
 import { putCluster } from '@shared/components/clusters/store'
 import { call } from '@shared/rpc'
@@ -65,38 +66,38 @@ function GpuSheet({ gpus, value: p, onChange, onClose }:
   )
 }
 
-/** Queue, billing, group and extra options: set once, then left alone. */
+/** Queue, priority, group and extra options: set once, then left alone. */
 function QueueSheet({ limits, value: p, onChange, onClose }:
   { limits: Limits | null; value: Profile; onChange: (p: Profile) => void; onClose: () => void }) {
-  const [pick, setPick] = useState<'' | 'queue' | 'billing'>('')
+  const [pick, setPick] = useState<'' | 'queue' | 'priority'>('')
   const set = (change: Partial<Profile>) => onChange({ ...p, ...change })
-  const def = (x?: string) => (x ? `${x} (default)` : 'Default')
-  const queues = (limits?.partitions ?? []).map((q) => ({ value: q, label: q === limits?.default_partition ? def(q) : q }))
-  const billing = (limits?.qos ?? []).map((q) => ({ value: q, label: q === limits?.default_qos ? def(q) : q }))
+  const queue = p.partition || limits?.default_partition || ''
+  const qos = p.qos || limits?.default_qos || ''
+  const queues = (limits?.partitions ?? []).map((q) => ({ value: q, label: q }))
+  const levels = (limits?.qos ?? []).map((q) => ({ value: q, label: priorityName(q) }))
   const text = { autoCapitalize: 'none', autoCorrect: 'off', spellCheck: false } as const
   return (
-    <Sheet title="Queue and billing" flush onClose={onClose}
+    <Sheet title="Queue and priority" flush onClose={onClose}
       actions={<MainButton onClick={onClose}>Done</MainButton>}>
       <List>
-        {queues.length ? <Row label="Queue" value={p.partition || def(limits?.default_partition)} opens
-          onPress={() => setPick('queue')} /> : null}
-        {billing.length ? <Row label="Billing" value={p.qos || def(limits?.default_qos)} opens
-          onPress={() => setPick('billing')} /> : null}
+        {queues.length ? <Row label="Queue" value={queue || 'Default'} opens onPress={() => setPick('queue')} /> : null}
+        {levels.length ? <Row label="Priority" value={priorityName(qos)} opens onPress={() => setPick('priority')} />
+          : null}
       </List>
       <div className="px-4 pt-2">
         {!queues.length && <Field label="Queue" {...text} value={p.partition} placeholder="Default"
           onChange={(e) => set({ partition: e.target.value.trim() })} />}
-        {!billing.length && <Field label="Billing" {...text} value={p.qos ?? ''} placeholder="Default"
+        {!levels.length && <Field label="Priority" {...text} value={p.qos ?? ''} placeholder="Default"
           onChange={(e) => set({ qos: e.target.value.trim() })} />}
         <Field label="Group to bill" {...text} value={p.account ?? ''} placeholder="Your default group"
           onChange={(e) => set({ account: e.target.value.trim() })} />
         <Field label="Extra options" {...text} value={p.extra_args ?? ''} placeholder="--constraint=intel"
           onChange={(e) => set({ extra_args: e.target.value })} />
       </div>
-      {pick === 'queue' && <PickerSheet title="Queue" options={[{ value: '', label: 'Default' }, ...queues]}
-        value={p.partition} onPick={(v) => set({ partition: v })} onClose={() => setPick('')} />}
-      {pick === 'billing' && <PickerSheet title="Billing" options={[{ value: '', label: 'Default' }, ...billing]}
-        value={p.qos ?? ''} onPick={(v) => set({ qos: v })} onClose={() => setPick('')} />}
+      {pick === 'queue' && <PickerSheet title="Queue" options={queues} value={queue}
+        onPick={(v) => set({ partition: v })} onClose={() => setPick('')} />}
+      {pick === 'priority' && <PickerSheet title="Priority" options={levels} value={qos}
+        onPick={(v) => set({ qos: v })} onClose={() => setPick('')} />}
     </Sheet>
   )
 }
@@ -119,7 +120,7 @@ export function NodeFields({ cluster, value: p, onChange, onValid }:
 
   const quick = presets(gpus)
   const on = quick.find((x) => isPreset(p, x))?.id ?? ''
-  const queue = [p.partition, p.qos].filter((x) => x?.trim()).join(', ') || 'Default'
+  const queue = queueText(p.partition, p.qos)
 
   return (
     <>
@@ -136,7 +137,7 @@ export function NodeFields({ cluster, value: p, onChange, onValid }:
           onPress={() => setOpen('gpu')} />}
         <DurationRow label="Time" minutes={minutes(p.time) ?? 240} max={limits?.longest}
           onChange={(m) => set({ time: slurmTime(Math.max(1, m)) })} />
-        <Row label="Queue and billing" value={queue} opens onPress={() => setOpen('queue')} />
+        <Row label="Queue and priority" value={queue} opens onPress={() => setOpen('queue')} />
       </List>
       {open === 'gpu' && <GpuSheet gpus={gpus} value={p} onChange={onChange} onClose={() => setOpen('')} />}
       {open === 'queue' && <QueueSheet limits={limits} value={p} onChange={onChange} onClose={() => setOpen('')} />}
