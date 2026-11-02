@@ -19,7 +19,7 @@ import { NodeSheet, shortName } from './NodeSheet'
 
 const WAITING = 'Requesting compute node'
 
-type Open = '' | 'login' | 'settings' | 'setup' | 'request' | 'more' | 'agents' | 'release' | 'log'
+type Open = '' | 'login' | 'settings' | 'setup' | 'request' | 'more' | 'agents' | 'release' | 'disconnect' | 'log'
 
 const AGENTS: [string, string][] = [['claude', 'Claude'], ['codex', 'ChatGPT'], ['agy', 'Antigravity'], ['cursor', 'Cursor']]
 
@@ -83,7 +83,7 @@ export function ClusterCard({ cluster: c, session: s, log, primary = false }:
     { label: 'Settings', icon: Settings, onPick: () => setOpen('settings') },
     { label: 'Log', icon: ScrollText, onPick: () => setOpen('log') },
     ...(s.state === 'Connected' ? [{ label: 'Disconnect', icon: Power, danger: true,
-      onPick: () => run('clusters.disconnect') }] : []),
+      onPick: () => (s.owned && s.node ? setOpen('disconnect') : run('clusters.disconnect')) }] : []),
   ]
   const agents: SheetAction[] = [
     ...AGENTS.map(([id, label]) => ({ label, icon: agentIcon(id), onPick: () => go('agents', { cluster: c.id, start: id }) })),
@@ -142,6 +142,9 @@ export function ClusterCard({ cluster: c, session: s, log, primary = false }:
       {open === 'release' && <ConfirmSheet title={`Release node ${s.node}?`} danger keep="Keep it" confirm="Release node"
         text="Anything running on it stops. You stay connected, and your files stay where they are."
         onConfirm={() => run('clusters.release_node')} onClose={close} />}
+      {open === 'disconnect' && <ConfirmSheet title={`Disconnect ${short}?`} danger keep="Stay connected"
+        confirm="Disconnect" text={`Node ${s.node} is released.`}
+        onConfirm={() => run('clusters.disconnect')} onClose={close} />}
       {open === 'more' && <ActionSheet title={short} actions={more} onClose={close} />}
       {open === 'agents' && <ActionSheet title={`Start an agent on ${short}`} actions={agents} onClose={close} />}
       {open === 'login' && <LoginSheet cluster={c} hint={hint} onClose={close} />}
