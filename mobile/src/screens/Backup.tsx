@@ -78,7 +78,7 @@ function Flow({ id, name, full }: { id: string; name: string; full: string }) {
       body = <ScanView scan={b.scan} />
       main = b.scan?.state === 'failed'
         ? <Button kind="primary" className="flex-1" onClick={() => b.startScan()}>{scanning.again}</Button>
-        : <Button className="flex-1" onClick={b.stopScan}>{scanning.stop}</Button>
+        : <Button className="flex-1" onClick={b.stopScan}>Stop checking</Button>
       break
     case 'risk':
       body = s ? <RiskView s={s} name={name} /> : null
