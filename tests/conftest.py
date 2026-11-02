@@ -34,7 +34,7 @@ POSIX = {
     "api/test_cluster_settings.py", "api/test_files.py", "api/test_files_local.py", "api/test_latex_api.py",
     "api/test_permissions_api.py", "api/test_projects.py", "api/test_schedules_api.py", "api/test_skills_api.py",
     "api/test_backup.py", "backup/test_flow.py",
-    "connect/test_vpn_helper.py",
+    "connect/test_vpn_helper.py", "connect/test_vpn_android.py",
     "compute/test_slurm.py", "compute/test_usage.py", "connect/test_askpass.py", "connect/test_session.py",
     "connect/test_session_asyncssh.py", "core/test_paths.py", "core/test_remote.py",
     "files/test_remote_fs.py", "files/test_transfer.py", "latex/test_latex_git.py",

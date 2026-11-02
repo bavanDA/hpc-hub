@@ -95,13 +95,14 @@ def test_skips_vpn_when_reachable(env, monkeypatch):
     assert rec.done.wait(20)
 
 
-def test_phone_says_the_vpn_is_not_there_yet(env, monkeypatch):
+def test_phone_without_the_vpn_programs_says_so(env, monkeypatch, tmp_path):
     import socket
 
     from hpc_hub.connect import session as session_mod
-    from hpc_hub.connect.vpn_android import NOT_YET
+    from hpc_hub.connect.vpn_android import NO_VPN
 
     monkeypatch.setattr(session_mod.sys, "platform", "android")
+    monkeypatch.setenv("HPC_HUB_VPN_DIR", str(tmp_path / "no-vpn"))
     server, _ = env
     with socket.create_server(("127.0.0.1", 0)) as gateway:
         cfg = ClusterConfig(id="t", name="Test", host="unreachable.invalid")
@@ -111,7 +112,7 @@ def test_phone_says_the_vpn_is_not_there_yet(env, monkeypatch):
         s = ClusterSession(cfg, server, rec)
         s.connect(Login("u", "pw"), Login("u", "pw"))
         assert rec.done.wait(20)
-    assert s.state == State.ERROR and s.detail == NOT_YET
+    assert s.state == State.ERROR and s.detail == NO_VPN
 
 
 def test_borrows_running_job(env, monkeypatch):

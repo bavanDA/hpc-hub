@@ -48,3 +48,11 @@ def test_matrix_is_a_qr_code():
     for x, y in ((4, 4), (size - 11, 4), (4, size - 11)):  # the three finder squares: a dark ring, then light
         assert all(m[y][x + i] and m[y + 6][x + i] and m[y + i][x] and m[y + i][x + 6] for i in range(7))
         assert not m[y + 1][x + 1] and m[y + 3][x + 3]
+
+
+def test_a_vpn_login_of_its_own_comes_along(store):
+    store[("yale", "ssh")] = Login("jd123", "")
+    assert pairing.saved(["yale"]) == [Entry("yale", "jd123", vpn_user="abc123", vpn_password="vpnpass")]
+    assert pairing.saved(["yale"], passwords=False) == [Entry("yale", "jd123", vpn_user="abc123")]
+    entry = Entry("yale", "jd123", key=True, vpn_user="abc123", vpn_password="vpnpass")
+    assert pairing.parse(pairing.code(Code([entry], b"k" * 32), now=1), now=1).entries == [entry]

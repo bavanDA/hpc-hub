@@ -1,5 +1,6 @@
-// What a login asks while it runs (hpc_hub/api/hub.py): a password, a 6-digit code, a yes or no; and the Duo
-// screen while it waits for your phone, which opens Duo Mobile for you. A push expires after about a minute, so
+// What a login asks while it runs (hpc_hub/api/hub.py): a password, a 6-digit code, a yes or no, a web sign-in
+// (the VPN's, in a page of its own: websignin.rs); and the Duo screen while it waits for your phone, which opens
+// Duo Mobile for you. A push expires after about a minute, so
 // after LATE seconds it says so and offers a new one (a fresh login, like the desktop's DuoDialog). The backend
 // waits on a worker thread until question.answer arrives.
 import { invoke } from '@tauri-apps/api/core'
@@ -14,9 +15,10 @@ import { DUO, type Question, type Session } from '@shared/types/clusters'
 import { Button, Field, MainButton, Sheet, useToast } from '../ui'
 
 const digits = (text: string) => text.replace(/\s/g, '')
-// web sign-in pages (the VPN's, a portal's) need a sign-in window the phone doesn't have yet
-const UNSUPPORTED: Question['kind'][] = ['chrome-window', 'web-login']
-const demo = '__TAURI_INTERNALS__' in window ? null : new URLSearchParams(location.search)
+// our own Chrome window is the desktop's; the phone signs in in its own page (web-login)
+const UNSUPPORTED: Question['kind'][] = ['chrome-window']
+const inTauri = '__TAURI_INTERNALS__' in window
+const demo = inTauri ? null : new URLSearchParams(location.search)
 const demoLate = demo?.get('duoafter') ?? null  // design work: ?duoafter=0 shows it at once
 const LATE = demoLate === null ? 60 : Number(demoLate)
 
@@ -60,15 +62,34 @@ export function Questions() {
     call('question.answer', { id: q.id, answer: value }).catch((e: Error) => toast(e.message))
   }
 
+  // the sign-in page (websignin.rs) gets the saved login from the backend itself and answers with the token,
+  // which goes straight back to the backend, never shown or kept
+  const [signingIn, setSigningIn] = useState<string[]>([])
+  async function webLogin(q: Question) {
+    setSigningIn((all) => [...all, q.id])
+    const req = { title: q.title ?? `${nameOf(q.cluster, q.name)} VPN sign-in`, login_url: q.login_url,
+      final_url: q.final_url, token_cookie: q.token_cookie, error_cookie: q.error_cookie, fill: q.fill ?? null }
+    const done = await invoke<{ token: string; error: string }>('vpn_sign_in', { req })
+      .catch((e) => ({ token: '', error: String((e as Error).message ?? e) }))
+    setSigningIn((all) => all.filter((x) => x !== q.id))
+    call('question.answer', { id: q.id, answer: JSON.stringify(done) }).catch(() => {})
+  }
+
   useEvent<Question>('question', (q) => {
-    if (UNSUPPORTED.includes(q.kind)) {
-      toast(`${nameOf(q.cluster, q.name)} wants a web sign-in, which the phone can't do yet. Use campus Wi-Fi, or connect from a computer.`)
-      call('question.answer', { id: q.id, answer: null }).catch(() => {})
+    if (UNSUPPORTED.includes(q.kind) || (q.kind === 'web-login' && !inTauri)) {
+      call('question.answer', { id: q.id, answer: q.kind === 'chrome-window' ? 'in-app' : null }).catch(() => {})
+      return
+    }
+    if (q.kind === 'web-login') {
+      webLogin(q)
       return
     }
     setQuestions((all) => [...all.filter((x) => x.id !== q.id), q])
   })
-  useEvent<{ id: string }>('question-done', ({ id }) => setQuestions((all) => all.filter((x) => x.id !== id)))
+  useEvent<{ id: string }>('question-done', ({ id }) => {
+    if (signingIn.includes(id)) invoke('close_sign_in').catch(() => {})
+    setQuestions((all) => all.filter((x) => x.id !== id))
+  })
   const again = useRef('')  // Send a new push: cancelled, connect again once it has stopped
   useEvent<Session>('session', (s) => {
     if (again.current === s.id && (s.state === 'Disconnected' || s.state === 'Error')) {
@@ -79,7 +100,8 @@ export function Questions() {
     if (s.state === 'Error' && s.detail) toast(`${nameOf(s.id)}: ${s.detail}`)
   })
 
-  const duo = Object.values(sessions).find((s) => s.state === DUO)
+  // while the sign-in page is open, Duo is part of that page: no Duo screen, and Duo Mobile is not opened for it
+  const duo = signingIn.length ? undefined : Object.values(sessions).find((s) => s.state === DUO)
   const waited = useSeconds(!!duo)
   const late = waited >= LATE
   const newPush = (id: string) => {
@@ -87,7 +109,7 @@ export function Questions() {
     call('clusters.cancel', { cluster: id }).catch((e: Error) => toast(e.message))
   }
   const openDuo = () => {  // only the phone app can open Duo Mobile (not the demo in a browser)
-    if ('__TAURI_INTERNALS__' in window) invoke('open_duo').catch((e) => toast(String((e as Error).message ?? e)))
+    if (inTauri) invoke('open_duo').catch((e) => toast(String((e as Error).message ?? e)))
   }
   useEffect(() => {
     if (duo) openDuo() // once per push: the push is sent by now, Duo Mobile shows it when it opens

@@ -194,10 +194,10 @@ def test_a_portal_sign_in_says_what_it_is(hub):
     assert out["result"] == ("session-1", "")
 
 
-def _rust_const(name: str) -> str:
-    rs = (Path(__file__).parents[2] / "app" / "src-tauri" / "src" / "sso.rs").read_text()
+def _rust_const(name: str, path: str = "app/src-tauri/src/sso.rs") -> str:
+    rs = (Path(__file__).parents[2] / path).read_text()
     m = re.search(rf'const {name}: &str = r#"(.*?)"#;', rs, re.S)
-    assert m, f"{name} not found in sso.rs"
+    assert m, f"{name} not found in {path}"
     return m.group(1)
 
 
@@ -205,3 +205,10 @@ def test_sign_in_window_uses_the_same_fill_script():
     """sso.rs carries a copy of STEP_JS (the GTK app's), with the four values as %s like here."""
     from hpc_hub.connect.sso import STEP_JS
     assert _rust_const("STEP_JS").strip() == STEP_JS.strip()
+
+
+def test_phone_sign_in_page_uses_the_desktop_scripts():
+    """The phone's sign-in page (mobile websignin.rs) fills in and notes your own clicks as the desktop's does."""
+    phone = "mobile/src-tauri/src/websignin.rs"
+    for name in ("STEP_JS", "CLICKS_JS"):
+        assert _rust_const(name, phone).strip() == _rust_const(name).strip(), name

@@ -45,7 +45,7 @@
             android:foregroundServiceType="specialUse">
             <property
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
-                android:value="Keeps the user's SSH connections to university HPC clusters open while the app is in the background, so terminals and file transfers don't drop. Started and stopped by the user in Settings." />
+                android:value="Keeps the user's SSH connections to university HPC clusters open while the app is in the background, so terminals and file transfers don't drop. Those that need the university's VPN go through a tunnel inside the app (no VpnService), which stays open with them. Started and stopped by the user in Settings." />
         </service>
 
         <provider

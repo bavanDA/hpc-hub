@@ -1,6 +1,6 @@
 // A cluster's settings on the phone (the desktop's SettingsDialog): a list of sections, each its own screen, and one
-// Save for all of them (cluster_settings.save checks every field). Sign-in has its own sheet (LoginSheet). The VPN
-// sections stay hidden until the phone has a VPN.
+// Save for all of them (cluster_settings.save checks every field). Sign-in has its own sheet (LoginSheet), the VPN's
+// own login included. The VPN's server settings stay as the cluster comes, so they have no section here.
 import { Bot, Code, Cpu, KeyRound, ListOrdered, Plus, Server, ShieldCheck } from 'lucide-react'
 import { useEffect, useState } from 'react'
 

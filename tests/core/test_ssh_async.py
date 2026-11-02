@@ -94,6 +94,66 @@ def test_changed_host_key_is_refused(sshd):
         login(sshd, answers([]))
 
 
+class Forward:
+    """What the phone's VPN gives SSH: a local port that leads to the cluster (here: to the fake sshd)."""
+
+    def __init__(self, port: int):
+        self.server = socket.create_server(("127.0.0.1", 0))
+        self.port, self.to, self.used = self.server.getsockname()[1], port, 0
+        threading.Thread(target=self._accept, daemon=True).start()
+
+    def _accept(self):
+        while True:
+            try:
+                client, _ = self.server.accept()
+            except OSError:
+                return
+            self.used += 1
+            upstream = socket.create_connection(("127.0.0.1", self.to))
+            for a, b in ((client, upstream), (upstream, client)):
+                threading.Thread(target=self._pipe, args=(a, b), daemon=True).start()
+
+    @staticmethod
+    def _pipe(a, b):
+        try:
+            while data := a.recv(65536):
+                b.sendall(data)
+        except OSError:
+            pass
+        finally:
+            for s in (a, b):
+                try:
+                    s.shutdown(socket.SHUT_RDWR)
+                except OSError:
+                    pass
+
+    def close(self):
+        self.server.close()
+
+
+def test_a_tunnel_port_keeps_the_cluster_name_for_the_host_key(sshd):
+    from hpc_hub.core import tunnels
+    fwd = Forward(sshd.port)
+    tunnels.use("Cluster.Example", 22, fwd.port)  # a name that resolves nowhere: only the tunnel reaches it
+    cfg = ClusterConfig(id="t", name="Test", host="cluster.example")
+    try:
+        m = ssh_async.AsyncSshMaster(cfg, "u", {}, print, answers([]))
+        m.start(timeout=30)
+        assert m.run("echo hi").stdout.strip() == "hi"
+        m.stop()
+        assert fwd.used == 1
+        assert ssh_async.KNOWN_HOSTS.read_text().startswith("cluster.example ssh-ed25519 ")
+
+        other = asyncssh.generate_private_key("ssh-ed25519").export_public_key().decode().split()
+        ssh_async.KNOWN_HOSTS.write_text(f"cluster.example {other[0]} {other[1]}\n")
+        with pytest.raises(ssh.SshError, match="Host key verification failed"):
+            ssh_async.AsyncSshMaster(cfg, "u", {}, print, answers([])).start(timeout=30)
+    finally:
+        tunnels.drop("cluster.example", 22)
+        fwd.close()
+    assert tunnels.local_port("cluster.example", 22) is None
+
+
 def test_cancel_while_waiting_for_duo(sshd):
     cfg = ClusterConfig(id="t", name="Test", host="127.0.0.1", port=sshd.port)
     asking, stop = threading.Event(), threading.Event()

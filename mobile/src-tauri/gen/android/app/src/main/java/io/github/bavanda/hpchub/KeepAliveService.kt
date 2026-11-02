@@ -23,8 +23,10 @@ private const val CHANNEL = "connections"
 private const val ID = 1
 private const val EXTRA_TEXT = "text"
 
-/** Keeps the app (and so its SSH connections and the backend) running while you use other apps, shown as an
- *  ongoing "Connected to Wulver" notification. Optional: tmux and Slurm keep your work alive on the cluster anyway. */
+/** Keeps the app (and so its SSH connections, the backend and the VPN tunnels it runs) going while you use other
+ *  apps or the screen is off, shown as an ongoing "Connected to Wulver" notification. Android lets an app with this
+ *  service use the network in Doze, and openconnect, as one of the app's own processes, gets that too. Optional:
+ *  tmux and Slurm keep your work alive on the cluster anyway. */
 class KeepAliveService : Service() {
   override fun onBind(intent: Intent?): IBinder? = null
 

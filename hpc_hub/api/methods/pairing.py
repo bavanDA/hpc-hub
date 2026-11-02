@@ -67,4 +67,6 @@ def apply(code: str) -> list[str]:
     for e in entries:
         cfg = known[e.cluster]
         set_login(cfg.id, "ssh", e.username, e.password or None, cfg.remember_password)
+        if e.vpn_user:
+            set_login(cfg.id, "vpn", e.vpn_user, e.vpn_password or None, cfg.remember_password)
     return [known[e.cluster].name for e in entries]
