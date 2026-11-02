@@ -1,6 +1,6 @@
 // Passcode lock: Claude takes no messages until you start one with the code from your authenticator app.
 import { ChevronDown, ChevronRight, ShieldAlert, ShieldCheck } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { call } from '../../rpc'
 import type { LockConfig, LockSetup, LockStatus } from '../../types/permissions'
@@ -92,14 +92,16 @@ function Activity({ status }: { status: LockStatus }) {
   )
 }
 
-export function LockGroup({ status, config, onConfig, onSetUp, onUnlock, onOff }: {
+export function LockGroup({ status, config, onConfig, onSetUp, onUnlock, onOff, onBad }: {
   status: LockStatus; config: LockConfig; onConfig: (c: LockConfig) => void; onSetUp: () => void
-  onUnlock: () => void; onOff: () => void
+  onUnlock: () => void; onOff: () => void; onBad?: (field: string, bad: boolean) => void
 }) {
+  const badMinutes = useBad(onBad, 'minutes')
+  const badTries = useBad(onBad, 'tries')
   if (!status.set_up) return (
     <Group title="Passcode lock" description={ABOUT}>
-      <Row title={<span className="font-semibold text-accent-text">Set up with Google Authenticator</span>}
-        prefix={<ShieldCheck size={20} className="text-accent-text" />} onClick={onSetUp} />
+      <Row title={<span className="font-semibold">Set up with Google Authenticator</span>}
+        prefix={<ShieldCheck size={20} className="text-dim" />} onClick={onSetUp} />
     </Group>
   )
   const set = (part: Partial<LockConfig>) => onConfig({ ...config, ...part })
@@ -116,11 +118,11 @@ export function LockGroup({ status, config, onConfig, onSetUp, onUnlock, onOff }
       <SwitchRow title="Ask for the code on every message" on={config.minutes === 0}
         onChange={(every) => set({ minutes: every ? 0 : 10 })} />
       {config.minutes > 0 && (
-        <StepperRow title="A code lasts" min={1} max={240} value={config.minutes}
-          onChange={(minutes) => set({ minutes })} />
+        <StepperRow title="A code lasts" min={1} max={240} unit="min" value={config.minutes}
+          onChange={(minutes) => set({ minutes })} onBad={badMinutes} />
       )}
       <StepperRow title="Wrong codes allowed" min={1} max={10} value={config.tries}
-        onChange={(tries) => set({ tries })} />
+        onChange={(tries) => set({ tries })} onBad={badTries} />
       <SwitchRow title="Then sign Claude out" on={config.logout} onChange={(logout) => set({ logout })} />
       <SwitchRow title="Then cancel Claude's job" on={config.scancel} onChange={(scancel) => set({ scancel })} />
       <Activity status={status} />
@@ -129,4 +131,9 @@ export function LockGroup({ status, config, onConfig, onSetUp, onUnlock, onOff }
         Turn off passcode lock</button>
     </Group>
   )
+}
+
+/** A steady onBad for one field, so StepperRow's effect doesn't run on every render. */
+function useBad(onBad: ((field: string, bad: boolean) => void) | undefined, field: string) {
+  return useCallback((bad: boolean) => onBad?.(field, bad), [onBad, field])
 }

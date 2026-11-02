@@ -11,6 +11,7 @@ import { LockGroup, LockSetupDialog, lockConfig } from '../components/permission
 import { useToast } from '../components/toast'
 import { AlertDialog, Button, EmptyState, IconButton, Spinner } from '../components/ui'
 import { useEvent } from '../hooks'
+import { setLeaveGuard } from '../nav'
 import { call } from '../rpc'
 import type { Session } from '../types'
 import type { ClaudePermissions, LockConfig } from '../types/permissions'
@@ -32,6 +33,14 @@ export function Permissions() {
   const [saving, setSaving] = useState(false)
   const [lockDialog, setLockDialog] = useState<'setup' | 'off' | null>(null)
   useEffect(() => { setPerm(null); setDraft(null); setError('') }, [cluster])  // another cluster picked
+  const [bad, setBad] = useState<Set<string>>(new Set())  // number fields typed out of range
+  const onBad = useCallback((field: string, on: boolean) => setBad((b) => {
+    if (on === b.has(field)) return b
+    const next = new Set(b)
+    if (on) next.add(field); else next.delete(field)
+    return next
+  }), [])
+  const [leaving, setLeaving] = useState<(() => void) | null>(null)  // a move held until you answer
 
   const show = (p: ClaudePermissions) => { setPerm(p); setDraft(draftOf(p)); setError('') }
   const load = useCallback(() => {
@@ -47,6 +56,11 @@ export function Permissions() {
   const dirty = useMemo(() => !!perm && !!draft && JSON.stringify(draftOf(perm)) !== JSON.stringify(draft),
     [perm, draft])
   const name = active ? shortName(active) : cluster
+  useEffect(() => {
+    if (!dirty) return
+    setLeaveGuard((proceed) => { setLeaving(() => proceed); return true })
+    return () => setLeaveGuard(null)
+  }, [dirty])
   const allowed = useMemo(() => new Set(draft?.allowed), [draft])
   const edit = (part: Partial<Draft>) => setDraft((d) => d && { ...d, ...part })
   const tick = (cmds: string[], on: boolean) => {
@@ -94,7 +108,7 @@ export function Permissions() {
       </Group>
       <LockGroup status={perm.lock} config={draft.lock} onConfig={(lock) => edit({ lock })}
         onSetUp={() => setLockDialog('setup')} onOff={() => setLockDialog('off')}
-        onUnlock={() => lockAction('permissions.lock_reset', 'Unlocked')} />
+        onUnlock={() => lockAction('permissions.lock_reset', 'Unlocked')} onBad={onBad} />
       <Commands groups={perm.groups} custom={draft.custom} allowed={allowed} onChange={tick}
         onAdd={(cmd) => edit({ custom: [...draft.custom, cmd], allowed: [...draft.allowed, cmd].sort() })} />
       <p className="px-1 text-sm text-dim">ChatGPT and Antigravity ask before running commands.</p>
@@ -107,12 +121,17 @@ export function Permissions() {
         <span className="flex-1" />
         {loading && <Spinner />}
         <IconButton icon={RefreshCw} label="Reload from the cluster" size={16} onClick={load} />
-        <Button kind="suggested" disabled={!dirty || saving} onClick={save}>
+        <Button kind="suggested" disabled={!dirty || saving || bad.size > 0} onClick={save}>
           {saving && <Spinner size={14} />}Save</Button>
       </div>}
       {body}
       {lockDialog === 'setup' && <LockSetupDialog cluster={cluster} name={name} onClose={() => setLockDialog(null)}
         onDone={lockDone} />}
+      {leaving && (
+        <AlertDialog title="Throw away your changes?" keep="Keep editing" act="Throw away"
+          onClose={() => setLeaving(null)}
+          onAct={() => { const go = leaving; setLeaving(null); setLeaveGuard(null); go() }} />
+      )}
       {lockDialog === 'off' && (
         <AlertDialog title={`Turn off the passcode lock on ${name}?`} keep="Keep the lock" act="Turn off"
           onClose={() => setLockDialog(null)} onAct={() => lockAction('permissions.lock_off', 'Passcode lock is off')}>

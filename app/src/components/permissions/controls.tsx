@@ -1,6 +1,6 @@
 // Settings rows like Adwaita's preferences: groups with a title, switches, checks and number steppers.
 import { Minus, Plus } from 'lucide-react'
-import { useEffect, useRef, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 
 import { List, Row, Switch as UiSwitch } from '../ui'
 
@@ -40,21 +40,37 @@ export function Check({ on, mixed = false, onChange, label }:
     onChange={(e) => onChange(e.target.checked)} className="size-[18px] shrink-0 accent-[var(--color-accent)]" />
 }
 
-export function StepperRow({ title, subtitle, value, min, max, onChange }: {
-  title: string; subtitle?: string; value: number; min: number; max: number; onChange: (v: number) => void
+/** A number you type, with - and + beside it. The typed text is kept as is; only a whole number in range is passed on.
+ *  onBad tells the page while the text is out of range, so it can hold Save. */
+export function StepperRow({ title, subtitle, value, min, max, unit, onChange, onBad }: {
+  title: string; subtitle?: string; value: number; min: number; max: number; unit?: string
+  onChange: (v: number) => void; onBad?: (bad: boolean) => void
 }) {
-  const set = (v: number) => onChange(Math.min(max, Math.max(min, Number.isFinite(v) ? Math.round(v) : min)))
+  const [text, setText] = useState(String(value))
+  const [focused, setFocused] = useState(false)
+  useEffect(() => { if (!focused) setText(String(value)) }, [value, focused])
+  const n = /^\d+$/.test(text.trim()) ? Number(text) : NaN
+  const bad = !(n >= min && n <= max)
+  useEffect(() => { onBad?.(bad) }, [bad, onBad])
+  const type = (t: string) => {
+    setText(t)
+    const v = /^\d+$/.test(t.trim()) ? Number(t) : NaN
+    if (v >= min && v <= max) onChange(v)
+  }
+  const step = (v: number) => { const next = Math.min(max, Math.max(min, v)); setText(String(next)); onChange(next) }
   const btn = 'grid size-8 place-items-center rounded-full bg-pill hover:bg-selected disabled:opacity-40'
+  const limit = `${min} to ${max}${unit ? ` ${unit}` : ''}`
   return (
-    <Row title={title} subtitle={wrap(subtitle)} suffix={
+    <Row title={title} subtitle={bad ? <span className="text-bad">{limit}</span> : wrap(subtitle)} suffix={
       <div className="flex items-center gap-1.5">
-        <input type="number" value={value} min={min} max={max} aria-label={title}
-          onChange={(e) => set(Number(e.target.value))}
-          className="h-8 w-14 rounded-md bg-pill text-center tabular-nums outline-none [appearance:textfield]
-            focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus [&::-webkit-inner-spin-button]:appearance-none" />
-        <button aria-label="Less" className={btn} disabled={value <= min} onClick={() => set(value - 1)}>
+        <input type="text" inputMode="numeric" value={text} aria-label={title} aria-invalid={bad}
+          onChange={(e) => type(e.target.value)} onFocus={() => setFocused(true)} onBlur={() => setFocused(false)}
+          className={`h-8 w-14 rounded-md bg-pill text-center tabular-nums outline-none
+            focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus ${bad ? 'ring-2 ring-inset ring-bad' : ''}`} />
+        {unit && <span className="text-dim">{unit}</span>}
+        <button aria-label="Less" className={btn} disabled={bad || value <= min} onClick={() => step(value - 1)}>
           <Minus size={14} /></button>
-        <button aria-label="More" className={btn} disabled={value >= max} onClick={() => set(value + 1)}>
+        <button aria-label="More" className={btn} disabled={bad || value >= max} onClick={() => step(value + 1)}>
           <Plus size={14} /></button>
       </div>} />
   )
