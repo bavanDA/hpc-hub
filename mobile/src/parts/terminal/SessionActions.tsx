@@ -1,12 +1,13 @@
 // What a long press on a session offers: rename or stop it, and open an agent's remote control or copy ChatGPT's
 // pairing code. The same calls as the desktop's ⋯ menu.
 import { Copy, ExternalLink, Pencil, Square, X } from 'lucide-react'
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import { openLink } from '@shared/components/app/openLink'
 import { close, getTab, tabKey, update } from '@shared/components/terminals/tabs'
 import { copyText } from '@shared/components/terminals/xterm'
 import { call } from '@shared/rpc'
+import type { Listing } from '@shared/types/terminals'
 import { ActionSheet, ConfirmSheet, Field, MainButton, Sheet, useToast } from '../../ui'
 
 /** The session the actions are for: one listed, or an open terminal's. remote: the agent's remote-control link, or
@@ -22,6 +23,14 @@ export function SessionActions({ target, onClose, onChanged, detach }:
   const chosen = useRef(false)  // the action sheet closes itself before it runs the pick
   const pick = (next: typeof step) => { chosen.current = true; setStep(next) }
   const key = tabKey(target.cluster, target.name)
+  // An open terminal doesn't carry the agent's link, so ask the list for it.
+  const [found, setFound] = useState('')
+  useEffect(() => {
+    if (target.remote !== undefined) return
+    call<Listing>('terminals.list', { cluster: target.cluster })
+      .then((l) => setFound(l.sessions.find((s) => s.name === target.name)?.remote ?? ''))
+      .catch(() => {})
+  }, [target.cluster, target.name, target.remote])
   const run = (method: string, extra: Record<string, unknown>, after: () => void = () => {}) => {
     call(method, { cluster: target.cluster, session: target.name, node: target.node, ...extra })
       .then(after)
@@ -36,7 +45,7 @@ export function SessionActions({ target, onClose, onChanged, detach }:
       text="Everything running in it ends, like an agent or a build."
       onConfirm={() => { if (getTab(key)) close(key); run('terminals.stop', { kind: target.kind }) }} />
   )
-  const remote = target.remote ?? ''
+  const remote = target.remote ?? found
   const pair = remote.startsWith('code:') ? remote.slice(5) : ''
   const others = pair
     ? [{ label: 'Copy ChatGPT pairing code', icon: Copy, onPick: () => { onClose(); copyText(pair).then((ok) =>

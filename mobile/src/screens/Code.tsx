@@ -370,11 +370,13 @@ export function Code() {
               }} />
           </Suspense>
         )}
-        {f && editable && !f.editing && (
-          <Button kind="primary" icon={Pencil} className="absolute right-4 bottom-4 shadow-[var(--shadow-menu)]"
-            onClick={() => { setEditing(f.key, true); editor.current?.setEditable(true) }}>Edit</Button>
-        )}
       </div>
+      {f && editable && !f.editing && !selection && (
+        <div className="border-t border-line px-4 py-3">
+          <Button kind="primary" icon={Pencil} className="w-full"
+            onClick={() => { setEditing(f.key, true); editor.current?.setEditable(true) }}>Edit</Button>
+        </div>
+      )}
 
       {f && selection && (
         <SelectionBar selection={selection} onCopy={() => copy(selection.text, 'Copied')}
