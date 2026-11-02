@@ -103,7 +103,8 @@ export function FolderPicker({ cluster, start, onPick, onClose, projects = [] }:
     <EDialog title={`Choose a folder on ${shortName(cluster)}`} width={860} onClose={onClose}
       actions={<>
         <span className="min-w-0 flex-1 self-center truncate font-mono text-sm text-dim" dir="rtl">
-          {target && <bdi>{short(target, at?.home ?? '')}</bdi>}</span>
+          {target && <bdi>{short(target, at?.home ?? '') === '~' ? 'Home folder' : short(target, at?.home ?? '')}</bdi>}
+        </span>
         <EButton kind="primary" disabled={!target} onClick={() => { onClose(); onPick(target) }}>
           {picked ? `Choose ${picked}` : 'Choose this folder'}</EButton>
       </>}>

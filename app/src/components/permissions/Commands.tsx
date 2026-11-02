@@ -59,10 +59,11 @@ function CommandsDialog({ group, own, commands, allowed, known, onChange, onAdd,
         </form>
       )}
       {commands.length > 0 ? <>
-        <Section note={group.note || undefined}>
+        <div className={own ? 'pt-3' : ''}><List>
           <ToggleRow label="Allow all of them" checked={on === commands.length}
             onChange={(v) => onChange(commands, v)} />
-        </Section>
+        </List></div>
+        {group.note && <p className="px-5 pt-2 text-sm text-dim">{group.note}</p>}
         <div className="pt-5"><List>
           {commands.map((c) => (
             <ToggleRow key={c} label={c} checked={allowed.has(c)} onChange={(v) => onChange([c], v)} />
