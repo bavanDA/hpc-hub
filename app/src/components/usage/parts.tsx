@@ -17,11 +17,12 @@ export function Bar({ value, mine, className = 'w-40' }:
   )
 }
 
-export function Section({ title, note, children }: { title: string; note?: ReactNode; children: ReactNode }) {
+/** A group of rows under a small grey title (style E). */
+export function Section({ title, note, children }: { title?: string; note?: ReactNode; children: ReactNode }) {
   return (
-    <section className="flex flex-col gap-2">
-      <h2 className="font-semibold">{title}</h2>
-      {note && <p className="text-sm text-dim">{note}</p>}
+    <section className="flex flex-col gap-1.5">
+      {title && <h2 className="px-4 text-xs font-semibold tracking-wide text-dim uppercase">{title}</h2>}
+      {note && <p className="px-4 pb-1 text-sm text-dim">{note}</p>}
       {children}
     </section>
   )

@@ -35,7 +35,7 @@ function Quota({ r, onBackup }: { r: StorageRow; onBackup?: () => void }) {
           )}
         </div>
         <Bar value={r.quota ? r.used / r.quota : 0} mine={r.quota && r.mine != null ? r.mine / r.quota : null} />
-        <span className="w-4 text-dim">
+        <span className="w-4 shrink-0 text-dim">
           {people.length > 0 && (open ? <ChevronDown size={16} /> : <ChevronRight size={16} />)}</span>
       </div>
       {open && people.map(([user, gb]) => (
@@ -53,10 +53,10 @@ export function StorageTab({ storage, error, onBackup }:
   const note = error ? `Could not load: ${error}` : !storage ? 'Loading…'
     : ''
   return (
-    <Section title="Storage" note={note}>
+    <Section note={note}>
       {storage && storage.rows.length > 0 && <List>{storage.rows.map((r) => <Quota key={r.label} r={r}
         onBackup={/scratch/i.test(r.label) ? onBackup : undefined} />)}</List>}
-      {storage?.raw && <pre className="overflow-auto rounded-xl bg-view p-4 font-mono text-sm select-text">
+      {storage?.raw && <pre className="overflow-auto rounded-lg bg-soft p-4 font-mono text-sm select-text">
         {storage.raw}</pre>}
     </Section>
   )
