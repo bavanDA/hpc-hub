@@ -7,7 +7,7 @@ import { useGo } from '../../nav'
 import { AGENT_NAMES, type TmuxSession } from '../../types/terminals'
 import { useClusters } from '../clusters/store'
 import { useListings, useLive } from '../terminals/data'
-import { Dot } from '../terminals/Popover'
+import { SessionIcon } from '../terminals/Popover'
 import { SessionMenu } from '../terminals/SessionMenu'
 import { openSession } from '../terminals/tabs'
 import { useTools } from '../tools/useTools'
@@ -95,7 +95,7 @@ export function Running() {
         <List>
           {rows.map(({ cluster, name, s }) => (
             <div key={`${cluster}/${s.name}`} className="flex items-center gap-3 px-4 py-2.5">
-              <Dot color={s.color} />
+              <SessionIcon agent={s.agent} session={s.name} size={20} />
               <div className="min-w-0 flex-1">
                 <div className="truncate font-semibold">{title(s)}</div>
                 <div className="truncate text-sm text-dim">

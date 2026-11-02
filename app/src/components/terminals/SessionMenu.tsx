@@ -3,10 +3,9 @@ import { MoreVertical } from 'lucide-react'
 import { useRef, useState } from 'react'
 
 import { call } from '../../rpc'
-import { COLORS } from '../../types/terminals'
 import { useToast } from '../toast'
-import { Button, Dialog, IconButton } from '../ui'
-import { Dot, MenuItem, Popover } from './Popover'
+import { AlertDialog, Button, Dialog, IconButton } from '../ui'
+import { MenuItem, Popover } from './Popover'
 import { close, getTab, tabKey, update } from './tabs'
 
 /** What the menu acts on: a listed session, or an open tab's. */
@@ -28,10 +27,6 @@ export function SessionMenu({ target, onChanged }: { target: Target; onChanged: 
       .catch((e: Error) => toast(`Failed: ${e.message}`))
       .finally(onChanged)
   }
-  const pick = (color: string) => {
-    setAt(null)
-    run('terminals.set_color', { color }, () => update(key, { color }))
-  }
 
   return (
     // Clicks in the menu and its dialogs are not clicks on the row it sits in
@@ -45,14 +40,6 @@ export function SessionMenu({ target, onChanged }: { target: Target; onChanged: 
       {at && (
         <Popover x={at.x} y={at.y} onClose={() => setAt(null)}>
           <MenuItem onClick={() => { setAt(null); setDialog('rename') }}>Rename…</MenuItem>
-          {target.kind === 'tmux' && (
-            <div className="flex gap-1 px-2 py-1.5">
-              {COLORS.map((c) => (
-                <button key={c} title={c} onClick={() => pick(c)}
-                  className="grid size-7 place-items-center rounded-full hover:bg-hover"><Dot color={c} size={14} /></button>
-              ))}
-            </div>
-          )}
           <MenuItem danger onClick={() => { setAt(null); setDialog('stop') }}>Stop session…</MenuItem>
         </Popover>
       )}
@@ -61,16 +48,14 @@ export function SessionMenu({ target, onChanged }: { target: Target; onChanged: 
           onRename={(label) => run('terminals.rename', { label, kind: target.kind }, () => update(key, { title: label }))} />
       )}
       {dialog === 'stop' && (
-        <Dialog title={`Stop ${target.title}?`} onClose={() => setDialog(null)} width={400} actions={<>
-          <Button onClick={() => setDialog(null)}>Cancel</Button>
-          <Button kind="destructive" onClick={() => {
+        <AlertDialog title={`Stop ${target.title}?`} keep="Keep it running" act="Stop session"
+          onClose={() => setDialog(null)} onAct={() => {
             setDialog(null)
             if (getTab(key)) close(key)
             run('terminals.stop', { kind: target.kind })
-          }}>Stop</Button>
-        </>}>
-          <p className="text-dim">Everything running in it ends (Claude, a build…).</p>
-        </Dialog>
+          }}>
+          <p>Everything running in it stops.</p>
+        </AlertDialog>
       )}
     </span>
   )

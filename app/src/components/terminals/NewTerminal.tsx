@@ -1,11 +1,9 @@
 // New terminal: name, cluster, login or compute node, folder, color. It runs in tmux.
 import { useState } from 'react'
 
-import { COLORS } from '../../types/terminals'
 import { useToast } from '../toast'
 import { Button, Dialog } from '../ui'
 import type { Live } from './data'
-import { Dot } from './Popover'
 import { inputClass } from './SessionMenu'
 import { openNew } from './tabs'
 
@@ -29,12 +27,11 @@ export function NewTerminalDialog({ live, cluster: start = '', onClose, onOpened
   const [node, setOnNode] = useState<boolean | null>(null)  // null: the compute node when there is one
   const onNode = node ?? Boolean(c?.node)
   const [folder, setFolder] = useState('~')
-  const [color, setColor] = useState(COLORS[0])
 
   const create = () => {
     onClose()
     openNew(cluster, { name: name.trim() || 'Terminal', node: onNode && Boolean(c?.node), folder: folder.trim() || '~',
-      color }).then(onOpened).catch((e: Error) => toast(`Could not open the terminal: ${e.message}`))
+      color: '' }).then(onOpened).catch((e: Error) => toast(`Could not open the terminal: ${e.message}`))
   }
 
   return (
@@ -65,16 +62,6 @@ export function NewTerminalDialog({ live, cluster: start = '', onClose, onOpened
         <Field label="Start in">
           <input value={folder} onChange={(e) => setFolder(e.target.value)} className={inputClass}
             spellCheck={false} placeholder="~ (your home folder)" />
-        </Field>
-        <Field label="Color">
-          <div className="flex gap-1">
-            {COLORS.map((x) => (
-              <button key={x} title={x} onClick={(e) => { e.preventDefault(); setColor(x) }}
-                className={`grid size-8 place-items-center rounded-full ${x === color ? 'bg-selected' : 'hover:bg-hover'}`}>
-                <Dot color={x} size={16} />
-              </button>
-            ))}
-          </div>
         </Field>
       </div>
       <div className="mt-6 mb-2 flex justify-center">

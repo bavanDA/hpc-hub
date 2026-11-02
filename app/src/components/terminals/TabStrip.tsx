@@ -2,7 +2,7 @@
 import { X } from 'lucide-react'
 
 import { useToast } from '../toast'
-import { Dot } from './Popover'
+import { SessionIcon } from './Popover'
 import { SessionMenu } from './SessionMenu'
 import { close, select, type Tab } from './tabs'
 
@@ -22,7 +22,7 @@ export function TabStrip({ tabs, current, onChanged }:
           <div key={t.key} onClick={() => select(t.key)} title={t.session || t.title}
             className={`flex h-9 max-w-[220px] min-w-[120px] shrink-0 items-center gap-2 rounded-md pr-1 pl-3 ${
               t.key === current ? 'bg-selected' : 'hover:bg-hover'}`}>
-            <Dot color={t.color} />
+            <SessionIcon session={t.session} />
             <span className={`min-w-0 flex-1 truncate ${t.ended ? 'text-dim' : ''}`}>{t.title}</span>
             <button aria-label="Close" title={t.session ? 'Close (keeps running)' : 'Close'}
               onClick={(e) => { e.stopPropagation(); shut(t) }}

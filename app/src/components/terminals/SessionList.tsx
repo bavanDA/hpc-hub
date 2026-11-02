@@ -5,7 +5,7 @@ import { AGENT_NAMES, type TmuxSession } from '../../types/terminals'
 import { useToast } from '../toast'
 import { IconButton } from '../ui'
 import type { Listed, Live } from './data'
-import { Dot } from './Popover'
+import { SessionIcon } from './Popover'
 import { SessionMenu } from './SessionMenu'
 import { openLink } from './pty'
 import { openSession, tabKey, type Tab } from './tabs'
@@ -106,7 +106,7 @@ function SessionRow({ cluster, s, nodes, open, selected, onRefresh }: {
   return (
     <div onClick={() => openSession(cluster, s)} title={`${s.name} (${s.kind})${s.path ? ` in ${s.path}` : ''}`}
       className={`flex items-center gap-2.5 rounded-md py-1.5 pr-1 pl-3 ${selected ? 'bg-selected' : 'hover:bg-hover'}`}>
-      <Dot color={s.color} />
+      <SessionIcon agent={s.agent} session={s.name} />
       <div className="min-w-0 flex-1">
         <div className="truncate">{s.title.startsWith(`${what} · `) ? s.title.slice(what.length + 3) : s.title}</div>
         <div className="truncate text-sm text-dim">{bits.join(' · ')}</div>

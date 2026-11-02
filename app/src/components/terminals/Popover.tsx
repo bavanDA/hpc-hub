@@ -1,5 +1,8 @@
 // A small menu that opens at a point and closes on any click outside or Escape (Adwaita's popover menu).
+import { SquareTerminal } from 'lucide-react'
 import { useEffect, useRef, type ReactNode } from 'react'
+
+import { agentIcon } from '../agents/AgentIcon'
 
 export function Popover({ x, y, onClose, children }: { x: number; y: number; onClose: () => void; children: ReactNode }) {
   const ref = useRef<HTMLDivElement>(null)
@@ -29,7 +32,11 @@ export function MenuItem({ children, onClick, danger = false }:
   )
 }
 
-export function Dot({ color, size = 10 }: { color: string; size?: number }) {
-  return <span className="inline-block shrink-0 rounded-full" style={{ width: size, height: size,
-    background: color || 'var(--color-dim)', opacity: color ? 1 : 0.5 }} />
+const LOGO = new Set(['claude', 'codex', 'agy', 'cursor'])
+
+/** An agent's own logo for its session (named hpchub-<agent>-…), a grey terminal for the rest. */
+export function SessionIcon({ agent = '', session = '', size = 16 }: { agent?: string; session?: string; size?: number }) {
+  const id = LOGO.has(agent) ? agent : /^hpchub-([a-z]+)-/.exec(session)?.[1] ?? ''
+  const Icon = LOGO.has(id) ? agentIcon(id) : SquareTerminal
+  return <Icon size={size} className="shrink-0 text-dim" />
 }
