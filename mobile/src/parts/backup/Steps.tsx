@@ -1,7 +1,7 @@
 // The backup agent's steps on the phone, in rows: one column, the step's main button at the bottom of the screen
 // (screens/Backup.tsx puts it there). The flow and the at-risk grouping are the desktop's (@shared/components/backup);
 // the words that differ on the phone are in ./words.
-import { CircleAlert, CircleCheck, FileText, GitBranch } from 'lucide-react'
+import { BellRing, CircleAlert, CircleCheck, FileText, GitBranch } from 'lucide-react'
 import type { ReactNode } from 'react'
 
 import { agentIcon } from '@shared/components/agents/AgentIcon'
@@ -205,7 +205,8 @@ export function CopyCard({ plan, progress }: { plan: Plan | null; progress: Prog
   )
 }
 
-export function DoneCard({ cluster, result }: { cluster: string; result: CopyResult | null }) {
+export function DoneCard({ cluster, result, onWeekly }:
+  { cluster: string; result: CopyResult | null; onWeekly: () => void }) {
   if (!result) return <Loading />
   const busy = result.busy.length
   const failed = result.failed.length
@@ -223,12 +224,14 @@ export function DoneCard({ cluster, result }: { cluster: string; result: CopyRes
         {busy > 0 && <p className="text-dim">{doneCopy.busy(busy)}</p>}
         {failed > 0 && <p className="text-dim">{doneCopy.failed(failed)}</p>}
       </div>
-      {result.notes_path && <List className="mt-5">
-        <Row icon={FileText} label="Notes on what was copied"
-          sub={<span className="font-mono break-all">{result.notes_path.split('/').slice(-2).join('/')}</span>} />
-      </List>}
+      <List className="mt-5">
+        {result.notes_path && <Row icon={FileText} label="Notes on what was copied"
+          sub={<span className="font-mono break-all">{result.notes_path.split('/').slice(-2).join('/')}</span>} />}
+        <Row icon={BellRing} label={doneCopy.weekly} opens onPress={onWeekly} />
+      </List>
       {partial && <Section title="Not copied">
-        {[...result.busy.map((p) => [p, 'A job was still writing it']), ...result.failed.map((x) => [x.path, x.why])].map(([p, why]) => (
+        {[...result.busy.map((p) => [p, 'A job was still writing it']),
+          ...result.failed.map((x) => [x.path, x.why])].map(([p, why]) => (
           <Row key={p} label={<span className="font-mono text-sm break-all">{p}</span>} sub={why} />
         ))}
       </Section>}

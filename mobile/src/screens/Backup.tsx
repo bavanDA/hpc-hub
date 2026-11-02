@@ -105,8 +105,7 @@ function Flow({ id, name, full }: { id: string; name: string; full: string }) {
       break
     case 'done': {
       const bad = (b.result?.mismatches ?? 0) > 0
-      body = <DoneCard cluster={id} result={b.result} />
-      second = <Button onClick={() => setRemind('on')}>{doneCopy.weekly}</Button>
+      body = <DoneCard cluster={id} result={b.result} onWeekly={() => setRemind('on')} />
       main = bad
         ? <Button kind="primary" className="flex-1" onClick={() => b.setStep('space')}>{doneCopy.again}</Button>
         : <Button kind="primary" className="flex-1" onClick={() => go('files',
@@ -160,7 +159,6 @@ function RemindersSheet({ value, onSave, onClose }:
           <Row label="Warn me" value={`${r.horizon_days} days ahead`} opens onPress={() => setPicking('horizon')} />
         </>}
       </List>
-      {r.enabled && <p className="px-4 pt-3 text-sm text-dim">{remindCopy.every(DAYS[day - 1], r.time)}</p>}
       {picking === 'day' && <PickerSheet title={remindCopy.day} value={String(day)} onClose={() => setPicking('')}
         onPick={(v) => setR({ ...r, days: [Number(v)] })}
         options={DAYS.map((d, i) => ({ value: String(i + 1), label: d }))} />}
