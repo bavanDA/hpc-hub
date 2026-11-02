@@ -9,9 +9,12 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <!-- the notification plugin asks for this to bring back scheduled notifications after a reboot; HPC Hub schedules none -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" tools:node="remove" />
-    <!-- DuoPlugin.kt opens Duo Mobile -->
+    <!-- DuoPlugin.kt opens Duo Mobile; SpeechPlugin.kt reaches the phone's text to speech engine -->
     <queries>
         <package android:name="com.duosecurity.duomobile" />
+        <intent>
+            <action android:name="android.intent.action.TTS_SERVICE" />
+        </intent>
     </queries>
 
     <application
