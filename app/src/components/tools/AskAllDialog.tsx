@@ -1,12 +1,16 @@
-// Ask all: one prompt to every agent you pick; answers land in one folder (hpc_hub/agents/ui/ask_all.py).
+// Ask all: one prompt to every agent you pick; answers land in one folder (hpc_hub/agents/ui/ask_all.py). Style E,
+// like the phone's AskAllSheet.
 import { useEffect, useState } from 'react'
 
 import { useGo } from '../../nav'
 import { call } from '../../rpc'
 import type { ToolSetup } from '../../types/tools'
-import { EntryRow, Group, SwitchRow } from '../clusters/fields'
-import { Button, Dialog } from '../ui'
-import { ComputeGroup, FolderRow, Section, TextBox } from './fields'
+import { agentIcon } from '../agents/AgentIcon'
+import { shortName } from '../clusters/loginCopy'
+import { IconToggleRow, TextArea } from '../e/extra'
+import { NodeFields } from '../e/NodeFields'
+import { EDialog, Field, List, MainButton, Row, Section, ToggleRow } from '../e/ui'
+import { FolderField } from './fields'
 import { answersFolder, sendable } from './format'
 import { startAsk } from './run'
 
@@ -24,6 +28,7 @@ export function AskAllDialog({ setup, folder: start = '', onClose }:
   const [checkError, setCheckError] = useState(false)
   const [discuss, setDiscuss] = useState(false)
   const [profile, setProfile] = useState(setup.profile)
+  const [fits, setFits] = useState(true)
   const [remember, setRemember] = useState(true)
   const [note, setNote] = useState('')
 
@@ -51,43 +56,37 @@ export function AskAllDialog({ setup, folder: start = '', onClose }:
       profile: setup.node ? null : sendable(profile), remember }, go)
   }
 
-  const whoNote = checkError ? 'Could not check which agents are installed.' : !found
-    ? 'Checking which ones are installed…'
-    : 'Pick who answers.'
   return (
-    <Dialog title={`Ask all on ${setup.name}`} onClose={onClose} width={620}
-      actions={<>
-        {note && <span className="mr-auto self-center text-sm text-bad">{note}</span>}
-        <Button onClick={onClose}>Cancel</Button>
-        <Button kind="suggested" onClick={ask}>Ask all</Button>
-      </>}>
-      <Group description="Every agent you pick gets the same prompt and works in this folder. Each one writes its answer
-        to the answers folder.">
-        <FolderRow cluster={setup} value={folder} onChange={setFolder} />
-        <EntryRow label="Answers folder" value={out} onChange={setOut} />
-      </Group>
-      <Section title="Prompt">
-        <TextBox value={prompt} onChange={(v) => { setPrompt(v); setNote('') }} rows={6} autoFocus
+    <EDialog title={`Ask all on ${shortName(setup)}`} width={560} onClose={onClose}
+      actions={<MainButton disabled={!setup.node && !fits} onClick={ask}>Ask all</MainButton>}>
+      <div className="px-5">
+        {note && <p className="pb-1 font-semibold text-bad">{note}</p>}
+        <TextArea label="Prompt" value={prompt} rows={5} autoFocus
+          onChange={(e) => { setPrompt(e.target.value); setNote('') }}
           placeholder="Which of these two plotting scripts is easier to maintain, and why?" />
-      </Section>
-      <Group title="Agents" description={whoNote}>
+        <FolderField cluster={setup} value={folder} onChange={setFolder} />
+        <Field label="Answers go to" value={out} onChange={(e) => setOut(e.target.value)} />
+      </div>
+      <Section title="Who answers" note={checkError ? 'Could not check which agents are installed.'
+        : !found ? 'Checking which ones are installed' : undefined}>
         {setup.agents.map((a) => (
-          <SwitchRow key={a.id} label={a.name} checked={Boolean(picked[a.id]) && usable(a.id)}
-            sub={usable(a.id) ? undefined : 'Not installed'}
+          <IconToggleRow key={a.id} icon={agentIcon(a.id)} label={a.name} disabled={!usable(a.id)}
+            checked={Boolean(picked[a.id]) && usable(a.id)} sub={usable(a.id) ? undefined : 'Not installed'}
             onChange={(on) => { if (usable(a.id)) { setPicked({ ...picked, [a.id]: on }); setNote('') } }} />
         ))}
-        <SwitchRow label="Let them read each other's answers" checked={discuss} onChange={setDiscuss}
-          sub="Each reads the others' answers and writes a second one" />
-      </Group>
-      {setup.node ? (
-        <p className="mb-4 text-sm text-dim">Runs on your node {setup.node} (job {setup.job}).</p>
-      ) : (
-        <>
-          <ComputeGroup cluster={setup.id} value={profile} onChange={setProfile}
-            description="You have no node yet, so it asks for one with:" />
-          <Group><SwitchRow label="Use these next time" checked={remember} onChange={setRemember} /></Group>
-        </>
-      )}
-    </Dialog>
+        <ToggleRow label="Let them read each other's answers" checked={discuss} onChange={setDiscuss}
+          sub="Each one answers again after reading the others" />
+      </Section>
+      {setup.node
+        ? <div className="pt-5"><List><Row label="Compute node" value={setup.node} /></List></div>
+        : <>
+            <section className="pt-5">
+              <h3 className="px-5 pb-1 text-xs font-semibold tracking-wide text-dim uppercase">Compute node</h3>
+              <p className="px-5 pb-2.5 text-sm text-dim">You have no node yet, so it asks for one.</p>
+              <NodeFields cluster={setup.id} value={profile} onChange={setProfile} onValid={setFits} />
+            </section>
+            <Section><ToggleRow label="Use this size next time" checked={remember} onChange={setRemember} /></Section>
+          </>}
+    </EDialog>
   )
 }
