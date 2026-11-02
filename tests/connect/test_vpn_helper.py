@@ -106,7 +106,7 @@ def test_no_helper_asks_before_installing(tmp_path, wulver, monkeypatch):
     v, _ = make(wulver, str(tmp_path / "none.sock"), lambda title, text: asked.append(text) or False)
     with pytest.raises(VpnError, match="needs the helper"):
         v.ensure_profile()
-    assert asked and "installs a small helper once" in asked[0] and not installed  # said no: nothing installed
+    assert asked and "asks for your permission once" in asked[0] and not installed  # said no: nothing installed
     v.confirm = lambda title, text: True
     v.ensure_profile()
     assert installed == [["vpn.njit.edu"]]

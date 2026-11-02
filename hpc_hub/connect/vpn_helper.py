@@ -204,9 +204,8 @@ class HelperVpn(Vpn):
             return
         host = urlsplit(self.cfg.vpn.gateway if "//" in self.cfg.vpn.gateway else "//" + self.cfg.vpn.gateway)
         system = "Windows" if WINDOWS else "macOS"
-        if not self.confirm("Set up the VPN helper", (
-                f"To connect the VPN, HPC Hub installs a small helper once. {system} will ask for permission. "
-                "The helper only starts and stops the VPN to your cluster's servers, for your account.")):
+        if not self.confirm("Let HPC Hub start the VPN", (
+                f"{system} asks for your permission once. After that, Connect starts the VPN by itself.")):
             raise VpnError("The VPN needs the helper. Connect again to set it up.")
         self.log("Installing the VPN helper")
         install([host.hostname or self.cfg.vpn.gateway])

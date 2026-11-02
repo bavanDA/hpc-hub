@@ -26,9 +26,8 @@ function demoQuestions(): Question[] {
   const kind = demo?.get('question') as Question['kind'] | undefined
   const cluster = demo?.get('cluster') ?? 'wulver'
   // the same words as vpn_helper.py's one-time question
-  const confirm = kind === 'confirm' ? { title: 'Set up the VPN helper', prompt: 'To connect the VPN, HPC Hub '
-    + 'installs a small helper once. Your computer will ask for permission. The helper only starts and stops the VPN to '
-    + "your cluster's servers, for your account." } : {}
+  const confirm = kind === 'confirm' ? { title: 'Let HPC Hub start the VPN',
+    prompt: 'Your computer asks for your permission once. After that, Connect starts the VPN by itself.' } : {}
   return kind ? [{ id: 'demo', kind, cluster, name: DEMO_NAMES[cluster] ?? cluster, default: '',
     fill: { socket: '', token: '' }, ...confirm }] : []
 }
