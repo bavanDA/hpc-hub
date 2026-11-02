@@ -3,7 +3,7 @@ import { Server } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
 import { call } from '../../rpc'
-import { Dialog, Pill } from '../ui'
+import { Dialog } from '../ui'
 
 export function AboutDialog({ onClose }: { onClose: () => void }) {
   const [version, setVersion] = useState('')
@@ -13,11 +13,11 @@ export function AboutDialog({ onClose }: { onClose: () => void }) {
   return (
     <Dialog title="" onClose={onClose} width={360}>
       <div className="flex flex-col items-center gap-3 pb-6 text-center">
-        <div className="grid size-24 place-items-center rounded-3xl bg-accent text-white shadow-lg">
+        <div className="grid size-20 place-items-center rounded-2xl border border-line">
           <Server size={40} strokeWidth={1.5} />
         </div>
-        <h2 className="mt-2 text-2xl font-bold">HPC Hub</h2>
-        {version && <Pill>{version}</Pill>}
+        <h2 className="mt-2 text-xl font-semibold">HPC Hub</h2>
+        {version && <span className="text-sm text-dim tabular-nums">Version {version}</span>}
         <p className="text-dim">Wulver, Yale and SDSC in one place.</p>
       </div>
     </Dialog>
