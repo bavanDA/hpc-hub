@@ -23,7 +23,7 @@ function LaptopCopies() {
   if (!items.length) return null
   return (
     <section className="px-4 pt-4">
-      <h2 className="mb-2 px-1 text-sm font-semibold text-dim">Through this laptop</h2>
+      <h2 className="mb-1.5 text-xs font-semibold tracking-wide text-dim uppercase">Through this laptop</h2>
       <Transfers items={items} onX={transfers.x} />
     </section>
   )

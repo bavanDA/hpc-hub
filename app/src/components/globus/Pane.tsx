@@ -1,6 +1,6 @@
 // One side of the Globus page: a cluster's collection, browsed through Globus (no SSH or VPN needed).
 import {
-  ArrowUp, Bookmark, CircleAlert, File, Folder, FolderOpen, FolderPlus, FolderSearch, HardDrive, Home, KeyRound,
+  ArrowUp, Bookmark, ChevronDown, CircleAlert, File, Folder, FolderOpen, FolderPlus, FolderSearch, HardDrive, Home, KeyRound,
   RefreshCw, WifiOff,
   type LucideIcon,
 } from 'lucide-react'
@@ -10,7 +10,7 @@ import { call } from '../../rpc'
 import type { GlobusCluster, Item } from '../../types/globus'
 import { Menu } from '../projects/Menu'
 import { useToast } from '../toast'
-import { Button, Card, Dialog, IconButton, Spinner } from '../ui'
+import { Button, Dialog, IconButton, Spinner } from '../ui'
 import { Field, formatSize, joinPath, parentPath, shortDate } from './parts'
 import { usePlaces } from './places'
 import type { Pane as PaneState } from './usePane'
@@ -34,7 +34,7 @@ function NewFolder({ onClose, onCreate }: { onClose: () => void; onCreate: (name
   return (
     <Dialog title="New folder" onClose={onClose} width={380}
       actions={<><Button onClick={onClose}>Cancel</Button>
-        <Button kind="suggested" disabled={!ok} onClick={create}>Create</Button></>}>
+        <Button kind="primary" disabled={!ok} onClick={create}>Create</Button></>}>
       <Field autoFocus className="w-full" placeholder="Folder name" value={name}
         onChange={(e) => setName(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && create()} />
     </Dialog>
@@ -46,8 +46,8 @@ function ItemRow({ it, selected, onSelect, onOpen }:
   const Icon = it.is_dir ? Folder : File
   return (
     <div onClick={onSelect} onDoubleClick={onOpen}
-      className={`grid h-9 grid-cols-[1fr_64px_96px] items-center gap-2 rounded-md px-2 ${
-        selected ? 'bg-accent/20' : 'hover:bg-hover'}`}>
+      className={`grid h-10 grid-cols-[1fr_64px_96px] items-center gap-2 border-b border-line px-3 ${
+        selected ? 'bg-selected' : 'hover:bg-hover'}`}>
       <span className="flex min-w-0 items-center gap-2">
         <Icon size={16} className={`shrink-0 ${'text-dim'}`} />
         <span className="truncate">{it.name}</span>
@@ -95,9 +95,9 @@ export function Pane({ pane, clusters, onChoose, onConsent, onStart }: {
     button="Start it" onClick={() => onStart(cfg).then(pane.reload)} />
   else if (!l.items.length) body = <Empty icon={FolderOpen} title="Empty folder" />
   else body = (
-    <div className="flex flex-col px-2 pb-2">
-      <div className="sticky top-0 grid grid-cols-[1fr_64px_96px] gap-2 bg-card px-2 py-1.5 text-xs font-semibold
-        text-dim">
+    <div className="flex flex-col">
+      <div className="sticky top-0 grid grid-cols-[1fr_64px_96px] gap-2 border-b border-line bg-window px-3 py-2
+        text-xs font-semibold text-dim">
         <span className="pl-6">Name</span><span className="text-right">Size</span><span>Modified</span>
       </div>
       {l.items.map((it) => (
@@ -110,17 +110,22 @@ export function Pane({ pane, clusters, onChoose, onConsent, onStart }: {
 
   const browsing = l?.state === 'ok' && !!pane.path
   return (
-    <Card className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+    <section className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-lg border border-line">
       <div className="flex flex-col gap-2 border-b border-line p-2">
         <div className="flex items-center gap-1">
-          <select value={pane.cluster} onChange={(e) => pane.pick(e.target.value)} aria-label="Cluster"
-            className="h-9 min-w-0 flex-1 truncate rounded-md bg-pill px-2 font-semibold outline-none hover:bg-selected">
-            {clusters.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-          </select>
+          <div className="relative min-w-0 flex-1">
+            <select value={pane.cluster} onChange={(e) => pane.pick(e.target.value)} aria-label="Cluster"
+              className="h-9 w-full appearance-none truncate rounded-lg border border-line-strong bg-window pr-8 pl-3
+                font-medium outline-none hover:bg-hover focus-visible:border-accent">
+              {clusters.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
+            <ChevronDown size={16} className="pointer-events-none absolute top-1/2 right-2.5 -translate-y-1/2 text-dim" />
+          </div>
           <IconButton icon={ArrowUp} label="Up" size={16} onClick={() => browsing && pane.go(parentPath(pane.path))} />
           <IconButton icon={Home} label="Home" size={16} onClick={() => pane.go('')} />
           <Menu label="Go to a folder" trigger={<FolderOpen size={16} />}
-            className="grid size-[34px] shrink-0 place-items-center rounded-md hover:bg-hover active:bg-pressed"
+            className="grid size-9 shrink-0 place-items-center rounded-md text-dim hover:bg-hover hover:text-text
+              active:bg-pressed"
             groups={[places.map((p) => ({ label: p.label, icon: p.path ? HardDrive : Home, onClick: () => pane.go(p.path) })),
               projects.map((p) => ({ label: p.label, icon: Bookmark, onClick: () => pane.go(p.path) }))]} />
           <IconButton icon={RefreshCw} label="Refresh" size={16} onClick={pane.reload} />
@@ -136,6 +141,6 @@ export function Pane({ pane, clusters, onChoose, onConsent, onStart }: {
         {pane.loading ? <><Spinner size={14} />Loading…</> : l?.state === 'ok' && `${l.items.length} items`}
       </div>
       {naming && <NewFolder onClose={() => setNaming(false)} onCreate={mkdir} />}
-    </Card>
+    </section>
   )
 }
