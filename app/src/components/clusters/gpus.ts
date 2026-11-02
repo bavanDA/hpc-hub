@@ -81,7 +81,8 @@ export function presets(gpus: Gpu[]): Preset[] {
       apply: (p) => withGpu({ ...p, cpus: 8, mem_gb: 32 }, null) },
   ]
   const g = gpus[0]
-  if (g) out.push({ id: 'gpu', label: g.slice ? `GPU ${g.memory_gb} GB` : `1 × ${g.label.replace(/^RTX /, '')}`, hint: gpuName(g),
+  if (g) out.push({ id: 'gpu', label: g.slice ? `GPU ${g.memory_gb} GB` : `1 × ${g.label.replace(/^RTX /, '')}`,
+    hint: g.slice ? gpuName(g) : '4 cores · 16 GB',
     apply: (p) => withGpu({ ...p, cpus: 4, mem_gb: 16 }, g) })
   return out
 }

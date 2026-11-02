@@ -108,7 +108,8 @@ export function Tree({ cluster, root, current, onRoot, onOpen, onOther }: {
     })
   }
 
-  const short = root && home && root.startsWith(home) ? `~${root.slice(home.length)}` : root
+  const short = root && home && root === home ? 'Home folder'
+    : root && home && root.startsWith(home) ? `~${root.slice(home.length)}` : root
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       {projects.length > 0 && (
@@ -133,7 +134,8 @@ export function Tree({ cluster, root, current, onRoot, onOpen, onOther }: {
       <div className="flex h-9 shrink-0 items-center gap-1 px-2">
         <IconButton icon={FolderUp} label="Up one folder" small disabled={!root || root === '/'}
           onClick={() => onRoot(parent(root))} />
-        <span className="min-w-0 flex-1 truncate font-mono text-xs text-dim" title={root}>{short || '…'}</span>
+        <span className={`min-w-0 flex-1 truncate text-xs text-dim ${root === home ? '' : 'font-mono'}`}
+          title={root}>{short || '…'}</span>
         <button type="button" onClick={() => setHidden(!hidden)} title="Show files whose name starts with a dot"
           className={`rounded-md px-1.5 text-xs font-semibold ${hidden ? 'bg-selected text-text' : 'text-dim hover:bg-hover'}`}>
           .files</button>
