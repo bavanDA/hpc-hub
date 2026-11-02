@@ -1,7 +1,7 @@
 // Small dialogs: ask for a name (new folder, rename), and confirm before something can't be undone.
 import { useState } from 'react'
 
-import { AlertDialog, Button, Dialog } from '../ui'
+import { AlertDialog, Button, Dialog, FIELD } from '../ui'
 
 export function NameDialog({ title, action, initial = '', onDone, onClose }:
   { title: string; action: string; initial?: string; onDone: (name: string) => void; onClose: () => void }) {
@@ -12,7 +12,7 @@ export function NameDialog({ title, action, initial = '', onDone, onClose }:
     <Dialog title={title} onClose={onClose} width={400}
       actions={<>
         <Button onClick={onClose}>Cancel</Button>
-        <Button kind="suggested" disabled={!ok} onClick={go}>{action}</Button>
+        <Button kind="primary" disabled={!ok} onClick={go}>{action}</Button>
       </>}>
       <input autoFocus value={name} onChange={(e) => setName(e.target.value)}
         onKeyDown={(e) => e.key === 'Enter' && go()}
@@ -20,7 +20,7 @@ export function NameDialog({ title, action, initial = '', onDone, onClose }:
           const dot = initial.lastIndexOf('.')
           e.target.setSelectionRange(0, dot > 0 ? dot : initial.length)
         }}
-        className="h-10 w-full rounded-md bg-pill px-3 outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus" />
+        className={`${FIELD} h-10 w-full`} />
       {name.includes('/') && <p className="mt-2 text-sm text-bad">A name can't have / in it.</p>}
     </Dialog>
   )

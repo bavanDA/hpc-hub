@@ -224,7 +224,7 @@ export function Files() {
   }
 
   return (
-    <div className="flex h-full flex-col bg-view">
+    <div className="flex h-full flex-col bg-window">
       {connected && <PathBar path={path}
         connected={connected} loading={loading} places={places} count={listing ? entries.length : null}
         preview={preview} onPreview={() => { memory.preview = !preview; setPreview(!preview) }}

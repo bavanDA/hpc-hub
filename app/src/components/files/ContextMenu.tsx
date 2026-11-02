@@ -1,4 +1,4 @@
-// A right-click menu at the pointer, in sections like GTK's popover menus. Click outside or Escape closes it.
+// A right-click menu at the pointer, in sections split by hairlines. Click outside or Escape closes it.
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 
 export type MenuItem = { label: string; onClick: () => void; danger?: boolean }
@@ -25,12 +25,12 @@ export function ContextMenu({ x, y, sections, onClose }:
   return (
     <div className="fixed inset-0 z-30" onMouseDown={onClose} onContextMenu={(e) => { e.preventDefault(); onClose() }}>
       <div ref={box} style={pos} onMouseDown={(e) => e.stopPropagation()}
-        className="fixed min-w-[200px] rounded-xl border border-line bg-window p-1.5 shadow-xl">
+        className="menu-in fixed min-w-[200px] rounded-lg bg-raised py-1 shadow-[var(--shadow-menu)]">
         {sections.filter((s) => s.length).map((s, i) => (
-          <div key={i} className={i ? 'mt-1.5 border-t border-line pt-1.5' : ''}>
+          <div key={i} className={i ? 'mt-1 border-t border-line pt-1' : ''}>
             {s.map((item) => (
               <button key={item.label} onClick={() => { onClose(); item.onClick() }}
-                className={`flex h-8 w-full items-center rounded-md px-3 text-left hover:bg-hover ${
+                className={`flex h-9 w-full items-center px-3 text-left hover:bg-hover active:bg-pressed ${
                   item.danger ? 'text-bad' : ''}`}>
                 {item.label}
               </button>
