@@ -51,7 +51,8 @@ export function Sheet({ title, onClose, children, actions, flush = false }:
         <h1 className="min-w-0 flex-1 text-[17px] leading-tight font-semibold">{title}</h1>
       </header>
       <div className={`min-h-0 flex-1 overflow-y-auto ${flush ? 'pt-2' : 'p-4'}`}>{children}</div>
-      {actions && <footer className="flex shrink-0 gap-3 px-4 py-3">{actions}</footer>}
+      {actions && <footer className="flex shrink-0 flex-wrap gap-3 px-4 py-3 [&>button]:min-w-fit [&>button]:whitespace-nowrap">
+        {actions}</footer>}
     </div>
   )
 }
