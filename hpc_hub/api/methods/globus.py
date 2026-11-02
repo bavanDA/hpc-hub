@@ -197,7 +197,7 @@ def set_collection(cluster: str, id: str, name: str = "") -> dict:
 @method("globus.ls")
 def ls(cluster: str, path: str = "") -> dict:
     """A folder of the cluster's collection. state: ok, none (no collection), consent or domain (sign-in wanted),
-    offline (Globus Connect Personal is not running there)."""
+    offline (Globus Connect Personal is not running there), hidden (it runs, but doesn't share that folder)."""
     c = _cluster(cluster)
     base = {"cluster": cluster, "collection": c.globus.collection_name, "path": path, "items": []}
     if not c.globus.collection_id:
@@ -211,9 +211,18 @@ def ls(cluster: str, path: str = "") -> dict:
     except globus.GlobusError as e:
         if globus.personal_offline(str(e)):
             return {**base, "state": "offline"}
+        if globus.denied(str(e)) and _personal(c):
+            return {**base, "state": "hidden"}
         raise
     return {**base, "state": "ok", "path": target,
             "items": [{"name": i.name, "is_dir": i.is_dir, "size": i.size, "modified": i.modified} for i in items]}
+
+
+def _personal(c) -> bool:
+    try:
+        return client().collection(c.globus.collection_id).kind == "GCP_mapped_collection"
+    except globus.GlobusError:
+        return False
 
 
 @method("globus.mkdir")

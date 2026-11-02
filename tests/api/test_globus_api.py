@@ -22,7 +22,8 @@ class FakeGlobus:
         self.collections = {"c1": globus.Collection("c1", "Wulver home", "admin@njit.edu", "GCSv5_mapped_collection",
                                                     managed=True),
                             "c2": globus.Collection("c2", "Expanse", "admin@sdsc.edu", "GCSv5_mapped_collection",
-                                                    managed=True)}
+                                                    managed=True),
+                            "mine": globus.Collection("mine", "jdoe laptop", "jdoe@gmail.com", "GCP_mapped_collection")}
 
     @property
     def logged_in(self):
@@ -55,6 +56,8 @@ class FakeGlobus:
             raise globus.ConsentRequired([SCOPE])
         if cid == "gcp":
             raise globus.GlobusError("Globus Connect Personal endpoint is not currently connected to Globus")
+        if cid in ("mine", "c1") and path.startswith("/scratch/mygroup"):
+            raise globus.GlobusError("PermissionDenied: Permission denied")
         return "/home/jdoe/", [globus.Item("data", True, 0, "2026-01-02 10:00"),
                                globus.Item("a.txt", False, 12, "2026-01-02 10:00")]
 
@@ -169,6 +172,10 @@ def test_ls_states(h):
     assert m.ls("sdsc")["state"] == "consent" and "sdsc" in m._wants
     h.clusters[1].globus.collection_id = "gcp"
     assert m.ls("sdsc")["state"] == "offline"
+    h.clusters[1].globus.collection_id = "mine"  # your own collection, not sharing that group's folder yet
+    assert m.ls("sdsc", "/scratch/mygroup/jdoe")["state"] == "hidden"
+    with pytest.raises(globus.GlobusError):  # a cluster's own collection: a real no
+        m.ls("wulver", "/scratch/mygroup/jdoe")
 
 
 def test_transfer_tasks_cancel(h):

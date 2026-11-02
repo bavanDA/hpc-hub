@@ -243,13 +243,19 @@ def transfer_tokens(resp: dict) -> dict:
     raise GlobusError("Globus did not return a transfer token")
 
 
-# Start Globus Connect Personal (unpacked in ~) on a login node, sharing home and the given folders, unless it runs.
+# Start Globus Connect Personal (unpacked in ~) on a login node, sharing home and the given folders. Running already
+# with other folders (you joined a group since): start it again with these.
 PERSONAL_START = r"""
 gcp=$(ls -d "$HOME"/globusconnectpersonal-*/ 2>/dev/null | sort -V | tail -1)
 [ -n "$gcp" ] || { echo "Globus Connect Personal is not installed in your home folder there" >&2; exit 2; }
-"$gcp/globusconnectpersonal" -status >/dev/null 2>&1 && exit 0
 allow="rw~/"
 for p in "$@"; do allow="$allow,rw$p,rw$(readlink -f "$p")"; done
+if "$gcp/globusconnectpersonal" -status >/dev/null 2>&1; then
+  now=$(ps -u "$USER" -o args= | sed -n 's/.*globusconnectpersonal -start -restrict-paths \([^ ]*\).*/\1/p' | head -1)
+  [ -z "$now" ] || [ "$now" = "$allow" ] && exit 0
+  "$gcp/globusconnectpersonal" -stop >/dev/null 2>&1
+  for _ in $(seq 10); do "$gcp/globusconnectpersonal" -status >/dev/null 2>&1 || break; sleep 1; done
+fi
 cd "$gcp" && setsid nohup ./globusconnectpersonal -start -restrict-paths "$allow" >/dev/null 2>&1 </dev/null &
 for _ in $(seq 20); do sleep 2; "$gcp/globusconnectpersonal" -status >/dev/null 2>&1 && exit 0; done
 echo "Globus Connect Personal started but did not connect to Globus" >&2; exit 1
@@ -258,6 +264,12 @@ echo "Globus Connect Personal started but did not connect to Globus" >&2; exit 1
 
 def personal_start(paths: list[str]) -> str:
     return " ".join(["bash", "-c", shlex.quote(PERSONAL_START), "_", *map(shlex.quote, paths)])
+
+
+def denied(err: str) -> bool:
+    """A folder your own collection doesn't share (yet)."""
+    low = err.lower()
+    return "permission denied" in low or "permissiondenied" in low or "not allowed" in low
 
 
 def personal_offline(err: str) -> bool:
