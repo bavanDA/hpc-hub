@@ -6,16 +6,17 @@ import { useEffect, useState } from 'react'
 import { expectCopies } from '@shared/components/projects/copies'
 import { copyText } from '@shared/components/terminals/xterm'
 import { setNotify } from '@shared/components/tools/run'
-import { EmptyState, Spinner } from '@shared/components/ui'
+import { Spinner } from '@shared/components/ui'
 import { useCall, useEvent } from '@shared/hooks'
 import { call } from '@shared/rpc'
 import type { Project, ProjectList } from '@shared/types/projects'
+import { shortCluster, wrapPath } from '../parts/code/util'
 import { Header } from '../parts/Header'
 import { CopySheet } from '../parts/projects/CopySheet'
 import { Copies } from '../parts/projects/Copies'
 import { ProjectActions, type Act } from '../parts/projects/ProjectActions'
 import { ProjectSheet, type Mode } from '../parts/projects/ProjectSheet'
-import { ActionSheet, Button, Card, ConfirmSheet, ListRow, SearchField, useToast } from '../ui'
+import { ActionSheet, Button, ConfirmSheet, EmptyState, List, MainButton, Row, SearchField, useToast } from '../ui'
 
 type Open = { kind: 'actions' | 'copy' | 'remove'; p: Project } | { kind: 'edit'; mode: Mode; p?: Project }
   | { kind: 'add' }
@@ -40,6 +41,7 @@ export function Projects() {
   }
   const remove = (p: Project) => call('projects.remove', { id: p.id }).then(reload).catch((e: Error) => toast(e.message))
 
+  const many = new Set((data?.projects ?? []).map((p) => p.cluster)).size > 1
   const words = query.toLowerCase().split(/\s+/).filter(Boolean)
   const shown = (data?.projects ?? []).filter((p) => {
     const hay = `${p.name} ${p.path} ${p.cluster_name || p.cluster}`.toLowerCase()
@@ -51,31 +53,34 @@ export function Projects() {
       <Header title="Projects">
         {data && data.projects.length > 0 && (
           <button aria-label="Add a project" onClick={() => setOpen({ kind: 'add' })}
-            className="grid size-12 place-items-center rounded-full active:bg-hover"><Plus size={24} /></button>
+            className="grid size-12 place-items-center rounded-full active:bg-pressed"><Plus size={24} /></button>
         )}
       </Header>
-      <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4">
-        {error && <p className="select-text rounded-xl bg-bad-bg p-3 text-bad">Couldn't load projects: {error}</p>}
+      <div className="min-h-0 flex-1 overflow-y-auto pb-6">
+        {error && <p className="px-4 py-3 select-text text-bad">Couldn't load projects: {error}</p>}
         {!data && !error && loading && <div className="grid h-40 place-items-center"><Spinner size={28} /></div>}
         {data && data.projects.length === 0 && (
           <EmptyState icon={Folder} title="No projects yet"
-            text="Add a folder you already have on a cluster, or start a new one. Then open it in Code, Files or an agent."
-            action={<div className="mt-2 flex flex-col gap-2">
-              <Button kind="primary" onClick={() => setOpen({ kind: 'edit', mode: 'new' })}>New project</Button>
+            text="Open a project in Code, Files or an agent with one tap."
+            action={<div className="mt-2 flex w-64 flex-col gap-3">
+              <MainButton onClick={() => setOpen({ kind: 'edit', mode: 'new' })}>New project</MainButton>
               <Button onClick={() => setOpen({ kind: 'edit', mode: 'add' })}>Add a folder you have</Button>
             </div>} />
         )}
         {data && data.projects.length > 0 && (
           <>
-            <SearchField value={query} onChange={setQuery} placeholder="Search projects" />
+            {data.projects.length > 6 && (
+              <div className="px-4 pb-3"><SearchField value={query} onChange={setQuery} placeholder="Search projects" /></div>
+            )}
             {shown.length ? (
-              <Card className="mt-3 divide-y divide-line py-1">
+              <List>
                 {shown.map((p) => (
-                  <ListRow key={p.id} icon={p.main_tex ? FileText : Folder} title={p.name}
-                    subtitle={`${p.cluster_name || `${p.cluster} (unknown cluster)`} · ${p.path}`}
-                    onClick={() => setOpen({ kind: 'actions', p })} />
+                  <Row key={p.id} icon={p.main_tex ? FileText : Folder} label={p.name}
+                    sub={wrapPath(many ? `${p.cluster_name ? shortCluster(p.cluster_name) : `${p.cluster}, not set up`} · ${p.path}`
+                      : p.path)}
+                    onPress={() => setOpen({ kind: 'actions', p })} />
                 ))}
-              </Card>
+              </List>
             ) : <p className="py-10 text-center text-dim">Nothing matches “{query}”</p>}
           </>
         )}

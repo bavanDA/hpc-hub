@@ -5,7 +5,8 @@ import { useState } from 'react'
 import { Spinner } from '@shared/components/ui'
 import { call } from '@shared/rpc'
 import { TEMPLATES, type Place, type Project, type ProjectCluster } from '@shared/types/projects'
-import { Button, Field, ListRow, PickerSheet, Sheet, Switch } from '../../ui'
+import { Field, MainButton, PickerSheet, Row, Sheet, ToggleRow } from '../../ui'
+import { shortCluster, wrapPath } from '../code/util'
 import { FolderPicker } from './FolderPicker'
 
 export type Mode = 'add' | 'new' | 'edit'
@@ -30,7 +31,7 @@ export function ProjectSheet({ mode, project, clusters, projects, onClose, onSav
 
   const browse = () => {
     if (!c) return
-    if (!c.connected) setError(`Connect to ${c.name} on Clusters first, then choose the folder.`)
+    if (!c.connected) setError(`Connect to ${shortCluster(c.name)} on Clusters first.`)
     else { setError(''); setOpen('folder') }
   }
 
@@ -44,7 +45,7 @@ export function ProjectSheet({ mode, project, clusters, projects, onClose, onSav
     if (!name.trim()) return setError('Give the project a name')
     if (!target) return setError('Choose a folder')
     if (!c) return setError('Pick a cluster')
-    if (create && !c.connected) return setError(`Connect to ${c.name} first to create the folder`)
+    if (create && !c.connected) return setError(`Connect to ${shortCluster(c.name)} first`)
     setBusy(true)
     setError('')
     const req = create ? call<Project>('projects.create', { cluster, parent: path.trim() || '~', name, template, git })
@@ -57,41 +58,34 @@ export function ProjectSheet({ mode, project, clusters, projects, onClose, onSav
   const title = create ? 'New project' : mode === 'edit' ? 'Edit project' : 'Add a folder'
   return (
     <>
-      <Sheet title={title} onClose={onClose} actions={<>
-        <Button className="flex-1" onClick={onClose}>Cancel</Button>
-        <Button kind="primary" className="flex-1" disabled={busy} onClick={save}>
-          {busy ? <Spinner /> : create ? 'Create' : 'Save'}</Button></>}>
+      <Sheet flush title={title} onClose={onClose} actions={
+        <MainButton disabled={busy} onClick={save}>{busy ? <Spinner /> : create ? 'Create' : 'Save'}</MainButton>}>
         {/* only the name is in the form: Enter there saves, and the rows' buttons below don't submit */}
-        <form onSubmit={(e) => { e.preventDefault(); save() }}>
+        <form className="px-4 pb-3" onSubmit={(e) => { e.preventDefault(); save() }}>
           <Field label="Name" value={name} placeholder="myproj, thesis…" autoCapitalize="none"
             onChange={(e) => setName(e.target.value)} />
           <button type="submit" hidden />
         </form>
-        <div className="divide-y divide-line">
-          <ListRow title="Cluster" subtitle={c ? (c.connected ? c.name : `${c.name}, not connected`) : 'Pick one'}
-            onClick={() => setOpen('cluster')} />
-          <ListRow title={create ? 'Create inside' : 'Folder'}
-            subtitle={<span className="font-mono">{path.trim() || 'Choose a folder'}</span>}
-            onClick={browse} />
+        <div className="border-t border-line">
+          <Row label="Cluster" opens onPress={() => setOpen('cluster')}
+            value={c ? (c.connected ? shortCluster(c.name) : `${shortCluster(c.name)}, not connected`) : 'Pick one'} />
+          <Row label={create ? 'Inside' : 'Folder'} opens onPress={browse}
+            value={<span className="font-mono text-sm break-words">{wrapPath(path.trim() || 'Choose')}</span>} />
           {create && <>
-            <ListRow title="Start with" subtitle={template} onClick={() => setOpen('template')} />
-            <Switch label="Make it a git repository" checked={git} onChange={setGit} />
+            <Row label="Start with" value={template} opens onPress={() => setOpen('template')} />
+            <ToggleRow label="Git repository" checked={git} onChange={setGit} />
           </>}
         </div>
         {create && name.trim() && (
-          <p className="mt-3 text-sm text-dim">Will create <span className="font-mono">{target}</span></p>
+          <p className="px-4 pt-2 text-sm text-dim">Makes <span className="font-mono break-words">{wrapPath(target)}</span></p>
         )}
-        {!create && c && !c.connected && !error && (
-          <p className="mt-3 text-sm text-dim">
-            {c.name} is not connected. The folder is checked the first time you open the project.</p>
-        )}
-        {error && <p className="mt-3 select-text rounded-xl bg-bad-bg p-3 text-bad">{error}</p>}
+        {error && <p className="px-4 pt-3 select-text text-bad">{error}</p>}
       </Sheet>
 
       {open === 'cluster' && (
         <PickerSheet title="Cluster" value={cluster} onClose={() => setOpen('')}
           onPick={(v) => { setCluster(v); setPath(create ? '~' : ''); setError('') }}
-          options={clusters.map((x) => ({ value: x.id, label: x.name, hint: x.connected ? 'Connected' : 'Not connected' }))} />
+          options={clusters.map((x) => ({ value: x.id, label: shortCluster(x.name), hint: x.connected ? 'Connected' : 'Not connected' }))} />
       )}
       {open === 'template' && (
         <PickerSheet title="Start with" value={template} onClose={() => setOpen('')} onPick={setTemplate}
