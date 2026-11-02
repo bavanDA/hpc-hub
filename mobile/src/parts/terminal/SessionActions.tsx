@@ -1,6 +1,6 @@
 // What a long press on a session offers: rename or stop it, and open an agent's remote control or copy ChatGPT's
 // pairing code. The same calls as the desktop's ⋯ menu.
-import { Copy, ExternalLink, Pencil, Square, X } from 'lucide-react'
+import { Copy, ExternalLink, Link, Pencil, Square, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
 import { openLink } from '@shared/components/app/openLink'
@@ -16,8 +16,8 @@ export type Target = { cluster: string; name: string; kind: 'tmux' | 'screen'; n
   remote?: string }
 
 /** detach: from an open terminal, "Close" leaves the session running and goes back to the list. */
-export function SessionActions({ target, onClose, onChanged, detach }:
-  { target: Target; onClose: () => void; onChanged: () => void; detach?: () => void }) {
+export function SessionActions({ target, onClose, onChanged, detach, onLinks }:
+  { target: Target; onClose: () => void; onChanged: () => void; detach?: () => void; onLinks?: () => void }) {
   const toast = useToast()
   const [step, setStep] = useState<'menu' | 'rename' | 'stop'>('menu')
   const chosen = useRef(false)  // the action sheet closes itself before it runs the pick
@@ -59,6 +59,7 @@ export function SessionActions({ target, onClose, onChanged, detach }:
       actions={[
       ...(detach ? [{ label: 'Close (it keeps running)', icon: X, onPick: () => { onClose(); detach() } }] : []),
       ...others,
+      ...(onLinks ? [{ label: 'Links on the screen', icon: Link, onPick: () => { onClose(); onLinks() } }] : []),
       { label: 'Rename', icon: Pencil, onPick: () => pick('rename') },
       { label: 'Stop session', icon: Square, danger: true, onPick: () => pick('stop') },
     ]} />
