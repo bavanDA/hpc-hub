@@ -11,13 +11,24 @@ import { load, useClusters } from '@shared/components/clusters/store'
 import { useEvent } from '@shared/hooks'
 import { call } from '@shared/rpc'
 import { DUO, type Question, type Session } from '@shared/types/clusters'
-import { Button, Field, Sheet, useToast } from '../ui'
+import { Button, Field, MainButton, Sheet, useToast } from '../ui'
 
 const digits = (text: string) => text.replace(/\s/g, '')
 // web sign-in pages (the VPN's, a portal's) need a sign-in window the phone doesn't have yet
 const UNSUPPORTED: Question['kind'][] = ['chrome-window', 'web-login']
-const demoLate = new URLSearchParams(location.search).get('duoafter')  // design work: ?duoafter=0 shows it at once
+const demo = '__TAURI_INTERNALS__' in window ? null : new URLSearchParams(location.search)
+const demoLate = demo?.get('duoafter') ?? null  // design work: ?duoafter=0 shows it at once
 const LATE = demoLate === null ? 60 : Number(demoLate)
+
+/** Design work in a plain browser: ?question=code|ask|confirm&cluster=sdsc shows that question. */
+function demoQuestions(): Question[] {
+  const kind = demo?.get('question') as Question['kind'] | null | undefined
+  if (!kind) return []
+  const cluster = demo?.get('cluster') ?? 'wulver'
+  const prompt = kind === 'confirm' ? "The server looks different from last time. Connect anyway?"
+    : kind === 'ask' ? 'Password:' : ''
+  return [{ id: 'demo', kind, cluster, name: cluster, prompt, title: kind === 'confirm' ? 'Check the server' : undefined }]
+}
 
 /** How long Duo has waited, counting up each second. */
 function useSeconds(running: boolean) {
@@ -37,9 +48,11 @@ function useSeconds(running: boolean) {
 export function Questions() {
   const toast = useToast()
   const { clusters, sessions } = useClusters()
-  const [questions, setQuestions] = useState<Question[]>([])
+  const [questions, setQuestions] = useState<Question[]>(demoQuestions)
   const [text, setText] = useState('')
   useEffect(load, [])
+  // the cluster's own name, from the cluster it is about
+  const nameOf = (id: string, fallback = id) => clusters?.find((c) => c.id === id)?.name ?? fallback
 
   function answer(q: Question, value: string | null) {
     setQuestions((all) => all.filter((x) => x.id !== q.id))
@@ -49,7 +62,7 @@ export function Questions() {
 
   useEvent<Question>('question', (q) => {
     if (UNSUPPORTED.includes(q.kind)) {
-      toast(`${q.name} wants a web sign-in, which the phone can't do yet. Use campus Wi-Fi, or connect from a computer.`)
+      toast(`${nameOf(q.cluster, q.name)} wants a web sign-in, which the phone can't do yet. Use campus Wi-Fi, or connect from a computer.`)
       call('question.answer', { id: q.id, answer: null }).catch(() => {})
       return
     }
@@ -63,7 +76,7 @@ export function Questions() {
       call('clusters.connect', { cluster: s.id, switch: true }).catch((e: Error) => toast(e.message))
       return
     }
-    if (s.state === 'Error' && s.detail) toast(`${clusters?.find((c) => c.id === s.id)?.name ?? s.id}: ${s.detail}`)
+    if (s.state === 'Error' && s.detail) toast(`${nameOf(s.id)}: ${s.detail}`)
   })
 
   const duo = Object.values(sessions).find((s) => s.state === DUO)
@@ -81,56 +94,56 @@ export function Questions() {
   }, [duo?.id]) // eslint-disable-line react-hooks/exhaustive-deps
   const q = questions[0]
   if (q) {
-    const cancel = () => answer(q, null)
+    const stop = () => answer(q, null)
+    const name = nameOf(q.cluster, q.name)
     if (q.kind === 'confirm') {
       return (
-        <Sheet title={q.title ?? q.name} onClose={cancel} actions={<>
-          <Button className="flex-1" onClick={cancel}>Not now</Button>
+        <Sheet title={q.title ?? name} onClose={stop} actions={<>
+          <Button className="flex-1" onClick={stop}>Stop signing in</Button>
           <Button kind="primary" className="flex-1" onClick={() => answer(q, 'yes')}>Yes</Button></>}>
-          <p className="text-dim">{q.prompt}</p>
+          <p>{q.prompt?.trim() || 'Go on signing in?'}</p>
         </Sheet>
       )
     }
     const code = q.kind === 'code'
     const send = () => answer(q, code ? digits(text) : text)
     return (
-      <Sheet title={code ? `Code for ${q.name}` : `${q.name} is asking`} onClose={cancel} actions={<>
-        <Button className="flex-1" onClick={cancel}>Cancel</Button>
-        <Button kind="primary" className="flex-1" disabled={code && !digits(text)} onClick={send}>Send</Button></>}>
+      <Sheet title={code ? `Code for ${name}` : copy.signIn({ name, org: '' })} onClose={stop} actions={<>
+        <Button className="flex-1" onClick={stop}>Stop signing in</Button>
+        <Button kind="primary" className="flex-1" disabled={code ? !digits(text) : !text} onClick={send}>Send</Button></>}>
         <form onSubmit={(e) => { e.preventDefault(); send() }}>
           {code
-            ? <p className="mb-4 text-center text-dim">Open your authenticator app and type the 6-digit code.</p>
-            : q.prompt?.trim() && <p className="mb-4 whitespace-pre-wrap text-dim">{q.prompt.trim()}</p>}
+            ? <p className="mb-4">Type the 6-digit code from your authenticator app.</p>
+            : q.prompt?.trim() && <p className="mb-2 whitespace-pre-wrap text-dim">{q.prompt.trim()}</p>}
           {code
             ? <input autoFocus inputMode="numeric" maxLength={8} placeholder="123456" value={text} aria-label="Code"
                 onChange={(e) => {
                   setText(e.target.value)
                   if (/^\d{6}$/.test(digits(e.target.value))) answer(q, digits(e.target.value))
                 }}
-                className="h-16 w-full rounded-2xl bg-pill text-center text-3xl font-bold tracking-[0.2em]
-                  tabular-nums outline-none focus:ring-2 focus:ring-accent" />
+                className="h-16 w-full rounded-[10px] border border-line-strong bg-window text-center text-3xl
+                  font-semibold tracking-[0.2em] tabular-nums outline-none placeholder:text-line-strong
+                  focus:border-accent focus:ring-1 focus:ring-accent" />
             : <Field label="Answer" type="password" autoFocus value={text} onChange={(e) => setText(e.target.value)} />}
         </form>
       </Sheet>
     )
   }
   if (duo) {
-    const name = clusters?.find((c) => c.id === duo.id)?.name ?? duo.id
+    const name = nameOf(duo.id)
+    const stop = () => call('clusters.cancel', { cluster: duo.id }).catch((e: Error) => toast(e.message))
     return (
-      <Sheet title={name} onClose={() => call('clusters.cancel', { cluster: duo.id }).catch(() => {})}
-        actions={<>
-          <Button className="flex-1" onClick={() => call('clusters.cancel', { cluster: duo.id })
-            .catch((e: Error) => toast(e.message))}>Cancel</Button>
-          {late
-            ? <Button kind="primary" className="flex-1" onClick={() => newPush(duo.id)}>{copy.newPush}</Button>
-            : <Button kind="primary" className="flex-1" onClick={openDuo}>Open Duo</Button>}</>}>
+      <Sheet title={name} onClose={stop} actions={<div className="flex w-full flex-col gap-3">
+        {late
+          ? <MainButton onClick={() => newPush(duo.id)}>{copy.newPush}</MainButton>
+          : <MainButton onClick={openDuo}>Open Duo</MainButton>}
+        <Button onClick={stop}>Stop signing in</Button></div>}>
         <div className="flex h-full flex-col items-center justify-center gap-4 text-center">
-          <Smartphone size={72} strokeWidth={1.25} className={late ? 'text-warn' : 'text-accent-text'} />
-          <h2 className="text-2xl font-bold">Approve Duo</h2>
-          <p className="text-dim">{late ? copy.duoLate
-            : `Approve the sign-in to ${name} in Duo Mobile, then come back here.`}</p>
+          <Smartphone size={64} strokeWidth={1.25} className="text-dim" />
+          <h2 className="text-2xl font-semibold">Approve Duo</h2>
+          <p className="text-dim">{late ? copy.duoLate : 'Approve the sign-in in Duo Mobile, then come back here.'}</p>
           <p className="text-dim tabular-nums">Waiting {Math.floor(waited / 60)}:{String(waited % 60).padStart(2, '0')}</p>
-          {late && <button onClick={openDuo} className="h-11 font-semibold text-accent-text">Open Duo</button>}
+          {late && <Button kind="quiet" onClick={openDuo}>Open Duo</Button>}
         </div>
       </Sheet>
     )
