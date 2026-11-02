@@ -178,3 +178,11 @@ def test_say_with_the_reader_voice(h, monkeypatch, tmp_path):
     monkeypatch.setattr(api, "online", lambda host: False)
     with pytest.raises(RuntimeError, match="needs the internet"):
         api.say("census")
+
+
+def test_say_only_the_recording_for_the_phone(h, monkeypatch):
+    monkeypatch.setattr(narration, "say", lambda word, voice: pytest.fail("no reader voice on the phone"))
+    assert api.say("census", recording_only=True) == {"data": ""}
+    monkeypatch.setitem(api._sounds, "census", "https://api.dictionaryapi.dev/media/census.mp3")
+    monkeypatch.setattr(api, "_fetch", lambda url: b"ID3 " + url.encode())
+    assert base64.b64decode(api.say("Census", recording_only=True)["data"]).startswith(b"ID3 https://")

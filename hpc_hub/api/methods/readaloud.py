@@ -202,8 +202,9 @@ def lookup(word: str) -> dict:
 
 
 @method("readaloud.say")
-def say(word: str, voice: str = "") -> dict:
-    """The word spoken: the dictionary's own recording when it has one, else the reader voice. Base64 MP3."""
+def say(word: str, voice: str = "", recording_only: bool = False) -> dict:
+    """The word spoken: the dictionary's own recording when it has one, else the reader voice. Base64 MP3.
+    recording_only: no reader voice (the phone says it with its own), so data is empty without a recording."""
     key = dictionary.term(word)
     url = _sounds.get(key)
     if url:
@@ -211,6 +212,8 @@ def say(word: str, voice: str = "") -> dict:
             return {"data": base64.b64encode(_fetch(url)).decode()}
         except OSError:
             pass  # the reader voice says it instead
+    if recording_only:
+        return {"data": ""}
     if voice not in dict(narration.VOICES):
         voice = narration.VOICES[0][0]
     try:
