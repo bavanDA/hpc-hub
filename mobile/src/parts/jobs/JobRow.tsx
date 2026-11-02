@@ -2,6 +2,7 @@
 import type { Job } from '@shared/types/jobs'
 import { StatusDot } from '../../ui'
 import { Bar } from '../usage/Bar'
+import { reasonText } from './filters'
 import { cores, stateTone, stateWord } from './words'
 
 /** How far into its time limit a job is, as the bar shows it: full when it ran out. */
@@ -38,7 +39,7 @@ export function JobRow({ job: j, showUser, onOpen }: { job: Job; showUser: boole
         <span className="min-w-0 flex-1 font-medium break-words">{j.name || `Job ${j.job_id}`}</span>
         <JobState state={j.state} />
       </span>
-      <span className="text-sm break-words text-dim tabular-nums">{j.reason || timeText(j)}</span>
+      <span className="text-sm break-words text-dim tabular-nums">{j.reason ? reasonText(j.reason) : timeText(j)}</span>
       <span className="text-sm break-words text-dim tabular-nums">{facts.join(' · ')}</span>
     </button>
   )
