@@ -20,7 +20,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   }, [drop])
   useEffect(() => {  // a plain browser (design work): ?toast=error shows one
     if ('__TAURI_INTERNALS__' in window || new URLSearchParams(location.search).get('toast') !== 'error') return
-    toast('Could not connect to SDSC Expanse: the login was refused.',
+    toast('Could not connect to SDSC Expanse: the sign-in was refused.',
       { kind: 'error', action: { label: 'Try again', run: () => {} } })
   }, [toast])
   return (

@@ -53,7 +53,7 @@ export function AskAllDialog({ setup, folder: start = '', onClose }:
 
   const whoNote = checkError ? 'Could not check which agents are installed.' : !found
     ? 'Checking which ones are installed…'
-    : 'Pick who answers. If an agent cannot write its file, what it printed is saved as its answer.'
+    : 'Pick who answers.'
   return (
     <Dialog title={`Ask all on ${setup.name}`} onClose={onClose} width={620}
       actions={<>
@@ -73,11 +73,11 @@ export function AskAllDialog({ setup, folder: start = '', onClose }:
       <Group title="Agents" description={whoNote}>
         {setup.agents.map((a) => (
           <SwitchRow key={a.id} label={a.name} checked={Boolean(picked[a.id]) && usable(a.id)}
-            sub={usable(a.id) ? undefined : `not installed ('${a.settings.command || a.id}' not found)`}
+            sub={usable(a.id) ? undefined : 'Not installed'}
             onChange={(on) => { if (usable(a.id)) { setPicked({ ...picked, [a.id]: on }); setNote('') } }} />
         ))}
         <SwitchRow label="Let them read each other's answers" checked={discuss} onChange={setDiscuss}
-          sub="Round 2: each reads the others' answers and writes a second one, like claude.round2.md" />
+          sub="Each reads the others' answers and writes a second one" />
       </Group>
       {setup.node ? (
         <p className="mb-4 text-sm text-dim">Runs on your node {setup.node} (job {setup.job}).</p>

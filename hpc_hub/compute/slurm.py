@@ -47,8 +47,8 @@ def validate(p: ComputeProfile) -> list[str]:
     if p.mem_gb < 1:
         errors.append("Memory must be at least 1 GB")
     if not TIME.match(p.time):
-        errors.append("Wall time must look like 04:00:00 or 1-00:00:00")
-    for label, value in (("Partition", p.partition), ("Account", p.account), ("QOS", p.qos),
+        errors.append("Time must look like 04:00:00 or 1-00:00:00")
+    for label, value in (("Queue", p.partition), ("Account", p.account), ("Billing", p.qos),
                          ("GPU type", p.gpu_type)):
         if not SAFE.match(value):
             errors.append(f"{label} has invalid characters")

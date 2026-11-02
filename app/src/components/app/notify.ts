@@ -47,7 +47,7 @@ export function useSessionNotifications() {
       notify(`${name}: approve Duo`, s.detail ?? '', { kind: 'duo', page: 'clusters', params: { cluster: s.id } })
         .catch(() => {})
     } else if (s.state === 'Connected' && was) {
-      notify(`${name} connected`, s.node ? `Node ${s.node}, job ${s.job}` : s.detail || 'Logged in',
+      notify(`${name} connected`, s.node ? `Node ${s.node}, job ${s.job}` : s.detail || 'Signed in',
         { kind: 'connected', page: 'clusters', params: { cluster: s.id } }).catch(() => {})
     }
   })

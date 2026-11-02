@@ -39,7 +39,7 @@ class JobsPage(DetailsMixin, CancelMixin, Gtk.Box):
         self.cluster = Gtk.DropDown.new_from_strings([s.cfg.name for s in sessions])
         self.scope = Gtk.DropDown.new_from_strings([label for _, label in SCOPES])
         self.state = Gtk.DropDown.new_from_strings([label for _, label in STATES])
-        self.search = Gtk.SearchEntry(placeholder_text="Filter by id, name, user, partition", hexpand=True)
+        self.search = Gtk.SearchEntry(placeholder_text="Filter by id, name, person, queue", hexpand=True)
         self.refresh_btn = Gtk.Button(icon_name="view-refresh-symbolic", tooltip_text="Refresh")
         for w in (self.cluster, self.scope, self.state, self.search, self.refresh_btn):
             bar.append(w)

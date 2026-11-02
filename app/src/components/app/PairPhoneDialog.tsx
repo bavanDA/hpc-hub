@@ -112,7 +112,8 @@ export function PairPhoneDialog({ only, onClose }: { only?: string[]; onClose: (
               </List>
             )}
           <List>
-            <Row title="Include passwords" subtitle="Off: only the usernames. The phone asks for the password."
+            <Row title="Include passwords" subtitle={passwords ? 'The phone signs in by itself'
+              : 'The phone asks for each password'}
               suffix={<Switch on={passwords} onChange={setPasswords} label="Include passwords" />} />
           </List>
           {error && <p className="text-sm text-bad">{error}</p>}

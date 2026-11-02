@@ -94,7 +94,7 @@ def _queues(v) -> str:
         if not item:
             continue
         if not (NAME.fullmatch(part) and NAME.fullmatch(qos)):
-            raise ValueError(f"Queues: {item} is not partition:qos")
+            raise ValueError(f"Queues: write {item} as queue:billing, like general:low")
         out.append(f"{part}:{qos}")
     return ",".join(out)
 

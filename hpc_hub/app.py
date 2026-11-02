@@ -163,7 +163,7 @@ class HpcHubApp(LoginPromptsMixin, QuitMixin, Adw.Application):
         elif session.state == State.CONNECTED:
             self.withdraw_notification(f"duo-{session.cfg.id}")
             a = session.allocation
-            body = f"Node {a.node}, job {a.job_id}" if a else (session.detail or "Logged in")
+            body = f"Node {a.node}, job {a.job_id}" if a else (session.detail or "Signed in")
             self._notify(f"up-{session.cfg.id}", f"{name} connected", body)
         elif session.state == State.ERROR:
             self.withdraw_notification(f"duo-{session.cfg.id}")

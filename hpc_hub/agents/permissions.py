@@ -32,8 +32,8 @@ GROUPS = [
     ("LaTeX and PDF", "", "pdflatex latexmk bibtex biber pdftotext pdfinfo pdftoppm"),
     ("Slurm", "Submitting uses your group's SUs", "squeue sacct sinfo sacctmgr sreport sstat seff sshare sprio "
                                                   "scontrol sbatch srun module ml quota"),
-    ("Git", "Force push still asks if that is on below", "git gh"),
-    ("Network", "Download, copy to and log in to other machines", "ssh scp rsync curl wget"),
+    ("Git", "Force push has its own switch below", "git gh"),
+    ("Network", "Download, copy to and sign in to other machines", "ssh scp rsync curl wget"),
     ("Processes and agents", "", "kill pkill codex claude"),
 ]
 GROUPS = [(title, note, cmds.split()) for title, note, cmds in GROUPS]

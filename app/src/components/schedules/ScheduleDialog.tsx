@@ -118,7 +118,7 @@ export function ScheduleDialog({ cluster, clusterName, options: o, editing, onCl
         <DaysRow names={o.days} days={days} onChange={setDays} />
         <DurationRow total={minutes} limits={limits} onChange={setMinutes} />
       </Group>
-      <Group title="Compute" description="Each run is a batch job on a compute node.">
+      <Group title="Compute" description="Runs at the set time, even with your laptop off.">
         <SelectRow title="Resources" subtitle={own ? undefined : computeText(ownFrom(o.profile, {}))} value={own ? 'own' : 'node'}
           onChange={(v) => setOwn(v === 'own')} options={[{ value: 'node', label: 'Same as your compute node' },
             { value: 'own', label: 'Set here' }]} />

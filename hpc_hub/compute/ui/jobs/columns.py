@@ -4,7 +4,7 @@ a small bar, the pending reason in words, numbers lined up on the right."""
 from gi.repository import GObject, Gtk, Pango
 
 from ....ui.status import StatusPill
-from ...jobs import JobInfo, duration_text, reason_text, seconds, shown_qos
+from ...jobs import JobInfo, duration_text, reason_text, seconds
 
 # (title, kind, expand); kind picks the cell widget below
 COLUMNS = [
@@ -88,7 +88,7 @@ def _bind(kind: str):
             name, extra = w.get_first_child(), w.get_last_child()
             name.set_label(j.name)
             name.set_tooltip_text(j.name)
-            extra.set_label(" · ".join(x for x in (j.partition, shown_qos(j), "HPC Hub" if j.from_app else "") if x))
+            extra.set_label("HPC Hub" if j.from_app else "")
         elif kind == "time":
             bar = w.get_first_child()
             used, of = bar.get_next_sibling(), w.get_last_child()

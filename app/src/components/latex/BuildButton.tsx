@@ -55,7 +55,7 @@ export function BuildButton({ cluster, clusterName, running, settings, onSetting
             <label className="flex items-center gap-2">
               <input type="checkbox" checked={draft.on_node} className="accent-accent"
                 onChange={(e) => setDraft({ ...draft, on_node: e.target.checked })} />
-              Build on my compute node, if I have one
+              Build on my compute node
             </label>
             <div className="flex justify-end">
               <Button kind="suggested" className="!h-8 text-sm" onClick={() => save(close)}>Save settings</Button>
