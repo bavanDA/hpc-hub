@@ -4,6 +4,7 @@ import { FileText, Folder, Plus } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
 import { expectCopies } from '@shared/components/projects/copies'
+import { liveLine, useLive } from '@shared/components/projects/live'
 import { copyText } from '@shared/components/terminals/xterm'
 import { setNotify } from '@shared/components/tools/run'
 import { Spinner } from '@shared/components/ui'
@@ -40,6 +41,7 @@ export function Projects() {
     remove: (p) => setOpen({ kind: 'remove', p }),
     failed: toast,
   }
+  const live = useLive(data?.clusters ?? [], data?.projects ?? [])  // terminals running in it, its branch
   const remove = (p: Project) => call('projects.remove', { id: p.id }).then(reload).catch((e: Error) => toast(e.message))
 
   const many = new Set((data?.projects ?? []).map((p) => p.cluster)).size > 1
@@ -77,8 +79,8 @@ export function Projects() {
               <List>
                 {shown.map((p) => (
                   <Row key={p.id} icon={p.main_tex ? FileText : Folder} label={p.name}
-                    sub={wrapPath(many ? `${p.cluster_name ? shortCluster(p.cluster_name) : `${p.cluster}, not set up`} · ${p.path}`
-                      : p.path)}
+                    sub={<>{wrapPath(many ? `${p.cluster_name ? shortCluster(p.cluster_name) : `${p.cluster}, not set up`} · ${p.path}`
+                      : p.path)}{liveLine(live, p) && <span className="block">{liveLine(live, p)}</span>}</>}
                     onPress={() => setOpen({ kind: 'actions', p })} />
                 ))}
               </List>

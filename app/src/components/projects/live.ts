@@ -45,3 +45,9 @@ export function useLive(clusters: ProjectCluster[], projects: Project[]): Live {
     git: (p) => on(p) ? git[p.cluster]?.[p.path] : undefined,
   }
 }
+
+/** All of it in one line for the phone's rows: "2 running · main · 3 changed", "" when there is nothing. */
+export function liveLine(live: Live, p: Project) {
+  const n = live.running(p), g = live.git(p)
+  return [n > 0 && `${n} running`, g?.branch, g && g.changed > 0 && `${g.changed} changed`].filter(Boolean).join(' · ')
+}
