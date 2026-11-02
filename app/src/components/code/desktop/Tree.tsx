@@ -1,12 +1,11 @@
 // The Code page's file tree: folders open in place (files.list, loaded the first time you open them), files open in
-// the editor. The root is your home, a project, or a folder you went to; projects on this cluster sit on top.
-import { ChevronDown, ChevronRight, FileCode2, FileText, Folder, FolderOpen, FolderUp, RefreshCw } from 'lucide-react'
-import { useCallback, useEffect, useState } from 'react'
+// the editor. The root is the open project or folder; head (its name and the switcher) sits on top.
+import { ChevronDown, ChevronRight, FileCode2, FileText, Folder, FolderOpen, RefreshCw } from 'lucide-react'
+import { useCallback, useEffect, useState, type ReactNode } from 'react'
 
 import { call } from '../../../rpc'
 import type { Entry, Listing } from '../../../types/files'
-import type { Project, ProjectList } from '../../../types/projects'
-import { isDir, isText, join, parent } from '../../files/format'
+import { isDir, isText, join } from '../../files/format'
 import { IconButton, Spinner } from '../../ui'
 
 type Node = { entries: Entry[] | null; error: string }
@@ -18,42 +17,30 @@ const byName = (a: Entry, b: Entry) =>
 const opens = (e: Entry) => isText(e) || /\.(out|err|log|slurm|sbatch|cfg|ini|c|h|cc|cpp|hpp|cu|f|f90|f95|jl|r|m|R)$/i
   .test(e.name) || !e.name.includes('.')
 
-export function Tree({ cluster, root, current, onRoot, onOpen, onOther }: {
+export function Tree({ cluster, root, head, current, onOpen, onOther }: {
   cluster: string
-  root: string                              // '' until the cluster's home is known
+  root: string                              // the open folder
+  head: ReactNode
   current: string | null                    // the open file's path, highlighted
-  onRoot: (path: string) => void
   onOpen: (path: string) => void
   onOther: (path: string) => void           // not text: open it in Files instead
 }) {
   const [nodes, setNodes] = useState<Record<string, Node>>({})
   const [open, setOpen] = useState<Set<string>>(new Set())
-  const [home, setHome] = useState('')
-  const [projects, setProjects] = useState<Project[]>([])
   const [hidden, setHidden] = useState(false)
-  const [typing, setTyping] = useState<string | null>(null)  // the folder path being typed
 
   const load = useCallback((dir: string) => {
     setNodes((n) => ({ ...n, [dir]: { entries: n[dir]?.entries ?? null, error: '' } }))
     call<Listing>('files.list', { cluster, path: dir })
-      .then((l) => {
-        if (!dir) { setHome(l.path); onRoot(l.path) }
-        setNodes((n) => ({ ...n, [l.path]: { entries: [...l.entries].sort(byName), error: '' } }))
-      })
+      .then((l) => setNodes((n) => ({ ...n, [l.path]: { entries: [...l.entries].sort(byName), error: '' } })))
       .catch((e: Error) => setNodes((n) => ({ ...n, [dir]: { entries: n[dir]?.entries ?? [], error: e.message } })))
-  }, [cluster, onRoot])
+  }, [cluster])
 
-  useEffect(() => {  // a new cluster: start again at its home, or the root asked for
+  useEffect(() => {  // another cluster or folder: start again at its top
     setNodes({})
     setOpen(new Set())
     load(root)
-    call<ProjectList>('projects.list').then((l) => setProjects(l.projects.filter((p) => p.cluster === cluster)))
-      .catch(() => setProjects([]))
-  }, [cluster])  // eslint-disable-line react-hooks/exhaustive-deps
-
-  useEffect(() => {
-    if (root && !nodes[root]) load(root)
-  }, [root])  // eslint-disable-line react-hooks/exhaustive-deps
+  }, [cluster, root, load])
 
   const toggle = (dir: string) => {
     const next = new Set(open)
@@ -93,7 +80,6 @@ export function Tree({ cluster, root, current, onRoot, onOpen, onOther }: {
         <div key={path}>
           <button type="button" title={path}
             onClick={() => (folder ? toggle(path) : opens(e) ? onOpen(path) : onOther(path))}
-            onDoubleClick={() => folder && onRoot(path)}
             className={`flex h-7 w-full items-center gap-1.5 truncate rounded-md pr-2 text-left text-sm
               transition-colors duration-90 hover:bg-hover ${current === path ? 'bg-selected font-semibold' : ''}
               ${!folder && !opens(e) ? 'text-dim' : ''}`}
@@ -109,56 +95,16 @@ export function Tree({ cluster, root, current, onRoot, onOpen, onOther }: {
     })
   }
 
-  const short = root && home && root === home ? 'Home folder'
-    : root && home && root.startsWith(home) ? `~${root.slice(home.length)}` : root
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      {projects.length > 0 && (
-        <div className="border-b border-line px-2 py-2">
-          <p className="px-2 pb-1 text-xs font-semibold text-dim uppercase">Projects</p>
-          {projects.map((p) => (
-            <button key={p.id} type="button" title={p.path} onClick={() => onRoot(p.path)}
-              className={`flex h-7 w-full items-center gap-2 truncate rounded-md px-2 text-left text-sm hover:bg-hover
-                ${root === p.path ? 'bg-selected font-semibold' : ''}`}>
-              <Folder size={14} className="shrink-0 text-dim" />
-              <span className="truncate">{p.name}</span>
-            </button>
-          ))}
-          {home && root !== home && (
-            <button type="button" onClick={() => onRoot(home)}
-              className="flex h-7 w-full items-center gap-2 rounded-md px-2 text-left text-sm text-dim hover:bg-hover">
-              <Folder size={14} className="shrink-0" /> Home
-            </button>
-          )}
-        </div>
-      )}
-      <div className="flex h-9 shrink-0 items-center gap-1 px-2">
-        <IconButton icon={FolderUp} label="Up one folder" small disabled={!root || root === '/'}
-          onClick={() => onRoot(parent(root))} />
-        {typing !== null ? (
-          <input autoFocus value={typing} aria-label="Go to folder" spellCheck={false}
-            className="h-7 min-w-0 flex-1 rounded-md border border-line bg-window px-2 font-mono text-xs outline-none
-              focus:border-accent"
-            onChange={(e) => setTyping(e.target.value)} onBlur={() => setTyping(null)}
-            onKeyDown={(e) => {
-              if (e.key === 'Escape') setTyping(null)
-              if (e.key !== 'Enter') return
-              const t = typing.trim().replace(/\/+$/, '') || '/'
-              const path = t === '~' ? home : t.startsWith('~/') ? `${home}${t.slice(1)}` : t
-              setTyping(null)
-              if (path && path !== root) onRoot(path)
-            }} />
-        ) : (
-          <button type="button" title="Type a folder to go to" onClick={() => setTyping(root)}
-            className={`h-7 min-w-0 flex-1 truncate rounded-md px-1 text-left text-xs text-dim hover:bg-hover
-              ${root === home ? '' : 'font-mono'}`}>{short || '…'}</button>
-        )}
+      <div className="flex h-10 shrink-0 items-center gap-1 px-2">
+        {head}
         <button type="button" onClick={() => setHidden(!hidden)} title="Show files whose name starts with a dot"
           className={`rounded-md px-1.5 text-xs font-semibold ${hidden ? 'bg-selected text-text' : 'text-dim hover:bg-hover'}`}>
           .files</button>
         <IconButton icon={RefreshCw} label="Refresh" small onClick={refresh} />
       </div>
-      <div className="min-h-0 flex-1 overflow-auto px-1 pb-2">{root ? rows(root, 0) : rows('', 0)}</div>
+      <div className="min-h-0 flex-1 overflow-auto px-1 pb-2">{rows(root, 0)}</div>
     </div>
   )
 }

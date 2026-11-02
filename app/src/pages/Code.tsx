@@ -1,7 +1,8 @@
-// Code: a light editor for files on the clusters, made to work with the agents (docs/design/code.md). The tree on
-// the left, open files as tabs, the editor, and an Ask panel on the right. Files change on the cluster while you
-// look (an agent, a job): clean files reload by themselves, files with your edits ask first. Saving checks the file
-// is still the one you opened. Unsaved edits are kept in the browser, so a crash doesn't lose them.
+// Code: a light editor for files on the clusters, made to work with the agents (docs/design/code.md). One project or
+// folder open per cluster, like VS Code: its tree on the left, open files as tabs, the editor, and an Ask panel on the
+// right. Files change on the cluster while you look (an agent, a job): clean files reload by themselves, files with
+// your edits ask first. Saving checks the file is still the one you opened. Unsaved edits are kept in the browser, so
+// a crash doesn't lose them.
 import { Clock, FileCode2, FolderSearch, Play, RefreshCw, Save, Search, Sparkles, Send } from 'lucide-react'
 import { lazy, Suspense, useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 
@@ -17,13 +18,17 @@ import { FindBar } from '../components/code/desktop/FindBar'
 import { GoToFile } from '../components/code/desktop/GoToFile'
 import { StatusLine, type Look } from '../components/code/desktop/StatusLine'
 import { Tabs } from '../components/code/desktop/Tabs'
+import { Start } from '../components/code/desktop/Start'
+import { Switcher } from '../components/code/desktop/Switcher'
 import { Tree } from '../components/code/desktop/Tree'
+import { folderName, inside, openFolder, rememberFolder, usePlaces } from '../components/code/desktop/workspace'
 import { discardDraft, findDraft, keepDrafts, type Draft } from '../components/code/drafts'
 import type { EditorHandle } from '../components/code/Editor'
 import { detectIndent, type Lang } from '../components/code/languages'
 import { closeFile, getFile, isDirty, openFile, reloadFile, replaceText, saveFile, selectFile, setCursor, setText,
   useCode, type OpenFile } from '../components/code/store'
 import { onWatch, startWatch, undoAgentChange } from '../components/code/watch'
+import { FolderPicker } from '../components/projects/FolderPicker'
 import { useToast } from '../components/toast'
 import { AlertDialog, Button, Dialog, EmptyState, IconButton, Spinner } from '../components/ui'
 import { useGo, usePageParams } from '../nav'
@@ -34,7 +39,6 @@ const Editor = lazy(() => import('../components/code/Editor'))
 
 const LOG = /\.(out|err|log)$/i
 const FOLLOW_EVERY = 3000
-const roots: Record<string, string> = {}  // the tree's folder per cluster, kept while you visit other pages
 const readOnlyKeys = new Set<string>()      // opened to look, not to edit (a job's output)
 
 type Banner =
@@ -54,7 +58,8 @@ export function Code() {
   const { files, current } = useCode()
   const { asks } = useAsks()
   const cluster = active?.id ?? ''
-  const [root, setRootState] = useState(roots[cluster] ?? '')
+  const [root, setRootState] = useState(() => openFolder(cluster))  // the open folder, '' for none
+  const places = usePlaces(cluster)
   const handle = useRef<EditorHandle | null>(null)
   const [find, setFind] = useState<string | null>(null)       // the bar is open, with this to start
   const [goTo, setGoTo] = useState(false)
@@ -72,15 +77,16 @@ export function Code() {
   const connected = !!sessions[cluster]?.connected
 
   const setRoot = useCallback((path: string) => {
-    roots[cluster] = path
+    rememberFolder(cluster, path)
     setRootState(path)
   }, [cluster])
-  useEffect(() => { setRootState(roots[cluster] ?? '') }, [cluster])
+  useEffect(() => { setRootState(openFolder(cluster)) }, [cluster])
+  const project = root ? folderName(root, places.home, places.projects) : ''
 
   // opened from elsewhere: a file (Files' Edit, a job's output), or a folder (a project)
   useEffect(() => {
     if (params.cluster) setActiveCluster(params.cluster)
-    if (params.cluster && params.folder) { roots[params.cluster] = params.folder; setRootState(params.folder) }
+    if (params.cluster && params.folder) { rememberFolder(params.cluster, params.folder); setRootState(params.folder) }
     if (params.cluster && params.path) {
       const key = `${params.cluster}:${params.path}`
       if (params.readonly) readOnlyKeys.add(key)
@@ -195,6 +201,31 @@ export function Code() {
       Your edits are lost.</AlertDialog>)
   }
 
+  // Closing the project closes its files (asking first about unsaved ones); then next opens
+  const closeProject = (next = '') => {
+    const was = root
+    const mine = files.filter((f) => f.cluster === cluster && inside(f.path, was))
+    const unsaved = mine.filter(isDirty)
+    const finish = () => {
+      for (const f of mine) { closeFile(f.key); dropBanner(f.key) }
+      for (const f of unsaved) void discardDraft(f.cluster, f.path)
+      setRoot(next)
+    }
+    if (!unsaved.length) return finish()
+    const names = unsaved.map((f) => f.name)
+    const list = names.length === 1 ? names[0] : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`
+    setDialog(<AlertDialog title={`Close ${project} without saving?`} keep="Keep it open" act="Close without saving"
+      onClose={close} onAct={() => { close(); finish() }}>Your edits to {list} are lost.</AlertDialog>)
+  }
+  const openProject = (path: string) => { if (path !== root) closeProject(path) }
+  const browse = () => active && setDialog(
+    <FolderPicker cluster={{ id: cluster, name: active.name, connected }} start={root || '~'} onClose={close}
+      projects={places.projects.map((p) => ({ label: p.name, path: p.path }))} onPick={openProject} />)
+  const switcher = (
+    <Switcher name={project || 'Open a project'} open={root} home={places.home} projects={places.projects}
+      recent={places.recent} onOpen={openProject} onBrowse={browse} onClose={root ? () => closeProject() : undefined} />
+  )
+
   const submit = async () => {
     if (!file) return
     if (isDirty(file) && !(await save())) return
@@ -252,15 +283,16 @@ export function Code() {
         <div className="flex h-10 shrink-0 items-center gap-1 border-b border-line px-2">
           <ClusterPicker />
           <span className="flex-1" />
-          <IconButton icon={FolderSearch} label={`Go to file (${mod}P)`} small disabled={!connected}
+          <IconButton icon={FolderSearch} label={`Go to file (${mod}P)`} small disabled={!connected || !root}
             onClick={() => setGoTo(true)} />
         </div>
         {!active ? <div className="grid flex-1 place-items-center"><Spinner size={20} /></div>
-          : connected ? <Tree cluster={cluster} root={root} current={file?.cluster === cluster ? file.path : null}
-              onRoot={setRoot} onOpen={openPath}
+          : !connected ? <div className="min-h-0 flex-1 overflow-auto"><NotConnected cluster={active}
+              session={sessions[cluster]} what="files" /></div>
+          : root ? <Tree cluster={cluster} root={root} head={switcher}
+              current={file?.cluster === cluster ? file.path : null} onOpen={openPath}
               onOther={(p) => go('files', { cluster, path: p.replace(/\/[^/]*$/, '') || '/' })} />
-          : <div className="min-h-0 flex-1 overflow-auto"><NotConnected cluster={active} session={sessions[cluster]}
-              what="files" /></div>}
+          : <div className="flex h-10 shrink-0 items-center px-2">{switcher}</div>}
       </aside>
 
       <section className="flex min-w-0 flex-1 flex-col">
@@ -323,7 +355,10 @@ export function Code() {
           start={find} onClose={() => { setFind(null); handle.current?.focus() }} />}
 
         <div className="code-main min-h-0 flex-1">
-          {!file ? (
+          {!file && !root ? (
+            <Start home={places.home} projects={places.projects} recent={places.recent} onOpen={openProject}
+              onBrowse={browse} />
+          ) : !file ? (
             <EmptyState icon={FileCode2} title="No file open"
               text={`Pick a file on the left, or press ${mod}P to go to one.`}
               action={connected ? <Button onClick={() => setGoTo(true)}>Go to file</Button> : undefined} />
