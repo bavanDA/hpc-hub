@@ -11,6 +11,7 @@ import { call } from '@shared/rpc'
 import type { Job, JobDetails } from '@shared/types/jobs'
 import { Button, Row, Section, Sheet, useToast } from '../ui'
 import { CancelSheet } from './CancelSheet'
+import { reasonText } from './jobs/filters'
 import { JobState, JobTime } from './jobs/JobRow'
 import { phoneGroups } from './jobs/words'
 
@@ -52,7 +53,7 @@ export function JobSheet({ cluster, job: j, appJob, onClose, onChanged }: {
 
   const appNode = !!appJob && appJob === j.job_id
   const found = phoneGroups(details?.groups ?? []).map((g) => g.title === 'Resources' && j.su
-    ? { ...g, rows: [...g.rows, { label: 'SU', value: j.su }] } : g)
+    ? { ...g, rows: [...g.rows, { label: 'Hours (SU)', value: j.su }] } : g)
   // the job's id leads the first group (the times), or stands alone while the details load
   const id = { label: 'Job ID', value: j.job_id }
   const groups = found[0]?.title === '' ? [{ ...found[0], rows: [id, ...found[0].rows] }, ...found.slice(1)]
@@ -69,7 +70,7 @@ export function JobSheet({ cluster, job: j, appJob, onClose, onChanged }: {
           {appNode ? 'Release node' : 'Cancel job'}</Button> : undefined}>
       <div className="flex flex-col gap-2 px-4">
         <JobState state={j.state} />
-        {j.reason ? <p className="text-dim">{j.reason}</p> : <JobTime job={j} />}
+        {j.reason ? <p className="text-dim">{reasonText(j.reason)}</p> : <JobTime job={j} />}
       </div>
       {groups.map((g) => g.title === 'Files'
         ? <Section key={g.title} title="Files">

@@ -18,7 +18,7 @@ import { useEvent } from '@shared/hooks'
 import { call } from '@shared/rpc'
 import type { BuildDone, Issue, Opened, PdfInfo, Settings, SourceSpot, Spot, TreeEntry } from '@shared/types/latex'
 import { useBackLayer } from '../../nav'
-import { ActionSheet, Segments, useToast } from '../../ui'
+import { ActionSheet, MainButton, Segments, useToast } from '../../ui'
 import { shortCluster } from '../code/util'
 import { BuildSheet } from './BuildSheet'
 import { FilesSheet, type FileActions } from './FilesSheet'
@@ -259,14 +259,13 @@ export function Paper({ paper, onClose }: { paper: Opened; onClose: () => void }
           message={pdf.none ? <Empty title="No PDF yet" text="Tap Build to make it on the cluster." />
             : pdf.error ? <Empty title="Couldn't read the PDF" text={pdf.error} /> : undefined} />}
         {pane === 'log' && <LogPane running={!!running} log={log} last={last} onGo={goIssue} onStop={stop} />}
-
-        {pane !== 'log' && !typing && (
-          <button onClick={build} disabled={!!running} aria-label="Build"
-            className="absolute right-4 bottom-4 flex h-[52px] items-center gap-2 rounded-[10px] bg-accent px-5
-              font-semibold text-on-accent active:bg-accent-pressed disabled:opacity-80">
-            {running ? <Spinner size={20} /> : <RefreshCw size={20} />} {running ? 'Building' : 'Build'}</button>
-        )}
       </div>
+      {pane !== 'log' && !typing && (
+        <div className="shrink-0 border-t border-line px-4 py-2">
+          <MainButton onClick={build} disabled={!!running} icon={running ? undefined : RefreshCw}>
+            {running ? <><Spinner size={20} /> Building</> : 'Build'}</MainButton>
+        </div>
+      )}
 
       {typing && (
         <div className="flex shrink-0 gap-1 overflow-x-auto border-t border-line bg-window px-2 py-1">

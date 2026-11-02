@@ -4,6 +4,7 @@
 import { ListChecks, RefreshCw, SearchX, SlidersHorizontal, WifiOff } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
+import { shortName } from '@shared/components/clusters/loginCopy'
 import { Spinner } from '@shared/components/ui'
 import { useGo, usePageParams } from '@shared/nav'
 import { call } from '@shared/rpc'
@@ -101,7 +102,7 @@ export function Jobs() {
           <div className="flex min-h-0 flex-1 flex-col">
             <div className="flex flex-col gap-3 px-4 pb-1">
               {live.length > 1 && <Segments label="Cluster" value={current.id}
-                options={live.map((c) => [c.id, c.name.split(' (')[0]] as const)} onChange={pick} />}
+                options={live.map((c) => [c.id, shortName(c)] as const)} onChange={pick} />}
               <SearchField value={query} onChange={setQuery} placeholder="Search id, name, person, queue" />
             </div>
             <div className="min-h-0 flex-1 overflow-y-auto pb-4">

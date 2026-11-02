@@ -88,3 +88,12 @@ body { font-feature-settings: "tnum" 1; }
 /* Shared desktop pieces still say "bg-accent text-white": on dark the accent is white, so their text follows the
    accent instead. Phone code says text-on-accent. */
 .bg-accent.text-white:not(:disabled) { color: var(--color-on-accent); }
+
+/* The desktop's monitor bar is one 24 px line; on a phone its items wrap to a second line instead of being cut off. */
+.phone-monitor > div { height: auto; flex-wrap: wrap; row-gap: 2px; padding-block: 3px; }
+
+/* Code and LaTeX editors: the current line and the selection in grey, not the desktop's blue. */
+html:root { --code-active-line: var(--color-soft); --cm-active-line: var(--color-soft);
+  --code-selection: rgb(0 0 0 / 0.14); --cm-selection: rgb(0 0 0 / 0.14); --code-flash: rgb(0 0 0 / 0.10); }
+html:root[data-theme="dark"] { --code-selection: rgb(255 255 255 / 0.18); --cm-selection: rgb(255 255 255 / 0.18);
+  --code-flash: rgb(255 255 255 / 0.12); }

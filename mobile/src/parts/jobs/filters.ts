@@ -33,3 +33,9 @@ export function shownJobs(jobs: Job[], states: string[], query: string, order: O
     (!q || [j.job_id, j.name, j.user, j.partition, j.reason].some((v) => v.toLowerCase().includes(q))))
   return sortJobs(kept, order.key, order.desc)
 }
+
+/** The wait reason without the "Waiting:" the state word already says: "Higher-priority jobs go first". */
+export function reasonText(reason: string): string {
+  const r = reason.replace(/^(waiting|pending)\s*:\s*/i, '')
+  return r.charAt(0).toUpperCase() + r.slice(1)
+}

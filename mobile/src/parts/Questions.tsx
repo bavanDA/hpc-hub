@@ -100,12 +100,16 @@ export function Questions() {
       return (
         <Sheet title={q.title ?? name} onClose={stop} actions={<>
           <Button className="flex-1" onClick={stop}>Stop signing in</Button>
-          <Button kind="primary" className="flex-1" onClick={() => answer(q, 'yes')}>Yes</Button></>}>
+          <Button kind="primary" className="flex-1" onClick={() => answer(q, 'yes')}>Connect anyway</Button></>}>
           <p>{q.prompt?.trim() || 'Go on signing in?'}</p>
         </Sheet>
       )
     }
     const code = q.kind === 'code'
+    // "Password:" from the cluster is the field's label; a longer prompt stays above a "Password" field
+    const prompt = q.prompt?.trim() ?? ''
+    const short = !!prompt && prompt.length <= 40 && !prompt.includes('\n')
+    const label = short ? prompt.replace(/:\s*$/, '') : 'Password'
     const send = () => answer(q, code ? digits(text) : text)
     return (
       <Sheet title={code ? `Code for ${name}` : copy.signIn({ name, org: '' })} onClose={stop} actions={<>
@@ -114,7 +118,7 @@ export function Questions() {
         <form onSubmit={(e) => { e.preventDefault(); send() }}>
           {code
             ? <p className="mb-4">Type the 6-digit code from your authenticator app.</p>
-            : q.prompt?.trim() && <p className="mb-2 whitespace-pre-wrap text-dim">{q.prompt.trim()}</p>}
+            : prompt && !short && <p className="mb-2 whitespace-pre-wrap text-dim">{prompt}</p>}
           {code
             ? <input autoFocus inputMode="numeric" maxLength={8} placeholder="123456" value={text} aria-label="Code"
                 onChange={(e) => {
@@ -124,7 +128,7 @@ export function Questions() {
                 className="h-16 w-full rounded-[10px] border border-line-strong bg-window text-center text-3xl
                   font-semibold tracking-[0.2em] tabular-nums outline-none placeholder:text-line-strong
                   focus:border-accent focus:ring-1 focus:ring-accent" />
-            : <Field label="Answer" type="password" autoFocus value={text} onChange={(e) => setText(e.target.value)} />}
+            : <Field label={label} type="password" autoFocus value={text} onChange={(e) => setText(e.target.value)} />}
         </form>
       </Sheet>
     )

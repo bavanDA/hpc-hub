@@ -81,7 +81,7 @@ export function TerminalScreen({ tab, shown, onBack, onChanged = () => {} }:
         </div>
       ))}
       <div ref={host} className="min-h-0 flex-1 py-1 pl-1" onClick={() => tab.term.focus()} />
-      {tab.session && <MonitorBar cluster={tab.cluster} node={tab.node} shown={shown} />}
+      {tab.session && <div className="phone-monitor"><MonitorBar cluster={tab.cluster} node={tab.node} shown={shown} /></div>}
       <div className="flex shrink-0 gap-1.5 overflow-x-auto border-t border-line bg-window p-1.5">
         {ctrl
           ? <>{key('Ctrl', () => setCtrl(false))}{CTRL.map((c) =>

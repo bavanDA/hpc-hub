@@ -1,14 +1,14 @@
 // A cluster's settings on the phone (the desktop's SettingsDialog): a list of sections, each its own screen, and one
 // Save for all of them (cluster_settings.save checks every field). Sign-in has its own sheet (LoginSheet). The VPN
 // sections stay hidden until the phone has a VPN.
-import { Bot, Code, Cpu, KeyRound, ListOrdered, Server, ShieldCheck } from 'lucide-react'
+import { Bot, Code, Cpu, KeyRound, ListOrdered, Plus, Server, ShieldCheck } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
 import { putCluster } from '@shared/components/clusters/store'
 import { Spinner } from '@shared/components/ui'
 import { call } from '@shared/rpc'
-import type { AgentId, AgentSettings, Cluster, Logins, Profile, SettingsInfo, VsCode } from '@shared/types/clusters'
-import { Field, List, MainButton, NumberRow, PickerSheet, Row, Section, Sheet, TextArea, ToggleRow, useToast } from '../ui'
+import type { AgentId, AgentSettings, Cluster, Limits, Logins, Profile, SettingsInfo, VsCode } from '@shared/types/clusters'
+import { Field, List, MainButton, NumberRow, PickerSheet, Row, Section, Sheet, ToggleRow, useToast } from '../ui'
 import { AuthenticatorSheet } from './AuthenticatorSheet'
 import { LoginSheet } from './LoginSheet'
 import { ASK, NodeFields, nodeSize } from './NodeSheet'
@@ -41,6 +41,53 @@ function changes(d: Cluster, info: SettingsInfo | null): Record<string, unknown>
 function queueCount(queues?: string) {
   const n = (queues ?? '').split(',').filter((q) => q.trim()).length
   return n === 0 ? 'The one you pick' : n === 1 ? '1 queue' : `${n} queues`
+}
+
+/** "general:low, debug:debug" as [queue, billing] pairs, and back. */
+const parseQueues = (q?: string) => (q ?? '').split(',').map((x) => x.trim()).filter(Boolean)
+  .map((x) => { const [queue = '', billing = ''] = x.split(':'); return [queue.trim(), billing.trim()] as [string, string] })
+const joinQueues = (l: [string, string][]) => l.filter(([q]) => q).map(([q, b]) => (b ? `${q}:${b}` : q)).join(',')
+
+/** The queues to try, in order: one row each (queue, its billing), tap to change or remove, then Add a queue. */
+function QueueRows({ cluster, value, onChange }: { cluster: string; value?: string; onChange: (v: string) => void }) {
+  const list = parseQueues(value)
+  const [edit, setEdit] = useState<number | null>(null)  // list.length: a new one
+  const [pick, setPick] = useState<'' | 'queue' | 'billing'>('')
+  const [limits, setLimits] = useState<Limits | null>(null)
+  const cur = edit === null ? null : (list[edit] ?? ['', ''] as [string, string])
+  useEffect(() => {
+    if (edit === null) return
+    call<Limits>('clusters.partitions', { cluster, partition: cur?.[0] ?? '', qos: '' }).then(setLimits).catch(() => {})
+  }, [cluster, edit, cur?.[0]]) // eslint-disable-line react-hooks/exhaustive-deps
+  const put = (pair: [string, string] | null) => {
+    const next = [...list]
+    if (pair) next[edit!] = pair; else next.splice(edit!, 1)
+    onChange(joinQueues(next))
+  }
+  const close = () => { setEdit(null); setPick('') }
+  return <>
+    <Section title="Tried in this order">
+      {list.map(([q, b], i) => <Row key={`${q}:${b}:${i}`} label={q} value={b || 'Default billing'} opens
+        onPress={() => setEdit(i)} />)}
+      <Row icon={Plus} label="Add a queue" onPress={() => setEdit(list.length)} />
+    </Section>
+    {cur && <Sheet flush title={edit! < list.length ? cur[0] : 'Add a queue'} onClose={close}
+      actions={<MainButton onClick={close}>Done</MainButton>}>
+      <List>
+        <Row label="Queue" value={cur[0] || 'Pick one'} opens onPress={() => setPick('queue')} />
+        <Row label="Billing" value={cur[1] || 'Default'} opens onPress={() => setPick('billing')} />
+      </List>
+      {edit! < list.length && <List className="mt-6">
+        <Row label="Remove this queue" danger onPress={() => { put(null); close() }} />
+      </List>}
+      {pick === 'queue' && <PickerSheet title="Queue" value={cur[0]}
+        options={(limits?.partitions ?? []).map((q) => ({ value: q, label: q }))}
+        onPick={(v) => put([v, cur[1]])} onClose={() => setPick('')} />}
+      {pick === 'billing' && <PickerSheet title="Billing" value={cur[1]}
+        options={[{ value: '', label: 'Default' }, ...(limits?.qos ?? []).map((q) => ({ value: q, label: q }))]}
+        onPick={(v) => put([cur[0] || limits?.default_partition || '', v])} onClose={() => setPick('')} />}
+    </Sheet>}
+  </>
 }
 
 /** One agent's choices: its own node or yours, Claude's remote control, its folder, its model and modes. */
@@ -130,12 +177,8 @@ export function ClusterSettingsSheet({ cluster, onClose }: { cluster: Cluster; o
             onChange={(e) => up({ port: parseInt(e.target.value || '22', 10) || 22 })} />
         </div>}
         {section === 'queues' && <>
-          <div className="px-4 pb-4">
-            <TextArea label="Queues" {...TEXT} value={d.queues ?? ''} placeholder="general:low, general:standard"
-              onChange={(e) => up({ queues: e.target.value })} />
-            <p className="text-sm text-dim">Tried in order, cheapest first. Each is queue:billing.</p>
-          </div>
-          <List>
+          <QueueRows cluster={d.id} value={d.queues} onChange={(queues) => up({ queues })} />
+          <List className="mt-6">
             <NumberRow label="Wait for a cheaper queue" unit="seconds" min={0} value={d.queue_wait ?? 60}
               onChange={(n) => up({ queue_wait: n })} />
           </List>

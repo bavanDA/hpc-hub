@@ -8,6 +8,7 @@
 import { Check } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
+import { shortName } from '@shared/components/clusters/loginCopy'
 import { chosen, gpuName, gpuSummary, isPreset, presets, useGpus, withGpu, type Gpu } from '@shared/components/clusters/gpus'
 import { human, minutes, slurmTime } from '@shared/components/clusters/time'
 import { putCluster } from '@shared/components/clusters/store'
@@ -18,8 +19,8 @@ import {
   ToggleRow, useToast,
 } from '../ui'
 
-/** The cluster's name without the school: "Wulver (NJIT)" -> "Wulver". */
-export const shortName = (c: Cluster) => c.name.split(' (')[0]
+/** "Wulver", "Yale", "SDSC": the cluster's short name. */
+export { shortName }
 
 /** What Slurm allows on the queue the profile asks for (read at the last login). */
 function useLimits(cluster: string, p: Profile) {

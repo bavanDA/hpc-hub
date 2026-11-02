@@ -1,6 +1,7 @@
 // A thin strip at the top of Terminals (the desktop's sidebar footer): each connected cluster, its node and the time
 // left on it. Tapping a cluster opens Clusters. The time left comes from app/watch.ts, which PhoneWatch
 // (watchPhone.ts) keeps looking at once a minute for the whole app. The items wrap, so nothing is cut off.
+import { shortName } from '@shared/components/clusters/loginCopy'
 import { leftText, useTimeLeft } from '@shared/components/app/watch'
 import { useClusters } from '@shared/components/clusters/store'
 import { useGo } from '@shared/nav'
@@ -24,7 +25,7 @@ function Item({ name, s }: { name: string; s: Session }) {
 
 export function StatusStrip() {
   const { clusters, sessions } = useClusters()
-  const shown = (clusters ?? []).map((c) => [c.name.split(' (')[0], sessions[c.id]] as const)
+  const shown = (clusters ?? []).map((c) => [shortName(c), sessions[c.id]] as const)
     .filter(([, s]) => s && (s.connected || s.state === 'Requesting compute node'))
   if (!shown.length) return null
   return (

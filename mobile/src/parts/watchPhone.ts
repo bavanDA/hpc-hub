@@ -4,6 +4,7 @@
 // Settings, nothing while you're already looking at the place it's about, and tapping one opens that place.
 import { createElement, useEffect, useRef, useState, useSyncExternalStore } from 'react'
 
+import { shortName } from '@shared/components/clusters/loginCopy'
 import { setNotifier, useSessionNotifications, type Notice, type NoticeKind } from '@shared/components/app/notify'
 import { useWatch } from '@shared/components/app/watch'
 import type { Page } from '@shared/components/Sidebar'
@@ -125,7 +126,7 @@ function useAskNotifications() {
 /** The stay-connected service: on while you want it and a cluster is connected, naming the clusters. */
 function useKeepAlive(keep: boolean) {
   const { clusters, sessions } = useClusters()
-  const names = Object.fromEntries((clusters ?? []).map((c) => [c.id, c.name.split(' (')[0]]))
+  const names = Object.fromEntries((clusters ?? []).map((c) => [c.id, shortName(c)]))
   const up = Object.values(sessions).filter((s) => s.state !== 'Disconnected' && s.state !== 'Error')
   const connected = up.filter((s) => s.connected).map((s) => names[s.id] ?? s.id)
   const list = (connected.length ? connected : up.map((s) => names[s.id] ?? s.id))
