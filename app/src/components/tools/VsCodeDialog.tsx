@@ -27,8 +27,8 @@ export function inWords(resources: string): string {
   return `${m[1]} ${m[1] === '1' ? 'core' : 'cores'} · ${memText(m[2])} · ${time(m[3])} of ${time(m[4])}`
 }
 
-export function VsCodeDialog({ setup, found, folder: start = '', target: wanted, onClose }:
-  { setup: ToolSetup; found: VsFound; folder?: string; target?: Target; onClose: () => void }) {
+export function VsCodeDialog({ setup, found, folder: start = '', target: wanted, onClose, onBack }:
+  { setup: ToolSetup; found: VsFound; folder?: string; target?: Target; onClose: () => void; onBack?: () => void }) {
   const go = useGo()
   const v = setup.vscode
   const job = found.job
@@ -49,7 +49,7 @@ export function VsCodeDialog({ setup, found, folder: start = '', target: wanted,
   }
 
   return (
-    <EDialog title={`VS Code on ${shortName(setup)}`} onClose={onClose}
+    <EDialog title={`VS Code on ${shortName(setup)}`} onClose={onClose} onBack={onBack}
       actions={<MainButton disabled={!keep && !fits} onClick={open}>{target === 'browser' ? 'Open in the browser' : 'Open in VS Code'}
       </MainButton>}>
       <div className="flex flex-col gap-3 px-5">
