@@ -5,8 +5,7 @@ import { useEffect, useState } from 'react'
 
 import { shortName } from '@shared/components/clusters/loginCopy'
 import { basename } from '@shared/components/files/format'
-import { formatSize } from '@shared/components/projects/size'
-import { sendable, short, when } from '@shared/components/tools/format'
+import { chatPlace, sendable, when } from '@shared/components/tools/format'
 import { startAgent } from '@shared/components/tools/run'
 import { Spinner } from '@shared/components/ui'
 import { useGo } from '@shared/nav'
@@ -81,8 +80,7 @@ export function AgentSheet({ setup, agent: a, project = '', onClose }:
         {!chats && !error && <div className="grid place-items-center border-b border-line py-6"><Spinner /></div>}
         {shown.map((c) => (
           <Row key={c.id} icon={MessageSquare} label={c.name} onPress={() => run(c.cwd || '~', c.id, c.name.slice(0, 40))}
-            sub={[when(c.mtime), short(c.cwd, chats?.home ?? ''), c.size ? formatSize(c.size) : '']
-              .filter(Boolean).join(' · ')} />
+            sub={[when(c.mtime), chatPlace(c.cwd, folder, chats?.home ?? '')].filter(Boolean).join(' · ')} />
         ))}
       </Section>
       {choosing && <PickerSheet title={choosing.label} value={options[choosing.key] ?? ''}

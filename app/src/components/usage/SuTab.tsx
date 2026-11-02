@@ -46,7 +46,7 @@ export function SuTab({ account, people, error, loading, period, onPerson }: {
     <>
       <Section><Summary a={account} /></Section>
       {account && (
-        <Section title={`Who used it, ${period.toLowerCase()}`} note={<span className="inline-flex items-center gap-2">
+        <Section title="Who used it" note={<span className="inline-flex items-center gap-2">
           {loading && people && <Spinner size={14} />}{note}</span>}>
           {people && (
             <List>

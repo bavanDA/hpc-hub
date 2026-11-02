@@ -49,9 +49,9 @@ function chat(id: string, name: string, cwd: string, hoursAgo: number, size: num
 }
 
 const CHATS: Chat[] = [
-  chat('a1b2c3d4-0001', 'Fix the loss plot axis labels', '/mmfs1/project/mygroup/jdoe/thesis', 1, 1_250_000),
-  chat('a1b2c3d4-0002', 'Speed up the data loader', '/mmfs1/project/mygroup/jdoe/thesis/src', 20, 3_400_000),
-  chat('a1b2c3d4-0003', 'Write the methods section draft', '/mmfs1/project/mygroup/jdoe/thesis/paper', 50, 820_000),
+  chat('a1b2c3d4-0001', 'Fix the loss plot axis labels', '/home/jdoe/thesis', 1, 1_250_000),
+  chat('a1b2c3d4-0002', 'Speed up the data loader', '/home/jdoe/thesis/src', 20, 3_400_000),
+  chat('a1b2c3d4-0003', 'Write the methods section draft', '/home/jdoe/thesis/paper', 50, 820_000),
   chat('a1b2c3d4-0004', 'Why does sbatch reject my job', '/home/jdoe', 200, 96_000),
   chat('a1b2c3d4-0005', 'Port train.py to the new cluster', '/project/mygroup/abc123', 900, 2_100_000),
 ]

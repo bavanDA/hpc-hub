@@ -11,10 +11,9 @@ import { ChoiceRow, SearchField, TextArea } from '../e/extra'
 import { NodeFields } from '../e/NodeFields'
 import { EDialog, MainButton, Row, Section, ToggleRow } from '../e/ui'
 import { basename } from '../files/format'
-import { formatSize } from '../projects/size'
 import { Spinner } from '../ui'
 import { FolderField } from './fields'
-import { sendable, short, when } from './format'
+import { chatPlace, sendable, when } from './format'
 import { startAgent } from './run'
 
 export function AgentDialog({ setup, agent: a, project = '', onClose }:
@@ -94,8 +93,7 @@ export function AgentDialog({ setup, agent: a, project = '', onClose }:
         {!chats && !error && <div className="grid place-items-center border-b border-line py-5"><Spinner /></div>}
         {shown.map((c) => (
           <Row key={c.id} label={c.name} onPress={() => run(c.cwd || '~', c.id, c.name.slice(0, 40))}
-            sub={[when(c.mtime), short(c.cwd, chats?.home ?? ''), c.size ? formatSize(c.size) : '']
-              .filter(Boolean).join(' · ')} />
+            sub={[when(c.mtime), chatPlace(c.cwd, folder, chats?.home ?? '')].filter(Boolean).join(' · ')} />
         ))}
       </Section>
     </EDialog>
