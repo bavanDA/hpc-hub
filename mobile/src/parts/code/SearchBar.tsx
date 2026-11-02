@@ -10,8 +10,8 @@ import { closeFind, countFind, countText, findNextMatch, findPreviousMatch, repl
 type Props = { editor: RefObject<EditorHandle | null>; canReplace: boolean; tick: number; onClose: () => void
   onReplaced: (n: number) => void }
 
-const ICON = 'grid size-11 shrink-0 place-items-center rounded-full active:bg-hover disabled:opacity-40'
-const INPUT = 'h-11 min-w-0 flex-1 rounded-xl bg-pill px-3 text-base outline-none focus:ring-2 focus:ring-accent'
+const ICON = 'grid size-12 shrink-0 place-items-center rounded-full active:bg-pressed disabled:opacity-40'
+const INPUT = 'h-12 min-w-0 flex-1 rounded-[10px] bg-soft px-3 text-base outline-none focus:ring-2 focus:ring-accent'
 
 export function SearchBar({ editor, canReplace, tick, onClose, onReplaced }: Props) {
   const [text, setText] = useState('')
@@ -38,7 +38,7 @@ export function SearchBar({ editor, canReplace, tick, onClose, onReplaced }: Pro
   }
 
   return (
-    <div className="flex shrink-0 flex-col gap-2 border-b border-line bg-header px-2 py-2">
+    <div className="flex shrink-0 flex-col gap-2 border-b border-line bg-window px-2 py-2">
       <div className="flex items-center gap-1">
         <input autoFocus value={text} onChange={(e) => setText(e.target.value)} placeholder="Find in file"
           aria-label="Find in file" autoCapitalize="none" autoCorrect="off" spellCheck={false} className={INPUT}
@@ -50,7 +50,7 @@ export function SearchBar({ editor, canReplace, tick, onClose, onReplaced }: Pro
           <ChevronDown size={20} /></button>
         {canReplace && (
           <button aria-label="Replace" aria-pressed={replacing} onClick={() => setReplacing((r) => !r)}
-            className={`${ICON} ${replacing ? 'bg-accent-soft text-accent-text' : ''}`}><Replace size={18} /></button>
+            className={`${ICON} ${replacing ? 'bg-accent text-on-accent' : ''}`}><Replace size={18} /></button>
         )}
         <button aria-label="Close search" className={ICON} onClick={onClose}><X size={20} /></button>
       </div>
@@ -59,10 +59,12 @@ export function SearchBar({ editor, canReplace, tick, onClose, onReplaced }: Pro
           <input value={replace} onChange={(e) => setReplace(e.target.value)} placeholder="Replace with"
             aria-label="Replace with" autoCapitalize="none" autoCorrect="off" spellCheck={false} className={INPUT} />
           <button disabled={!text} onClick={() => step(replaceOne)}
-            className="h-11 shrink-0 rounded-xl bg-pill px-3 font-semibold active:bg-selected disabled:opacity-40">
+            className="h-12 shrink-0 rounded-[10px] border border-line-strong px-3 font-semibold active:bg-pressed
+              disabled:opacity-40">
             Replace</button>
           <button disabled={!text} onClick={() => step((v) => onReplaced(replaceEvery(v)))}
-            className="h-11 shrink-0 rounded-xl bg-pill px-3 font-semibold active:bg-selected disabled:opacity-40">
+            className="h-12 shrink-0 rounded-[10px] border border-line-strong px-3 font-semibold active:bg-pressed
+              disabled:opacity-40">
             All</button>
         </div>
       )}

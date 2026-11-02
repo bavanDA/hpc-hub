@@ -5,13 +5,12 @@ import { useEffect, useState } from 'react'
 
 import { allDrafts, type Draft } from '@shared/components/code/drafts'
 import { useClusters } from '@shared/components/clusters/store'
-import { EmptyState } from '@shared/components/ui'
 import { useGo } from '@shared/nav'
 import { call } from '@shared/rpc'
 import type { Project, ProjectList } from '@shared/types/projects'
-import { Button, ListRow } from '../../ui'
+import { EmptyState, MainButton, Row, Section } from '../../ui'
 import { useConnected } from '../useConnected'
-import { folderOf, nameOf, recentFiles } from './util'
+import { folderOf, nameOf, recentFiles, shortCluster, wrapPath } from './util'
 
 type Props = { onOpen: (cluster: string, path: string) => void; onBrowse: (cluster?: string, path?: string) => void }
 
@@ -22,7 +21,9 @@ export function Start({ onOpen, onBrowse }: Props) {
   const [drafts, setDrafts] = useState<Draft[]>([])
   const [projects, setProjects] = useState<Project[]>([])
   const recent = recentFiles()
-  const name = (id: string) => clusters?.find((c) => c.id === id)?.name ?? id
+  const name = (id: string) => shortCluster(clusters?.find((c) => c.id === id)?.name ?? id)
+  const many = new Set([...drafts, ...recent, ...projects].map((x) => x.cluster)).size > 1
+  const where = (cluster: string, path: string) => wrapPath(many ? `${name(cluster)} · ${path}` : path)
   const isLive = (id: string) => live.some((c) => c.id === id)
 
   useEffect(() => {
@@ -33,42 +34,43 @@ export function Start({ onOpen, onBrowse }: Props) {
 
   if (!live.length && !drafts.length && !recent.length) {
     return <EmptyState icon={FolderOpen} title="No cluster connected"
-      text="Connect one to open and edit its files here." action={<Button kind="primary" onClick={() => go('clusters')}>
-        Go to Clusters</Button>} />
+      text="Connect one to open its files here." action={<MainButton onClick={() => go('clusters')}>
+        Go to Clusters</MainButton>} />
   }
 
-  const section = 'mt-5 mb-1 text-sm font-semibold text-dim'
+  const when = (at: number) => new Date(at).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })
   return (
-    <div className="h-full overflow-y-auto px-4 pb-6">
-      <p className="pt-2 text-dim">Open a file on your cluster to read or change it, and ask an agent about it.</p>
-      <Button kind="primary" icon={FolderOpen} className="mt-4 w-full" disabled={!live.length}
-        onClick={() => onBrowse()}>Browse files</Button>
+    <div className="h-full overflow-y-auto pb-6">
+      <div className="px-4 pt-2">
+        <MainButton icon={FolderOpen} disabled={!live.length} onClick={() => onBrowse()}>Browse files</MainButton>
+      </div>
 
-      {drafts.length > 0 && <>
-        <p className={section}>Edits you haven't saved</p>
-        {drafts.map((d) => (
-          <ListRow key={`${d.cluster}:${d.path}`} icon={FileWarning} title={nameOf(d.path)}
-            subtitle={`${name(d.cluster)} · ${new Date(d.at).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}`}
-            onClick={() => onOpen(d.cluster, d.path)} />
-        ))}
-      </>}
+      {drafts.length > 0 && (
+        <Section title="Not saved">
+          {drafts.map((d) => (
+            <Row key={`${d.cluster}:${d.path}`} icon={FileWarning} label={nameOf(d.path)}
+              sub={many ? `${name(d.cluster)} · ${when(d.at)}` : when(d.at)} onPress={() => onOpen(d.cluster, d.path)} />
+          ))}
+        </Section>
+      )}
 
-      {recent.length > 0 && <>
-        <p className={section}>Recent</p>
-        {recent.map((r) => (
-          <ListRow key={`${r.cluster}:${r.path}`} icon={Clock} title={nameOf(r.path)}
-            subtitle={`${name(r.cluster)} · ${folderOf(r.path)}`}
-            onClick={() => isLive(r.cluster) ? onOpen(r.cluster, r.path) : go('clusters')} />
-        ))}
-      </>}
+      {recent.length > 0 && (
+        <Section title="Recent">
+          {recent.map((r) => (
+            <Row key={`${r.cluster}:${r.path}`} icon={Clock} label={nameOf(r.path)} sub={where(r.cluster, folderOf(r.path))}
+              onPress={() => isLive(r.cluster) ? onOpen(r.cluster, r.path) : go('clusters')} />
+          ))}
+        </Section>
+      )}
 
-      {projects.length > 0 && <>
-        <p className={section}>Projects</p>
-        {projects.map((p) => (
-          <ListRow key={p.id} icon={FolderGit2} title={p.name} subtitle={`${p.cluster_name} · ${p.path}`}
-            onClick={() => isLive(p.cluster) ? onBrowse(p.cluster, p.path) : go('clusters')} />
-        ))}
-      </>}
+      {projects.length > 0 && (
+        <Section title="Projects">
+          {projects.map((p) => (
+            <Row key={p.id} icon={FolderGit2} label={p.name} sub={where(p.cluster, p.path)}
+              onPress={() => isLive(p.cluster) ? onBrowse(p.cluster, p.path) : go('clusters')} />
+          ))}
+        </Section>
+      )}
     </div>
   )
 }

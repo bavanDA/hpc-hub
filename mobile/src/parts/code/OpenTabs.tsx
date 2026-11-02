@@ -34,14 +34,14 @@ export function OpenTabs({ files, current, onClose }: Props) {
 function Chip({ file, on, onMenu, onClose }: { file: OpenFile; on: boolean; onMenu: () => void; onClose: () => void }) {
   const press = useLongPress(() => selectFile(file.key), onMenu)
   return (
-    <div role="tab" aria-selected={on} className={`flex h-11 shrink-0 items-center rounded-full pl-4 text-sm font-semibold
-      ${on ? 'bg-accent-soft text-accent-text' : 'bg-pill text-dim'}`}>
-      <button {...press} className="flex h-full max-w-44 items-center gap-1.5 truncate">
-        {isDirty(file) && <span className="size-2 shrink-0 rounded-full bg-accent" aria-label="Unsaved" />}
-        <span className="truncate">{file.name}</span>
+    <div role="tab" aria-selected={on} className={`flex h-12 shrink-0 items-center rounded-full pl-4 text-sm font-semibold
+      ${on ? 'bg-accent text-on-accent' : 'border border-line-strong'}`}>
+      <button {...press} className="flex h-full items-center gap-1.5 whitespace-nowrap">
+        {isDirty(file) && <span className="size-2 shrink-0 rounded-full bg-current" aria-label="Unsaved" />}
+        <span>{file.name}</span>
       </button>
       <button aria-label={`Close ${file.name}`} onClick={onClose}
-        className="grid size-11 shrink-0 place-items-center rounded-full active:bg-hover"><X size={16} /></button>
+        className="grid size-12 shrink-0 place-items-center rounded-full active:bg-pressed"><X size={16} /></button>
     </div>
   )
 }

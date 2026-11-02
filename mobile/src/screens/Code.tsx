@@ -2,7 +2,7 @@
 // view mode so scrolling never brings up the keyboard; Edit switches to typing with a row of keys above it. Ask
 // sends the file or the selected lines to an agent on the cluster and shows its change as a diff to accept. Open
 // files stay open while you look at other tabs (code/store.ts), and unsaved edits survive the app being closed.
-import { Folder, FolderOpen, MoreVertical, Pencil, Save, Search, Sparkles } from 'lucide-react'
+import { Copy, Folder, FolderOpen, Hash, MoreVertical, Pencil, Save, Search } from 'lucide-react'
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 
 import { getAsk, isRunning, loadAsks, unseenCount, useAsks } from '@shared/components/code/ask'
@@ -22,7 +22,7 @@ import type { Limits } from '@shared/types/clusters'
 import type { TmuxSession } from '@shared/types/terminals'
 import { AskSheet, type AskStart } from '../parts/code/AskSheet'
 import { Banners, type Banner } from '../parts/code/Banners'
-import { ConflictSheet, type Compare } from '../parts/code/ConflictSheet'
+import { ConflictChoice, ConflictSheet, type Compare } from '../parts/code/ConflictSheet'
 import { FilesDrawer } from '../parts/code/FilesDrawer'
 import { KeyRow } from '../parts/code/KeyRow'
 import { LogFollow } from '../parts/code/LogFollow'
@@ -31,10 +31,10 @@ import { ResultSheet } from '../parts/code/ResultSheet'
 import { SearchBar } from '../parts/code/SearchBar'
 import { SelectionBar } from '../parts/code/SelectionBar'
 import { Start } from '../parts/code/Start'
-import { blamed, folderOf, isLog, lastError, preloadLanguage, reference, rememberFile, runCommand,
+import { blamed, folderOf, isLog, lastError, preloadLanguage, reference, rememberFile, runCommand, shortCluster,
   type Spot } from '../parts/code/util'
 import { useEditorKeyboard } from '../parts/keyboard'
-import { ActionSheet, BottomSheet, Button, ConfirmSheet, PromptSheet, useToast, type SheetAction } from '../ui'
+import { ActionSheet, BottomSheet, Button, ConfirmSheet, PromptSheet, Row, useToast, type SheetAction } from '../ui'
 
 const Editor = lazy(() => import('@shared/components/code/Editor'))
 
@@ -45,9 +45,9 @@ function prefs(): Prefs {
   catch { return { wrap: true, fontSize: 13 } }
 }
 
-const ICON = 'relative grid size-11 shrink-0 place-items-center rounded-full active:bg-hover disabled:opacity-40'
+const ICON = 'relative grid size-12 shrink-0 place-items-center rounded-full active:bg-pressed disabled:opacity-40'
 
-type Confirm = { kind: 'close' | 'reload'; file: OpenFile } | null
+type Confirm = { kind: 'close' | 'reload' | 'theirs'; file: OpenFile } | null
 
 export function Code() {
   const toast = useToast()
@@ -67,6 +67,7 @@ export function Code() {
   const [ask, setAsk] = useState<AskStart | null>(null)
   const [result, setResult] = useState<string | null>(null)
   const [compare, setCompare] = useState<Compare | null>(null)
+  const [conflict, setConflict] = useState<OpenFile | null>(null)
   const [menu, setMenu] = useState(false)
   const [pathSheet, setPathSheet] = useState(false)
   const [gotoLine, setGotoLine] = useState(false)
@@ -81,7 +82,7 @@ export function Code() {
   const [follow, setFollow] = useState(true)
   const [partitions, setPartitions] = useState<Record<string, string[]>>({})
 
-  const clusterName = (id: string) => clusters?.find((c) => c.id === id)?.name ?? id
+  const clusterName = (id: string) => shortCluster(clusters?.find((c) => c.id === id)?.name ?? id)
   const connected = (id: string) => !!sessions[id]?.connected
   const locked = (file: OpenFile) => !file.writable || readonly.current.has(file.key) || isLog(file.path)
 
@@ -166,7 +167,7 @@ export function Code() {
       setEvents((all) => { const { [file.key]: _, ...rest } = all; return rest })
       return true
     }
-    if (r.conflict) setCompare({ kind: 'cluster', file: getFile(file.key) ?? file })
+    if (r.conflict) setConflict(getFile(file.key) ?? file)
     else toast(r.error)
     return false
   }
@@ -223,16 +224,19 @@ export function Code() {
     const name = clusterName(f.cluster)
     const e = events[f.key]
     if (!connected(f.cluster)) {
-      banners.push({ id: 'offline', tone: 'warn', text: `Not connected to ${name}. You can read the file, and save once connected.`,
+      banners.push({ id: 'offline', tone: 'warn', text: `Not connected to ${name}. Connect to save.`,
         actions: [{ label: 'Connect', primary: true, run: () => void call('clusters.connect', { cluster: f.cluster, switch: true })
           .catch((err: Error) => toast(err.message)) }] })
     }
     if (e?.kind === 'changed') {
-      banners.push({ id: 'changed', tone: 'warn', text: `${f.name} changed on ${name} while you were editing it.`,
+      banners.push({ id: 'changed', tone: 'warn', text: `${f.name} changed on ${name} while you were editing.`,
         actions: [
           { label: 'Compare', primary: true, run: () => setCompare({ kind: 'cluster', file: f }) },
-          { label: 'Reload', run: () => setConfirm({ kind: 'reload', file: f }) },
-          { label: 'Keep mine', run: () => setEvents((all) => { const { [f.key]: _, ...rest } = all; return rest }) },
+          { label: "Use the cluster's", run: () => setConfirm({ kind: 'theirs', file: f }) },
+          { label: 'Save mine', run: () => void saveFile(f.key, true).then((r) => {
+            toast(r.saved ? 'Saved' : r.conflict ? 'It changed again. Try once more.' : r.error)
+            if (r.saved) setEvents((all) => { const { [f.key]: _, ...rest } = all; return rest })
+          }) },
         ] })
     }
     if (e?.kind === 'agent-changed') {
@@ -310,26 +314,23 @@ export function Code() {
         <button aria-label="Open a file" className={ICON} onClick={() => setDrawer({ cluster: f?.cluster, path: f ? folderOf(f.path) : undefined })}>
           <FolderOpen size={22} /></button>
         {f
-          ? <button onClick={() => setPathSheet(true)} className="flex h-11 min-w-0 flex-1 items-center gap-1.5 rounded-lg px-1 text-left"
+          ? <button onClick={() => setPathSheet(true)} className="flex min-h-12 min-w-0 flex-1 items-center gap-1.5 rounded-lg px-1 text-left active:bg-pressed"
               aria-label={`${f.name}, ${f.path}`}>
-              <span className="min-w-0 truncate text-lg font-bold">{f.name}</span>
-              {isDirty(f) && <span className="size-2 shrink-0 rounded-full bg-accent" aria-label="Unsaved" />}
+              <span className="min-w-0 text-[17px] leading-tight font-semibold break-all">{f.name}</span>
+              {isDirty(f) && <span className="size-2 shrink-0 rounded-full bg-text" aria-label="Unsaved" />}
             </button>
-          : <h1 className="min-w-0 flex-1 truncate px-1 text-2xl font-bold">Code</h1>}
+          : <h1 className="min-w-0 flex-1 px-1 text-2xl font-bold">Code</h1>}
         {f && !isLog(f.path) && !f.loading && (
           <button aria-label="Find in file" className={ICON} onClick={() => setSearching((s) => !s)}><Search size={20} /></button>
         )}
         {f && !f.loading && (
-          <button aria-label={running ? `Ask an agent, ${running} running` : 'Ask an agent'} className={`${ICON} text-accent-text`}
-            onClick={() => startAsk('free')}>
-            <Sparkles size={20} />
-            {(running > 0 || unseen > 0) && (
-              <span className={`absolute top-1 right-1 grid min-w-4 place-items-center rounded-full px-1 text-[10px] font-bold
-                text-white ${running ? 'bg-accent' : 'bg-ok-dot'}`}>{running || ''}</span>
-            )}
-          </button>
+          <Button aria-label={running ? `Ask an agent, ${running} running` : unseen ? 'Ask an agent, new answer' : 'Ask an agent'}
+            className="mx-1 px-3.5" onClick={() => startAsk('free')}>
+            Ask{running > 0 && <span className="font-normal text-dim tabular-nums">{running}</span>}
+            {!running && unseen > 0 && <span aria-hidden className="size-2 rounded-full bg-text" />}
+          </Button>
         )}
-        {f && isDirty(f) && <button aria-label="Save" className={`${ICON} text-accent-text`} onClick={() => void save()}><Save size={20} /></button>}
+        {f && isDirty(f) && <button aria-label="Save" className={ICON} onClick={() => void save()}><Save size={20} /></button>}
         {f && <button aria-label="More" className={ICON} onClick={() => setMenu(true)}><MoreVertical size={20} /></button>}
       </header>
 
@@ -386,16 +387,16 @@ export function Code() {
         onOpen={(c, p, editing) => void open(c, p, undefined, editing)} onClose={() => setDrawer(null)} />}
       {menu && f && <ActionSheet title={f.name} actions={menuActions} onClose={() => setMenu(false)} />}
       {pathSheet && f && (
-        <BottomSheet title={clusterName(f.cluster)} onClose={() => setPathSheet(false)}>
-          <p className="px-1 pb-3 font-mono text-sm break-all select-text">{f.path}</p>
-          <div className="flex flex-col gap-2">
-            <Button onClick={() => { setPathSheet(false); copy(f.path, 'Path copied') }}>Copy path</Button>
+        <BottomSheet onClose={() => setPathSheet(false)}>
+          <p className="pb-3 font-mono text-sm break-all select-text">{f.path}</p>
+          <div className="-mx-4 border-t border-line">
+            <Row icon={Copy} label="Copy path" onPress={() => { setPathSheet(false); copy(f.path, 'Path copied') }} />
             {!isLog(f.path) && (
-              <Button onClick={() => { setPathSheet(false); copy(`${f.path}:${editor.current?.line() ?? f.cursor.line}`, 'Copied with the line') }}>
-                Copy path with the line</Button>
+              <Row icon={Hash} label="Copy path with the line" onPress={() => {
+                setPathSheet(false); copy(`${f.path}:${editor.current?.line() ?? f.cursor.line}`, 'Copied with the line') }} />
             )}
-            <Button icon={Folder} onClick={() => { setPathSheet(false); go('files', { cluster: f.cluster, path: folderOf(f.path) }) }}>
-              Show in Files</Button>
+            <Row icon={Folder} label="Show in Files" onPress={() => {
+              setPathSheet(false); go('files', { cluster: f.cluster, path: folderOf(f.path) }) }} />
           </div>
         </BottomSheet>
       )}
@@ -404,9 +405,12 @@ export function Code() {
           onSubmit={(t) => { const n = parseInt(t, 10); if (n > 0) editor.current?.goto(n) }} />
       )}
       {confirm && (
-        <ConfirmSheet title={confirm.kind === 'close' ? `Close ${confirm.file.name}?` : `Reload ${confirm.file.name}?`}
-          text={confirm.kind === 'close' ? "Your edits aren't saved. They'll be lost." : `Your edits are replaced by the version on ${clusterName(confirm.file.cluster)}.`}
-          keep="Keep editing" confirm={confirm.kind === 'close' ? 'Close without saving' : 'Reload'} danger onClose={() => setConfirm(null)}
+        <ConfirmSheet title={confirm.kind === 'close' ? `Close ${confirm.file.name}?`
+          : confirm.kind === 'theirs' ? `Use the copy on ${clusterName(confirm.file.cluster)}?` : `Reload ${confirm.file.name}?`}
+          text={confirm.kind === 'close' ? "Your edits aren't saved. They'll be lost."
+            : `Your edits are replaced by the version on ${clusterName(confirm.file.cluster)}.`}
+          keep="Keep editing" danger onClose={() => setConfirm(null)}
+          confirm={{ close: 'Close without saving', reload: 'Reload', theirs: "Use the cluster's" }[confirm.kind]}
           onConfirm={() => {
             const file = confirm.file
             void discardDraft(file.cluster, file.path)
@@ -415,6 +419,13 @@ export function Code() {
             else void reloadFile(file.key)
           }} />
       )}
+      {conflict && <ConflictChoice file={conflict} clusterName={clusterName(conflict.cluster)}
+        onCompare={() => { setCompare({ kind: 'cluster', file: conflict }); setConflict(null) }}
+        onDone={(msg) => {
+          if (msg) toast(msg)
+          setEvents((all) => { const { [conflict.key]: _, ...rest } = all; return rest })
+          setConflict(null)
+        }} />}
       {compare && <ConflictSheet compare={compare} clusterName={clusterName(compare.file.cluster)}
         onDone={(msg) => {
           if (msg) toast(msg)
