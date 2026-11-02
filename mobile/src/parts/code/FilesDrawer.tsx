@@ -1,7 +1,7 @@
 // The Code tab's file browser, full screen: pick the cluster, a place (home, project, scratch), walk the folders
 // and tap a file to open it. "Go to file" finds a file by name under the folder you're in. A long press offers New
 // file, New folder, Rename, Delete and Copy path.
-import { File, FilePlus2, Folder, FolderPlus, Search } from 'lucide-react'
+import { CornerLeftUp, File, FilePlus2, Folder, FolderPlus, Search } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 
 import { isDir, join, parent, sorted } from '@shared/components/files/format'
@@ -10,9 +10,11 @@ import { Spinner } from '@shared/components/ui'
 import { call } from '@shared/rpc'
 import type { FoundFile } from '@shared/types/code'
 import type { Entry, Listing, Place } from '@shared/types/files'
-import { ActionSheet, ConfirmSheet, ListRow, PromptSheet, SearchField, Segments, Sheet, useToast } from '../../ui'
+import { ActionSheet, Chips, ConfirmSheet, EmptyState, List, PromptSheet, Row, SearchField, Segments, Sheet, useToast }
+  from '../../ui'
 import { useConnected } from '../useConnected'
 import { useLongPress } from '../terminal/useLongPress'
+import { shortCluster } from './util'
 
 type Props = {
   start?: { cluster: string; path: string }
@@ -71,65 +73,63 @@ export function FilesDrawer({ start, onOpen, onClose }: Props) {
 
   if (!cluster) {
     return (
-      <Sheet title="Files" onClose={onClose}>
-        <p className="text-dim">Connect a cluster first, from the Clusters tab.</p>
+      <Sheet title="Open a file" onClose={onClose}>
+        <EmptyState icon={Folder} title="No cluster connected" text="Connect one in Clusters to see its files." />
       </Sheet>
     )
   }
 
+  const ICON = 'grid size-12 shrink-0 place-items-center rounded-full active:bg-pressed'
   return (
-    <Sheet title="Open a file" onClose={onClose}>
-      {live.length > 1 && (
-        <div className="mb-3"><Segments value={cluster} options={live.map((c) => [c.id, c.name] as const)}
-          onChange={(id) => { pick(id); setPath('') }} /></div>
-      )}
-      <SearchField value={query} onChange={setQuery} placeholder="Go to file in this folder" />
-      {!query && places.length > 0 && (
-        <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
-          {places.map((p) => (
-            <button key={p.path} onClick={() => setPath(p.path)} className={`h-11 shrink-0 rounded-full px-4 text-sm
-              font-semibold ${here === p.path ? 'bg-accent-soft text-accent-text' : 'bg-pill text-dim'}`}>{p.label}</button>
-          ))}
-        </div>
-      )}
+    <Sheet flush title="Open a file" onClose={onClose}>
+      <div className="flex flex-col gap-3 px-4 pb-2">
+        {live.length > 1 && <Segments label="Cluster" value={cluster}
+          options={live.map((c) => [c.id, shortCluster(c.name)] as const)} onChange={(id) => { pick(id); setPath('') }} />}
+        <SearchField value={query} onChange={setQuery} placeholder="Go to file in this folder" />
+        {!query && places.length > 1 && (
+          <Chips one options={places.map((p) => [p.path, p.label] as const)} value={places.some((p) => p.path === here) ? [here] : []}
+            onChange={([p]) => setPath(p)} />
+        )}
+      </div>
       {!query && (
-        <div className="mt-2 flex items-center gap-1 overflow-x-auto text-sm" aria-label="Folder path">
-          <button className="h-11 shrink-0 px-1 text-dim" onClick={() => setPath('/')}>/</button>
-          {crumbs.map((c, i) => (
-            <button key={i} onClick={() => setPath('/' + crumbs.slice(0, i + 1).join('/'))}
-              className={`h-11 shrink-0 px-1 ${i === crumbs.length - 1 ? 'font-semibold' : 'text-dim'}`}>
-              {c}{i < crumbs.length - 1 && <span className="pl-1 text-faint">/</span>}</button>
-          ))}
-          <span className="flex-1" />
-          <button aria-label="New file here" onClick={() => setDialog({ kind: 'new-file' })}
-            className="grid size-11 shrink-0 place-items-center rounded-full active:bg-hover"><FilePlus2 size={20} /></button>
-          <button aria-label="New folder here" onClick={() => setDialog({ kind: 'new-folder' })}
-            className="grid size-11 shrink-0 place-items-center rounded-full active:bg-hover"><FolderPlus size={20} /></button>
+        <div className="flex items-center gap-1 pl-3 pr-1" aria-label="Folder path">
+          <div className="flex min-w-0 flex-1 flex-wrap items-center text-sm">
+            <button className="h-12 shrink-0 px-1 text-dim" onClick={() => setPath('/')}>/</button>
+            {crumbs.map((c, i) => (
+              <button key={i} onClick={() => setPath('/' + crumbs.slice(0, i + 1).join('/'))}
+                className={`h-12 min-w-0 px-1 break-all ${i === crumbs.length - 1 ? 'font-semibold' : 'text-dim'}`}>
+                {c}{i < crumbs.length - 1 && <span className="pl-1 text-faint">/</span>}</button>
+            ))}
+          </div>
+          <button aria-label="New file here" onClick={() => setDialog({ kind: 'new-file' })} className={ICON}>
+            <FilePlus2 size={20} className="text-dim" /></button>
+          <button aria-label="New folder here" onClick={() => setDialog({ kind: 'new-folder' })} className={ICON}>
+            <FolderPlus size={20} className="text-dim" /></button>
         </div>
       )}
 
-      <div className="mt-1">
-        {error && <p className="py-4 text-bad">{error}</p>}
+      <List>
+        {error && <p className="px-4 py-4 text-bad">{error}</p>}
         {query
           ? found === null
             ? <div className="grid h-24 place-items-center"><Spinner /></div>
             : found.length === 0
-              ? <p className="py-4 text-dim">No file named like that under {crumbs[crumbs.length - 1] ?? '/'}.</p>
+              ? <p className="px-4 py-4 text-dim">No file named like that in {crumbs[crumbs.length - 1] ?? '/'}.</p>
               : found.slice(0, 200).map((f) => (
-                  <ListRow key={f.path} icon={Search} title={f.name} subtitle={f.path.slice(here.length + 1) || f.path}
-                    onClick={() => onOpen(cluster, f.path)} trailing={<span />} />
+                  <Row key={f.path} icon={Search} label={f.name} sub={folderIn(f.path, here)}
+                    onPress={() => onOpen(cluster, f.path)} />
                 ))
           : !listing
             ? <div className="grid h-24 place-items-center"><Spinner /></div>
             : <>
-                {here !== '/' && <ListRow icon={Folder} title=".." subtitle="Up one folder" onClick={() => setPath(parent(here))} />}
+                {here !== '/' && <Row icon={CornerLeftUp} label="Up one folder" onPress={() => setPath(parent(here))} />}
                 {entries.map((e) => (
                   <EntryRow key={e.name} entry={e} onTap={() => isDir(e) ? setPath(join(here, e.name)) : onOpen(cluster, join(here, e.name))}
                     onLong={() => setDialog({ kind: 'entry', entry: e })} />
                 ))}
-                {entries.length === 0 && <p className="py-4 text-dim">This folder is empty.</p>}
+                {entries.length === 0 && <p className="px-4 py-4 text-dim">This folder is empty.</p>}
               </>}
-      </div>
+      </List>
 
       {dialog?.kind === 'entry' && (
         <ActionSheet title={dialog.entry.name} onClose={() => setDialog(null)} actions={[
@@ -164,13 +164,21 @@ export function FilesDrawer({ start, onOpen, onClose }: Props) {
   )
 }
 
+/** Where a found file is, under the folder you searched from ("src/model", or nothing when it's right here). */
+function folderIn(path: string, root: string) {
+  const rel = path.startsWith(root + '/') ? path.slice(root.length + 1) : path
+  const at = rel.lastIndexOf('/')
+  return at > 0 ? rel.slice(0, at) : undefined
+}
+
 function EntryRow({ entry, onTap, onLong }: { entry: Entry; onTap: () => void; onLong: () => void }) {
   const press = useLongPress(onTap, onLong)
   const dir = isDir(entry)
   return (
-    <button {...press} className="flex min-h-14 w-full items-center gap-3 py-2 text-left active:bg-hover">
-      {dir ? <Folder size={22} className="text-accent-text" /> : <File size={22} className="text-dim" />}
-      <span className="min-w-0 flex-1 truncate">{entry.name}</span>
+    <button {...press} className="flex min-h-14 w-full items-center gap-3 border-b border-line px-4 py-2 text-left
+      active:bg-pressed">
+      {dir ? <Folder size={22} className="shrink-0 text-dim" /> : <File size={22} className="shrink-0 text-dim" />}
+      <span className="min-w-0 flex-1 break-all">{entry.name}</span>
     </button>
   )
 }

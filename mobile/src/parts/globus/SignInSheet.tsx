@@ -8,7 +8,7 @@ import { looksLikeCode, pastedCode } from '@shared/components/globus/parts'
 import { Spinner } from '@shared/components/ui'
 import { call } from '@shared/rpc'
 import type { GlobusStatus, Login } from '@shared/types/globus'
-import { Button, Field, Sheet } from '../../ui'
+import { Button, Field, MainButton, Sheet } from '../../ui'
 
 const read = () => navigator.clipboard.readText().catch(() => '')
 
@@ -53,10 +53,9 @@ export function SignInSheet({ start, onClose, onDone }:
   const fresh = !login || login.fresh || !!login.domain
 
   return (
-    <Sheet title={fresh ? 'Sign in to Globus' : 'Allow Globus'} onClose={onClose} actions={<>
-      <Button className="flex-1" onClick={onClose}>Cancel</Button>
-      <Button kind="primary" className="flex-1" disabled={!clean || busy} onClick={finish}>
-        {busy && <Spinner size={16} />}{fresh ? 'Sign in' : 'Done'}</Button></>}>
+    <Sheet title={fresh ? 'Sign in to Globus' : 'Allow Globus'} onClose={onClose} actions={
+      <MainButton disabled={!clean || busy} onClick={finish}>
+        {busy && <Spinner size={16} />}{fresh ? 'Sign in' : 'Done'}</MainButton>}>
       {!login ? (
         <div className="grid h-40 place-items-center">{error ? <p className="text-bad">{error}</p> : <Spinner size={28} />}</div>
       ) : (
@@ -64,14 +63,14 @@ export function SignInSheet({ start, onClose, onDone }:
           <ol className="flex flex-col gap-3">
             {steps(login).map(([title, text], i) => (
               <li key={title} className="flex gap-3">
-                <span className="grid size-7 shrink-0 place-items-center rounded-full bg-accent/15 font-bold
-                  text-accent-text">{i + 1}</span>
+                <span className="grid size-7 shrink-0 place-items-center rounded-full border border-line-strong
+                  text-sm font-semibold">{i + 1}</span>
                 <span className="min-w-0"><span className="block font-semibold">{title}</span>
                   <span className="block text-sm text-dim">{text}</span></span>
               </li>
             ))}
           </ol>
-          <Button kind="primary" icon={ExternalLink} onClick={() => openSystem(login.url)}>Open the Globus page</Button>
+          <Button icon={ExternalLink} onClick={() => openSystem(login.url)}>Open the Globus page</Button>
           <div className="flex items-end gap-2">
             <div className="min-w-0 flex-1">
               <Field label="Code from Globus" value={code} placeholder="Paste the code"

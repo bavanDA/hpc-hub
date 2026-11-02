@@ -3,7 +3,7 @@
 import { FileX, Plus } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 
-import { EmptyState, Spinner } from '@shared/components/ui'
+import { Spinner } from '@shared/components/ui'
 import { useCall, useEvent } from '@shared/hooks'
 import { usePageParams } from '@shared/nav'
 import { call } from '@shared/rpc'
@@ -12,7 +12,7 @@ import { Header } from '../parts/Header'
 import { NewPaperSheet } from '../parts/papers/NewPaperSheet'
 import { Paper } from '../parts/papers/Paper'
 import { PaperList } from '../parts/papers/PaperList'
-import { Button, PickerSheet, useToast } from '../ui'
+import { Button, EmptyState, PickerSheet, useToast } from '../ui'
 
 // The open paper stays open while you visit other screens
 const memory = { opened: null as Opened | null, asked: '' }
@@ -52,9 +52,9 @@ export function Papers() {
     <div className="flex h-full flex-col">
       <Header title="Papers">
         {data && <button aria-label="New paper" onClick={() => setCreating(true)}
-          className="grid size-12 place-items-center rounded-full active:bg-hover"><Plus size={24} /></button>}
+          className="grid size-12 place-items-center rounded-full active:bg-pressed"><Plus size={24} /></button>}
       </Header>
-      <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4">
+      <div className="min-h-0 flex-1 overflow-y-auto pb-6">
         {picker.error && !data && <EmptyState icon={FileX} title="Couldn't load your papers" text={picker.error}
           action={<Button onClick={reload}>Try again</Button>} />}
         {!data && !picker.error && <div className="grid h-40 place-items-center"><Spinner size={28} /></div>}

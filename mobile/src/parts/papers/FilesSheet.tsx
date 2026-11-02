@@ -39,9 +39,9 @@ function ordered(entries: TreeEntry[]): TreeEntry[] {
 
 function iconFor(e: TreeEntry) {
   const x = ext(e.path)
-  if (e.kind === 'd') return <Folder size={20} className="shrink-0 text-accent-text" />
-  if (x === '.tex') return <FileText size={20} className="shrink-0 text-ok" />
-  if (x === '.bib') return <BookOpen size={20} className="shrink-0 text-warn" />
+  if (e.kind === 'd') return <Folder size={20} className="shrink-0 text-dim" />
+  if (x === '.tex') return <FileText size={20} className="shrink-0 text-dim" />
+  if (x === '.bib') return <BookOpen size={20} className="shrink-0 text-dim" />
   if (IMAGE_EXT.includes(x) || x === '.pdf' || x === '.eps') return <Image size={20} className="shrink-0 text-dim" />
   return <File size={20} className="shrink-0 text-dim" />
 }
@@ -53,31 +53,33 @@ export function FilesSheet({ entries, current, main, actions, onClose }: { entri
   const done = () => setAsk(null)
 
   return (
-    <Sheet title="Files" onClose={onClose}>
-      <div className="mb-3 flex gap-2">
+    <Sheet flush title="Files" onClose={onClose}>
+      <div className="flex gap-2 px-4 pb-3">
         <Button icon={FilePlus} className="flex-1" onClick={() => setAsk({ kind: 'file', into: '' })}>New file</Button>
         <Button icon={FolderPlus} className="flex-1" onClick={() => setAsk({ kind: 'folder', into: '' })}>New folder</Button>
       </div>
+      <div className="border-t border-line">
       {list.map((e) => {
         const depth = e.path.split('/').length - 1
         const text = e.kind === 'f' && TEXT_EXT.includes(ext(e.path))
         return (
-          <div key={e.path} style={{ paddingLeft: depth * 20 }}
-            className={`flex min-h-12 items-center gap-1 rounded-xl ${e.path === current ? 'bg-selected' : ''}`}>
+          <div key={e.path} style={{ paddingLeft: 8 + depth * 20 }}
+            className={`flex min-h-14 items-center gap-1 border-b border-line ${e.path === current ? 'bg-soft' : ''}`}>
             <button disabled={!text} onClick={() => { onClose(); actions.open(e.path) }}
-              className="flex min-h-12 min-w-0 flex-1 items-center gap-3 px-2 text-left enabled:active:bg-hover">
+              className="flex min-h-14 min-w-0 flex-1 items-center gap-3 px-2 text-left enabled:active:bg-pressed">
               {iconFor(e)}
-              <span className={`min-w-0 flex-1 truncate ${e.kind === 'f' && !text ? 'text-dim' : ''}`}>
+              <span className={`min-w-0 flex-1 break-all ${e.kind === 'f' && !text ? 'text-dim' : ''}`}>
                 {basename(e.path)}</span>
-              {e.path === main && <span className="rounded-full bg-ok-bg px-2 py-0.5 text-xs font-semibold text-ok">
-                main</span>}
+              {e.path === main && <span className="rounded-full border border-line-strong px-2 py-0.5 text-xs
+                font-semibold text-dim">main</span>}
             </button>
             <button aria-label={`More for ${basename(e.path)}`} onClick={() => setAsk({ kind: 'menu', entry: e })}
-              className="grid size-11 shrink-0 place-items-center rounded-full text-dim active:bg-hover">
+              className="grid size-12 shrink-0 place-items-center rounded-full text-dim active:bg-pressed">
               <MoreVertical size={20} /></button>
           </div>
         )
       })}
+      </div>
       {!list.length && <p className="py-6 text-center text-dim">No files yet.</p>}
 
       {ask?.kind === 'menu' && <ActionSheet title={basename(ask.entry.path)} onClose={done} actions={[
@@ -95,8 +97,8 @@ export function FilesSheet({ entries, current, main, actions, onClose }: { entri
         value={basename(ask.entry.path)} confirm="Rename" onClose={done}
         onSubmit={(name) => actions.rename(ask.entry.path, name)} />}
       {ask?.kind === 'delete' && <ConfirmSheet title={`Delete ${basename(ask.entry.path)}?`} keep="Keep it" confirm="Delete" danger
-        text={ask.entry.kind === 'd' ? 'The folder and everything in it are removed from the cluster. There is no trash.'
-          : 'It is removed from the cluster. There is no trash.'}
+        text={ask.entry.kind === 'd' ? "Everything in it goes too. There's no trash, so it's gone for good."
+          : "There's no trash, so it's gone for good."}
         onConfirm={() => actions.remove(ask.entry.path)} onClose={done} />}
       {ask?.kind === 'file' && <PromptSheet title={ask.into ? `New file in ${ask.into}` : 'New file'} label="Name"
         placeholder="section.tex" confirm="Create" onClose={done} onSubmit={(name) => actions.newFile(ask.into, name)} />}

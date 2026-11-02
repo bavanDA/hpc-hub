@@ -1,6 +1,8 @@
 // Demo data for the Code page: a few made-up files you can open, edit and save in the browser preview. One file
 // "changes on the cluster" after a while, to show the change banner and a save conflict.
 import type { FileState, FoundFile, GrepHit, OpenedFile, SaveResult } from '../types/code'
+import type { FileData, Listing } from '../types/files'
+import { answers as files } from './files'
 
 const HOME = '/home/jdoe'
 const now = () => Math.floor(Date.now() / 1000)
@@ -58,9 +60,22 @@ const full = (path: string) => path.replace(/^~/, HOME)
 // a job's output from the Jobs demo (any folder, slurm-<id>.out) reads like the log above
 const jobLog = (p: string) => /\/slurm-\d+\.(out|err)$/.test(p) ? FILES[`${HOME}/slurm-123456.out`] : undefined
 
+// any other text file the Files demo lists opens with the text Files shows for it
+function listed(p: string): string | undefined {
+  const at = p.lastIndexOf('/')
+  try {
+    const { entries } = (files['files.list'] as (a: { path: string }) => Listing)({ path: p.slice(0, at) || '/' })
+    if (!entries.some((e) => e.kind === 'f' && e.name === p.slice(at + 1))) return undefined
+    const data = (files['files.read'] as (a: { path: string }) => FileData)({ path: p })
+    return data.kind === 'text' ? data.text : undefined
+  } catch {
+    return undefined
+  }
+}
+
 function get(path: string) {
   const p = full(path)
-  const text = FILES[p] ?? jobLog(p)
+  const text = FILES[p] ?? jobLog(p) ?? listed(p)
   if (!state[p] && text !== undefined) state[p] = { text, sha: shaOf(text), mtime: now() - 3600 }
   return state[p]
 }
@@ -81,6 +96,11 @@ setTimeout(() => {
   if (f) Object.assign(f, { text: f.text.replace('EPOCHS = 30', 'EPOCHS = 30\nWARMUP = 2'), mtime: now() })
   if (f) f.sha = shaOf(f.text)
 }, 60_000)
+
+/** The file as the demo cluster has it now (for the demo agent's answer). */
+export function current(path: string): { text: string; sha: string } | undefined {
+  return get(path)
+}
 
 export const answers = {
   'code.open': ({ path }: { path: string }): OpenedFile => opened(path),

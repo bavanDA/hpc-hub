@@ -49,8 +49,8 @@ export function LogFollow({ file, follow, fontSize, onSpot }: Props) {
         const spot = spotIn(line, dir)
         return spot
           ? <button key={i} onClick={() => onSpot(spot)}
-              className="block w-full text-left whitespace-pre-wrap break-all text-accent-text underline decoration-dotted
-                underline-offset-2 active:bg-hover">{line || ' '}</button>
+              className="block w-full text-left whitespace-pre-wrap break-all underline decoration-dotted
+                underline-offset-2 active:bg-pressed">{line || ' '}</button>
           : <div key={i} className="whitespace-pre-wrap break-all">{line || ' '}</div>
       })}
     </div>

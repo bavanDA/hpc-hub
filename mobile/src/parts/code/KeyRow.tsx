@@ -10,16 +10,16 @@ import type { LangId } from '@shared/components/code/languages'
 export function KeyRow({ lang, editor }: { lang: LangId; editor: RefObject<EditorHandle | null> }) {
   const keep = (e: React.PointerEvent) => e.preventDefault()  // the editor keeps the focus
   return (
-    <div className="flex h-12 shrink-0 items-stretch gap-1 overflow-x-auto border-t border-line bg-header px-1 py-1"
+    <div className="flex h-12 shrink-0 items-stretch gap-1 overflow-x-auto border-t border-line bg-window px-1 py-1"
       role="toolbar" aria-label="Keys">
       {keyRow(lang).map((k) => (
         <button key={k.id} type="button" title={k.title} aria-label={k.title} onPointerDown={keep}
           onClick={() => { const v = editor.current?.view(); if (v) k.run(v) }}
-          className="min-w-11 shrink-0 rounded-lg bg-pill px-2 font-mono text-base active:bg-selected">{k.label}</button>
+          className="min-w-11 shrink-0 rounded-lg border border-line px-2 font-mono text-base active:bg-pressed">{k.label}</button>
       ))}
       <button type="button" aria-label="Hide the keyboard" onPointerDown={keep}
         onClick={() => editor.current?.view()?.contentDOM.blur()}
-        className="grid min-w-11 shrink-0 place-items-center rounded-lg text-dim active:bg-hover">
+        className="grid min-w-11 shrink-0 place-items-center rounded-lg text-dim active:bg-pressed">
         <ChevronDown size={20} />
       </button>
     </div>

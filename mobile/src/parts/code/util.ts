@@ -3,6 +3,7 @@
 import type { Extension } from '@codemirror/state'
 
 import { detect, loadLanguage, type LangId } from '@shared/components/code/languages'
+import { chunkBars } from './chunkBars'
 
 // -- recent files ------------------------------------------------------------------------------------------------
 export type Recent = { cluster: string; path: string; at: number }
@@ -96,17 +97,30 @@ export function preloadLanguage(path: string) {
 
 const extensions = new Map<string, Extension[]>()
 
-/** The language for a path as a stable array (Diff wants the same array each time); [] until it has loaded. */
+/** What a diff of a path gets, as a stable array (Diff wants the same array each time): the phone's Accept and
+ *  Reject bars, and the file's language once it has loaded. */
 export function languageFor(path: string): Extension[] {
   const id = detect(path).id
   const ext = loaded.get(id)
-  if (!ext) return []
-  const key = id
-  if (!extensions.has(key)) extensions.set(key, [ext])
+  const key = ext ? id : ''
+  if (!extensions.has(key)) extensions.set(key, ext ? [ext, chunkBars] : [chunkBars])
   return extensions.get(key)!
 }
 
 /** "train.py:40-58" or "train.py:40", for pasting into a chat. */
 export function reference(path: string, from: number, to: number) {
   return `${path}:${from}${to > from ? `-${to}` : ''}`
+}
+
+// -- long paths in rows ---------------------------------------------------------------------------------------
+/** A path that wraps after a slash rather than in the middle of a name (a zero-width space after each /). */
+export const wrapPath = (path: string) => path.replace(/\//g, '/\u200b')
+
+// -- cluster names in lists ---------------------------------------------------------------------------------------
+/** A cluster's name in a list row: its first word, "Wulver", "Yale", "SDSC" (the full name is the screen's title). */
+export const shortCluster = (name: string) => name.split(/[ (]/)[0] || name
+
+/** A line from the backend with the clusters' full names in it, with their short names instead. */
+export function withShortNames(text: string, clusters: { name: string }[] | null | undefined): string {
+  return (clusters ?? []).reduce((t, c) => t.split(c.name).join(shortCluster(c.name)), text)
 }

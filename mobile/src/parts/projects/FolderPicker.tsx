@@ -6,7 +6,8 @@ import { useCallback, useEffect, useState } from 'react'
 import { Spinner } from '@shared/components/ui'
 import { call } from '@shared/rpc'
 import type { Folder as FolderList, Place, Places, ProjectCluster } from '@shared/types/projects'
-import { Button, Chips, Field, ListRow, Sheet } from '../../ui'
+import { Button, Chips, Field, List, MainButton, Row, Sheet } from '../../ui'
+import { shortCluster, wrapPath } from '../code/util'
 
 const join = (a: string, b: string) => `${a.replace(/\/+$/, '')}/${b}`
 const parent = (p: string) => p.replace(/\/+$/, '').replace(/\/[^/]*$/, '') || '/'
@@ -54,56 +55,57 @@ export function FolderPicker({ cluster, start, onPick, onClose, projects = [] }:
   const folders = (at?.folders ?? []).filter((f) => hidden || !f.startsWith('.'))
 
   return (
-    <Sheet title={`Choose a folder on ${cluster.name}`} onClose={onClose}
-      actions={<Button kind="primary" className="flex-1" disabled={!at}
-        onClick={() => { if (at) { onClose(); onPick(at.path) } }}>Choose this folder</Button>}>
-      <Chips one value={[]} onChange={([path]) => path && load(path)}
-        options={jumps.map((p) => [p.path, p.label] as const)} />
+    <Sheet flush title={`Choose a folder on ${shortCluster(cluster.name)}`} onClose={onClose}
+      actions={<MainButton disabled={!at} onClick={() => { if (at) { onClose(); onPick(at.path) } }}>
+        Choose this folder</MainButton>}>
+      <div className="px-4">
+        <Chips one value={[]} onChange={([path]) => path && load(path)}
+          options={jumps.map((p) => [p.path, p.label] as const)} />
+      </div>
 
-      <div className="mt-3 flex items-center gap-1">
-        <button aria-label="Up" disabled={!at || at.path === '/'} onClick={() => at && load(parent(at.path))}
-          className="grid size-11 shrink-0 place-items-center rounded-full active:bg-hover disabled:opacity-40">
+      <div className="mt-1 flex items-center gap-1 px-1">
+        <button aria-label="Up one folder" disabled={!at || at.path === '/'} onClick={() => at && load(parent(at.path))}
+          className="grid size-12 shrink-0 place-items-center rounded-full text-dim active:bg-pressed disabled:opacity-40">
           <ArrowUp size={22} /></button>
-        <p className="min-w-0 flex-1 truncate font-mono text-sm" dir="rtl">
-          <bdi>{at ? short(at.path, at.home) : start}</bdi></p>
+        <p className="min-w-0 flex-1 py-1 font-mono text-sm break-words">{wrapPath(at ? short(at.path, at.home) : start)}</p>
         <button aria-label="Type a path" onClick={() => setTyping(typing === null ? at?.path ?? '' : null)}
-          className="grid size-11 shrink-0 place-items-center rounded-full active:bg-hover"><Pencil size={20} /></button>
+          className="grid size-12 shrink-0 place-items-center rounded-full text-dim active:bg-pressed"><Pencil size={20} /></button>
         <button aria-label={hidden ? 'Hide hidden folders' : 'Show hidden folders'} onClick={() => setHidden(!hidden)}
-          className="grid size-11 shrink-0 place-items-center rounded-full active:bg-hover">
+          className="grid size-12 shrink-0 place-items-center rounded-full text-dim active:bg-pressed">
           {hidden ? <EyeOff size={20} /> : <Eye size={20} />}</button>
       </div>
 
       {typing !== null && (
-        <form onSubmit={(e) => { e.preventDefault(); if (typing.trim()) load(typing.trim()) }}>
+        <form className="px-4" onSubmit={(e) => { e.preventDefault(); if (typing.trim()) load(typing.trim()) }}>
           <Field label="Go to a path" value={typing} autoFocus autoCapitalize="none" autoCorrect="off"
             spellCheck={false} placeholder="~/myproj or /scratch" onChange={(e) => setTyping(e.target.value)} />
         </form>
       )}
 
-      {naming !== null ? (
-        <form className="mt-1" onSubmit={(e) => { e.preventDefault(); newFolder() }}>
+      {naming !== null && (
+        <form className="px-4 pb-3" onSubmit={(e) => { e.preventDefault(); newFolder() }}>
           <Field label="New folder name" value={naming} autoFocus autoCapitalize="none" autoCorrect="off"
             spellCheck={false} onChange={(e) => setNaming(e.target.value)} />
           <div className="flex gap-3">
-            <Button type="button" className="flex-1" onClick={() => setNaming(null)}>Cancel</Button>
-            <Button type="submit" kind="primary" className="flex-1" disabled={!naming.trim()}>Create</Button>
+            <Button type="button" className="flex-1" onClick={() => setNaming(null)}>Don't make it</Button>
+            <Button type="submit" className="flex-1" disabled={!naming.trim()}>Make folder</Button>
           </div>
         </form>
-      ) : (
-        <ListRow icon={FolderPlus} title="New folder here" onClick={() => setNaming('')} trailing={<span />} />
       )}
 
-      {error && <p className="my-2 select-text rounded-xl bg-bad-bg p-3 text-bad">{error}</p>}
-      <div className="divide-y divide-line">
+      {error && <p className="px-4 py-2 select-text text-bad">{error}</p>}
+      <List>
+        {naming === null && <Row icon={FolderPlus} label="New folder here" onPress={() => setNaming('')} />}
         {loading && !at
           ? <div className="grid h-40 place-items-center"><Spinner size={24} /></div>
           : folders.length === 0
             ? <p className="py-10 text-center text-dim">
                 {at && at.folders.length ? `${at.folders.length} hidden folders` : 'No folders here'}</p>
             : folders.map((f) => (
-              <ListRow key={f} icon={Folder} title={f} onClick={() => at && load(join(at.path, f))} />
+              <Row key={f} icon={Folder} label={<span className="break-all">{f}</span>} opens
+                onPress={() => at && load(join(at.path, f))} />
             ))}
-      </div>
+      </List>
       {loading && at && <div className="flex justify-center py-2"><Spinner /></div>}
     </Sheet>
   )

@@ -7,7 +7,8 @@ import { copyText } from '@shared/components/terminals/xterm'
 import { Spinner } from '@shared/components/ui'
 import { call } from '@shared/rpc'
 import type { Commit, GitInfo } from '@shared/types/latex'
-import { Button, Card, Field, ListRow, Sheet, useToast } from '../../ui'
+import { Button, Field, MainButton, Row, Section, Sheet, useToast } from '../../ui'
+import { wrapPath } from '../code/util'
 
 type Where = { cluster: string; folder: string }
 const lastLine = (s: string) => s.trim().split('\n').pop() ?? s
@@ -41,59 +42,60 @@ export function GitSheet({ where, before, onPulled, onClose }:
   }
 
   return (
-    <Sheet title="Git" onClose={onClose}>
-      {error ? <p className="py-8 text-center text-bad">{error}</p>
+    <Sheet flush title="Git" onClose={onClose}>
+      {error ? <p className="px-4 py-8 text-center text-bad">{error}</p>
         : !info ? <div className="grid h-40 place-items-center"><Spinner size={28} /></div>
-        : !info.root ? <p className="py-8 text-center text-dim">This folder is not a git repository.</p>
+        : !info.root ? <p className="px-4 py-8 text-center text-dim">This folder isn't a git repository.</p>
         : <>
-          <Card className="py-1">
-            <ListRow title="Branch" subtitle={info.branch || '(detached)'} />
+          <div className="border-t border-line">
+            <Row label="Branch" value={info.branch || 'Detached'} />
             {info.remotes.length ? info.remotes.map((r) => (
-              <ListRow key={r.name} title={`Remote ${r.name}`} subtitle={r.url}
-                trailing={<button aria-label="Copy address" onClick={() => copyText(r.url)
+              <Row key={r.name} label={r.name === 'origin' ? 'Remote' : `Remote ${r.name}`}
+                sub={wrapPath(r.url)}>
+                <button aria-label="Copy address" onClick={() => copyText(r.url)
                   .then((ok) => toast(ok ? 'Address copied' : "Couldn't copy"))}
-                  className="-mr-2 grid size-11 place-items-center rounded-full text-dim active:bg-hover">
-                  <Copy size={20} /></button>} />
-            )) : <ListRow title="Remote" subtitle="None" />}
-          </Card>
-          <div className="mt-3 flex gap-2">
+                  className="-mr-2 grid size-12 shrink-0 place-items-center rounded-full text-dim active:bg-pressed">
+                  <Copy size={20} /></button>
+              </Row>
+            )) : <Row label="Remote" value="None" />}
+          </div>
+          <div className="flex gap-2 px-4 pt-3">
             <Button className="flex-1" disabled={!!busy} onClick={() => run('pull')}>
               {busy === 'pull' ? <Spinner size={18} /> : <ArrowDown size={20} />} Pull</Button>
             <Button className="flex-1" disabled={!!busy || !info.remotes.length} onClick={() => run('push')}>
               {busy === 'push' ? <Spinner size={18} /> : <ArrowUp size={20} />} Push</Button>
           </div>
 
-          <h2 className="mt-6 mb-2 text-sm font-bold text-dim">
-            {info.changes.length ? `${info.changes.length} changed ${info.changes.length === 1 ? 'file' : 'files'}`
-              : 'Nothing to commit'}</h2>
-          {info.changes.length > 0 && (
-            <Card className="py-1">
-              {info.changes.slice(0, 40).map((c) => (
-                <div key={c.path} className="flex min-h-11 items-center gap-3">
-                  <span className={`w-10 shrink-0 font-mono text-sm font-semibold ${c.status === '??' ? 'text-ok'
-                    : c.status.includes('D') ? 'text-bad' : 'text-warn'}`}>{c.status === '??' ? 'new' : c.status}</span>
-                  <span className="min-w-0 flex-1 truncate font-mono text-sm">{c.path}</span>
-                </div>
-              ))}
-            </Card>
-          )}
-          <form onSubmit={(e) => { e.preventDefault(); if (message.trim()) run('commit') }}>
-            <Field label="Commit message" value={message} placeholder="What changed"
-              onChange={(e) => setMessage(e.target.value)} />
-          </form>
-          <Button kind="primary" icon={busy === 'commit' ? undefined : GitCommitHorizontal} className="w-full"
-            disabled={!message.trim() || !info.changes.length || !!busy} onClick={() => run('commit')}>
-            {busy === 'commit' && <Spinner size={18} />} Commit</Button>
-          <p className="mt-2 text-sm text-dim">Commit takes every change except LaTeX build files.</p>
-
-          <h2 className="mt-6 mb-2 text-sm font-bold text-dim">History</h2>
-          <Card className="py-1">
-            {info.history.map((c) => (
-              <ListRow key={c.hash} title={c.subject} subtitle={`${c.hash} · ${c.date} · ${c.author}`}
-                onClick={() => setShown(c)} />
+          <Section title={info.changes.length ? `${info.changes.length} changed ${info.changes.length === 1 ? 'file' : 'files'}`
+            : 'Nothing to commit'}>
+            {info.changes.slice(0, 40).map((c) => (
+              <div key={c.path} className="flex min-h-12 items-center gap-3 border-b border-line px-4 py-2">
+                <span className="w-10 shrink-0 font-mono text-sm font-semibold text-dim">
+                  {c.status === '??' ? 'new' : c.status}</span>
+                <span className="min-w-0 flex-1 font-mono text-sm break-all">{c.path}</span>
+              </div>
             ))}
-            {!info.history.length && <p className="py-3 text-dim">No commits yet.</p>}
-          </Card>
+          </Section>
+          {info.changes.length > 0 && (
+            <div className="px-4 pt-2">
+              <form onSubmit={(e) => { e.preventDefault(); if (message.trim()) run('commit') }}>
+                <Field label="Commit message" value={message} placeholder="What changed"
+                  onChange={(e) => setMessage(e.target.value)} />
+              </form>
+              <MainButton icon={busy === 'commit' ? undefined : GitCommitHorizontal}
+                disabled={!message.trim() || !!busy} onClick={() => run('commit')}>
+                {busy === 'commit' && <Spinner size={18} />} Commit</MainButton>
+              <p className="mt-2 text-sm text-dim">Every change goes in, except LaTeX build files.</p>
+            </div>
+          )}
+
+          <Section title="History">
+            {info.history.map((c) => (
+              <Row key={c.hash} label={c.subject} sub={`${c.hash} · ${c.date} · ${c.author}`} opens
+                onPress={() => setShown(c)} />
+            ))}
+            {!info.history.length && <p className="border-b border-line px-4 py-3 text-dim">No commits yet.</p>}
+          </Section>
         </>}
       {shown && <CommitSheet where={where} commit={shown} onClose={() => setShown(null)} />}
     </Sheet>
@@ -110,11 +112,11 @@ function CommitSheet({ where, commit, onClose }: { where: Where; commit: Commit;
     <Sheet title={commit.subject} onClose={onClose}>
       <p className="mb-3 text-sm text-dim">{commit.hash} · {commit.date} · {commit.author}</p>
       {text === null ? <div className="grid h-40 place-items-center"><Spinner size={28} /></div>
-        : <pre className="overflow-x-auto rounded-xl bg-view p-3 font-mono text-xs leading-[18px] select-text">
+        : <pre className="overflow-x-auto rounded-[10px] bg-soft p-3 font-mono text-xs leading-[18px] select-text">
             {text.split('\n').map((l, i) => (
-              <div key={i} className={l.startsWith('+') && !l.startsWith('+++') ? 'bg-ok-bg text-ok'
-                : l.startsWith('-') && !l.startsWith('---') ? 'bg-bad-bg text-bad'
-                : l.startsWith('@@') ? 'text-accent-text' : ''}>{l || ' '}</div>))}</pre>}
+              <div key={i} className={l.startsWith('+') && !l.startsWith('+++') ? 'font-semibold'
+                : l.startsWith('-') && !l.startsWith('---') ? 'text-dim'
+                : l.startsWith('@@') ? 'text-dim' : ''}>{l || ' '}</div>))}</pre>}
     </Sheet>
   )
 }

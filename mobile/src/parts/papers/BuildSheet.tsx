@@ -5,7 +5,8 @@ import { useState } from 'react'
 import { Spinner } from '@shared/components/ui'
 import { call } from '@shared/rpc'
 import type { Settings } from '@shared/types/latex'
-import { Button, Card, Field, ListRow, PickerSheet, Sheet, Switch, useToast } from '../../ui'
+import { Field, MainButton, PickerSheet, Row, Section, Sheet, ToggleRow, useToast } from '../../ui'
+import { shortCluster } from '../code/util'
 
 const ENGINES: { value: Settings['engine']; label: string }[] = [
   { value: 'pdf', label: 'pdfLaTeX' }, { value: 'xelatex', label: 'XeLaTeX' }, { value: 'lualatex', label: 'LuaLaTeX' }]
@@ -25,23 +26,22 @@ export function BuildSheet({ cluster, clusterName, settings, auto, onAuto, onSav
       .catch((e: Error) => { toast(`Couldn't save: ${e.message}`); setBusy(false) })
   }
   return (
-    <Sheet title="Build settings" onClose={onClose} actions={<>
-      <Button className="flex-1" onClick={onClose}>Cancel</Button>
-      <Button kind="primary" className="flex-1" disabled={busy} onClick={save}>
-        {busy && <Spinner size={18} />} Save</Button></>}>
-      <Card className="py-1">
-        <Switch label="Build each time you save" checked={auto} onChange={onAuto} />
-      </Card>
-      <h2 className="mt-5 mb-2 text-sm font-bold text-dim">On {clusterName}</h2>
-      <Card className="py-1">
-        <ListRow title="Engine" subtitle={ENGINES.find((e) => e.value === draft.engine)?.label}
-          onClick={() => setPicking(true)} />
-        <Switch label="Build on my compute node" hint="When you have one. Otherwise on the login node."
-          checked={draft.on_node} onChange={(on) => setDraft({ ...draft, on_node: on })} />
-      </Card>
-      <Field label="Run before the build" value={draft.setup} placeholder="module load texlive"
-        autoCapitalize="none" autoCorrect="off" spellCheck={false}
-        onChange={(e) => setDraft({ ...draft, setup: e.target.value })} />
+    <Sheet flush title="Build settings" onClose={onClose} actions={
+      <MainButton disabled={busy} onClick={save}>{busy && <Spinner size={18} />} Save</MainButton>}>
+      <div className="border-t border-line">
+        <ToggleRow label="Build each time you save" checked={auto} onChange={onAuto} />
+      </div>
+      <Section title={`On ${shortCluster(clusterName)}`}>
+        <Row label="Engine" value={ENGINES.find((e) => e.value === draft.engine)?.label} opens
+          onPress={() => setPicking(true)} />
+        <ToggleRow label="Build on my compute node" checked={draft.on_node}
+          onChange={(on) => setDraft({ ...draft, on_node: on })} />
+      </Section>
+      <div className="px-4 pt-3">
+        <Field label="Run before the build" value={draft.setup} placeholder="module load texlive"
+          autoCapitalize="none" autoCorrect="off" spellCheck={false}
+          onChange={(e) => setDraft({ ...draft, setup: e.target.value })} />
+      </div>
       {picking && <PickerSheet title="Engine" value={draft.engine} options={ENGINES} onClose={() => setPicking(false)}
         onPick={(engine) => setDraft({ ...draft, engine })} />}
     </Sheet>

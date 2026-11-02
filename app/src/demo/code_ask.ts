@@ -1,28 +1,71 @@
 // Demo answers for asking an agent about code (code_ask.py), sending text into a session, submitting a job script
-// and the phone's QR code. An ask "runs" for a few seconds, then answers with one changed file and one new test.
+// and the phone's QR code. An ask "runs" for a few seconds, then answers about the file it was asked about.
 import type { AskResult, AskStatus } from '../types/code'
+import { current } from './code'
 
-type Started = AskStatus & { at: number }
+type Started = AskStatus & { at: number; question: string; base?: { text: string; sha: string } }
 const asks: Record<string, Started> = {}
 
-const ORIGINAL = `import numpy as np
+type Answer = Pick<AskResult, 'answer' | 'files'>
 
-def train(data, lr=0.1, epochs=10):
-    w = np.zeros(data.shape[1])
-    for _ in range(epochs):
-        grad = data.T @ (data @ w) / len(data)
-        w -= lr * grad
-    return w
-`
-const PROPOSED = ORIGINAL.replace('lr=0.1', 'lr=0.01').replace('    return w', '    if not np.isfinite(w).all():\n        raise ValueError("training diverged, try a smaller lr")\n    return w')
+const nameOf = (path: string) => path.slice(path.lastIndexOf('/') + 1)
+const folderOf = (path: string) => path.slice(0, path.lastIndexOf('/'))
+const changed = (path: string, base: { text: string; sha: string }, proposed: string) =>
+  ({ path, base_sha: base.sha, original: base.text, proposed, is_new: false })
+
+/** What the demo agent says about the file it was asked about, worked out from the file as it is. */
+function answer(a: Started): Answer {
+  const name = nameOf(a.path)
+  const text = a.base?.text ?? ''
+  if (a.kind === 'explain') {
+    return { answer: `\`${name}\` trains the model for a fixed number of epochs and prints the loss after each one.`
+      + ' The learning rate and the number of epochs are set at the top.', files: [] }
+  }
+  if (a.kind === 'fix') {
+    const configPath = `${folderOf(a.path)}/config.yaml`
+    const config = current(configPath)
+    if (config?.text.includes('batch_size: 64')) {
+      return {
+        answer: 'The GPU ran out of memory in `net.step(opt)`. A batch of 64 grids is too big for it, so I halved it'
+          + ' in `config.yaml`.',
+        files: [changed(configPath, config, config.text.replace('batch_size: 64', 'batch_size: 32'))],
+      }
+    }
+    return { answer: `I couldn't find the cause in \`${name}\`. The error comes from code it calls.`, files: [] }
+  }
+  if (a.kind === 'test' && name.endsWith('.py')) {
+    const module = name.replace(/\.py$/, '')
+    return {
+      answer: `I wrote a test that checks the settings in \`${name}\` make sense.`,
+      files: [{ path: `${folderOf(a.path)}/tests/test_${name}`, base_sha: '', original: '', is_new: true,
+        proposed: `from ${module} import EPOCHS, LR\n\n\ndef test_settings():\n    assert 0 < LR < 1\n`
+          + '    assert EPOCHS > 0\n' }],
+    }
+  }
+  if (a.base && /^LR = .*$/m.test(text) && /^EPOCHS = .*$/m.test(text)) {
+    const proposed = text
+      .replace(/^import torch$/m, 'import argparse\n\nimport torch')
+      .replace(/^def main\(\):$/m, 'def main():\n    parser = argparse.ArgumentParser()\n'
+        + '    parser.add_argument("--lr", type=float, default=LR)\n'
+        + '    parser.add_argument("--epochs", type=int, default=EPOCHS)\n    args = parser.parse_args()')
+      .replace('lr=LR)', 'lr=args.lr)').replace('range(EPOCHS)', 'range(args.epochs)')
+    return {
+      answer: 'You can now set both when you run it, like `python train.py --lr 0.0005 --epochs 50`.'
+        + ' Without them it uses the values at the top of the file.',
+      files: [changed(a.path, a.base, proposed)],
+    }
+  }
+  return { answer: `Nothing in \`${name}\` needs to change for that.`, files: [] }
+}
 
 function now(a: Started): AskStatus {
   const s = (Date.now() - a.at) / 1000
-  if (a.state === 'cancelled') return a
+  const { at: _at, question: _q, base: _base, ...status } = a
+  if (a.state === 'cancelled') return status
   const state = s < 1.5 ? 'starting' : s < 4 ? 'running' : 'done'
   const name = a.path.split('/').pop()
   const detail = { starting: 'Starting', running: `Claude is reading ${name}`, done: 'Answer ready' }[state]
-  return { ...a, state, detail }
+  return { ...status, state, detail }
 }
 
 function id() {
@@ -46,9 +89,9 @@ function qr(): string[] {
 }
 
 export const answers: Record<string, unknown> = {
-  'code.ask_start': (p: { path: string; agent: string; kind: AskStatus['kind'] }) => {
+  'code.ask_start': (p: { path: string; agent: string; kind: AskStatus['kind']; question?: string }) => {
     const a: Started = { id: id(), state: 'starting', kind: p.kind, agent: p.agent, path: p.path,
-      started: Date.now() / 1000, detail: 'Starting', at: Date.now() }
+      started: Date.now() / 1000, detail: 'Starting', at: Date.now(), question: p.question ?? '', base: current(p.path) }
     asks[a.id] = a
     return now(a)
   },
@@ -58,22 +101,8 @@ export const answers: Record<string, unknown> = {
     asks[id] = { ...asks[id], state: 'cancelled', detail: 'Stopped' }
     return asks[id]
   },
-  'code.ask_result': ({ id }: { id: string }): AskResult & { put_back: string[]; state: string } => {
-    const path = asks[id]?.path ?? '/home/jdoe/proj/train.py'
-    const folder = path.slice(0, path.lastIndexOf('/'))
-    return {
-      id, state: 'done', chat_id: '7f3c2a10-demo', put_back: [],
-      answer: 'The loss blows up because the learning rate is too big for this data.\n\n'
-        + '- Lowered `lr` from 0.1 to 0.01.\n- `train` now stops with a clear error if the weights stop being numbers.\n\n'
-        + 'I also wrote a small test that checks training stays finite.',
-      files: [
-        { path, base_sha: 'demo', original: ORIGINAL, proposed: PROPOSED, is_new: false },
-        { path: `${folder}/tests/test_train.py`, base_sha: '', original: '', is_new: true,
-          proposed: 'import numpy as np\nfrom train import train\n\n\ndef test_training_stays_finite():\n'
-            + '    data = np.random.default_rng(0).normal(size=(100, 4))\n    assert np.isfinite(train(data)).all()\n' },
-      ],
-    }
-  },
+  'code.ask_result': ({ id }: { id: string }): AskResult & { put_back: string[]; state: string } =>
+    ({ id, state: 'done', chat_id: '7f3c2a10-demo', put_back: [], ...answer(asks[id]) }),
   'terminals.send': () => null,
   'jobs.submit': () => ({ job_id: String(4240000 + Math.floor(Math.random() * 9999)) }),
   'pairing.make': () => {
