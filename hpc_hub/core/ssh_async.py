@@ -21,7 +21,7 @@ from pathlib import Path
 
 import asyncssh
 
-from . import ssh_bridge
+from . import ssh_bridge, tunnels
 from .config import ClusterConfig
 from .fastshell import START, FastShellError, wrap
 from .ssh import CHANNEL, SshError, SshMaster
@@ -68,6 +68,17 @@ def soon(fn: Callable, *args) -> None:
         except Exception:  # noqa: BLE001
             pass
     loop().call_soon_threadsafe(run)
+
+
+class _LocalPort:
+    """asyncssh's tunnel to a cluster behind the phone's VPN (tunnels.py): the TCP connection goes to the local
+    port that leads there, while the login still checks the host key under the cluster's own name."""
+
+    def __init__(self, port: int):
+        self.port = port
+
+    async def create_connection(self, session_factory, _host: str, _port: int):
+        return await asyncio.get_running_loop().create_connection(session_factory, "127.0.0.1", self.port)
 
 
 class _Client(asyncssh.SSHClient):
@@ -259,10 +270,12 @@ class AsyncSshMaster(SshMaster):
         KNOWN_HOSTS.touch(exist_ok=True)
         self._lost = False
         keys = {"client_keys": [self.cfg.ssh_key]} if self.cfg.ssh_key else {}  # the key you picked
+        local = tunnels.local_port(self.cfg.host, self.cfg.port)
+        via = {"tunnel": _LocalPort(local)} if local else {}
         conn, _ = await asyncssh.create_connection(
             lambda: _Client(self), self.cfg.host, self.cfg.port, username=self.username,
             known_hosts=str(KNOWN_HOSTS), preferred_auth=AUTH, keepalive_interval=30, keepalive_count_max=3,
-            connect_timeout=30, login_timeout=timeout, **{**keys, **OPTIONS})
+            connect_timeout=30, login_timeout=timeout, **{**keys, **via, **OPTIONS})
         try:
             self._bridge = await asyncio.start_server(self._serve_bridge, "127.0.0.1", 0)
         except OSError:
