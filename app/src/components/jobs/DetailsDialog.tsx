@@ -32,7 +32,7 @@ export function DetailsDialog({ cluster, job: j, onClose, onCancel }:
 
   return (
     <Dialog title={`Job ${j.job_id} · ${j.name}`} onClose={onClose} width={600}
-      actions={j.cancellable && <Button kind="destructive" onClick={onCancel}>Cancel job</Button>}>
+      actions={j.cancellable && <Button kind="danger-solid" onClick={onCancel}>Cancel job</Button>}>
       {error && <p className="py-6 text-center text-bad">{error}</p>}
       {!details && !error && <p className="flex items-center justify-center gap-2 py-10 text-dim">
         <Spinner />Loading…</p>}

@@ -198,7 +198,7 @@ export function SettingsDialog({ cluster, hint, onClose, start = 'login', advanc
   const forgetRow = (what: string) => (
     <Group>
       <ActionRow label={`Forget ${what}`}>
-        <Button kind="danger" size="sm" type="button" onClick={() => setForgetting(true)}>Forget</Button>
+        <Button kind="danger-solid" size="sm" type="button" onClick={() => setForgetting(true)}>Forget</Button>
       </ActionRow>
     </Group>
   )

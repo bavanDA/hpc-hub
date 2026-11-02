@@ -10,7 +10,7 @@ export const EVERY = 10_000
 
 export type WatchEvent =
   | { kind: 'reloaded'; key: string }                          // clean file, now the cluster's version
-  | { kind: 'changed'; key: string; sha: string }              // has your edits; the shell offers Compare / Use the cluster's / Save mine
+  | { kind: 'changed'; key: string; sha: string }              // has your edits; the shell offers Compare / Use Yale's / Save mine
   | { kind: 'deleted'; key: string }                           // gone from the cluster
   | { kind: 'agent-changed'; key: string; agent: string; before: string }  // after a send; offers Keep / Undo
 
