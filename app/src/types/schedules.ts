@@ -2,7 +2,7 @@
 import type { Profile } from './clusters'
 
 /** Resources a schedule asks for instead of the cluster's node settings; empty = those settings. */
-export type Compute = Partial<Pick<Profile, 'cpus' | 'mem_gb' | 'gpus' | 'partition' | 'account' | 'qos'>>
+export type Compute = Partial<Pick<Profile, 'cpus' | 'mem_gb' | 'gpus' | 'gpu_type' | 'partition' | 'account' | 'qos'>>
 
 export type Schedule = {
   name: string

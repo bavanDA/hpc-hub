@@ -1,8 +1,11 @@
 // Rows of the schedule dialog: the days to run on, how long a run may take, and the compute it asks for.
 import type { Limits, Profile } from '../../types/clusters'
 import type { Compute } from '../../types/schedules'
+import { GpuPicker } from '../clusters/ComputeDialog'
 import { ActionRow, EntryRow, SpinRow } from '../clusters/fields'
+import { useGpus } from '../clusters/gpus'
 import { human } from '../clusters/time'
+import { Term } from '../Term'
 
 export function DaysRow({ names, days, onChange }: { names: string[]; days: number[]; onChange: (d: number[]) => void }) {
   const flip = (d: number) => onChange(days.includes(d) ? days.filter((x) => x !== d) : [...days, d].sort())
@@ -29,7 +32,7 @@ export function DurationRow({ total, limits, onChange }:
     onChange(top ? Math.min(t, top) : t)
   }
   const sub = !limits?.known ? 'Max shown after you connect'
-    : top ? `Longest allowed: ${human(top)} (${limits.why})` : 'No time limit here'
+    : top ? `Up to ${human(top)}` : 'No time limit here'
   const units: [string, string, number, number, (v: number) => void][] = [
     ['days', 'd', d, 99, (v) => set(v, h, m)], ['hours', 'h', h, 23, (v) => set(d, v, m)],
     ['minutes', 'min', m, 59, (v) => set(d, h, v)]]
@@ -53,22 +56,27 @@ export function DurationRow({ total, limits, onChange }:
 export type OwnCompute = Required<Compute>
 
 export const ownFrom = (p: Profile, c: Compute): OwnCompute => ({ cpus: c.cpus ?? p.cpus, mem_gb: c.mem_gb ?? p.mem_gb,
-  gpus: c.gpus ?? p.gpus ?? 0, partition: c.partition ?? p.partition, account: c.account ?? p.account ?? '',
+  gpus: c.gpus ?? p.gpus ?? 0, gpu_type: c.gpu_type ?? p.gpu_type ?? '', partition: c.partition ?? p.partition, account: c.account ?? p.account ?? '',
   qos: c.qos ?? p.qos ?? '' })
 
-export function ComputeRows({ value, limits, onChange }:
-  { value: OwnCompute; limits: Limits | null; onChange: (c: OwnCompute) => void }) {
+export function ComputeRows({ cluster, value, limits, onChange }:
+  { cluster: string; value: OwnCompute; limits: Limits | null; onChange: (c: OwnCompute) => void }) {
   const set = (part: Partial<OwnCompute>) => onChange({ ...value, ...part })
+  const { gpus } = useGpus(cluster)
+  const asProfile = { ...value, time: '' } as Profile
   return (
     <>
       <SpinRow label="CPU cores" value={value.cpus} onChange={(cpus) => set({ cpus })} min={1} max={512} />
       <SpinRow label="Memory (GB)" value={value.mem_gb} onChange={(mem_gb) => set({ mem_gb })} min={1} max={4096} />
-      <SpinRow label="GPUs" value={value.gpus} onChange={(gpus) => set({ gpus })} min={0} max={16} />
-      <EntryRow label="Partition" value={value.partition} onChange={(partition) => set({ partition })}
-        list={limits?.partitions} placeholder={limits?.default_partition} />
-      <EntryRow label="Account" value={value.account} onChange={(account) => set({ account })} />
-      <EntryRow label="QOS" value={value.qos} onChange={(qos) => set({ qos })} list={limits?.qos}
-        placeholder={limits?.default_qos} />
+      <div className="px-4 pt-3 text-sm font-semibold text-dim">GPU</div>
+      <GpuPicker gpus={gpus} value={asProfile}
+        onChange={(p) => set({ gpus: p.gpus ?? 0, gpu_type: p.gpu_type ?? '', partition: p.partition })} />
+      <EntryRow label={<Term name="queue">Queue</Term>} value={value.partition}
+        onChange={(partition) => set({ partition })} list={limits?.partitions} placeholder={limits?.default_partition} />
+      <EntryRow label={<Term name="group">Group to bill</Term>} value={value.account}
+        onChange={(account) => set({ account })} />
+      <EntryRow label={<Term name="priority">Priority and billing</Term>} value={value.qos}
+        onChange={(qos) => set({ qos })} list={limits?.qos} placeholder={limits?.default_qos} />
     </>
   )
 }

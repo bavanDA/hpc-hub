@@ -30,10 +30,15 @@ export function gpuName(g: Gpu) {
   return g.slice || !g.memory_gb ? g.label : `${g.label}, ${g.memory_gb} GB`
 }
 
-/** The line under its name: what part of a GPU you get and how many one job can have. */
+/** The line under its name: how many one job can have ("Up to 8 per job"); '' for a slice, whose name says it. */
 export function gpuHint(g: Gpu) {
-  return g.slice ? `${g.memory_gb} GB of one GPU. One per job.`
-    : `A whole GPU. Up to ${g.max_per_job} per job.`
+  return g.slice || g.max_per_job <= 1 ? '' : `Up to ${g.max_per_job} per job`
+}
+
+/** Each GPU's line, left out when they would all say the same. */
+export function gpuHints(gpus: Gpu[]): string[] {
+  const all = gpus.map(gpuHint)
+  return new Set(all.filter(Boolean)).size > 1 ? all : all.map(() => '')
 }
 
 /** The GPU a profile asks for, or null for none. */

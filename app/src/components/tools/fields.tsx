@@ -4,9 +4,12 @@ import { useEffect, useState, type ReactNode } from 'react'
 
 import { call } from '../../rpc'
 import type { Limits, Profile } from '../../types/clusters'
+import { GpuPicker } from '../clusters/ComputeDialog'
 import { ActionRow, EntryRow, Group, NumberBox } from '../clusters/fields'
+import { useGpus } from '../clusters/gpus'
 import { human, minutes, slurmTime } from '../clusters/time'
 import { FolderPicker } from '../projects/FolderPicker'
+import { Term } from '../Term'
 import { IconButton } from '../ui'
 
 export const selectClass = 'h-8 max-w-[260px] rounded-md bg-pill px-2 outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus'
@@ -68,6 +71,7 @@ export function ComputeGroup({ cluster, value, onChange, disabled = false, descr
   const [more, setMore] = useState(false)
   const [limits, setLimits] = useState<Limits | null>(null)
   const set = (change: Partial<Profile>) => onChange({ ...value, ...change })
+  const { gpus } = useGpus(cluster)
   const { partition, qos = '' } = value
   useEffect(() => {  // the partition and QoS decide the longest time
     const t = setTimeout(() => {
@@ -81,7 +85,7 @@ export function ComputeGroup({ cluster, value, onChange, disabled = false, descr
   const setTime = (m: number) => set({ time: slurmTime(Math.max(1, top ? Math.min(m, top) : m)) })
   const d = Math.floor(total / 1440), h = Math.floor((total % 1440) / 60), m = total % 60
   const sub = !limits?.known ? 'Max shown after you connect'
-    : limits.longest ? `Longest allowed: ${human(limits.longest)} (${limits.why})` : 'No time limit here'
+    : limits.longest ? `Up to ${human(limits.longest)}` : 'No time limit here'
   const queue = [partition, value.account ?? '', qos].filter((x) => x.trim()).join(' · ') || "The cluster's defaults"
   const time = 'h-8 w-12 rounded-md bg-pill text-center tabular-nums outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus'
   const unit = (label: string, short: string, v: number, max: number, to: (n: number) => number) => (
@@ -99,8 +103,8 @@ export function ComputeGroup({ cluster, value, onChange, disabled = false, descr
           onChange={(cpus) => set({ cpus })} /></ActionRow>
         <ActionRow label="Memory (GB)"><NumberBox label="Memory (GB)" value={value.mem_gb} min={1} max={4096}
           onChange={(mem_gb) => set({ mem_gb })} /></ActionRow>
-        <ActionRow label="GPUs"><NumberBox label="GPUs" value={value.gpus ?? 0} min={0} max={16}
-          onChange={(gpus) => set({ gpus })} /></ActionRow>
+        <div className="px-4 pt-3 text-sm font-semibold text-dim">GPU</div>
+        <GpuPicker gpus={gpus} value={value} onChange={onChange} />
         <ActionRow label="Time" sub={sub}>
           <div className="flex items-center">
             {unit('days', 'd', d, 99, (n) => n * 1440 + h * 60 + m)}
@@ -111,17 +115,18 @@ export function ComputeGroup({ cluster, value, onChange, disabled = false, descr
         <button type="button" onClick={() => setMore(!more)}
           className="flex min-h-[56px] w-full items-center gap-3 px-4 py-2 text-left hover:bg-hover">
           <div className="min-w-0 flex-1">
-            <div>Partition, account and QOS</div>
+            <div>Queue and billing</div>
             <div className="truncate text-sm text-dim">{queue}</div>
           </div>
           {more ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
         </button>
         {more && <>
-          <EntryRow label="Partition" value={partition} onChange={(v) => set({ partition: v })}
+          <EntryRow label={<Term name="queue">Queue</Term>} value={partition} onChange={(v) => set({ partition: v })}
             list={limits?.partitions} placeholder={limits?.default_partition} />
-          <EntryRow label="Account" value={value.account ?? ''} onChange={(v) => set({ account: v })} />
-          <EntryRow label="QOS" value={qos} onChange={(v) => set({ qos: v })} list={limits?.qos}
-            placeholder={limits?.default_qos} />
+          <EntryRow label={<Term name="group">Group to bill</Term>} value={value.account ?? ''}
+            onChange={(v) => set({ account: v })} />
+          <EntryRow label={<Term name="priority">Priority and billing</Term>} value={qos}
+            onChange={(v) => set({ qos: v })} list={limits?.qos} placeholder={limits?.default_qos} />
         </>}
       </Group>
     </div>

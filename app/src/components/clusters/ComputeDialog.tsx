@@ -10,7 +10,7 @@ import { useToast } from '../toast'
 import { Term } from '../Term'
 import { Button, Dialog } from '../ui'
 import { ActionRow, EntryRow, Group, NumberBox, SpinRow, SwitchRow } from './fields'
-import { chosen, gpuHint, gpuName, gpuSummary, isPreset, presets, useGpus, withGpu, type Gpu } from './gpus'
+import { chosen, gpuHints, gpuName, gpuSummary, isPreset, presets, useGpus, withGpu, type Gpu } from './gpus'
 import { putCluster } from './store'
 import { human, minutes, slurmTime } from './time'
 
@@ -41,14 +41,14 @@ export function Duration({ total, onChange, limits }:
 }
 
 /** One choice in the GPU list: its name, memory, and what it is. */
-function GpuChoice({ title, sub, on, onPick }: { title: string; sub: string; on: boolean; onPick: () => void }) {
+function GpuChoice({ title, sub, on, onPick }: { title: string; sub?: string; on: boolean; onPick: () => void }) {
   return (
     <button type="button" role="radio" aria-checked={on} onClick={onPick}
       className={`flex min-h-[64px] items-center gap-3 rounded-lg border px-3 py-2 text-left transition-colors
         ${on ? 'border-accent bg-accent-soft' : 'border-line hover:bg-hover'}`}>
       <div className="min-w-0 flex-1">
         <div className="font-semibold">{title}</div>
-        <div className="text-sm text-dim">{sub}</div>
+        {sub && <div className="text-sm text-dim">{sub}</div>}
       </div>
       {on && <Check size={16} className="shrink-0 text-accent-text" />}
     </button>
@@ -56,15 +56,16 @@ function GpuChoice({ title, sub, on, onPick }: { title: string; sub: string; on:
 }
 
 /** None, then each GPU the cluster has; a whole GPU gets a count. Shared wording with the phone's node screen. */
-export function GpuPicker({ gpus, known, value: p, onChange }:
-  { gpus: Gpu[]; known: boolean; value: Profile; onChange: (p: Profile) => void }) {
+export function GpuPicker({ gpus, value: p, onChange }:
+  { gpus: Gpu[]; known?: boolean; value: Profile; onChange: (p: Profile) => void }) {
   const g = chosen(p, gpus)
+  const hints = gpuHints(gpus)
   return (
     <div className="flex flex-col gap-2 px-4 py-3">
       <div role="radiogroup" aria-label="GPU" className="grid grid-cols-2 gap-2">
-        <GpuChoice title="No GPU" sub="CPU only" on={!p.gpus} onPick={() => onChange(withGpu(p, null))} />
-        {gpus.map((x) => (
-          <GpuChoice key={x.type || 'any'} title={gpuName(x)} sub={gpuHint(x)}
+        <GpuChoice title="No GPU" on={!p.gpus} onPick={() => onChange(withGpu(p, null))} />
+        {gpus.map((x, i) => (
+          <GpuChoice key={x.type || 'any'} title={gpuName(x)} sub={hints[i]}
             on={!!g && g.type === x.type} onPick={() => onChange(withGpu(p, x, p.gpus || 1))} />
         ))}
       </div>
@@ -75,10 +76,6 @@ export function GpuPicker({ gpus, known, value: p, onChange }:
             onChange={(n) => onChange(withGpu(p, g, n))} />
         </div>
       )}
-      {g && g.partitions.length > 0 && <p className="text-sm text-dim">
-        Runs on the {g.partitions.join(' or ')} queue.</p>}
-      {!known && gpus.length > 0 && <p className="text-sm text-dim">
-        From the cluster's docs. The real list shows after you connect.</p>}
     </div>
   )
 }
@@ -93,7 +90,7 @@ export function ComputeDialog({ cluster: c, onClose, saveOnly = false }:
   const [remember, setRemember] = useState(true)
   const [limits, setLimits] = useState<Limits | null>(null)
   const [sending, setSending] = useState(false)
-  const { gpus, known } = useGpus(c.id)
+  const { gpus } = useGpus(c.id)
   const set = (change: Partial<Profile>) => setP((x) => ({ ...x, ...change }))
 
   // the partition and QoS decide the longest time
@@ -136,11 +133,10 @@ export function ComputeDialog({ cluster: c, onClose, saveOnly = false }:
         <Button kind="suggested" disabled={sending} onClick={go}>{saveOnly ? 'Save' : 'Get node'}</Button>
       </>}>
       <div className="mb-4 flex items-center gap-3 rounded-lg bg-inset px-4 py-3">
-        <Cpu size={20} className="shrink-0 text-accent-text" />
+        <Cpu size={20} className="shrink-0 text-dim" />
         <div className="min-w-0">
           <div className="font-semibold tabular-nums">{line}</div>
-          <div className="text-sm text-dim">{saveOnly ? 'HPC Hub asks for this when you connect.'
-            : p.partition ? `On the ${p.partition} queue` : "On the cluster's default queue"}</div>
+          {saveOnly && <div className="text-sm text-dim">Used each time you connect.</div>}
         </div>
       </div>
       <div className="mb-4 flex flex-wrap gap-2">
@@ -161,9 +157,9 @@ export function ComputeDialog({ cluster: c, onClose, saveOnly = false }:
         <SpinRow label="Memory (GB)" value={p.mem_gb} onChange={(v) => set({ mem_gb: v })} min={1} max={4096} />
       </Group>
       <Group title="GPU">
-        <GpuPicker gpus={gpus} known={known} value={p} onChange={setP} />
+        <GpuPicker gpus={gpus} value={p} onChange={setP} />
       </Group>
-      <Group title="Time">
+      <Group>
         <Duration total={time} onChange={setTotal} limits={limits} />
       </Group>
       <Group>

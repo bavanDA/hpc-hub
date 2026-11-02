@@ -122,7 +122,7 @@ export function ScheduleDialog({ cluster, clusterName, options: o, editing, onCl
         <SelectRow title="Resources" subtitle={own ? undefined : computeText(ownFrom(o.profile, {}))} value={own ? 'own' : 'node'}
           onChange={(v) => setOwn(v === 'own')} options={[{ value: 'node', label: 'Same as your compute node' },
             { value: 'own', label: 'Set here' }]} />
-        {own && <ComputeRows value={compute} limits={limits} onChange={setCompute} />}
+        {own && <ComputeRows cluster={cluster} value={compute} limits={limits} onChange={setCompute} />}
       </Group>
       {picker && <FolderPicker cluster={{ id: cluster, name: clusterName, connected: true }} start={folder || '~'}
         projects={projects} onPick={pickFolder} onClose={() => setPicker(false)} />}

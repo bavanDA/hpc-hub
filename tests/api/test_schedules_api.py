@@ -118,3 +118,9 @@ def test_profile_for_keeps_the_node_settings_without_own_compute():
     assert schedules.profile_for(Schedule("a", compute={"mem_gb": 32}), base).mem_gb == 32
     with pytest.raises(ValueError, match="Cores"):
         schedules.profile_for(Schedule("a", compute={"cpus": 0}), base)
+
+
+def test_a_schedule_can_ask_for_a_gpu_slice():
+    p = schedules.profile_for(Schedule("a", compute={"gpus": 1, "gpu_type": "a100_10g", "partition": "gpu"}),
+                              ComputeProfile())
+    assert (p.gpus, p.gpu_type, p.partition) == (1, "a100_10g", "gpu")

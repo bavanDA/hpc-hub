@@ -126,7 +126,7 @@ def script(s: Schedule, agent: Agent, settings: AgentSettings, profile: ComputeP
 
 
 COMPUTE_INTS = ("cpus", "mem_gb", "gpus")
-COMPUTE_TEXT = ("partition", "account", "qos")
+COMPUTE_TEXT = ("partition", "account", "qos", "gpu_type")
 
 
 def profile_for(s: Schedule, base: ComputeProfile) -> ComputeProfile:
