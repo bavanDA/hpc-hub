@@ -32,7 +32,7 @@ export function DuoDialog({ name, onCancel, onRetry }: { name: string; onCancel:
         {!late && <div className="mt-3"><Spinner size={40} /></div>}
         <p className="text-dim tabular-nums">Waiting {Math.floor(s / 60)}:{String(s % 60).padStart(2, '0')}</p>
         <div className="mt-1 flex gap-2">
-          <Button onClick={onCancel}>Cancel</Button>
+          <Button onClick={onCancel}>Stop signing in</Button>
           {late && <Button kind="primary" onClick={onRetry}>{copy.newPush}</Button>}
         </div>
       </div>

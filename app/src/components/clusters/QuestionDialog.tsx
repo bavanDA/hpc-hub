@@ -35,7 +35,7 @@ export function QuestionDialog({ q, cluster, onAnswer }:
     return (
       <>
         <Dialog title={`Code for ${q.name}`} onClose={cancel} width={420}
-          actions={<><Button onClick={cancel}>Cancel</Button>
+          actions={<><Button onClick={cancel}>Stop signing in</Button>
             <Button kind="suggested" disabled={!digits(text)} onClick={() => onAnswer(digits(text))}>Send</Button></>}>
           <p className="mb-4 text-center text-dim">Open your authenticator app and type the 6-digit code.</p>
           <form onSubmit={(e) => { e.preventDefault(); if (digits(text)) onAnswer(digits(text)) }}>

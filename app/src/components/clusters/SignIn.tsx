@@ -29,7 +29,7 @@ export function ChromeWindowLogin({ q, onAnswer }: { q: Question; onAnswer: (a: 
   const cancel = () => onAnswer(null)
   return (
     <Dialog title={q.title ?? `${q.name} VPN sign-in`} onClose={cancel} width={460}
-      actions={<Button onClick={cancel}>Cancel</Button>}>
+      actions={<Button onClick={cancel}>Stop signing in</Button>}>
       <Waiting title="Sign in in the Chrome window"
         text="Sign in and approve Duo in the Chrome window that opened. It closes by itself once you are signed in." />
       <div className="mt-4 flex flex-col items-center gap-2">
@@ -67,16 +67,14 @@ export function WebLogin({ q, onAnswer }: { q: Question; onAnswer: (a: string | 
   }
   return (
     <Dialog title={q.title ?? `${q.name} VPN sign-in`} onClose={cancel} width={460}
-      actions={<><Button onClick={cancel}>Cancel</Button>
+      actions={<><Button onClick={cancel}>Stop signing in</Button>
         {!error && <Button kind="suggested" onClick={() => inTauri && invoke('sso_show', { id: q.id })}>
           Show sign-in window</Button>}</>}>
       {error
         ? <p className="rounded-lg bg-bad-bg px-4 py-2.5 text-center font-semibold text-bad">
             Could not open the sign-in window: {error}</p>
         : <Waiting title="Sign in in the window that opened" text={status} />}
-      {!error && <p className="mt-3 text-center text-sm text-dim">
-        {q.note ?? (q.fill ? 'HPC Hub fills in your username and password on the first page. On any other page, '
-          + 'type them yourself.' : 'No password is saved for this VPN, so you type it there.')}</p>}
+      {!error && q.note && <p className="mt-3 text-center text-sm text-dim">{q.note}</p>}
     </Dialog>
   )
 }

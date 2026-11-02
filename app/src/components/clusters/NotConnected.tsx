@@ -7,7 +7,8 @@ import { useGo } from '../../nav'
 import { call } from '../../rpc'
 import { BUSY, type Cluster, type Session } from '../../types/clusters'
 import { useToast } from '../toast'
-import { Button, Dialog, EmptyState, Spinner } from '../ui'
+import { AlertDialog, Button, EmptyState, Spinner } from '../ui'
+import { shortName } from './loginCopy'
 
 type Switch = { id: string; name: string }
 
@@ -31,9 +32,9 @@ export function NotConnected({ cluster, session, what }: { cluster: Cluster; ses
 
   let body
   if (busy) {
-    body = <EmptyState icon={Unplug} title={`Connecting to ${cluster.name}`} text={session?.detail || session?.state}
+    body = <EmptyState icon={Unplug} title={`Connecting to ${shortName(cluster)}`} text={session?.detail || session?.state}
       action={<Button onClick={() => call('clusters.cancel', { cluster: cluster.id }).catch(() => {})}>
-        <Spinner size={14} />Cancel</Button>} />
+        <Spinner size={14} />Stop signing in</Button>} />
   } else if (dropped) {
     body = <EmptyState icon={Unplug} title={`${cluster.name} dropped`}
       text="The connection was lost, for example after the laptop slept."
@@ -46,13 +47,11 @@ export function NotConnected({ cluster, session, what }: { cluster: Cluster; ses
     <>
       {body}
       {swap && (
-        <Dialog title={`Disconnect ${swap.name}?`} onClose={() => setSwap(null)} width={420} actions={<>
-          <Button onClick={() => setSwap(null)}>Cancel</Button>
-          <Button kind="danger-solid" onClick={() => { setSwap(null); connect(true) }}>Switch to {cluster.name}</Button>
-        </>}>
-          <p className="text-dim">
-            Only one VPN can run at a time. {swap.name} will be disconnected and its compute node ended.</p>
-        </Dialog>
+        <AlertDialog title={`Disconnect ${shortName(swap)}?`} keep={`Stay on ${shortName(swap)}`}
+          act={`Switch to ${shortName(cluster)}`} onClose={() => setSwap(null)}
+          onAct={() => { setSwap(null); connect(true) }}>
+          <p>Only one VPN can run at a time. {shortName(swap)} disconnects and its node is released.</p>
+        </AlertDialog>
       )}
     </>
   )
