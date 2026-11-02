@@ -28,8 +28,8 @@ function Icon({ node, open }: { node: Node; open: boolean }) {
   const cls = 'shrink-0'
   if (node.dir) return open ? <FolderOpen size={16} className={`${cls} text-accent-text`} />
     : <Folder size={16} className={`${cls} text-accent-text`} />
-  if (x === '.tex') return <FileText size={16} className={`${cls} text-ok`} />
-  if (x === '.bib') return <BookOpen size={16} className={`${cls} text-warn`} />
+  if (x === '.tex') return <FileText size={16} className={`${cls} text-dim`} />
+  if (x === '.bib') return <BookOpen size={16} className={`${cls} text-dim`} />
   if (IMAGE_EXT.includes(x) || x === '.pdf' || x === '.eps') return <Image size={16} className={`${cls} text-dim`} />
   return <File size={16} className={`${cls} text-dim`} />
 }

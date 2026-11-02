@@ -284,8 +284,8 @@ export function Code() {
             <button type="button" onClick={() => setAsk(ask ? null : { kind: 'free', id: null })}
               aria-pressed={!!ask} title="Ask an agent about this file"
               className={`relative flex h-8 items-center gap-1.5 rounded-md px-2.5 text-sm font-semibold transition-colors
-                duration-90 ${ask ? 'bg-accent-soft text-accent-text' : 'hover:bg-hover'}`}>
-              <Sparkles size={14} className="text-accent-text" /> Ask
+                duration-90 ${ask ? 'bg-selected' : 'hover:bg-hover'}`}>
+              Ask
               {(running > 0 || unseen > 0) && (
                 <span className="grid min-w-4 place-items-center rounded-full bg-accent px-1 text-[11px] text-white">
                   {running || unseen}</span>
@@ -384,7 +384,7 @@ function BannerRow({ file, banner, clusterName, onDismiss, onReload, onCompare, 
           <Button size="sm" kind="primary" onClick={() => onRestore(d)}>Restore</Button></>
   }
   return (
-    <div role="status" className="flex shrink-0 items-center gap-2 border-b border-line bg-accent-soft px-4 py-1.5">
+    <div role="status" className="flex shrink-0 items-center gap-2 border-b border-line bg-pill px-4 py-1.5">
       <p className="min-w-0 flex-1 text-sm">{text}</p>
       {actions}
     </div>

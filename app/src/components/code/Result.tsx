@@ -132,7 +132,7 @@ function ProposedFileView({ cluster, file, agent, languageFor, onOpenFile }:
           {file.is_new ? `New file ${file.path}` : `${who} suggests ${left === 1 ? 'a change' : `${left} changes`} to ${name}`}
         </p>
       </div>
-      {changedSince && <p className="text-sm text-warn">You changed {name} since you asked. This compares with your version.</p>}
+      {changedSince && <p className="text-sm text-dim">You changed {name} since you asked. This compares with your version.</p>}
       <Diff original={base} proposed={file.proposed} isNew={file.is_new} extensions={extensions} handle={handle}
         onChange={(_t, n) => setLeft(n)} />
       {state === 'saved' && <p className="text-sm text-ok">Saved on the cluster.</p>}

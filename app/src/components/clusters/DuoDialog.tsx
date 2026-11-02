@@ -23,7 +23,7 @@ export function DuoDialog({ name, onCancel, onRetry }: { name: string; onCancel:
       <div role="dialog" aria-label="Duo"
         className="flex w-[460px] max-w-full flex-col items-center gap-3 rounded-2xl bg-window px-8 pb-8 pt-10
           text-center shadow-2xl">
-        <Smartphone size={40} strokeWidth={1.25} className={late ? 'text-warn' : 'text-dim'} />
+        <Smartphone size={40} strokeWidth={1.25} className="text-dim" />
         <h2 className="mt-2 text-2xl font-bold">Approve Duo on your phone</h2>
         {late
           ? <p className="text-dim">{copy.duoLate}</p>

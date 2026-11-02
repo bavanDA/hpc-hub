@@ -17,7 +17,7 @@ export function StartStep({ name, policy, last, busy, onCheck, onLast }: {
   return (
     <Card className="flex flex-col gap-5 p-6">
       <div className="flex items-start gap-4">
-        <IconTile icon={noTimer ? TimerOff : ShieldCheck} size={56} tone="accent" />
+        <IconTile icon={noTimer ? TimerOff : ShieldCheck} size={56} />
         <p className="text-md">{!policy ? <Spinner /> : noTimer ? start.noTimer(name) : start.intro(name, days)}</p>
       </div>
       <label className="flex items-start gap-3">

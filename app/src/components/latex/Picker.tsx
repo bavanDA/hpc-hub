@@ -64,7 +64,7 @@ export function Picker({ data, onOpen, onReload }:
           {projects.map((p) => (
             <div key={p.id} onClick={() => open(p.cluster, p.main_tex ? `${p.path}/${p.main_tex}` : p.path)}
               className="group flex min-h-[60px] items-center gap-3 px-4 py-2 hover:bg-hover">
-              <div className="grid size-9 shrink-0 place-items-center rounded-lg bg-ok-bg text-ok"><FileText size={20} /></div>
+              <div className="grid size-9 shrink-0 place-items-center rounded-lg bg-pill text-dim"><FileText size={20} /></div>
               <div className="min-w-0 flex-1">
                 <div className="truncate font-semibold">{p.name}</div>
                 <div className="truncate text-sm text-dim">

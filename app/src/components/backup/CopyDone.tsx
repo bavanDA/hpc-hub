@@ -42,7 +42,7 @@ export function DoneView({ cluster, result, onOpen, onWeekly, onAgain, onNewChec
     <div className="flex flex-col gap-5">
       <Card className="flex flex-col gap-4 p-6">
         <div className="flex items-start gap-4">
-          <IconTile icon={bad ? CircleAlert : CircleCheck} size={56} tone={bad ? 'neutral' : 'success'} />
+          <IconTile icon={bad ? CircleAlert : CircleCheck} size={56} />
           <div className="flex flex-col gap-1.5">
             <h2 className="text-xl font-semibold">{bad ? copy.mismatch(result.mismatches)
               : partial ? copy.partial(result.copied_files, result.copied_files + busy + failed)

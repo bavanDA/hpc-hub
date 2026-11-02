@@ -52,8 +52,8 @@ export function PlanView({ plan, options, busy, onToggle, onOptions, onNext }: {
   return (
     <div className="flex flex-col gap-6">
       {plan.agent_summary && (
-        <p className="flex items-start gap-2 rounded-lg bg-accent-soft p-3 text-md">
-          <Bot size={16} className="mt-1 shrink-0 text-accent-text" />{plan.agent_summary}
+        <p className="flex items-start gap-2 rounded-lg bg-pill p-3 text-md">
+          <Bot size={16} className="mt-1 shrink-0 text-dim" />{plan.agent_summary}
         </p>
       )}
       {section(copy.keep, plan.items, copy.empty, `${count(plan.files)} files, ${plan.exact ? '' : 'about '}${gb(plan.bytes)}`)}

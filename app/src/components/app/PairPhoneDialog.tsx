@@ -95,7 +95,7 @@ export function PairPhoneDialog({ only, onClose }: { only?: string[]; onClose: (
       ) : (
         <div className="flex flex-col gap-4 pb-2">
           <div className="flex items-center gap-3">
-            <IconTile icon={Smartphone} tone="accent" />
+            <IconTile icon={Smartphone} />
             <p className="text-dim">Each login you pick goes to HPC Hub on your phone. Duo still asks when the phone
               connects.</p>
           </div>
