@@ -1,7 +1,7 @@
 // A file from the cluster, to look at: text, images and PDFs (pdf.js, fetched a few MB at a time). Edit opens it in
 // the Code tab; Download and Share copy it to this phone first.
 import { Download, FileQuestion, Pencil, Share2 } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 
 import { kind, MEDIA_LIMIT } from '@shared/components/files/format'
 import { readFile } from '@shared/components/pdf/load'
@@ -59,7 +59,6 @@ function PdfPreview({ cluster, path, size, onDownload }:
   const [error, setError] = useState('')
   const [progress, setProgress] = useState(0)
   const big = size > MEDIA_LIMIT
-  const source = useMemo(() => ({ cluster, path }), [cluster, path])
   useEffect(() => {
     if (big) return
     let live = true
@@ -73,7 +72,7 @@ function PdfPreview({ cluster, path, size, onDownload }:
   }
   return (
     <div className="-m-4 h-[calc(100%+2rem)]">
-      <ReadAloudPdf compact data={data} source={source} memory={`phone:${cluster}:${path}`} loading={!data && !error} progress={progress}
+      <ReadAloudPdf compact data={data} memory={`phone:${cluster}:${path}`} loading={!data && !error} progress={progress}
         message={error ? <EmptyState icon={FileQuestion} title="Can't show this PDF" text={error} /> : undefined} />
     </div>
   )
