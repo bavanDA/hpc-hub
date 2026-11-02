@@ -19,6 +19,7 @@ import { KeyPanel, keyHeading, PasswordInstead } from './KeyPanel'
 import { KeySetupDialog } from './KeySetupDialog'
 import { copy } from './loginCopy'
 import { CHROME_WINDOW } from './SignIn'
+import { QueueRows } from './QueueRows'
 import { putCluster } from './store'
 import { minutes, slurmTime } from './time'
 
@@ -305,8 +306,7 @@ export function SettingsDialog({ cluster, hint, onClose, start = 'login', advanc
     </Group>
     <Group title="Queues to try"
       description="Cheapest first. Your node comes from the first one that can start within the wait below.">
-      <EntryRow label="Queues" value={d.queues ?? ''}
-        onChange={(queues) => up({ queues })} placeholder="general:low,general:standard" />
+      <QueueRows cluster={d.id} value={d.queues ?? ''} onChange={(queues) => up({ queues })} />
       <SpinRow label="Wait for a cheaper queue (seconds)" value={d.queue_wait ?? 60}
         onChange={(queue_wait) => up({ queue_wait })} min={0} max={3600} />
     </Group>
