@@ -2,7 +2,7 @@
 
 from collections.abc import Callable
 
-from gi.repository import Adw, GLib, Gtk
+from gi.repository import Adw, GLib, GObject, Gtk
 
 from ...connect.session import ClusterSession
 from ...ui.widgets import bg
@@ -115,16 +115,20 @@ class PermissionsPage(Gtk.Box):
             unlock.connect("clicked", lambda *_: self._lock_action(lock.reset, "Unlocked"))
             row.add_suffix(unlock)
             g.add(row)
-        self.minutes = Adw.SpinRow.new_with_range(0, 240, 1)
+        minutes = conf.get("minutes", 10)
+        self.every = Adw.SwitchRow(title="Ask for the code on every message", active=minutes == 0)
+        self.minutes = Adw.SpinRow.new_with_range(1, 240, 1)
         self.minutes.set_title("A code lasts")
-        self.minutes.set_subtitle("Minutes, or 0 for every message")
-        self.minutes.set_value(conf.get("minutes", 10))
+        self.minutes.set_subtitle("Minutes")
+        self.minutes.set_value(minutes or 10)
+        self.every.bind_property("active", self.minutes, "visible", GObject.BindingFlags.SYNC_CREATE
+                                 | GObject.BindingFlags.INVERT_BOOLEAN)
         self.tries = Adw.SpinRow.new_with_range(1, 10, 1)
         self.tries.set_title("Wrong codes allowed")
         self.tries.set_value(conf.get("tries", 3))
         self.logout = Adw.SwitchRow(title="Then sign Claude out", active=conf.get("logout", True))
         self.scancel = Adw.SwitchRow(title="Then cancel Claude's job", active=conf.get("scancel", True))
-        for w in (self.minutes, self.tries, self.logout, self.scancel):
+        for w in (self.every, self.minutes, self.tries, self.logout, self.scancel):
             g.add(w)
         log = Adw.ExpanderRow(title="Recent activity", subtitle=f"{st.get('open', 0)} sessions open now")
         for line in reversed(st.get("log", [])[-10:]):
@@ -213,7 +217,8 @@ class PermissionsPage(Gtk.Box):
             self.toast(f"Could not save: {err}" if err else
                        f"Saved on {s.cfg.name}. Running Claude sessions pick it up when restarted")
         lock_on = bool(self.lock.get("set_up"))
-        conf = (int(self.minutes.get_value()), int(self.tries.get_value()), self.logout.get_active(),
+        minutes = 0 if lock_on and self.every.get_active() else int(self.minutes.get_value()) if lock_on else 0
+        conf = (minutes, int(self.tries.get_value()), self.logout.get_active(),
                 self.scancel.get_active()) if lock_on else None
 
         def work():
