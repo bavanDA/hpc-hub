@@ -247,19 +247,20 @@ export function SettingsDialog({ cluster, hint, onClose, start = '', advanced = 
     </div>}
   </>
 
+  const reuse = <ToggleRow label="Reuse a node you already have" sub="One an agent or VS Code got earlier."
+    checked={d.reuse_running_job ?? true} onChange={(on) => up({ reuse_running_job: on })} />
   const compute = <>
     <List>
       <ToggleRow label="Get a compute node when I connect" sub="Your terminals and agents run there."
         checked={want} onChange={(on) => up({ request_node_on_connect: on })} />
+      {!want && reuse}
     </List>
     {want && <div className="pt-5">
-      <NodeFields cluster={d.id} value={d.profile} onChange={(profile) => up({ profile })} /></div>}
-    <Section>
-      {want && <ToggleRow label={ASK} sub="Shows the node window when you connect." checked={d.ask_node ?? false}
-        onChange={(on) => up({ ask_node: on })} />}
-      <ToggleRow label="Reuse a node you already have" sub="One an agent or VS Code got earlier."
-        checked={d.reuse_running_job ?? true} onChange={(on) => up({ reuse_running_job: on })} />
-    </Section>
+      <NodeFields cluster={d.id} value={d.profile} onChange={(profile) => up({ profile })} />
+      <ToggleRow label={ASK} sub="Shows the node window when you connect." checked={d.ask_node ?? false}
+        onChange={(on) => up({ ask_node: on })} />
+      {reuse}
+    </div>}
   </>
 
   const queues = <>

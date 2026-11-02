@@ -80,11 +80,10 @@ export function VsCodeDialog({ setup, found, folder: start = '', target: wanted,
         <h3 className="px-5 pb-1 text-xs font-semibold tracking-wide text-dim uppercase">Compute node</h3>
         <p className="px-5 pb-2.5 text-sm text-dim">VS Code runs as a job of its own.</p>
         <NodeFields cluster={setup.id} value={profile} onChange={setProfile} onValid={setFits} />
-      </section>}
-      <Section>
-        {!keep && <ToggleRow label="Use these next time" checked={remember} onChange={setRemember} />}
+        <ToggleRow label="Use these next time" checked={remember} onChange={setRemember} />
         <ToggleRow label={ASK_VS} sub={ASK_VS_SUB} checked={ask} onChange={setAsk} />
-      </Section>
+      </section>}
+      {keep && <Section><ToggleRow label={ASK_VS} sub={ASK_VS_SUB} checked={ask} onChange={setAsk} /></Section>}
       {picking && <FolderPicker cluster={{ id: setup.id, name: setup.name, connected: true }}
         start={folder.trim() || '~'} onPick={setFolder} onClose={() => setPicking(false)} />}
     </EDialog>

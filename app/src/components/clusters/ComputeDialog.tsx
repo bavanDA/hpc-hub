@@ -7,7 +7,7 @@ import { useState } from 'react'
 import { call } from '../../rpc'
 import { summary, type Cluster, type Limits, type Profile } from '../../types/clusters'
 import { NodeFields } from '../e/NodeFields'
-import { EDialog, List, MainButton, Section, ToggleRow } from '../e/ui'
+import { EDialog, List, MainButton, ToggleRow } from '../e/ui'
 import { useToast } from '../toast'
 import { ActionRow, NumberBox } from './fields'
 import { chosen, gpuHints, gpuName, withGpu, type Gpu } from './gpus'
@@ -128,11 +128,11 @@ export function ComputeDialog({ cluster: c, mode, onClose }:
           onChange={setWant} /></List></div>}
       {sizing && <div className="pt-1">
         <NodeFields cluster={c.id} value={p} onChange={setP} onValid={setOk} extra={false} /></div>}
-      {sizing && <Section>
+      {sizing && <>{/* more rows of the same list: no gap after Queue and priority */}
         {mode === 'request' && <ToggleRow label="Use this size next time" checked={remember}
           sub={remember ? undefined : `Next time: ${summary(c.profile)}`} onChange={setRemember} />}
         <ToggleRow label={ASK} sub={ASK_SUB} checked={ask} onChange={setAsk} />
-      </Section>}
+      </>}
     </EDialog>
   )
 }
