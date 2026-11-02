@@ -8,6 +8,7 @@ import { Spinner } from '@shared/components/ui'
 import { call } from '@shared/rpc'
 import type { Commit, GitInfo } from '@shared/types/latex'
 import { Button, Field, MainButton, Row, Section, Sheet, useToast } from '../../ui'
+import { wrapPath } from '../code/util'
 
 type Where = { cluster: string; folder: string }
 const lastLine = (s: string) => s.trim().split('\n').pop() ?? s
@@ -50,7 +51,7 @@ export function GitSheet({ where, before, onPulled, onClose }:
             <Row label="Branch" value={info.branch || 'Detached'} />
             {info.remotes.length ? info.remotes.map((r) => (
               <Row key={r.name} label={r.name === 'origin' ? 'Remote' : `Remote ${r.name}`}
-                sub={<span className="break-all">{r.url}</span>}>
+                sub={wrapPath(r.url)}>
                 <button aria-label="Copy address" onClick={() => copyText(r.url)
                   .then((ok) => toast(ok ? 'Address copied' : "Couldn't copy"))}
                   className="-mr-2 grid size-12 shrink-0 place-items-center rounded-full text-dim active:bg-pressed">
