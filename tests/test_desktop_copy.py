@@ -26,11 +26,15 @@ def _words(path: Path) -> list[str]:
     return found + [m.group(1).strip() for m in JSX_TEXT.finditer(code)]
 
 
+def _classes(w: str) -> bool:
+    """A Tailwind class list ("flex items-center gap-2"), not words: all lower case, with a hyphenated class."""
+    return not re.search(r"[A-Z]", w) and bool(re.search(r"\b[a-z]+-[\w\[]", w))
+
+
 def _hits(rule: str, flags=0) -> dict[str, list[str]]:
     out: dict[str, list[str]] = {}
     for p in FILES:
-        bad = [w for w in _words(p) if re.search(rule, w, flags)
-               and "className" not in w and not re.fullmatch(r"[\w.:-]+( [\w.:-]+)*", w.replace("--", ""))]
+        bad = [w for w in _words(p) if re.search(rule, w, flags) and "className" not in w and not _classes(w)]
         if bad:
             out[str(p.relative_to(SRC))] = bad
     return out
@@ -85,3 +89,13 @@ def test_jobs_say_waiting_and_hours():
     fmt = (SRC / "components" / "jobs" / "format.ts").read_text(encoding="utf-8")
     assert "PENDING: 'Waiting'" in fmt
     assert "['su', 'SU'," not in (SRC / "pages" / "Usage.tsx").read_text(encoding="utf-8")
+
+
+def test_no_app_insides():
+    """Say what the user gets, not how the app works (rule 2): no helper installs, no rm or .trash talk."""
+    assert not _hits(r"small helper|instead of rm|rm is blocked|\.trash for|own switch below")
+
+
+def test_same_lock_words_as_the_phone():
+    """One wording on both platforms (rule 21)."""
+    assert not _hits(r"Minutes a code keeps|Wrong codes before|Anything not ticked")

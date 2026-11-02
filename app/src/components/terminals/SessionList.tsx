@@ -93,8 +93,8 @@ function SessionRow({ cluster, s, nodes, open, selected, onRefresh }: {
   let state = open ? 'open' : s.attached ? 'open elsewhere' : 'running'
   let node = s.node
   if (!node && s.job && nodes) {
-    node = nodes[s.job] ?? 'node ended'
-    if (node === 'node ended' && state === 'running') state = ''
+    node = nodes[s.job] ?? 'node released'
+    if (node === 'node released' && state === 'running') state = ''
   }
   const what = AGENT_NAMES[s.agent] ?? (s.kind === 'screen' ? 'screen' : s.command || 'tmux')
   const bits = [what, node, ago(s.created), state].filter(Boolean)
