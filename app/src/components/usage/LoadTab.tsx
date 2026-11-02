@@ -4,20 +4,20 @@ import { Card } from '../ui'
 import { n, pct } from './format'
 import { Bar, Section } from './parts'
 
-export function LoadTab({ name, parts, error }: { name: string; parts: Partition[] | null; error: string }) {
+export function LoadTab({ parts, error }: { name?: string; parts: Partition[] | null; error: string }) {
   const busy = (parts ?? []).reduce((s, p) => s + p.cpus_used, 0)
   const total = (parts ?? []).reduce((s, p) => s + p.cpus_total, 0)
   const gpus = (parts ?? []).some((p) => p.gpus_total)
   const note = error ? `Could not load: ${error}` : !parts ? 'Loading…'
-    : `${name}: ${n(busy)} of ${n(total)} CPUs busy (${pct(busy, total)}). Many jobs waiting means a long queue.`
+    : `${n(busy)} of ${n(total)} CPUs busy (${pct(busy, total)}). Many jobs waiting means a long queue.`
   return (
-    <Section title="Partitions" note={note}>
+    <Section title="Queues" note={note}>
       {parts && parts.length > 0 && (
         <Card className="overflow-x-auto">
           <table className="w-full border-collapse text-base tabular-nums">
             <thead>
               <tr className="border-b border-line text-left text-sm whitespace-nowrap text-dim">
-                <th className="py-2.5 pr-2 pl-4 font-semibold">Partition</th>
+                <th className="py-2.5 pr-2 pl-4 font-semibold">Queue</th>
                 <th className="px-2 font-semibold">CPUs busy</th>
                 {gpus && <th className="px-2 text-right font-semibold">GPUs</th>}
                 <th className="px-2 text-right font-semibold">Running</th>

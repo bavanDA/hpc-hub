@@ -53,7 +53,7 @@ export function PreferencesDialog({ onClose, onExperimental }:
         </Group>
         {setup && <Group title="Clusters" description="The ones you use. The others are hidden, their settings kept.">
           {setup.choices.map((c) => (
-            <SwitchRow key={c.id} label={c.name} sub={university(c) || undefined} checked={setup.chosen.includes(c.id)}
+            <SwitchRow key={c.id} label={c.name} sub={university(c) && !c.name.includes(university(c)) ? university(c) : undefined} checked={setup.chosen.includes(c.id)}
               onChange={(on) => {
                 const ids = setup.choices.map((x) => x.id)
                   .filter((id) => id === c.id ? on : setup.chosen.includes(id))

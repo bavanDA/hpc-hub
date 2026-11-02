@@ -2,6 +2,7 @@
 import { ArrowLeft, ArrowRight, CircleAlert, Settings } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
+import { shortName } from '../components/clusters/loginCopy'
 import { Banner } from '../components/globus/Banner'
 import { CollectionPicker } from '../components/globus/CollectionPicker'
 import { LoginDialog } from '../components/globus/LoginDialog'
@@ -139,7 +140,7 @@ export function Globus() {
       </div>
       <Transfers tasks={tasks} error={tasksError} onRefresh={loadTasks} onCancel={cancel}
         names={Object.fromEntries(status.clusters.filter((c) => c.collection_name)
-          .map((c) => [c.collection_name, c.name]))} />
+          .map((c) => [c.collection_name, shortName(c)]))} />
     </div>
   )
 

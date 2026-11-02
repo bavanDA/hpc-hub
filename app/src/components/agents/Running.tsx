@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from 'react'
 
 import { useGo } from '../../nav'
 import { AGENT_NAMES, type TmuxSession } from '../../types/terminals'
+import { shortName } from '../clusters/loginCopy'
 import { useClusters } from '../clusters/store'
 import { useListings, useLive } from '../terminals/data'
 import { SessionIcon } from '../terminals/Popover'
@@ -71,7 +72,7 @@ export function Running() {
   const rows: { cluster: string; name: string; s: TmuxSession }[] = []
   for (const c of live) {
     for (const s of listings[c.id]?.listing?.sessions ?? []) {
-      if (s.agent && s.agent !== 'term' && AGENT_NAMES[s.agent]) rows.push({ cluster: c.id, name: c.name, s })
+      if (s.agent && s.agent !== 'term' && AGENT_NAMES[s.agent]) rows.push({ cluster: c.id, name: shortName(c), s })
     }
   }
   const loading = live.some((c) => !listings[c.id])
@@ -80,7 +81,7 @@ export function Running() {
     <div className="mx-auto flex max-w-[880px] flex-col gap-4 px-4 py-6">
       <div className="flex items-center gap-2">
         <p className="min-w-0 flex-1 text-sm text-dim">
-          {live.length ? `On ${live.map((c) => c.name).join(' and ')}` : 'Connect a cluster to see its agents.'}</p>
+          {live.length ? '' : 'Connect a cluster to see its agents.'}</p>
         {loading && <Spinner />}
         <IconButton icon={RefreshCw} label="Refresh" onClick={refresh} />
         <StartMenu onStart={(cluster, name, key) => tools.open(cluster, name, key)} />

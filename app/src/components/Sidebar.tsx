@@ -62,7 +62,7 @@ export function Sidebar({ page, onPick, experimental, onSettings, floating = fal
           </div>
         ))}
       </nav>
-      <SidebarFooter onPick={onPick} onSettings={onSettings} />
+      <SidebarFooter page={page} onPick={onPick} onSettings={onSettings} />
     </aside>
   )
 }

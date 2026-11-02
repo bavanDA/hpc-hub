@@ -7,6 +7,7 @@ import { useGo } from '../../nav'
 import { call } from '../../rpc'
 import type { Project } from '../../types/projects'
 import { agentIcon } from '../agents/AgentIcon'
+import { shortName } from '../clusters/loginCopy'
 import { useTools } from '../tools/useTools'
 import { Menu, type MenuItem } from './Menu'
 
@@ -54,7 +55,7 @@ export function ProjectRow({ p, experimental, act }: { p: Project; experimental:
       <div className="min-w-0 flex-1">
         <div className="truncate">{p.name}</div>
         <div className="truncate text-sm text-dim" title={p.path}>
-          {known ? p.cluster_name : `${p.cluster} (unknown cluster)`} · {p.path}
+          {known ? shortName({ name: p.cluster_name }) : `${p.cluster} (unknown cluster)`} · {p.path}
         </div>
       </div>
       {known && (

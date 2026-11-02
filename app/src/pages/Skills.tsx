@@ -77,7 +77,7 @@ export function Skills() {
         const mine = list.installed.filter((k) => k.target === t.id && !k.managed)
         const builtIn = list.installed.filter((k) => k.target === t.id && k.managed)
         return (
-          <Group key={t.id} title={`${t.label} skills`} description={`${t.folder} on ${list.name}`}>
+          <Group key={t.id} title={`${t.label} skills`} description={t.folder}>
             {mine.map((k) => <SkillRow key={k.path} name={k.name} description={k.description} path={k.path}
               suffix={<IconButton icon={Trash2} label={`Remove ${k.name}`} size={16}
                 onClick={() => setRemoving(k)} />} />)}

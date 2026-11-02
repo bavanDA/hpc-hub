@@ -4,6 +4,7 @@ import { useState } from 'react'
 
 import { call } from '../../rpc'
 import type { LatexCluster, Paper, Picker as PickerData } from '../../types/latex'
+import { shortName } from '../clusters/loginCopy'
 import { useToast } from '../toast'
 import { Button, Card, Dialog, Spinner } from '../ui'
 import { ago, short } from './bits'
@@ -68,7 +69,7 @@ export function Picker({ data, onOpen, onReload }:
               <div className="min-w-0 flex-1">
                 <div className="truncate font-semibold">{p.name}</div>
                 <div className="truncate text-sm text-dim">
-                  {p.cluster_name} · {short(p.path)}{p.main_tex ? ` · ${p.main_tex}` : ''}</div>
+                  {shortName({ name: p.cluster_name })} · {short(p.path)}{p.main_tex ? ` · ${p.main_tex}` : ''}</div>
               </div>
               {!connected(p.cluster) && <span className="text-xs text-dim">not connected</span>}
               <span className="w-28 text-right text-sm text-dim">{ago(p.opened)}</span>
@@ -102,7 +103,7 @@ export function Picker({ data, onOpen, onReload }:
                 <FileText size={20} className="shrink-0 text-dim" />
                 <div className="min-w-0 flex-1">
                   <div className="truncate">{p.title}</div>
-                  <div className="truncate text-sm text-dim">{p.cluster_name} · {p.short} · {p.main}
+                  <div className="truncate text-sm text-dim">{shortName({ name: p.cluster_name })} · {p.short} · {p.main}
                     {p.others ? ` (+${p.others} more)` : ''}</div>
                 </div>
                 <span className="w-28 text-right text-sm text-dim">{ago(p.mtime)}</span>
