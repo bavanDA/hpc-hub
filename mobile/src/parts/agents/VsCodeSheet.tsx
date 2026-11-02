@@ -4,6 +4,8 @@ import { Globe } from 'lucide-react'
 import { useState } from 'react'
 
 import { shortName } from '@shared/components/clusters/loginCopy'
+import { human, minutes } from '@shared/components/clusters/time'
+import { memText } from '@shared/components/jobs/format'
 import { sendable } from '@shared/components/tools/format'
 import { startVscode } from '@shared/components/tools/run'
 import { useGo } from '@shared/nav'
@@ -11,6 +13,14 @@ import type { ToolSetup, VsFound } from '@shared/types/tools'
 import { MainButton, Section, Segments, Sheet, ToggleRow } from '../../ui'
 import { FolderField } from './FolderField'
 import { NodeRow } from './NodeFields'
+
+/** "2 cores · 8G · 1:12:40 of 8:00:00" (squeue) in words: "2 cores · 8 GB · 1 h 13 min of 8 h". */
+function inWords(resources: string): string {
+  const m = /^(\d+) cores · (\S+) · (\S+) of (\S+)$/.exec(resources)
+  if (!m) return resources
+  const time = (t: string) => { const n = minutes(t); return n === null ? t : human(n) }
+  return `${m[1]} ${m[1] === '1' ? 'core' : 'cores'} · ${memText(m[2])} · ${time(m[3])} of ${time(m[4])}`
+}
 
 export function VsCodeSheet({ setup, found, folder: first = '', onClose }:
   { setup: ToolSetup; found: VsFound; folder?: string; onClose: () => void }) {
@@ -42,7 +52,7 @@ export function VsCodeSheet({ setup, found, folder: first = '', onClose }:
               : 'A VS Code job is waiting in the queue'}</p>
             <Segments label="VS Code" value={keep ? 'keep' : 'new'} onChange={(x) => setKeep(x === 'keep')}
               options={[['keep', 'Use it'], ['new', 'Start a new one']] as const} />
-            {job.resources && <p className="mt-1.5 text-sm text-dim">{job.resources}</p>}
+            {job.resources && <p className="mt-1.5 text-sm text-dim">{inWords(job.resources)}</p>}
           </div>
         )}
         <FolderField cluster={setup.id} name={setup.name} value={folder} onChange={setFolder} />
