@@ -116,10 +116,10 @@ export function LockGroup({ status, config, onConfig, onSetUp, onUnlock, onOff }
       <SwitchRow title="Ask for the code on every message" on={config.minutes === 0}
         onChange={(every) => set({ minutes: every ? 0 : 10 })} />
       {config.minutes > 0 && (
-        <StepperRow title="Minutes a code keeps a session open" min={1} max={240} value={config.minutes}
+        <StepperRow title="A code lasts" min={1} max={240} value={config.minutes}
           onChange={(minutes) => set({ minutes })} />
       )}
-      <StepperRow title="Wrong codes before Claude is stopped" min={1} max={10} value={config.tries}
+      <StepperRow title="Wrong codes allowed" min={1} max={10} value={config.tries}
         onChange={(tries) => set({ tries })} />
       <SwitchRow title="Then sign Claude out" on={config.logout} onChange={(logout) => set({ logout })} />
       <SwitchRow title="Then cancel Claude's job" on={config.scancel} onChange={(scancel) => set({ scancel })} />

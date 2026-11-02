@@ -58,7 +58,7 @@ export function Commands({ groups, custom, allowed, onChange, onAdd }: {
     else { onAdd(cmd); setAdded((n) => n + 1) }
   }
   return (
-    <Group title="Run without asking" description="Anything not ticked asks you first">
+    <Group title="Run without asking" description="Anything not allowed here asks you first">
       {groups.map((g) => <Expander key={g.title} title={g.title} note={g.note} commands={g.commands} allowed={allowed}
         onChange={onChange} />)}
       <Expander opens={added} title="Your own" note="Commands you added"

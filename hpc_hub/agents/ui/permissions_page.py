@@ -73,8 +73,8 @@ class PermissionsPage(Gtk.Box):
 
         main = self._group(title="Claude", description="Saved in ~/.claude/settings.json")
         self.edits = Adw.SwitchRow(title="Edit files without asking", active=p.accept_edits)
-        self.trash = Adw.SwitchRow(title="Use trash instead of rm", active=p.trash,
-                                   subtitle="rm is blocked. Deleted files stay in .trash for 7 days")
+        self.trash = Adw.SwitchRow(title="Move deleted files to the trash", active=p.trash,
+                                   subtitle="Kept for 7 days")
         main.add(self.edits)
         main.add(self.trash)
 
@@ -87,7 +87,7 @@ class PermissionsPage(Gtk.Box):
 
         self._lock_group(s, lock_status)
 
-        allow = self._group(title="Run without asking", description="Anything not ticked asks you first")
+        allow = self._group(title="Run without asking", description="Anything not allowed here asks you first")
         for title, note, cmds in GROUPS:
             allow.add(self._expander(title, note, cmds, p.allowed))
         self.other = self._expander("Your own", "Commands you added", p.custom, p.allowed)
@@ -116,11 +116,11 @@ class PermissionsPage(Gtk.Box):
             row.add_suffix(unlock)
             g.add(row)
         self.minutes = Adw.SpinRow.new_with_range(0, 240, 1)
-        self.minutes.set_title("Minutes a code keeps a session open")
-        self.minutes.set_subtitle("Set to 0 to ask on every message")
+        self.minutes.set_title("A code lasts")
+        self.minutes.set_subtitle("Minutes, or 0 for every message")
         self.minutes.set_value(conf.get("minutes", 10))
         self.tries = Adw.SpinRow.new_with_range(1, 10, 1)
-        self.tries.set_title("Wrong codes before Claude is stopped")
+        self.tries.set_title("Wrong codes allowed")
         self.tries.set_value(conf.get("tries", 3))
         self.logout = Adw.SwitchRow(title="Then sign Claude out", active=conf.get("logout", True))
         self.scancel = Adw.SwitchRow(title="Then cancel Claude's job", active=conf.get("scancel", True))

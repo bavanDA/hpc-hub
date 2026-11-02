@@ -80,7 +80,7 @@ export function Permissions() {
       <Group title="Claude" description="What Claude may do on the cluster without asking you.">
         <SwitchRow title="Edit files without asking" on={draft.accept_edits}
           onChange={(v) => edit({ accept_edits: v })} />
-        <SwitchRow title="Use trash instead of rm" subtitle="rm is blocked. Deleted files stay in .trash for 7 days"
+        <SwitchRow title="Move deleted files to the trash" subtitle="Kept for 7 days"
           on={draft.trash} onChange={(v) => edit({ trash: v })} />
       </Group>
       <Group title="Always ask first" description="Even when allowed below">
