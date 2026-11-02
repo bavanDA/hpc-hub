@@ -9,6 +9,7 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { call } from '../../rpc'
 import { secondStep, summary, type AgentId, type AgentSettings, type Cluster, type Logins, type SettingsInfo,
   type VsCode } from '../../types/clusters'
+import { agentIcon } from '../agents/AgentIcon'
 import { NodeFields } from '../e/NodeFields'
 import { ConfirmDialog, Note, PickerDialog, type PickerOption } from '../e/parts'
 import { EDialog, Field, List, MainButton, NumberRow, Row, Section, Segments, ToggleRow } from '../e/ui'
@@ -301,7 +302,7 @@ export function SettingsDialog({ cluster, hint, onClose, start = '', advanced = 
     const s = d[a.id]
     if (!s) return null
     return (
-      <Section key={a.id} title={a.name}>
+      <Section key={a.id} title={a.name} icon={agentIcon(a.id)}>
         <ToggleRow label="Its own compute node" sub={s.new_node ? undefined : 'Runs on the node you have.'}
           checked={s.new_node} onChange={(new_node) => upAgent(a.id, { new_node })} />
         {a.remote_label && <ToggleRow label={a.remote_label} sub={a.remote_hint} checked={s.remote}

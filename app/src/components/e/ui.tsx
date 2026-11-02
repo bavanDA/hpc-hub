@@ -8,9 +8,11 @@ import { human } from '../clusters/time'
 import { useEscape } from '../ui'
 
 /** A window over the app in style E: title on the left, X on the right, rows, the main button at the bottom.
- *  onBack: a part of a bigger window (a settings section), with an arrow back before the title. */
-export function EDialog({ title, onClose, onBack, children, actions, width = 520 }: {
-  title: string; onClose: () => void; onBack?: () => void; children: ReactNode; actions?: ReactNode; width?: number
+ *  onBack: a part of a bigger window (a settings section), with an arrow back before the title. icon: a logo before
+ *  the title (an agent's). */
+export function EDialog({ title, icon: Icon, onClose, onBack, children, actions, width = 520 }: {
+  title: string; icon?: LucideIcon; onClose: () => void; onBack?: () => void; children: ReactNode; actions?: ReactNode
+  width?: number
 }) {
   useEscape(onClose)
   return (
@@ -22,6 +24,7 @@ export function EDialog({ title, onClose, onBack, children, actions, width = 520
         <header className={`flex h-14 shrink-0 items-center gap-2 pr-2 ${onBack ? 'pl-2' : 'pl-5'}`}>
           {onBack && <button type="button" aria-label="Back" onClick={onBack} className="grid size-9
             place-items-center rounded-md text-dim hover:bg-hover active:bg-pressed"><ArrowLeft size={18} /></button>}
+          {Icon && <Icon size={20} className="shrink-0" />}
           <h2 className="min-w-0 flex-1 text-lg font-semibold">{title}</h2>
           <button type="button" aria-label="Close" onClick={onClose} className="grid size-9 place-items-center
             rounded-md text-dim hover:bg-hover active:bg-pressed"><X size={18} /></button>
@@ -49,11 +52,13 @@ export function List({ children }: { children: ReactNode }) {
   return <div className="border-t border-line">{children}</div>
 }
 
-/** A titled group of rows. */
-export function Section({ title, note, children }: { title?: string; note?: ReactNode; children: ReactNode }) {
+/** A titled group of rows; icon: a logo before the title (an agent's). */
+export function Section({ title, icon: Icon, note, children }:
+  { title?: string; icon?: LucideIcon; note?: ReactNode; children: ReactNode }) {
   return (
     <section className="pt-5">
-      {title && <h3 className="px-5 pb-1.5 text-xs font-semibold tracking-wide text-dim uppercase">{title}</h3>}
+      {title && <h3 className="flex items-center gap-2 px-5 pb-1.5 text-xs font-semibold tracking-wide text-dim
+        uppercase">{Icon && <Icon size={14} className="shrink-0" />}{title}</h3>}
       <List>{children}</List>
       {note && <p className="px-5 pt-2 text-sm text-dim">{note}</p>}
     </section>

@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react'
 
 import { call } from '../../rpc'
 import type { AskContext, AskKind } from '../../types/code'
+import { agentIcon } from '../agents/AgentIcon'
 import { useClusters } from '../clusters/store'
 import { AGENT_NAMES as AGENTS, sendToAgent, startAsk, type RunningAgent } from './ask'
 
@@ -34,6 +35,12 @@ function remembered(): string {
 
 const CHIP = 'inline-flex min-h-[34px] items-center gap-1.5 rounded-full px-3 text-sm font-semibold transition-colors ' +
   'duration-90 pointer-coarse:min-h-11 pointer-coarse:px-4 pointer-coarse:text-base'
+/** The agent's logo in a chip; the black and white ones take the chip's text color, so they show when it's on. */
+function Logo({ agent }: { agent: string }) {
+  const Icon = agentIcon(agent)
+  return <Icon size={14} className="shrink-0" style={agent === 'claude' || agent === 'agy' ? undefined : { color: 'inherit' }} />
+}
+
 const chip = (on: boolean) => `${CHIP} ${on ? 'bg-text text-window' : 'bg-control text-text hover:bg-hover'}`
 
 export function AskForm({ context, kind: firstKind = 'free', errorText = '', errorSources = [], running = [],
@@ -172,7 +179,8 @@ export function AskForm({ context, kind: firstKind = 'free', errorText = '', err
               : (
                 <div className="flex flex-wrap gap-2">
                   {agents.map((a) => (
-                    <button key={a} type="button" className={chip(agent === a)} onClick={() => setAgent(a)}>{AGENTS[a]}</button>
+                    <button key={a} type="button" className={chip(agent === a)} onClick={() => setAgent(a)}>
+                      <Logo agent={a} />{AGENTS[a]}</button>
                   ))}
                 </div>
               )}
