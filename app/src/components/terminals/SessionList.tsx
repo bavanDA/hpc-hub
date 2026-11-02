@@ -3,6 +3,7 @@ import { PanelLeftClose, Plus, RefreshCw } from 'lucide-react'
 
 import { AGENT_NAMES, type TmuxSession } from '../../types/terminals'
 import { useToast } from '../toast'
+import { shortName } from '../clusters/loginCopy'
 import { IconButton } from '../ui'
 import type { Listed, Live } from './data'
 import { SessionIcon } from './Popover'
@@ -70,7 +71,7 @@ function ClusterSessions({ cluster, listed, tabs, current, onRefresh }:
     `their compute node and end with its job; older sessions may still be on ${listing.host}.` : undefined
   return (
     <div className="mb-2">
-      <h3 title={tip} className="px-2 pt-3 pb-1 text-sm font-semibold text-dim">{cluster.name}</h3>
+      <h3 title={tip} className="px-2 pt-3 pb-1 text-sm font-semibold text-dim">{shortName(cluster)}</h3>
       {!listing && listed?.error && <Note>{listed.error}</Note>}
       {!listing && !listed?.error && !items.length && <Note>Loading…</Note>}
       {listing && !listing.has_tmux && !items.length && <Note>tmux is not installed here.</Note>}

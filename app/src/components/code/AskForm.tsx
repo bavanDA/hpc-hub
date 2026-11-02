@@ -1,7 +1,7 @@
 // What to ask an agent about some code, shared by the phone's Ask sheet and the desktop's Ask panel: which lines
 // (or the whole file), which agent, a shortcut or your own words, the error for "Fix this error", and where it runs.
 // It either starts a one-shot ask on the cluster (ask.ts) or sends the question to an agent already running there.
-import { ClipboardPaste, Sparkles } from 'lucide-react'
+import { ClipboardPaste } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
 import { call } from '../../rpc'
@@ -183,7 +183,7 @@ export function AskForm({ context, kind: firstKind = 'free', errorText = '', err
         className="inline-flex h-[34px] items-center justify-center gap-2 rounded-md bg-accent px-4 text-base font-semibold
           text-white transition-colors duration-90 hover:bg-accent-hover active:bg-accent-pressed disabled:bg-control
           disabled:text-faint pointer-coarse:h-12 pointer-coarse:text-md">
-        <Sparkles size={16} /> {busy ? 'Sending' : target ? 'Send' : 'Ask'}
+        {busy ? 'Sending' : target ? 'Send' : 'Ask'}
       </button>
     </form>
   )

@@ -19,7 +19,7 @@ export function Duration({ total, onChange, limits }:
   const d = Math.floor(total / 1440), h = Math.floor((total % 1440) / 60), m = total % 60
   const set = (dd: number, hh: number, mm: number) => onChange(dd * 1440 + hh * 60 + mm)
   const sub = !limits?.known ? 'Max shown after you connect'
-    : limits.longest ? `Up to ${human(limits.longest)} on this queue` : 'No time limit on this queue'
+    : limits.longest ? `Up to ${human(limits.longest)}` : 'No time limit'
   const units: [string, string, number, number, (v: number) => void][] = [
     ['days', 'd', d, 99, (v) => set(v, h, m)], ['hours', 'h', h, 23, (v) => set(d, v, m)],
     ['minutes', 'min', m, 59, (v) => set(d, h, v)]]
