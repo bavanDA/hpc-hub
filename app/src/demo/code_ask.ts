@@ -8,6 +8,7 @@ const asks: Record<string, Started> = {}
 
 type Answer = Pick<AskResult, 'answer' | 'files'>
 
+const NAMES: Record<string, string> = { wulver: 'Wulver (NJIT)', yale: 'Yale Bouchet', sdsc: 'SDSC Expanse' }
 const nameOf = (path: string) => path.slice(path.lastIndexOf('/') + 1)
 const folderOf = (path: string) => path.slice(0, path.lastIndexOf('/'))
 const changed = (path: string, base: { text: string; sha: string }, proposed: string) =>
@@ -105,12 +106,13 @@ export const answers: Record<string, unknown> = {
     ({ id, state: 'done', chat_id: '7f3c2a10-demo', put_back: [], ...answer(asks[id]) }),
   'terminals.send': () => null,
   'jobs.submit': () => ({ job_id: String(4240000 + Math.floor(Math.random() * 9999)) }),
-  'pairing.make': () => {
+  'pairing.make': ({ clusters: ids }: { clusters?: string[] }) => {
     const matrix = qr()
     const n = matrix.length
     const path = matrix.flatMap((row, y) => [...row].map((c, x) => (c === '1' ? `M${x} ${y}h1v1h-1z` : ''))).join('')
     return {
-      text: 'hpchub-pair:1:demo', matrix, clusters: ['Wulver (NJIT)', 'SDSC Expanse'], skipped: [],
+      text: 'hpchub-pair:1:demo', matrix, skipped: [],
+      clusters: (ids ?? ['wulver', 'yale']).map((id) => NAMES[id] ?? id),
       svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${n} ${n}" shape-rendering="crispEdges">`
         + `<rect width="${n}" height="${n}" fill="#fff"/><path d="${path}" fill="#000"/></svg>`,
       expires: Math.floor(Date.now() / 1000) + 600,
