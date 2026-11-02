@@ -1,13 +1,17 @@
 // A new Globus copy on a phone: one pane at a time. From: pick the cluster, open folders, tap what to copy.
 // To: pick the cluster and open the folder it goes into, then "Copy here". Globus does the rest, app closed or not.
-import { ArrowUp, Check, ChevronRight, CircleAlert, File, Folder, FolderPlus, KeyRound, Play, Plug } from 'lucide-react'
+import {
+  ArrowUp, Bookmark, Check, ChevronRight, CircleAlert, File, Folder, FolderOpen, FolderPlus, HardDrive, House, KeyRound,
+  Play, Plug,
+} from 'lucide-react'
 import { useEffect, useState } from 'react'
 
 import { formatSize, joinPath, parentPath } from '@shared/components/globus/parts'
+import { usePlaces } from '@shared/components/globus/places'
 import { Spinner } from '@shared/components/ui'
 import { call } from '@shared/rpc'
 import type { GlobusCluster, GlobusStatus, Item } from '@shared/types/globus'
-import { Button, EmptyState, MainButton, PickerSheet, PromptSheet, Segments, Sheet, useToast } from '../../ui'
+import { ActionSheet, Button, EmptyState, MainButton, PickerSheet, PromptSheet, Segments, Sheet, useToast } from '../../ui'
 import { shortCluster, wrapPath } from '../code/util'
 import { usePane, type Pane } from './usePane'
 
@@ -19,6 +23,8 @@ function PaneView({ pane, side, clusters, onChooseCluster, onConsent, onChooseCo
 }) {
   const c = clusters.find((x) => x.id === pane.cluster)
   const l = pane.listing
+  const [goTo, setGoTo] = useState(false)
+  const { places, projects } = usePlaces(pane.cluster)
   let body
   if (!c) body = null
   else if (pane.error) body = <EmptyState icon={CircleAlert} title="Can't open this folder" text={pane.error} />
@@ -59,14 +65,22 @@ function PaneView({ pane, side, clusters, onChooseCluster, onConsent, onChooseCo
           <span className="font-medium">{c ? shortCluster(c.name) : 'Pick a cluster'}</span>
           {pane.loading ? <Spinner size={16} /> : <ChevronRight size={18} className="-mr-1 text-dim" />}
         </button>
-        {pane.path && (
-          <div className="flex items-center gap-1 pr-4 pl-1">
-            <button aria-label="Up one folder" disabled={pane.path === '/'} onClick={() => pane.go(parentPath(pane.path))}
+        {c && l?.state === 'ok' && (
+          <div className="flex items-center gap-1 px-1">
+            <button aria-label="Up one folder" disabled={!pane.path || pane.path === '/'}
+              onClick={() => pane.go(parentPath(pane.path))}
               className="grid size-12 shrink-0 place-items-center rounded-full text-dim active:bg-pressed disabled:opacity-40">
               <ArrowUp size={20} /></button>
-            <p className="min-w-0 flex-1 py-1 text-sm break-words text-dim">{wrapPath(pane.path)}</p>
+            <p className="min-w-0 flex-1 py-1 text-sm break-words text-dim">
+              {pane.path ? wrapPath(pane.path) : 'Home folder'}</p>
+            <button aria-label="Go to a folder" onClick={() => setGoTo(true)}
+              className="grid size-12 shrink-0 place-items-center rounded-full text-dim active:bg-pressed">
+              <FolderOpen size={20} /></button>
           </div>
         )}
+        {goTo && <ActionSheet title="Go to" onClose={() => setGoTo(false)} actions={[
+          ...places.map((p) => ({ label: p.label, icon: p.path ? HardDrive : House, onPick: () => pane.go(p.path) })),
+          ...projects.map((p) => ({ label: p.label, icon: Bookmark, onPick: () => pane.go(p.path) }))]} />}
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto pb-2">{body}</div>
     </div>

@@ -1,15 +1,18 @@
 // One side of the Globus page: a cluster's collection, browsed through Globus (no SSH or VPN needed).
 import {
-  ArrowUp, CircleAlert, File, Folder, FolderOpen, FolderPlus, FolderSearch, Home, KeyRound, RefreshCw, WifiOff,
+  ArrowUp, Bookmark, CircleAlert, File, Folder, FolderOpen, FolderPlus, FolderSearch, HardDrive, Home, KeyRound,
+  RefreshCw, WifiOff,
   type LucideIcon,
 } from 'lucide-react'
 import { useEffect, useState, type ReactNode } from 'react'
 
 import { call } from '../../rpc'
 import type { GlobusCluster, Item } from '../../types/globus'
+import { Menu } from '../projects/Menu'
 import { useToast } from '../toast'
 import { Button, Card, Dialog, IconButton, Spinner } from '../ui'
 import { Field, formatSize, joinPath, parentPath, shortDate } from './parts'
+import { usePlaces } from './places'
 import type { Pane as PaneState } from './usePane'
 
 function Empty({ icon: Icon, title, text, button, onClick }:
@@ -62,6 +65,7 @@ export function Pane({ pane, clusters, onChoose, onConsent, onStart }: {
   const toast = useToast()
   const [location, setLocation] = useState('')
   const [naming, setNaming] = useState(false)
+  const { places, projects } = usePlaces(pane.cluster)
   const cfg = clusters.find((c) => c.id === pane.cluster)
   const l = pane.listing?.cluster === pane.cluster ? pane.listing : null
   useEffect(() => setLocation(pane.path), [pane.path])
@@ -115,6 +119,10 @@ export function Pane({ pane, clusters, onChoose, onConsent, onStart }: {
           </select>
           <IconButton icon={ArrowUp} label="Up" size={16} onClick={() => browsing && pane.go(parentPath(pane.path))} />
           <IconButton icon={Home} label="Home" size={16} onClick={() => pane.go('')} />
+          <Menu label="Go to a folder" trigger={<FolderOpen size={16} />}
+            className="grid size-[34px] shrink-0 place-items-center rounded-md hover:bg-hover active:bg-pressed"
+            groups={[places.map((p) => ({ label: p.label, icon: p.path ? HardDrive : Home, onClick: () => pane.go(p.path) })),
+              projects.map((p) => ({ label: p.label, icon: Bookmark, onClick: () => pane.go(p.path) }))]} />
           <IconButton icon={RefreshCw} label="Refresh" size={16} onClick={pane.reload} />
           <IconButton icon={FolderPlus} label="New folder" size={16} onClick={() => browsing && setNaming(true)} />
         </div>
