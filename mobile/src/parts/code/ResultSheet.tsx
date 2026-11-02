@@ -18,6 +18,8 @@ export function ResultSheet({ askId, onClose, onOpenFile }: Props) {
   const title = ask ? `${agentName(ask.status.agent)} on ${nameOf(ask.status.path)}` : 'Answer'
   return (
     <Sheet title={ask && isRunning(ask) ? `${title}, working` : title} onClose={onClose}>
+      {/* the shared buttons in the phone's look: outlined, the main one solid */}
+      <div className="[&_button.bg-control]:border [&_button.bg-control]:border-line-strong [&_button.bg-control]:bg-transparent">
       <Result askId={askId} languageFor={languageFor}
         onOpenFile={(cluster, path) => {
           onClose()
@@ -30,6 +32,7 @@ export function ResultSheet({ askId, onClose, onOpenFile }: Props) {
           startAgent(cluster, { agent, name: agentName(agent), folder: folderOf(ask?.status.path ?? '~'), chat_id: chatId,
             label: '', task: '', options: {}, new_node: false, remote_control: false, profile: null }, go)
         }} />
+      </div>
     </Sheet>
   )
 }
