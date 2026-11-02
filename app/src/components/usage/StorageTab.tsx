@@ -51,7 +51,7 @@ function Quota({ r, onBackup }: { r: StorageRow; onBackup?: () => void }) {
 export function StorageTab({ storage, error, onBackup }:
   { storage: Storage | null; error: string; onBackup?: () => void }) {
   const note = error ? `Could not load: ${error}` : !storage ? 'Loading…'
-    : storage.rows.some((r) => r.mine != null) ? 'The darker part of each bar is yours.' : ''
+    : ''
   return (
     <Section title="Storage" note={note}>
       {storage && storage.rows.length > 0 && <List>{storage.rows.map((r) => <Quota key={r.label} r={r}

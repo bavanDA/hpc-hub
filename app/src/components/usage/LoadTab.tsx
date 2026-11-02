@@ -33,7 +33,7 @@ export function LoadTab({ parts, error }: { name?: string; parts: Partition[] | 
                   </td>
                   <td className="w-full px-2">
                     <div className="flex items-center gap-3">
-                      <Bar value={p.cpus_total ? p.cpus_used / p.cpus_total : 0} className="w-full max-w-60" />
+                      <Bar share value={p.cpus_total ? p.cpus_used / p.cpus_total : 0} className="w-full max-w-60" />
                       <span className="whitespace-nowrap">{n(p.cpus_used)} of {n(p.cpus_total)}
                         <span className="text-dim"> · {pct(p.cpus_used, p.cpus_total)}</span></span>
                     </div>
