@@ -1,7 +1,7 @@
 // The Sessions panel: tmux sessions per connected cluster. Click one to open it on the right.
 import { PanelLeftClose, Plus, RefreshCw } from 'lucide-react'
 
-import { AGENT_NAMES, type TmuxSession } from '../../types/terminals'
+import { sessionKind, type TmuxSession } from '../../types/terminals'
 import { useToast } from '../toast'
 import { shortName } from '../clusters/loginCopy'
 import { IconButton } from '../ui'
@@ -97,8 +97,9 @@ function SessionRow({ cluster, s, nodes, open, selected, onRefresh }: {
     node = nodes[s.job] ?? 'node released'
     if (node === 'node released' && state === 'running') state = ''
   }
-  const what = AGENT_NAMES[s.agent] ?? (s.kind === 'screen' ? 'screen' : s.command || 'tmux')
-  const bits = [what, node, ago(s.created), state].filter(Boolean)
+  const what = sessionKind(s)
+  const title = s.title.startsWith(`${what} · `) ? s.title.slice(what.length + 3) : s.title
+  const bits = [title.startsWith(what) ? '' : what, node, ago(s.created), state].filter(Boolean)  // not VS Code twice
   const code = s.remote.startsWith('code:')
   const remoteAction = () => {
     if (!code) return openLink(s.remote)
@@ -111,7 +112,7 @@ function SessionRow({ cluster, s, nodes, open, selected, onRefresh }: {
         selected ? 'bg-selected' : 'hover:bg-hover active:bg-pressed'}`}>
       <SessionIcon agent={s.agent} session={s.name} />
       <div className="min-w-0 flex-1">
-        <div className="break-words">{s.title.startsWith(`${what} · `) ? s.title.slice(what.length + 3) : s.title}</div>
+        <div className="break-words">{title}</div>
         <div className="text-sm break-words text-dim">{bits.join(' · ')}</div>
       </div>
       {(code || s.remote.startsWith('http')) && (
