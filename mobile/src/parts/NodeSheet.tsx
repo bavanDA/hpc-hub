@@ -139,8 +139,8 @@ export function NodeFields({ cluster, value: p, onChange, onValid }:
   )
 }
 
-const ASK = 'Ask before each request'
-const ASK_SUB = 'Shows this screen when you connect.'
+export const ASK = 'Ask before each request'
+export const ASK_SUB = 'Shows this screen when you connect.'
 
 /** "Ask before each request" inside padded content (Settings › Compute). */
 export function AskFirst({ checked, onChange }: { checked: boolean; onChange: (on: boolean) => void }) {
