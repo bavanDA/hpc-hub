@@ -35,6 +35,7 @@ export function Projects() {
   const toast = useToast()
   const go = useGo()
 
+  useEvent('projects', () => reload())  // your other devices changed them (shared on the cluster)
   useEvent<{ id: string; connected: boolean }>('session', (s) => setData((d) => d && {
     ...d, clusters: d.clusters.map((c) => c.id === s.id ? { ...c, connected: s.connected } : c) }))
 

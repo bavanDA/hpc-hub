@@ -29,6 +29,7 @@ export function Projects() {
   const close = () => setOpen(null)
   useEffect(() => setNotify(toast), [toast])  // "Connecting to Wulver…" while a project waits for its cluster
 
+  useEvent('projects', () => reload())  // your other devices changed them (shared on the cluster)
   useEvent<{ id: string; connected: boolean }>('session', (s) => setData((d) => d && {
     ...d, clusters: d.clusters.map((c) => c.id === s.id ? { ...c, connected: s.connected } : c) }))
 
