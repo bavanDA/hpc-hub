@@ -73,7 +73,7 @@ export function AgentSheet({ setup, agent: a, project = '', onClose }:
         {asks && <NodeRow cluster={setup.id} profile={profile} onChange={setProfile}
           label={newNode ? 'New compute node' : 'Compute node'} />}
         {a.remote_label && <ToggleRow label={a.remote_label} sub={a.remote_hint} checked={remote} onChange={setRemote} />}
-        {a.options.map((o) => <Row key={o.key} label={o.label} value={label(o)} onPress={() => setChoosing(o)} />)}
+        {a.options.map((o) => <Row key={o.key} label={o.label} value={label(o)} opens onPress={() => setChoosing(o)} />)}
       </Section>
       <Section title="Or continue a chat" note={status || undefined}>
         {list.length > 6 && <div className="border-b border-line px-4 py-2">

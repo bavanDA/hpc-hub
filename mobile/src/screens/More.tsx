@@ -37,7 +37,7 @@ const GROUPS: [string, Row[]][] = [
     { screen: 'papers', title: 'Papers', subtitle: 'LaTeX next to your code', icon: FileText, experimental: true },
   ]],
   ['Cluster', [
-    { screen: 'usage', title: 'Usage', subtitle: 'Hours left, storage and load', icon: Gauge },
+    { screen: 'usage', title: 'Usage', subtitle: 'Hours, storage and queues', icon: Gauge },
   ]],
   ['Data', [
     { screen: 'files', title: 'Files', subtitle: 'Browse, copy, upload and download', icon: FolderOpen },

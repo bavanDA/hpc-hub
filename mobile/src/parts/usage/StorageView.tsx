@@ -20,7 +20,7 @@ function Quota({ r }: { r: StorageRow }) {
       {r.quota ? <Bar value={r.used / r.quota} mine={r.mine != null ? r.mine / r.quota : null} label={r.label}
         className="my-1 w-full" /> : null}
       <span className="flex w-full gap-3 text-sm text-dim tabular-nums">
-        <span className="flex-1"><span className={r.quota && r.used / r.quota >= 0.9 ? 'text-bad' : ''}>
+        <span className="flex-1"><span className={r.quota && r.used / r.quota >= 0.9 ? 'font-semibold text-text' : ''}>
           {r.quota ? `${pct(r.used, r.quota)} full` : 'No limit'}</span>{yours && ` · ${yours}`}</span>
       </span>
     </>
