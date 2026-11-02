@@ -20,7 +20,7 @@ import { useToast } from './toast'
 import { useTools } from './tools/useTools'
 import { AlertDialog, Button, IconButton, IconTile, Spinner } from './ui'
 
-type Open = null | 'settings' | 'compute' | 'size' | 'phone' | 'release' | { switch: { id: string; name: string }; vpnOnly: boolean }
+type Open = null | 'settings' | 'compute' | 'size' | 'phone' | 'release' | 'disconnect' | { switch: { id: string; name: string }; vpnOnly: boolean }
 
 const WAITING = 'Requesting compute node'
 
@@ -91,7 +91,8 @@ export function ClusterCard({ cluster: c, session: s, log }: { cluster: Cluster;
     idle ? [{ label: 'Node size…', icon: Cpu, onClick: () => setOpen('size') },
       ...(c.vpn.enabled ? [{ label: 'Connect VPN only', icon: Plug, onClick: () => connect(true) }] : [])] : [],
     [{ label: 'Connect phone', icon: Smartphone, onClick: () => setOpen('phone') }],
-    s.state === 'Connected' ? [{ label: 'Disconnect', icon: Power, danger: true, onClick: () => run('clusters.disconnect') }]
+    s.state === 'Connected' ? [{ label: a?.owned ? 'Disconnect…' : 'Disconnect', icon: Power, danger: true,
+      onClick: () => (a?.owned ? setOpen('disconnect') : run('clusters.disconnect')) }]
       : [],
   ]
   const agents: MenuItem[][] = [AGENTS.map(([key, label, icon]) => ({ label, icon,
@@ -168,6 +169,10 @@ export function ClusterCard({ cluster: c, session: s, log }: { cluster: Cluster;
         onAct={() => { setOpen(null); run('clusters.release_node') }} onClose={() => setOpen(null)}>
         <p>Anything running on it stops.</p>
         <p>You stay connected, and your files stay where they are.</p>
+      </AlertDialog>}
+      {open === 'disconnect' && a && <AlertDialog title={`Disconnect ${shortName(c)}?`} keep="Stay connected"
+        act="Disconnect" onAct={() => { setOpen(null); run('clusters.disconnect') }} onClose={() => setOpen(null)}>
+        <p>Node {a.node} is released.</p>
       </AlertDialog>}
       {open && typeof open === 'object' && (
         <AlertDialog title={`Disconnect ${shortName(open.switch)}?`} keep={`Stay on ${shortName(open.switch)}`}
