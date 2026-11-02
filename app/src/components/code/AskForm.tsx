@@ -48,16 +48,20 @@ export function AskForm({ context, kind: firstKind = 'free', errorText = '', err
   const [to, setTo] = useState<string>('')  // '' = a one-shot ask; else a running agent's session
   const [busy, setBusy] = useState(false)
   const [problem, setProblem] = useState('')
+  const [lookFailed, setLookFailed] = useState('')  // the check for agents failed (not the same as none found)
+  const [look, setLook] = useState(0)
 
   useEffect(() => {
+    setAgents(null)
+    setLookFailed('')
     call<string[]>('tools.installed', { cluster: context.cluster })
       .then((found) => {
         const list = found.filter((a) => a in AGENTS)
         setAgents(list)
         setAgent((a) => (list.includes(a) ? a : list[0] ?? ''))
       })
-      .catch(() => setAgents([]))
-  }, [context.cluster])
+      .catch((e: Error) => { setLookFailed(e.message); setAgents([]) })
+  }, [context.cluster, look])
 
   const ctx: AskContext = whole ? { cluster: context.cluster, path: context.path } : context
   const target = running.find((r) => r.session === to)
@@ -159,6 +163,10 @@ export function AskForm({ context, kind: firstKind = 'free', errorText = '', err
           <span className="text-sm font-semibold text-dim">Agent</span>
           {agents === null
             ? <span className="text-sm text-dim">Looking for agents on the cluster</span>
+            : lookFailed
+              ? <span className="text-sm text-dim">Could not look for agents: {lookFailed}{' '}
+                <button type="button" className="font-semibold text-text underline"
+                  onClick={() => setLook((n) => n + 1)}>Try again</button></span>
             : agents.length === 0
               ? <span className="text-sm text-dim">No agent is installed on this cluster yet.</span>
               : (
