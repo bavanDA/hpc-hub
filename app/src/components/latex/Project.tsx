@@ -8,9 +8,10 @@ import { call } from '../../rpc'
 import type { BuildDone, Issue, Opened, PdfInfo, Settings, SourceSpot, Spot } from '../../types/latex'
 import { ConfirmDialog, NameDialog } from '../files/dialogs'
 import { ImageDialog } from '../files/ImageDialog'
-import { Pdf, type PdfTarget } from '../pdf'
+import { type PdfTarget } from '../pdf'
 import { PdfDialog } from '../pdf/PdfDialog'
 import { readFile } from '../pdf/load'
+import { ReadablePdf } from '../pdf/ReadAloud'
 import { useToast } from '../toast'
 import { Spinner } from '../ui'
 import { basename, ext, IMAGE_EXT, rel, Split, TEXT_EXT } from './bits'
@@ -23,7 +24,7 @@ import { counts, Logs } from './Logs'
 const CodeEditor = lazy(() => import('./CodeEditor'))
 type View = 'editor' | 'split' | 'pdf'
 type Doc = { path: string; text: string; version: number; line?: number }
-type PdfState = { data: Uint8Array | null; none?: boolean; error?: string }
+type PdfState = { data: Uint8Array | null; path?: string; none?: boolean; error?: string }
 
 function remembered<T extends string>(key: string, fallback: T): T {
   try { return (localStorage.getItem(key) as T) || fallback } catch { return fallback }
@@ -105,7 +106,7 @@ export function Project({ project, onClose }: { project: Opened; onClose: () => 
   const loadPdf = useCallback(() => {
     setProgress(0)
     call<PdfInfo | null>('latex.pdf', { cluster, main })
-      .then((info) => info ? readFile(cluster, info.path, setProgress).then((data) => setPdf({ data }))
+      .then((info) => info ? readFile(cluster, info.path, setProgress).then((data) => setPdf({ data, path: info.path }))
         : setPdf({ data: null, none: true }))
       .catch((e: Error) => setPdf({ data: null, error: e.message }))
   }, [cluster, main])
@@ -292,10 +293,12 @@ export function Project({ project, onClose }: { project: Opened; onClose: () => 
         dark:text-black">{warnings}</span>}
     </button>
   )
+  const source = pdf.path ? { cluster, path: pdf.path } : undefined
   const pdfPane = logsOpen
     ? <Logs running={!!running} log={log} last={last} onGo={goIssue} onClose={() => setLogsOpen(false)}
         onStop={() => running && running !== 'starting' && call('latex.stop', { id: running })} />
-    : <Pdf data={pdf.data} memory={`latex:${cluster}:${main}`} onSync={fromPdf} target={target} extra={logsButton}
+    : <ReadablePdf data={pdf.data} source={source} memory={`latex:${cluster}:${main}`} onSync={fromPdf} target={target}
+        extra={logsButton}
         loading={!pdf.none && !pdf.error} progress={progress}
         message={pdf.none ? <Empty title="No PDF yet" text="Press Recompile to build it on the cluster." />
           : pdf.error ? <Empty title="Could not read the PDF" text={pdf.error} /> : undefined} />
