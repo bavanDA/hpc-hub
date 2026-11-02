@@ -4,7 +4,8 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
 
 import { shortName } from '@shared/components/clusters/loginCopy'
-import { setNotify, whenConnected } from '@shared/components/tools/run'
+import { setNotify, startVscode, whenConnected } from '@shared/components/tools/run'
+import { useGo } from '@shared/nav'
 import { call } from '@shared/rpc'
 import type { ToolSetup, VsFound } from '@shared/types/tools'
 import { useToast } from '../../ui'
@@ -14,6 +15,7 @@ import { VsCodeSheet } from './VsCodeSheet'
 
 export function useStart() {
   const toast = useToast()
+  const go = useGo()
   const [sheet, setSheet] = useState<ReactNode>(null)
   useEffect(() => setNotify(toast), [toast])
   const close = useCallback(() => setSheet(null), [])
@@ -26,6 +28,12 @@ export function useStart() {
       const [setup, found] = await Promise.all([call<ToolSetup>('tools.setup', { cluster }),
         kind === 'vscode' ? call<VsFound>('tools.vscode_find', { cluster }) : Promise.resolve(null)])
       if (kind === 'vscode' && found) {
+        const v = setup.vscode
+        if (v.ask === false) {  // Ask every time is off: the saved choices, a running job if there is one
+          startVscode(cluster, { folder: folder || v.workdir || '~', target: 'browser', job: found.job?.id ?? '',
+            replace_job: false, profile: null, remember: false, remember_folder: false }, true, go)
+          return
+        }
         setSheet(<VsCodeSheet setup={setup} found={found} folder={folder} onClose={close} />)
       } else if (kind === 'agent') {
         const agent = setup.agents.find((a) => a.id === what)
@@ -37,7 +45,7 @@ export function useStart() {
     } catch (e) {
       toast((e as Error).message)
     }
-  }, [toast, close])
+  }, [toast, close, go])
 
   return { open, sheet }
 }

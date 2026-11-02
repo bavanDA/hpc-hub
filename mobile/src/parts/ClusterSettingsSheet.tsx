@@ -28,8 +28,8 @@ function changes(d: Cluster, info: SettingsInfo | null): Record<string, unknown>
     profile: pick(d.profile, PROFILE_KEYS),
   }
   if (d.vscode) {
-    const { setup, command, workdir, open_links, open_in, compute } = d.vscode
-    out.vscode = { setup, command, workdir, open_links, open_in, compute: pick(compute, PROFILE_KEYS) }
+    const { setup, command, workdir, open_links, open_in, ask, compute } = d.vscode
+    out.vscode = { setup, command, workdir, open_links, open_in, ask, compute: pick(compute, PROFILE_KEYS) }
   }
   for (const a of info?.agents ?? []) {
     const s = d[a.id]
@@ -193,6 +193,10 @@ export function ClusterSettingsSheet({ cluster, onClose }: { cluster: Cluster; o
             <Field label="Folder it opens" {...TEXT} value={d.vscode.workdir === '~' ? '' : d.vscode.workdir}
               placeholder="Home folder" onChange={(e) => upVs({ workdir: e.target.value || '~' })} />
           </div>
+          <List className="mt-3">
+            <ToggleRow label="Ask every time" sub="Shows the VS Code screen before it starts." checked={d.vscode.ask ?? true}
+              onChange={(ask) => upVs({ ask })} />
+          </List>
           <h3 className="px-4 pt-5 pb-1.5 text-xs font-semibold tracking-wide text-dim uppercase">Its own node</h3>
           <NodeFields cluster={d} value={d.vscode.compute} onChange={(compute) => upVs({ compute })} />
         </>}

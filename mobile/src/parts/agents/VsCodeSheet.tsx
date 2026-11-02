@@ -31,13 +31,14 @@ export function VsCodeSheet({ setup, found, folder: first = '', onClose }:
   const [folder, setFolder] = useState(first || v.workdir || '~')
   const [profile, setProfile] = useState(v.profile)
   const [remember, setRemember] = useState(true)
+  const [ask, setAsk] = useState(v.ask ?? true)
 
   const open = () => {
     onClose()
     // links (the tunnel, a GitHub sign-in, VS Code web on a forwarded port) open in the browser as they show up
     startVscode(setup.id, { folder: folder.trim() || '~', target: 'browser', job: job?.id ?? '',
       replace_job: Boolean(job) && !keep, profile: keep ? null : sendable(profile), remember,
-      remember_folder: !first }, true, go)
+      remember_folder: !first, ask }, true, go)
   }
 
   return (
@@ -57,12 +58,12 @@ export function VsCodeSheet({ setup, found, folder: first = '', onClose }:
         )}
         <FolderField cluster={setup.id} name={setup.name} value={folder} onChange={setFolder} />
       </div>
-      {!keep && (
-        <Section note="VS Code runs as a job of its own.">
-          <NodeRow cluster={setup.id} label="Compute node" profile={profile} onChange={setProfile} />
-          <ToggleRow label="Use these next time" checked={remember} onChange={setRemember} />
-        </Section>
-      )}
+      <Section note={keep ? undefined : 'VS Code runs as a job of its own.'}>
+        {!keep && <NodeRow cluster={setup.id} label="Compute node" profile={profile} onChange={setProfile} />}
+        {!keep && <ToggleRow label="Use these next time" checked={remember} onChange={setRemember} />}
+        <ToggleRow label="Ask every time" sub="Shows this screen before VS Code starts." checked={ask}
+          onChange={setAsk} />
+      </Section>
     </Sheet>
   )
 }
