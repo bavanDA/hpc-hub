@@ -6,7 +6,9 @@ import { useEffect, useState } from 'react'
 import { useGo } from '../../../nav'
 import { call } from '../../../rpc'
 import type { AskContext, AskKind } from '../../../types/code'
-import type { Listing } from '../../../types/terminals'
+import type { Listing, TmuxSession } from '../../../types/terminals'
+import { openSession } from '../../terminals/tabs'
+import { useToast } from '../../toast'
 import { startAgent } from '../../tools/run'
 import { IconButton, Spinner, StatusPill } from '../../ui'
 import { AGENT_NAMES, agentName, isRunning, loadAsks, type RunningAgent, useAsks } from '../ask'
@@ -31,20 +33,33 @@ export function AskPanel({ context, kind, logText, askId, onAsk, onOpenFile, onC
   const go = useGo()
   const { asks } = useAsks()
   const [running, setRunning] = useState<RunningAgent[]>([])
+  const [sessions, setSessions] = useState<TmuxSession[]>([])
+  const toast = useToast()
   const cluster = context?.cluster ?? ''
 
   useEffect(() => {
     if (!cluster) return
     loadAsks(cluster).catch(() => {})
     call<Listing>('terminals.list', { cluster })
-      .then((l) => setRunning(l.sessions.filter((s) => s.agent in AGENT_NAMES).map((s) => ({
-        cluster, session: s.name, node: s.node, agent: s.agent, label: s.label || agentName(s.agent) }))))
+      .then((l) => {
+        setSessions(l.sessions)
+        setRunning(l.sessions.filter((s) => s.agent in AGENT_NAMES).map((s) => ({
+          cluster, session: s.name, node: s.node, agent: s.agent, label: s.label || agentName(s.agent) })))
+      })
       .catch(() => setRunning([]))
   }, [cluster])
 
   const errorSources: ErrorSource[] = context && LOG.test(context.path)
     ? [{ label: 'The end of this file', load: async () => logText().split('\n').slice(-80).join('\n') }] : []
   const mine = asks.filter((a) => !cluster || a.cluster === cluster)
+
+  // a question sent to an agent already running: its answer comes in its terminal, so show that
+  const sent = (to: RunningAgent) => {
+    const s = sessions.find((x) => x.name === to.session)
+    toast(`Sent to ${to.label}`)
+    if (s) openSession(to.cluster, s)
+    go('terminals')
+  }
 
   const keepTalking = (c: string, chatId: string, agent: string) => {
     const folder = context?.path.replace(/\/[^/]*$/, '') || '~'
@@ -66,7 +81,7 @@ export function AskPanel({ context, kind, logText, askId, onAsk, onOpenFile, onC
         ) : context ? (
           <AskForm key={`${context.path}:${context.from_line ?? 0}:${context.to_line ?? 0}:${kind}`}
             context={context} kind={kind} errorSources={errorSources} running={running}
-            fileKey={`${context.cluster}:${context.path}`} onStarted={(id) => onAsk(id)} />
+            fileKey={`${context.cluster}:${context.path}`} onStarted={(id) => onAsk(id)} onSent={sent} />
         ) : (
           <p className="text-sm text-dim">Open a file, then ask about it or about the lines you select.</p>
         )}
