@@ -167,8 +167,9 @@ class NodesMixin:
             job = max(own, key=lambda j: int(j.job_id))
             self.allocation = Allocation(job.job_id, job.node, owned=True)
         else:
-            ours = [j for j in jobs if j.name.startswith("hpc-hub") and j.name != "hpc-hub-vscode"]
-            job = slurm.pick_reusable(jobs if self.cfg.reuse_running_job else ours, self.cfg.profile.partition)
+            mine = [j for j in jobs if j.name != "hpc-hub-vscode"]  # VS Code's node is VS Code's
+            ours = [j for j in mine if j.name.startswith("hpc-hub")]
+            job = slurm.pick_reusable(mine if self.cfg.reuse_running_job else ours, self.cfg.profile.partition)
             if not job:
                 return False
             self.allocation = Allocation(job.job_id, job.node, owned=False)

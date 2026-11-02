@@ -300,8 +300,9 @@ def test_reuses_agent_node_but_not_strangers(env, monkeypatch):
     assert rec.done.wait(20)
     assert "scancel" not in (tmp / "cmds.log").read_text()  # not ours to cancel
 
-    s, rec = _connect_with_jobs(server, monkeypatch, "71|bash|n0071|general;72|hpc-hub-vscode|n0072|general")
-    assert s.allocation.job_id == "42"  # a fresh node: your own jobs and VS Code are left alone
+    s, rec = _connect_with_jobs(server, monkeypatch, "71|bash|n0071|general;72|hpc-hub-vscode|n0072|general",
+                                reuse_running_job=False)
+    assert s.allocation.job_id == "42"  # reuse off: a fresh node, your own jobs and VS Code are left alone
     rec.done.clear()
     s.disconnect()
     assert rec.done.wait(20)
