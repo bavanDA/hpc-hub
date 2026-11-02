@@ -16,7 +16,8 @@ _setups: dict[str, tuple[str, str]] = {}  # setup id: (cluster, secret), until t
 
 
 _EVENTS = ((r"ok \S+ \(open (\d+) min\)", "Code accepted, open for {} min"), (r"ok \S+", "Code accepted"),
-           (r"wrong code (\d+) of (\d+) in \S+", "Wrong code, {} of {}"), (r"locked: stopping Claude", "Locked, Claude stopped"),
+           (r"wrong code (\d+) of (\d+) in \S+", "Wrong code, {} of {}"),
+           (r"locked: stopping Claude", "Locked, Claude stopped"),
            (r"locked by hand", "Locked"), (r"set up", "Lock turned on"), (r"set .*", "Lock settings changed"),
            (r"reset", "Unlocked"))
 _MONTHS = "Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec".split()
