@@ -1,0 +1,32 @@
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 390px; height: 844px; overflow: hidden; }
+body { position: relative; background: var(--bg); color: var(--fg); -webkit-font-smoothing: antialiased;
+  display: flex; flex-direction: column; font-feature-settings: "tnum" 1; }
+button, input { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+.sb { height: 36px; flex: none; display: flex; align-items: center; justify-content: space-between;
+  padding: 2px 26px 0 30px; font: 600 15px/1 "Inter", system-ui, sans-serif; color: var(--fg); position: relative; z-index: 60; }
+.sbi { display: flex; gap: 6px; align-items: center; }
+.sbi svg { fill: currentColor; }
+.gb { height: 22px; flex: none; display: flex; justify-content: center; align-items: center; position: relative; z-index: 60; }
+.gb i { width: 108px; height: 4px; border-radius: 4px; background: var(--fg); opacity: .8; }
+.grow { flex: 1; min-height: 0; overflow: hidden; position: relative; }
+svg.i { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+.caret { display: inline-block; width: 2px; height: 1.1em; background: var(--acc); vertical-align: -0.15em; margin-left: 1px; }
+[data-state=edit] .foot { display: none; }
+
+/* numeric keyboards (system UI, neutral) */
+:root { --kb-bg:#e3e4e8; --kb-key:#ffffff; --kb-fn:#c8cad0; --kb-fg:#1b1b1b; }
+[data-theme=dark] { --kb-bg:#1f1f21; --kb-key:#3a3a3d; --kb-fn:#2c2c2f; --kb-fg:#ececec; }
+[data-state=edit] .gb { background: var(--kb-bg); }
+.kb { flex: none; background: var(--kb-bg); color: var(--kb-fg); font-family: "Inter", system-ui, sans-serif; position: relative; z-index: 50; }
+.kb-a { padding: 8px 6px 6px; display: grid; grid-template-columns: repeat(3, 1fr) 1fr; gap: 6px; }
+.kb-a b { height: 54px; border-radius: 8px; background: var(--kb-key); display: grid; place-items: center; font-size: 24px; font-weight: 400; }
+.kb-a b.fn { background: var(--kb-fn); font-size: 16px; font-weight: 500; }
+.kb-a b.done { grid-row: span 3; height: auto; }
+.kb-i { padding: 0 0 4px; }
+.kb-i .tb { height: 44px; display: flex; align-items: center; justify-content: flex-end; padding: 0 18px; font-size: 17px; font-weight: 600;
+  background: var(--kb-fn); }
+.kb-i .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; padding: 7px 6px 0; }
+.kb-i b { height: 50px; border-radius: 6px; background: var(--kb-key); display: grid; place-items: center; font-size: 25px; font-weight: 400;
+  box-shadow: 0 1px 0 rgba(0,0,0,.25); }
+.kb-i b.e { background: none; box-shadow: none; }

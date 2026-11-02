@@ -55,8 +55,15 @@ the owner's own review notes; the quote is what they said. A rule that can be te
     task.
     > "keep it professional and relevant, no colorful"
 
+18. **Style E everywhere (phone first, then desktop).** The owner chose style E, "Black and white rows" in the
+    manner of GitHub and Linear mobile: monochrome rows on a plain background, hairline separators, label on the
+    left and value on the right, tapping a number row opens it in place as a large input with its limit, a chevron
+    only where a row opens another screen, segmented quick picks, one solid main button (white on dark, black on
+    light), no colored accent. Reference: `docs/design/style-e/` (E.html and screenshots).
+    > "I like the E style can you create the whole using that style"
+
 ## Process
 
-18. **Show before merging.** Every design goes to the owner on a review page first; nothing merges without it.
-19. **A fix is only done when it shows on screen.** Check every reported fix against the actual screenshot.
-20. **Check the whole app, not just the screen that was commented on.** A rule broken once is checked everywhere.
+19. **Show before merging.** Every design goes to the owner on a review page first; nothing merges without it.
+20. **A fix is only done when it shows on screen.** Check every reported fix against the actual screenshot.
+21. **Check the whole app, not just the screen that was commented on.** A rule broken once is checked everywhere.
