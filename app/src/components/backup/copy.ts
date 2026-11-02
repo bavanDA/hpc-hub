@@ -141,7 +141,7 @@ export const space = {
 export const copying = {
   title: (bytes: string) => `Copying ${bytes} to project`,
   job: (_id: string) => 'You can close the app.',
-  stop: 'Stop copying',
+  stop: 'Stop copy',
   stopTitle: 'Stop the copy?',
   stopText: 'Files copied so far stay in project. Start again later and it goes on from there.',
   keep: 'Keep copying',

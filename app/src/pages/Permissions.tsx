@@ -3,6 +3,7 @@ import { CircleAlert, RefreshCw } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { useActiveCluster } from '../components/clusters/active'
+import { shortName } from '../components/clusters/loginCopy'
 import { NotConnected } from '../components/clusters/NotConnected'
 import { Commands } from '../components/permissions/Commands'
 import { Group, SwitchRow } from '../components/permissions/controls'
@@ -45,7 +46,7 @@ export function Permissions() {
 
   const dirty = useMemo(() => !!perm && !!draft && JSON.stringify(draftOf(perm)) !== JSON.stringify(draft),
     [perm, draft])
-  const name = active?.name ?? cluster
+  const name = active ? shortName(active) : cluster
   const allowed = useMemo(() => new Set(draft?.allowed), [draft])
   const edit = (part: Partial<Draft>) => setDraft((d) => d && { ...d, ...part })
   const tick = (cmds: string[], on: boolean) => {
