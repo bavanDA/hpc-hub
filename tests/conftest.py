@@ -27,7 +27,6 @@ GTK_TESTS = {
     "api/test_sso.py::test_chrome_profile_can_switch_to_the_app_window_or_cancel",
     "api/test_sso.py::test_sign_in_window_uses_the_same_fill_script",
     "connect/test_vpn_sso.py::test_password_only_goes_to_the_sign_in_site",
-    "pdf/test_readaloud.py::test_assemble_parts_and_offsets",
 }
 POSIX = {
     "agents/test_ask_all.py", "agents/test_chat_copy.py", "agents/test_chats.py", "agents/test_lock.py",

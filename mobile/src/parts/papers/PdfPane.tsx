@@ -3,14 +3,16 @@
 // taps in the same spot into one, and drops the browser's own so a double-tap never asks twice.
 import { useEffect, useRef, type ReactNode } from 'react'
 
-import { Pdf, type PdfTarget } from '@shared/components/pdf'
+import type { PdfTarget } from '@shared/components/pdf'
+import { ReadAloudPdf } from '../ReadAloudPdf'
 
 const GAP = 350  // ms between the two taps
 const NEAR = 30  // px between them
 const STILL = 10  // px a finger may move and still count as a tap
 
-export function PdfPane({ data, memory, loading, progress, message, target, onSync }: {
-  data: Uint8Array | null; memory: string; loading: boolean; progress: number; message?: ReactNode
+export function PdfPane({ data, path, cluster, memory, loading, progress, message, target, onSync }: {
+  data: Uint8Array | null; path?: string; cluster: string; memory: string; loading: boolean; progress: number
+  message?: ReactNode
   target: PdfTarget | null; onSync: (page: number, x: number, y: number) => void
 }) {
   const box = useRef<HTMLDivElement>(null)
@@ -48,8 +50,8 @@ export function PdfPane({ data, memory, loading, progress, message, target, onSy
 
   return (
     <div ref={box} className="h-full">
-      <Pdf data={data} memory={memory} compact loading={loading} progress={progress} message={message}
-        target={target} onSync={onSync} />
+      <ReadAloudPdf data={data} source={path ? { cluster, path } : undefined} memory={memory} compact
+        loading={loading} progress={progress} message={message} target={target} onSync={onSync} />
     </div>
   )
 }

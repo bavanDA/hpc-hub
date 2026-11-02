@@ -1,9 +1,9 @@
 // A PDF from a cluster over the whole window. Escape or the X closes it.
 import { X } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 
-import { Pdf } from './index'
 import { readFile } from './load'
+import { ReadablePdf } from './ReadAloud'
 
 export function PdfDialog({ cluster, path, subtitle, onClose }:
   { cluster: string; path: string; subtitle?: string; onClose: () => void }) {
@@ -11,6 +11,7 @@ export function PdfDialog({ cluster, path, subtitle, onClose }:
   const [progress, setProgress] = useState(0)
   const [error, setError] = useState('')
   const name = path.split('/').pop() || path
+  const source = useMemo(() => ({ cluster, path }), [cluster, path])
 
   useEffect(() => {
     let live = true
@@ -40,7 +41,7 @@ export function PdfDialog({ cluster, path, subtitle, onClose }:
             className="grid size-9 place-items-center rounded-full hover:bg-hover"><X size={16} /></button>
         </div>
         <div className="min-h-0 flex-1 border-t border-line">
-          <Pdf data={data} zoom="auto" memory={`${cluster}:${path}`} loading={!data} progress={progress}
+          <ReadablePdf data={data} source={source} zoom="auto" memory={`${cluster}:${path}`} loading={!data} progress={progress}
             message={error ? <p className="text-bad">Could not read the PDF: {error}</p> : undefined} />
         </div>
       </div>

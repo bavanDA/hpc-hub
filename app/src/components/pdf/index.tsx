@@ -2,6 +2,10 @@
 import { lazy, Suspense, type ReactNode } from 'react'
 
 import { Spinner } from '../ui'
+import type { Reader, Spot } from './reader'
+
+/** A word you right-clicked or held: its text, where it is on the page, and where on the screen. */
+export type WordPick = { text: string; spot: Spot; x: number; y: number; touch: boolean }
 
 /** Where to scroll, in PDF points from the page's top left; n changes for each new jump. */
 export type PdfTarget = { page: number; x: number; y: number; n: number }
@@ -17,6 +21,10 @@ export type PdfProps = {
   onSync?: (page: number, x: number, y: number) => void  // double-click on a page, in PDF points from top left
   target?: PdfTarget | null
   extra?: ReactNode  // more buttons at the right of the toolbar
+  reader?: Reader  // read aloud: the spoken word is drawn and followed; a click on a word reads from there
+  onWord?: (w: WordPick) => void  // right-click (or hold, on a touch screen) on a word
+  bar?: ReactNode  // under the toolbar
+  footer?: ReactNode  // under the pages
 }
 
 const Viewer = lazy(() => import('./PdfViewer'))
