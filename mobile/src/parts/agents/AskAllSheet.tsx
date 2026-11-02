@@ -7,7 +7,7 @@ import { startAsk } from '@shared/components/tools/run'
 import { useGo } from '@shared/nav'
 import { call } from '@shared/rpc'
 import type { ToolSetup } from '@shared/types/tools'
-import { Button, Card, Field, Sheet, Switch, TextArea } from '../../ui'
+import { Field, MainButton, Section, Sheet, TextArea, ToggleRow } from '../../ui'
 import { FolderField } from './FolderField'
 import { NodeRow } from './NodeFields'
 
@@ -48,36 +48,35 @@ export function AskAllSheet({ setup, folder: first = '', onClose }:
       profile: setup.node ? null : sendable(profile), remember }, go)
   }
 
+  const short = setup.name.split(' (')[0]
   return (
-    <Sheet title={`Ask all on ${setup.name}`} onClose={onClose}
-      actions={<Button kind="primary" className="flex-1" onClick={ask}>Ask all</Button>}>
-      {note && <p className="mb-3 rounded-xl bg-bad-bg p-3 text-bad">{note}</p>}
-      <TextArea label="Prompt" value={prompt} onChange={(e) => { setPrompt(e.target.value); setNote('') }}
-        placeholder="Which of these two plotting scripts is easier to maintain, and why?" />
-      <FolderField cluster={setup.id} name={setup.name} value={folder} onChange={setFolder} />
-      <Field label="Answers go to" value={out} autoCapitalize="none" autoCorrect="off" spellCheck={false}
-        onChange={(e) => setOut(e.target.value)} />
-      <h2 className="mt-3 mb-1 font-bold">Who answers</h2>
-      <p className="mb-2 text-sm text-dim">{checkFailed ? "Couldn't check which agents are installed."
-        : !found ? 'Checking which ones are installed…' : 'Each one works in the folder and writes its own answer.'}</p>
-      <Card className="py-1">
+    <Sheet title={`Ask all on ${short}`} flush onClose={onClose} actions={<MainButton onClick={ask}>Ask all</MainButton>}>
+      <div className="px-4">
+        {note && <p className="pb-1 font-semibold text-bad">{note}</p>}
+        <TextArea label="Prompt" value={prompt} onChange={(e) => { setPrompt(e.target.value); setNote('') }}
+          placeholder="Which of these two plotting scripts is easier to maintain, and why?" />
+        <FolderField cluster={setup.id} name={setup.name} value={folder} onChange={setFolder} />
+        <Field label="Answers go to" value={out} autoCapitalize="none" autoCorrect="off" spellCheck={false}
+          onChange={(e) => setOut(e.target.value)} />
+      </div>
+      <Section title="Who answers" note={checkFailed ? "Couldn't check which agents are installed."
+        : !found ? 'Checking which ones are installed…' : 'Each one works in the folder and writes its own answer.'}>
         {setup.agents.map((a) => (
-          <Switch key={a.id} label={a.name} checked={Boolean(picked[a.id]) && usable(a.id)}
-            hint={usable(a.id) ? undefined : 'Not installed on this cluster'}
+          <ToggleRow key={a.id} label={a.name} checked={Boolean(picked[a.id]) && usable(a.id)}
+            sub={usable(a.id) ? undefined : 'Not installed'}
             onChange={(on) => { if (usable(a.id)) { setPicked({ ...picked, [a.id]: on }); setNote('') } }} />
         ))}
-        <Switch label="Let them read each other's answers" checked={discuss} onChange={setDiscuss}
-          hint="A second round where each one answers again after reading the others" />
-      </Card>
-      <div className="mt-3">
+        <ToggleRow label="Let them read each other's answers" checked={discuss} onChange={setDiscuss}
+          sub="Each one answers again after reading the others" />
+      </Section>
+      <Section>
         {setup.node
-          ? <NodeRow line={`Runs on your node ${setup.node}`} sub={`Job ${setup.job}, no new job needed`} />
+          ? <NodeRow cluster={setup.id} node={setup.node} />
           : <>
-              <NodeRow line="Asks for a compute node first" profile={profile} onChange={setProfile} />
-              <Card className="mt-2 py-1"><Switch label="Use this size next time" checked={remember}
-                onChange={setRemember} /></Card>
+              <NodeRow cluster={setup.id} label="Compute node" profile={profile} onChange={setProfile} />
+              <ToggleRow label="Use this size next time" checked={remember} onChange={setRemember} />
             </>}
-      </div>
+      </Section>
     </Sheet>
   )
 }

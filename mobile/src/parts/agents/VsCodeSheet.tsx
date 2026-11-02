@@ -7,7 +7,7 @@ import { sendable } from '@shared/components/tools/format'
 import { startVscode } from '@shared/components/tools/run'
 import { useGo } from '@shared/nav'
 import type { ToolSetup, VsFound } from '@shared/types/tools'
-import { Button, Card, Segments, Sheet, Switch } from '../../ui'
+import { MainButton, Section, Segments, Sheet, ToggleRow } from '../../ui'
 import { FolderField } from './FolderField'
 import { NodeRow } from './NodeFields'
 
@@ -30,25 +30,27 @@ export function VsCodeSheet({ setup, found, folder: first = '', onClose }:
   }
 
   return (
-    <Sheet title={`VS Code on ${setup.name}`} onClose={onClose}
-      actions={<Button kind="primary" icon={Globe} className="flex-1" onClick={open}>Open in the browser</Button>}>
-      <p className="mb-3 text-dim">It opens at vscode.dev in your browser. The first time, sign in with GitHub
-        when it asks.</p>
-      {job && (
-        <div className="mb-3">
-          <p className="mb-2 font-semibold">{job.node ? `VS Code is already running on node ${job.node}`
-            : 'A VS Code job is waiting in the queue'}</p>
-          <Segments value={keep ? 'keep' : 'new'} onChange={(x) => setKeep(x === 'keep')}
-            options={[['keep', 'Use it'], ['new', 'Start a new one']] as const} />
-          {job.resources && <p className="mt-1 text-sm text-dim">{job.resources}</p>}
-        </div>
-      )}
-      <FolderField cluster={setup.id} name={setup.name} value={folder} onChange={setFolder} />
+    <Sheet title={`VS Code on ${setup.name.split(' (')[0]}`} flush onClose={onClose}
+      actions={<MainButton icon={Globe} onClick={open}>Open in the browser</MainButton>}>
+      <div className="px-4">
+        <p className="pb-2 text-dim">It opens at vscode.dev in your browser. The first time, sign in with GitHub
+          when it asks.</p>
+        {job && (
+          <div className="py-2">
+            <p className="mb-2 font-medium">{job.node ? `VS Code is already running on node ${job.node}`
+              : 'A VS Code job is waiting in the queue'}</p>
+            <Segments label="VS Code" value={keep ? 'keep' : 'new'} onChange={(x) => setKeep(x === 'keep')}
+              options={[['keep', 'Use it'], ['new', 'Start a new one']] as const} />
+            {job.resources && <p className="mt-1.5 text-sm text-dim">{job.resources}</p>}
+          </div>
+        )}
+        <FolderField cluster={setup.id} name={setup.name} value={folder} onChange={setFolder} />
+      </div>
       {!keep && (
-        <div className="mt-2">
-          <NodeRow line="VS Code runs as a job of its own" profile={profile} onChange={setProfile} />
-          <Card className="mt-2 py-1"><Switch label="Use these next time" checked={remember} onChange={setRemember} /></Card>
-        </div>
+        <Section note="VS Code runs as a job of its own.">
+          <NodeRow cluster={setup.id} label="Compute node" profile={profile} onChange={setProfile} />
+          <ToggleRow label="Use these next time" checked={remember} onChange={setRemember} />
+        </Section>
       )}
     </Sheet>
   )
