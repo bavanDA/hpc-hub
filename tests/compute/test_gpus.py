@@ -51,7 +51,7 @@ def test_the_request_names_the_type():
     assert "--gres=gpu:a100_10g:1" in slurm.resource_args(p)
     assert "--gres=gpu:2" in slurm.resource_args(ComputeProfile(gpus=2))
     assert "GPU type has invalid characters" in slurm.validate(ComputeProfile(gpus=1, gpu_type="a100;rm"))
-    assert p.summary().endswith("A100, 10 GB slice · gpu")
+    assert p.summary() == "2 cores · 16 GB · 4 h · A100, 10 GB slice"  # the size, not the queue
     assert "2 × H100" in ComputeProfile(gpus=2, gpu_type="h100").summary()
 
 

@@ -107,17 +107,21 @@ function details({ cluster, job_id }: Record<string, unknown>): JobDetails {
   const j = find(String(cluster), String(job_id))
   if (!j) throw new Error('Job not found')
   const active = ['RUNNING', 'PENDING'].includes(j.state)
-  const start = j.state === 'PENDING' ? '' : '2026-10-24 09:31'
+  const start = j.state === 'PENDING' ? '' : 'Oct 24, 09:31'
   const dir = `/project/mygroup/${ME}/${j.name}`
+  const STATE: Record<string, string> = { RUNNING: 'Running', COMPLETED: 'Finished', FAILED: 'Failed',
+    CANCELLED: 'Cancelled', TIMEOUT: 'Ran out of time' }
   const groups = [
     { title: 'Status', rows: [
-      ['State', j.state === 'PENDING' ? `PENDING ${j.where}` : j.state], ['Run time', `${j.elapsed} of ${j.limit}`],
-      ['Started', start], [active ? 'Ends' : 'Ended', start && '2026-10-24 13:31'], ['Submitted', '2026-10-24 09:30'],
-      ['Exit code', active ? '' : j.state === 'COMPLETED' ? '0:0' : '1:0']] },
+      ['State', j.state === 'PENDING' ? j.reason : STATE[j.state] ?? j.state],
+      ['Run time', j.state === 'PENDING' ? `${j.limit_text} asked` : `${j.elapsed_text} of ${j.limit_text}`],
+      ['Started', start], [active ? 'Ends' : 'Ended', start && 'Oct 24, 13:31'], ['Submitted', 'Oct 24, 09:30'],
+      ['Exit code', active ? '' : j.state === 'COMPLETED' ? '0, finished without errors'
+        : '1, the program reported an error']] },
     { title: 'Resources', rows: [
-      ['Node', j.state === 'PENDING' ? '' : j.where], ['CPUs', j.cpus], ['Memory', j.mem],
-      ['GPUs', j.partition === 'gpu' ? '2' : ''],
-      ['Partition · QoS · account', `${j.partition} · ${j.qos} · mygroup`]] },
+      ['Node', j.state === 'PENDING' ? '' : j.where], ['Cores', j.cpus], ['Memory', j.mem.replace(/G$/, ' GB')],
+      ['GPUs', j.partition === 'gpu' ? '2' : ''], ['Queue', j.partition], ['Billing', j.qos_shown],
+      ['Charged to', 'mygroup']] },
     { title: 'Files', rows: [['Work folder', dir], ['Output', `${dir}/slurm-${j.job_id}.out`]] },
   ].map((g) => ({ title: g.title, rows: g.rows.filter(([, v]) => v).map(([label, value]) => ({ label, value })) }))
   const text = [`JobId=${j.job_id} JobName=${j.name}`,

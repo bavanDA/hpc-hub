@@ -1,4 +1,5 @@
-// Cancel a job: one short question that says what you lose (time run, what runs in it, HPC Hub's node).
+// Cancel a job: one short question that says what you lose (time run, what runs in it). HPC Hub's own node gets
+// the Release node question instead.
 import { useEffect, useState } from 'react'
 
 import { call } from '../../rpc'
@@ -34,11 +35,19 @@ export function CancelDialog({ cluster, job: j, appJob, onClose, onDone }: {
     toast(`Cancelling job ${j.job_id}…`)
     call<{ gone: boolean }>('jobs.cancel', { cluster, job_id: j.job_id })
       .then(({ gone }) => toast(gone ? `Job ${j.job_id} is cancelled`
-        : `Cancel sent. Slurm is still stopping job ${j.job_id}`))
+        : `Cancel sent. Job ${j.job_id} is still stopping`))
       .catch((e: Error) => toast(`Couldn't cancel job ${j.job_id}: ${e.message}`))
       .finally(onDone)
   }
 
+  // HPC Hub's own node: the same question as the card's Release node
+  if (appNode && running) return (
+    <AlertDialog title={`Release node ${j.where}?`} keep="Keep it" act="Release node" onAct={confirm}
+      onClose={onClose}>
+      <p>Job {j.job_id} ends and the node goes back to the cluster. Anything running there stops.</p>
+      {inside && inside.sessions.length > 0 && <p>These stop too: {inside.sessions.join(', ')}.</p>}
+    </AlertDialog>
+  )
   return (
     <AlertDialog title={`Cancel ${j.name || `job ${j.job_id}`}?`} keep={running ? 'Keep running' : 'Keep waiting'}
       act="Cancel job" disabled={!inside} onAct={confirm} onClose={onClose}>
@@ -46,7 +55,7 @@ export function CancelDialog({ cluster, job: j, appJob, onClose, onDone }: {
         ? `It has run ${ranFor(j.elapsed)}. Its output so far stays in your folder.`
         : "It's still waiting in the queue. Nothing has started yet."}</p>
       {inside && inside.sessions.length > 0 && <p>These stop too: {inside.sessions.join(', ')}.</p>}
-      {appNode && <p>HPC Hub runs your terminals on this node, so you'll be left without one.</p>}
+      {appNode && <p>Your terminals on this node stop too.</p>}
       {!inside && <p className="flex items-center gap-2 text-sm"><Spinner size={14} />Checking what runs in it…</p>}
     </AlertDialog>
   )

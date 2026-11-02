@@ -5,7 +5,7 @@ import { Check, ChevronDown, ChevronRight, Cpu } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
 import { call } from '../../rpc'
-import { summary, type Cluster, type Limits, type Profile } from '../../types/clusters'
+import { cores, summary, type Cluster, type Limits, type Profile } from '../../types/clusters'
 import { useToast } from '../toast'
 import { Term } from '../Term'
 import { Button, Dialog } from '../ui'
@@ -127,7 +127,7 @@ export function ComputeDialog({ cluster: c, onClose, saveOnly = false }:
   }
 
   const gpu = gpuSummary(p, gpus)
-  const line = [`${p.cpus} cores`, `${p.mem_gb} GB`, gpu, human(time)].filter(Boolean).join(' · ')
+  const line = [cores(p.cpus), `${p.mem_gb} GB`, gpu, human(time)].filter(Boolean).join(' · ')
   const queue = [p.partition, p.account, p.qos].filter((x) => x?.trim()).join(' · ') || "The cluster's defaults"
   return (
     <Dialog title={saveOnly ? 'Compute node size' : `Compute node on ${c.name}`} onClose={onClose} width={640}

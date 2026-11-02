@@ -66,9 +66,9 @@ function JobRow({ job: j, cols, anyCancel, onOpen, onCancel }: {
       case 'name': return (
         <span className="flex min-w-0 items-baseline gap-2">
           <span className="min-w-[7ch] truncate" title={j.name}>{j.name}</span>
-          {/* the queue gives way first, so the name stays readable */}
+          {/* the HPC Hub mark gives way first, so the name stays readable */}
           <span className="min-w-0 shrink-[4] truncate text-sm text-dim">
-            {[j.partition, j.qos_shown, j.from_app && 'HPC Hub'].filter(Boolean).join(' · ')}</span>
+            {j.from_app ? 'HPC Hub' : ''}</span>
         </span>)
       case 'user': return <span className="text-dim">{j.user}</span>
       case 'state': return <StatusPill state={j.state}>{stateName(j.state)}</StatusPill>

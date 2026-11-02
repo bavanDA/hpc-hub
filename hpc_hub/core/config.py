@@ -52,13 +52,12 @@ class ComputeProfile:
     extra_args: str = ""
 
     def summary(self) -> str:
-        parts = [f"{self.cpus} cores", f"{self.mem_gb} GB", short_time(self.time)]
+        """"4 cores · 16 GB · 4 h": the size, not the queue."""
+        parts = [f"{self.cpus} core{'' if self.cpus == 1 else 's'}", f"{self.mem_gb} GB", short_time(self.time)]
         if self.gpus:
             from ..compute.gpus import describe
             name = describe(self.gpu_type)[0] if self.gpu_type else "GPU"
             parts.append(name if self.gpus == 1 and self.gpu_type else f"{self.gpus} × {name}")
-        if self.partition:
-            parts.append(self.partition)
         return " · ".join(parts)
 
 

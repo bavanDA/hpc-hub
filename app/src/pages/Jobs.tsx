@@ -105,7 +105,7 @@ export function Jobs() {
           focus-within:ring-2 focus-within:ring-accent">
           <Search size={16} className="shrink-0 text-dim" />
           <input value={query} onChange={(e) => setQuery(e.target.value)}
-            placeholder="Filter by id, name, user, partition"
+            placeholder="Filter by id, name, person, queue"
             className="min-w-0 flex-1 bg-transparent outline-none placeholder:text-dim" />
         </label>
         <button aria-label="Refresh" title="Refresh" onClick={() => refresh()} disabled={!connected || loading}

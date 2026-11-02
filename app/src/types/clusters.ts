@@ -176,9 +176,12 @@ export function gpuText(p: Profile) {
   return p.gpus > 1 ? `${p.gpus} × ${name}` : name
 }
 
+/** "1 core", "4 cores". */
+export const cores = (n: number | string) => `${n} core${Number(n) === 1 ? '' : 's'}`
+
+/** "4 cores · 16 GB · 4 h · A100": the size, without the queue (hpc_hub/core/config.py summary). */
 export function summary(p: Profile) {
-  return [`${p.cpus} cores`, `${p.mem_gb} GB`, shortTime(p.time), gpuText(p), p.partition]
-    .filter(Boolean).join(' · ')
+  return [cores(p.cpus), `${p.mem_gb} GB`, shortTime(p.time), gpuText(p)].filter(Boolean).join(' · ')
 }
 
 /** Your node settings on the Fast node queue (hpc_hub/core/config.py fast_profile); null without one. */

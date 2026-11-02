@@ -1,4 +1,5 @@
 // How a schedule reads in its row: when it runs next, when it ran last, and a short status.
+import { cores } from '../../types/clusters'
 import type { Compute, ScheduleStatus } from '../../types/schedules'
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
@@ -24,6 +25,6 @@ export function status(st: ScheduleStatus): { kind: Kind; label: string; note: s
 }
 
 export function computeText(c: Compute): string {
-  return [c.cpus ? `${c.cpus} cores` : '', c.mem_gb ? `${c.mem_gb} GB` : '', c.gpus ? `${c.gpus} GPU` : '',
-    c.partition ?? ''].filter(Boolean).join(' · ')
+  return [c.cpus ? cores(c.cpus) : '', c.mem_gb ? `${c.mem_gb} GB` : '',
+    c.gpus ? `${c.gpus} GPU${c.gpus > 1 ? 's' : ''}` : ''].filter(Boolean).join(' · ')
 }

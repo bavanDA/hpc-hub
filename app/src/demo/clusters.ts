@@ -91,7 +91,7 @@ const sessions: Session[] = [
 
 const logs: Record<string, string[]> = {
   wulver: ['09:14:02  VPN vpn.njit.edu is up', '09:14:05  Signing in as jdoe', '09:14:11  Duo approved',
-    '09:14:12  Requesting 4 cores · 16 GB · 04:00:00 · general', '09:14:31  Node n0042 (job 123456)'],
+    '09:14:12  Requesting 4 cores · 16 GB · 4 h', '09:14:31  Node n0042 (job 123456)'],
   yale: ['09:20:40  VPN access.yale.edu is up', '09:20:44  Signing in as jdoe', '09:20:52  Duo approved'],
   sdsc: [],
 }

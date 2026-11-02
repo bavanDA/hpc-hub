@@ -3,6 +3,7 @@
 import re
 import time
 from dataclasses import asdict
+from datetime import datetime
 
 from ...compute import jobs, slurm, usage
 from ...compute.jobs import JobInfo
@@ -80,8 +81,44 @@ def list_jobs(cluster: str, scope: str = jobs.MINE) -> dict:
             "app_job": s.allocation.job_id if s.allocation else ""}
 
 
+# Slurm's job states in words; a waiting job says why instead
+STATES = {"RUNNING": "Running", "COMPLETED": "Finished", "COMPLETING": "Finishing", "FAILED": "Failed",
+          "CANCELLED": "Cancelled", "TIMEOUT": "Ran out of time", "OUT_OF_MEMORY": "Ran out of memory",
+          "NODE_FAIL": "The node failed", "PREEMPTED": "Stopped for a higher-priority job", "SUSPENDED": "Paused",
+          "REQUEUED": "Back in the queue", "BOOT_FAIL": "The node didn't start", "DEADLINE": "Missed its deadline"}
+
+
+def state_text(state: str, reason: str = "") -> str:
+    """"Running", "Ran out of time", "Waiting: higher-priority jobs go first"."""
+    if state == "PENDING":
+        return jobs.reason_text(f"({reason})") if reason else "Waiting to start"
+    word = state.split()[0] if state else ""
+    return STATES.get(word, word.capitalize())
+
+
+def date_text(v: str) -> str:
+    """"Oct 24, 09:31" for Slurm's "2026-10-24T09:31:05"."""
+    try:
+        t = datetime.strptime(v[:16], "%Y-%m-%dT%H:%M")
+    except ValueError:
+        return v.replace("T", " ")[:16]
+    return f"{t:%b} {t.day}, {t:%H:%M}"
+
+
+def mem_text(v: str) -> str:
+    """"64 GB" for Slurm's "64G", "500 MB" for "500M", "1.5 TB" for "1536G"."""
+    m = re.fullmatch(r"([\d.]+)([KMGT]?)\w*", v.strip())
+    if not m:
+        return v
+    mb = float(m.group(1)) * {"K": 1 / 1024, "M": 1, "G": 1024, "T": 1024 ** 2, "": 1}[m.group(2)]
+    for unit, size in (("TB", 1024 ** 2), ("GB", 1024)):
+        if mb >= size:
+            return f"{mb / size:.1f}".removesuffix(".0") + f" {unit}"
+    return f"{mb:.0f} MB"
+
+
 def detail_groups(d: dict[str, str]) -> list[dict]:
-    """The few fields people look at, grouped like the GTK dialog; empty ones left out."""
+    """The few fields people look at, grouped like the GTK dialog, in words; empty ones left out."""
     def get(*keys: str) -> str:
         for k in keys:
             v = d.get(k, "")
@@ -89,18 +126,25 @@ def detail_groups(d: dict[str, str]) -> list[dict]:
                 return v
         return ""
 
-    def when(*keys: str) -> str:  # 2026-10-19T17:07:01 -> 2026-10-19 17:07
-        return get(*keys).replace("T", " ")[:16]
+    def when(*keys: str) -> str:
+        v = get(*keys)
+        return date_text(v) if v else ""
 
     tres = get("AllocTRES", "ReqTRES")
     gpus = re.findall(r"gres/gpu(?::[^=,]+)?=(\d+)", tres)
     mem = re.search(r"mem=([^,]+)", tres)
     state, reason = get("JobState", "State"), get("Reason")
     active = state in ("RUNNING", "PENDING")
+    ran, limit = jobs.seconds(get("RunTime", "Elapsed")), jobs.seconds(get("TimeLimit", "Timelimit"))
+    if state == "PENDING":
+        run_time = f"{jobs.duration_text(limit)} asked" if limit else ""
+    else:
+        run_time = " of ".join([jobs.duration_text(ran)] + ([jobs.duration_text(limit)] if limit else []))
+    queue, qos = get("Partition"), get("QOS")
     groups = [
         ("Status", [
-            ("State", f"{state} ({reason})" if reason else state),
-            ("Run time", " of ".join(x for x in (get("RunTime", "Elapsed"), get("TimeLimit", "Timelimit")) if x)),
+            ("State", state_text(state, reason)),
+            ("Run time", run_time),
             ("Started", when("StartTime", "Start")),
             ("Ends" if active else "Ended", when("EndTime", "End")),
             ("Submitted", when("SubmitTime", "Submit")),
@@ -108,10 +152,12 @@ def detail_groups(d: dict[str, str]) -> list[dict]:
         ]),
         ("Resources", [
             ("Node", get("NodeList")),
-            ("CPUs", get("NumCPUs", "AllocCPUS")),
-            ("Memory", mem.group(1) if mem else get("ReqMem")),
+            ("Cores", get("NumCPUs", "AllocCPUS")),
+            ("Memory", mem_text(mem.group(1) if mem else get("ReqMem"))),
             ("GPUs", str(sum(int(g) for g in gpus)) if gpus else ""),
-            ("Partition · QoS · account", " · ".join(x for x in (get("Partition"), get("QOS"), get("Account")) if x)),
+            ("Queue", queue),
+            ("Billing", "" if qos in ("normal", queue) else qos),
+            ("Charged to", get("Account")),
         ]),
         ("Files", [
             ("Work folder", get("WorkDir")),

@@ -83,13 +83,25 @@ def test_list_needs_a_connection(session):
 def test_details(session):
     got = m.details("wulver", "7")
     groups = {g["title"]: {r["label"]: r["value"] for r in g["rows"]} for g in got["groups"]}
-    assert groups["Status"] == {"State": "RUNNING", "Run time": "01:30:00 of 04:00:00",
-                                "Started": "2026-10-19 17:07", "Ends": "2026-10-19 21:07"}
-    assert groups["Resources"]["Memory"] == "16G" and groups["Resources"]["GPUs"] == "2"
+    assert groups["Status"] == {"State": "Running", "Run time": "1 h 30 min of 4 h",
+                                "Started": "Oct 19, 17:07", "Ends": "Oct 19, 21:07"}
+    assert groups["Resources"]["Memory"] == "16 GB" and groups["Resources"]["GPUs"] == "2"
     assert groups["Files"] == {"Work folder": "/home/jdoe/run", "Output": "/home/jdoe/run/out.txt"}
     assert got["text"].startswith("JobId=7")
     with pytest.raises(jobs.SlurmError):
         m.details("wulver", "7; rm -rf ~")
+
+
+def test_details_read_like_words():
+    assert m.state_text("PENDING", "Priority") == "Waiting: higher-priority jobs go first"
+    assert m.state_text("CANCELLED by 4242") == "Cancelled" and m.state_text("TIMEOUT") == "Ran out of time"
+    assert m.mem_text("64G") == "64 GB" and m.mem_text("500M") == "500 MB" and m.mem_text("1536G") == "1.5 TB"
+    assert m.date_text("2026-10-04T09:31:05") == "Oct 4, 09:31"
+    rows = m.detail_groups({"JobState": "PENDING", "Reason": "Resources", "TimeLimit": "3-00:00:00",
+                            "Partition": "general", "QOS": "low", "Account": "mygroup"})
+    status, res = ({r["label"]: r["value"] for r in g["rows"]} for g in rows[:2])
+    assert status == {"State": "Waiting: not enough free nodes yet", "Run time": "3 days asked"}
+    assert res == {"Queue": "general", "Billing": "low", "Charged to": "mygroup"}
 
 
 def test_cancel_frees_the_app_node(session, monkeypatch):
