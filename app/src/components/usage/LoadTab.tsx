@@ -26,7 +26,7 @@ export function LoadTab({ parts, error }: { name?: string; parts: Partition[] | 
             <tbody>
               {parts.map((p) => (
                 <tr key={p.name} className="h-14 border-b border-line last:border-0">
-                  <td className="pr-2 pl-4 whitespace-nowrap">
+                  <td className="pr-2 pl-4 whitespace-nowrap normal-nums">{/* tabular figures widen hyphens */}
                     <div className={p.up ? '' : 'text-dim'}>{p.name}{!p.up && ' (down)'}</div>
                     <div className="text-sm text-dim">{n(p.nodes)} nodes</div>
                   </td>
