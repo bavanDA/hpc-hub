@@ -8,18 +8,17 @@ import { useEffect, useState } from 'react'
 
 import { useGo } from '../nav'
 import { call } from '../rpc'
-import { BUSY, DUO, fastLabel, summary, type Cluster, type Session } from '../types/clusters'
+import { BUSY, DUO, fastLabel, type Cluster, type Session } from '../types/clusters'
 import { agentIcon } from './agents/AgentIcon'
 import { PairPhoneDialog } from './app/PairPhoneDialog'
 import { ComputeDialog } from './clusters/ComputeDialog'
 import { LogView } from './clusters/LogView'
-import { who } from './clusters/loginCopy'
+import { shortName } from './clusters/loginCopy'
 import { SettingsDialog } from './clusters/SettingsDialog'
-import { putCluster } from './clusters/store'
 import { Menu, type MenuItem } from './projects/Menu'
 import { useToast } from './toast'
 import { useTools } from './tools/useTools'
-import { AlertDialog, Button, Dialog, IconButton, IconTile, Spinner } from './ui'
+import { AlertDialog, Button, IconButton, IconTile, Spinner } from './ui'
 
 type Open = null | 'settings' | 'compute' | 'size' | 'phone' | 'release' | { switch: { id: string; name: string }; vpnOnly: boolean }
 
@@ -47,7 +46,7 @@ function Action({ icon: Icon, label, onClick }: { icon: LucideIcon; label: strin
     <button type="button" onClick={onClick}
       className="flex h-10 items-center gap-2 rounded-lg bg-pill px-3.5 font-semibold hover:bg-selected
         focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent">
-      <Icon size={16} className="text-accent-text" />{label}</button>
+      <Icon size={16} className="text-dim" />{label}</button>
   )
 }
 
@@ -81,14 +80,6 @@ export function ClusterCard({ cluster: c, session: s, log }: { cluster: Cluster;
     }
   }
 
-  async function wantNode(on: boolean) {
-    try {
-      putCluster(await call<Cluster>('clusters.update', { cluster: c.id, changes: { request_node_on_connect: on } }))
-    } catch (e) {
-      toast((e as Error).message)
-    }
-  }
-
   const a = s.node ? s : null
   const fast = fastLabel(c)
   const more: MenuItem[][] = [
@@ -97,7 +88,8 @@ export function ClusterCard({ cluster: c, session: s, log }: { cluster: Cluster;
           onClick: () => (a.owned ? setOpen('release') : run('clusters.release_node')) }]
       : [{ label: 'Get a node…', icon: Cpu, onClick: () => setOpen('compute') },
           ...(fast ? [{ label: fast, icon: Zap, onClick: () => run('clusters.request_fast_node') }] : [])]) : [],
-    idle && c.vpn.enabled ? [{ label: 'Connect VPN only', icon: Plug, onClick: () => connect(true) }] : [],
+    idle ? [{ label: 'Node size…', icon: Cpu, onClick: () => setOpen('size') },
+      ...(c.vpn.enabled ? [{ label: 'Connect VPN only', icon: Plug, onClick: () => connect(true) }] : [])] : [],
     [{ label: 'Connect phone', icon: Smartphone, onClick: () => setOpen('phone') }],
     s.state === 'Connected' ? [{ label: 'Disconnect', icon: Power, danger: true, onClick: () => run('clusters.disconnect') }]
       : [],
@@ -111,7 +103,6 @@ export function ClusterCard({ cluster: c, session: s, log }: { cluster: Cluster;
         <IconTile icon={Server} />
         <div className="min-w-0 flex-1">
           <h2 className="text-lg font-semibold leading-tight">{c.name}</h2>
-          <p className="truncate text-sm text-dim">{c.host || 'No host set'}{c.vpn.enabled ? ` · ${who(c)} VPN` : ''}</p>
         </div>
         <Status s={s} vpnOnly={vpnOnly} />
         <IconButton icon={Settings} label={`${c.name} settings`} onClick={() => { setHint(''); setOpen('settings') }} />
@@ -123,7 +114,7 @@ export function ClusterCard({ cluster: c, session: s, log }: { cluster: Cluster;
         {(busy || (s.detail && !vpnOnly)) && (
           <div className={`flex items-center gap-2 text-base ${s.state === 'Error' ? 'text-bad' : ''}`}>
             {busy && <Spinner />}
-            <span className={`min-w-0 break-words ${s.state === DUO ? 'font-semibold text-accent-text' : ''}`}>
+            <span className={`min-w-0 break-words ${s.state === DUO ? 'font-semibold' : ''}`}>
               {s.detail}</span>
           </div>
         )}
@@ -145,7 +136,7 @@ export function ClusterCard({ cluster: c, session: s, log }: { cluster: Cluster;
               <Action icon={SquareTerminal} label="Terminal" onClick={() => go('terminals', { cluster: c.id, new: '1' })} />
               <Action icon={Code} label="VS Code" onClick={() => tools.open(c.id, c.name, 'vscode')} />
               <Action icon={Folder} label="Files" onClick={() => tools.open(c.id, c.name, 'files')} />
-              <Menu groups={agents} label="Agents" trigger={<><Bot size={16} className="text-accent-text" />Agents
+              <Menu groups={agents} label="Agents" trigger={<><Bot size={16} className="text-dim" />Agents
                 <ChevronDown size={16} className="text-dim" /></>}
                 className="flex h-10 items-center gap-2 rounded-lg bg-pill px-3.5 font-semibold hover:bg-selected" />
             </div>
@@ -154,23 +145,10 @@ export function ClusterCard({ cluster: c, session: s, log }: { cluster: Cluster;
 
         {(idle || busy || vpnOnly) && (
           <div className="flex items-center gap-3">
-            {idle ? (
-              <div className="flex min-w-0 flex-1 items-center gap-2.5 text-base">
-                <label className="flex min-w-0 cursor-pointer items-center gap-2.5"
-                  title="Ask Slurm for a compute node when you connect">
-                  <input type="checkbox" checked={c.request_node_on_connect ?? true}
-                    onChange={(e) => wantNode(e.target.checked)}
-                    className="size-4 shrink-0 accent-[var(--color-accent)]" />
-                  <span className="truncate">Get a compute node <span className="text-dim">
-                    · {summary(c.profile)}{c.ask_node ? ', asks first' : ''}</span></span>
-                </label>
-                <button type="button" onClick={() => setOpen('size')}
-                  className="shrink-0 font-semibold text-accent-text hover:underline">Change</button>
-              </div>
-            ) : <span className="flex-1" />}
+            <span className="flex-1" />
             {busy
               ? <Button onClick={() => run('clusters.cancel')} disabled={s.state === 'Disconnecting'}>
-                  {s.state === 'Disconnecting' ? 'Disconnecting…' : s.state === WAITING ? 'Stop waiting' : 'Cancel'}</Button>
+                  {s.state === 'Disconnecting' ? 'Disconnecting…' : s.state === WAITING ? 'Stop waiting' : 'Stop signing in'}</Button>
               : vpnOnly
                 ? <Button onClick={() => run('clusters.disconnect')}>Disconnect</Button>
                 : <Button kind="primary" className="min-w-[120px]" onClick={() => connect()}>
@@ -192,15 +170,11 @@ export function ClusterCard({ cluster: c, session: s, log }: { cluster: Cluster;
         <p>You stay connected, and your files stay where they are.</p>
       </AlertDialog>}
       {open && typeof open === 'object' && (
-        <Dialog title={`Disconnect ${open.switch.name}?`} onClose={() => setOpen(null)} width={420}
-          actions={<>
-            <Button onClick={() => setOpen(null)}>Cancel</Button>
-            <Button kind="destructive" onClick={() => { setOpen(null); connect(open.vpnOnly, true) }}>
-              Switch to {c.name}</Button>
-          </>}>
-          <p className="text-center text-dim">
-            Only one VPN can run at a time. {open.switch.name} will be disconnected and its compute node ended.</p>
-        </Dialog>
+        <AlertDialog title={`Disconnect ${shortName(open.switch)}?`} keep={`Stay on ${shortName(open.switch)}`}
+          act={`Switch to ${shortName(c)}`} onClose={() => setOpen(null)}
+          onAct={() => { setOpen(null); connect(open.vpnOnly, true) }}>
+          <p>Only one VPN can run at a time. {shortName(open.switch)} disconnects and its node is released.</p>
+        </AlertDialog>
       )}
     </section>
   )
