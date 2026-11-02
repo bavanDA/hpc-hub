@@ -9,7 +9,9 @@ import { LogDialog } from '../components/schedules/LogDialog'
 import { ScheduleDialog } from '../components/schedules/ScheduleDialog'
 import { isBackupCheck, ScheduleRow } from '../components/schedules/ScheduleRow'
 import { useToast } from '../components/toast'
-import { AlertDialog, Button, EmptyState, IconButton, List, Spinner } from '../components/ui'
+import { Confirm, EButton, EmptyState, EPage, IconBtn } from '../components/e/extra'
+import { List } from '../components/e/ui'
+import { Spinner } from '../components/ui'
 import { useEvent } from '../hooks'
 import { useGo } from '../nav'
 import { call } from '../rpc'
@@ -62,44 +64,39 @@ export function Schedules() {
   let body
   if (active && (!connected || error.startsWith('Connect to'))) body = <div className="h-[60vh]"><NotConnected
     cluster={active} session={session} what="scheduled agents" /></div>
-  else if (error) body = <div className="h-[60vh]"><EmptyState icon={CircleAlert}
-    title="Could not load the schedules" text={error} /></div>
+  else if (error) body = <EmptyState icon={CircleAlert} title="Could not load the schedules" text={error} />
   else if (!list) body = <div className="grid h-64 place-items-center"><Spinner size={24} /></div>
-  else if (!list.length) body = <div className="h-[60vh]"><EmptyState icon={AlarmClock} title="No scheduled agents yet"
-    text={`An agent can work on a task on ${name} by itself, every night or on the days you pick.`}
-    action={<Button kind="primary" disabled={!options} onClick={() => setOpen({ kind: 'edit', st: null })}>
-      New schedule</Button>} /></div>
+  else if (!list.length) body = <EmptyState icon={AlarmClock} title="No scheduled agents yet"
+    text={`An agent can work on a task on ${name} by itself, every night or on the days you pick.`} />
   else body = (
     <>
       <List>
         {list.map((st) => <ScheduleRow key={st.name} st={st} busy={busy === st.name}
           onToggle={(on) => toggle(st, on)} onRun={() => runNow(st)} onLog={() => setOpen({ kind: 'log', st })}
-          onEdit={() => isBackupCheck(st) ? goPage('backup', { cluster }) : setOpen({ kind: 'edit', st })} onDelete={() => setOpen({ kind: 'delete', st })} />)}
+          onEdit={() => isBackupCheck(st) ? goPage('backup', { cluster }) : setOpen({ kind: 'edit', st })}
+          onDelete={() => setOpen({ kind: 'delete', st })} />)}
       </List>
-      <p className="px-1 text-sm text-dim">
-        Runs at the set time, even with your laptop off.</p>
+      <p className="px-5 pt-2 text-sm text-dim">Runs at the set time, even with your laptop off.</p>
     </>
   )
 
   return (
-    <div className="mx-auto flex max-w-[900px] flex-col gap-4 px-4 py-6">
-      {connected && <div className="flex items-center gap-2">
-        <span className="flex-1" />
-        {loading && list && <Spinner />}
-        <IconButton icon={RefreshCw} label="Refresh" size={16} onClick={load} />
-        <Button kind="suggested" disabled={!list || !options} onClick={() => setOpen({ kind: 'edit', st: null })}>
-          <Plus size={16} />New schedule</Button>
-      </div>}
+    <EPage width={820} actions={connected && <>
+      {loading && list && <Spinner />}
+      <IconBtn icon={RefreshCw} label="Refresh" onClick={load} />
+      <EButton kind="primary" icon={Plus} disabled={!list || !options}
+        onClick={() => setOpen({ kind: 'edit', st: null })}>New schedule</EButton>
+    </>}>
       {body}
       {open?.kind === 'edit' && options && <ScheduleDialog cluster={cluster} clusterName={name} options={options}
         editing={open.st} onClose={() => setOpen(null)} onSaved={saved} />}
       {open?.kind === 'log' && <LogDialog cluster={cluster} name={open.st.name} onClose={() => setOpen(null)} />}
       {open?.kind === 'delete' && (
-        <AlertDialog title={`Delete ${open.st.name}?`} keep="Keep it" act="Delete" onClose={() => setOpen(null)}
+        <Confirm title={`Delete ${open.st.name}?`} keep="Keep it" act="Delete" onClose={() => setOpen(null)}
           onAct={() => remove(open.st)}>
-          <p>It stops running and its task and logs are removed from the cluster.</p>
-        </AlertDialog>
+          <p>It stops running, and its task and logs are removed from the cluster.</p>
+        </Confirm>
       )}
-    </div>
+    </EPage>
   )
 }
