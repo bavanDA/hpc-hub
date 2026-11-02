@@ -16,7 +16,7 @@ import { ConfirmSheet } from '../ui'
 
 // -- your choices, kept on this phone ----------------------------------------------------------------------------
 export const KINDS: [NoticeKind, string][] = [['duo', 'Duo is waiting'], ['connected', 'A cluster connected'],
-  ['node', 'Your node is about to end'], ['job', 'A job ended'], ['copy', 'A copy finished'],
+  ['node', "Your node's time is almost up"], ['job', 'A job ended'], ['copy', 'A copy finished'],
   ['ask', 'An agent answered'], ['backup', 'Scratch files are about to be deleted'], ['backup_done', 'A backup finished']]
 
 export type PhonePrefs = { notify: boolean; kinds: Record<NoticeKind, boolean>; keep: boolean; asked: boolean }
@@ -50,14 +50,14 @@ export function setPhonePrefs(change: Partial<PhonePrefs>) {
 }
 
 // -- Android's permission ----------------------------------------------------------------------------------------
-export const EXPLAIN = 'HPC Hub can tell you when Duo is waiting, when your node is about to end, when a job ' +
-  'ends, and when an agent has an answer. Pick which ones in Settings.'
+export const EXPLAIN = "Know when Duo is waiting, your node's time is almost up, a job ends or an agent answers. " +
+  'Pick which ones in Settings.'
 
 const plugin = () => import('@tauri-apps/plugin-notification')
 const inApp = '__TAURI_INTERNALS__' in window
 
 export async function notificationsAllowed(): Promise<boolean> {
-  if (!inApp) return false
+  if (!inApp) return new URLSearchParams(location.search).has('allowed')  // design work: ?allowed
   return (await plugin()).isPermissionGranted()
 }
 

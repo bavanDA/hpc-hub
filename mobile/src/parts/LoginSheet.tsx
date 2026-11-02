@@ -1,14 +1,51 @@
 // A cluster's sign-in on the phone: scanned from the desktop app's QR code (scanPairing.ts), or typed here. Kept on
-// the phone in the encrypted vault (vault_file.py). The words are the desktop's (loginCopy.ts).
-import { ScanQrCode } from 'lucide-react'
+// the phone in the encrypted vault (vault_file.py). The words are the desktop's (loginCopy.ts). A cluster that takes
+// only SSH keys (Yale) gets this phone's key instead of a password: make it, copy it to the cluster's key page.
+import { Copy, ExternalLink, KeyRound, ScanQrCode, ShieldCheck } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
-import { copy, who } from '@shared/components/clusters/loginCopy'
+import { copyText } from '@shared/components/app/clipboard'
+import { openSystem } from '@shared/components/app/openLink'
+import { copy, fill, keyHelp, who } from '@shared/components/clusters/loginCopy'
+import { S } from '@shared/components/clusters/loginStrings'
 import { call } from '@shared/rpc'
-import { secondStep, type Cluster, type Logins } from '@shared/types/clusters'
-import { Button, ConfirmSheet, Field, Sheet, Switch, useToast } from '../ui'
+import type { Cluster, Logins, MyKey } from '@shared/types/clusters'
+import { Button, ConfirmSheet, Field, List, MainButton, Row, Section, Sheet, ToggleRow, useToast } from '../ui'
 import { AuthenticatorSheet } from './AuthenticatorSheet'
 import { scanPairing } from './scanPairing'
+
+/** Signs in with an SSH key and no password: the cluster has a page for your public key. */
+export const usesKey = (c: Cluster) => !!c.key_page && !c.password_too && !c.password_only
+
+/** This phone's key for the cluster: make it, copy it, open the page it goes on. */
+function KeyRows({ cluster: c }: { cluster: Cluster }) {
+  const toast = useToast()
+  const [key, setKey] = useState<MyKey | null | undefined>(undefined)
+  const [copied, setCopied] = useState(false)
+  useEffect(() => { call<MyKey | null>('keys.mine', { cluster: c.id }).then(setKey).catch(() => setKey(null)) }, [c.id])
+  const run = (what: () => Promise<void>) => what().catch((e: Error) => toast(e.message))
+  const org = who(c)
+
+  return (
+    <Section title={fill(S.STEP_ADD, { who: org })} note={<>
+      {key && <span className="block">{fill(S.PASTE_IT, { who: org })} {c.key_page_note}</span>}
+      <button onClick={() => openSystem(keyHelp(c))} className="-ml-1 min-h-12 px-1 font-semibold text-text underline
+        underline-offset-2">{copy.whatsAKey}</button></>}>
+      {key === null && <Row icon={KeyRound} label={S.CREATE_KEY}
+        onPress={() => run(async () => setKey(await call<MyKey>('keys.create')))} />}
+      {key && <>
+        <Row icon={KeyRound} label="This phone's key" sub={<span className="break-all font-mono text-xs">
+          {key.public}</span>} />
+        <Row icon={Copy} label={copied ? S.COPIED : `${S.COPY_KEY} key`} onPress={() => run(async () => {
+          await copyText(key.public)
+          setCopied(true)
+          setTimeout(() => setCopied(false), 2000)
+        })} />
+        <Row icon={ExternalLink} label={S.OPEN_PAGE} onPress={() => openSystem(c.key_page!).catch(() => {})} />
+      </>}
+    </Section>
+  )
+}
 
 export function LoginSheet({ cluster: c, hint, onClose }: { cluster: Cluster; hint?: string; onClose: () => void }) {
   const toast = useToast()
@@ -18,6 +55,7 @@ export function LoginSheet({ cluster: c, hint, onClose }: { cluster: Cluster; hi
   const [remember, setRemember] = useState(true)
   const [ask, setAsk] = useState<'' | 'forget' | 'code'>('')
   const label = c.username_label || 'Username'
+  const key = usesKey(c)
   useEffect(() => {
     call<Logins>('clusters.login', { cluster: c.id }).then((l) => {
       setSaved(l)
@@ -28,7 +66,8 @@ export function LoginSheet({ cluster: c, hint, onClose }: { cluster: Cluster; hi
 
   async function save() {
     try {
-      await call('clusters.set_login', { cluster: c.id, kind: 'ssh', username: user, password, remember })
+      await call('clusters.set_login', { cluster: c.id, kind: 'ssh', username: user, password: key ? '' : password,
+        remember })
       onClose()
     } catch (e) {
       toast((e as Error).message)
@@ -54,29 +93,32 @@ export function LoginSheet({ cluster: c, hint, onClose }: { cluster: Cluster; hi
 
   if (ask === 'code') return <AuthenticatorSheet cluster={c} onClose={() => setAsk('')} />
   return (
-    <Sheet title={copy.signIn(c)} onClose={onClose} actions={
-      <Button kind="primary" className="flex-1" disabled={!user.trim()} onClick={save}>Save</Button>}>
-      {hint && <p className="mb-3 rounded-xl bg-warn-bg p-3 text-warn">{hint}</p>}
-      <Button kind="primary" icon={ScanQrCode} className="w-full" onClick={scan}>Scan from your computer</Button>
-      <p className="mt-2 text-sm text-dim">On the computer, open HPC Hub's menu, then Set up the phone app.</p>
-      <p className="mb-1 mt-6 text-sm font-bold text-dim">Or type it</p>
-      <form onSubmit={(e) => { e.preventDefault(); save() }}>
+    <Sheet title={copy.signIn(c)} onClose={onClose} flush
+      actions={<MainButton disabled={!user.trim()} onClick={save}>Save</MainButton>}>
+      <div className="px-4">
+        {hint && <p className="pb-3">{hint}</p>}
+        <Button icon={ScanQrCode} className="w-full" onClick={scan}>Scan from your computer</Button>
+        <p className="pt-2 text-sm text-dim">On the computer, open HPC Hub's menu, then Set up the phone app.</p>
+      </div>
+      <h3 className="px-4 pt-6 text-xs font-semibold tracking-wide text-dim uppercase">Or type it</h3>
+      {key && <p className="px-4 pt-1">{copy.keyIntro(c)}</p>}
+      <form className="px-4 pt-1" onSubmit={(e) => { e.preventDefault(); save() }}>
         <Field label={label} autoCapitalize="none" autoCorrect="off" spellCheck={false} autoComplete="username"
           placeholder={copy.usernameHint} value={user} onChange={(e) => setUser(e.target.value)} />
-        <Field label={copy.password} type="password" autoComplete="current-password" value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          placeholder={saved?.ssh.password ? copy.saved : c.password_only ? '' : 'Empty for an SSH key'} />
+        {!key && <Field label={copy.password} type="password" autoComplete="current-password" value={password}
+          onChange={(e) => setPassword(e.target.value)} placeholder={saved?.ssh.password ? copy.saved : ''} />}
       </form>
-      <p className="text-sm text-dim">Kept encrypted on this phone. Changing it here doesn't change your {who(c)} password.</p>
-      <Switch label={copy.remember} hint={remember ? undefined : copy.rememberOff} checked={remember}
-        onChange={setRemember} />
-      {c.second_factor === 'code' && <>
-        <p className="mt-2 text-sm text-dim">{secondStep(c)}</p>
-        {c.code_setup && <button onClick={() => setAsk('code')} className="h-11 font-semibold text-accent-text">
-          {copy.codeSetup}</button>}
+      {key ? <KeyRows cluster={c} /> : <>
+        <p className="px-4 pb-3 text-sm text-dim">Kept encrypted on this phone. Changing it here doesn't change your
+          {' '}{who(c)} password.</p>
+        <List>
+          <ToggleRow label={copy.remember} sub={remember ? undefined : copy.rememberOff} checked={remember}
+            onChange={setRemember} />
+          {c.second_factor === 'code' && c.code_setup && <Row icon={ShieldCheck} label={copy.codeSetup} opens
+            onPress={() => setAsk('code')} />}
+          {saved?.ssh.password && <Row label={copy.forget} danger onPress={() => setAsk('forget')} />}
+        </List>
       </>}
-      {saved?.ssh.password && <button onClick={() => setAsk('forget')}
-        className="mt-4 block h-11 font-semibold text-bad">{copy.forget}</button>}
       {ask === 'forget' && <ConfirmSheet title={copy.forgetTitle(c)} text={copy.forgetBody(label)} confirm={copy.forget}
         keep="Keep it" danger onConfirm={forget} onClose={() => setAsk('')} />}
     </Sheet>

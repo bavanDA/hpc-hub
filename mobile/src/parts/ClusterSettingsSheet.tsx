@@ -7,18 +7,18 @@ import { useEffect, useState } from 'react'
 import { putCluster } from '@shared/components/clusters/store'
 import { Spinner } from '@shared/components/ui'
 import { call } from '@shared/rpc'
-import type { AgentId, AgentSettings, Cluster, Profile, SettingsInfo, VsCode } from '@shared/types/clusters'
-import { secondStep } from '@shared/types/clusters'
-import { Button, Field, ListRow, PickerSheet, Sheet, Switch, useToast } from '../ui'
+import type { AgentId, AgentSettings, Cluster, Logins, Profile, SettingsInfo, VsCode } from '@shared/types/clusters'
+import { Field, List, MainButton, NumberRow, PickerSheet, Row, Section, Sheet, TextArea, ToggleRow, useToast } from '../ui'
 import { AuthenticatorSheet } from './AuthenticatorSheet'
 import { LoginSheet } from './LoginSheet'
-import { AskFirst, NodeFields, nodeLine } from './NodeSheet'
+import { ASK, NodeFields, nodeSize } from './NodeSheet'
 
 type Section = '' | 'signin' | 'compute' | 'server' | 'queues' | 'vscode' | 'agents' | 'code'
 
 const PROFILE_KEYS: (keyof Profile)[] = ['cpus', 'mem_gb', 'gpus', 'gpu_type', 'time', 'partition', 'account', 'qos', 'extra_args']
 const pick = <T extends object>(o: T, keys: (keyof T)[]) =>
   Object.fromEntries(keys.filter((k) => o[k] !== undefined).map((k) => [k, o[k]]))
+const TEXT = { autoCapitalize: 'none', autoCorrect: 'off', spellCheck: false } as const
 
 function changes(d: Cluster, info: SettingsInfo | null): Record<string, unknown> {
   const out: Record<string, unknown> = {
@@ -37,28 +37,35 @@ function changes(d: Cluster, info: SettingsInfo | null): Record<string, unknown>
   return Object.fromEntries(Object.entries(out).filter(([, x]) => x !== undefined))
 }
 
+/** "3 queues" for "general:low, debug:debug, general:standard". */
+function queueCount(queues?: string) {
+  const n = (queues ?? '').split(',').filter((q) => q.trim()).length
+  return n === 0 ? 'The one you pick' : n === 1 ? '1 queue' : `${n} queues`
+}
+
 /** One agent's choices: its own node or yours, Claude's remote control, its folder, its model and modes. */
 function AgentRows({ a, value: s, onChange }: { a: SettingsInfo['agents'][number]; value: AgentSettings;
   onChange: (change: Partial<AgentSettings>) => void }) {
   const [choosing, setChoosing] = useState<keyof AgentSettings | ''>('')
   const option = a.options.find((o) => o.key === choosing)
   return (
-    <section className="mb-6">
-      <h3 className="mb-1 text-sm font-bold text-dim">{a.name}</h3>
-      <Switch label="Its own compute node" hint="Off: it runs on the node you have." checked={s.new_node}
-        onChange={(on) => onChange({ new_node: on })} />
-      {a.remote_label && <Switch label={a.remote_label} hint={a.remote_hint} checked={s.remote}
+    <Section title={a.name}>
+      <ToggleRow label="Its own compute node" sub={s.new_node ? undefined : 'Runs on the node you have.'}
+        checked={s.new_node} onChange={(on) => onChange({ new_node: on })} />
+      {a.remote_label && <ToggleRow label={a.remote_label} sub={a.remote_hint} checked={s.remote}
         onChange={(on) => onChange({ remote: on })} />}
-      <Field label="Folder it starts in" autoCapitalize="none" autoCorrect="off" spellCheck={false} value={s.workdir}
-        placeholder="Your home folder" onChange={(e) => onChange({ workdir: e.target.value })} />
       {a.options.map((o) => (
-        <ListRow key={o.key} title={o.label}
-          subtitle={o.choices.find(([v]) => v === s[o.key])?.[1] ?? 'Default'} onClick={() => setChoosing(o.key)} />
+        <Row key={o.key} label={o.label} value={o.choices.find(([v]) => v === s[o.key])?.[1] ?? 'Default'} opens
+          onPress={() => setChoosing(o.key)} />
       ))}
+      <div className="border-b border-line px-4 pb-2">
+        <Field label="Folder it starts in" {...TEXT} value={s.workdir} placeholder="Your home folder"
+          onChange={(e) => onChange({ workdir: e.target.value })} />
+      </div>
       {option && <PickerSheet title={option.label} value={String(s[option.key] ?? '')}
         options={option.choices.map(([value, label]) => ({ value, label }))}
         onPick={(v) => onChange({ [option.key]: v })} onClose={() => setChoosing('')} />}
-    </section>
+    </Section>
   )
 }
 
@@ -66,12 +73,17 @@ export function ClusterSettingsSheet({ cluster, onClose }: { cluster: Cluster; o
   const toast = useToast()
   const [info, setInfo] = useState<SettingsInfo | null>(null)
   const [d, setD] = useState<Cluster>(cluster)
+  const [user, setUser] = useState('')
   const [section, setSection] = useState<Section>('')
   const [busy, setBusy] = useState(false)
   useEffect(() => {
     call<SettingsInfo>('cluster_settings.get', { cluster: cluster.id })
       .then((got) => { setInfo(got); setD(got.cluster) }).catch((e: Error) => toast(e.message))
   }, [cluster.id, toast])
+  useEffect(() => {
+    if (section) return  // again after the sign-in sheet closes
+    call<Logins>('clusters.login', { cluster: cluster.id }).then((l) => setUser(l.ssh.username)).catch(() => {})
+  }, [cluster.id, section])
 
   const up = (change: Partial<Cluster>) => setD((x) => ({ ...x, ...change }))
   const upVs = (change: Partial<VsCode>) => setD((x) => ({ ...x, vscode: { ...x.vscode!, ...change } }))
@@ -82,7 +94,7 @@ export function ClusterSettingsSheet({ cluster, onClose }: { cluster: Cluster; o
     setBusy(true)
     try {
       putCluster(await call<Cluster>('cluster_settings.save', { cluster: d.id, changes: changes(d, info) }))
-      toast(`${d.name} settings saved`)
+      toast('Settings saved')
       onClose()
     } catch (e) {
       toast((e as Error).message)
@@ -91,9 +103,6 @@ export function ClusterSettingsSheet({ cluster, onClose }: { cluster: Cluster; o
   }
 
   const want = d.request_node_on_connect ?? true
-  const saveBar = <>
-    <Button className="flex-1" onClick={onClose}>Cancel</Button>
-    <Button kind="primary" className="flex-1" disabled={busy || !info} onClick={save}>Save</Button></>
 
   if (section === 'signin') return <LoginSheet cluster={d} onClose={back} />
   if (section === 'code') return <AuthenticatorSheet cluster={d} onClose={back} />
@@ -101,38 +110,46 @@ export function ClusterSettingsSheet({ cluster, onClose }: { cluster: Cluster; o
     const title = { compute: 'Compute node', server: 'Server', queues: 'Queues', vscode: 'VS Code job',
       agents: 'Agents' }[section]
     return (
-      <Sheet title={title} onClose={back} actions={<Button kind="primary" className="flex-1" onClick={back}>Done</Button>}>
+      <Sheet title={title} onClose={back} flush actions={<MainButton onClick={back}>Done</MainButton>}>
         {section === 'compute' && <>
-          <Switch label="Get a compute node when I connect" hint="Your terminals and agents run there."
-            checked={want} onChange={(on) => up({ request_node_on_connect: on })} />
-          {want && <div className="-mx-4 py-2"><NodeFields cluster={d} value={d.profile} onChange={(profile) => up({ profile })} /></div>}
-          <Switch label="Reuse a node you already have" hint="A node an agent or VS Code got earlier, instead of a new one."
-            checked={d.reuse_running_job ?? false} onChange={(on) => up({ reuse_running_job: on })} />
-          {want && <AskFirst checked={d.ask_node ?? false} onChange={(on) => up({ ask_node: on })} />}
+          <List>
+            <ToggleRow label="Get a compute node when I connect" sub="Your terminals and agents run there."
+              checked={want} onChange={(on) => up({ request_node_on_connect: on })} />
+          </List>
+          {want && <div className="pt-5"><NodeFields cluster={d} value={d.profile} onChange={(profile) => up({ profile })} /></div>}
+          <Section>
+            {want && <ToggleRow label={ASK} sub="Shows the node screen when you connect."
+              checked={d.ask_node ?? false} onChange={(on) => up({ ask_node: on })} />}
+            <ToggleRow label="Reuse a node you already have" sub="One an agent or VS Code got earlier."
+              checked={d.reuse_running_job ?? true} onChange={(on) => up({ reuse_running_job: on })} />
+          </Section>
         </>}
-        {section === 'server' && <>
-          <Field label="Login host" autoCapitalize="none" autoCorrect="off" spellCheck={false} value={d.host}
-            onChange={(e) => up({ host: e.target.value.trim() })} />
+        {section === 'server' && <div className="px-4">
+          <Field label="Login host" {...TEXT} value={d.host} onChange={(e) => up({ host: e.target.value.trim() })} />
           <Field label="Port" inputMode="numeric" value={d.port ?? 22}
             onChange={(e) => up({ port: parseInt(e.target.value || '22', 10) || 22 })} />
-        </>}
+        </div>}
         {section === 'queues' && <>
-          <p className="mb-2 text-sm text-dim">Queues to try in order, cheapest first, as queue:priority. HPC Hub takes
-            the first that starts soon enough, else the one that starts soonest.</p>
-          <Field label="Queues" autoCapitalize="none" autoCorrect="off" spellCheck={false} value={d.queues ?? ''}
-            placeholder="general:low, general:standard" onChange={(e) => up({ queues: e.target.value })} />
-          <Field label="Wait this long for a cheaper queue (seconds)" inputMode="numeric" value={d.queue_wait ?? 60}
-            onChange={(e) => up({ queue_wait: parseInt(e.target.value || '0', 10) || 0 })} />
+          <div className="px-4 pb-4">
+            <TextArea label="Queues" {...TEXT} value={d.queues ?? ''} placeholder="general:low, general:standard"
+              onChange={(e) => up({ queues: e.target.value })} />
+            <p className="text-sm text-dim">Tried in order, cheapest first. Each is queue:billing.</p>
+          </div>
+          <List>
+            <NumberRow label="Wait for a cheaper queue" unit="seconds" min={0} value={d.queue_wait ?? 60}
+              onChange={(n) => up({ queue_wait: n })} />
+          </List>
         </>}
         {section === 'vscode' && d.vscode && <>
-          <Field label="Command" autoCapitalize="none" autoCorrect="off" spellCheck={false} value={d.vscode.command}
-            onChange={(e) => upVs({ command: e.target.value })} />
-          <Field label="Runs first" autoCapitalize="none" autoCorrect="off" spellCheck={false} value={d.vscode.setup}
-            placeholder="e.g. module load VSCode" onChange={(e) => upVs({ setup: e.target.value })} />
-          <Field label="Folder it opens" autoCapitalize="none" autoCorrect="off" spellCheck={false} value={d.vscode.workdir}
-            placeholder="Your home folder" onChange={(e) => upVs({ workdir: e.target.value })} />
-          <p className="mt-3 text-sm font-bold text-dim">Its compute node</p>
-          <div className="-mx-4"><NodeFields cluster={d} value={d.vscode.compute} onChange={(compute) => upVs({ compute })} /></div>
+          <div className="px-4">
+            <Field label="Command" {...TEXT} value={d.vscode.command} onChange={(e) => upVs({ command: e.target.value })} />
+            <Field label="Runs first" {...TEXT} value={d.vscode.setup} placeholder="module load VSCode"
+              onChange={(e) => upVs({ setup: e.target.value })} />
+            <Field label="Folder it opens" {...TEXT} value={d.vscode.workdir} placeholder="Your home folder"
+              onChange={(e) => upVs({ workdir: e.target.value })} />
+          </div>
+          <h3 className="px-4 pt-5 pb-1.5 text-xs font-semibold tracking-wide text-dim uppercase">Its own node</h3>
+          <NodeFields cluster={d} value={d.vscode.compute} onChange={(compute) => upVs({ compute })} />
         </>}
         {section === 'agents' && (info?.agents ?? []).map((a) => d[a.id] && (
           <AgentRows key={a.id} a={a} value={d[a.id]!} onChange={(change) => upAgent(a.id, change)} />
@@ -142,21 +159,23 @@ export function ClusterSettingsSheet({ cluster, onClose }: { cluster: Cluster; o
   }
 
   return (
-    <Sheet title={`${cluster.name} settings`} onClose={onClose} actions={saveBar}>
+    <Sheet title={`${cluster.name} settings`} onClose={onClose} flush
+      actions={<MainButton disabled={busy || !info} onClick={save}>Save</MainButton>}>
       {!info ? <div className="grid h-40 place-items-center"><Spinner size={28} /></div> : <>
-        <ListRow icon={KeyRound} title="Sign-in" subtitle={secondStep(d)} onClick={() => setSection('signin')} />
-        {d.second_factor === 'code' && d.code_setup && <ListRow icon={ShieldCheck} title="Set up your authenticator app"
-          onClick={() => setSection('code')} />}
-        <ListRow icon={Cpu} title="Compute node" subtitle={want ? nodeLine(d).replace('Gets a node: ', '') : 'Off'}
-          onClick={() => setSection('compute')} />
-        <p className="mt-5 mb-1 text-sm font-bold text-dim">Advanced</p>
-        <ListRow icon={Server} title="Server" subtitle={d.host} onClick={() => setSection('server')} />
-        <ListRow icon={ListOrdered} title="Queues" subtitle={d.queues || 'Only the queue you pick'}
-          onClick={() => setSection('queues')} />
-        {d.vscode && <ListRow icon={Code} title="VS Code job" subtitle={d.vscode.command}
-          onClick={() => setSection('vscode')} />}
-        {!!info.agents.length && <ListRow icon={Bot} title="Agents" subtitle={info.agents.map((a) => a.name).join(', ')}
-          onClick={() => setSection('agents')} />}
+        <List>
+          <Row icon={KeyRound} label="Sign-in" value={user || 'Not set'} opens onPress={() => setSection('signin')} />
+          {d.second_factor === 'code' && d.code_setup && <Row icon={ShieldCheck} label="Authenticator app" opens
+            onPress={() => setSection('code')} />}
+          <Row icon={Cpu} label="Compute node" sub={want ? nodeSize(d) : 'Off'} opens
+            onPress={() => setSection('compute')} />
+        </List>
+        <Section title="Advanced">
+          <Row icon={Server} label="Server" value={d.host} opens onPress={() => setSection('server')} />
+          <Row icon={ListOrdered} label="Queues" value={queueCount(d.queues)} opens onPress={() => setSection('queues')} />
+          {d.vscode && <Row icon={Code} label="VS Code job" opens onPress={() => setSection('vscode')} />}
+          {!!info.agents.length && <Row icon={Bot} label="Agents" sub={info.agents.map((a) => a.name).join(', ')} opens
+            onPress={() => setSection('agents')} />}
+        </Section>
       </>}
     </Sheet>
   )

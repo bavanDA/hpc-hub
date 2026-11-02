@@ -3,22 +3,18 @@
 import { Power } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
-import { university, type SetupStatus } from '@shared/components/app/Welcome'
+import type { SetupStatus } from '@shared/components/app/Welcome'
 import { useClusters } from '@shared/components/clusters/store'
 import { setMonitorBar } from '@shared/components/terminals/MonitorBar'
 import { call } from '@shared/rpc'
 import { setAppearance, type Appearance } from '@shared/theme'
 import { Header } from '../parts/Header'
 import { askForNotifications, EXPLAIN, KINDS, notificationsAllowed, setPhonePrefs, usePhonePrefs } from '../parts/watchPhone'
-import { Card, ConfirmSheet, ListRow, Segments, Switch, useToast } from '../ui'
+import { ConfirmSheet, Row, Section, Segments, ToggleRow, useToast } from '../ui'
 
 type Prefs = { monitor_bar: boolean; appearance: Appearance; experimental: boolean }
 
 const THEMES = [['system', 'System'], ['light', 'Light'], ['dark', 'Dark']] as const
-
-function Title({ children }: { children: string }) {
-  return <h2 className="mb-2 mt-5 text-sm font-bold text-dim first:mt-0">{children}</h2>
-}
 
 export function Settings() {
   const toast = useToast()
@@ -58,12 +54,8 @@ export function Settings() {
   async function allow() {
     const ok = await askForNotifications().catch(() => false)
     setAllowed(ok)
-    if (!ok) toast("Android didn't allow notifications. Turn them on in Android's settings for HPC Hub.")
-  }
-
-  function notifications(on: boolean) {
-    setPhonePrefs({ notify: on })
-    if (on && allowed === false) setExplain(true)
+    if (ok) setPhonePrefs({ notify: true })
+    else toast("Android didn't allow it. Turn on notifications for HPC Hub in Android's settings.")
   }
 
   const live = Object.values(sessions).filter((s) => s.state !== 'Disconnected' && s.state !== 'Error')
@@ -74,69 +66,55 @@ export function Settings() {
   return (
     <div className="flex h-full flex-col">
       <Header title="Settings" />
-      <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-6">
-        <Title>Appearance</Title>
-        <Segments value={prefs?.appearance ?? 'system'} options={THEMES}
-          onChange={(appearance) => { setAppearance(appearance); save({ appearance }) }} />
+      <div className="min-h-0 flex-1 overflow-y-auto pb-8">
+        <section>
+          <h3 className="px-4 pb-1.5 text-xs font-semibold tracking-wide text-dim uppercase">Appearance</h3>
+          <div className="px-4">
+            <Segments label="Appearance" value={prefs?.appearance ?? 'system'} options={THEMES}
+              onChange={(appearance) => { setAppearance(appearance); save({ appearance }) }} />
+          </div>
+        </section>
 
-        {setup && <>
-          <Title>Clusters you use</Title>
-          <Card className="py-1">
+        {setup && (
+          <Section title="Clusters you use" note="Hidden clusters keep their settings.">
             {setup.choices.map((c) => (
-              <Switch key={c.id} label={c.name.split(' (')[0]} hint={university(c) || undefined} checked={setup.chosen.includes(c.id)}
-                onChange={(on) => use(c.id, on)} />
+              <ToggleRow key={c.id} label={c.name} checked={setup.chosen.includes(c.id)} onChange={(on) => use(c.id, on)} />
             ))}
-          </Card>
-          <p className="mt-1 text-sm text-dim">The others are hidden. Their settings are kept.</p>
-        </>}
-
-        <Title>On the phone</Title>
-        <Card className="py-1">
-          <Switch label="Stay connected in the background"
-            hint="Your clusters stay connected while you use other apps. Android shows a small notice, and the phone uses a little more battery while a cluster is connected."
-            checked={phone.keep} onChange={(keep) => setPhonePrefs({ keep })} />
-          <Switch label="Notifications"
-            hint={phone.notify && allowed === false ? 'Android has them off for HPC Hub.'
-              : 'Not while you are already looking at what they are about.'}
-            checked={phone.notify} onChange={notifications} />
-          {phone.notify && allowed === false && (
-            <ListRow title="Allow notifications" subtitle="Android asks you once" onClick={() => setExplain(true)} />
-          )}
-        </Card>
-        {phone.notify && (
-          <Card className="mt-3 py-1">
-            {KINDS.map(([kind, label]) => (
-              <Switch key={kind} label={label} checked={phone.kinds[kind]}
-                onChange={(on) => setPhonePrefs({ kinds: { ...phone.kinds, [kind]: on } })} />
-            ))}
-          </Card>
+          </Section>
         )}
 
-        <Title>Terminals</Title>
-        <Card className="py-1">
-          <Switch label="Monitoring bar" hint="CPU, memory and network of the host, under each terminal."
+        <Section title="Notifications">
+          {allowed === false
+            ? <Row label="Allow notifications" sub="Duo, your node's time, jobs, copies and agents"
+                onPress={() => setExplain(true)} />
+            : <ToggleRow label="Notifications" checked={phone.notify} onChange={(notify) => setPhonePrefs({ notify })} />}
+          {allowed && phone.notify && KINDS.map(([kind, label]) => (
+            <ToggleRow key={kind} label={label} checked={phone.kinds[kind]}
+              onChange={(on) => setPhonePrefs({ kinds: { ...phone.kinds, [kind]: on } })} />
+          ))}
+        </Section>
+
+        <Section title="On the phone">
+          <ToggleRow label="Stay connected in the background" sub="Uses a little more battery while a cluster is connected."
+            checked={phone.keep} onChange={(keep) => setPhonePrefs({ keep })} />
+          <ToggleRow label="Monitoring bar" sub="CPU, memory and network under each terminal."
             checked={prefs?.monitor_bar ?? true} onChange={(on) => save({ monitor_bar: on })} />
-        </Card>
-
-        <Title>Experimental</Title>
-        <Card className="py-1">
-          <Switch label="Experimental features" hint="Papers, and the Scheduled and Skills tabs of Agents. They may change."
+          <ToggleRow label="Experimental features" sub="Papers, and the Scheduled and Skills tabs in Agents."
             checked={prefs?.experimental ?? false} onChange={(on) => save({ experimental: on })} />
-        </Card>
+        </Section>
 
-        {!!live.length && <>
-          <Title>Connections</Title>
-          <Card className="py-1">
-            <ListRow icon={Power} danger title="Disconnect all"
-              subtitle={live.length === 1 ? '1 cluster connected' : `${live.length} clusters connected`}
-              onClick={() => setConfirm(true)} />
-          </Card>
-        </>}
+        {!!live.length && (
+          <Section>
+            <Row icon={Power} danger label="Disconnect all"
+              sub={live.length === 1 ? '1 cluster connected' : `${live.length} clusters connected`}
+              onPress={() => setConfirm(true)} />
+          </Section>
+        )}
       </div>
       {explain && <ConfirmSheet title="Get notifications?" text={EXPLAIN} keep="Not now" confirm="Allow" onConfirm={allow}
         onClose={() => setExplain(false)} />}
       {confirm && <ConfirmSheet title="Disconnect all clusters?" danger keep="Stay connected" confirm="Disconnect all"
-        text="Nodes HPC Hub got for you are released. Your terminal sessions keep running."
+        text="Nodes you got in HPC Hub are released. Your terminal sessions keep running."
         onConfirm={disconnectAll} onClose={() => setConfirm(false)} />}
     </div>
   )

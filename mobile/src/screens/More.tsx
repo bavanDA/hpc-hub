@@ -8,7 +8,7 @@ import { Spinner } from '@shared/components/ui'
 import { call } from '@shared/rpc'
 import { ScreenBackContext, usePhoneNav, type MoreScreen } from '../nav'
 import { Header } from '../parts/Header'
-import { Card, ListRow } from '../ui'
+import { Row, Section } from '../ui'
 
 const named = <K extends string>(load: () => Promise<Record<K, ComponentType>>, name: K) =>
   lazy(() => load().then((m) => ({ default: m[name] })))
@@ -37,14 +37,14 @@ const GROUPS: [string, Row[]][] = [
     { screen: 'papers', title: 'Papers', subtitle: 'LaTeX next to your code', icon: FileText, experimental: true },
   ]],
   ['Cluster', [
-    { screen: 'usage', title: 'Usage', subtitle: 'SU left, storage and load', icon: Gauge },
+    { screen: 'usage', title: 'Usage', subtitle: 'Hours left, storage and load', icon: Gauge },
   ]],
   ['Data', [
     { screen: 'files', title: 'Files', subtitle: 'Browse, copy, upload and download', icon: FolderOpen },
     { screen: 'transfers', title: 'Transfers', subtitle: 'Copies between clusters, Globus', icon: ArrowLeftRight },
   ]],
   ['App', [
-    { screen: 'settings', title: 'Settings', subtitle: 'Light or dark, terminals', icon: Gear },
+    { screen: 'settings', title: 'Settings', subtitle: 'Light or dark, notifications', icon: Gear },
     { screen: 'about', title: 'About', subtitle: 'Version and license', icon: Info },
   ]],
 ]
@@ -68,19 +68,16 @@ export function More() {
   return (
     <div className="flex h-full flex-col">
       <Header title="More" />
-      <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4">
+      <div className="min-h-0 flex-1 overflow-y-auto pb-8">
         {GROUPS.map(([group, rows]) => {
           const shown = rows.filter((r) => experimental || !r.experimental)
           return shown.length > 0 && (
-            <div key={group} className="mb-5">
-              <h2 className="mb-2 text-sm font-bold text-dim">{group}</h2>
-              <Card className="py-1">
-                {shown.map((r) => (
-                  <ListRow key={r.screen} icon={r.icon} title={r.title} subtitle={r.subtitle}
-                    onClick={() => openScreen(r.screen)} />
-                ))}
-              </Card>
-            </div>
+            <Section key={group} title={group}>
+              {shown.map((r) => (
+                <Row key={r.screen} icon={r.icon} label={r.title} sub={r.subtitle} opens
+                  onPress={() => openScreen(r.screen)} />
+              ))}
+            </Section>
           )
         })}
       </div>
