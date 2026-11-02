@@ -1,5 +1,5 @@
-// A button that opens a popover menu (like a GTK MenuButton). The menu is fixed to the window, so a list card
-// that clips its rows never cuts it off.
+// A button that opens a popover menu. The menu is fixed to the window, so a list card that clips its rows never cuts
+// it off. Style E: plain rows with grey icons, hairlines between the groups, red words for a destructive item.
 import type { LucideIcon } from 'lucide-react'
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 
@@ -41,15 +41,14 @@ export function Menu({ groups, trigger, label, className = '' }:
       </button>
       {open && (
         <div ref={menu} role="menu" style={{ top: at?.top ?? -9999, right: at?.right ?? 0 }}
-          className="fixed z-50 min-w-[200px] rounded-xl bg-header p-1.5 shadow-[0_2px_12px_rgb(0_0_6/0.25)]
-            ring-1 ring-line">
+          className="menu-in fixed z-50 min-w-[200px] rounded-lg bg-raised py-1 shadow-[var(--shadow-menu)]">
           {groups.filter((g) => g.length).map((g, n) => (
-            <div key={n} className={n ? 'mt-1.5 border-t border-line pt-1.5' : ''}>
+            <div key={n} className={n ? 'mt-1 border-t border-line pt-1' : ''}>
               {g.map(({ label: text, icon: Icon, onClick, danger }) => (
                 <button key={text} role="menuitem" onClick={() => { setOpen(false); onClick() }}
-                  className={`flex h-9 w-full items-center gap-3 rounded-md px-2.5 text-left hover:bg-hover ${
+                  className={`flex h-9 w-full items-center gap-3 px-3 text-left hover:bg-hover active:bg-pressed ${
                     danger ? 'text-bad' : ''}`}>
-                  {Icon && <Icon size={16} className="shrink-0" />}
+                  {Icon && <Icon size={16} className={`shrink-0 ${danger ? '' : 'text-dim'}`} />}
                   <span className="truncate">{text}</span>
                 </button>
               ))}
