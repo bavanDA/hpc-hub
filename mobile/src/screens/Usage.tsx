@@ -3,6 +3,7 @@
 import { CircleAlert, RefreshCw, WifiOff } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
+import { shortName } from '@shared/components/clusters/loginCopy'
 import { useRemote } from '@shared/components/usage/useRemote'
 import { Spinner } from '@shared/components/ui'
 import { useGo, usePageParams } from '@shared/nav'
@@ -56,7 +57,7 @@ export function Usage() {
   let body
   if (view === 'load') {
     body = load.error ? <p className="px-4 py-3 text-bad">Couldn't load the queues: {load.error}</p>
-      : load.data ? <LoadView name={current?.name.split(' (')[0] ?? ''} parts={load.data} /> : <Loading />
+      : load.data ? <LoadView name={current ? shortName(current) : ''} parts={load.data} /> : <Loading />
   } else if (accounts.error) body = <EmptyState icon={CircleAlert} title="Couldn't read your groups" text={accounts.error} />
   else if (!accounts.data) body = <Loading />
   else if (view === 'su') {
@@ -85,7 +86,7 @@ export function Usage() {
           <div className="min-h-0 flex-1 overflow-y-auto pb-6">
             <div className="flex flex-col gap-3 px-4 pb-4">
               {live.length > 1 && <Segments label="Cluster" value={current.id}
-                options={live.map((c) => [c.id, c.name.split(' (')[0]] as const)} onChange={pickCluster} />}
+                options={live.map((c) => [c.id, shortName(c)] as const)} onChange={pickCluster} />}
               <Segments label="Show" value={view} options={VIEWS} onChange={setView} />
             </div>
             {body}
