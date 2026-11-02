@@ -68,3 +68,20 @@ def test_queue_not_partition_or_qos():
 def test_no_hostname_under_a_cluster_name():
     card = (SRC / "components" / "ClusterCard.tsx").read_text(encoding="utf-8")
     assert "c.host" not in _code(card)
+
+
+def test_no_if_else_copy():
+    """State what is true now, not the program's branches ("None picked means every day", "0 asks for a code")."""
+    assert not _hits(r"\bNone picked means\b|^0 asks\b| 0 asks\b|\bempty = |\bOff: ")
+
+
+def test_no_bare_gpu_count():
+    """A GPU always has its type: "2 × A100", "A100, 10 GB slice", never "2 GPUs" (rule 13)."""
+    assert not _hits(r"\$\{[^}]*\} GPU(s|\$\{)|\bGPUs\b'\]")
+
+
+def test_jobs_say_waiting_and_hours():
+    """The desktop uses the phone's words: Waiting (not Pending), Hours (not a bare SU tab)."""
+    fmt = (SRC / "components" / "jobs" / "format.ts").read_text(encoding="utf-8")
+    assert "PENDING: 'Waiting'" in fmt
+    assert "['su', 'SU'," not in (SRC / "pages" / "Usage.tsx").read_text(encoding="utf-8")

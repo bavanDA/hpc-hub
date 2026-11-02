@@ -86,7 +86,7 @@ export function AgentDialog({ setup, agent: a, project = '', onClose }:
           {a.remote_label && <SwitchRow label={a.remote_label} sub={a.remote_hint} checked={remote}
             onChange={setRemote} />}
           <SwitchRow label="Use a new compute node" checked={newNode} onChange={setNewNode}
-            sub={hasNode ? `Off: your node ${setup.node}` : 'Off: one is requested when needed'} />
+            sub={newNode ? undefined : hasNode ? `Shares ${setup.node} with your terminals` : 'Gets a node when it starts'} />
         </Group>
         {a.options.length > 0 && (
           <Group title={`${a.name} options`}>
