@@ -7,7 +7,9 @@ import { Globe } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
 import type { Question } from '../../types/clusters'
-import { Button, Dialog, Spinner } from '../ui'
+import { Button } from '../e/parts'
+import { EDialog, MainButton } from '../e/ui'
+import { Spinner } from '../ui'
 
 export const inTauri = '__TAURI_INTERNALS__' in window
 
@@ -15,9 +17,9 @@ export const CHROME_WINDOW = { title: 'Chrome window (faster)', sub: 'A separate
 
 function Waiting({ title, text }: { title: string; text: string }) {
   return (
-    <div className="flex flex-col items-center gap-3 py-2 text-center">
+    <div className="flex flex-col items-center gap-3 px-5 py-2 text-center">
       <Globe size={40} strokeWidth={1.25} className="text-dim" />
-      <h3 className="text-xl font-semibold">{title}</h3>
+      <h3 className="text-lg font-semibold">{title}</h3>
       <p className="max-w-sm text-dim">{text}</p>
       <Spinner size={24} />
     </div>
@@ -28,14 +30,13 @@ function Waiting({ title, text }: { title: string; text: string }) {
 export function ChromeWindowLogin({ q, onAnswer }: { q: Question; onAnswer: (a: string | null) => void }) {
   const cancel = () => onAnswer(null)
   return (
-    <Dialog title={q.title ?? `${q.name} VPN sign-in`} onClose={cancel} width={460}
-      actions={<Button onClick={cancel}>Stop signing in</Button>}>
+    <EDialog title={q.title ?? `${q.name} VPN sign-in`} onClose={cancel} width={460} actions={<>
+      <Button onClick={cancel}>Stop signing in</Button>
+      <Button className="flex-1" onClick={() => onAnswer('in-app')}>Sign in in the app instead</Button>
+    </>}>
       <Waiting title="Sign in in the Chrome window"
         text="Sign in and approve Duo in the Chrome window that opened. It closes by itself once you are signed in." />
-      <div className="mt-4 flex flex-col items-center gap-2">
-        <Button kind="ghost" onClick={() => onAnswer('in-app')}>Sign in in the app instead</Button>
-      </div>
-    </Dialog>
+    </EDialog>
   )
 }
 
@@ -66,15 +67,15 @@ export function WebLogin({ q, onAnswer }: { q: Question; onAnswer: (a: string | 
     onAnswer(null)
   }
   return (
-    <Dialog title={q.title ?? `${q.name} VPN sign-in`} onClose={cancel} width={460}
-      actions={<><Button onClick={cancel}>Stop signing in</Button>
-        {!error && <Button kind="suggested" onClick={() => inTauri && invoke('sso_show', { id: q.id })}>
-          Show sign-in window</Button>}</>}>
+    <EDialog title={q.title ?? `${q.name} VPN sign-in`} onClose={cancel} width={460} actions={<>
+      <Button className={error ? 'flex-1' : ''} onClick={cancel}>Stop signing in</Button>
+      {!error && <MainButton className="flex-1" onClick={() => inTauri && invoke('sso_show', { id: q.id })}>
+        Show sign-in window</MainButton>}
+    </>}>
       {error
-        ? <p className="rounded-lg bg-bad-bg px-4 py-2.5 text-center font-semibold text-bad">
-            Could not open the sign-in window: {error}</p>
+        ? <p role="alert" className="px-5 pb-2 font-semibold text-bad">Couldn't open the sign-in window: {error}</p>
         : <Waiting title="Sign in in the window that opened" text={status} />}
-      {!error && q.note && <p className="mt-3 text-center text-sm text-dim">{q.note}</p>}
-    </Dialog>
+      {!error && q.note && <p className="mt-3 px-5 text-center text-sm text-dim">{q.note}</p>}
+    </EDialog>
   )
 }

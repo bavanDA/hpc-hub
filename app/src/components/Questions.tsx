@@ -17,7 +17,8 @@ import { load, useClusters } from './clusters/store'
 import { useToast } from './toast'
 
 // a plain browser (design work): ?question=chrome-window|web-login or ?show=settings|keysetup,
-// with &cluster=id and &tab=login|compute (&advanced to open Advanced), opens that dialog with demo data
+// with &cluster=id and &tab=login|compute|server|queues|vscode|agents (else the list), opens that dialog with
+// demo data
 const demo = inTauri ? null : new URLSearchParams(location.search)
 
 const DEMO_NAMES: Record<string, string> = { wulver: 'Wulver (NJIT)', yale: 'Yale Bouchet', sdsc: 'SDSC Expanse' }
@@ -93,7 +94,7 @@ export function Questions() {
       {q && <QuestionDialog key={q.id} q={q} cluster={clusters?.find((c) => c.id === q.cluster)}
         onAnswer={(a) => answer(q, a)} />}
       {shown === 'settings' && demoCluster && <SettingsDialog cluster={demoCluster} onClose={() => setShown('')}
-        start={demo?.get('tab') ?? 'login'} advanced={demo?.has('advanced')} hint={demo?.get('hint') ?? undefined} />}
+        start={demo?.get('tab') ?? ''} advanced={demo?.has('advanced')} hint={demo?.get('hint') ?? undefined} />}
       {shown === 'keysetup' && demoCluster && <KeySetupDialog cluster={demoCluster} onClose={() => setShown('')}
         onDone={() => setShown('')} />}
     </>

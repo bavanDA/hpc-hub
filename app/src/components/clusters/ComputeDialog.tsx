@@ -1,18 +1,19 @@
-// Which resources to ask for before a node is requested, with your saved choice filled in (compute_dialog.py).
-// Grouped like a form people fill in once: a summary on top, quick sizes, then size, GPU, time, and the queue folded.
-// The GPU list is the cluster's own (clusters.gpus): slices of one GPU first, then whole GPUs with a count.
-import { Check, ChevronDown, ChevronRight, Cpu } from 'lucide-react'
-import { useEffect, useState } from 'react'
+// A cluster's compute node in style E (compute_dialog.py): its size before a node is requested, with your saved
+// choice filled in, or what connecting gets you. The size itself is e/NodeFields: quick sizes, then rows.
+// Duration and GpuPicker are the older pieces other dialogs still use.
+import { Check } from 'lucide-react'
+import { useState } from 'react'
 
 import { call } from '../../rpc'
-import { cores, summary, type Cluster, type Limits, type Profile } from '../../types/clusters'
+import { summary, type Cluster, type Limits, type Profile } from '../../types/clusters'
+import { NodeFields } from '../e/NodeFields'
+import { EDialog, List, MainButton, Section, ToggleRow } from '../e/ui'
 import { useToast } from '../toast'
-import { Term } from '../Term'
-import { Button, Dialog } from '../ui'
-import { ActionRow, EntryRow, Group, NumberBox, SpinRow, SwitchRow } from './fields'
-import { chosen, gpuHints, gpuName, gpuSummary, isPreset, presets, useGpus, withGpu, type Gpu } from './gpus'
+import { ActionRow, NumberBox } from './fields'
+import { chosen, gpuHints, gpuName, withGpu, type Gpu } from './gpus'
+import { shortName } from './loginCopy'
 import { putCluster } from './store'
-import { human, minutes, slurmTime } from './time'
+import { human } from './time'
 
 export function Duration({ total, onChange, limits }:
   { total: number; onChange: (m: number) => void; limits: Limits | null }) {
@@ -80,42 +81,37 @@ export function GpuPicker({ gpus, value: p, onChange }:
   )
 }
 
-/** saveOnly: change the saved size without asking for a node now (the card's Change, before you connect). */
-export function ComputeDialog({ cluster: c, onClose, saveOnly = false }:
-  { cluster: Cluster; onClose: () => void; saveOnly?: boolean }) {
+export const ASK = 'Ask before each request'
+export const ASK_SUB = 'Shows this window when you connect.'
+
+/** The phone's NodeSheet at desktop size. setup: whether to get a node when you connect, its size and Ask before
+ *  each request, saved, nothing requested. request: ask Slurm for a node now, the saved size filled in. */
+export function ComputeDialog({ cluster: c, mode, onClose }:
+  { cluster: Cluster; mode: 'setup' | 'request'; onClose: () => void }) {
   const toast = useToast()
   const [p, setP] = useState<Profile>({ ...c.profile, account: c.profile.account ?? '', qos: c.profile.qos ?? '' })
-  const [total, setTotal] = useState(minutes(c.profile.time) ?? 240)
-  const [more, setMore] = useState(false)
+  const [want, setWant] = useState(c.request_node_on_connect ?? true)
+  const [ask, setAsk] = useState(c.ask_node ?? false)
   const [remember, setRemember] = useState(true)
-  const [limits, setLimits] = useState<Limits | null>(null)
   const [sending, setSending] = useState(false)
-  const { gpus } = useGpus(c.id)
-  const set = (change: Partial<Profile>) => setP((x) => ({ ...x, ...change }))
-
-  // the partition and QoS decide the longest time
-  useEffect(() => {
-    const t = setTimeout(() => {
-      call<Limits>('clusters.partitions', { cluster: c.id, partition: p.partition, qos: p.qos ?? '' })
-        .then(setLimits).catch(() => {})
-    }, 250)
-    return () => clearTimeout(t)
-  }, [c.id, p.partition, p.qos])
-  const top = limits?.longest ?? null
-  const time = Math.max(1, top ? Math.min(total, top) : total)
+  const [ok, setOk] = useState(true)
+  const sizing = mode === 'request' || want
 
   async function go() {
     const profile: Profile = { cpus: p.cpus, mem_gb: p.mem_gb, gpus: p.gpus ?? 0, gpu_type: p.gpu_type ?? '',
-      time: slurmTime(time), partition: p.partition.trim(), account: (p.account ?? '').trim(), qos: (p.qos ?? '').trim() }
+      time: p.time, partition: p.partition.trim(), account: (p.account ?? '').trim(), qos: (p.qos ?? '').trim() }
     setSending(true)
     try {
-      if (saveOnly) {
-        putCluster(await call<Cluster>('clusters.update', { cluster: c.id, changes: { profile } }))
-        onClose()
-        return
+      if (mode === 'setup') {
+        putCluster(await call<Cluster>('clusters.update', { cluster: c.id,
+          changes: { profile, request_node_on_connect: want, ask_node: ask } }))
+      } else {
+        if (ask !== (c.ask_node ?? false)) {
+          putCluster(await call<Cluster>('clusters.update', { cluster: c.id, changes: { ask_node: ask } }))
+        }
+        await call('clusters.request_node', { cluster: c.id, profile, remember })
+        if (remember) putCluster({ ...c, profile: { ...c.profile, ...profile }, ask_node: ask })
       }
-      await call('clusters.request_node', { cluster: c.id, profile, remember })
-      if (remember) putCluster({ ...c, profile: { ...c.profile, ...profile } })
       onClose()
     } catch (e) {
       toast((e as Error).message)
@@ -123,68 +119,20 @@ export function ComputeDialog({ cluster: c, onClose, saveOnly = false }:
     }
   }
 
-  const gpu = gpuSummary(p, gpus)
-  const line = [cores(p.cpus), `${p.mem_gb} GB`, gpu, human(time)].filter(Boolean).join(' · ')
-  const queue = [p.partition, p.account, p.qos].filter((x) => x?.trim()).join(' · ') || "The cluster's defaults"
   return (
-    <Dialog title={saveOnly ? 'Compute node size' : `Compute node on ${c.name}`} onClose={onClose} width={640}
-      actions={<>
-        <Button onClick={onClose}>Cancel</Button>
-        <Button kind="suggested" disabled={sending} onClick={go}>{saveOnly ? 'Save' : 'Get node'}</Button>
-      </>}>
-      <div className="mb-4 flex items-center gap-3 rounded-lg bg-inset px-4 py-3">
-        <Cpu size={20} className="shrink-0 text-dim" />
-        <div className="min-w-0">
-          <div className="font-semibold tabular-nums">{line}</div>
-          {saveOnly && <div className="text-sm text-dim">Used each time you connect.</div>}
-        </div>
-      </div>
-      <div className="mb-4 flex flex-wrap gap-2">
-        {presets(gpus).map((x) => {
-          const on = isPreset(p, x)
-          return (
-            <button key={x.id} type="button" aria-pressed={on} onClick={() => setP((cur) => x.apply(cur))}
-              className={`rounded-lg border px-3 py-1.5 text-left ${on ? 'border-accent bg-accent-soft'
-                : 'border-line hover:bg-hover'}`}>
-              <div className="text-sm font-semibold">{x.label}</div>
-              <div className="text-xs text-dim">{x.hint}</div>
-            </button>
-          )
-        })}
-      </div>
-      <Group title="Size">
-        <SpinRow label="Cores" value={p.cpus} onChange={(v) => set({ cpus: v })} min={1} max={512} />
-        <SpinRow label="Memory" unit="GB" value={p.mem_gb} onChange={(v) => set({ mem_gb: v })} min={1} max={4096} />
-      </Group>
-      <Group title="GPU">
-        <GpuPicker gpus={gpus} value={p} onChange={setP} />
-      </Group>
-      <Group>
-        <Duration total={time} onChange={setTotal} limits={limits} />
-      </Group>
-      <Group>
-        <button type="button" onClick={() => setMore(!more)}
-          className="flex min-h-[56px] w-full items-center gap-3 px-4 py-2 text-left hover:bg-hover">
-          <div className="min-w-0 flex-1">
-            <div>Queue and billing <span className="text-dim">(optional)</span></div>
-            <div className="truncate text-sm text-dim">{queue}</div>
-          </div>
-          {more ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-        </button>
-        {more && <>
-          <EntryRow label={<Term name="queue">Queue</Term>} value={p.partition} onChange={(v) => set({ partition: v })}
-            list={limits?.partitions} placeholder={limits?.default_partition || "The cluster's default"} />
-          <EntryRow label={<Term name="group">Group to bill</Term>} value={p.account ?? ''}
-            onChange={(v) => set({ account: v })} placeholder="Leave empty for your default group" />
-          <EntryRow label={<Term name="priority">Priority and billing</Term>} value={p.qos ?? ''}
-            onChange={(v) => set({ qos: v })} list={limits?.qos}
-            placeholder={limits?.default_qos || "The cluster's default"} />
-        </>}
-      </Group>
-      {!saveOnly && <Group>
-        <SwitchRow label="Use these next time" sub={remember ? undefined : `Next time: ${summary(c.profile)}`}
-          checked={remember} onChange={setRemember} />
-      </Group>}
-    </Dialog>
+    <EDialog title={mode === 'setup' ? `Compute node on ${shortName(c)}` : `Get a node on ${shortName(c)}`}
+      onClose={onClose} actions={<MainButton disabled={sending || (sizing && !ok)} onClick={go}>
+        {mode === 'setup' ? 'Save' : 'Get node'}</MainButton>}>
+      {mode === 'setup' && <div className="pb-5"><List>
+        <ToggleRow label="Get a node when I connect" sub="Your terminals and agents run there." checked={want}
+          onChange={setWant} /></List></div>}
+      {sizing && <div className="pt-1">
+        <NodeFields cluster={c.id} value={p} onChange={setP} onValid={setOk} extra={false} /></div>}
+      {sizing && <Section>
+        {mode === 'request' && <ToggleRow label="Use this size next time" checked={remember}
+          sub={remember ? undefined : `Next time: ${summary(c.profile)}`} onChange={setRemember} />}
+        <ToggleRow label={ASK} sub={ASK_SUB} checked={ask} onChange={setAsk} />
+      </Section>}
+    </EDialog>
   )
 }

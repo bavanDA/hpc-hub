@@ -1,52 +1,42 @@
-// A cluster's settings, like the GTK app's settings.py: sections in a list down the left. Sign-in (username,
-// password or key) and Compute (the node) first; under Advanced the server and VPN, queues, the VS Code job and
-// the agents.
+// A cluster's settings in style E, the phone's ClusterSettingsSheet at desktop size: a list of sections, each opening
+// in the same window, and one Save for all of them. Sign-in (username, password or key) and the compute node
+// first; under Advanced the server and VPN, queues, the VS Code job and the agents.
 // Saved with cluster_settings.save, which checks every field; logins with clusters.set_login. Passwords go in
 // and never come back out.
-import { ExternalLink, KeyRound, Lock } from 'lucide-react'
+import { Bot, Code, Cpu, Globe, KeyRound, ListOrdered, Server, ShieldCheck } from 'lucide-react'
 import { useEffect, useState, type ReactNode } from 'react'
 
 import { call } from '../../rpc'
-import { secondStep, type AgentId, type AgentSettings, type Cluster, type Limits, type Logins, type Profile,
-  type SettingsInfo, type VsCode } from '../../types/clusters'
-import { openSystem } from '../app/openLink'
+import { secondStep, summary, type AgentId, type AgentSettings, type Cluster, type Logins, type SettingsInfo,
+  type VsCode } from '../../types/clusters'
+import { NodeFields } from '../e/NodeFields'
+import { ConfirmDialog, Note, PickerDialog, type PickerOption } from '../e/parts'
+import { EDialog, Field, List, MainButton, NumberRow, Row, Section, Segments, ToggleRow } from '../e/ui'
 import { useToast } from '../toast'
 import { ASK_VS, ASK_VS_SUB } from '../tools/VsCodeDialog'
-import { AlertDialog, Button, Dialog, List } from '../ui'
-import { Duration, GpuPicker } from './ComputeDialog'
-import { useGpus } from './gpus'
-import { ActionRow, ComboRow, EntryRow, Group, NumberBox, SpinRow, SwitchRow } from './fields'
+import { Spinner } from '../ui'
+import { AuthenticatorHelp } from './AuthenticatorHelp'
+import { ASK } from './ComputeDialog'
 import { KeyPanel, keyHeading, PasswordInstead } from './KeyPanel'
 import { KeySetupDialog } from './KeySetupDialog'
-import { copy } from './loginCopy'
+import { copy, shortName } from './loginCopy'
+import { queueCount, QueueRows } from './QueueRows'
 import { CHROME_WINDOW } from './SignIn'
-import { QueueRows } from './QueueRows'
 import { putCluster } from './store'
-import { minutes, slurmTime } from './time'
 
-const MAIN = [['login', 'Sign-in'], ['compute', 'Compute']] as const
-const ADVANCED = [['server', 'Server and VPN'], ['queues', 'Queues'], ['vscode', 'VS Code'],
-  ['agents', 'Agents']] as const
-export type Tab = typeof MAIN[number][0] | typeof ADVANCED[number][0]
-const TABS: readonly (readonly [Tab, string])[] = [...MAIN, ...ADVANCED]
+type Part = '' | 'login' | 'compute' | 'server' | 'queues' | 'vscode' | 'agents'
+const TITLES: Record<Exclude<Part, ''>, string> = { login: 'Sign-in', compute: 'Compute node',
+  server: 'Server and VPN', queues: 'Queues', vscode: 'VS Code job', agents: 'Agents' }
 
 /** Where a caller's start (and its old advanced flag) opens: the advanced part of Sign-in is Server and VPN. */
-function firstTab(start: string, advanced: boolean): Tab {
-  if (!TABS.some(([t]) => t === start)) return advanced ? 'server' : 'login'
+function firstPart(start: string, advanced: boolean): Part {
+  if (!(start in TITLES)) return advanced ? 'server' : ''
   if (advanced && start === 'login') return 'server'
   if (advanced && start === 'compute') return 'queues'
-  return start as Tab
+  return start as Part
 }
 
-function NavItem({ id, label, on, pick }: { id: Tab; label: string; on: boolean; pick: (t: Tab) => void }) {
-  return (
-    <button type="button" role="tab" aria-selected={on} onClick={() => pick(id)}
-      className={`flex h-8 w-full items-center rounded-md px-3 text-left text-base transition-colors duration-90 ${
-        on ? 'bg-selected font-semibold' : 'text-dim hover:bg-hover hover:text-text'}`}>{label}</button>
-  )
-}
-
-const TARGETS: [string, string][] = [['desktop', 'VS Code app'], ['browser', 'Browser (vscode.dev)']]
+const TARGETS = [['desktop', 'VS Code app'], ['browser', 'Browser']] as const
 const PROFILE_KEYS = ['cpus', 'mem_gb', 'time', 'partition', 'account', 'qos', 'gpus', 'gpu_type', 'extra_args'] as const
 const VPN_KEYS = ['enabled', 'gateway', 'protocol', 'useragent', 'authgroup', 'same_login_as_ssh', 'split_tunnel',
   'domains', 'routes', 'browser'] as const
@@ -54,51 +44,13 @@ const VPN_KEYS = ['enabled', 'gateway', 'protocol', 'useragent', 'authgroup', 's
 const pick = <T extends object, K extends keyof T>(o: T, keys: readonly K[]) =>
   Object.fromEntries(keys.filter((k) => o[k] !== undefined).map((k) => [k, o[k]]))
 
+type Choosing = { title: string; value: string; options: PickerOption<string>[]; onPick: (v: string) => void }
 
-/** Cores, memory, GPUs, time, partition, account, QOS and extra arguments (settings.py ProfileRows). */
-function ProfileRows({ cluster, p, onChange, extra, rows = 'all', billing = true }:
-  { cluster: string; p: Profile; onChange: (p: Profile) => void; extra: string; rows?: 'all' | 'size' | 'more'
-    billing?: boolean }) {
-  const [limits, setLimits] = useState<Limits | null>(null)
-  useEffect(() => {
-    const t = setTimeout(() => {
-      call<Limits>('clusters.partitions', { cluster, partition: p.partition, qos: p.qos ?? '' })
-        .then(setLimits).catch(() => {})
-    }, 250)
-    return () => clearTimeout(t)
-  }, [cluster, p.partition, p.qos])
-  const set = (change: Partial<Profile>) => onChange({ ...p, ...change })
-  const { gpus, known } = useGpus(cluster)
-  return <>
-    {rows !== 'more' && <>
-      <SpinRow label="Cores" value={p.cpus} onChange={(cpus) => set({ cpus })} min={1} max={512} />
-      <SpinRow label="Memory" unit="GB" value={p.mem_gb} onChange={(mem_gb) => set({ mem_gb })} min={1} max={4096} />
-      <Duration total={minutes(p.time) ?? 240} onChange={(m) => set({ time: slurmTime(m) })} limits={limits} />
-      <div className="px-4 pt-3 text-sm font-semibold text-dim">GPU</div>
-      <GpuPicker gpus={gpus} known={known} value={p} onChange={onChange} />
-      <EntryRow label="Queue" value={p.partition} onChange={(partition) => set({ partition })}
-        list={limits?.partitions} placeholder={limits?.default_partition} />
-    </>}
-    {rows !== 'size' && <More p={p} set={set} limits={limits} extra={extra} billing={billing} />}
-  </>
-}
-
-/** billing: off where each queue row sets its own. */
-function More({ p, set, limits, extra, billing }:
-  { p: Profile; set: (c: Partial<Profile>) => void; limits: Limits | null; extra: string; billing: boolean }) {
-  return <>
-    <EntryRow label="Group to bill" value={p.account ?? ''} onChange={(account) => set({ account })} />
-    {billing && <EntryRow label="Billing" value={p.qos ?? ''} onChange={(qos) => set({ qos })} list={limits?.qos}
-      placeholder={limits?.default_qos} />}
-    <EntryRow label={extra} value={p.extra_args ?? ''} onChange={(extra_args) => set({ extra_args })}
-      placeholder="--constraint=gpu" />
-  </>
-}
-
-export function SettingsDialog({ cluster, hint, onClose, start = 'login', advanced = false }:
+/** start: '' for the list, or a section ('login', 'compute', 'server', 'queues', 'vscode', 'agents'). */
+export function SettingsDialog({ cluster, hint, onClose, start = '', advanced = false }:
   { cluster: Cluster; hint?: string; onClose: () => void; start?: string; advanced?: boolean }) {
   const toast = useToast()
-  const [tab, setTab] = useState<Tab>(() => firstTab(start, advanced))
+  const [part, setPart] = useState<Part>(() => firstPart(start, advanced))
   const [d, setD] = useState<Cluster>(cluster)
   const [info, setInfo] = useState<SettingsInfo | null>(null)
   const [saved, setSaved] = useState<Logins | null>(null)
@@ -111,9 +63,9 @@ export function SettingsDialog({ cluster, hint, onClose, start = 'login', advanc
   const [busy, setBusy] = useState(false)
   const [usePassword, setUsePassword] = useState(false)  // a key cluster that takes a password too
   // no login yet on a cluster with a portal: set it up there, like the GTK app does on Connect
-  const [open, setOpen] = useState<null | 'key'>(hint && cluster.portal ? 'key' : null)
+  const [open, setOpen] = useState<null | 'key' | 'code' | 'forget' | 'leave'>(hint && cluster.portal ? 'key' : null)
+  const [choosing, setChoosing] = useState<Choosing | null>(null)
   const [base, setBase] = useState<Cluster | null>(null)  // the settings as loaded, to tell if anything changed
-  const [asking, setAsking] = useState(false)  // "Throw away your changes?"
 
   useEffect(() => {
     call<SettingsInfo>('cluster_settings.get', { cluster: cluster.id })
@@ -132,14 +84,15 @@ export function SettingsDialog({ cluster, hint, onClose, start = 'login', advanc
   const changed = (!!base && JSON.stringify(d) !== JSON.stringify(base)) || !!password || !!vpnPassword
     || (!!saved && (user !== saved.ssh.username || vpnUser !== saved.vpn.username
       || remember !== (saved.remember ?? true)))
-  const close = () => (changed ? setAsking(true) : onClose())
+  const close = () => (changed ? setOpen('leave') : onClose())
 
   const v = d.vpn
-  const code = d.second_factor === 'code'
   const ownVpnLogin = v.enabled && !(v.same_login_as_ssh ?? true)
   const win = info?.chrome_window
   const signIn: [string, string][] = [['', 'Built-in window'],
     ...(win && (win.offered || v.browser === win.value) ? [[win.value, CHROME_WINDOW.title] as [string, string]] : [])]
+  const label = d.username_label || 'Username'
+  const want = d.request_node_on_connect ?? true
 
   function changes() {
     const out: Record<string, unknown> = {
@@ -170,7 +123,7 @@ export function SettingsDialog({ cluster, hint, onClose, start = 'login', advanc
         await call('clusters.set_login', { cluster: d.id, kind: 'vpn', username: vpnUser, password: vpnPassword,
           remember })
       }
-      toast(`${d.name} settings saved`)
+      toast(`${shortName(d)} settings saved`)
       onClose()
     } catch (e) {
       setError((e as Error).message)
@@ -178,9 +131,7 @@ export function SettingsDialog({ cluster, hint, onClose, start = 'login', advanc
     }
   }
 
-  const [forgetting, setForgetting] = useState(false)
   async function forget() {
-    setForgetting(false)
     try {
       const keep = !d.key_page  // a key cluster has no password: forgetting means the username
       await call('clusters.forget_logins', { cluster: d.id, keep_username: keep })
@@ -190,7 +141,7 @@ export function SettingsDialog({ cluster, hint, onClose, start = 'login', advanc
         setUser(''); setVpnUser('')
       }
       setPassword(''); setVpnPassword('')
-      toast('Saved password removed')
+      toast(keep ? 'Saved password removed' : `${label} forgotten`)
     } catch (e) {
       toast((e as Error).message)
     }
@@ -199,203 +150,211 @@ export function SettingsDialog({ cluster, hint, onClose, start = 'login', advanc
   function keyDone(name: string) {
     setOpen(null)
     onClose()
-    toast(`Signed in as ${name}. Connecting to ${d.name}`)
+    toast(`Signed in as ${name}. Connecting to ${shortName(d)}`)
     call('clusters.connect', { cluster: d.id }).catch((e: Error) => toast(e.message))
   }
 
+  const choose = (title: string, value: string, options: [string, string][], onPick: (v: string) => void) =>
+    setChoosing({ title, value, options: options.map(([value, label]) => ({ value, label })), onPick })
+
+  const keyCluster = !!d.key_page && !usePassword
   const instead = d.key_page && d.password_too
-    ? <div className="-mt-2 mb-5 flex"><PasswordInstead on={usePassword} onChange={setUsePassword} /></div> : null
-  // the one destructive thing here: a row of its own at the bottom, with a soft red button that asks first
-  const forgetRow = (what: string) => (
-    <Group>
-      <ActionRow label={`Forget ${what}`}>
-        <Button kind="danger-solid" size="sm" type="button" onClick={() => setForgetting(true)}>Forget</Button>
-      </ActionRow>
-    </Group>
-  )
-  const keyText = keyHeading(d).text
-  const login = d.key_page && !usePassword ? <>
-    {keyText && <p className="mb-3 text-base text-dim">{keyText}</p>}
-    <div className="mb-3"><KeyPanel cluster={d} user={user} onUser={setUser} /></div>
+    ? <div className="px-5 pt-4"><PasswordInstead on={usePassword} onChange={setUsePassword} /></div> : null
+  // a key cluster has no password to forget: its username goes
+  const forgetRow = (d.key_page ? !!saved?.ssh.username : !!saved?.ssh.password) && (
+    <Section><Row label={d.key_page ? `Forget ${label}` : copy.forget} danger onPress={() => setOpen('forget')} />
+    </Section>)
+
+  const login = keyCluster ? <>
+    <p className="px-5 pb-1 text-dim">{keyHeading(d).text}</p>
+    <div className="px-5"><KeyPanel cluster={d} user={user} onUser={setUser} /></div>
     {instead}
-    {forgetRow(d.username_label || 'username')}
+    {forgetRow}
   </> : <>
-    <List>
-      <EntryRow label={d.username_label || 'Username'} value={user} onChange={setUser} autoFocus
-        placeholder={copy.usernameHint} />
-      <EntryRow label={copy.password} value={password} onChange={setPassword} password
+    <div className="px-5">
+      <Field label={label} value={user} autoFocus placeholder={copy.usernameHint}
+        onChange={(e) => setUser(e.target.value)} />
+      <Field label={copy.password} type="password" value={password} onChange={(e) => setPassword(e.target.value)}
         placeholder={!remember ? 'Asked when you connect' : saved?.ssh.password ? copy.saved : undefined} />
-      <SwitchRow label={copy.remember} checked={remember} onChange={setRemember}
-        sub={remember ? undefined : copy.rememberOff} />
-    </List>
-    <div className="mb-5 mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 px-1 text-sm text-dim">
-      {remember && <span className="flex items-center gap-1.5"><Lock size={14} />{copy.passwordNote(d)}</span>}
-      {secondStep(d) && <span>{secondStep(d)}</span>}
-      {code && d.code_setup && <button type="button" onClick={() => openSystem(d.code_setup!)}
-        className="inline-flex items-center gap-1 font-semibold text-accent-text hover:underline">
-        {copy.codeSetup}<ExternalLink size={14} /></button>}
     </div>
+    <Section note={remember ? copy.passwordNote(d) : undefined}>
+      <ToggleRow label={copy.remember} sub={remember ? undefined : copy.rememberOff} checked={remember}
+        onChange={setRemember} />
+    </Section>
+    {secondStep(d) && (d.code_setup ? <Section note={secondStep(d)}>
+      <Row icon={ShieldCheck} label={copy.codeSetup} opens onPress={() => setOpen('code')} />
+    </Section> : <p className="px-5 pt-3 text-sm text-dim">{secondStep(d)}</p>)}
+    {d.portal && <Section note={copy.portalNote}>
+      <Row icon={Globe} label={copy.portal(d)} opens onPress={() => setOpen('key')} />
+    </Section>}
     {instead}
-    {d.portal && (
-      <div className="mb-5 flex items-center gap-4 rounded-xl bg-card px-4 py-3 shadow-[var(--shadow-card)]">
-        <KeyRound size={20} className="shrink-0 text-dim" />
-        <p className="min-w-0 flex-1 text-base">Skip the password: add this computer's SSH key through the portal.
-          <span className="text-dim"> You'll still need the code.</span></p>
-        <Button type="button" onClick={() => setOpen('key')}>{copy.portal(d)}</Button>
-      </div>
-    )}
-    {forgetRow('saved password')}
+    {forgetRow}
   </>
 
   const server = <>
-    <Group title="Server">
-      <EntryRow label="Login host" value={d.host} onChange={(h) => up({ host: h })} placeholder="login.example.edu" />
-      <ActionRow label="SSH port">
-        <NumberBox label="SSH port" value={d.port ?? 22} onChange={(port) => up({ port })} min={1} max={65535}
-          width={72} />
-      </ActionRow>
-    </Group>
-    <Group title="VPN">
-      <SwitchRow label="Use VPN" checked={v.enabled} onChange={(enabled) => upVpn({ enabled })} />
-      {v.enabled && <>
-        <EntryRow label="Gateway" value={v.gateway} onChange={(gateway) => upVpn({ gateway })}
-          placeholder="vpn.example.edu" />
-        <ComboRow label="Sign in with" value={v.browser ?? ''}
-          sub="The Chrome window remembers your sign-in, so it is quicker"
-          options={signIn}
-          onChange={(browser) => upVpn({ browser })} />
-        <ComboRow label="Protocol" value={v.protocol ?? 'anyconnect'} onChange={(protocol) => upVpn({ protocol })}
-          options={(info?.protocols ?? [v.protocol ?? 'anyconnect']).map((p): [string, string] => [p, p])} />
-        <EntryRow label="User agent (optional)" value={v.useragent ?? ''} onChange={(useragent) => upVpn({ useragent })} />
-        <EntryRow label="Group (optional)" value={v.authgroup ?? ''} onChange={(authgroup) => upVpn({ authgroup })} />
-        <SwitchRow label="Split tunnel" checked={v.split_tunnel ?? true}
-          sub="Only these networks and domains use this VPN, so other VPNs can run too"
-          onChange={(split_tunnel) => upVpn({ split_tunnel })} />
+    <div className="px-5">
+      <Field label="Login host" value={d.host} placeholder="login.example.edu"
+        onChange={(e) => up({ host: e.target.value.trim() })} />
+    </div>
+    <div className="pt-3"><List>
+      <NumberRow label="SSH port" unit="" showUnit={false} value={d.port ?? 22} max={65535}
+        onChange={(port) => up({ port })} />
+    </List></div>
+    <Section title="VPN">
+      <ToggleRow label="Use VPN" checked={v.enabled} onChange={(enabled) => upVpn({ enabled })} />
+    </Section>
+    {v.enabled && <>
+      <div className="px-5 pt-3">
+        <Field label="Gateway" value={v.gateway} placeholder="vpn.example.edu"
+          onChange={(e) => upVpn({ gateway: e.target.value })} />
+        {signIn.length > 1 && <div className="py-1.5">
+          <p className="mb-1.5 text-sm text-dim">Sign in with</p>
+          <Segments label="Sign in with" value={v.browser ?? ''} options={signIn}
+            onChange={(browser) => upVpn({ browser })} />
+        </div>}
+      </div>
+      <div className="pt-4"><List>
+        <Row label="Protocol" value={v.protocol ?? 'anyconnect'} opens onPress={() => choose('Protocol',
+          v.protocol ?? 'anyconnect', (info?.protocols ?? [v.protocol ?? 'anyconnect']).map((p) => [p, p]),
+          (protocol) => upVpn({ protocol }))} />
+        <ToggleRow label="Split tunnel" sub="Only these networks and domains use this VPN, so other VPNs can run too."
+          checked={v.split_tunnel ?? true} onChange={(split_tunnel) => upVpn({ split_tunnel })} />
+      </List></div>
+      <div className="px-5 pt-3">
         {(v.split_tunnel ?? true) && <>
-          <EntryRow label="VPN domains (its DNS answers these)" value={v.domains ?? ''}
-            onChange={(domains) => upVpn({ domains })} placeholder="example.edu" />
-          <EntryRow label="VPN networks (CIDR, space separated)" value={v.routes ?? ''}
-            onChange={(routes) => upVpn({ routes })} placeholder="10.0.0.0/16" />
+          <Field label="VPN domains" value={v.domains ?? ''} placeholder="example.edu"
+            onChange={(e) => upVpn({ domains: e.target.value })} />
+          <Field label="VPN networks, space separated" value={v.routes ?? ''} placeholder="10.0.0.0/16"
+            onChange={(e) => upVpn({ routes: e.target.value })} />
         </>}
-      </>}
-    </Group>
-    {v.enabled && (
-      <Group title="VPN login">
-        <SwitchRow label="Same login as cluster" checked={v.same_login_as_ssh ?? true}
-          onChange={(same_login_as_ssh) => upVpn({ same_login_as_ssh })} />
-        {ownVpnLogin && <>
-          <EntryRow label="VPN username" value={vpnUser} onChange={setVpnUser} placeholder="jane.doe@example.edu" />
-          <EntryRow label="VPN password" value={vpnPassword} onChange={setVpnPassword} password
-            placeholder={saved?.vpn.password ? copy.saved : 'Same as the cluster password'} />
-        </>}
-      </Group>
-    )}
+        <Field label="User agent (optional)" value={v.useragent ?? ''}
+          onChange={(e) => upVpn({ useragent: e.target.value })} />
+        <Field label="Group (optional)" value={v.authgroup ?? ''}
+          onChange={(e) => upVpn({ authgroup: e.target.value })} />
+      </div>
+    </>}
+    {v.enabled && <Section title="VPN login">
+      <ToggleRow label="Same login as the cluster" checked={v.same_login_as_ssh ?? true}
+        onChange={(same_login_as_ssh) => upVpn({ same_login_as_ssh })} />
+    </Section>}
+    {ownVpnLogin && <div className="px-5 pt-2">
+      <Field label="VPN username" value={vpnUser} placeholder="jdoe@example.edu"
+        onChange={(e) => setVpnUser(e.target.value)} />
+      <Field label="VPN password" type="password" value={vpnPassword} onChange={(e) => setVpnPassword(e.target.value)}
+        placeholder={saved?.vpn.password ? copy.saved : 'Same as the cluster password'} />
+    </div>}
   </>
 
   const compute = <>
-    <Group description="Your terminals and agents run on a compute node, not the busy login node.">
-      <SwitchRow label="Get a compute node when I connect" checked={d.request_node_on_connect ?? true}
-        onChange={(request_node_on_connect) => up({ request_node_on_connect })} />
-      {(d.request_node_on_connect ?? true) && (
-        <SwitchRow label="Ask before each request" checked={d.ask_node ?? false}
-          onChange={(ask_node) => up({ ask_node })} />
-      )}
-      <SwitchRow label="Reuse a node you already have" checked={d.reuse_running_job ?? true}
-        onChange={(reuse_running_job) => up({ reuse_running_job })} />
-    </Group>
-    <Group title="Node size">
-      <ProfileRows cluster={d.id} p={d.profile} onChange={(profile) => up({ profile })} rows="size"
-        extra="Extra options" />
-    </Group>
+    <List>
+      <ToggleRow label="Get a compute node when I connect" sub="Your terminals and agents run there."
+        checked={want} onChange={(on) => up({ request_node_on_connect: on })} />
+    </List>
+    {want && <div className="pt-5">
+      <NodeFields cluster={d.id} value={d.profile} onChange={(profile) => up({ profile })} /></div>}
+    <Section>
+      {want && <ToggleRow label={ASK} sub="Shows the node window when you connect." checked={d.ask_node ?? false}
+        onChange={(on) => up({ ask_node: on })} />}
+      <ToggleRow label="Reuse a node you already have" sub="One an agent or VS Code got earlier."
+        checked={d.reuse_running_job ?? true} onChange={(on) => up({ reuse_running_job: on })} />
+    </Section>
   </>
 
   const queues = <>
-    <Group title="Group and options">
-      <ProfileRows cluster={d.id} p={d.profile} onChange={(profile) => up({ profile })} rows="more"
-        extra="Extra options" billing={!(d.queues ?? '').trim()} />
-    </Group>
-    <Group title="Queues to try"
-      description="Cheapest first. Your node comes from the first one that can start within the wait below.">
-      <QueueRows cluster={d.id} value={d.queues ?? ''} onChange={(queues) => up({ queues })} />
-      <SpinRow label="Wait for a cheaper queue (seconds)" value={d.queue_wait ?? 60}
-        onChange={(queue_wait) => up({ queue_wait })} min={0} max={3600} />
-    </Group>
+    <h3 className="px-5 pb-1.5 text-xs font-semibold tracking-wide text-dim uppercase">Tried in this order</h3>
+    <QueueRows cluster={d.id} value={d.queues ?? ''} onChange={(queues) => up({ queues })} />
+    <p className="px-5 pt-2 text-sm text-dim">Cheapest first. Your node comes from the first one that can start
+      within the wait below.</p>
+    <div className="pt-5"><List>
+      <NumberRow label="Wait for a cheaper queue" unit="seconds" min={0} max={3600} value={d.queue_wait ?? 60}
+        onChange={(queue_wait) => up({ queue_wait })} />
+    </List></div>
   </>
 
   const vs = d.vscode
-  const vscode = vs && <>
-    <Group title="VS Code job">
-      <EntryRow label="Run first (for example module load VSCode)" value={vs.setup} onChange={(setup) => upVs({ setup })} />
-      <EntryRow label="Command" value={vs.command} onChange={(command) => upVs({ command })} />
-      <EntryRow label="Start in folder" value={vs.workdir} onChange={(workdir) => upVs({ workdir })} placeholder="~" />
-      <ComboRow label="Open in" value={vs.open_in} options={TARGETS}
-        onChange={(x) => upVs({ open_in: x as VsCode['open_in'] })} />
-      <SwitchRow label="Open automatically" sub="When the tunnel is ready, and the GitHub sign-in page"
+  const vscode = vs ? <>
+    <div className="px-5">
+      <Field label="Runs first" value={vs.setup} placeholder="module load VSCode"
+        onChange={(e) => upVs({ setup: e.target.value })} />
+      <Field label="Command" value={vs.command} onChange={(e) => upVs({ command: e.target.value })} />
+      <Field label="Folder it opens" value={vs.workdir === '~' ? '' : vs.workdir} placeholder="Home folder"
+        onChange={(e) => upVs({ workdir: e.target.value || '~' })} />
+      <div className="py-1.5">
+        <p className="mb-1.5 text-sm text-dim">Open in</p>
+        <Segments label="Open in" value={vs.open_in} options={TARGETS} onChange={(open_in) => upVs({ open_in })} />
+      </div>
+    </div>
+    <Section>
+      <ToggleRow label="Open automatically" sub="When the tunnel is ready, and the GitHub sign-in page."
         checked={vs.open_links} onChange={(open_links) => upVs({ open_links })} />
-      <SwitchRow label={ASK_VS} sub={ASK_VS_SUB} checked={vs.ask ?? true} onChange={(ask) => upVs({ ask })} />
-    </Group>
-    <Group title="Node size" description="VS Code gets its own node with this size.">
-      <ProfileRows cluster={d.id} p={vs.compute} onChange={(c) => upVs({ compute: c })} extra="Extra options" />
-    </Group>
+      <ToggleRow label={ASK_VS} sub={ASK_VS_SUB} checked={vs.ask ?? true} onChange={(ask) => upVs({ ask })} />
+    </Section>
+    <h3 className="px-5 pt-5 pb-1.5 text-xs font-semibold tracking-wide text-dim uppercase">Its own node</h3>
+    <NodeFields cluster={d.id} value={vs.compute} onChange={(compute) => upVs({ compute })} />
+  </> : <p className="px-5 text-dim">No VS Code settings here.</p>
+
+  const agents = (info?.agents ?? []).map((a) => {
+    const s = d[a.id]
+    if (!s) return null
+    return (
+      <Section key={a.id} title={a.name}>
+        <ToggleRow label="Its own compute node" sub={s.new_node ? undefined : 'Runs on the node you have.'}
+          checked={s.new_node} onChange={(new_node) => upAgent(a.id, { new_node })} />
+        {a.remote_label && <ToggleRow label={a.remote_label} sub={a.remote_hint} checked={s.remote}
+          onChange={(remote) => upAgent(a.id, { remote })} />}
+        {a.options.map((o) => (
+          <Row key={o.key} label={o.label} value={o.choices.find(([x]) => x === s[o.key])?.[1] ?? 'Default'} opens
+            onPress={() => choose(o.label, String(s[o.key] ?? ''), o.choices,
+              (x) => upAgent(a.id, { [o.key]: x }))} />
+        ))}
+        <div className="border-b border-line px-5 pb-2">
+          <Field label="Folder it starts in" value={s.workdir === '~' ? '' : s.workdir} placeholder="Home folder"
+            onChange={(e) => upAgent(a.id, { workdir: e.target.value || '~' })} />
+        </div>
+      </Section>
+    )
+  })
+
+  const list = !info ? <div className="grid h-40 place-items-center"><Spinner size={28} /></div> : <>
+    <List>
+      <Row icon={KeyRound} label="Sign-in" value={user || 'Not set'} opens onPress={() => setPart('login')} />
+      {d.second_factor === 'code' && d.code_setup && <Row icon={ShieldCheck} label="Authenticator app" opens
+        onPress={() => setOpen('code')} />}
+      <Row icon={Cpu} label="Compute node" sub={want ? summary(d.profile) : 'Off'} opens
+        onPress={() => setPart('compute')} />
+    </List>
+    <Section title="Advanced" note="Changes apply the next time you connect.">
+      <Row icon={Server} label="Server and VPN" value={d.host} opens onPress={() => setPart('server')} />
+      <Row icon={ListOrdered} label="Queues" value={queueCount(d.queues)} opens onPress={() => setPart('queues')} />
+      {d.vscode && <Row icon={Code} label="VS Code job" opens onPress={() => setPart('vscode')} />}
+      {!!info.agents.length && <Row icon={Bot} label="Agents" sub={info.agents.map((a) => a.name).join(', ')} opens
+        onPress={() => setPart('agents')} />}
+    </Section>
   </>
 
-  const agents = <>
-    <p className="mb-3 text-sm text-dim">What each agent starts with. You can change these when you start one
-      too.</p>
-    {(info?.agents ?? []).map((a) => {
-      const s = d[a.id]
-      if (!s) return null
-      return (
-        <Group key={a.id} title={a.name}>
-          {a.options.map((o) => (
-            <ComboRow key={o.key} label={o.label} value={String(s[o.key] ?? '')} options={o.choices}
-              onChange={(x) => upAgent(a.id, { [o.key]: x })} />
-          ))}
-          <SwitchRow label="Use a new compute node" checked={s.new_node}
-            sub={s.new_node ? 'A node of its own' : 'Shares your compute node'} onChange={(new_node) => upAgent(a.id, { new_node })} />
-          {a.remote_label && <SwitchRow label={a.remote_label} sub={a.remote_hint} checked={s.remote}
-            onChange={(remote) => upAgent(a.id, { remote })} />}
-          <EntryRow label="Start in folder" value={s.workdir} onChange={(workdir) => upAgent(a.id, { workdir })}
-            placeholder="~" />
-        </Group>
-      )
-    })}
-  </>
-
-  const pages: Record<Tab, ReactNode> = {
-    login, compute, server, queues, vscode: vscode || <p className="text-dim">No VS Code settings here.</p>, agents,
-  }
-  const title = TABS.find(([t]) => t === tab)?.[1] ?? ''
+  const pages: Record<Part, ReactNode> = { '': list, login, compute, server, queues, vscode, agents }
+  const back = () => setPart('')
   return (
     <>
-      <Dialog title={`${d.name} settings`} onClose={close} width={780} height={640} bare
-        actions={<>
-          <span className="mr-auto text-sm text-dim">Changes apply the next time you connect.</span>
-          <Button kind="ghost" onClick={close}>Cancel</Button>
-          <Button kind="primary" disabled={busy || !saved || !info} onClick={save}>Save</Button>
-        </>}>
-        <nav role="tablist" aria-orientation="vertical" aria-label="Settings sections"
-          className="flex w-48 shrink-0 flex-col gap-0.5 rounded-bl-2xl bg-sidebar p-2">
-          {MAIN.map(([t, label]) => <NavItem key={t} id={t} label={label} on={tab === t} pick={setTab} />)}
-          <p className="mt-4 mb-1 px-3 text-xs font-semibold text-dim">Advanced</p>
-          {ADVANCED.map(([t, label]) => <NavItem key={t} id={t} label={label} on={tab === t} pick={setTab} />)}
-        </nav>
-        <div role="tabpanel" aria-label={title} className="min-w-0 flex-1 overflow-y-auto px-6 py-5">
-          <h3 className="mb-4 text-lg font-semibold">{title}</h3>
-          {hint && <p className="mb-4 rounded-lg bg-warn-bg px-4 py-2.5 text-base font-semibold text-warn">{hint}</p>}
-          {error && <p role="alert" className="mb-4 rounded-lg bg-bad-bg px-4 py-2.5 text-base font-semibold text-bad">
-            {error}</p>}
-          {pages[tab]}
-        </div>
-      </Dialog>
-      {asking && <AlertDialog title="Throw away your changes?" keep="Keep editing" act="Throw away"
-        onClose={() => setAsking(false)} onAct={onClose} />}
+      <EDialog title={part ? TITLES[part] : `${cluster.name} settings`} width={580} onClose={close}
+        onBack={part ? back : undefined}
+        actions={part ? <MainButton onClick={back}>Done</MainButton>
+          : <MainButton disabled={busy || !saved || !info} onClick={save}>Save</MainButton>}>
+        {hint && (part === '' || part === 'login') && <Note>{hint}</Note>}
+        {error && <Note error>{error}</Note>}
+        <div className="pb-3">{pages[part]}</div>
+      </EDialog>
+      {open === 'leave' && <ConfirmDialog title="Throw away your changes?" danger keep="Keep editing"
+        confirm="Throw away" onClose={() => setOpen(null)} onConfirm={onClose} />}
       {open === 'key' && <KeySetupDialog cluster={d} onClose={() => setOpen(null)} onDone={keyDone} />}
-      {forgetting && <AlertDialog title={d.key_page ? `Forget your ${d.username_label || 'username'}?`
-        : copy.forgetTitle(d)} keep={copy.keep} act={d.key_page ? 'Forget' : copy.forget}
-        onAct={forget} onClose={() => setForgetting(false)}>
-        {d.key_page ? "You'll type it next time you connect. Your key stays on this computer."
-          : copy.forgetBody(d.username_label || 'username')}</AlertDialog>}
+      {open === 'code' && <AuthenticatorHelp cluster={d} onClose={() => setOpen(null)} />}
+      {open === 'forget' && <ConfirmDialog danger title={d.key_page ? `Forget your ${label}?` : copy.forgetTitle(d)}
+        keep={copy.keep} confirm={d.key_page ? `Forget ${label}` : copy.forget} onConfirm={forget}
+        onClose={() => setOpen(null)}
+        text={d.key_page ? "You'll type it next time you connect. Your key stays on this computer."
+          : copy.forgetBody(label)} />}
+      {choosing && <PickerDialog title={choosing.title} value={choosing.value} options={choosing.options}
+        onPick={choosing.onPick} onClose={() => setChoosing(null)} />}
     </>
   )
 }

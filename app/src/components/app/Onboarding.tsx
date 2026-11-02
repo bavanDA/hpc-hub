@@ -1,17 +1,19 @@
-// After the first start's cluster picker: for each cluster you chose, its sign-in, then its compute node.
-// A sign-in can wait ("Do this later": asked on the first Connect); all of it changes later in the cluster's Settings.
-import { Cpu, ExternalLink, Globe, KeyRound, Lock } from 'lucide-react'
+// After the first start's cluster picker: for each cluster you chose, its sign-in, then its compute node. Style E:
+// a title, rows, one main button. A sign-in can wait ("Do this later": asked on the first Connect); all of it changes
+// later in the cluster's Settings.
+import { ExternalLink, Globe } from 'lucide-react'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 
 import { call } from '../../rpc'
-import { secondStep, summary, type Cluster, type Logins, type Profile } from '../../types/clusters'
-import { Duration } from '../clusters/ComputeDialog'
-import { EntryRow, SpinRow, SwitchRow, Toggle } from '../clusters/fields'
+import { secondStep, type Cluster, type Logins, type Profile } from '../../types/clusters'
+import { ASK } from '../clusters/ComputeDialog'
 import { KeyPanel, keyHeading, PasswordInstead } from '../clusters/KeyPanel'
 import { KeySetupDialog } from '../clusters/KeySetupDialog'
 import { copy, shortName } from '../clusters/loginCopy'
-import { minutes, slurmTime } from '../clusters/time'
-import { Button, List, Spinner } from '../ui'
+import { NodeFields } from '../e/NodeFields'
+import { Button } from '../e/parts'
+import { Field, List, MainButton, Section, ToggleRow } from '../e/ui'
+import { Spinner } from '../ui'
 import { openSystem } from './openLink'
 
 type Step = { cluster: Cluster; kind: 'login' | 'node' }
@@ -36,8 +38,8 @@ export function Onboarding({ ids, onDone }: { ids: string[]; onDone: () => void 
   const next = () => (at + 1 < steps.length ? setAt(at + 1) : onDone())
   const last = at + 1 === steps.length
   return (
-    <div className="flex h-full flex-col items-center overflow-auto px-8 py-10">
-      <div className="flex w-full max-w-[560px] flex-col gap-6">
+    <div className="flex h-full flex-col items-center overflow-auto py-10">
+      <div className="flex w-full max-w-[600px] flex-col gap-6">
         <Progress steps={steps} at={at} />
         {step.kind === 'login'
           ? <LoginStep key={at} cluster={step.cluster} onNext={next} />
@@ -51,46 +53,33 @@ function Progress({ steps, at }: { steps: Step[]; at: number }) {
   const clusters = steps.filter((s) => s.kind === 'login')
   const which = clusters.findIndex((s) => s.cluster.id === steps[at].cluster.id) + 1
   return (
-    <div className="flex items-center gap-3 text-sm text-dim">
+    <div className="flex items-center gap-3 px-5 text-sm text-dim">
       {clusters.length > 1 && <span>Cluster {which} of {clusters.length}</span>}
       <div className="flex flex-1 gap-1.5" aria-label={`Step ${at + 1} of ${steps.length}`}>
         {steps.map((_, i) => (
-          <span key={i} className={`h-1.5 flex-1 rounded-full ${i <= at ? 'bg-accent' : 'bg-selected'}`} />
+          <span key={i} className={`h-1 flex-1 rounded-full ${i <= at ? 'bg-accent' : 'bg-line-strong'}`} />
         ))}
       </div>
     </div>
   )
 }
 
-function Heading({ icon, title, text }: { icon: ReactNode; title: string; text?: ReactNode }) {
+function Heading({ title, text }: { title: string; text?: ReactNode }) {
   return (
-    <div className={`flex gap-4 ${text ? 'items-start' : 'items-center'}`}>
-      <div className="grid size-12 shrink-0 place-items-center rounded-full bg-pill text-dim">{icon}</div>
-      <div className={`min-w-0 ${text ? 'pt-1' : ''}`}>
-        <h1 className="text-2xl font-bold">{title}</h1>
-        {text && <p className="mt-1 text-dim">{text}</p>}
-      </div>
+    <div className="px-5">
+      <h1 className="text-2xl font-semibold">{title}</h1>
+      {text && <p className="mt-1.5 text-dim">{text}</p>}
     </div>
   )
 }
 
-/** onSkip: a quiet "Do this later" link on the left (asked again on the first Connect). */
+/** The main button, then a quiet "Do this later" under it (asked again on the first Connect). */
 function Footer({ onSkip, children }: { onSkip?: () => void; children: ReactNode }) {
   return (
-    <div className="flex items-center justify-between gap-3">
-      {onSkip ? <button type="button" onClick={onSkip}
-        className="rounded px-1 py-1 text-base text-dim underline-offset-2 hover:text-text hover:underline">
-        {copy.skip}</button> : <span />}
+    <div className="flex flex-col items-center gap-1 px-5 pt-2">
       {children}
+      {onSkip && <Button kind="quiet" className="text-dim" onClick={onSkip}>{copy.skip}</Button>}
     </div>
-  )
-}
-
-/** The lock line under a password, or what turning Remember off means. */
-function RememberNote({ remember }: { remember: boolean }) {
-  return (
-    <p className="flex items-center gap-1.5 px-1 text-sm text-dim">
-      {remember ? <><Lock size={14} className="shrink-0" />{copy.savedIn}</> : copy.rememberOff}</p>
   )
 }
 
@@ -126,53 +115,59 @@ function LoginStep({ cluster: c, onNext }: { cluster: Cluster; onNext: () => voi
   }
 
   const instead = c.key_page && c.password_too
-    ? <PasswordInstead on={usePassword} onChange={setUsePassword} /> : null
+    ? <div className="flex px-5"><PasswordInstead on={usePassword} onChange={setUsePassword} /></div> : null
+  const failed = error && <p role="alert" className="px-5 font-semibold text-bad">{error}</p>
   if (c.key_page && !usePassword) {
     const head = keyHeading(c)
     // Skip keeps a username you typed: the key is on disk either way
     const skip = () => (user.trim() ? save() : onNext())
     return (
-      <form className="flex flex-col gap-6" onSubmit={(e) => { e.preventDefault(); if (works) save() }}>
-        <Heading icon={<KeyRound size={20} />} title={head.title} text={head.text} />
-        {loaded ? <KeyPanel cluster={c} user={user} onUser={setUser} onTested={setWorks} />
-          : <div className="grid h-40 place-items-center"><Spinner size={24} /></div>}
+      <form className="flex flex-col gap-5" onSubmit={(e) => { e.preventDefault(); if (works) save() }}>
+        <Heading title={head.title} text={head.text} />
+        <div className="px-5">
+          {loaded ? <KeyPanel cluster={c} user={user} onUser={setUser} onTested={setWorks} />
+            : <div className="grid h-40 place-items-center"><Spinner size={24} /></div>}
+        </div>
         {instead}
-        {error && <p className="text-bad">{error}</p>}
+        {failed}
         <Footer onSkip={works || user.trim() ? undefined : skip}>
-          <Button kind="primary" pill type="submit" disabled={!works || busy}>{copy.continue}</Button>
+          <MainButton type="submit" disabled={!works || busy}>{copy.continue}</MainButton>
         </Footer>
       </form>
     )
   }
   const label = c.username_label || 'Username'
   return (
-    <form className="flex flex-col gap-6" onSubmit={(e) => { e.preventDefault(); if (user.trim()) save() }}>
-      <Heading icon={<KeyRound size={20} />} title={copy.signIn(c)}
+    <form className="flex flex-col gap-5" onSubmit={(e) => { e.preventDefault(); if (user.trim()) save() }}>
+      <Heading title={copy.signIn(c)}
         text={c.second_factor === 'code' ? <>{secondStep(c)}{c.code_setup && <> <button type="button"
-          onClick={() => openSystem(c.code_setup!)} className="inline-flex items-center gap-1 font-semibold
-          text-accent-text hover:underline">{copy.codeSetup}<ExternalLink size={14} /></button></>}</> : undefined} />
+          onClick={() => openSystem(c.code_setup!)} className="inline-flex items-center gap-1 font-semibold text-text
+          underline-offset-2 hover:underline">{copy.codeSetup}<ExternalLink size={14} /></button></>}</> : undefined} />
       {c.portal && (
-        <div className="flex flex-col gap-3">
-          <Button kind="primary" pill type="button" onClick={() => setPortal(true)}>
-            <Globe size={16} /> {copy.portal(c)}</Button>
-          <p className="-mt-1 text-center text-sm text-dim">{copy.portalNote}</p>
-          <p className="mt-2 text-sm text-dim">{copy.orPassword}</p>
+        <div className="flex flex-col gap-2 px-5">
+          <MainButton type="button" icon={Globe} onClick={() => setPortal(true)}>{copy.portal(c)}</MainButton>
+          <p className="text-center text-sm text-dim">{copy.portalNote}</p>
+          <p className="pt-3 text-dim">{copy.orPassword}</p>
         </div>
       )}
-      <div className="flex flex-col gap-3">
-        <List>
-          <EntryRow label={label} value={user} onChange={setUser} autoFocus={!c.portal} placeholder={copy.usernameHint} />
-          <EntryRow label={copy.password} value={password} onChange={setPassword} password
+      <div>
+        <div className="px-5">
+          <Field label={label} value={user} autoFocus={!c.portal} placeholder={copy.usernameHint}
+            onChange={(e) => setUser(e.target.value)} />
+          <Field label={copy.password} type="password" value={password} onChange={(e) => setPassword(e.target.value)}
             placeholder={saved ? copy.saved : undefined} />
-          <SwitchRow label={copy.remember} checked={remember} onChange={setRemember} />
-        </List>
-        <RememberNote remember={remember} />
+        </div>
+        <Section note={remember ? copy.savedIn : undefined}>
+          <ToggleRow label={copy.remember} sub={remember ? undefined : copy.rememberOff} checked={remember}
+            onChange={setRemember} />
+        </Section>
       </div>
       {instead}
-      {error && <p className="text-bad">{error}</p>}
+      {failed}
       <Footer onSkip={user.trim() || saved ? undefined : onNext}>
-        <Button kind={c.portal ? 'secondary' : 'primary'} pill type="submit" disabled={!user.trim() || busy}>
-          {copy.continue}</Button>
+        {c.portal
+          ? <Button type="submit" className="h-11 w-full" disabled={!user.trim() || busy}>{copy.continue}</Button>
+          : <MainButton type="submit" disabled={!user.trim() || busy}>{copy.continue}</MainButton>}
       </Footer>
       {portal && <KeySetupDialog cluster={c} onClose={() => setPortal(false)}
         onDone={() => { setPortal(false); onNext() }} />}
@@ -184,14 +179,14 @@ function NodeStep({ cluster: c, onNext, last }: { cluster: Cluster; onNext: () =
   const [want, setWant] = useState(c.request_node_on_connect ?? true)
   const [ask, setAsk] = useState(c.ask_node ?? false)
   const [p, setP] = useState<Profile>(c.profile)
-  const [editing, setEditing] = useState(false)
+  const [ok, setOk] = useState(true)
   const [error, setError] = useState('')
-  const set = (change: Partial<Profile>) => setP((x) => ({ ...x, ...change }))
 
   async function save() {
     try {
       await call('clusters.update', { cluster: c.id, changes: { request_node_on_connect: want, ask_node: ask,
-        profile: { cpus: p.cpus, mem_gb: p.mem_gb, time: p.time, partition: p.partition } } })
+        profile: { cpus: p.cpus, mem_gb: p.mem_gb, gpus: p.gpus ?? 0, gpu_type: p.gpu_type ?? '', time: p.time,
+          partition: p.partition, account: p.account ?? '', qos: p.qos ?? '' } } })
       onNext()
     } catch (e) {
       setError((e as Error).message)
@@ -199,54 +194,23 @@ function NodeStep({ cluster: c, onNext, last }: { cluster: Cluster; onNext: () =
   }
 
   return (
-    <form className="flex flex-col gap-6" onSubmit={(e) => { e.preventDefault(); save() }}>
-      <Heading icon={<Cpu size={20} />} title={`Compute node on ${shortName(c)}`}
+    <form className="flex flex-col gap-5" onSubmit={(e) => { e.preventDefault(); save() }}>
+      <Heading title={`Compute node on ${shortName(c)}`}
         text="Your terminals and agents run on a compute node, not the busy login node." />
-      <div className="overflow-hidden rounded-xl bg-card shadow-[var(--shadow-card)]">
-        <label className="flex cursor-pointer items-center gap-4 px-5 py-4">
-          <span className="min-w-0 flex-1">
-            <span className="block text-md font-semibold">Get a compute node when I connect</span>
-            <span className="block text-sm text-dim">
-              {want ? 'Ready as soon as you sign in.' : 'You can still get one from the cluster card.'}
-            </span>
-          </span>
-          <Toggle checked={want} onChange={setWant} label="Get a compute node when I connect" />
-        </label>
-        {want && (
-          <div className="border-t border-line px-5 py-4">
-            {!editing ? (
-              <div className="flex items-center gap-4">
-                <div className="grid size-10 shrink-0 place-items-center rounded-lg bg-pill text-dim">
-                  <Cpu size={20} /></div>
-                <div className="min-w-0 flex-1">
-                  <div className="text-md font-semibold">{summary(p)}</div>
-                  <div className="text-sm text-dim">The usual size for {shortName(c)}</div>
-                </div>
-                <Button type="button" kind="pill" onClick={() => setEditing(true)}>Change</Button>
-              </div>
-            ) : (
-              <div className="-mx-5 -my-4">
-                <List>
-                  <SpinRow label="Cores" value={p.cpus} onChange={(cpus) => set({ cpus })} min={1} max={512} />
-                  <SpinRow label="Memory" unit="GB" value={p.mem_gb} onChange={(mem_gb) => set({ mem_gb })} min={1} max={4096} />
-                  <Duration total={minutes(p.time) ?? 240} onChange={(m) => set({ time: slurmTime(m) })} limits={null} />
-                  {c.profile.partition && <EntryRow label="Queue" value={p.partition}
-                    onChange={(partition) => set({ partition })} />}
-                </List>
-              </div>
-            )}
-            <label className="mt-4 flex cursor-pointer items-center gap-2.5 text-base">
-              <input type="checkbox" checked={ask} onChange={(e) => setAsk(e.target.checked)}
-                className="size-4 accent-[var(--color-accent)]" />
-              Ask before each request
-            </label>
-          </div>
-        )}
+      <div>
+        <List>
+          <ToggleRow label="Get a compute node when I connect" checked={want} onChange={setWant}
+            sub={want ? 'Ready as soon as you sign in.' : 'You can still get one from the cluster card.'} />
+        </List>
+        {want && <div className="pt-5">
+          <NodeFields cluster={c.id} value={p} onChange={setP} onValid={setOk} extra={false} /></div>}
+        {want ? <Section note="You can change this later in Settings.">
+          <ToggleRow label={ASK} sub="Shows the node window when you connect." checked={ask} onChange={setAsk} />
+        </Section> : <p className="px-5 pt-2 text-sm text-dim">You can change this later in Settings.</p>}
       </div>
-      <p className="-mt-3 px-1 text-sm text-dim">You can change this later in Settings.</p>
-      {error && <p className="text-bad">{error}</p>}
+      {error && <p role="alert" className="px-5 font-semibold text-bad">{error}</p>}
       <Footer>
-        <Button kind="primary" pill type="submit">{last ? 'Done' : copy.continue}</Button>
+        <MainButton type="submit" disabled={want && !ok}>{last ? 'Done' : copy.continue}</MainButton>
       </Footer>
     </form>
   )
