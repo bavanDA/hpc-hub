@@ -19,6 +19,7 @@ import { call } from '@shared/rpc'
 import type { BuildDone, Issue, Opened, PdfInfo, Settings, SourceSpot, Spot, TreeEntry } from '@shared/types/latex'
 import { useBackLayer } from '../../nav'
 import { ActionSheet, Segments, useToast } from '../../ui'
+import { shortCluster } from '../code/util'
 import { BuildSheet } from './BuildSheet'
 import { FilesSheet, type FileActions } from './FilesSheet'
 import { GitSheet } from './GitSheet'
@@ -213,16 +214,16 @@ export function Paper({ paper, onClose }: { paper: Opened; onClose: () => void }
     <div className="flex h-full flex-col">
       <header className="flex h-16 shrink-0 items-center gap-1 pr-2 pl-1">
         <button aria-label="Back to papers" onClick={leave}
-          className="grid size-12 shrink-0 place-items-center rounded-full active:bg-hover"><ArrowLeft size={24} /></button>
+          className="grid size-12 shrink-0 place-items-center rounded-full active:bg-pressed"><ArrowLeft size={24} /></button>
         <div className="min-w-0 flex-1 leading-tight">
-          <h1 className="truncate text-xl font-bold">{paper.name}</h1>
-          <p className="truncate text-sm text-dim">{paper.cluster_name} · {saving ? 'Saving…' : dirty ? 'Not saved'
+          <h1 className="text-lg font-semibold break-all">{paper.name}</h1>
+          <p className="text-sm text-dim">{shortCluster(paper.cluster_name)} · {saving ? 'Saving' : dirty ? 'Not saved'
             : 'Saved'}</p>
         </div>
         <button aria-label="Files" onClick={() => setOpen('files')}
-          className="grid size-12 place-items-center rounded-full active:bg-hover"><FolderOpen size={22} /></button>
+          className="grid size-12 place-items-center rounded-full active:bg-pressed"><FolderOpen size={22} /></button>
         <button aria-label="Paper options" onClick={() => setOpen('menu')}
-          className="grid size-12 place-items-center rounded-full active:bg-hover"><MoreVertical size={22} /></button>
+          className="grid size-12 place-items-center rounded-full active:bg-pressed"><MoreVertical size={22} /></button>
       </header>
       <div className="shrink-0 px-4 pb-2">
         <Segments value={pane} onChange={setPane} options={[['source', 'Source'], ['pdf', 'PDF'],
@@ -231,16 +232,16 @@ export function Paper({ paper, onClose }: { paper: Opened; onClose: () => void }
 
       <div className="relative min-h-0 flex-1">
         <div className={`h-full flex-col ${pane === 'source' ? 'flex' : 'hidden'}`}>
-          <div className="flex h-12 shrink-0 items-center gap-1 border-b border-line px-2">
+          <div className="flex min-h-12 shrink-0 items-center gap-1 border-y border-line px-2">
             <FileText size={18} className="ml-2 shrink-0 text-dim" />
-            <span className="min-w-0 flex-1 truncate px-1 font-semibold">{docRel || basename(main)}</span>
+            <span className="min-w-0 flex-1 px-1 font-semibold break-all">{docRel || basename(main)}</span>
             <button aria-label="Show this line in the PDF" onClick={toPdf}
-              className="grid size-11 place-items-center rounded-full text-dim active:bg-hover"><LocateFixed size={20} /></button>
+              className="grid size-12 place-items-center rounded-full text-dim active:bg-pressed"><LocateFixed size={20} /></button>
             {dirty && <button aria-label="Save" onClick={saveNow}
-              className="grid size-11 place-items-center rounded-full text-accent-text active:bg-hover"><Save size={20} /></button>}
+              className="grid size-12 place-items-center rounded-full active:bg-pressed"><Save size={20} /></button>}
             <button aria-label={editing ? 'Done editing' : 'Edit'} onClick={() => editor.current?.setEditable(!editing)}
-              className={`flex h-11 items-center gap-1.5 rounded-full px-3 font-semibold active:bg-hover ${
-                editing ? 'text-accent-text' : ''}`}>
+              className="flex h-12 items-center gap-1.5 rounded-[10px] border border-line-strong px-3 font-semibold
+                active:bg-pressed">
               {editing ? <><Check size={18} /> Done</> : <><Pencil size={18} /> Edit</>}</button>
           </div>
           <div className="min-h-0 flex-1">
@@ -261,18 +262,18 @@ export function Paper({ paper, onClose }: { paper: Opened; onClose: () => void }
 
         {pane !== 'log' && !typing && (
           <button onClick={build} disabled={!!running} aria-label="Build"
-            className="absolute right-4 bottom-4 flex h-14 items-center gap-2 rounded-full bg-accent px-5 font-bold
-              text-white shadow-[var(--shadow-dialog)] active:brightness-90 disabled:opacity-80">
+            className="absolute right-4 bottom-4 flex h-[52px] items-center gap-2 rounded-[10px] bg-accent px-5
+              font-semibold text-on-accent active:bg-accent-pressed disabled:opacity-80">
             {running ? <Spinner size={20} /> : <RefreshCw size={20} />} {running ? 'Building' : 'Build'}</button>
         )}
       </div>
 
       {typing && (
-        <div className="flex shrink-0 gap-1 overflow-x-auto border-t border-line bg-header px-2 py-1">
+        <div className="flex shrink-0 gap-1 overflow-x-auto border-t border-line bg-window px-2 py-1">
           {keys.map((k) => (
             <button key={k.id} aria-label={k.title} onPointerDown={(e) => e.preventDefault()}
               onClick={() => { const v = editor.current?.view(); if (v) k.run(v) }}
-              className="h-11 min-w-11 shrink-0 rounded-lg bg-pill px-3 font-mono text-base active:bg-selected">
+              className="h-11 min-w-11 shrink-0 rounded-lg border border-line px-3 font-mono text-base active:bg-pressed">
               {k.label}</button>
           ))}
         </div>
