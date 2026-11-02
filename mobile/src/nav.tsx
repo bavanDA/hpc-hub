@@ -11,7 +11,8 @@ import { NavContext, type Go } from '@shared/nav'
 export type Tab = 'clusters' | 'terminals' | 'code' | 'jobs' | 'more'
 export type MoreScreen = 'projects' | 'agents' | 'backup' | 'files' | 'transfers' | 'papers' | 'usage' | 'settings' |
   'about'
-export type Place = { tab: Tab; screen?: MoreScreen; params: Record<string, string> }
+/** from: the screen that opened this one (Backup from Agents), where back returns to. */
+export type Place = { tab: Tab; screen?: MoreScreen; from?: MoreScreen; params: Record<string, string> }
 
 export const TABS: Tab[] = ['clusters', 'terminals', 'code', 'jobs', 'more']
 export const SCREENS: MoreScreen[] = ['projects', 'agents', 'backup', 'files', 'transfers', 'papers', 'usage', 'settings',
@@ -24,6 +25,10 @@ export function placeOf(page: Page | Tab | MoreScreen | string, params: Record<s
     case 'clusters': case 'terminals': case 'code': case 'jobs': case 'more':
       return { tab: page, params: p }
     case 'latex': return { tab: 'more', screen: 'papers', params: p }
+    case 'backup': return { tab: 'more', screen: 'backup', from: 'agents', params: p }
+    case 'agents':
+      if (p.tab === 'backup') return { tab: 'more', screen: 'backup', from: 'agents', params: p }
+      return { tab: 'more', screen: 'agents', params: p }
     case 'permissions': return { tab: 'more', screen: 'agents', params: { ...p, tab: 'permissions' } }
     case 'skills': return { tab: 'more', screen: 'agents', params: { ...p, tab: 'skills' } }
     case 'schedules': return { tab: 'more', screen: 'agents', params: { ...p, tab: 'scheduled' } }
@@ -101,7 +106,7 @@ export function useBackLayer(onBack: () => void, active = true) {
 }
 
 // -- the provider ----------------------------------------------------------------------------------------------
-type PhoneNav = { place: Place; go: Go; open: (tab: Tab) => void; openScreen: (s: MoreScreen) => void; closeScreen: () => void }
+type PhoneNav = { place: Place; go: Go; open: (tab: Tab) => void; openScreen: (s: MoreScreen, from?: MoreScreen) => void; closeScreen: () => void }
 const PhoneNavContext = createContext<PhoneNav | null>(null)
 
 export function usePhoneNav() {
@@ -120,12 +125,14 @@ export function NavProvider({ first, children }: { first: Place; children: React
     setPlace(placeOf(page, params))
   }, [])
   const open = useCallback((tab: Tab) => setPlace({ tab, params: {} }), [])
-  const openScreen = useCallback((screen: MoreScreen) => setPlace({ tab: 'more', screen, params: {} }), [])
-  const closeScreen = useCallback(() => setPlace((p) => ({ tab: p.tab, params: {} })), [])
+  const openScreen = useCallback((screen: MoreScreen, from?: MoreScreen) =>
+    setPlace({ tab: 'more', screen, from, params: {} }), [])
+  const closeScreen = useCallback(() => setPlace((p) => ({ tab: p.tab, screen: p.from, params: {} })), [])
   // Back: a screen on top of More goes back to the list first; another tab then goes back to Clusters. The tab's
   // layer is declared first so the screen's sits above it.
   useBackLayer(() => open('clusters'), place.tab !== 'clusters')
   useBackLayer(closeScreen, !!place.screen)
+  useBackLayer(closeScreen, !!place.from)
   return (
     <PhoneNavContext.Provider value={{ place, go, open, openScreen, closeScreen }}>
       <NavContext.Provider value={{ go, params: place.params }}>{children}</NavContext.Provider>

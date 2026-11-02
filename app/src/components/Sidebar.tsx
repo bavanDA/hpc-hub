@@ -1,5 +1,5 @@
 import {
-  ArchiveRestore, Bot, FileCode2, FileText, FolderOpen, Gauge, LayoutGrid, ListChecks, Server, SquareTerminal, type LucideIcon,
+  Bot, FileCode2, FileText, FolderOpen, Gauge, LayoutGrid, ListChecks, Server, SquareTerminal, type LucideIcon,
 } from 'lucide-react'
 
 import { SidebarFooter } from './app/SidebarFooter'
@@ -19,7 +19,6 @@ export const GROUPS: [string, Item[]][] = [
     { page: 'terminals', title: 'Terminals', icon: SquareTerminal },
     { page: 'code', title: 'Code', icon: FileCode2 },
     { page: 'agents', title: 'Agents', icon: Bot },
-    { page: 'backup', title: 'Backup agent', icon: ArchiveRestore },
     { page: 'latex', title: 'Papers', icon: FileText, experimental: true },
   ]],
   ['Cluster', [

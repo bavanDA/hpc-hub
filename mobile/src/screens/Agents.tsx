@@ -1,7 +1,8 @@
-// More › Agents: Running (every agent session, tap to open; Scheduled and Skills under it when experimental is on)
+// More › Agents: Running (every agent session, tap to open; Backup under it, and Scheduled and Skills when
+// experimental is on)
 // and Permissions (what an agent may do on each cluster without asking). Start agent picks a cluster, then Claude,
 // ChatGPT, Antigravity, Cursor, Ask all or VS Code in the browser.
-import { AlarmClock, BookOpen, Play, ShieldCheck } from 'lucide-react'
+import { AlarmClock, ArchiveRestore, BookOpen, Play, ShieldCheck } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
 import { shortName } from '@shared/components/clusters/loginCopy'
@@ -17,6 +18,7 @@ import { Skills } from '../parts/agents/Skills'
 import { StartPicker } from '../parts/agents/StartPicker'
 import { useStart } from '../parts/agents/useStart'
 import { Header } from '../parts/Header'
+import { usePhoneNav } from '../nav'
 import { Button, Row, Section, Segments, Sheet } from '../ui'
 
 type Part = 'running' | 'permissions'
@@ -39,6 +41,7 @@ export function Agents() {
   const [perms, setPerms] = useState<Cluster | null>(null)
   const [starting, setStarting] = useState(false)
   const start = useStart()
+  const { openScreen } = usePhoneNav()
   const openStart = start.open
 
   useEffect(() => {
@@ -63,6 +66,12 @@ export function Agents() {
         options={[['running', 'Running'], ['permissions', 'Permissions']] as const} /></div>
       <div className="min-h-0 flex-1 overflow-y-auto pb-6">
         {part === 'running' && <Running />}
+        {part === 'running' && (
+          <Section>
+            <Row icon={ArchiveRestore} label="Backup" sub="Save scratch files before they are deleted" opens
+              onPress={() => openScreen('backup', 'agents')} />
+          </Section>
+        )}
         {part === 'running' && experimental && (
           <Section>
             <Row icon={AlarmClock} label="Scheduled" sub="Agents that run at a set time" opens

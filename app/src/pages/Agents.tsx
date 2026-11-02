@@ -1,5 +1,5 @@
 // Agents: everything about the AI agents in one place. Running (all clusters), then per cluster (the header's
-// cluster picker): Scheduled and Skills (experimental), and Permissions. go('agents', { tab: 'permissions' }).
+// cluster picker): Backup, Scheduled and Skills (experimental), and Permissions. go('agents', { tab: 'permissions' }).
 import { lazy, Suspense } from 'react'
 
 import { Running } from '../components/agents/Running'
@@ -10,11 +10,12 @@ import { useGo, usePageParams } from '../nav'
 const Permissions = lazy(() => import('./Permissions').then((m) => ({ default: m.Permissions })))
 const Schedules = lazy(() => import('./Schedules').then((m) => ({ default: m.Schedules })))
 const Skills = lazy(() => import('./Skills').then((m) => ({ default: m.Skills })))
+const Backup = lazy(() => import('./Backup').then((m) => ({ default: m.Backup })))
 
-export type AgentTab = 'running' | 'scheduled' | 'skills' | 'permissions'
+export type AgentTab = 'running' | 'backup' | 'scheduled' | 'skills' | 'permissions'
 const EXPERIMENTAL: AgentTab[] = ['scheduled', 'skills']
 const ALL: TabItem<AgentTab>[] = [
-  { id: 'running', title: 'Running' }, { id: 'scheduled', title: 'Scheduled' }, { id: 'skills', title: 'Skills' },
+  { id: 'running', title: 'Running' }, { id: 'backup', title: 'Backup' }, { id: 'scheduled', title: 'Scheduled' }, { id: 'skills', title: 'Skills' },
   { id: 'permissions', title: 'Permissions' },
 ]
 
@@ -34,6 +35,7 @@ export function Agents({ experimental }: { experimental: boolean }) {
       <div className="min-h-0 flex-1 overflow-auto">
         <Suspense fallback={<div className="grid h-64 place-items-center"><Spinner size={24} /></div>}>
           {tab === 'running' && <Running />}
+          {tab === 'backup' && <Backup />}
           {tab === 'scheduled' && <Schedules />}
           {tab === 'skills' && <Skills />}
           {tab === 'permissions' && <Permissions />}

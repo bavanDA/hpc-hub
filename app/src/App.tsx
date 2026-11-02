@@ -24,7 +24,6 @@ import { setAppearance } from './theme'
 
 // Pages load the first time you open them, so the app starts fast (Clusters is the first screen)
 const Agents = lazy(() => import('./pages/Agents').then((m) => ({ default: m.Agents })))
-const Backup = lazy(() => import('./pages/Backup').then((m) => ({ default: m.Backup })))
 const Code = lazy(() => import('./pages/Code').then((m) => ({ default: m.Code })))
 const FilesPage = lazy(() => import('./pages/FilesPage').then((m) => ({ default: m.FilesPage })))
 const Jobs = lazy(() => import('./pages/Jobs').then((m) => ({ default: m.Jobs })))
@@ -40,17 +39,17 @@ const TITLES = Object.fromEntries(ITEMS.map((i) => [i.page, i.title])) as Record
 /** Pages that became a tab of another one: go('permissions') still works. */
 const MOVED: Partial<Record<Page, [Page, string]>> = {
   permissions: ['agents', 'permissions'], skills: ['agents', 'skills'], schedules: ['agents', 'scheduled'],
-  globus: ['files', 'transfers'],
+  globus: ['files', 'transfers'], backup: ['agents', 'backup'],
 }
 
 const PAGES: Partial<Record<Page, ComponentType>> = {
-  clusters: Clusters, projects: Projects, terminals: Terminals, code: Code, backup: Backup, jobs: Jobs, usage: Usage,
+  clusters: Clusters, projects: Projects, terminals: Terminals, code: Code, jobs: Jobs, usage: Usage,
   files: FilesPage, latex: Latex,
 }
 
 /** Pages that show one cluster at a time get the cluster picker in the header (per tab where they have tabs). */
 function picksCluster(page: Page, tab = ''): boolean {
-  if (page === 'jobs' || page === 'usage' || page === 'backup') return true
+  if (page === 'jobs' || page === 'usage') return true
   if (page === 'files') return tab !== 'transfers'
   if (page === 'agents') return !!tab && tab !== 'running'
   return false

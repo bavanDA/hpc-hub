@@ -1,6 +1,6 @@
 // More: everything that isn't a tab, as a list. Each row opens its screen on top (nav.tsx), with a back arrow.
 import {
-  ArchiveRestore, ArrowLeftRight, Bot, FileText, FolderOpen, Gauge, Info, LayoutGrid, Settings as Gear, type LucideIcon,
+  ArrowLeftRight, Bot, FileText, FolderOpen, Gauge, Info, LayoutGrid, Settings as Gear, type LucideIcon,
 } from 'lucide-react'
 import { lazy, Suspense, useEffect, useState, type ComponentType } from 'react'
 
@@ -31,9 +31,7 @@ type Row = { screen: MoreScreen; title: string; subtitle: string; icon: LucideIc
 const GROUPS: [string, Row[]][] = [
   ['Work', [
     { screen: 'projects', title: 'Projects', subtitle: 'Your folders on every cluster', icon: LayoutGrid },
-    { screen: 'agents', title: 'Agents', subtitle: 'Running, scheduled, skills and permissions', icon: Bot },
-    { screen: 'backup', title: 'Backup agent', subtitle: 'Save scratch files before they are deleted',
-      icon: ArchiveRestore },
+    { screen: 'agents', title: 'Agents', subtitle: 'Running, backup and permissions', icon: Bot },
     { screen: 'papers', title: 'Papers', subtitle: 'LaTeX next to your code', icon: FileText, experimental: true },
   ]],
   ['Cluster', [
