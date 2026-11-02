@@ -146,6 +146,46 @@ def list_projects() -> dict:
             "projects": [_json(p) for p in items if not (p.is_latex and exp)]}
 
 
+# -- git, for the list ---------------------------------------------------------------------
+GIT_SECONDS = 10  # each git call; a slow folder only loses its own count
+
+# one folder: "<path>\t<branch>\t<changed files>" (-1: status too slow), nothing when it isn't git
+_GIT_ONE = (
+    'b=$(timeout {t} git -C "$1" symbolic-ref --short -q HEAD 2>/dev/null'
+    ' || timeout {t} git -C "$1" rev-parse --short HEAD 2>/dev/null) || return 0; '
+    'if s=$(timeout {t} git -C "$1" status --porcelain 2>/dev/null); then n=$(printf %s "$s" | grep -c .); '
+    'else n=-1; fi; printf "%s\\t%s\\t%s\\n" "$1" "$b" "$n"'
+).format(t=GIT_SECONDS)
+
+
+def git_command(paths: list[str]) -> str:
+    """One shell line that looks at all the folders at once."""
+    each = " ".join(f"one {remote_fs.q(p)} &" for p in paths)
+    return f"one() {{ {_GIT_ONE}; }}; {each} wait"
+
+
+@method("projects.status")
+def status(cluster: str) -> dict:
+    """Branch and number of changed files of each git project on the cluster, by its path, in one ssh command.
+    Nothing while the cluster isn't connected."""
+    s = hub().sessions.get(cluster)
+    if not s or not s.connected:
+        return {}
+    paths = {p.path for p in _load() if p.cluster == cluster}
+    if not paths:
+        return {}
+    home = _home(cluster) if any(p.startswith("~") for p in paths) else ""
+    full = {home + p[1:] if p.startswith("~") else p: p for p in paths}
+    res = s.ssh.run(git_command(sorted(full)), timeout=GIT_SECONDS * 2 + 30)
+    out = {}
+    for line in res.stdout.splitlines():
+        path, _, rest = line.rpartition("\t")[0].rpartition("\t")
+        changed = line.rpartition("\t")[2]
+        if path in full and changed.lstrip("-").isdigit():
+            out[full[path]] = {"branch": rest, "changed": int(changed)}
+    return out
+
+
 def slug(name: str) -> str:
     return re.sub(r"[^\w.-]+", "-", name.strip()).strip("-") or "project"
 

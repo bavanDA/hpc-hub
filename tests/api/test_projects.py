@@ -1,4 +1,5 @@
 import json
+import subprocess
 import time
 
 import pytest
@@ -108,6 +109,26 @@ def test_create_update_remove(hub, tmp_path):
     assert store.load(store.PROJECTS_FILE)[0].opened > 0
     api.remove(q["id"])
     assert api.list_projects()["projects"] == [] and folder.exists()  # the folder stays
+
+
+def test_status_reads_git_of_every_project_at_once(hub, tmp_path, monkeypatch):
+    home = tmp_path / "home"
+    repo, plain, tilde = home / "thesis", home / "notes", home / "paper"
+    for d in (repo, plain, tilde):
+        d.mkdir()
+    for d in (repo, tilde):
+        subprocess.run(["git", "init", "-q", "-b", "main", str(d)], check=True)
+    (repo / "a.py").write_text("x")
+    (repo / "b.py").write_text("y")
+    store.save([Project("thesis", "wulver", str(repo)), Project("notes", "wulver", str(plain)),
+                Project("paper", "wulver", "~/paper"), Project("sims", "sdsc", "/s")], store.PROJECTS_FILE)
+    commands = []
+    run = hub.sessions["wulver"].ssh.run
+    monkeypatch.setattr(hub.sessions["wulver"].ssh, "run", lambda c, **k: commands.append(c) or run(c, **k))
+    got = api.status("wulver")
+    assert got == {str(repo): {"branch": "main", "changed": 2}, "~/paper": {"branch": "main", "changed": 0}}
+    assert len([c for c in commands if "git" in c]) == 1  # one ssh command for all of them
+    assert api.status("sdsc") == {} and api.status("yale") == {}
 
 
 def test_browse_lists_folders_only(hub, tmp_path):
