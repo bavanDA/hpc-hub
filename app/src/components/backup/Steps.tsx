@@ -1,11 +1,14 @@
 // The backup agent's first two steps on the desktop: start (what it does, Check my scratch) and the check while it
 // runs. Wording in copy.ts.
-import { Bot, ShieldCheck, TimerOff } from 'lucide-react'
+import { ShieldCheck, TimerOff } from 'lucide-react'
 import { useState } from 'react'
 
 import type { BackupPolicy, Scan } from '../../types/backup'
+import { agentIcon } from '../agents/AgentIcon'
 import { Button, Card, IconTile, Meter, Spinner, Switch } from '../ui'
 import { count, scanning, start } from './copy'
+
+const Claude = agentIcon('claude')
 
 export function StartStep({ name, policy, last, busy, onCheck, onLast }: {
   name: string; policy: BackupPolicy | null; last: Scan | null; busy: boolean
@@ -23,7 +26,7 @@ export function StartStep({ name, policy, last, busy, onCheck, onLast }: {
       <label className="flex items-start gap-3">
         <Switch on={agent} onChange={setAgent} label={start.agent} />
         <span className="flex flex-col">
-          <span className="flex items-center gap-1.5"><Bot size={14} className="text-dim" />{start.agent}</span>
+          <span className="flex items-center gap-1.5"><Claude size={14} />{start.agent}</span>
           <span className="text-sm text-dim">{start.agentHint}</span>
         </span>
       </label>
