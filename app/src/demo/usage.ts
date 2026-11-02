@@ -15,7 +15,7 @@ const PEOPLE: Record<string, [string, string, number, number][]> = {
     ['cwong', 'Chris Wong', 940, 2210], ['dpatel', 'Dev Patel', 60, 120], ['elopez', 'Eva Lopez', 0, 0],
     ['fnguyen', 'Finn Nguyen', 0, 0]],
   abc123: [['cwong', 'Chris Wong', 4210, 4210], ['asmith', 'Alex Smith', 1990, 2050], ['jdoe', 'Jane Doe', 0, 0]],
-  pi_doe: [['jdoe', 'Jane Doe', 9120, 9120], ['mlee', 'Mia Lee', 21400, 21400], ['tross', 'Tom Ross', 17690, 18020]],
+  pi_doe: [['mlee', 'Mia Lee', 21400, 21400], ['tross', 'Tom Ross', 17690, 18020], ['jdoe', 'Jane Doe', 9120, 9120]],
 }
 
 function people({ account, days }: Record<string, unknown>): People {

@@ -135,7 +135,7 @@ export function SkeletonRows({ rows = 5, height = 40 }: { rows?: number; height?
 /** How full something is (time used, SUs, disk): blue, amber from 85%, red when full. */
 export function Meter({ value, label, className = '' }: { value: number; label?: string; className?: string }) {
   const v = Math.max(0, Math.min(1, Number.isFinite(value) ? value : 0))
-  const color = v >= 1 ? 'bg-bad-dot' : v >= 0.85 ? 'bg-warn-dot' : 'bg-accent'
+  const color = v >= 1 ? 'bg-bad-dot' : 'bg-text'
   return (
     <div role="meter" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(v * 100)} aria-label={label}
       className={`h-1.5 overflow-hidden rounded-full bg-pill ${className}`}>
