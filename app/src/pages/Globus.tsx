@@ -3,7 +3,6 @@ import { ArrowLeft, ArrowRight, CircleAlert, Settings } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { shortName } from '../components/clusters/loginCopy'
-import { Banner } from '../components/globus/Banner'
 import { CollectionPicker } from '../components/globus/CollectionPicker'
 import { LoginDialog } from '../components/globus/LoginDialog'
 import { Pane } from '../components/globus/Pane'
@@ -121,7 +120,6 @@ export function Globus() {
   else if (!status.signed_in) body = <SignIn onSignIn={() => setLogin('globus.login_url')} />
   else body = (
     <div className="flex h-full min-h-[560px] flex-col gap-3 px-4 py-4 [color-scheme:light_dark]">
-      <Banner wants={status.wants} onClick={() => setLogin('globus.consent_url')} />
       <div className="flex items-center gap-2 pl-1">
         <p className="flex-1 text-sm text-dim">Copies run on Globus, so you can close the app or your laptop.</p>
         <IconButton icon={Settings} label="Globus settings" size={16} onClick={() => setSettings(true)} />
