@@ -4,6 +4,7 @@ import { CircleAlert, ShieldCheck, WifiOff } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { shortName } from '@shared/components/clusters/loginCopy'
+import { askLabel } from '@shared/components/permissions/asks'
 import { lockConfig } from '@shared/components/permissions/Lock'
 import { Spinner } from '@shared/components/ui'
 import { call } from '@shared/rpc'
@@ -18,10 +19,6 @@ type Draft = { allowed: string[]; custom: string[]; trash: boolean; ask: string[
 const draftOf = (p: ClaudePermissions): Draft => ({ allowed: [...p.allowed].sort(), custom: p.custom,
   trash: p.trash, ask: [...p.ask].sort(), accept_edits: p.accept_edits, lock: lockConfig(p.lock) })
 
-/** The asks in plain words; the commands behind them stay out of sight. */
-const ASKS: Record<string, string> = { scancel: 'Cancel jobs', force_push: 'Force push',
-  discard: 'Throw away unsaved changes' }
-const plain = (label: string) => label.replace(/\s*\(.*\)$/, '')
 const GROUPS: Record<string, string> = { Slurm: 'Jobs and modules' }
 const count = (on: number, all: number) => all ? `${on} of ${all} allowed` : 'None yet'
 
@@ -81,9 +78,9 @@ export function PermissionsSheet({ cluster, onClose }: { cluster: Cluster; onClo
         <ToggleRow label="Move deleted files to the trash" sub="Kept for 7 days" checked={draft.trash}
           onChange={(v) => edit({ trash: v })} />
       </Section>
-      <Section title="Always ask first">
+      <Section title="Ask first">
         {perm.asks.map((a) => (
-          <ToggleRow key={a.key} label={ASKS[a.key] ?? plain(a.label)} checked={draft.ask.includes(a.key)}
+          <ToggleRow key={a.key} label={askLabel(a.key, a.label)} checked={draft.ask.includes(a.key)}
             onChange={(v) => edit({ ask: v ? [...draft.ask, a.key].sort() : draft.ask.filter((k) => k !== a.key) })} />
         ))}
       </Section>

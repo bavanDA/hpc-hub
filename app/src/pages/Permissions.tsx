@@ -8,6 +8,7 @@ import { shortName } from '../components/clusters/loginCopy'
 import { NotConnected } from '../components/clusters/NotConnected'
 import { Confirm, EButton, EmptyState, EPage, IconBtn } from '../components/e/extra'
 import { Section, ToggleRow } from '../components/e/ui'
+import { askLabel } from '../components/permissions/asks'
 import { Commands } from '../components/permissions/Commands'
 import { LockSection, LockSetupDialog, lockConfig, lockOk } from '../components/permissions/Lock'
 import { useToast } from '../components/toast'
@@ -24,10 +25,6 @@ type Draft = { allowed: string[]; custom: string[]; trash: boolean; ask: string[
 const draftOf = (p: ClaudePermissions): Draft => ({ allowed: [...p.allowed].sort(), custom: p.custom,
   trash: p.trash, ask: [...p.ask].sort(), accept_edits: p.accept_edits, lock: lockConfig(p.lock) })
 
-/** The asks in plain words; the commands behind them stay out of sight. */
-const ASKS: Record<string, string> = { scancel: 'Cancel jobs', force_push: 'Force push',
-  discard: 'Throw away unsaved changes' }
-const plain = (label: string) => label.replace(/\s*\(.*\)$/, '')
 
 export function Permissions() {
   const toast = useToast()
@@ -92,16 +89,16 @@ export function Permissions() {
   else if (!perm || !draft) body = <div className="grid h-64 place-items-center"><Spinner size={24} /></div>
   else body = (
     <div className="-mt-5">
-      <Section title="Claude" note="What Claude may do on the cluster without asking you.">
+      <Section title="Claude">
         <ToggleRow label="Edit files without asking" checked={draft.accept_edits}
           onChange={(v) => edit({ accept_edits: v })} />
         <ToggleRow label="Move deleted files to the trash" sub="Kept for 7 days" checked={draft.trash}
           onChange={(v) => edit({ trash: v })} />
       </Section>
-      <Section title="Always ask first" note="Even when allowed below.">
+      <Section title="Ask first">
         {perm.asks.map((a) => (
           <div key={a.key} title={a.hint}>
-            <ToggleRow label={ASKS[a.key] ?? plain(a.label)} checked={draft.ask.includes(a.key)}
+            <ToggleRow label={askLabel(a.key, a.label)} checked={draft.ask.includes(a.key)}
               onChange={(v) => edit({ ask: v ? [...draft.ask, a.key].sort() : draft.ask.filter((k) => k !== a.key) })} />
           </div>
         ))}
