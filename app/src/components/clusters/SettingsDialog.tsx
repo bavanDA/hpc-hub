@@ -22,7 +22,7 @@ import { KeySetupDialog } from './KeySetupDialog'
 import { copy, shortName } from './loginCopy'
 import { queueCount, QueueRows } from './QueueRows'
 import { CHROME_WINDOW } from './SignIn'
-import { putCluster } from './store'
+import { putCluster, useClusters } from './store'
 
 type Part = '' | 'login' | 'compute' | 'server' | 'queues' | 'vscode' | 'agents'
 const TITLES: Record<Exclude<Part, ''>, string> = { login: 'Sign-in', compute: 'Compute node',
@@ -50,6 +50,7 @@ type Choosing = { title: string; value: string; options: PickerOption<string>[];
 export function SettingsDialog({ cluster, hint, onClose, start = '', advanced = false }:
   { cluster: Cluster; hint?: string; onClose: () => void; start?: string; advanced?: boolean }) {
   const toast = useToast()
+  const session = useClusters().sessions[cluster.id]
   const [part, setPart] = useState<Part>(() => firstPart(start, advanced))
   const [d, setD] = useState<Cluster>(cluster)
   const [info, setInfo] = useState<SettingsInfo | null>(null)
@@ -167,7 +168,8 @@ export function SettingsDialog({ cluster, hint, onClose, start = '', advanced = 
 
   const login = keyCluster ? <>
     <p className="px-5 pb-1 text-dim">{keyHeading(d).text}</p>
-    <div className="px-5"><KeyPanel cluster={d} user={user} onUser={setUser} /></div>
+    <div className="px-5"><KeyPanel cluster={d} user={user} onUser={setUser}
+      signedIn={!!session && (session.connected ?? session.state === 'Connected')} /></div>
     {instead}
     {forgetRow}
   </> : <>

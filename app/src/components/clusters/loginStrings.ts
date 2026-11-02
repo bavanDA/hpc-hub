@@ -41,7 +41,7 @@ export const S = {
   "PASTE_IT": "Paste it on {who}'s key page.",
   "OPEN_PAGE": "Open key page",
   "PASTED_IT": "I pasted it",
-  "PASTED": "Pasted",
+  "PASTED": "Pasted on the key page",
   "STEP_TEST": "Try it",
   "TRY": "Try it",
   "TRY_AGAIN": "Try again",
