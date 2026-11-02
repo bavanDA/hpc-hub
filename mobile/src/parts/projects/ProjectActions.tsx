@@ -1,16 +1,11 @@
-// What a project offers when you tap it. Code, Files and LaTeX open their screens here; the agents, Ask all and
-// VS Code open on the Agents screen with the project's folder: go('agents', { cluster, folder, start }), where start
-// is the desktop's open-menu key (agent:claude, ask, vscode:browser). Anything that needs the cluster connects first.
-import {
-  ArrowRightLeft, ClipboardCopy, FileCode, FileText, FolderOpen, Globe, Pencil, Trash2, Users,
-} from 'lucide-react'
+// What a project offers when you tap it: where to open its folder (openIn.ts), LaTeX, and the rest.
+import { ArrowRightLeft, ClipboardCopy, FileText, Pencil, Trash2 } from 'lucide-react'
 
-import { agentIcon } from '@shared/components/agents/AgentIcon'
-import { whenConnected } from '@shared/components/tools/run'
 import { useGo } from '@shared/nav'
 import { call } from '@shared/rpc'
 import type { Project } from '@shared/types/projects'
 import { ActionSheet, type SheetAction } from '../../ui'
+import { useOpenIn } from './openIn'
 
 export type Act = { copy: (p: Project) => void; edit: (p: Project) => void; copyPath: (p: Project) => void;
   remove: (p: Project) => void; failed: (text: string) => void }
@@ -18,30 +13,16 @@ export type Act = { copy: (p: Project) => void; edit: (p: Project) => void; copy
 export function ProjectActions({ p, experimental, act, onClose }:
   { p: Project; experimental: boolean; act: Act; onClose: () => void }) {
   const go = useGo()
+  const openIn = useOpenIn()
   const known = Boolean(p.cluster_name)
 
-  /** Connect if needed, then the project's folder with ~ expanded (projects.opened also bumps it in the list). */
-  const where = async () => {
-    await whenConnected(p.cluster, p.cluster_name)
-    return call<Project>('projects.opened', { id: p.id }).then((x) => x.path, () => p.path)
-  }
-  const open = (page: 'code' | 'files') => () =>
-    where().then((path) => go(page, { cluster: p.cluster, path })).catch((e: Error) => act.failed(e.message))
-  const start = (key: string) => () =>
-    where().then((folder) => go('agents', { cluster: p.cluster, folder, start: key }))
-      .catch((e: Error) => act.failed(e.message))
+  // projects.opened also bumps it in the list
+  const opened = () => call<Project>('projects.opened', { id: p.id }).then((x) => x.path, () => p.path)
   const paper = () => go('latex', { cluster: p.cluster,
     path: p.main_tex ? `${p.path.replace(/\/$/, '')}/${p.main_tex}` : p.path })
 
   const tools: SheetAction[] = known ? [
-    { label: 'Code', icon: FileCode, onPick: open('code') },
-    { label: 'Files', icon: FolderOpen, onPick: open('files') },
-    { label: 'Claude', icon: agentIcon('claude'), onPick: start('agent:claude') },
-    { label: 'ChatGPT', icon: agentIcon('codex'), onPick: start('agent:codex') },
-    { label: 'Antigravity', icon: agentIcon('agy'), onPick: start('agent:agy') },
-    { label: 'Cursor', icon: agentIcon('cursor'), onPick: start('agent:cursor') },
-    { label: 'Ask all agents', icon: Users, onPick: start('ask') },
-    { label: 'VS Code in the browser', icon: Globe, onPick: start('vscode:browser') },
+    ...openIn({ cluster: p.cluster, clusterName: p.cluster_name, folder: p.path, prepare: opened }, act.failed),
     ...(experimental ? [{ label: 'LaTeX', icon: FileText, onPick: paper }] : []),
     { label: 'Copy to another cluster', icon: ArrowRightLeft, onPick: () => act.copy(p) },
   ] : []
