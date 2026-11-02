@@ -232,7 +232,7 @@ export function Code() {
       banners.push({ id: 'changed', tone: 'warn', text: `${f.name} changed on ${name} while you were editing.`,
         actions: [
           { label: 'Compare', primary: true, run: () => setCompare({ kind: 'cluster', file: f }) },
-          { label: "Use the cluster's", run: () => setConfirm({ kind: 'theirs', file: f }) },
+          { label: `Use ${name}'s`, run: () => setConfirm({ kind: 'theirs', file: f }) },
           { label: 'Save mine', run: () => void saveFile(f.key, true).then((r) => {
             toast(r.saved ? 'Saved' : r.conflict ? 'It changed again. Try once more.' : r.error)
             if (r.saved) setEvents((all) => { const { [f.key]: _, ...rest } = all; return rest })
@@ -410,7 +410,7 @@ export function Code() {
           text={confirm.kind === 'close' ? "Your edits aren't saved. They'll be lost."
             : `Your edits are replaced by the version on ${clusterName(confirm.file.cluster)}.`}
           keep="Keep editing" danger onClose={() => setConfirm(null)}
-          confirm={{ close: 'Close without saving', reload: 'Reload', theirs: "Use the cluster's" }[confirm.kind]}
+          confirm={{ close: 'Close without saving', reload: 'Reload', theirs: `Use ${clusterName(confirm.file.cluster)}'s` }[confirm.kind]}
           onConfirm={() => {
             const file = confirm.file
             void discardDraft(file.cluster, file.path)

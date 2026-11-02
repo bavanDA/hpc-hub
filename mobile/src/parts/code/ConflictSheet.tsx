@@ -1,5 +1,5 @@
-// A file that changed on the cluster while you edited it. A save that finds it asks first: Compare, Use the
-// cluster's, or Save mine (the desktop's words). Compare shows both versions as one diff you settle change by change;
+// A file that changed on the cluster while you edited it. A save that finds it asks first: Compare, Use Yale's
+// (the cluster's short name), or Save mine. Compare shows both versions as one diff you settle change by change;
 // it also compares a draft from earlier with what is open now. What you keep from the diff is what gets saved.
 import { Copy } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
@@ -34,7 +34,7 @@ export function ConflictChoice({ file, clusterName, onCompare, onDone }:
       <div className="mt-5 flex flex-col gap-3">
         <Button kind="primary" onClick={onCompare}>Compare</Button>
         <Button onClick={() => void reloadFile(file.key, false).then(() => onDone(`Using the version on ${clusterName}`))}>
-          Use the cluster's</Button>
+          Use {clusterName}'s</Button>
         <Button onClick={() => void saveMine()}>Save mine</Button>
       </div>
     </BottomSheet>
@@ -82,15 +82,11 @@ export function ConflictSheet({ compare, clusterName, onDone }: Props) {
               onClick={() => { replaceText(f.key, result()); onDone('In the editor. Save when ready.') }}>Put in editor</Button>
           </>
         : <>
-            <Button className="flex-1" disabled={busy} onClick={() => void useTheirs()}>Use the cluster's</Button>
+            <Button className="flex-1" disabled={busy} onClick={() => void useTheirs()}>Use {clusterName}'s</Button>
             <Button kind="primary" className="flex-1" disabled={busy || theirs === null} onClick={() => void keep()}>
               Save mine</Button>
           </>}>
-      <p className="mb-3 text-sm text-dim">
-        {compare.kind === 'draft'
-          ? 'Green is what you typed earlier. Reject a change to leave it out.'
-          : `Red is on ${clusterName}, green is yours. Reject a change to keep ${clusterName}'s.`}
-      </p>
+      {compare.kind === 'draft' && <p className="mb-3 text-sm text-dim">Reject a change to leave it out.</p>}
       {problem && <p className="mb-3 text-sm text-bad">{problem}</p>}
       {theirs === null && !problem && <p className="text-sm text-dim">Getting the file from {clusterName}</p>}
       {theirs !== null && (
