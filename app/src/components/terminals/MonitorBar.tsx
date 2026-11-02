@@ -99,7 +99,7 @@ export function MonitorBar({ cluster, node, shown }: { cluster: string; node: st
       <Item icon={ArrowDown} text={rate(st?.down ?? null)} tip={`Download: ${rate(st?.down ?? null)}${nets}`} />
       <Item icon={Clock} text={st ? duration(st.uptime) : '...'} tip={st ? `Up for ${duration(st.uptime)}` : 'Uptime'} />
       <Item icon={Users} text={st ? String(st.users) : '...'}
-        tip={st ? `${st.users} ${st.users === 1 ? 'person' : 'people'} logged in` : 'People logged in'} />
+        tip={st ? `${st.users} ${st.users === 1 ? 'person' : 'people'} signed in` : 'People logged in'} />
       {st?.disks.map((d) => (
         <Item key={d.mount} icon={HardDrive} text={`${d.mount}: ${d.percent}%`} level={level(d.percent)}
           tip={`Disk ${d.mount}: ${size(d.used)} of ${size(d.size)} used`} />

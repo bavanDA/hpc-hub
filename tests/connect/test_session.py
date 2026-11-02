@@ -331,7 +331,7 @@ def test_reconnect_reuses_live_login(env):
     s.connect(Login("u", "wrong password"), None)  # would fail if it logged in again
     assert rec.done.wait(20)
     assert s.state == State.CONNECTED, "\n".join(rec.lines)
-    assert any("reusing that login" in line for line in rec.lines)
+    assert any("no Duo this time" in line for line in rec.lines)
     rec.done.clear()
     s.disconnect()
     assert rec.done.wait(20)

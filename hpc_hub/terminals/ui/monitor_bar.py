@@ -93,7 +93,7 @@ class MonitorBar(Gtk.Box):
         self.down.show(monitor.rate(st["down"]), f"Download: {monitor.rate(st['down'])}{nets}")
         self.uptime.show(monitor.duration(st["uptime"]), f"Up for {monitor.duration(st['uptime'])}")
         n = st["users"]
-        self.users.show(str(n), f"{n} {'person' if n == 1 else 'people'} logged in")
+        self.users.show(str(n), f"{n} {'person' if n == 1 else 'people'} signed in")
         if st["disks"] == self._disks:  # they change once a minute at most
             return False
         self._disks = st["disks"]

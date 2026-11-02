@@ -198,7 +198,7 @@ class ClusterSession(NodesMixin):
             if link_works(live):  # still logged in (e.g. after an app restart): no VPN, no Duo
                 self.ssh = live
                 self.vpn_used = self.cfg.vpn.enabled and self.vpn.is_active()
-                self._log("Still logged in to the cluster, reusing that login (no Duo)")
+                self._log("Still signed in to the cluster, so no Duo this time")
                 self._after_login()
                 return
         if self.ssh:
