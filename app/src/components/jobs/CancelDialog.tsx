@@ -83,7 +83,9 @@ export function CancelManyDialog({ cluster, jobs, appJob, onClose, onDone }: {
     <AlertDialog title={`Cancel ${n} jobs?`} keep="Keep them" act={`Cancel ${n} jobs`} onAct={confirm}
       onClose={onClose}>
       <p>{names.length > 6 ? `${names.slice(0, 6).join(', ')} and ${names.length - 6} more.` : `${names.join(', ')}.`}</p>
-      <p>Running ones stop now. Their output so far stays in your folders.</p>
+      <p>{!jobs.some((j) => j.state === 'RUNNING') ? "They're still waiting in the queue. Nothing has started yet."
+        : jobs.every((j) => j.state === 'RUNNING') ? 'They stop now. Their output so far stays in your folders.'
+          : 'The running ones stop now and keep their output so far. The waiting ones leave the queue.'}</p>
       {node && <p>One of them is HPC Hub&apos;s node {node.where}. Your terminals on it stop too.</p>}
     </AlertDialog>
   )
