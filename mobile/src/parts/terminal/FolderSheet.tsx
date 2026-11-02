@@ -3,6 +3,7 @@
 import { ArrowUp, Folder, FolderPlus } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 
+import { shortName } from '@shared/components/clusters/loginCopy'
 import { Spinner } from '@shared/components/ui'
 import { call } from '@shared/rpc'
 import type { Folder as FolderList, Place, Places } from '@shared/types/projects'
@@ -52,7 +53,7 @@ export function FolderSheet({ cluster, name, start, onPick, onClose }: {
   const here = at ? tilde(at.path, at.home) : ''
   const shown = (at?.folders ?? []).filter((f) => !f.startsWith('.') && f.toLowerCase().includes(filter.toLowerCase()))
   return (
-    <Sheet title={`A folder on ${name.split(' (')[0]}`} flush onClose={onClose}
+    <Sheet title={`A folder on ${shortName({ name })}`} flush onClose={onClose}
       actions={<MainButton disabled={!at} onClick={() => { onClose(); onPick(here) }}>Use this folder</MainButton>}>
       <div className="px-4">
         <Chips one options={places.map((p) => [p.path, p.label] as const)} value={[]}

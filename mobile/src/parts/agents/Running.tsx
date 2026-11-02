@@ -3,6 +3,7 @@
 import { Bot } from 'lucide-react'
 import { useState } from 'react'
 
+import { shortName } from '@shared/components/clusters/loginCopy'
 import { useListings, useLive } from '@shared/components/terminals/data'
 import { openSession, tabKey, useTabs } from '@shared/components/terminals/tabs'
 import { Spinner } from '@shared/components/ui'
@@ -21,7 +22,7 @@ export function Running() {
   const rows: { cluster: string; name: string; s: TmuxSession }[] = []
   for (const c of live) {
     for (const s of listings[c.id]?.listing?.sessions ?? []) {
-      if (s.agent && s.agent !== 'term' && AGENT_NAMES[s.agent]) rows.push({ cluster: c.id, name: c.name.split(' (')[0], s })
+      if (s.agent && s.agent !== 'term' && AGENT_NAMES[s.agent]) rows.push({ cluster: c.id, name: shortName(c), s })
     }
   }
   const loading = live.some((c) => !listings[c.id])
@@ -40,7 +41,7 @@ export function Running() {
           <SessionRow key={`${cluster}/${s.name}`} s={s} extra={live.length > 1 ? name : ''}
             nodes={listings[cluster]?.listing?.nodes ?? null} open={tabs.some((t) => t.key === tabKey(cluster, s.name))}
             onOpen={() => { openSession(cluster, s); go('terminals') }}
-            onActions={() => setActing({ cluster, name: s.name, kind: s.kind, node: s.node, title: s.title || s.name })} />
+            onActions={() => setActing({ cluster, name: s.name, kind: s.kind, node: s.node, title: s.title || s.name, remote: s.remote })} />
         ))}
       </List>}
       {acting && <SessionActions target={acting} onClose={() => setActing(null)} onChanged={refresh} />}

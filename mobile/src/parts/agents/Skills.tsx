@@ -69,7 +69,7 @@ export function Skills() {
                 <div key={k.path} className="flex min-h-14 items-center gap-3 border-b border-line py-2 pr-1 pl-4">
                   <span className="min-w-0 flex-1 break-words">
                     <span className="block">{k.name}</span>
-                    <span className="block text-sm break-all text-dim">{k.description || k.path}</span>
+                    <span className="block text-sm break-words text-dim">{k.description || k.path}</span>
                   </span>
                   <button aria-label={`Remove ${k.name}`} onClick={() => setRemoving(k)}
                     className="grid size-12 shrink-0 place-items-center rounded-full text-dim active:bg-pressed">

@@ -3,6 +3,7 @@
 import { MessageSquare } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
+import { shortName } from '@shared/components/clusters/loginCopy'
 import { basename } from '@shared/components/files/format'
 import { formatSize } from '@shared/components/projects/size'
 import { sendable, short, when } from '@shared/components/tools/format'
@@ -58,7 +59,7 @@ export function AgentSheet({ setup, agent: a, project = '', onClose }:
       : project ? 'No chats here yet.' : 'No chats yet.'
 
   return (
-    <Sheet title={`${a.name} ${project ? `in ${basename(project)}` : `on ${setup.name.split(' (')[0]}`}`} flush
+    <Sheet title={`${a.name} ${project ? `in ${basename(project)}` : `on ${shortName({ name: setup.name })}`}`} flush
       onClose={onClose} actions={<MainButton onClick={() => run(folder.trim() || '~', '')}>Start</MainButton>}>
       <div className="px-4">
         <TextArea label="Task (optional)" value={task} onChange={(e) => setTask(e.target.value)}
