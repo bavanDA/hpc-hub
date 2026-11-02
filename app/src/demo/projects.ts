@@ -1,5 +1,6 @@
 // Demo data for the Projects page: made-up projects on made-up accounts; adding and removing work in memory.
-import type { CopyPlan, CopyTargets, Folder, Places, Project, ProjectList } from '../types/projects'
+import type { CopyPlan, CopyTargets, Folder, GitStatus, Places, Project, ProjectList } from '../types/projects'
+import { demoEmit } from './events'
 
 const clusters = [
   { id: 'wulver', name: 'Wulver (NJIT)', connected: true },
@@ -13,12 +14,33 @@ function project(n: string, cluster: string, path: string, extra: Partial<Projec
     latex: false, opened: 0, copy_to: '', copy_into: '', ...extra }
 }
 
+const now = Math.floor(Date.now() / 1000)
 let projects: Project[] = [
-  project('thesis', 'wulver', '/mmfs1/project/mygroup/jdoe/thesis', { opened: 4 }),
-  project('climate-model', 'yale', '/home/jdoe/project/climate-model', { opened: 3 }),
-  project('simulations', 'sdsc', '/expanse/lustre/projects/abc123/jdoe/simulations', { opened: 2 }),
-  project('paper', 'wulver', '/home/jdoe/paper', { main_tex: 'main.tex', kind: 'latex', latex: true, opened: 1 }),
+  project('thesis', 'wulver', '/mmfs1/project/mygroup/jdoe/thesis', { opened: now - 600 }),
+  project('climate-model', 'yale', '/home/jdoe/project/climate-model', { opened: now - 30 * 3600 }),
+  project('simulations', 'sdsc', '/expanse/lustre/projects/abc123/jdoe/simulations', { opened: now - 21 * 86400 }),
+  project('paper', 'wulver', '/home/jdoe/paper', { main_tex: 'main.tex', kind: 'latex', latex: true,
+    opened: now - 2 * 3600 }),
 ]
+
+// projects.status: git of the connected clusters' folders
+const git: Record<string, GitStatus> = {
+  wulver: { '/mmfs1/project/mygroup/jdoe/thesis': { branch: 'main', changed: 3 },
+    '/home/jdoe/paper': { branch: 'main', changed: 0 } },
+  yale: { '/home/jdoe/project/climate-model': { branch: 'dev', changed: 12 } },
+}
+
+/** A copy that moves along, so Copies shows a bar. */
+function copying(id: string, title: string, total: number) {
+  let done = 0
+  const step = () => {
+    done = Math.min(total, done + total * 0.03)
+    const finished = done >= total
+    demoEmit('transfer', { id, title, done, total, status: finished ? 'Done' : 'Copying', finished, error: '' })
+    if (!finished) setTimeout(step, 1000)
+  }
+  setTimeout(step, 300)
+}
 
 const tree: Record<string, string[]> = {
   '/home/jdoe': ['.cache', '.config', 'paper', 'project', 'scratch', 'notebooks', 'tools'],
@@ -86,6 +108,13 @@ export const answers: Record<string, unknown> = {
         ...c, globus_missing: c.id === 'sdsc' ? 'a Globus collection for SDSC Expanse' : '' })) }
   },
   'projects.copy_plan': () => new Promise((done) => setTimeout(() => done(plan), 600)),
-  'projects.copy': () => ({ id: 'project-demo', chats: '' }),
+  'projects.copy': ({ id, to }: { id: string; to: string }) => {
+    const p = projects.find((x) => x.id === id)!
+    const tid = `project-demo-${Date.now()}`
+    copying(tid, `${p.name}: ${name(p.cluster).split(' ')[0]} → ${name(to).split(' ')[0]}:/home/jdoe/${p.name}`,
+      21_400_000_000)
+    return { id: tid, chats: '' }
+  },
+  'projects.status': ({ cluster }: { cluster: string }) => git[cluster] ?? {},
   'projects.cancel_copy': null,
 }

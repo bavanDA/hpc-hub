@@ -27,7 +27,10 @@ const listings: Record<string, Listing> = {
       session('4321.notes', { kind: 'screen', label: 'notes', command: '', created: 0 }),
     ],
   },
-  yale: { host: 'bouchet1', has_tmux: true, nodes: {}, sessions: [] },
+  yale: { host: 'bouchet1', has_tmux: true, nodes: {}, sessions: [
+    session('hpchub-codex-0930', { label: 'ChatGPT · climate-model', agent: 'codex', command: 'codex',
+      created: now - 1800, path: '/home/jdoe/project/climate-model' }),
+  ] },
 }
 
 function scan({ text }: { text: string }): Link[] {
