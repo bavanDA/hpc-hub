@@ -40,6 +40,7 @@ export function Jobs() {
   const params = usePageParams()  // from Usage: { cluster, user } shows that person's jobs
   const [scope, setScope] = useState<Scope>(params.user ? 'all' : 'mine')
   const [states, setStates] = useState<string[]>([])
+  const [group, setGroup] = useState('')  // with My group: one of your groups, '' = all of them
   const [query, setQuery] = useState(params.user ?? '')
   const [order, setOrder] = useState(ORDERS[0])
   const [filtering, setFiltering] = useState(false)
@@ -48,7 +49,8 @@ export function Jobs() {
   const [open, setOpen] = useState<Job | null>(null)
   const turn = useRef(0)
   const id = current?.id ?? ''
-  const key = `${id}|${scope}`
+  const account = scope === 'group' ? group : ''
+  const key = `${id}|${scope}|${account}`
 
   useEffect(() => {
     if (params.cluster) pick(params.cluster)
@@ -59,11 +61,12 @@ export function Jobs() {
     if (!id) return
     const mine = ++turn.current
     setLoading(true)
-    call<JobList>('jobs.list', { cluster: id, scope })
-      .then((list) => mine === turn.current && setGot({ key: `${id}|${scope}`, list, error: '' }))
-      .catch((e: Error) => mine === turn.current && setGot({ key: `${id}|${scope}`, list: null, error: e.message }))
+    call<JobList>('jobs.list', { cluster: id, scope, account })
+      .then((list) => mine === turn.current && setGot({ key: `${id}|${scope}|${account}`, list, error: '' }))
+      .catch((e: Error) => mine === turn.current &&
+        setGot({ key: `${id}|${scope}|${account}`, list: null, error: e.message }))
       .finally(() => mine === turn.current && setLoading(false))
-  }, [id, scope])
+  }, [id, scope, account])
   useEffect(() => {
     refresh()
     const t = setInterval(() => document.visibilityState === 'visible' && refresh(), REFRESH_MS)
@@ -127,6 +130,7 @@ export function Jobs() {
           </div>
         )}
       {filtering && <FilterSheet scope={scope} states={states} order={order} onScope={setScope} onStates={setStates}
+        groups={got.list?.groups ?? []} group={group} onGroup={setGroup}
         onOrder={setOrder} onReset={reset} onClose={() => setFiltering(false)}
         count={list ? shown.length : null} />}
       {open && current && <JobSheet cluster={current.id} job={open} appJob={list?.app_job ?? ''}

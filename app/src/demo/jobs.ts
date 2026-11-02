@@ -145,7 +145,7 @@ function details({ cluster, job_id }: Record<string, unknown>): JobDetails {
 function list({ cluster, scope }: Record<string, unknown>): JobList {
   if (!JOBS[String(cluster)]) throw new Error('Connect to SDSC Expanse first')
   return { jobs: JOBS[String(cluster)][String(scope)] ?? [], user: ME, accounts: ACCOUNTS[String(cluster)],
-    app_job: cluster === 'wulver' ? '123456' : '' }
+    app_job: cluster === 'wulver' ? '123456' : '', groups: cluster === 'wulver' ? ['mygroup', 'abc123'] : ['mygroup'] }
 }
 
 export const answers: Record<string, unknown> = {

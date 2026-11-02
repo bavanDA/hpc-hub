@@ -30,7 +30,8 @@ export type Job = {
   cancellable: boolean // yours, and still running or waiting
 }
 
-export type JobList = { jobs: Job[]; user: string; accounts: Account[]; app_job: string }
+export type JobList = { jobs: Job[]; user: string; accounts: Account[]; app_job: string
+  groups?: string[] }  // the groups you may bill: My group can show one of them
 
 export type DetailGroup = { title: string; rows: { label: string; value: string }[] }
 export type JobDetails = { groups: DetailGroup[]; text: string }

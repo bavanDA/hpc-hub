@@ -27,6 +27,7 @@ export function Jobs() {
   const params = usePageParams()  // from Usage: { cluster, user } shows that person's jobs
   const [scope, setScope] = useState<Scope>(params.user ? 'all' : 'mine')
   const [state, setState] = useState('')
+  const [group, setGroup] = useState('')  // with My group: one of your groups, '' = all of them
   const [query, setQuery] = useState(params.user ?? '')
   useEffect(() => {
     if (params.cluster) setCluster(params.cluster)
@@ -40,10 +41,12 @@ export function Jobs() {
   const [cancel, setCancel] = useState<Job | null>(null)
   const [picked, setPicked] = useState<Set<string>>(new Set())
   const [cancelMany, setCancelMany] = useState(false)
+  const lastGroups = useRef<string[]>([])  // kept while another view loads
   const turn = useRef(0) // answers to an older cluster or scope are dropped
   const busy = useRef(false)
   const id = cluster?.id ?? ''
-  const key = `${id}|${scope}`
+  const account = scope === 'group' ? group : ''
+  const key = `${id}|${scope}|${account}`
   const list = got.key === key ? got.list : null
   const error = got.key === key ? got.error : ''
 
@@ -52,17 +55,17 @@ export function Jobs() {
     const mine = ++turn.current
     busy.current = true
     setLoading(true)
-    call<JobList>('jobs.list', { cluster: id, scope })
+    call<JobList>('jobs.list', { cluster: id, scope, account })
       .then((d) => mine === turn.current &&
-        setGot({ key: `${id}|${scope}`, list: d, error: '', updated: new Date().toLocaleTimeString('en-GB') }))
+        setGot({ key: `${id}|${scope}|${account}`, list: d, error: '', updated: new Date().toLocaleTimeString('en-GB') }))
       .catch((e: Error) => mine === turn.current &&
-        setGot({ key: `${id}|${scope}`, list: null, error: e.message, updated: '' }))
+        setGot({ key: `${id}|${scope}|${account}`, list: null, error: e.message, updated: '' }))
       .finally(() => {
         if (mine !== turn.current) return
         busy.current = false
         setLoading(false)
       })
-  }, [id, scope, connected])
+  }, [id, scope, account, connected])
 
   useEffect(() => refresh(), [refresh])
   useEffect(() => {
@@ -84,6 +87,8 @@ export function Jobs() {
   if (!clusters || !cluster) return <div className="grid h-full place-items-center"><Spinner size={24} /></div>
 
   const off = !connected
+  const groups = list?.groups ?? lastGroups.current
+  if (list?.groups) lastGroups.current = list.groups
   let body
   if (off) body = <NotConnected cluster={cluster} session={session} what="jobs" />
   else if (error) body = <EmptyState icon={CircleAlert} title="Could not load jobs" text={error} />
@@ -103,6 +108,8 @@ export function Jobs() {
     <div className="flex h-full flex-col">
       {!off && <div className="flex shrink-0 items-center gap-2 px-4 py-3">
         <Select label="Which jobs" value={scope} onChange={setScope} options={SCOPES} />
+        {scope === 'group' && groups.length > 1 && <Select label="Group" value={group} onChange={setGroup}
+          options={[['', 'All my groups'], ...groups.map((g) => [g, g] as const)]} />}
         <Select label="State" value={state} onChange={setState} options={STATES} />
         <label className="flex h-9 min-w-0 flex-1 items-center gap-2 rounded-lg bg-soft px-3
           focus-within:ring-1 focus-within:ring-accent">
