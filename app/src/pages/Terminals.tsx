@@ -23,7 +23,7 @@ export function Terminals() {
   const { listings, refresh } = useListings(live)
   const [list, setListState] = useState(listShown)
   const setList = (on: boolean) => { listShown = on; setListState(on) }
-  const params = usePageParams()  // { cluster, new: '1' }: a cluster card's Terminal button
+  const params = usePageParams()  // { cluster, new: '1', folder? }: a cluster card's or a project's Terminal
   const [creating, setCreating] = useState(params.new === '1')
   const newTerminal = () => (live.length ? setCreating(true) : toast('Connect a cluster first'))
 
@@ -51,7 +51,7 @@ export function Terminals() {
         </div>
       </section>
       {creating && live.length > 0 && <NewTerminalDialog live={live} cluster={params.cluster}
-        onClose={() => setCreating(false)}
+        folder={params.folder} onClose={() => setCreating(false)}
         onOpened={() => setTimeout(refresh, 2000)} />}
     </div>
   )

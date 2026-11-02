@@ -18,8 +18,8 @@ function Pick({ label, hint, children }: { label: string; hint?: string; childre
   )
 }
 
-export function NewTerminalDialog({ live, cluster: start = '', onClose, onOpened }:
-  { live: Live[]; cluster?: string; onClose: () => void; onOpened: () => void }) {
+export function NewTerminalDialog({ live, cluster: start = '', folder: startIn = '', onClose, onOpened }:
+  { live: Live[]; cluster?: string; folder?: string; onClose: () => void; onOpened: () => void }) {
   const toast = useToast()
   const [name, setName] = useState(() => `Terminal ${new Date().toTimeString().slice(0, 5)}`)
   const [picked, setCluster] = useState(start)
@@ -27,7 +27,7 @@ export function NewTerminalDialog({ live, cluster: start = '', onClose, onOpened
   const cluster = c?.id ?? ''
   const [node, setOnNode] = useState<boolean | null>(null)  // null: the compute node when there is one
   const onNode = node ?? Boolean(c?.node)
-  const [folder, setFolder] = useState('~')
+  const [folder, setFolder] = useState(startIn || '~')
 
   const create = () => {
     onClose()
