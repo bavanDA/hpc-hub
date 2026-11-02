@@ -58,9 +58,10 @@ export function GoToFile({ cluster, root, onOpen, onClose }:
         {found && !error && !found.length && <p className="py-4 text-sm text-dim">No file matches.</p>}
         {found?.map((f, i) => (
           <button key={f.path} type="button" onClick={() => choose(f)} onMouseEnter={() => setPick(i)}
-            className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left ${i === pick ? 'bg-selected' : ''}`}>
+            className={`flex min-h-10 w-full items-center gap-2 border-b border-line px-2 text-left ${
+              i === pick ? 'bg-selected' : ''}`}>
             <FileCode2 size={14} className="shrink-0 text-dim" />
-            <span className="shrink-0 font-semibold">{f.name}</span>
+            <span className="shrink-0 font-medium">{f.name}</span>
             <span className="min-w-0 truncate font-mono text-xs text-dim">{rel(f.path)}</span>
           </button>
         ))}

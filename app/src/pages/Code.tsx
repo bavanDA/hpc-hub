@@ -247,7 +247,7 @@ export function Code() {
   void asks  // redraw the badge as asks change
 
   return (
-    <div className="flex h-full min-h-0 bg-view">
+    <div className="flex h-full min-h-0 bg-window">
       <aside aria-label="File tree" className="flex w-[260px] shrink-0 flex-col border-r border-line bg-window">
         <div className="flex h-10 shrink-0 items-center gap-1 border-b border-line px-2">
           <ClusterPicker />
@@ -390,7 +390,7 @@ function BannerRow({ file, banner, clusterName, onDismiss, onReload, onCompare, 
           <Button size="sm" kind="primary" onClick={() => onRestore(d)}>Restore</Button></>
   }
   return (
-    <div role="status" className="flex shrink-0 items-center gap-2 border-b border-line bg-pill px-4 py-1.5">
+    <div role="status" className="flex shrink-0 items-center gap-2 border-b border-line bg-soft px-4 py-1.5">
       <p className="min-w-0 flex-1 text-sm">{text}</p>
       {actions}
     </div>

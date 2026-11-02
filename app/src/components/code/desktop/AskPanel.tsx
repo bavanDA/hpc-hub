@@ -71,7 +71,7 @@ export function AskPanel({ context, kind, logText, askId, onAsk, onOpenFile, onC
     <aside aria-label="Ask an agent" className="flex w-[380px] shrink-0 flex-col border-l border-line bg-window">
       <div className="flex h-10 shrink-0 items-center gap-2 border-b border-line pr-1 pl-3">
         {askId ? <IconButton icon={ArrowLeft} label="All asks" small onClick={() => onAsk(null)} />
-          : <Sparkles size={16} className="text-accent-text" />}
+          : <Sparkles size={16} className="text-dim" />}
         <h2 className="flex-1 font-semibold">{askId ? 'Answer' : 'Ask an agent'}</h2>
         <IconButton icon={X} label="Close the Ask panel" small onClick={onClose} />
       </div>
@@ -86,11 +86,12 @@ export function AskPanel({ context, kind, logText, askId, onAsk, onOpenFile, onC
           <p className="text-sm text-dim">Open a file, then ask about it or about the lines you select.</p>
         )}
         {!askId && mine.length > 0 && (
-          <section className="mt-6 flex flex-col gap-1">
-            <h3 className="pb-1 text-sm font-semibold text-dim">Earlier asks</h3>
+          <section className="-mx-4 mt-6 flex flex-col">
+            <h3 className="px-4 pb-1.5 text-xs font-semibold tracking-wide text-dim uppercase">Earlier asks</h3>
             {mine.map((a) => (
               <button key={a.status.id} type="button" onClick={() => onAsk(a.status.id)}
-                className="flex items-center gap-2 rounded-md px-2 py-1.5 text-left hover:bg-hover">
+                className="flex min-h-11 items-center gap-2 border-b border-line px-4 py-1.5 text-left first-of-type:border-t
+                  hover:bg-hover active:bg-pressed">
                 {isRunning(a) && <Spinner size={12} />}
                 <span className="min-w-0 flex-1 truncate text-sm">
                   {agentName(a.status.agent)} · {a.status.path.split('/').pop()}</span>
