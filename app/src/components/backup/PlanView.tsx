@@ -1,85 +1,66 @@
-// The plan on the desktop: what is kept and what is left out, a switch per row with the reason in plain words, the
-// two plan switches, then Check space.
-import { UserRound } from 'lucide-react'
-
+// The plan on the desktop: what is kept and what is left out, folder by folder with a switch for each kind of file
+// and the reason in plain words, the two plan switches, then Check space. Style E, like the phone's PlanList.
 import type { Plan, PlanItem } from '../../types/backup'
 import { agentIcon } from '../agents/AgentIcon'
-import { Button, Card, Pill, Spinner, Switch } from '../ui'
+import { EButton, IconToggleRow } from '../e/extra'
+import { Section } from '../e/ui'
+import { Spinner } from '../ui'
 import { CLASS, count, gb, plan as copy } from './copy'
+import { Actions } from './Steps'
 import type { Options } from './useBackup'
 
 const Claude = agentIcon('claude')
 
-export function By({ by }: { by: string }) {
-  if (by === 'agent') return <Pill kind="neutral" dot={false}><Claude size={12} />{copy.by.agent}</Pill>
-  if (by === 'you') return <Pill kind="neutral" dot={false}><UserRound size={12} />{copy.by.you}</Pill>
-  return null
-}
-
-function Item({ i, busy, why, onToggle }:
-  { i: PlanItem; busy: boolean; why: string; onToggle: (keep: boolean) => void }) {
-  return (
-    <div className="flex min-h-14 items-center gap-3 px-4 py-2.5">
-      <div className="min-w-0 flex-1">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="truncate font-mono text-sm">{i.folder}</span>
-          <span className="text-sm font-semibold">{CLASS[i.kind]}</span>
-          <By by={i.by} />
-        </div>
-        {why && <div className="text-sm text-dim">{why}</div>}
+/** A plan's items grouped by folder: the folder once, a switch for each kind of file in it. */
+function Items({ items, busy, onToggle }:
+  { items: PlanItem[]; busy: boolean; onToggle: (i: PlanItem, keep: boolean) => void }) {
+  const folders = [...new Set(items.map((i) => i.folder))]
+  return folders.map((folder) => {
+    const mine = items.filter((i) => i.folder === folder)
+    return (
+      <div key={folder}>
+        <p className="px-5 pt-3 pb-1 font-mono text-sm break-all">{folder}</p>
+        {mine.map((i, n) => {
+          const why = n && mine[n - 1].why === i.why ? '' : i.why
+          const by = copy.by[i.by]
+          return <IconToggleRow key={i.kind} label={CLASS[i.kind]} checked={i.keep} disabled={busy}
+            onChange={(k) => onToggle(i, k)}
+            sub={[`${count(i.files)} ${i.files === 1 ? 'file' : 'files'}, ${gb(i.bytes)}`,
+              why && (by ? `${by}: ${why}` : why)].filter(Boolean).join(' · ')} />
+        })}
       </div>
-      <span className="w-20 shrink-0 text-right text-sm tabular-nums text-dim">{gb(i.bytes)}</span>
-      <Switch on={i.keep} disabled={busy} label={`${i.keep ? copy.leave : copy.keep}: ${i.folder}`}
-        onChange={onToggle} />
-    </div>
-  )
+    )
+  })
 }
 
-export function PlanView({ plan, options, busy, onToggle, onOptions, onNext }: {
+export function PlanView({ plan, options, busy, onToggle, onOptions, onNext, onBack }: {
   plan: Plan | null; options: Options; busy: boolean; onToggle: (i: PlanItem, keep: boolean) => void
-  onOptions: (o: Partial<Options>) => void; onNext: () => void
+  onOptions: (o: Partial<Options>) => void; onNext: () => void; onBack: () => void
 }) {
   if (!plan) return <div className="grid h-40 place-items-center"><Spinner size={20} /></div>
-  const section = (title: string, items: PlanItem[], empty: string, total?: string) => (
-    <section className="flex flex-col gap-2">
-      <div className="flex items-baseline gap-3 px-1">
-        <h3 className="text-md font-semibold">{title}</h3>
-        {total && <span className="text-sm text-dim tabular-nums">{total}</span>}
-      </div>
-      <Card className="divide-y divide-line overflow-hidden">
-        {items.length ? items.map((i, n) => <Item key={`${i.folder}|${i.kind}`} i={i} busy={busy}
-          why={n && items[n - 1].folder === i.folder && items[n - 1].why === i.why ? '' : i.why}
-          onToggle={(keep) => onToggle(i, keep)} />)
-          : <p className="px-4 py-4 text-sm text-dim">{empty}</p>}
-      </Card>
-    </section>
-  )
   return (
-    <div className="flex flex-col gap-6">
-      {plan.agent_summary && (
-        <p className="flex items-start gap-2 rounded-lg bg-pill p-3 text-md">
-          <Claude size={16} className="mt-1 shrink-0" />{plan.agent_summary}
-        </p>
-      )}
-      {section(copy.keep, plan.items, copy.empty, `${count(plan.files)} files, ${plan.exact ? '' : 'about '}${gb(plan.bytes)}`)}
-      {section(copy.leave, plan.left_out, copy.leftEmpty)}
-      <Card className="divide-y divide-line">
-        <label className="flex min-h-14 items-center gap-3 px-4 py-2">
-          <span className="flex-1"><span className="block">{copy.whole}</span>
-            <span className="text-sm text-dim">{copy.wholeHint}</span></span>
-          <Switch on={options.whole} disabled={busy} onChange={(whole) => onOptions({ whole })} label={copy.whole} />
-        </label>
-        <label className="flex min-h-14 items-center gap-3 px-4 py-2">
-          <span className="flex-1"><span className="block">{copy.onlySoon(options.horizon)}</span>
-            {options.everything && <span className="text-sm text-dim">{copy.onlySoonHint}</span>}</span>
-          <Switch on={!options.everything} disabled={busy} label={copy.onlySoon(options.horizon)}
-            onChange={(on) => onOptions({ everything: !on })} />
-        </label>
-      </Card>
-      <div className="flex items-center gap-3">
-        <Button kind="primary" size="lg" disabled={busy || !plan.items.length} onClick={onNext}>{copy.space}</Button>
+    <>
+      {plan.agent_summary && <p className="flex items-start gap-3 px-5 text-md">
+        <Claude size={18} className="mt-0.5 shrink-0" />{plan.agent_summary}</p>}
+      <Section title={`${copy.keep} · ${count(plan.files)} files, ${plan.exact ? '' : 'about '}${gb(plan.bytes)}`}>
+        {plan.items.length ? <Items items={plan.items} busy={busy} onToggle={onToggle} />
+          : <p className="border-b border-line px-5 py-3 text-dim">{copy.empty}</p>}
+      </Section>
+      <Section title={copy.leave}>
+        {plan.left_out.length ? <Items items={plan.left_out} busy={busy} onToggle={onToggle} />
+          : <p className="border-b border-line px-5 py-3 text-dim">{copy.leftEmpty}</p>}
+      </Section>
+      <Section>
+        <IconToggleRow label={copy.whole} sub={copy.wholeHint} checked={options.whole} disabled={busy}
+          onChange={(whole) => onOptions({ whole })} />
+        <IconToggleRow label={copy.onlySoon(options.horizon)} checked={!options.everything} disabled={busy}
+          sub={options.everything ? copy.onlySoonHint : undefined} onChange={(on) => onOptions({ everything: !on })} />
+      </Section>
+      <Actions>
+        <EButton onClick={onBack}>Back</EButton>
+        <EButton kind="primary" disabled={busy || !plan.items.length} onClick={onNext}>{copy.space}</EButton>
         {busy && <Spinner />}
-      </div>
-    </div>
+      </Actions>
+    </>
   )
 }
