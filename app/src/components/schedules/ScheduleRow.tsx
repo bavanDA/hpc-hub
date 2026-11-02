@@ -16,7 +16,7 @@ export function ScheduleRow({ st, busy, onToggle, onRun, onLog, onEdit, onDelete
   const s = status(st)
   const own = computeText(st.compute)
   const backup = isBackupCheck(st)
-  const what = backup ? ['Backup agent', 'scratch', st.when].join(' · ') : [st.agent_name, st.folder, st.when].join(' · ')
+  const what = backup ? ['Backup agent', 'scratch', st.when].join(' · ') : [st.agent_name, st.folder.replace(/\/+$/, '') === '~' ? 'Home folder' : st.folder, st.when].join(' · ')
   const how = [s.note, st.last_run ? `Last run ${localWhen(st.last_run)}` : 'Not run yet', own].filter(Boolean)
   return (
     <div className="flex min-h-[64px] items-center gap-3 px-4 py-2.5">

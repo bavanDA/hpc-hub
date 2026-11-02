@@ -23,7 +23,7 @@ export function LogDialog({ cluster, name, onClose }: { cluster: string; name: s
       {error ? <p className="py-6 text-center text-bad">{error}</p>
         : !log ? <div className="grid h-40 place-items-center"><Spinner size={20} /></div>
           : !log.path ? <p className="py-6 text-center text-dim">
-              It has not run yet. Answers are saved in {log.folder}.</p>
+              It has not run yet.</p>
             : <div className="flex flex-col gap-2">
                 <p className="truncate text-sm text-dim" title={log.path}>{log.path}</p>
                 <pre className="max-h-[60vh] overflow-auto rounded-lg bg-view p-4 font-mono text-sm
