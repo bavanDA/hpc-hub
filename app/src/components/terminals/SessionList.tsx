@@ -38,7 +38,7 @@ export function SessionList({ live, listings, tabs, current, onRefresh, onNew, o
         <IconButton icon={Plus} label="New terminal" onClick={onNew} />
         {onHide && <IconButton icon={PanelLeftClose} label="Hide sessions" onClick={onHide} />}
       </PanelHead>
-      <div className="min-h-0 flex-1 overflow-auto px-2 pb-2">
+      <div className="min-h-0 flex-1 overflow-auto pb-2">
         {!live.length && <Note>Connect a cluster to see its sessions.</Note>}
         {live.map((c) => (
           <ClusterSessions key={c.id} cluster={c} listed={listings[c.id]} tabs={tabs} current={current}
@@ -53,7 +53,7 @@ export function SessionList({ live, listings, tabs, current, onRefresh, onNew, o
 }
 
 function Note({ children }: { children: React.ReactNode }) {
-  return <p className="px-2 py-1 text-sm text-dim">{children}</p>
+  return <p className="border-b border-line px-4 py-2.5 text-sm text-dim">{children}</p>
 }
 
 function ClusterSessions({ cluster, listed, tabs, current, onRefresh }:
@@ -71,7 +71,8 @@ function ClusterSessions({ cluster, listed, tabs, current, onRefresh }:
     `their compute node and end with its job; older sessions may still be on ${listing.host}.` : undefined
   return (
     <div className="mb-2">
-      <h3 title={tip} className="px-2 pt-3 pb-1 text-sm font-semibold text-dim">{shortName(cluster)}</h3>
+      <h3 title={tip} className="border-b border-line px-4 pt-4 pb-1.5 text-xs font-semibold tracking-wide text-dim
+        uppercase">{shortName(cluster)}</h3>
       {!listing && listed?.error && <Note>{listed.error}</Note>}
       {!listing && !listed?.error && !items.length && <Note>Loading…</Note>}
       {listing && !listing.has_tmux && !items.length && <Note>tmux is not installed here.</Note>}
@@ -106,7 +107,8 @@ function SessionRow({ cluster, s, nodes, open, selected, onRefresh }: {
   }
   return (
     <div onClick={() => openSession(cluster, s)} title={`${s.name} (${s.kind})${s.path ? ` in ${s.path}` : ''}`}
-      className={`flex items-center gap-2.5 rounded-md py-1.5 pr-1 pl-3 ${selected ? 'bg-selected' : 'hover:bg-hover'}`}>
+      className={`flex min-h-12 items-center gap-3 border-b border-line py-1.5 pr-1.5 pl-4 ${
+        selected ? 'bg-selected' : 'hover:bg-hover active:bg-pressed'}`}>
       <SessionIcon agent={s.agent} session={s.name} />
       <div className="min-w-0 flex-1">
         <div className="truncate">{s.title.startsWith(`${what} · `) ? s.title.slice(what.length + 3) : s.title}</div>
@@ -115,7 +117,7 @@ function SessionRow({ cluster, s, nodes, open, selected, onRefresh }: {
       {(code || s.remote.startsWith('http')) && (
         <button onClick={(e) => { e.stopPropagation(); remoteAction() }}
           title={code ? `Copy pairing code ${s.remote.slice(5)}` : `Open remote: ${s.remote}`}
-          className="rounded-md px-2 py-1 text-sm font-semibold hover:bg-hover">
+          className="h-8 shrink-0 rounded-md border border-line-strong px-2.5 text-sm font-semibold hover:bg-hover">
           {code ? 'Copy code' : 'Open'}</button>
       )}
       <SessionMenu target={{ cluster, name: s.name, kind: s.kind, node: s.node, title: s.title }} onChanged={onRefresh} />

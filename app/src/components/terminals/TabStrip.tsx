@@ -16,17 +16,18 @@ export function TabStrip({ tabs, current, onChanged }:
     if (t.session && !t.ended) toast(`${t.title} is still running. Reopen it from Sessions.`)
   }
   return (
-    <div className="flex h-12 shrink-0 items-center gap-1 border-b border-line px-2">
-      <div className="flex min-w-0 flex-1 gap-1 overflow-x-auto">
+    <div className="flex h-11 shrink-0 items-center gap-1 border-b border-line pr-2">
+      <div className="flex h-full min-w-0 flex-1 overflow-x-auto">
         {tabs.map((t) => (
           <div key={t.key} onClick={() => select(t.key)} title={t.session || t.title}
-            className={`flex h-9 max-w-[220px] min-w-[120px] shrink-0 items-center gap-2 rounded-md pr-1 pl-3 ${
-              t.key === current ? 'bg-selected' : 'hover:bg-hover'}`}>
+            className={`flex h-full max-w-[220px] min-w-[120px] shrink-0 items-center gap-2 border-b-2 pr-1 pl-3 ${
+              t.key === current ? 'border-accent font-semibold' : 'border-transparent text-dim hover:bg-hover'}`}>
             <SessionIcon session={t.session} />
             <span className={`min-w-0 flex-1 truncate ${t.ended ? 'text-dim' : ''}`}>{t.title}</span>
             <button aria-label="Close" title={t.session ? 'Close (keeps running)' : 'Close'}
               onClick={(e) => { e.stopPropagation(); shut(t) }}
-              className="grid size-6 shrink-0 place-items-center rounded-full hover:bg-hover"><X size={14} /></button>
+              className="grid size-6 shrink-0 place-items-center rounded text-dim hover:bg-hover hover:text-text">
+              <X size={14} /></button>
           </div>
         ))}
       </div>
