@@ -406,7 +406,7 @@ export function Code() {
       {confirm && (
         <ConfirmSheet title={confirm.kind === 'close' ? `Close ${confirm.file.name}?` : `Reload ${confirm.file.name}?`}
           text={confirm.kind === 'close' ? "Your edits aren't saved. They'll be lost." : `Your edits are replaced by the version on ${clusterName(confirm.file.cluster)}.`}
-          confirm={confirm.kind === 'close' ? 'Close without saving' : 'Reload'} danger onClose={() => setConfirm(null)}
+          keep="Keep editing" confirm={confirm.kind === 'close' ? 'Close without saving' : 'Reload'} danger onClose={() => setConfirm(null)}
           onConfirm={() => {
             const file = confirm.file
             void discardDraft(file.cluster, file.path)

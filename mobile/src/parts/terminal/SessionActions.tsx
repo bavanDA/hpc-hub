@@ -30,7 +30,7 @@ export function SessionActions({ target, onClose, onChanged, detach }:
   if (step === 'color') return <ColorSheet onClose={onClose}
     onPick={(color) => run('terminals.set_color', { color }, () => update(key, { color }))} />
   if (step === 'stop') return (
-    <ConfirmSheet title={`Stop ${target.title}?`} danger confirm="Stop session" onClose={onClose}
+    <ConfirmSheet title={`Stop ${target.title}?`} danger keep="Keep it running" confirm="Stop session" onClose={onClose}
       text="Everything running in it ends, like an agent or a build."
       onConfirm={() => { if (getTab(key)) close(key); run('terminals.stop', { kind: target.kind }) }} />
   )

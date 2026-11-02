@@ -266,7 +266,7 @@ export function FilesManager() {
         value={dialog.entry.name} confirm="Rename" onClose={close}
         onSubmit={(n) => call('files.rename', { cluster: id, path: full(dialog.entry), name: n })
           .then(() => { toast(`Renamed to ${n}`); reload() }).catch(failed('rename it'))} />}
-      {dialog?.kind === 'delete' && <ConfirmSheet danger confirm="Delete" title={`Delete ${dialog.entry.name}?`}
+      {dialog?.kind === 'delete' && <ConfirmSheet danger keep="Keep it" confirm="Delete" title={`Delete ${dialog.entry.name}?`}
         text={`It's gone from ${name} for good. There's no trash to get it back from.`} onClose={close}
         onConfirm={() => call('files.delete', { cluster: id, path: full(dialog.entry) })
           .then(() => { toast(`Deleted ${dialog.entry.name}`); reload() }).catch(failed('delete it'))} />}

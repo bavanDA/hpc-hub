@@ -94,7 +94,7 @@ export function FilesSheet({ entries, current, main, actions, onClose }: { entri
       {ask?.kind === 'rename' && <PromptSheet title={`Rename ${basename(ask.entry.path)}`} label="New name"
         value={basename(ask.entry.path)} confirm="Rename" onClose={done}
         onSubmit={(name) => actions.rename(ask.entry.path, name)} />}
-      {ask?.kind === 'delete' && <ConfirmSheet title={`Delete ${basename(ask.entry.path)}?`} confirm="Delete" danger
+      {ask?.kind === 'delete' && <ConfirmSheet title={`Delete ${basename(ask.entry.path)}?`} keep="Keep it" confirm="Delete" danger
         text={ask.entry.kind === 'd' ? 'The folder and everything in it are removed from the cluster. There is no trash.'
           : 'It is removed from the cluster. There is no trash.'}
         onConfirm={() => actions.remove(ask.entry.path)} onClose={done} />}

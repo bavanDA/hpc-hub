@@ -124,7 +124,7 @@ function Flow({ id, name, full }: { id: string; name: string; full: string }) {
       {(main || second) && (
         <footer className="order-3 flex shrink-0 gap-3 border-t border-line bg-window px-4 py-3">{second}{main}</footer>
       )}
-      {stopping && <ConfirmSheet title={copying.stopTitle} text={copying.stopText} confirm={copying.stop}
+      {stopping && <ConfirmSheet title={copying.stopTitle} text={copying.stopText} keep="Keep copying" confirm={copying.stop}
         onConfirm={b.stopCopy} onClose={() => setStopping(false)} />}
       {remind && <RemindersSheet value={remind === 'on' && b.reminders ? { ...b.reminders, enabled: true } : b.reminders}
         onClose={() => setRemind('')} onSave={(r) => { b.setReminders(r); setRemind('') }} />}

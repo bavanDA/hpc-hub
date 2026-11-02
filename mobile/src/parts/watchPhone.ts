@@ -177,7 +177,7 @@ export function PhoneWatch() {
 
   if (!explain) return null
   return createElement(ConfirmSheet, {
-    title: 'Get notifications?', text: EXPLAIN, confirm: 'Allow',
+    title: 'Get notifications?', text: EXPLAIN, keep: 'Not now', confirm: 'Allow',
     onConfirm: () => { askForNotifications().catch(() => {}) },
     onClose: () => { setExplain(false); setPhonePrefs({ asked: true }) },
   })

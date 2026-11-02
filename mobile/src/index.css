@@ -38,3 +38,53 @@ body { font-size: 16px; }
 /* Room for the status bar and the gesture bar: the app draws under them (edge to edge) */
 :root { --top: env(safe-area-inset-top, 0px); --bottom: env(safe-area-inset-bottom, 0px); }
 .safe { padding-top: var(--top); padding-bottom: var(--bottom); }
+
+/* Style E, the owner's pick (docs/design/style-e): black and white rows. Plain background, hairlines, greys for
+   everything that isn't the main action; the accent is black on light and white on dark, only for the main button
+   and the current choice. Red stays for errors and destructive buttons. The desktop keeps its own look. */
+@theme { --color-on-accent: #ffffff; --color-soft: #f4f4f4; }
+:root {
+  --color-window: #ffffff;  --color-header: #ffffff;  --color-sidebar: #f4f4f4;
+  --color-card: #ffffff;    --color-view: #ffffff;    --color-raised: #ffffff;
+  --color-inset: #f4f4f4;   --color-control: #f4f4f4; --color-soft: #f4f4f4;
+  --color-hover: rgb(0 0 0 / 0.04);  --color-pressed: rgb(0 0 0 / 0.07);  --color-selected: rgb(0 0 0 / 0.06);
+  --color-line: #e6e6e6;    --color-line-strong: #d4d4d4;  --color-scrim: rgb(0 0 0 / 0.40);
+  --color-text: #0a0a0a;    --color-dim: #6b6b6b;     --color-faint: #9a9a9a;
+  --color-accent: #0a0a0a;  --color-accent-hover: #262626;  --color-accent-pressed: #333333;
+  --color-on-accent: #ffffff;
+  --color-accent-text: #0a0a0a;  --color-accent-soft: #f4f4f4;  --color-focus: #0a0a0a;
+  --color-ok: #0a0a0a;      --color-ok-bg: #f4f4f4;   --color-ok-dot: #0a0a0a;
+  --color-warn: #0a0a0a;    --color-warn-bg: #f4f4f4; --color-warn-dot: #6b6b6b;
+  --color-bad: #b42318;     --color-bad-bg: rgb(180 35 24 / 0.08);  --color-bad-dot: #b42318;
+  --color-bad-fill: #b42318;
+  --color-pill: #f4f4f4;    --color-orange: #0a0a0a;
+  --shadow-card: none;
+  --shadow-menu: 0 0 0 1px #e6e6e6, 0 8px 24px -8px rgb(0 0 0 / 0.16);
+  --shadow-dialog: 0 0 0 1px #e6e6e6;
+  --font-sans: "Inter", "Adwaita Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+:root[data-theme="dark"] {
+  --color-window: #0b0b0b;  --color-header: #0b0b0b;  --color-sidebar: #171717;
+  --color-card: #0b0b0b;    --color-view: #0b0b0b;    --color-raised: #171717;
+  --color-inset: #171717;   --color-control: #171717; --color-soft: #171717;
+  --color-hover: rgb(255 255 255 / 0.05);  --color-pressed: rgb(255 255 255 / 0.09);
+  --color-selected: rgb(255 255 255 / 0.08);
+  --color-line: #232323;    --color-line-strong: #333333;  --color-scrim: rgb(0 0 0 / 0.60);
+  --color-text: #f2f2f2;    --color-dim: #8f8f8f;     --color-faint: #6a6a6a;
+  --color-accent: #f2f2f2;  --color-accent-hover: #dcdcdc;  --color-accent-pressed: #c8c8c8;
+  --color-on-accent: #0b0b0b;
+  --color-accent-text: #f2f2f2;  --color-accent-soft: #171717;  --color-focus: #f2f2f2;
+  --color-ok: #f2f2f2;      --color-ok-bg: #171717;   --color-ok-dot: #f2f2f2;
+  --color-warn: #f2f2f2;    --color-warn-bg: #171717; --color-warn-dot: #8f8f8f;
+  --color-bad: #ff8577;     --color-bad-bg: rgb(255 133 119 / 0.12);  --color-bad-dot: #ff8577;
+  --color-bad-fill: #c4281c;
+  --color-pill: #171717;    --color-orange: #f2f2f2;
+  --shadow-card: none;
+  --shadow-menu: 0 0 0 1px #333333, 0 8px 24px -8px rgb(0 0 0 / 0.6);
+  --shadow-dialog: 0 0 0 1px #333333;
+}
+body { font-feature-settings: "tnum" 1; }
+
+/* Shared desktop pieces still say "bg-accent text-white": on dark the accent is white, so their text follows the
+   accent instead. Phone code says text-on-accent. */
+.bg-accent.text-white { color: var(--color-on-accent); }

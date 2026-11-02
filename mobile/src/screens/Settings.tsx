@@ -133,10 +133,10 @@ export function Settings() {
           </Card>
         </>}
       </div>
-      {explain && <ConfirmSheet title="Get notifications?" text={EXPLAIN} confirm="Allow" onConfirm={allow}
+      {explain && <ConfirmSheet title="Get notifications?" text={EXPLAIN} keep="Not now" confirm="Allow" onConfirm={allow}
         onClose={() => setExplain(false)} />}
-      {confirm && <ConfirmSheet title="Disconnect all clusters?" danger confirm="Disconnect all"
-        text="Your compute nodes started by HPC Hub end. Sessions in tmux keep running on the clusters."
+      {confirm && <ConfirmSheet title="Disconnect all clusters?" danger keep="Stay connected" confirm="Disconnect all"
+        text="Nodes HPC Hub got for you are released. Your terminal sessions keep running."
         onConfirm={disconnectAll} onClose={() => setConfirm(false)} />}
     </div>
   )

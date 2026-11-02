@@ -107,7 +107,7 @@ export function Scheduled() {
           onClose={() => setOpen(null)} onSaved={(l, n) => { setOpen(null); setList(l); toast(`Saved ${n}`) }} />
       )}
       {open?.kind === 'delete' && (
-        <ConfirmSheet title={`Delete ${open.st.name}?`} danger confirm="Delete" onClose={() => setOpen(null)}
+        <ConfirmSheet title={`Delete ${open.st.name}?`} danger keep="Keep it" confirm="Delete" onClose={() => setOpen(null)}
           text="It stops running, and its task and logs are removed from the cluster."
           onConfirm={() => act(open.st, 'schedules.delete', {}, () => `Deleted ${open.st.name}`)} />
       )}

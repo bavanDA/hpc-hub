@@ -174,7 +174,7 @@ export function ClusterCard({ cluster: c, session: s, log }: { cluster: Cluster;
 
       <LogView lines={log} />
 
-      {open === 'release' && <ConfirmSheet title={`Release node ${s.node}?`} danger confirm="Release node"
+      {open === 'release' && <ConfirmSheet title={`Release node ${s.node}?`} danger keep="Keep it" confirm="Release node"
         text={`Job ${s.job} ends and the node goes back to the cluster. Anything running there stops. `
           + 'You stay connected, and your files stay where they are.'}
         onConfirm={() => { close(); run('clusters.release_node') }} onClose={close} />}

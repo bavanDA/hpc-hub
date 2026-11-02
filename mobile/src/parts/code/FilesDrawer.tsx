@@ -157,7 +157,7 @@ export function FilesDrawer({ start, onOpen, onClose }: Props) {
       )}
       {dialog?.kind === 'delete' && (
         <ConfirmSheet title={`Delete ${dialog.entry.name}?`} text="There's no trash on the cluster, so it's gone for good."
-          confirm="Delete" danger onClose={() => setDialog(null)}
+          keep="Keep it" confirm="Delete" danger onClose={() => setDialog(null)}
           onConfirm={() => act(call('files.delete', { cluster, path: join(here, dialog.entry.name) }), 'Deleted')} />
       )}
     </Sheet>

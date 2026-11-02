@@ -94,7 +94,7 @@ export function Skills() {
       {fromGit && list && <FromGitSheet cluster={cluster} targets={list.targets} repo={list.default_repo}
         onClose={() => setFromGit(false)} onDone={load} />}
       {removing && (
-        <ConfirmSheet title={`Remove ${removing.name}?`} danger confirm="Remove" onClose={() => setRemoving(null)}
+        <ConfirmSheet title={`Remove ${removing.name}?`} danger keep="Keep it" confirm="Remove" onClose={() => setRemoving(null)}
           text={`${label(removing.target)} no longer has it on ${list?.name ?? 'this cluster'}. Its folder is deleted.`}
           onConfirm={() => remove(removing)} />
       )}

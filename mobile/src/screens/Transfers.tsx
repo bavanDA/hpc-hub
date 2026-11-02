@@ -137,7 +137,7 @@ function Globus() {
       {choosing && <CollectionSheet cluster={choosing} onClose={() => setChoosing(null)}
         onPicked={(s) => { setStatus(s); setChoosing(null); setStamp((n) => n + 1) }} />}
       {login && <SignInSheet start={login} onClose={() => setLogin(null)} onDone={signedInNow} />}
-      {cancel && <ConfirmSheet danger confirm="Cancel transfer" title={`Cancel ${cancel.label.replace(/^HPC Hub /, '')}?`}
+      {cancel && <ConfirmSheet danger keep="Keep copying" confirm="Stop copy" title={`Stop ${cancel.label.replace(/^HPC Hub /, '')}?`}
         text="Globus stops copying. Files already copied stay where they are." onClose={() => setCancel(null)}
         onConfirm={() => doCancel(cancel)} />}
     </>

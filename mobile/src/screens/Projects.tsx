@@ -101,7 +101,7 @@ export function Projects() {
       )}
       {open?.kind === 'remove' && (
         <ConfirmSheet title={`Remove ${open.p.name}?`} text="Only from this list. The folder on the cluster stays."
-          confirm="Remove" danger onConfirm={() => remove(open.p)} onClose={close} />
+          keep="Keep it" confirm="Remove" danger onConfirm={() => remove(open.p)} onClose={close} />
       )}
     </div>
   )

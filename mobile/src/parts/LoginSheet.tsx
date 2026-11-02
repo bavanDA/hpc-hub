@@ -78,7 +78,7 @@ export function LoginSheet({ cluster: c, hint, onClose }: { cluster: Cluster; hi
       {saved?.ssh.password && <button onClick={() => setAsk('forget')}
         className="mt-4 block h-11 font-semibold text-bad">{copy.forget}</button>}
       {ask === 'forget' && <ConfirmSheet title={copy.forgetTitle(c)} text={copy.forgetBody(label)} confirm={copy.forget}
-        danger onConfirm={forget} onClose={() => setAsk('')} />}
+        keep="Keep it" danger onConfirm={forget} onClose={() => setAsk('')} />}
     </Sheet>
   )
 }
