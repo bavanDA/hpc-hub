@@ -11,7 +11,7 @@ function state(t: Task): [string, 'ok' | 'bad' | 'warn' | 'dim'] {
   if (t.status === 'FAILED') return [t.cancelled ? 'Cancelled' : 'Failed', t.cancelled ? 'dim' : 'bad']
   if (t.problem) return [t.problem.replace(/_/g, ' ').toLowerCase().replace(/^./, (c) => c.toUpperCase()), 'warn']
   if (t.status === 'INACTIVE') return ['Paused', 'warn']
-  return ['Running', 'dim']
+  return ['Running', 'ok']
 }
 
 /** Why a transfer failed, in words: Globus' problem code, else its status line. */
@@ -23,7 +23,7 @@ function Icon({ t }: { t: Task }) {
   if (t.status === 'FAILED') {
     return <CircleX size={20} className={`shrink-0 ${t.cancelled ? 'text-dim' : 'text-bad'}`} />
   }
-  if (t.status === 'INACTIVE') return <Pause size={20} className="shrink-0 text-warn" />
+  if (t.status === 'INACTIVE') return <Pause size={20} className="shrink-0 text-dim" />
   return <Loader2 size={20} className="shrink-0 animate-spin text-dim" />
 }
 
@@ -46,7 +46,7 @@ function TaskRow({ t, onCancel, names }:
   const failed = t.status === 'FAILED' && !t.cancelled
   return (
     <Row prefix={<Icon t={t} />}
-      title={<span className="font-semibold">{t.label.replace(/^HPC Hub /, '')}</span>}
+      title={<span className="font-medium">{t.label.replace(/^HPC Hub /, '')}</span>}
       subtitle={<>
         <span>{names[t.source] ?? t.source} → {names[t.destination] ?? t.destination}</span>
         <span className="block">{failed ? `Failed: ${reason(t)}`
@@ -67,11 +67,11 @@ export function Transfers({ tasks, error, onRefresh, onCancel, names = {} }:
     names?: Record<string, string> }) {  // names: Globus collection name -> the app's cluster name
   return (
     <div className="flex min-h-0 flex-col gap-2">
-      <div className="flex items-center gap-2 px-1">
-        <h2 className="flex-1 font-semibold">Recent transfers</h2>
-        <IconButton icon={RefreshCw} label="Refresh" size={16} onClick={onRefresh} />
+      <div className="flex items-center gap-2">
+        <h2 className="flex-1 text-xs font-semibold tracking-wide text-dim uppercase">Recent transfers</h2>
+        <IconButton icon={RefreshCw} label="Refresh" size={16} small onClick={onRefresh} />
       </div>
-      <div className="max-h-[168px] min-h-0 overflow-auto rounded-xl">
+      <div className="max-h-[168px] min-h-0 overflow-auto">
         <List>
           {error ? <p className="p-4 text-center text-sm text-bad">{error}</p>
             : !tasks?.length ? <p className="p-4 text-center text-dim">{tasks ? 'No transfers yet' : 'Loading…'}</p>

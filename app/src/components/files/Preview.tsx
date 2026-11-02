@@ -48,8 +48,9 @@ export function Preview({ cluster, dir, entry, onOpen, onEdit }:
           : <Content data={now.data!} />}
       </div>
       <div className="flex gap-2 border-t border-line p-3">
-        <Button className="flex-1" onClick={onOpen}><ExternalLink size={16} /> Open</Button>
-        {isText(entry) && <Button className="flex-1" onClick={onEdit}><Pencil size={16} /> Edit</Button>}
+        <Button className="flex-1" onClick={onOpen}><ExternalLink size={16} className="text-dim" /> Open</Button>
+        {isText(entry) && <Button className="flex-1" onClick={onEdit}><Pencil size={16} className="text-dim" /> Edit
+        </Button>}
       </div>
     </aside>
   )
@@ -94,7 +95,7 @@ function Placeholder({ entry, onOpen }: { entry: Entry; onOpen: () => void }) {
   const k = kind(entry)
   if (k === 'pdf') {
     return <Note icon={FileType} title="Big PDF" text="Too big to preview here. Open it to read it."
-      action={<Button kind="suggested" onClick={onOpen}>Open</Button>} />
+      action={<Button kind="primary" onClick={onOpen}>Open</Button>} />
   }
   if (k === 'image') return <Note icon={ImageOff} title="Too big to preview" text="Open it to see it." />
   return <Note icon={FileQuestion} title="No preview" text="No preview for this type of file." />

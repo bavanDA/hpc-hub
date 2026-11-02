@@ -48,7 +48,7 @@ export function FileTable({ entries, sort, onSort, selected, onSelect, onOpen, o
 
   return (
     <div className="flex min-h-0 flex-1 flex-col outline-none" tabIndex={0} onKeyDown={key}>
-      <div className="flex h-9 shrink-0 items-center gap-4 border-b border-line px-4 text-sm font-semibold text-dim">
+      <div className="flex h-9 shrink-0 items-center gap-4 border-b border-line px-4 text-xs font-semibold text-dim">
         <div className="w-5" />
         {COLUMNS.map(([k, title, cls]) => (
           <button key={k} onClick={() => onSort({ key: k, desc: sort.key === k ? !sort.desc : false })}
@@ -58,7 +58,7 @@ export function FileTable({ entries, sort, onSort, selected, onSelect, onOpen, o
           </button>
         ))}
       </div>
-      <div ref={body} className="min-h-0 flex-1 overflow-auto py-1" onClick={() => onSelect(null)}
+      <div ref={body} className="min-h-0 flex-1 overflow-auto" onClick={() => onSelect(null)}
         onContextMenu={(ev) => menu(ev, null)}>
         {entries.map((e) => {
           const on = e.name === selected
@@ -66,8 +66,8 @@ export function FileTable({ entries, sort, onSort, selected, onSelect, onOpen, o
             <div key={e.name} data-selected={on}
               onClick={(ev) => { ev.stopPropagation(); onSelect(e.name) }}
               onDoubleClick={() => onOpen(e)} onContextMenu={(ev) => menu(ev, e)}
-              className={`mx-1.5 flex h-10 items-center gap-4 rounded-md px-2.5 ${
-                on ? 'bg-accent/20 dark:bg-accent/30' : 'hover:bg-hover'}`}>
+              className={`flex h-11 items-center gap-4 border-b border-line px-4 ${
+                on ? 'bg-selected' : 'hover:bg-hover'}`}>
               <FileIcon entry={e} />
               <span className="min-w-0 flex-1 truncate">{e.name}</span>
               <span className="w-24 text-right text-sm tabular-nums text-dim">{isDir(e) ? '' : size(e.size)}</span>

@@ -9,8 +9,8 @@ const REDIRECT = 'https://auth.globus.org/v2/web/auth-code'
 
 export function Field({ className = '', ...props }: InputHTMLAttributes<HTMLInputElement>) {
   return <input {...props} spellCheck={false}
-    className={`h-9 min-w-0 rounded-md bg-pill px-3 outline-none placeholder:text-dim focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus ${
-      className}`} />
+    className={`h-9 min-w-0 rounded-lg border border-line-strong bg-window px-3 outline-none placeholder:text-faint
+      focus:border-accent focus:ring-1 focus:ring-accent ${className}`} />
 }
 
 /** Like GLib.format_size: 12 bytes, 2.0 kB, 1.5 MB. */

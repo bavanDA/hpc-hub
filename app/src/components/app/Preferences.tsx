@@ -2,12 +2,12 @@
 import { useEffect, useState } from 'react'
 
 import { call } from '../../rpc'
-import { ActionRow, Group, SwitchRow } from '../clusters/fields'
+import { EDialog, Row, Section, ToggleRow } from '../e/ui'
 import { Select } from '../jobs/Select'
 import { setMonitorBar } from '../terminals/MonitorBar'
 import { setSelectToCopy } from '../terminals/xterm'
 import { useToast } from '../toast'
-import { Dialog, Row, Spinner } from '../ui'
+import { Spinner } from '../ui'
 import { AppearanceGroup } from './Appearance'
 import { forgetProfiles, getProfiles } from './openLink'
 import type { Preferences, Profiles } from './types'
@@ -41,19 +41,19 @@ export function PreferencesDialog({ onClose, onExperimental }:
   const options: [string, string][] = [['', 'System browser'],
     ...profiles.map((p): [string, string] => [p.name, `Chrome: ${p.name}${p.email ? ` (${p.email})` : ''}`])]
   return (
-    <Dialog title="Settings" onClose={onClose} width={560}>
+    <EDialog title="Settings" onClose={onClose} width={560}>
       {!prefs || !found ? <div className="grid h-40 place-items-center"><Spinner size={24} /></div> : <>
         <AppearanceGroup value={prefs.appearance} onChange={(appearance) => save({ appearance })} />
-        <Group title="Links" description="Links open in this browser. You can pick another each time.">
-          <ActionRow label={<span className="whitespace-nowrap">Default for links</span>}>
+        <Section title="Links" note="Links open in this browser. You can pick another each time.">
+          <Row label={<span className="whitespace-nowrap">Default for links</span>}>
             <Select label="Default for links" value={current} options={options}
               onChange={(v) => save({ browser_profile: v })} disabled={!profiles.length} />
-          </ActionRow>
-          {!profiles.length && <Row title="No Chrome profiles found" subtitle="Install Google Chrome to pick a profile." />}
-        </Group>
-        {setup && <Group title="Clusters" description="The ones you use. The others are hidden, their settings kept.">
+          </Row>
+          {!profiles.length && <Row label="No Chrome profiles found" sub="Install Google Chrome to pick a profile." />}
+        </Section>
+        {setup && <Section title="Clusters" note="The ones you use. The others are hidden, their settings kept.">
           {setup.choices.map((c) => (
-            <SwitchRow key={c.id} label={c.name} sub={university(c) && !c.name.includes(university(c)) ? university(c) : undefined} checked={setup.chosen.includes(c.id)}
+            <ToggleRow key={c.id} label={c.name} sub={university(c) && !c.name.includes(university(c)) ? university(c) : undefined} checked={setup.chosen.includes(c.id)}
               onChange={(on) => {
                 const ids = setup.choices.map((x) => x.id)
                   .filter((id) => id === c.id ? on : setup.chosen.includes(id))
@@ -61,20 +61,21 @@ export function PreferencesDialog({ onClose, onExperimental }:
                   .catch((e: Error) => toast(e.message))
               }} />
           ))}
-        </Group>}
-        <Group title="Terminals">
-          <SwitchRow label="Select to copy"
+        </Section>}
+        <Section title="Terminals">
+          <ToggleRow label="Select to copy"
             sub="Highlight text with the mouse to copy it."
             checked={prefs.select_to_copy} onChange={(on) => save({ select_to_copy: on })} />
-          <SwitchRow label="Monitoring bar"
+          <ToggleRow label="Monitoring bar"
             sub="CPU, memory and network of the host, under each terminal."
             checked={prefs.monitor_bar} onChange={(on) => save({ monitor_bar: on })} />
-        </Group>
-        <Group title="Experimental">
-          <SwitchRow label="Experimental features" sub="Papers, and the Scheduled and Skills tabs of Agents. They may change or break."
+        </Section>
+        <Section title="Experimental">
+          <ToggleRow label="Experimental features" sub="Papers, and the Scheduled and Skills tabs of Agents. They may change or break."
             checked={prefs.experimental} onChange={(on) => save({ experimental: on })} />
-        </Group>
+        </Section>
+        <div className="h-3" />
       </>}
-    </Dialog>
+    </EDialog>
   )
 }

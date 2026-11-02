@@ -11,7 +11,8 @@ import { close, getTab, tabKey, update } from './tabs'
 /** What the menu acts on: a listed session, or an open tab's. */
 export type Target = { cluster: string; name: string; kind: 'tmux' | 'screen'; node: string; title: string }
 
-export const inputClass = 'h-10 w-full rounded-md bg-pill px-3 outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus'
+export const inputClass = 'h-10 w-full rounded-lg border border-line-strong bg-window px-3 outline-none '
+  + 'focus:border-accent focus:ring-1 focus:ring-accent'
 
 export function SessionMenu({ target, onChanged }: { target: Target; onChanged: () => void }) {
   const toast = useToast()
@@ -69,7 +70,7 @@ function RenameDialog({ target, onClose, onRename }:
   return (
     <Dialog title="Rename session" onClose={onClose} width={400} actions={<>
       <Button onClick={onClose}>Cancel</Button>
-      <Button kind="suggested" disabled={!ok} onClick={done}>Rename</Button>
+      <Button kind="primary" disabled={!ok} onClick={done}>Rename</Button>
     </>}>
       <p className="mb-3 text-sm text-dim">{target.name}</p>
       <input autoFocus value={label} onChange={(e) => setLabel(e.target.value)} className={inputClass}

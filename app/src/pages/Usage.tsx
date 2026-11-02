@@ -1,11 +1,12 @@
 // Usage: SU per person in your account, storage quotas and how busy the cluster is.
-import { CircleAlert, Coins, Cpu, HardDrive, RefreshCw } from 'lucide-react'
+import { CircleAlert, RefreshCw } from 'lucide-react'
 import { useState } from 'react'
 
 import { NotConnected } from '../components/clusters/NotConnected'
+import { Segments } from '../components/e/ui'
 import { useClusters } from '../components/jobs/clusters'
 import { Select } from '../components/jobs/Select'
-import { EmptyState, Spinner } from '../components/ui'
+import { EmptyState, IconButton, Spinner } from '../components/ui'
 import { LoadTab } from '../components/usage/LoadTab'
 import { StorageTab } from '../components/usage/StorageTab'
 import { SuTab } from '../components/usage/SuTab'
@@ -15,7 +16,7 @@ import type { Account, Partition, People, Storage } from '../types/usage'
 
 const PERIODS = [['7', 'Last 7 days'], ['30', 'Last 30 days'], ['90', 'Last 90 days'], ['365', 'Last year']] as const
 type Tab = 'su' | 'storage' | 'load'
-const TABS = [['su', 'Hours', Coins], ['storage', 'Storage', HardDrive], ['load', 'Queues', Cpu]] as const
+const TABS = [['su', 'Hours'], ['storage', 'Storage'], ['load', 'Queues']] as const
 
 export function Usage() {
   const { clusters, cluster, session, connected, error: clustersError } = useClusters()
@@ -49,7 +50,7 @@ export function Usage() {
   }
   else if (!accounts.data) body = <div className="grid h-full place-items-center"><Spinner size={24} /></div>
   else body = (
-    <div className="mx-auto flex max-w-[900px] flex-col gap-6 px-4 pt-3 pb-6">
+    <div className="mx-auto flex max-w-[900px] flex-col gap-6 px-4 pt-2 pb-6">
       {tab === 'su' && <SuTab account={account} people={people.data} error={people.error} loading={people.loading}
         period={PERIODS.find(([d]) => d === days)![1]}
         onPerson={(user) => go('jobs', { cluster: cluster.id, user })} />}
@@ -61,25 +62,15 @@ export function Usage() {
 
   return (
     <div className="flex h-full flex-col">
-      {!off && <div className="flex shrink-0 items-center gap-2 p-3">
+      {!off && <div className="flex shrink-0 items-center gap-2 px-4 py-3">
+        <div className="mr-2 w-[300px] shrink-0">
+          <Segments label="Show" value={tab} onChange={setTab} options={TABS} /></div>
         {tab !== 'load' && <Select label="Group to bill" value={name} onChange={setPick} disabled={!list.length}
           options={list.length ? list.map((a) => [a.account, a.account] as const) : [['', '(no account)'] as const]} />}
         {tab === 'su' && <Select label="Period" value={days} onChange={setDays} options={PERIODS} />}
-        <div className="flex flex-1 justify-center">
-          <div role="tablist" className="inline-flex rounded-lg bg-pill p-0.5">
-            {TABS.map(([key, title, Icon]) => (
-              <button key={key} role="tab" aria-selected={tab === key} onClick={() => setTab(key)}
-                className={`flex h-8 items-center gap-2 rounded-md px-4 font-semibold ${
-                  tab === key ? 'bg-card shadow-[var(--shadow-card)]' : 'text-dim hover:text-text'}`}>
-                <Icon size={16} />{title}
-              </button>
-            ))}
-          </div>
-        </div>
-        <button aria-label="Refresh" title="Refresh" onClick={() => setTick(tick + 1)} disabled={!connected}
-          className="grid size-9 shrink-0 place-items-center rounded-md bg-pill hover:bg-selected disabled:opacity-50">
-          <RefreshCw size={16} className={loading && accounts.data ? 'animate-spin' : ''} />
-        </button>
+        <span className="flex-1" />
+        {loading && accounts.data ? <span className="grid size-9 shrink-0 place-items-center"><Spinner /></span>
+          : <IconButton icon={RefreshCw} label="Refresh" onClick={() => setTick(tick + 1)} disabled={!connected} />}
       </div>}
       <div className="min-h-0 flex-1 overflow-auto scheme-light-dark">{body}</div>
     </div>

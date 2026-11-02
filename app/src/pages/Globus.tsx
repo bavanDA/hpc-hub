@@ -128,10 +128,10 @@ export function Globus() {
         <Pane pane={left} clusters={status.clusters} onChoose={setPicking} onStart={startPersonal}
           onConsent={() => setLogin('globus.consent_url')} />
         <div className="flex shrink-0 flex-col items-center justify-center gap-2">
-          <Button kind={left.selected ? 'suggested' : 'pill'} disabled={!left.selected} title="Send the selected item"
+          <Button kind={left.selected ? 'primary' : 'secondary'} disabled={!left.selected} title="Send the selected item"
             onClick={() => transfer(left, right)}>Transfer<ArrowRight size={16} /></Button>
-          <Button kind={right.selected ? 'suggested' : 'pill'} disabled={!right.selected} title="Send the selected item"
-            onClick={() => transfer(right, left)}><ArrowLeft size={16} />Transfer</Button>
+          <Button kind={right.selected ? 'primary' : 'secondary'} disabled={!right.selected}
+            title="Send the selected item" onClick={() => transfer(right, left)}><ArrowLeft size={16} />Transfer</Button>
         </div>
         <Pane pane={right} clusters={status.clusters} onChoose={setPicking} onStart={startPersonal}
           onConsent={() => setLogin('globus.consent_url')} />

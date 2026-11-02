@@ -1,9 +1,10 @@
 // Above the table: Up / Home / Refresh / New folder, the path you can type into, and the places. The cluster is
 // picked in the header (clusters/ClusterPicker.tsx).
-import { ArrowUp, FolderPlus, HardDrive, House, PanelRight, RefreshCw, Upload, Zap } from 'lucide-react'
+import { ArrowUp, FolderPlus, House, PanelRight, RefreshCw, Upload } from 'lucide-react'
 import { useState } from 'react'
 
 import type { Place } from '../../types/files'
+import { Segments } from '../e/ui'
 import { IconButton, Spinner } from '../ui'
 
 type Props = {
@@ -44,30 +45,23 @@ export function PathBar(p: Props) {
               if (e.key === 'Enter') p.onGo(text.trim())
               if (e.key === 'Escape') { setText(p.path); e.currentTarget.blur() }
             }}
-            className="h-9 w-full rounded-md bg-pill px-3 pr-9 font-mono text-sm outline-none select-text
-              focus:bg-view focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus disabled:opacity-50" />
+            className="h-9 w-full rounded-lg bg-soft px-3 pr-9 font-mono text-sm outline-none select-text
+              focus:ring-1 focus:ring-accent disabled:opacity-50" />
           {p.loading && <span className="absolute right-2.5 top-1/2 -translate-y-1/2"><Spinner size={16} /></span>}
         </div>
         <IconButton icon={FolderPlus} label="New folder" onClick={p.onNewFolder} />
         <IconButton icon={Upload} label="Upload files here" onClick={p.onUpload} />
         <button onClick={p.onPreview} aria-label="Preview" title="Preview a file when you select it"
           aria-pressed={p.preview}
-          className={`grid size-9 place-items-center rounded-full ${p.preview ? 'bg-selected' : 'hover:bg-hover'}`}>
-          <PanelRight size={20} />
+          className={`grid size-9 place-items-center rounded-md ${p.preview ? 'bg-selected text-text'
+            : 'text-dim hover:bg-hover hover:text-text'}`}>
+          <PanelRight size={18} />
         </button>
       </div>
-      {p.connected ? <div className="flex h-11 items-center gap-1.5 overflow-x-auto px-3">
-        {p.places.map((pl) => {
-          const Icon = pl.label === 'Home' ? House : pl.label.startsWith('Scratch') ? Zap : HardDrive
-          const on = pl === here
-          return (
-            <button key={pl.path} onClick={() => p.onGo(pl.path)} title={pl.path}
-              className={`flex h-7 shrink-0 items-center gap-1.5 rounded-full px-3 text-sm font-semibold ${
-                on ? 'bg-accent text-white' : 'bg-pill hover:bg-selected'}`}>
-              <Icon size={14} /> {pl.label}
-            </button>
-          )
-        })}
+      {p.connected ? <div className="flex min-h-12 items-center gap-2 px-3 py-2">
+        {p.places.length > 0 && <div className="min-w-0" style={{ width: p.places.length * 120 }}>
+          <Segments label="Places" value={here?.path ?? ''} onChange={(path) => p.onGo(path)}
+            options={p.places.map((pl) => [pl.path, pl.label] as const)} /></div>}
         <span className="ml-auto shrink-0 pl-2 text-sm text-dim">
           {p.count === null ? '' : p.count === 1 ? '1 item' : `${p.count} items`}
         </span>

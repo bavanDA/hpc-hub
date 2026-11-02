@@ -9,7 +9,7 @@ import { DetailsDialog } from '../components/jobs/DetailsDialog'
 import { sortJobs, stateName, usageText } from '../components/jobs/format'
 import { JobTable, type Sort } from '../components/jobs/JobTable'
 import { Select } from '../components/jobs/Select'
-import { Card, EmptyState, SkeletonRows, Spinner } from '../components/ui'
+import { EmptyState, IconButton, SkeletonRows, Spinner } from '../components/ui'
 import { usePageParams } from '../nav'
 import { call } from '../rpc'
 import type { Job, JobList, Scope } from '../types/jobs'
@@ -82,39 +82,35 @@ export function Jobs() {
   let body
   if (off) body = <NotConnected cluster={cluster} session={session} what="jobs" />
   else if (error) body = <EmptyState icon={CircleAlert} title="Could not load jobs" text={error} />
-  else if (!list) body = <div className="px-3 pb-3"><Card className="overflow-clip"><SkeletonRows rows={6} /></Card></div>
+  else if (!list) body = <SkeletonRows rows={6} height={44} />
   else if (!list.jobs.length) body = <EmptyState icon={ListChecks} title="No jobs" text={NO_JOBS} />
   else if (!shown.length) body = <EmptyState icon={Search} title="No matching jobs" text={NO_MATCH} />
   else body = (
-    <div className="px-3 pb-3">
-      {/* scrolls sideways itself, so the ⋮ column can stay pinned on the right */}
-      <Card className="overflow-x-auto">
-        <JobTable jobs={shown} showUser={scope === 'all' || scope === 'group'} sort={sort} onSort={setSort} onOpen={setOpen}
-          onCancel={setCancel} />
-      </Card>
+    // scrolls sideways itself, so the ⋮ column can stay pinned on the right
+    <div className="overflow-x-auto">
+      <JobTable jobs={shown} showUser={scope === 'all' || scope === 'group'} sort={sort} onSort={setSort} onOpen={setOpen}
+        onCancel={setCancel} />
     </div>
   )
   const usage = list ? usageText(list.accounts) : ''
 
   return (
     <div className="flex h-full flex-col">
-      {!off && <div className="flex shrink-0 items-center gap-2 p-3">
+      {!off && <div className="flex shrink-0 items-center gap-2 px-4 py-3">
         <Select label="Which jobs" value={scope} onChange={setScope} options={SCOPES} />
         <Select label="State" value={state} onChange={setState} options={STATES} />
-        <label className="flex h-9 min-w-0 flex-1 items-center gap-2 rounded-md bg-pill px-3
-          focus-within:ring-2 focus-within:ring-accent">
+        <label className="flex h-9 min-w-0 flex-1 items-center gap-2 rounded-lg bg-soft px-3
+          focus-within:ring-1 focus-within:ring-accent">
           <Search size={16} className="shrink-0 text-dim" />
           <input value={query} onChange={(e) => setQuery(e.target.value)}
-            placeholder="Filter by id, name, person, queue"
+            placeholder="Search id, name, person, queue"
             className="min-w-0 flex-1 bg-transparent outline-none placeholder:text-dim" />
         </label>
-        <button aria-label="Refresh" title="Refresh" onClick={() => refresh()} disabled={!connected || loading}
-          className="grid size-9 shrink-0 place-items-center rounded-md bg-pill hover:bg-selected disabled:opacity-50">
-          <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
-        </button>
+        {loading ? <span className="grid size-9 shrink-0 place-items-center"><Spinner /></span>
+          : <IconButton icon={RefreshCw} label="Refresh" onClick={() => refresh()} disabled={!connected} />}
       </div>}
       <div className="@container min-h-0 flex-1 overflow-auto scheme-light-dark">{body}</div>
-      {!off && !error && <footer className="flex h-11 shrink-0 items-center gap-4 border-t border-line bg-header px-4
+      {!off && !error && <footer className="flex h-11 shrink-0 items-center gap-4 border-t border-line bg-window px-4
         text-sm">
         <span className="shrink-0 text-dim">
           {list ? `${list.jobs.length} jobs · updated ${got.updated}` : 'Loading…'}</span>

@@ -5,8 +5,9 @@ import { useState } from 'react'
 import { call } from '../../rpc'
 import type { LatexCluster, Paper, Picker as PickerData } from '../../types/latex'
 import { shortName } from '../clusters/loginCopy'
+import { Select } from '../jobs/Select'
 import { useToast } from '../toast'
-import { Button, Card, Dialog, Spinner } from '../ui'
+import { Button, Dialog, FIELD, Spinner } from '../ui'
 import { ago, short } from './bits'
 
 export function Picker({ data, onOpen, onReload }:
@@ -56,18 +57,18 @@ export function Picker({ data, onOpen, onReload }:
           <div className="relative">
             <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-dim" />
             <input value={filter} onChange={(e) => setFilter(e.target.value)} placeholder="Find a paper"
-              className="h-9 w-56 rounded-md bg-pill pl-9 pr-3 outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus" />
+              className="h-9 w-56 rounded-lg bg-soft pr-3 pl-9 outline-none focus:ring-1 focus:ring-accent" />
           </div>
-          <Button kind="suggested" onClick={() => setCreating(true)}><Plus size={16} /> New paper</Button>
+          <Button kind="primary" onClick={() => setCreating(true)}><Plus size={16} /> New paper</Button>
         </div>
 
-        <Card className="divide-y divide-line overflow-hidden">
+        <div className="divide-y divide-line border-y border-line">
           {projects.map((p) => (
             <div key={p.id} onClick={() => open(p.cluster, p.main_tex ? `${p.path}/${p.main_tex}` : p.path)}
               className="group flex min-h-[60px] items-center gap-3 px-4 py-2 hover:bg-hover">
-              <div className="grid size-9 shrink-0 place-items-center rounded-lg bg-pill text-dim"><FileText size={20} /></div>
+              <FileText size={20} className="shrink-0 text-dim" />
               <div className="min-w-0 flex-1">
-                <div className="truncate font-semibold">{p.name}</div>
+                <div className="truncate font-medium">{p.name}</div>
                 <div className="truncate text-sm text-dim">
                   {shortName({ name: p.cluster_name })} · {short(p.path)}{p.main_tex ? ` · ${p.main_tex}` : ''}</div>
               </div>
@@ -81,12 +82,12 @@ export function Picker({ data, onOpen, onReload }:
           ))}
           {!projects.length && <p className="px-4 py-6 text-center text-base text-dim">
             {f ? 'No project matches.' : 'No papers yet. Pick one found below, or make a new project.'}</p>}
-        </Card>
+        </div>
 
         <div className="mt-4 flex items-end gap-3">
           <div className="flex-1">
-            <h2 className="text-lg font-semibold">Papers found on the clusters</h2>
-            <p className="text-sm text-dim">
+            <h2 className="text-xs font-semibold tracking-wide text-dim uppercase">Papers found on the clusters</h2>
+            <p className="mt-1 text-sm text-dim">
               {searching ? 'Searching home, project and scratch for .tex files with \\documentclass…'
                 : papers.length ? `${papers.length} folders with a main .tex file, newest first.${
                   Number.isFinite(oldest) ? ` Searched ${ago(oldest)}.` : ''} Open one to add it to your projects.`
@@ -96,7 +97,7 @@ export function Picker({ data, onOpen, onReload }:
             {searching ? <Spinner size={16} /> : <FolderSearch size={16} />} Search</Button>
         </div>
         {found.length > 0 && (
-          <Card className="divide-y divide-line overflow-hidden">
+          <div className="divide-y divide-line border-y border-line">
             {found.slice(0, 40).map((p) => (
               <div key={`${p.cluster}:${p.folder}`} onClick={() => open(p.cluster, `${p.folder}/${p.main}`)}
                 title={`${p.folder}/${p.main}`} className="flex min-h-[56px] items-center gap-3 px-4 py-2 hover:bg-hover">
@@ -110,15 +111,15 @@ export function Picker({ data, onOpen, onReload }:
                 <ChevronRight size={16} className="text-dim" />
               </div>
             ))}
-          </Card>
+          </div>
         )}
 
-        <h2 className="mt-4 text-lg font-semibold">Open a .tex file by path</h2>
+        <h2 className="mt-4 text-xs font-semibold tracking-wide text-dim uppercase">Open a .tex file by path</h2>
         <div className="flex gap-2">
           <ClusterSelect clusters={data.clusters} value={cluster} onChange={setCluster} />
           <input value={path} onChange={(e) => setPath(e.target.value)} placeholder="~/paper/main.tex"
             onKeyDown={(e) => e.key === 'Enter' && path.trim() && open(cluster, path.trim())}
-            className="h-9 flex-1 rounded-md bg-pill px-3 font-mono text-sm outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus" />
+            className={`${FIELD} flex-1 font-mono text-sm`} />
           <Button disabled={!path.trim()} onClick={() => open(cluster, path.trim())}>Open</Button>
         </div>
       </div>
@@ -131,10 +132,8 @@ export function Picker({ data, onOpen, onReload }:
 function ClusterSelect({ clusters, value, onChange }:
   { clusters: LatexCluster[]; value: string; onChange: (id: string) => void }) {
   return (
-    <select value={value} onChange={(e) => onChange(e.target.value)}
-      className="h-9 rounded-md bg-pill px-2 outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus">
-      {clusters.map((c) => <option key={c.id} value={c.id}>{c.name}{c.connected ? '' : ' (not connected)'}</option>)}
-    </select>
+    <Select label="Cluster" value={value} onChange={onChange}
+      options={clusters.map((c) => [c.id, `${c.name}${c.connected ? '' : ' (not connected)'}`] as const)} />
   )
 }
 
@@ -153,11 +152,11 @@ function NewProject({ clusters, start, onClose, onMade }: { clusters: LatexClust
       .then((p) => onMade(cluster, p.main_tex ? `${p.path}/${p.main_tex}` : p.path))
       .catch((e: Error) => { toast(e.message); setBusy(false) })
   }
-  const field = 'h-9 w-full rounded-md bg-pill px-3 outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus'
+  const field = `${FIELD} w-full`
   return (
     <Dialog title="New paper" onClose={onClose} width={440}
       actions={<><Button onClick={onClose}>Cancel</Button>
-        <Button kind="suggested" disabled={!name.trim() || busy} onClick={go}>{busy && <Spinner size={14} />} Create</Button></>}>
+        <Button kind="primary" disabled={!name.trim() || busy} onClick={go}>{busy && <Spinner size={14} />} Create</Button></>}>
       <div className="flex flex-col gap-3 text-base">
         <label className="flex flex-col gap-1"><span className="text-sm text-dim">Name</span>
           <input autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder="my-paper"

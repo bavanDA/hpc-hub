@@ -1,6 +1,5 @@
 // Load: how busy each partition is, CPUs and GPUs in use, jobs running and waiting.
 import type { Partition } from '../../types/usage'
-import { Card } from '../ui'
 import { n, pct } from './format'
 import { Bar, Section } from './parts'
 
@@ -11,12 +10,12 @@ export function LoadTab({ parts, error }: { name?: string; parts: Partition[] | 
   const note = error ? `Could not load: ${error}` : !parts ? 'Loading…'
     : `${n(busy)} of ${n(total)} CPUs busy (${pct(busy, total)}).`
   return (
-    <Section title="Queues" note={note}>
+    <Section note={note}>
       {parts && parts.length > 0 && (
-        <Card className="overflow-x-auto">
+        <div className="overflow-x-auto border-y border-line">
           <table className="w-full border-collapse text-base tabular-nums">
             <thead>
-              <tr className="border-b border-line text-left text-sm whitespace-nowrap text-dim">
+              <tr className="border-b border-line text-left text-xs whitespace-nowrap text-dim">
                 <th className="py-2.5 pr-2 pl-4 font-semibold">Queue</th>
                 <th className="px-2 font-semibold">CPUs busy</th>
                 {gpus && <th className="px-2 text-right font-semibold">GPUs</th>}
@@ -47,7 +46,7 @@ export function LoadTab({ parts, error }: { name?: string; parts: Partition[] | 
               ))}
             </tbody>
           </table>
-        </Card>
+        </div>
       )}
     </Section>
   )

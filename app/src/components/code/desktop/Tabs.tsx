@@ -12,15 +12,16 @@ export function Tabs({ files, current, clusterName, onPick, onClose }: {
 }) {
   const clusters = new Set(files.map((f) => f.cluster))
   return (
-    <div role="tablist" className="flex h-9 shrink-0 items-end gap-0.5 overflow-x-auto border-b border-line bg-window px-1">
+    <div role="tablist" className="flex h-9 shrink-0 items-end overflow-x-auto border-b border-line bg-window px-1">
       {files.map((f) => {
         const on = f.key === current
         const dirty = isDirty(f)
         return (
           <div key={f.key} role="tab" aria-selected={on} title={`${clusterName(f.cluster)}: ${f.path}`}
             onClick={() => onPick(f.key)} onAuxClick={(e) => { if (e.button === 1) onClose(f.key) }}
-            className={`group flex h-8 max-w-[220px] shrink-0 cursor-pointer items-center gap-1.5 rounded-t-md pr-1 pl-3
-              text-sm transition-colors duration-90 ${on ? 'bg-view font-semibold' : 'text-dim hover:bg-hover'}`}>
+            className={`group -mb-px flex h-9 max-w-[220px] shrink-0 cursor-pointer items-center gap-1.5 border-b-2 pr-1
+              pl-3 text-sm transition-colors duration-90 ${on ? 'border-accent font-semibold'
+              : 'border-transparent text-dim hover:bg-hover hover:text-text'}`}>
             <span className="truncate">{f.name}</span>
             {clusters.size > 1 && <span className="shrink-0 text-xs text-dim">{clusterName(f.cluster)}</span>}
             <button type="button" aria-label={`Close ${f.name}`} onClick={(e) => { e.stopPropagation(); onClose(f.key) }}

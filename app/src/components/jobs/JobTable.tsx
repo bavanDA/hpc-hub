@@ -1,4 +1,4 @@
-// The job table: one line per job, sortable columns, the state as a pill, time used as a bar, and a ⋮ menu (details,
+// The job table: one line per job, sortable columns, the state as a dot and a word, time used as a bar, a ⋮ menu (details,
 // cancel) on your own running or waiting jobs, pinned to the right. Cancelling always asks first (CancelDialog).
 // Narrow windows drop the less important columns (container queries) instead of scrolling sideways.
 import { ChevronDown, ChevronUp, MoreVertical } from 'lucide-react'
@@ -31,13 +31,13 @@ export function JobTable({ jobs, showUser, sort, onSort, onOpen, onCancel }: {
   const anyCancel = jobs.some((j) => j.cancellable)
   return (
     <table className="w-full border-collapse text-base tabular-nums">
-      <thead className="sticky top-0 z-10 bg-card shadow-[inset_0_-1px_0_var(--color-line)]">
+      <thead className="sticky top-0 z-10 bg-window shadow-[inset_0_-1px_0_var(--color-line)]">
         <tr className="text-left text-xs font-semibold text-dim">
-          {cols.map((c) => (
+          {cols.map((c, i) => (
             <th key={c.key} aria-sort={sort.key === c.key ? (sort.desc ? 'descending' : 'ascending') : undefined}
               className={`p-0 font-semibold ${c.grow ? 'w-full' : ''} ${c.hide ?? ''}`}>
               <button onClick={() => onSort({ key: c.key, desc: sort.key === c.key ? !sort.desc : c.key === 'id' })}
-                className={`flex h-9 w-full items-center gap-1 px-3 whitespace-nowrap hover:text-text
+                className={`flex h-9 w-full items-center gap-1 px-3 whitespace-nowrap ${i ? '' : 'pl-4'} hover:text-text
                   ${c.right ? 'justify-end' : ''}`}>
                 {c.title}
                 {sort.key === c.key && (sort.desc ? <ChevronDown size={14} /> : <ChevronUp size={14} />)}
@@ -45,7 +45,7 @@ export function JobTable({ jobs, showUser, sort, onSort, onOpen, onCancel }: {
             </th>
           ))}
           {anyCancel && <th aria-label="Actions"
-            className="sticky right-0 w-10 bg-card shadow-[inset_0_-1px_0_var(--color-line)]" />}
+            className="sticky right-0 w-10 bg-window shadow-[inset_0_-1px_0_var(--color-line)]" />}
         </tr>
       </thead>
       <tbody>
@@ -83,13 +83,13 @@ function JobRow({ job: j, cols, anyCancel, onOpen, onCancel }: {
   }
   return (
     <tr onClick={onOpen} title="Show details"
-      className="group h-10 cursor-default border-b border-line last:border-0 hover:bg-hover">
+      className="group h-11 cursor-default border-b border-line hover:bg-hover">
       {cols.map((c) => (
-        <td key={c.key} className={`px-3 whitespace-nowrap ${c.right ? 'text-right' : ''}
+        <td key={c.key} className={`px-3 whitespace-nowrap first:pl-4 ${c.right ? 'text-right' : ''}
           ${c.grow ? 'max-w-0 min-w-[160px]' : ''} ${c.hide ?? ''}`}>{cell(c)}</td>
       ))}
       {anyCancel && (
-        <td className="sticky right-0 bg-card pr-2 pl-1 text-right group-hover:bg-hover">
+        <td className="sticky right-0 bg-window pr-2 pl-1 text-right group-hover:bg-hover">
           {j.cancellable && <RowMenu open={menu} setOpen={setMenu} onDetails={onOpen} onCancel={onCancel} />}
         </td>
       )}
@@ -131,12 +131,12 @@ function RowMenu({ open, setOpen, onDetails, onCancel }: {
           hover:text-text focus-visible:opacity-100 group-hover:opacity-100 [@media(hover:none)]:opacity-100
           ${open ? 'opacity-100' : 'opacity-0'}`}><MoreVertical size={16} /></button>
       {open && (
-        <div role="menu" className="menu-in absolute right-0 top-full z-30 mt-1 min-w-[160px] rounded-xl bg-raised p-1
+        <div role="menu" className="menu-in absolute right-0 top-full z-30 mt-1 min-w-[160px] rounded-lg bg-raised py-1
           text-left shadow-[var(--shadow-menu)]">
           <button role="menuitem" onClick={pick(onDetails)}
-            className="flex h-8 w-full items-center rounded-md px-3 hover:bg-hover">Details</button>
+            className="flex h-9 w-full items-center px-3 hover:bg-hover">Details</button>
           <button role="menuitem" onClick={pick(onCancel)}
-            className="flex h-8 w-full items-center rounded-md px-3 font-semibold text-bad hover:bg-hover">
+            className="flex h-9 w-full items-center px-3 text-bad hover:bg-hover">
             Cancel job…</button>
         </div>
       )}

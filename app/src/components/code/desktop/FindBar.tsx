@@ -48,10 +48,10 @@ export function FindBar({ view, editable, start, onClose }: {
     const v = view()
     if (v) { replaceEvery(v); setCount(countText(countFind(v))) }
   }
-  const toggle = (on: boolean) => `grid size-7 place-items-center rounded-md ${on ? 'bg-accent-soft text-accent-text'
-    : 'text-dim hover:bg-hover'}`
-  const field = 'h-7 min-w-0 flex-1 rounded-md bg-control px-2 text-sm text-text outline-none placeholder:text-faint ' +
-    'focus-visible:ring-2 focus-visible:ring-focus'
+  const toggle = (on: boolean) => `grid size-7 place-items-center rounded-md ${on ? 'bg-accent text-on-accent'
+    : 'text-dim hover:bg-hover hover:text-text'}`
+  const field = 'h-7 min-w-0 flex-1 rounded-md border border-line-strong bg-window px-2 text-sm text-text outline-none ' +
+    'placeholder:text-faint focus:border-accent focus:ring-1 focus:ring-accent'
 
   return (
     <div className="flex shrink-0 flex-col gap-1.5 border-b border-line bg-window px-3 py-2"
@@ -79,9 +79,11 @@ export function FindBar({ view, editable, start, onClose }: {
           <input value={replace} onChange={(e) => setReplace(e.target.value)} placeholder="Replace with"
             aria-label="Replace with" className={field} />
           <button type="button" onClick={one} disabled={!text}
-            className="h-7 rounded-md bg-control px-3 text-sm font-semibold hover:bg-hover disabled:opacity-45">Replace</button>
+            className="h-7 rounded-md border border-line-strong px-3 text-sm font-semibold hover:bg-hover disabled:opacity-45">
+            Replace</button>
           <button type="button" onClick={all} disabled={!text}
-            className="h-7 rounded-md bg-control px-3 text-sm font-semibold hover:bg-hover disabled:opacity-45">All</button>
+            className="h-7 rounded-md border border-line-strong px-3 text-sm font-semibold hover:bg-hover disabled:opacity-45">
+            All</button>
         </div>
       )}
     </div>

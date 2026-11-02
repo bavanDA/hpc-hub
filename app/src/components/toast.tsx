@@ -1,4 +1,5 @@
-// Short messages at the bottom of the window, like GTK's toasts: const toast = useToast(); toast('Saved').
+// Short messages at the bottom of the window: const toast = useToast(); toast('Saved'). Style E: a neutral strip,
+// black on light and white on dark, its button underlined words in the same color.
 // An error stays until you close it, and a toast can carry one button:
 // toast('Could not connect', { kind: 'error', action: { label: 'Retry', run: retry } })
 import { CircleAlert, X } from 'lucide-react'
@@ -30,19 +31,20 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         gap-2 px-4">
         {toasts.map((t) => (
           <div key={t.id} role={t.kind === 'error' ? 'alert' : 'status'}
-            className="menu-in pointer-events-auto flex max-w-[640px] items-center gap-3 rounded-xl bg-[#353538] py-2
-              pr-2 pl-4 text-sm text-white shadow-[var(--shadow-dialog)]">
-            {t.kind === 'error' && <CircleAlert size={16} className="shrink-0 text-[#ff8a78]" />}
+            className="menu-in pointer-events-auto flex min-h-11 max-w-[640px] items-center gap-3 rounded-lg bg-text
+              py-1.5 pr-1.5 pl-4 text-base text-window">
+            {t.kind === 'error' && <CircleAlert size={16} className="shrink-0" />}
             <span className="min-w-0 flex-1 py-0.5">{t.text}</span>
             {t.action && (
               <button onClick={() => { drop(t.id); t.action!.run() }}
-                className="shrink-0 rounded-md px-2.5 py-1 font-semibold text-[#7cb1f0] hover:bg-white/10">
+                className="shrink-0 rounded-md px-2.5 py-1 font-semibold underline underline-offset-2
+                  hover:bg-window/15">
                 {t.action.label}</button>
             )}
             {(t.kind === 'error' || t.action) && (
               <button onClick={() => drop(t.id)} aria-label="Close"
-                className="grid size-7 shrink-0 place-items-center rounded-md text-white/70 hover:bg-white/10">
-                <X size={14} /></button>
+                className="grid size-8 shrink-0 place-items-center rounded-md text-window/70 hover:bg-window/15">
+                <X size={16} /></button>
             )}
           </div>
         ))}

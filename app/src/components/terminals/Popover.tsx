@@ -1,4 +1,4 @@
-// A small menu that opens at a point and closes on any click outside or Escape (Adwaita's popover menu).
+// A small menu that opens at a point and closes on any click outside or Escape. Style E: plain rows.
 import { SquareTerminal } from 'lucide-react'
 import { useEffect, useRef, type ReactNode } from 'react'
 
@@ -18,7 +18,7 @@ export function Popover({ x, y, onClose, children }: { x: number; y: number; onC
   const top = Math.min(y, window.innerHeight - 200)
   return (
     <div ref={ref} style={{ left, top }}
-      className="fixed z-30 flex min-w-[200px] flex-col rounded-xl bg-card p-1.5 shadow-[var(--shadow-card)] ring-1 ring-line">
+      className="menu-in fixed z-30 flex min-w-[200px] flex-col rounded-lg bg-raised py-1 shadow-[var(--shadow-menu)]">
       {children}
     </div>
   )
@@ -28,7 +28,8 @@ export function MenuItem({ children, onClick, danger = false }:
   { children: ReactNode; onClick: () => void; danger?: boolean }) {
   return (
     <button onClick={onClick}
-      className={`rounded-md px-3 py-1.5 text-left hover:bg-hover ${danger ? 'text-bad' : ''}`}>{children}</button>
+      className={`flex min-h-9 items-center px-3 text-left hover:bg-hover active:bg-pressed ${danger ? 'text-bad' : ''}`}>
+      {children}</button>
   )
 }
 

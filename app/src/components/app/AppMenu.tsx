@@ -40,17 +40,19 @@ export function AppMenu({ onExperimental }: { onExperimental: (on: boolean) => v
   return (
     <div ref={box} className="relative">
       <button aria-label="Menu" title="Menu" aria-expanded={open} onClick={() => setOpen(!open)}
-        className={`grid size-8 place-items-center rounded-md hover:bg-hover ${open ? 'bg-selected' : ''}`}>
+        className={`grid size-8 place-items-center rounded-md text-dim hover:bg-hover hover:text-text ${
+          open ? 'bg-selected text-text' : ''}`}>
         <Menu size={16} />
       </button>
       {open && (
-        <div role="menu" className="absolute right-0 top-full z-30 mt-1.5 min-w-[280px] rounded-xl bg-card p-1
-          shadow-[0_0_0_1px_var(--color-line),0_6px_20px_rgb(0_0_0/0.25)]">
+        <div role="menu" className="menu-in absolute right-0 top-full z-30 mt-1.5 min-w-[280px] rounded-lg bg-raised
+          py-1 shadow-[var(--shadow-menu)]">
           {items.map((group, n) => (
             <div key={n} className={n ? 'mt-1 border-t border-line pt-1' : ''}>
               {group.map(([label, run, keys]) => (
                 <button key={label} role="menuitem" onClick={() => { setOpen(false); run() }}
-                  className="flex h-9 w-full items-center gap-6 whitespace-nowrap rounded-md px-3 text-left hover:bg-hover">
+                  className="flex h-9 w-full items-center gap-6 whitespace-nowrap px-3 text-left hover:bg-hover
+                    active:bg-pressed">
                   <span className="flex-1">{label}</span>
                   {keys && <span className="text-sm text-dim">{keys}</span>}
                 </button>

@@ -301,8 +301,8 @@ export function Project({ project, onClose }: { project: Opened; onClose: () => 
           : pdf.error ? <Empty title="Could not read the PDF" text={pdf.error} /> : undefined} />
 
   return (
-    <div className="flex h-full flex-col bg-view">
-      <div className="flex h-12 shrink-0 items-center gap-2 border-b border-line bg-header px-2">
+    <div className="flex h-full flex-col bg-window">
+      <div className="flex h-12 shrink-0 items-center gap-2 border-b border-line bg-window px-2">
         <button onClick={() => { setShowTree(!showTree); remember('latex.tree', showTree ? '0' : '1') }}
           aria-label="Show or hide the files" title="Show or hide the files"
           className={`grid size-8 place-items-center rounded-md ${showTree ? 'bg-selected' : 'hover:bg-hover'}`}>
@@ -312,12 +312,13 @@ export function Project({ project, onClose }: { project: Opened; onClose: () => 
           <div className="truncate text-xs text-dim">{project.cluster_name} · {rel(folder, main)}
             <span className="ml-2">{saving ? 'Saving…' : dirty ? 'Not saved' : 'Saved'}</span></div>
         </div>
-        <div className="flex rounded-lg bg-pill p-0.5">
+        <div role="radiogroup" aria-label="Show" className="flex gap-[3px] rounded-lg border border-line-strong p-[3px]">
           {([['editor', 'Editor', FileText], ['split', 'Both', Columns2], ['pdf', 'PDF', ScrollText]] as const)
             .map(([v, label, I]) => (
-              <button key={v} onClick={() => setView(v)} title={label}
+              <button key={v} role="radio" aria-checked={view === v} onClick={() => setView(v)} title={label}
                 className={`flex h-7 items-center gap-1.5 rounded-md px-2.5 text-sm ${view === v
-                  ? 'bg-card font-semibold shadow-sm' : 'text-dim hover:text-text'}`}><I size={14} /> {label}</button>
+                  ? 'bg-accent font-semibold text-on-accent' : 'text-dim hover:bg-hover hover:text-text'}`}>
+                <I size={14} /> {label}</button>
             ))}
         </div>
         <div className="flex flex-1 items-center justify-end gap-1.5">

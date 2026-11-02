@@ -4,26 +4,28 @@ import { useState } from 'react'
 
 import type { Account, People } from '../../types/usage'
 import { Term } from '../Term'
-import { Card, List, Pill, Row, Spinner } from '../ui'
+import { List, Row, Spinner } from '../ui'
 import { n, pct } from './format'
 import { Bar, Section } from './parts'
 
 function Summary({ a }: { a: Account | null }) {
-  if (!a) return <Card className="p-4 text-dim">No Slurm account found.</Card>
+  if (!a) return <p className="border-y border-line px-4 py-3 text-dim">No Slurm account found.</p>
   const cost = a.rate ? ` About $${n(a.used * a.rate)} at $${a.rate} per SU.` : ''
   const span = a.period ? ` in ${a.period}` : ''
   return (
-    <Card className="flex flex-col gap-3 p-4">
-      {a.quota > 0
-        ? <p className="text-2xl font-bold tabular-nums">{n(Math.max(0, a.quota - a.used))} <Term name="su">hours left (SU)</Term></p>
-        : <p className="text-2xl font-bold tabular-nums">{n(a.used)} <Term name="su">hours used (SU)</Term>{span}</p>}
-      <p className="text-dim">
+    <div className="flex flex-col gap-3 border-y border-line px-4 py-3">
+      <div className="flex min-h-8 items-center gap-3">
+        <span className="flex-1">{a.quota > 0 ? <Term name="su">Hours left (SU)</Term>
+          : <><Term name="su">Hours used (SU)</Term>{span}</>}</span>
+        <span className="text-xl font-semibold tabular-nums">{n(a.quota > 0 ? Math.max(0, a.quota - a.used) : a.used)}</span>
+      </div>
+      {a.quota > 0 && <Bar value={a.used / a.quota} mine={a.mine / a.quota} className="w-full" />}
+      <p className="text-sm text-dim">
         {a.quota > 0
           ? `${a.account} used ${n(a.used)} of ${n(a.quota)} (${pct(a.used, a.quota)})${span}. You used ${n(a.mine)} of it.`
           : `${a.account} has no SU limit${span}. You used ${n(a.mine)}.${cost}`}
       </p>
-      {a.quota > 0 && <Bar value={a.used / a.quota} mine={a.mine / a.quota} className="w-full" />}
-    </Card>
+    </div>
   )
 }
 
@@ -42,7 +44,7 @@ export function SuTab({ account, people, error, loading, period, onPerson }: {
 
   return (
     <>
-      <Section title="Group"><Summary a={account} /></Section>
+      <Section><Summary a={account} /></Section>
       {account && (
         <Section title={`Who used it, ${period.toLowerCase()}`} note={<span className="inline-flex items-center gap-2">
           {loading && people && <Spinner size={14} />}{note}</span>}>
@@ -50,8 +52,8 @@ export function SuTab({ account, people, error, loading, period, onPerson }: {
             <List>
               {active.map((p) => (
                 <Row key={p.user} onClick={onPerson ? () => onPerson(p.user) : undefined}
-                  title={<span className="flex items-center gap-2">{p.name || p.user}
-                    {p.user === people.me && <Pill kind="ok">you</Pill>}</span>}
+                  title={<span>{p.name || p.user}{p.user === people.me && <span className="text-dim"> (you)</span>}
+                    </span>}
                   subtitle={`${p.user} · ${n(p.hours)} core hours`}
                   suffix={<>
                     <span className="w-36 text-right text-base tabular-nums">
@@ -65,9 +67,12 @@ export function SuTab({ account, people, error, loading, period, onPerson }: {
         </Section>
       )}
       {idle.length > 0 && (
-        <section className="flex flex-col gap-2">
-          <button onClick={() => setIdleOpen(!idleOpen)} className="flex w-fit items-center gap-1 font-semibold">
-            {idleOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />} No usage in this period ({idle.length})
+        <section className="flex flex-col">
+          <button onClick={() => setIdleOpen(!idleOpen)} className="flex min-h-12 items-center gap-3 border-y
+            border-line px-4 text-left hover:bg-hover active:bg-pressed">
+            <span className="flex-1">No usage in this period</span>
+            <span className="font-medium tabular-nums">{idle.length}</span>
+            {idleOpen ? <ChevronDown size={16} className="text-dim" /> : <ChevronRight size={16} className="text-dim" />}
           </button>
           {idleOpen && <List>{idle.map((p) => <Row key={p.user} title={p.name || p.user} subtitle={p.user} />)}</List>}
         </section>
