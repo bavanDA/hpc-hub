@@ -151,11 +151,12 @@ export function NumberRow({ label, value, unit, showUnit = true, min = 1, max, o
   )
 }
 
-/** "1 day 4 h 0 min" in row form: numbers strong, units grey. */
+/** "1 day 4 h" in row form: numbers strong, units grey, the parts that are 0 left out. */
 function Duration({ total }: { total: number }) {
   const d = Math.floor(total / 1440), h = Math.floor((total % 1440) / 60), m = total % 60
-  return <>{d > 0 && <><Amount n={d} unit={d === 1 ? 'day' : 'days'} />{' '}</>}<Amount n={h} unit="h" />{' '}
-    <Amount n={m} unit="min" /></>
+  const parts = ([[d, d === 1 ? 'day' : 'days'], [h, 'h'], [m, 'min']] as const).filter(([n]) => n > 0)
+  if (!parts.length) return <Amount n={0} unit="min" />
+  return <>{parts.map(([n, unit], i) => <span key={unit}>{i > 0 && ' '}<Amount n={n} unit={unit} /></span>)}</>
 }
 
 /** A length of time typed as days, hours and minutes, in place like NumberRow. max: the longest allowed (minutes). */
@@ -251,7 +252,7 @@ export function Field({ label, ...props }: { label: string } & React.InputHTMLAt
 export function Segments<T extends string>({ value, options, onChange, label }:
   { value: T | ''; options: readonly (readonly [T, string])[]; onChange: (v: T) => void; label?: string }) {
   return (
-    <div role="radiogroup" aria-label={label} className="flex min-h-12 gap-[3px] rounded-[10px] border
+    <div role="radiogroup" aria-label={label} className="flex min-h-14 gap-[3px] rounded-[10px] border
       border-line-strong p-[3px]">
       {options.map(([v, text]) => (
         <button key={v} role="radio" aria-checked={v === value} onClick={() => onChange(v)}
