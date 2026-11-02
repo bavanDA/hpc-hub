@@ -31,7 +31,6 @@ function when(s: Schedule) {
   return `${days.map((d) => DAYS[d - 1]).join(', ')} at ${s.time}`
 }
 
-const ago = (hours: number) => Math.round(Date.now() / 1000 - hours * 3600)
 
 /** The next time at hh:mm on one of days (1 = Monday; none = every day), from now, as Slurm prints it. */
 function next(time: string, days: number[] = []): string {
@@ -44,6 +43,16 @@ function next(time: string, days: number[] = []): string {
   const pad = (n: number) => String(n).padStart(2, '0')
   return `${t.getFullYear()}-${pad(t.getMonth() + 1)}-${pad(t.getDate())}T${pad(h)}:${pad(m)}:00`
 }
+/** The last run before now at time on one of days, in epoch seconds (when an earlier run would have started). */
+function last(time: string, days: number[] = []): number {
+  const [h, m] = time.split(':').map(Number)
+  const t = new Date()
+  t.setHours(h, m, 0, 0)
+  for (let i = 0; i < 8; i++, t.setDate(t.getDate() - 1)) {
+    if (t.getTime() < Date.now() && (!days.length || days.includes(((t.getDay() + 6) % 7) + 1))) break
+  }
+  return Math.round(t.getTime() / 1000)
+}
 function status(s: Schedule, extra: Partial<ScheduleStatus> = {}): ScheduleStatus {
   return { ...s, agent_name: AGENTS.find((a) => a.id === s.agent)?.name ?? s.agent, when: when(s), job_id: '',
     state: '', start: '', last_run: 0, last_log: '', ...extra }
@@ -54,17 +63,17 @@ const lists: Record<string, ScheduleStatus[]> = {
   wulver: [
     status({ ...base, name: 'cleanup-thesis', agent: 'claude', folder: '/mmfs1/project/mygroup/jdoe/thesis',
       task: presets[0].task, time: '02:00', days: [1, 2, 3, 4, 5], minutes: 180 },
-    { job_id: '812345', state: 'PENDING', start: next('02:00', [1, 2, 3, 4, 5]), last_run: ago(9),
+    { job_id: '812345', state: 'PENDING', start: next('02:00', [1, 2, 3, 4, 5]), last_run: last('02:00', [1, 2, 3, 4, 5]),
       last_log: '/home/jdoe/.hpc-hub/schedules/cleanup-thesis/logs/2026-10-24-0200.md' }),
     status({ ...base, name: 'bugs-solver', agent: 'codex', folder: '~/project/solver', task: presets[1].task,
       time: '03:30', days: [6, 7], compute: { cpus: 8, mem_gb: 32, gpus: 1, gpu_type: 'a100_10g', partition: 'gpu' } },
-    { job_id: '812399', state: 'RUNNING', start: '2026-10-24T03:30:00', last_run: ago(30),
+    { job_id: '812399', state: 'PENDING', start: next('03:30', [6, 7]), last_run: last('03:30', [6, 7]),
       last_log: '/home/jdoe/.hpc-hub/schedules/bugs-solver/logs/2026-10-23-0330.md' }),
     status({ ...base, name: 'jobs-home', agent: 'claude', folder: '~', task: presets[2].task, time: '06:00',
       enabled: false, minutes: 60 }),
     status({ ...base, name: 'backup-check', agent: 'claude', folder: '/scratch/jdoe', task: '', time: '03:00',
       days: [1], minutes: 30, runner: 'backup' },
-    { job_id: '812500', state: 'PENDING', start: next('03:00', [1]), last_run: ago(7 * 24) }),
+    { job_id: '812500', state: 'PENDING', start: next('03:00', [1]), last_run: last('03:00', [1]) }),
   ],
   yale: [],
 }
