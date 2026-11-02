@@ -26,6 +26,10 @@ FAST_SHELLS = 3  # quick commands share these; more at once (or long ones) use p
 CHANNEL = "hpc-hub-channel"  # argv(tty=True) of a login no local ssh can ride: [CHANNEL, cluster id, command]
 
 
+REFUSED = "Session open refused by peer"
+REFUSED_WAITS = (0.5, 1.5, 3)
+
+
 class SshError(Exception):
     pass
 
@@ -121,10 +125,16 @@ class SshMaster:
         return self._run_plain(command, timeout)
 
     def _run_plain(self, command: str, timeout: float) -> subprocess.CompletedProcess:
-        return subprocess.run(
-            self.argv(command), capture_output=True, text=True, timeout=timeout,
-            stdin=subprocess.DEVNULL,
-        )
+        for wait in (*REFUSED_WAITS, None):
+            res = subprocess.run(
+                self.argv(command), capture_output=True, text=True, timeout=timeout,
+                stdin=subprocess.DEVNULL,
+            )
+            # the server's limit of sessions on one connection (MaxSessions): nothing ran, so wait for a free one
+            if wait is None or REFUSED not in res.stderr:
+                return res
+            time.sleep(wait)
+        return res
 
     def _new_shell(self, **kwargs) -> FastShell:
         return FastShell(self.argv(), **kwargs)
