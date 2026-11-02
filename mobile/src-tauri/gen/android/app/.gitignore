@@ -6,3 +6,4 @@
 /proguard-tauri.pro
 /tauri.properties
 /src/main/assets/python-*.zip
+/src/main/assets/licenses/vpn/

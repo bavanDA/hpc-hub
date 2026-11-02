@@ -171,6 +171,18 @@ if [ -n "$HOST" ]; then
 	install -m 755 "$OC" "$OUT/libhpchub_openconnect.so"
 	install -m 755 ocproxy/ocproxy "$OUT/libhpchub_ocproxy.so"
 	"$STRIP" "$OUT"/libhpchub_*.so
+	# their licenses go in the APK too (mobile/vpn/THIRD_PARTY.md lists them)
+	LICENSES=$ROOT/mobile/src-tauri/gen/android/app/src/main/assets/licenses/vpn
+	rm -rf "$LICENSES" && mkdir -p "$LICENSES"
+	cp openconnect/COPYING.LGPL "$LICENSES/openconnect.txt"
+	cp openconnect/json/LICENSE "$LICENSES/openconnect-json-parser.txt"
+	cp openssl/LICENSE.txt "$LICENSES/openssl.txt"
+	cp libxml2/Copyright "$LICENSES/libxml2.txt"
+	cp zlib/LICENSE "$LICENSES/zlib.txt"
+	cp libevent/LICENSE "$LICENSES/libevent.txt"
+	cp ocproxy/LICENSE "$LICENSES/ocproxy.txt"
+	cp ocproxy/lwip/COPYING "$LICENSES/lwip.txt"
+	cp "$HERE/THIRD_PARTY.md" "$LICENSES/README.md"
 else
 	install -m 755 "$OC" "$OUT/openconnect"
 	install -m 755 ocproxy/ocproxy "$OUT/ocproxy"
