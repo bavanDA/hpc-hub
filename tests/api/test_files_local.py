@@ -13,7 +13,7 @@ class FakeHub:
 
     def __init__(self):
         self.events: list[tuple[str, dict]] = []
-        self.s = SimpleNamespace(cfg=SimpleNamespace(id="wulver", name="Wulver"), ssh=LocalShell(), connected=True)
+        self.s = SimpleNamespace(cfg=SimpleNamespace(id="wulver", name="Wulver", short_name="Wulver"), ssh=LocalShell(), connected=True)
 
     def connected(self, cluster):
         if cluster != "wulver" or not self.s.connected:

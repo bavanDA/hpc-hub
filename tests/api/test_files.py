@@ -16,9 +16,9 @@ class FakeHub:
 
     def __init__(self):
         self.events: list[tuple[str, dict]] = []
-        self.sessions = {c: SimpleNamespace(cfg=SimpleNamespace(id=c, name=c.title(), globus=SimpleNamespace(
+        self.sessions = {c: SimpleNamespace(cfg=SimpleNamespace(id=c, name=c.title(), short_name=c.title(), globus=SimpleNamespace(
             collection_id=f"col-{c}")), ssh=LocalShell(), connected=True) for c in ("wulver", "yale")}
-        self.sessions["sdsc"] = SimpleNamespace(cfg=SimpleNamespace(id="sdsc", name="Expanse", globus=SimpleNamespace(
+        self.sessions["sdsc"] = SimpleNamespace(cfg=SimpleNamespace(id="sdsc", name="Expanse", short_name="Expanse", globus=SimpleNamespace(
             collection_id="")), ssh=None, connected=False)
 
     def session(self, cluster):
