@@ -1,5 +1,6 @@
 // Demo data for VS Code, the agents and Ask all: made-up chats, a VS Code job, pretend command lines.
 import type { Profile } from '../types/clusters'
+import { demoCluster } from './clusters'
 import type { AgentInfo, Chat, Chats, Opened, Started, ToolSetup, VsFound, VsStarted } from '../types/tools'
 
 const now = Math.floor(Date.now() / 1000)
@@ -22,8 +23,7 @@ const AGENTS: AgentInfo[] = [
     { key: 'mode', label: 'Permission mode', choices: [['', 'Default'], ['acceptEdits', 'Accept edits'],
       ['plan', 'Plan only'], ['auto', 'Auto']] },
     { key: 'effort', label: 'Effort', choices: EFFORT }]),
-  agent('codex', 'ChatGPT', 'codex', ['ChatGPT remote', 'Use it from the ChatGPT app. One at a time: this stops the '
-    + 'previous one'], [
+  agent('codex', 'ChatGPT', 'codex', ['ChatGPT remote', 'Use this session from the ChatGPT app, one session at a time'], [
     { key: 'sandbox', label: 'Sandbox', choices: [['', 'Default'], ['read-only', 'Read only'],
       ['workspace-write', 'Write in the folder']] },
     { key: 'effort', label: 'Reasoning effort', choices: EFFORT.slice(0, 5) }]),
@@ -35,10 +35,12 @@ const AGENTS: AgentInfo[] = [
 
 function setup({ cluster }: { cluster: string }): ToolSetup {
   const wulver = cluster === 'wulver'
-  return { id: cluster, name: wulver ? 'Wulver (NJIT)' : 'Yale Bouchet', connected: true, node: wulver ? 'n0042' : '',
+  const c = demoCluster(cluster)
+  const v = c?.vscode  // the VS Code job as saved in the cluster's settings, like hpc_hub/api/methods/tools.py
+  return { id: cluster, name: c?.name ?? cluster, connected: true, node: wulver ? 'n0042' : '',
     job: wulver ? '123456' : '', profile,
-    vscode: { workdir: '~', open_in: 'desktop', open_links: true, ask: true,
-      profile: { cpus: 2, mem_gb: 8, time: '08:00:00', partition: '', account: '', qos: '', gpus: 0 } },
+    vscode: { workdir: v?.workdir ?? '~', open_in: v?.open_in ?? 'desktop', open_links: v?.open_links ?? true,
+      ask: v?.ask ?? true, profile: v ? { ...v.compute } : { ...profile, cpus: 2, mem_gb: 8, time: '08:00:00' } },
     agents: AGENTS }
 }
 
@@ -47,9 +49,9 @@ function chat(id: string, name: string, cwd: string, hoursAgo: number, size: num
 }
 
 const CHATS: Chat[] = [
-  chat('a1b2c3d4-0001', 'Fix the loss plot axis labels', '/mmfs1/project/mygroup/jdoe/thesis', 1, 1_250_000),
-  chat('a1b2c3d4-0002', 'Speed up the data loader', '/mmfs1/project/mygroup/jdoe/thesis/src', 20, 3_400_000),
-  chat('a1b2c3d4-0003', 'Write the methods section draft', '/mmfs1/project/mygroup/jdoe/thesis/paper', 50, 820_000),
+  chat('a1b2c3d4-0001', 'Fix the loss plot axis labels', '/home/jdoe/thesis', 1, 1_250_000),
+  chat('a1b2c3d4-0002', 'Speed up the data loader', '/home/jdoe/thesis/src', 20, 3_400_000),
+  chat('a1b2c3d4-0003', 'Write the methods section draft', '/home/jdoe/thesis/paper', 50, 820_000),
   chat('a1b2c3d4-0004', 'Why does sbatch reject my job', '/home/jdoe', 200, 96_000),
   chat('a1b2c3d4-0005', 'Port train.py to the new cluster', '/project/mygroup/abc123', 900, 2_100_000),
 ]

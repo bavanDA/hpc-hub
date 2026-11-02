@@ -4,6 +4,8 @@
 import { useEffect, useState } from 'react'
 
 import { chosen, gpuName, gpuSummary, isPreset, presets, useGpus, withGpu, type Gpu } from '../clusters/gpus'
+import { queueText } from '../clusters/priority'
+import { QueuePickers } from '../clusters/queues'
 import { human, minutes, slurmTime } from '../clusters/time'
 import { call } from '../../rpc'
 import { gpuText, type Limits, type Profile } from '../../types/clusters'
@@ -53,21 +55,16 @@ function GpuDialog({ gpus, value: p, onChange, onClose }:
 function QueueDialog({ limits, value: p, onChange, onClose, extra }:
   { limits: Limits | null; value: Profile; onChange: (p: Profile) => void; onClose: () => void; extra: boolean }) {
   const set = (change: Partial<Profile>) => onChange({ ...p, ...change })
-  const list = (id: string, xs?: string[]) => xs?.length
-    ? <datalist id={id}>{xs.map((x) => <option key={x} value={x} />)}</datalist> : null
   return (
-    <EDialog title="Queue and billing" width={440} onClose={onClose}
+    <EDialog title="Queue and priority" width={440} onClose={onClose}
       actions={<MainButton onClick={onClose}>Done</MainButton>}>
-      <div className="px-5 pt-1">
-        <Field label="Queue" list="e-queues" value={p.partition} placeholder={limits?.default_partition || 'Default'}
-          onChange={(e) => set({ partition: e.target.value.trim() })} />
-        <Field label="Billing" list="e-qos" value={p.qos ?? ''} placeholder={limits?.default_qos || 'Default'}
-          onChange={(e) => set({ qos: e.target.value.trim() })} />
+      <QueuePickers limits={limits} queue={p.partition} qos={p.qos ?? ''} onQueue={(partition) => set({ partition })}
+        onQos={(qos) => set({ qos })} />
+      <div className="px-5 pt-3">
         <Field label="Group to bill" value={p.account ?? ''} placeholder="Your default group"
           onChange={(e) => set({ account: e.target.value.trim() })} />
         {extra && <Field label="Extra options" value={p.extra_args ?? ''} placeholder="--constraint=intel"
           onChange={(e) => set({ extra_args: e.target.value })} />}
-        {list('e-queues', limits?.partitions)}{list('e-qos', limits?.qos)}
       </div>
     </EDialog>
   )
@@ -90,7 +87,7 @@ export function NodeFields({ cluster, value: p, onChange, onValid, extra = true 
   useEffect(() => { onValid?.(ok) }, [ok, onValid])
   const quick = presets(gpus)
   const on = quick.find((x) => isPreset(p, x))?.id ?? ''
-  const queue = [p.partition, p.qos].filter((x) => x?.trim()).join(', ') || 'Default'
+  const queue = queueText(p.partition, p.qos)
   return (
     <>
       <div className="px-5 pb-4">
@@ -106,7 +103,7 @@ export function NodeFields({ cluster, value: p, onChange, onValid, extra = true 
           onPress={() => setOpen('gpu')} />}
         <DurationRow label="Time" minutes={minutes(p.time) ?? 240} max={limits?.longest}
           onChange={(m) => set({ time: slurmTime(Math.max(1, m)) })} />
-        <Row label="Queue and billing" value={queue} opens onPress={() => setOpen('queue')} />
+        <Row label="Queue and priority" value={queue} opens onPress={() => setOpen('queue')} />
       </List>
       {open === 'gpu' && <GpuDialog gpus={gpus} value={p} onChange={onChange} onClose={() => setOpen('')} />}
       {open === 'queue' && <QueueDialog limits={limits} value={p} onChange={onChange} extra={extra}

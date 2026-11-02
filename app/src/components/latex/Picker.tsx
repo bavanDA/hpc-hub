@@ -89,7 +89,7 @@ export function Picker({ data, onOpen, onReload }:
             <h2 className="text-xs font-semibold tracking-wide text-dim uppercase">Papers found on the clusters</h2>
             <p className="mt-1 text-sm text-dim">
               {searching ? 'Searching home, project and scratch for .tex files with \\documentclass…'
-                : papers.length ? `${papers.length} folders with a main .tex file, newest first.${
+                : papers.length ? `${papers.length} ${papers.length === 1 ? 'paper' : 'papers'}, newest first.${
                   Number.isFinite(oldest) ? ` Searched ${ago(oldest)}.` : ''} Open one to add it to your projects.`
                 : 'Search home, project and scratch for .tex files with \\documentclass.'}</p>
           </div>

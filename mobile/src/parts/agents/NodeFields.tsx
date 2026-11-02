@@ -1,6 +1,6 @@
 // The compute node an agent or VS Code asks for, as one row: the node it runs on, or the size of the new one. Tap
 // it and the size opens on its own screen with the same fields as the node screen (NodeSheet): cores, memory and
-// time typed in place up to what the queue allows, the GPU with its types and slices, the queue and billing.
+// time typed in place up to what the queue allows, the GPU with its types and slices, the queue and priority.
 import { useState } from 'react'
 
 import { useClusters } from '@shared/components/clusters/store'

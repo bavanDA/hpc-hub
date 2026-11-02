@@ -1,4 +1,4 @@
-// Set up the phone app: your logins as a QR code the phone scans (pairing.make), like the GTK app's
+// Set up the phone app (Connect phone on a cluster card): your logins as a QR code the phone scans (pairing.make), like the GTK app's
 // connect/ui/phone_pair.py. A cluster that takes keys gets a new key for the phone first, over the connection here.
 // Shown only on a click and hidden after SHOWN seconds, since anyone who sees the code sees what's in it.
 import { Smartphone } from 'lucide-react'
@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react'
 
 import { call } from '../../rpc'
 import type { Cluster, Logins } from '../../types/clusters'
+import { shortName } from '../clusters/loginCopy'
 import { useClusters } from '../clusters/store'
 import { Button, Dialog, IconTile, List, Row, Spinner, Switch } from '../ui'
 
@@ -15,6 +16,9 @@ type Made = { svg: string; clusters: string[]; skipped: { name: string; reason: 
 type Pick = { cluster: Cluster; username: string; password: boolean; ready: boolean; note: string }
 
 const takesKeys = (c: Cluster) => Boolean((c as Cluster & { key_login?: boolean }).key_login)
+
+/** "Wulver", "Wulver and Yale", "Wulver, Yale and SDSC". */
+const listed = (xs: string[]) => xs.length > 1 ? `${xs.slice(0, -1).join(', ')} and ${xs[xs.length - 1]}` : xs[0] ?? ''
 
 /** only: these clusters (a cluster card's "Connect phone"); the code shows right away when they're ready. */
 export function PairPhoneDialog({ only, onClose }: { only?: string[]; onClose: () => void }) {
@@ -73,10 +77,11 @@ export function PairPhoneDialog({ only, onClose }: { only?: string[]; onClose: (
     return () => clearTimeout(t)
   }, [made, left])
 
+  const short = (name: string) => shortName(clusters?.find((c) => c.name === name) ?? { name })
   const toggle = (id: string) => setOn((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n })
 
   return (
-    <Dialog title="Set up the phone app" onClose={onClose} width={520} actions={made
+    <Dialog title={only ? 'Connect phone' : 'Set up the phone app'} onClose={onClose} width={520} actions={made
       ? <Button onClick={() => setMade(null)}>Hide</Button>
       : <>
           <Button kind="ghost" onClick={onClose}>Cancel</Button>
@@ -85,12 +90,11 @@ export function PairPhoneDialog({ only, onClose }: { only?: string[]; onClose: (
         </>}>
       {made ? (
         <div className="flex flex-col items-center gap-3 pb-2 text-center">
-          <h3 className="text-xl font-semibold">Scan it with the phone</h3>
           <p className="text-dim">In HPC Hub on the phone, tap QR code on a cluster. Hides in {left} s.</p>
           <img src={`data:image/svg+xml;utf8,${encodeURIComponent(made.svg)}`} alt="QR code with your logins"
             className="size-[300px] rounded-md bg-white p-3 [image-rendering:pixelated]" />
-          <p className="text-sm text-dim">Has: {made.clusters.join(', ')}</p>
-          {made.skipped.map((s) => <p key={s.name} className="text-sm text-warn">{s.name}: {s.reason}</p>)}
+          <p className="text-sm text-dim">Signs the phone in to {listed(made.clusters.map(short))}.</p>
+          {made.skipped.map((s) => <p key={s.name} className="text-sm text-warn">{short(s.name)}: {s.reason}</p>)}
         </div>
       ) : (
         <div className="flex flex-col gap-4 pb-2">

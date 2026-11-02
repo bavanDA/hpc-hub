@@ -1,7 +1,8 @@
 // The job table: one line per job, sortable columns, the state as a dot and a word, time used as a bar, a ⋮ menu (details,
 // cancel) on your own running or waiting jobs, pinned to the right, and a box to pick several to cancel at once.
 // Cancelling always asks first (CancelDialog, CancelManyDialog).
-// Narrow windows drop the less important columns (container queries) instead of scrolling sideways.
+// Narrow windows drop the less important columns (container queries) instead of scrolling sideways, and the name
+// wraps instead of being cut.
 import { ChevronDown, ChevronUp, MoreVertical } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
@@ -11,6 +12,7 @@ import { memText, reasonText, stateName, type SortKey } from './format'
 
 type Column = { key: SortKey; title: string; right?: boolean; hide?: string; grow?: boolean }
 // hide: the container width under which the column goes
+const NUMBERS = new Set<SortKey>(['id', 'time', 'res', 'su'])  // tabular figures here only: they widen hyphens
 const COLUMNS: Column[] = [
   { key: 'id', title: 'ID' },
   { key: 'name', title: 'Name', grow: true },
@@ -39,7 +41,7 @@ export function JobTable({ jobs, showUser, sort, onSort, onOpen, onCancel, picke
     onPick(next)
   }
   return (
-    <table className="w-full border-collapse text-base tabular-nums">
+    <table className="w-full border-collapse text-base">
       <thead className="sticky top-0 z-10 bg-window shadow-[inset_0_-1px_0_var(--color-line)]">
         <tr className="text-left text-xs font-semibold text-dim">
           {anyCancel && <th className="w-10 pl-4">
@@ -77,11 +79,10 @@ function JobRow({ job: j, cols, anyCancel, picked, onPick, onOpen, onCancel }: {
     switch (c.key) {
       case 'id': return <span className="text-dim">{j.job_id}</span>
       case 'name': return (
-        <span className="flex min-w-0 items-baseline gap-2">
-          <span className="min-w-[7ch] truncate" title={j.name}>{j.name}</span>
-          {/* the HPC Hub mark gives way first, so the name stays readable */}
-          <span className="min-w-0 shrink-[4] truncate text-sm text-dim">
-            {j.from_app ? 'HPC Hub' : ''}</span>
+        <span className="flex min-w-0 flex-wrap items-baseline gap-x-2">
+          <span className="min-w-0 [overflow-wrap:anywhere]">{j.name}</span>
+          {/* the HPC Hub mark goes under the name when the two don't fit */}
+          {j.from_app && <span className="text-sm whitespace-nowrap text-dim">HPC Hub</span>}
         </span>)
       case 'user': return <span className="text-dim">{j.user}</span>
       case 'state': return <StatusPill state={j.state}>{stateName(j.state)}</StatusPill>
@@ -100,7 +101,8 @@ function JobRow({ job: j, cols, anyCancel, picked, onPick, onOpen, onCancel }: {
       {anyCancel && <td className="w-10 pl-4" onClick={(e) => e.stopPropagation()}>
         {j.cancellable && <Tick label={`Pick job ${j.job_id}`} checked={picked} onChange={onPick} />}</td>}
       {cols.map((c) => (
-        <td key={c.key} className={`px-3 whitespace-nowrap ${anyCancel ? '' : 'first:pl-4'} ${c.right ? 'text-right' : ''}
+        <td key={c.key} className={`px-3 ${c.grow ? 'py-1.5' : 'whitespace-nowrap'}
+          ${NUMBERS.has(c.key) ? 'tabular-nums' : ''} ${anyCancel ? '' : 'first:pl-4'} ${c.right ? 'text-right' : ''}
           ${c.grow ? 'max-w-0 min-w-[160px]' : ''} ${c.hide ?? ''}`}>{cell(c)}</td>
       ))}
       {anyCancel && (

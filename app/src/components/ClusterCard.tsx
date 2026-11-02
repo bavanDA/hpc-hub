@@ -1,8 +1,8 @@
 // One cluster in style E, the phone's ClusterCard (mobile/src/parts/ClusterCard.tsx) at desktop size: its name with
 // a status dot and word, the next thing to do (Connect, Stop signing in) on the right, then rows once connected:
-// the node (or Get a node), Terminal, Code, Files, Agents, VS Code. The rest (the node's size, sign-in, settings,
-// the log, Release node, Disconnect) are in ⋮. With Ask every time (ask_node) the node window opens by itself.
-import { Bot, ChevronRight, Code, Cpu, FileCode2, Folder, MoreVertical, Plug, Power, ScanQrCode, ScrollText, Settings,
+// the node (or Get a node), Terminal, Code, Files, Agents, VS Code. The rest (the node's size, settings, the log,
+// Release node, Disconnect) are in ⋮; the node's size is the Compute node part of the settings. With Ask every time (ask_node) the node window opens by itself.
+import { Bot, ChevronRight, Code, Cpu, FileCode2, Folder, MoreVertical, Plug, Power, ScrollText, Settings,
   Smartphone, SquareTerminal, Users, Zap, type LucideIcon } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
@@ -23,7 +23,7 @@ import { useToast } from './toast'
 import { useTools } from './tools/useTools'
 import { Spinner } from './ui'
 
-type Open = null | 'settings' | 'login' | 'request' | 'setup' | 'phone' | 'log' | 'release' | 'disconnect'
+type Open = null | 'settings' | 'login' | 'compute' | 'request' | 'phone' | 'log' | 'release' | 'disconnect'
   | { switch: { id: string; name: string }; vpnOnly: boolean }
 
 const WAITING = 'Requesting compute node'
@@ -82,9 +82,8 @@ export function ClusterCard({ cluster: c, session: s, log, primary = false }:
     [...(connected && a ? [{ label: a.owned ? 'Release node' : 'Stop using this node', icon: Power,
       onClick: () => (a.owned ? setOpen('release') : run('clusters.release_node')) }] : []),
     ...(connected && !a && fast ? [{ label: fast, icon: Zap, onClick: () => run('clusters.request_fast_node') }] : []),
-    { label: 'Compute node', icon: Cpu, onClick: () => setOpen('setup') }],
-    [{ label: 'Sign in', icon: ScanQrCode, onClick: () => { setHint(''); setOpen('login') } },
-      { label: 'Settings', icon: Settings, onClick: () => { setHint(''); setOpen('settings') } },
+    { label: 'Compute node', icon: Cpu, onClick: () => { setHint(''); setOpen('compute') } }],
+    [{ label: 'Settings', icon: Settings, onClick: () => { setHint(''); setOpen('settings') } },
       { label: 'Log', icon: ScrollText, onClick: () => setOpen('log') },
       { label: 'Connect phone', icon: Smartphone, onClick: () => setOpen('phone') }],
     [...(idle && c.vpn.enabled ? [{ label: 'Connect VPN only', icon: Plug, onClick: () => connect(true) }] : []),
@@ -142,16 +141,16 @@ export function ClusterCard({ cluster: c, session: s, log, primary = false }:
       )}
 
       {tools.dialog}
-      {(open === 'settings' || open === 'login') && <SettingsDialog cluster={c} hint={hint}
-        start={open === 'login' ? 'login' : ''} onClose={close} />}
-      {(open === 'request' || open === 'setup') && <ComputeDialog cluster={c} mode={open} onClose={close} />}
+      {(open === 'settings' || open === 'login' || open === 'compute') && <SettingsDialog cluster={c} hint={hint}
+        start={open === 'settings' ? '' : open} onClose={close} />}
+      {open === 'request' && <ComputeDialog cluster={c} onClose={close} />}
       {open === 'phone' && <PairPhoneDialog only={[c.id]} onClose={close} />}
       {open === 'log' && <LogDialog name={short} lines={log} onClose={close} />}
       {open === 'release' && a && <ConfirmDialog title={`Release node ${a.node}?`} danger keep="Keep it"
         confirm="Release node" onConfirm={() => run('clusters.release_node')} onClose={close}
         text={<><p>Anything running on it stops.</p><p>You stay connected, and your files stay where they are.</p></>} />}
       {open === 'disconnect' && a && <ConfirmDialog title={`Disconnect ${short}?`} danger keep="Stay connected"
-        confirm="Disconnect" text={`Node ${a.node} is released.`} onConfirm={() => run('clusters.disconnect')}
+        confirm="Disconnect" text={`This releases node ${a.node}.`} onConfirm={() => run('clusters.disconnect')}
         onClose={close} />}
       {open && typeof open === 'object' && (
         <ConfirmDialog title={`Disconnect ${shortName(open.switch)}?`} danger keep={`Stay on ${shortName(open.switch)}`}

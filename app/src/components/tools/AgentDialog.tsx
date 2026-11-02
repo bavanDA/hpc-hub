@@ -6,14 +6,14 @@ import { useGo } from '../../nav'
 import { call } from '../../rpc'
 import type { AgentInfo, Chats, ToolSetup } from '../../types/tools'
 import { shortName } from '../clusters/loginCopy'
+import { agentIcon } from '../agents/AgentIcon'
 import { ChoiceRow, SearchField, TextArea } from '../e/extra'
 import { NodeFields } from '../e/NodeFields'
 import { EDialog, MainButton, Row, Section, ToggleRow } from '../e/ui'
 import { basename } from '../files/format'
-import { formatSize } from '../projects/size'
 import { Spinner } from '../ui'
 import { FolderField } from './fields'
-import { sendable, short, when } from './format'
+import { chatPlace, sendable, when } from './format'
 import { startAgent } from './run'
 
 export function AgentDialog({ setup, agent: a, project = '', onClose }:
@@ -61,7 +61,7 @@ export function AgentDialog({ setup, agent: a, project = '', onClose }:
       : project ? 'No chats here yet.' : 'No chats yet.'
 
   return (
-    <EDialog title={`${a.name} ${where}`} width={560} onClose={onClose}
+    <EDialog title={`${a.name} ${where}`} icon={agentIcon(a.id)} width={560} onClose={onClose}
       actions={<MainButton disabled={asks && !fits} onClick={() => run(folder.trim() || '~', '')}>Start</MainButton>}>
       <div className="px-5">
         <TextArea label="Task (optional)" value={task} rows={3} onChange={(e) => setTask(e.target.value)}
@@ -93,8 +93,7 @@ export function AgentDialog({ setup, agent: a, project = '', onClose }:
         {!chats && !error && <div className="grid place-items-center border-b border-line py-5"><Spinner /></div>}
         {shown.map((c) => (
           <Row key={c.id} label={c.name} onPress={() => run(c.cwd || '~', c.id, c.name.slice(0, 40))}
-            sub={[when(c.mtime), short(c.cwd, chats?.home ?? ''), c.size ? formatSize(c.size) : '']
-              .filter(Boolean).join(' · ')} />
+            sub={[when(c.mtime), chatPlace(c.cwd, folder, chats?.home ?? '')].filter(Boolean).join(' · ')} />
         ))}
       </Section>
     </EDialog>

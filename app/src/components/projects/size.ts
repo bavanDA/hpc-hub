@@ -9,5 +9,5 @@ export function formatSize(n: number) {
     unit = u
     if (v < 1000) break
   }
-  return `${v.toFixed(1)} ${unit}`
+  return `${v >= 100 ? Math.round(v) : +v.toFixed(1)} ${unit}`  // 912 MB, 1.2 MB, 2 GB: no ".0"
 }

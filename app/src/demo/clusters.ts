@@ -53,7 +53,7 @@ const agentInfo: SettingsInfo['agents'] = [
         ['auto', 'Auto'], ['dontAsk', "Don't ask"]] },
       { key: 'effort', label: 'Effort', choices: EFFORT }] },
   { id: 'codex', name: 'ChatGPT', remote_label: 'ChatGPT remote',
-    remote_hint: 'Use it from the ChatGPT app. One at a time: this stops the previous one', options: [
+    remote_hint: 'Use this session from the ChatGPT app, one session at a time', options: [
       { key: 'sandbox', label: 'Sandbox', choices: [DEFAULT, ['read-only', 'Read only'],
         ['workspace-write', 'Write in the folder']] },
       { key: 'approval', label: 'Ask before running commands', choices: [DEFAULT,
@@ -115,6 +115,9 @@ const DEMO_GPUS: Record<string, Gpu[]> = {
     { type: 'h200', label: 'H200', memory_gb: 141, slice: false, partitions: ['gpu_h200'], max_per_job: 8 }],
   sdsc: [{ type: '', label: 'V100', memory_gb: 32, slice: false, partitions: ['gpu-shared', 'gpu'], max_per_job: 4 }],
 }
+
+/** A cluster's settings as saved here, for the other demo answers (tools.setup reads the VS Code job from it). */
+export const demoCluster = (id: string) => clusters.find((c) => c.id === id)
 
 function find<T extends { id: string }>(list: T[], id: string) {
   return list.find((x) => x.id === id)!

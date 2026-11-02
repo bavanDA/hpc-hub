@@ -41,7 +41,6 @@ export function NewTerminalDialog({ live, cluster: start = '', onClose, onOpened
     <EDialog title="New terminal" onClose={onClose}
       actions={<MainButton disabled={!cluster} onClick={create}>Open terminal</MainButton>}>
       <div className="flex flex-col gap-1 px-5">
-        <p className="pb-1 text-dim">It keeps running when you close the tab or the app.</p>
         <Field label="Name" autoFocus value={name} onChange={(e) => setName(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && create()} />
         {live.length > 1 && <Pick label="Cluster">

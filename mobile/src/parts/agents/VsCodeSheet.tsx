@@ -56,7 +56,7 @@ export function VsCodeSheet({ setup, found, folder: first = '', onClose }:
               : 'A VS Code job is waiting in the queue'}</p>
             <Segments label="VS Code" value={keep ? 'keep' : 'new'} onChange={(x) => setKeep(x === 'keep')}
               options={[['keep', 'Use it'], ['new', 'Start a new one']] as const} />
-            {job.resources && <p className="mt-1.5 text-sm text-dim">{inWords(job.resources)}</p>}
+            {keep && job.resources && <p className="mt-1.5 text-sm text-dim">{inWords(job.resources)}</p>}
           </div>
         )}
         <FolderField cluster={setup.id} name={setup.name} value={folder} onChange={setFolder} />

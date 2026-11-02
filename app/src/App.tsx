@@ -84,6 +84,7 @@ export default function App() {
   const [floating, setFloating] = useState(false)  // narrow window: the sidebar shown over the page
   const sidebar = narrow ? floating : sidebarWanted
   const [experimental, setExperimental] = useState(false)
+  const [prefsRead, setPrefsRead] = useState(false)  // until then an experimental page waits: it may be off
   const [settings, setSettings] = useState(false)
   const go = useCallback((p: Page, with_: Record<string, string> = {}) => leave(() => {
     const moved = MOVED[p]
@@ -98,7 +99,8 @@ export default function App() {
     call<Preferences>('preferences.get').then((p) => {
       setExperimental(p.experimental)
       setAppearance(p.appearance)
-    }).catch(() => {})
+      if (!p.experimental && EXPERIMENTAL.has(start as Page)) setPage('clusters')  // ?page=latex while it's off
+    }).catch(() => {}).finally(() => setPrefsRead(true))
     call<{ blocked: boolean; message: string }>('app.status').then((s) => setBlocked(s.blocked ? s.message : ''))
       .catch(() => {})
     call<SetupStatus>('setup.status').then(setSetup).catch(() => {})
@@ -143,7 +145,9 @@ export default function App() {
           <div className="min-h-0 flex-1 overflow-auto">
             <Suspense fallback={<div className="grid h-full place-items-center"><Spinner size={24} /></div>}>
               {page === 'agents' ? <Agents experimental={experimental} />
-                : Current ? <Current /> : <p className="p-8 text-dim">{TITLES[page]} is experimental.</p>}
+                : EXPERIMENTAL.has(page) && !experimental
+                  ? (prefsRead ? <p className="p-8 text-dim">{TITLES[page]} is experimental.</p> : null)
+                  : Current ? <Current /> : <p className="p-8 text-dim">{TITLES[page]} is experimental.</p>}
             </Suspense>
           </div>
         </main>

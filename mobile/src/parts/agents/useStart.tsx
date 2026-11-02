@@ -24,9 +24,10 @@ export function useStart() {
     const [kind, what = ''] = key.split(':')
     try {
       await whenConnected(cluster, name)
-      if (kind === 'vscode') toast(`Looking for VS Code on ${shortName({ name })}…`)
+      const looking = kind === 'vscode' ? toast(`Looking for VS Code on ${shortName({ name })}…`) : undefined
       const [setup, found] = await Promise.all([call<ToolSetup>('tools.setup', { cluster }),
         kind === 'vscode' ? call<VsFound>('tools.vscode_find', { cluster }) : Promise.resolve(null)])
+        .finally(() => looking?.())  // found it: the sheet opens, the note would only cover it
       if (kind === 'vscode' && found) {
         const v = setup.vscode
         if (v.ask === false) {  // Ask every time is off: the saved choices, a running job if there is one

@@ -435,14 +435,17 @@ export function EmptyState({ icon: Icon, title, text, action }:
   )
 }
 
-const ToastContext = createContext<(text: string) => void>(() => {})
+/** toast('Saved'); it answers a function that takes the toast away early. */
+const ToastContext = createContext<(text: string) => () => void>(() => () => {})
 
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<{ id: number; text: string }[]>([])
   const toast = useCallback((text: string) => {
     const id = Date.now() + Math.random()
+    const drop = () => setToasts((t) => t.filter((x) => x.id !== id))
     setToasts((t) => [...t, { id, text }])
-    setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 4000)
+    setTimeout(drop, 4000)
+    return drop
   }, [])
   return (
     <ToastContext.Provider value={toast}>

@@ -40,7 +40,9 @@ async function pickKeyFile(): Promise<string | null> {
   return typeof got === 'string' ? got : null
 }
 
-export type PanelProps = { cluster: Cluster; user: string; onUser: (u: string) => void; onTested?: (ok: boolean) => void }
+/** signedIn: the cluster is connected now, so the key works and the test step starts done. */
+export type PanelProps = { cluster: Cluster; user: string; onUser: (u: string) => void; onTested?: (ok: boolean) => void
+  signedIn?: boolean }
 
 /** The key's state and what you can do with it. */
 function useKeySignIn({ cluster: c, user, onTested }: PanelProps) {
@@ -102,7 +104,8 @@ export function KeyPanel(props: PanelProps) {
   const { cluster: c, user, onUser } = props
   const s = useKeySignIn(props)
   const [open, setOpen] = useState<number | null>(null)  // a done step you opened again
-  const works = !!s.test?.ok
+  const [known, setKnown] = useState(!!props.signedIn)  // connected with this username: no need to try it
+  const works = !!s.test?.ok || (known && !s.test && !!s.key && s.added)
   const reached = !s.key ? KEY : !s.added ? ADD : works ? TEST + 1 : TEST
   const at = open ?? reached
   const state = (n: number) => (n === at ? 'open' : n < reached ? 'done' : 'later')
@@ -119,7 +122,7 @@ export function KeyPanel(props: PanelProps) {
           <>
             {s.key && <p className="text-sm text-dim">{keyLine}</p>}
             <div className="flex flex-wrap items-center gap-2">
-              {!s.key && <Button kind="primary" icon={s.busy ? undefined : KeyRound} onClick={s.make}
+              {!s.key && <Button icon={s.busy ? undefined : KeyRound} onClick={s.make}
                 disabled={s.busy}>{s.busy && <Spinner />}{S.CREATE_KEY}</Button>}
               <Button icon={FolderOpen} onClick={() => { s.pick(); setOpen(null) }}>{S.USE_MINE}</Button>
             </div>
@@ -137,24 +140,25 @@ export function KeyPanel(props: PanelProps) {
           </div>
           <p>{fill(S.PASTE_IT, { who: org })}</p>
           <div className="flex flex-wrap items-center gap-2">
-            <Button kind="primary" onClick={s.openPage}>{S.OPEN_PAGE}<ExternalLink size={16} /></Button>
+            <Button onClick={s.openPage}>{S.OPEN_PAGE}<ExternalLink size={16} /></Button>
             <Button onClick={toTest}>{S.PASTED_IT}</Button>
           </div>
           {c.key_page_note && <p className="flex gap-2 text-sm text-dim">
             <Info size={14} className="mt-[3px] shrink-0" />{c.key_page_note}</p>}
         </>}
       </Step>
-      <Step n={3} state={state(TEST)} title={S.STEP_TEST} done={fill(S.SIGNED_IN_AS, { user: user.trim() })} last>
+      <Step n={3} state={state(TEST)} title={S.STEP_TEST} done={fill(S.SIGNED_IN_AS, { user: user.trim() })}
+        change={S.CHANGE} onOpen={() => setOpen(TEST)} last>
         <div className="flex flex-col gap-1.5">
           <label htmlFor="key-user" className="text-sm text-dim">{c.username_label || 'Username'}</label>
           <div className="flex gap-2">
             <input id="key-user" value={user} placeholder={copy.usernameHint} spellCheck={false}
               autoComplete="username" autoFocus
-              onChange={(e) => { onUser(e.target.value); s.clearTest() }}
+              onChange={(e) => { onUser(e.target.value); setKnown(false); s.clearTest() }}
               onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); if (user.trim()) s.check() } }}
               className="h-10 min-w-0 flex-1 rounded-lg border border-line-strong bg-window px-3 outline-none
                 placeholder:text-faint focus:border-accent focus:ring-1 focus:ring-accent" />
-            <Button kind="primary" onClick={s.check} disabled={!user.trim() || s.busy}>
+            <Button onClick={s.check} disabled={!user.trim() || s.busy}>
               {s.busy && <Spinner />}{s.test && !works ? S.TRY_AGAIN : S.TRY}</Button>
           </div>
         </div>

@@ -46,7 +46,7 @@ export function size(n: number): string {
   let v = n
   for (const u of units) {
     v /= 1000
-    if (v < 1000 || u === 'TB') return `${v.toFixed(1)} ${u}`
+    if (v < 1000 || u === 'TB') return `${v >= 100 ? Math.round(v) : +v.toFixed(1)} ${u}`  // no ".0"
   }
   return ''
 }

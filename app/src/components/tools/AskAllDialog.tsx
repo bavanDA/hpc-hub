@@ -19,8 +19,7 @@ export function AskAllDialog({ setup, folder: start = '', onClose }:
   const go = useGo()
   const claude = setup.agents.find((a) => a.id === 'claude')
   const [folder, setFolderState] = useState(start || claude?.settings.workdir || '~')
-  const [out, setOut] = useState(() => answersFolder(folder))
-  const [auto, setAuto] = useState(out)  // the answers folder follows the folder until you edit it
+  const [out, setOut] = useState('')  // empty: a new folder for this ask inside the folder (answersFolder)
   const [prompt, setPrompt] = useState('')
   const [picked, setPicked] = useState<Record<string, boolean>>(
     () => Object.fromEntries(setup.agents.map((a) => [a.id, true])))
@@ -36,14 +35,7 @@ export function AskAllDialog({ setup, folder: start = '', onClose }:
     call<string[]>('tools.installed', { cluster: setup.id }).then(setFound).catch(() => setCheckError(true))
   }, [setup.id])
 
-  const setFolder = (f: string) => {
-    setFolderState(f)
-    if (out === auto) {
-      const next = answersFolder(f)
-      setAuto(next)
-      setOut(next)
-    }
-  }
+  const setFolder = setFolderState
   const usable = (id: string) => !found || found.includes(id)
   const chosen = setup.agents.filter((a) => picked[a.id] && usable(a.id)).map((a) => a.id)
 
@@ -65,7 +57,8 @@ export function AskAllDialog({ setup, folder: start = '', onClose }:
           onChange={(e) => { setPrompt(e.target.value); setNote('') }}
           placeholder="Which of these two plotting scripts is easier to maintain, and why?" />
         <FolderField cluster={setup} value={folder} onChange={setFolder} />
-        <Field label="Answers go to" value={out} onChange={(e) => setOut(e.target.value)} />
+        <Field label="Answers go to" value={out} placeholder="A new folder inside the one above"
+          onChange={(e) => setOut(e.target.value)} />
       </div>
       <Section title="Who answers" note={checkError ? 'Could not check which agents are installed.'
         : !found ? 'Checking which ones are installed' : undefined}>

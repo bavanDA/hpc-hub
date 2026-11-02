@@ -16,6 +16,13 @@ export function when(ts: number): string {
 export const short = (path: string, home: string) =>
   home && (path === home || path.startsWith(home + '/')) ? '~' + path.slice(home.length) : path
 
+/** Where a past chat ran, said against the Folder above it: nothing when it's that folder, "src" inside it, else
+ *  the path with ~ for home. */
+export function chatPlace(cwd: string, folder: string, home: string): string {
+  const at = short(cwd, home), f = folder.trim().replace(/\/+$/, '') || '~'
+  return at === f ? '' : at.startsWith(`${f}/`) ? at.slice(f.length + 1) : at
+}
+
 const two = (n: number) => String(n).padStart(2, '0')
 
 /** <folder>/.hpc-hub/ask/20261024-1405 */

@@ -52,13 +52,13 @@ export function when(days: number | null): string {
 export const start = {
   title: 'Backup agent',
   intro: (cluster: string, days: number) => `Scratch on ${cluster} deletes files after ${days} days. The backup agent `
-    + 'finds what is about to go, picks what matters and copies it to your project folder. It never deletes anything.',
+    + 'copies the work that matters to your project folder before then.',
   noTimer: (cluster: string) => `Scratch on ${cluster} has no timer. Nothing here gets deleted by age.`,
   check: 'Check my scratch',
   anyway: 'Copy important work anyway',
   hint: 'Takes about 20 minutes. You can close the app.',
-  agent: 'Let Claude sort the folders the rules can\'t place',
-  agentHint: 'It reads names, READMEs and job scripts. It can\'t run anything.',
+  agent: 'Let Claude sort unclear folders',
+  agentHint: 'Claude only looks. It can\'t change or run anything.',
   last: (when: string) => `Last check ${when}.`,
   seeLast: 'See the last check',
 }

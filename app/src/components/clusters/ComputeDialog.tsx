@@ -1,5 +1,5 @@
 // A cluster's compute node in style E (compute_dialog.py): its size before a node is requested, with your saved
-// choice filled in, or what connecting gets you. The size itself is e/NodeFields: quick sizes, then rows.
+// choice filled in. The size itself is e/NodeFields: quick sizes, then rows.
 // Duration and GpuPicker are the older pieces other dialogs still use.
 import { Check } from 'lucide-react'
 import { useState } from 'react'
@@ -7,7 +7,7 @@ import { useState } from 'react'
 import { call } from '../../rpc'
 import { summary, type Cluster, type Limits, type Profile } from '../../types/clusters'
 import { NodeFields } from '../e/NodeFields'
-import { EDialog, List, MainButton, Section, ToggleRow } from '../e/ui'
+import { EDialog, MainButton, ToggleRow } from '../e/ui'
 import { useToast } from '../toast'
 import { ActionRow, NumberBox } from './fields'
 import { chosen, gpuHints, gpuName, withGpu, type Gpu } from './gpus'
@@ -84,34 +84,26 @@ export function GpuPicker({ gpus, value: p, onChange }:
 export const ASK = 'Ask before each request'
 export const ASK_SUB = 'Shows this window when you connect.'
 
-/** The phone's NodeSheet at desktop size. setup: whether to get a node when you connect, its size and Ask before
- *  each request, saved, nothing requested. request: ask Slurm for a node now, the saved size filled in. */
-export function ComputeDialog({ cluster: c, mode, onClose }:
-  { cluster: Cluster; mode: 'setup' | 'request'; onClose: () => void }) {
+/** The phone's NodeSheet at desktop size: ask Slurm for a node now, the saved size filled in. The size you get
+ *  when you connect is the Compute node part of the cluster's settings. */
+export function ComputeDialog({ cluster: c, onClose }: { cluster: Cluster; onClose: () => void }) {
   const toast = useToast()
   const [p, setP] = useState<Profile>({ ...c.profile, account: c.profile.account ?? '', qos: c.profile.qos ?? '' })
-  const [want, setWant] = useState(c.request_node_on_connect ?? true)
   const [ask, setAsk] = useState(c.ask_node ?? false)
   const [remember, setRemember] = useState(true)
   const [sending, setSending] = useState(false)
   const [ok, setOk] = useState(true)
-  const sizing = mode === 'request' || want
 
   async function go() {
     const profile: Profile = { cpus: p.cpus, mem_gb: p.mem_gb, gpus: p.gpus ?? 0, gpu_type: p.gpu_type ?? '',
       time: p.time, partition: p.partition.trim(), account: (p.account ?? '').trim(), qos: (p.qos ?? '').trim() }
     setSending(true)
     try {
-      if (mode === 'setup') {
-        putCluster(await call<Cluster>('clusters.update', { cluster: c.id,
-          changes: { profile, request_node_on_connect: want, ask_node: ask } }))
-      } else {
-        if (ask !== (c.ask_node ?? false)) {
-          putCluster(await call<Cluster>('clusters.update', { cluster: c.id, changes: { ask_node: ask } }))
-        }
-        await call('clusters.request_node', { cluster: c.id, profile, remember })
-        if (remember) putCluster({ ...c, profile: { ...c.profile, ...profile }, ask_node: ask })
+      if (ask !== (c.ask_node ?? false)) {
+        putCluster(await call<Cluster>('clusters.update', { cluster: c.id, changes: { ask_node: ask } }))
       }
+      await call('clusters.request_node', { cluster: c.id, profile, remember })
+      if (remember) putCluster({ ...c, profile: { ...c.profile, ...profile }, ask_node: ask })
       onClose()
     } catch (e) {
       toast((e as Error).message)
@@ -120,19 +112,14 @@ export function ComputeDialog({ cluster: c, mode, onClose }:
   }
 
   return (
-    <EDialog title={mode === 'setup' ? `Compute node on ${shortName(c)}` : `Get a node on ${shortName(c)}`}
-      onClose={onClose} actions={<MainButton disabled={sending || (sizing && !ok)} onClick={go}>
-        {mode === 'setup' ? 'Save' : 'Get node'}</MainButton>}>
-      {mode === 'setup' && <div className="pb-5"><List>
-        <ToggleRow label="Get a node when I connect" sub="Your terminals and agents run there." checked={want}
-          onChange={setWant} /></List></div>}
-      {sizing && <div className="pt-1">
-        <NodeFields cluster={c.id} value={p} onChange={setP} onValid={setOk} extra={false} /></div>}
-      {sizing && <Section>
-        {mode === 'request' && <ToggleRow label="Use this size next time" checked={remember}
-          sub={remember ? undefined : `Next time: ${summary(c.profile)}`} onChange={setRemember} />}
-        <ToggleRow label={ASK} sub={ASK_SUB} checked={ask} onChange={setAsk} />
-      </Section>}
+    <EDialog title={`Get a node on ${shortName(c)}`} onClose={onClose}
+      actions={<MainButton disabled={sending || !ok} onClick={go}>Get node</MainButton>}>
+      <div className="pt-1">
+        <NodeFields cluster={c.id} value={p} onChange={setP} onValid={setOk} extra={false} /></div>
+      {/* more rows of the same list: no gap after Queue and priority */}
+      <ToggleRow label="Use this size next time" checked={remember}
+        sub={remember ? undefined : `Next time: ${summary(c.profile)}`} onChange={setRemember} />
+      <ToggleRow label={ASK} sub={ASK_SUB} checked={ask} onChange={setAsk} />
     </EDialog>
   )
 }

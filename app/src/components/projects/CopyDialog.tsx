@@ -172,7 +172,7 @@ export function CopyDialog({ p, onClose, onStarted }:
                   ))}
                 </List>
                 <p className={NOTE}>{plan.chats_error ? `Could not read chats: ${plan.chats_error}`
-                  : 'Tick the ones to keep going there. Paths move to the new folder.'}</p>
+                  : 'Tick the ones to keep going there.'}</p>
               </Step>
             )}
             {error && <p className="px-5 pt-4 select-text text-bad">{error}</p>}

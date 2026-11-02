@@ -7,7 +7,7 @@ import type { PlanItem, Progress, Scan } from '@shared/types/backup'
 export const phone = {
   hint: 'Takes about 20 minutes. You can close the app.',
   agent: 'Let Claude sort unclear folders',
-  agentHint: "It reads names, READMEs and job scripts. It can't run anything.",
+  agentHint: "Claude only looks. It can't change or run anything.",
   onlySoonOn: 'Files safe for now stay in scratch.',
   onlySoonOff: 'Everything important, also files safe for now.',
   git: 'Git repo, copied whole',

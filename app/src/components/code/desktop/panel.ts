@@ -3,7 +3,7 @@
 import { useSyncExternalStore } from 'react'
 
 import { isMac } from '../../app/platform'
-import { AGENT_NAMES, type TmuxSession } from '../../../types/terminals'
+import { sessionKind, type TmuxSession } from '../../../types/terminals'
 import { useListings, type Listed, type Live } from '../../terminals/data'
 import { close } from '../../terminals/tabs'
 import { inside, tilde } from './workspace'
@@ -62,7 +62,7 @@ function ago(ts: number): string {
 
 /** What runs in it, where, and since when: "python · n0042 · src · 3 h". */
 export function about(s: TmuxSession, folder: string, home: string): string {
-  const what = AGENT_NAMES[s.agent] ?? (s.kind === 'screen' ? 'screen' : s.command || 'tmux')
+  const what = sessionKind(s)
   const dir = !s.path ? '' : inside(s.path, folder) ? s.path.slice(folder.length + 1) : tilde(s.path, home)
   return [what, s.node || 'login node', dir, ago(s.created)].filter(Boolean).join(' · ')
 }

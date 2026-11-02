@@ -96,3 +96,7 @@ def test_qos_only_when_it_tells_you_something():
     j = jobs.parse_jobs("1|x|me|general|RUNNING|1:00|4:00:00|2|8G|n1|low\n"
                         "2|y|me|debug|RUNNING|1:00|30:00|1|4G|n2|debug\n")
     assert [jobs.shown_qos(x) for x in j] == ["low", ""]
+
+
+def test_qos_reads_as_a_priority():
+    assert [jobs.priority_name(q) for q in ("low", "standard", "high_mygroup")] == ["Low", "Standard", "High (mygroup)"]

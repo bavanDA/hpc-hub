@@ -4,6 +4,7 @@
 import { Bot, Code, Cpu, KeyRound, ListOrdered, Plus, Server, ShieldCheck } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
+import { priorityName, queueRowName } from '@shared/components/clusters/priority'
 import { putCluster } from '@shared/components/clusters/store'
 import { Spinner } from '@shared/components/ui'
 import { call } from '@shared/rpc'
@@ -49,15 +50,15 @@ const parseQueues = (q?: string) => (q ?? '').split(',').map((x) => x.trim()).fi
   .map((x) => { const [queue = '', billing = ''] = x.split(':'); return [queue.trim(), billing.trim()] as [string, string] })
 const joinQueues = (l: [string, string][]) => l.filter(([q]) => q).map(([q, b]) => (b ? `${q}:${b}` : q)).join(',')
 
-/** The queues to try, in order: one row each (queue, its billing), tap to change or remove, then Add a queue. */
+/** The queues to try, in order: one row each (queue and priority), tap to change or remove, then Add a queue. */
 function QueueRows({ cluster, value, onChange }: { cluster: string; value?: string; onChange: (v: string) => void }) {
   const list = parseQueues(value)
   const [edit, setEdit] = useState<number | null>(null)  // list.length: a new one
-  const [pick, setPick] = useState<'' | 'queue' | 'billing'>('')
+  const [pick, setPick] = useState<'' | 'queue' | 'priority'>('')
   const [limits, setLimits] = useState<Limits | null>(null)
   const cur = edit === null ? null : (list[edit] ?? ['', ''] as [string, string])
-  useEffect(() => {
-    if (edit === null) return
+  const name = (q: string, b: string) => queueRowName(q, b, limits?.default_partition)
+  useEffect(() => {  // also for the rows' names: the usual queue goes unsaid
     call<Limits>('clusters.partitions', { cluster, partition: cur?.[0] ?? '', qos: '' }).then(setLimits).catch(() => {})
   }, [cluster, edit, cur?.[0]]) // eslint-disable-line react-hooks/exhaustive-deps
   const put = (pair: [string, string] | null) => {
@@ -68,15 +69,15 @@ function QueueRows({ cluster, value, onChange }: { cluster: string; value?: stri
   const close = () => { setEdit(null); setPick('') }
   return <>
     <Section title="Tried in this order">
-      {list.map(([q, b], i) => <Row key={`${q}:${b}:${i}`} label={q} value={b ? `Billing: ${b}` : 'Default billing'} opens
-        onPress={() => setEdit(i)} />)}
+      {list.map(([q, b], i) => <Row key={`${q}:${b}:${i}`} label={name(q, b)} opens onPress={() => setEdit(i)} />)}
       <Row icon={Plus} label="Add a queue" onPress={() => setEdit(list.length)} />
     </Section>
-    {cur && <Sheet flush title={edit! < list.length ? cur[0] : 'Add a queue'} onClose={close}
+    {cur && <Sheet flush title={edit! < list.length ? name(cur[0], cur[1]) : 'Add a queue'} onClose={close}
       actions={<MainButton onClick={close}>Done</MainButton>}>
       <List>
         <Row label="Queue" value={cur[0] || 'Pick one'} opens onPress={() => setPick('queue')} />
-        <Row label="Billing" value={cur[1] || 'Default'} opens onPress={() => setPick('billing')} />
+        <Row label="Priority" value={priorityName(cur[1] || limits?.default_qos)} opens
+          onPress={() => setPick('priority')} />
       </List>
       {edit! < list.length && <List className="mt-6">
         <Row label="Remove this queue" danger onPress={() => { put(null); close() }} />
@@ -84,8 +85,8 @@ function QueueRows({ cluster, value, onChange }: { cluster: string; value?: stri
       {pick === 'queue' && <PickerSheet title="Queue" value={cur[0]}
         options={(limits?.partitions ?? []).map((q) => ({ value: q, label: q }))}
         onPick={(v) => put([v, cur[1]])} onClose={() => setPick('')} />}
-      {pick === 'billing' && <PickerSheet title="Billing" value={cur[1]}
-        options={[{ value: '', label: 'Default' }, ...(limits?.qos ?? []).map((q) => ({ value: q, label: q }))]}
+      {pick === 'priority' && <PickerSheet title="Priority" value={cur[1] || limits?.default_qos || ''}
+        options={(limits?.qos ?? []).map((q) => ({ value: q, label: priorityName(q) }))}
         onPick={(v) => put([cur[0] || limits?.default_partition || '', v])} onClose={() => setPick('')} />}
     </Sheet>}
   </>

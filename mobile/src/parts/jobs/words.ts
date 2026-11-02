@@ -1,5 +1,6 @@
 // How a job reads on the phone: plain state words, "1 core", "64 GB", "Oct 24, 09:31", and Slurm's detail rows
 // turned into those words (no State or Run time rows: the top of the sheet shows them).
+import { priorityName } from '@shared/components/clusters/priority'
 import { memText, stateName } from '@shared/components/jobs/format'
 import type { DetailGroup } from '@shared/types/jobs'
 import type { Tone } from '../../ui'
@@ -44,7 +45,8 @@ export function phoneGroups(groups: DetailGroup[]): DetailGroup[] {
       if (r.label === 'Memory') return [{ label: 'Memory', value: memText(r.value) }]
       if (r.label === 'Partition · QoS · account') {
         const [queue, billing, group] = r.value.split(' · ')
-        return [{ label: 'Queue', value: queue }, { label: 'Billing', value: billing }, { label: 'Group', value: group }]
+        return [{ label: 'Queue', value: queue }, { label: 'Priority', value: billing && priorityName(billing) },
+          { label: 'Group', value: group }]
           .filter((x) => x.value)
       }
       return [{ label: r.label, value: dateText(r.value) }]

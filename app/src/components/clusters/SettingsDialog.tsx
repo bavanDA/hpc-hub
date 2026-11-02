@@ -9,6 +9,7 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { call } from '../../rpc'
 import { secondStep, summary, type AgentId, type AgentSettings, type Cluster, type Logins, type SettingsInfo,
   type VsCode } from '../../types/clusters'
+import { agentIcon } from '../agents/AgentIcon'
 import { NodeFields } from '../e/NodeFields'
 import { ConfirmDialog, Note, PickerDialog, type PickerOption } from '../e/parts'
 import { EDialog, Field, List, MainButton, NumberRow, Row, Section, Segments, ToggleRow } from '../e/ui'
@@ -22,7 +23,7 @@ import { KeySetupDialog } from './KeySetupDialog'
 import { copy, shortName } from './loginCopy'
 import { queueCount, QueueRows } from './QueueRows'
 import { CHROME_WINDOW } from './SignIn'
-import { putCluster } from './store'
+import { putCluster, useClusters } from './store'
 
 type Part = '' | 'login' | 'compute' | 'server' | 'queues' | 'vscode' | 'agents'
 const TITLES: Record<Exclude<Part, ''>, string> = { login: 'Sign-in', compute: 'Compute node',
@@ -50,7 +51,9 @@ type Choosing = { title: string; value: string; options: PickerOption<string>[];
 export function SettingsDialog({ cluster, hint, onClose, start = '', advanced = false }:
   { cluster: Cluster; hint?: string; onClose: () => void; start?: string; advanced?: boolean }) {
   const toast = useToast()
+  const session = useClusters().sessions[cluster.id]
   const [part, setPart] = useState<Part>(() => firstPart(start, advanced))
+  const [entry] = useState<Part>(part)  // opened straight at a section (the card's Compute node): it saves
   const [d, setD] = useState<Cluster>(cluster)
   const [info, setInfo] = useState<SettingsInfo | null>(null)
   const [saved, setSaved] = useState<Logins | null>(null)
@@ -167,7 +170,8 @@ export function SettingsDialog({ cluster, hint, onClose, start = '', advanced = 
 
   const login = keyCluster ? <>
     <p className="px-5 pb-1 text-dim">{keyHeading(d).text}</p>
-    <div className="px-5"><KeyPanel cluster={d} user={user} onUser={setUser} /></div>
+    <div className="px-5"><KeyPanel cluster={d} user={user} onUser={setUser}
+      signedIn={!!session && (session.connected ?? session.state === 'Connected')} /></div>
     {instead}
     {forgetRow}
   </> : <>
@@ -217,7 +221,7 @@ export function SettingsDialog({ cluster, hint, onClose, start = '', advanced = 
         <Row label="Protocol" value={v.protocol ?? 'anyconnect'} opens onPress={() => choose('Protocol',
           v.protocol ?? 'anyconnect', (info?.protocols ?? [v.protocol ?? 'anyconnect']).map((p) => [p, p]),
           (protocol) => upVpn({ protocol }))} />
-        <ToggleRow label="Split tunnel" sub="Only these networks and domains use this VPN, so other VPNs can run too."
+        <ToggleRow label="Split tunnel" sub="Only the domains and networks below go through this VPN."
           checked={v.split_tunnel ?? true} onChange={(split_tunnel) => upVpn({ split_tunnel })} />
       </List></div>
       <div className="px-5 pt-3">
@@ -245,19 +249,20 @@ export function SettingsDialog({ cluster, hint, onClose, start = '', advanced = 
     </div>}
   </>
 
+  const reuse = <ToggleRow label="Reuse a node you already have" sub="One an agent or VS Code got earlier."
+    checked={d.reuse_running_job ?? true} onChange={(on) => up({ reuse_running_job: on })} />
   const compute = <>
     <List>
       <ToggleRow label="Get a compute node when I connect" sub="Your terminals and agents run there."
         checked={want} onChange={(on) => up({ request_node_on_connect: on })} />
+      {!want && reuse}
     </List>
     {want && <div className="pt-5">
-      <NodeFields cluster={d.id} value={d.profile} onChange={(profile) => up({ profile })} /></div>}
-    <Section>
-      {want && <ToggleRow label={ASK} sub="Shows the node window when you connect." checked={d.ask_node ?? false}
-        onChange={(on) => up({ ask_node: on })} />}
-      <ToggleRow label="Reuse a node you already have" sub="One an agent or VS Code got earlier."
-        checked={d.reuse_running_job ?? true} onChange={(on) => up({ reuse_running_job: on })} />
-    </Section>
+      <NodeFields cluster={d.id} value={d.profile} onChange={(profile) => up({ profile })} />
+      <ToggleRow label={ASK} sub="Shows the node window when you connect." checked={d.ask_node ?? false}
+        onChange={(on) => up({ ask_node: on })} />
+      {reuse}
+    </div>}
   </>
 
   const queues = <>
@@ -297,7 +302,7 @@ export function SettingsDialog({ cluster, hint, onClose, start = '', advanced = 
     const s = d[a.id]
     if (!s) return null
     return (
-      <Section key={a.id} title={a.name}>
+      <Section key={a.id} title={a.name} icon={agentIcon(a.id)}>
         <ToggleRow label="Its own compute node" sub={s.new_node ? undefined : 'Runs on the node you have.'}
           checked={s.new_node} onChange={(new_node) => upAgent(a.id, { new_node })} />
         {a.remote_label && <ToggleRow label={a.remote_label} sub={a.remote_hint} checked={s.remote}
@@ -338,7 +343,7 @@ export function SettingsDialog({ cluster, hint, onClose, start = '', advanced = 
     <>
       <EDialog title={part ? TITLES[part] : `${cluster.name} settings`} width={580} onClose={close}
         onBack={part ? back : undefined}
-        actions={part ? <MainButton onClick={back}>Done</MainButton>
+        actions={part && part !== entry ? <MainButton onClick={back}>Done</MainButton>
           : <MainButton disabled={busy || !saved || !info} onClick={save}>Save</MainButton>}>
         {hint && (part === '' || part === 'login') && <Note>{hint}</Note>}
         {error && <Note error>{error}</Note>}

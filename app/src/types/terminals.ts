@@ -63,3 +63,13 @@ export const COLORS = ['#3584e4', '#2ec27e', '#e5a50a', '#ff7800', '#e01b24', '#
 export const AGENT_NAMES: Record<string, string> = {
   claude: 'Claude', codex: 'ChatGPT', agy: 'Antigravity', cursor: 'Cursor', ask: 'Ask all', term: 'Terminal',
 }
+
+const SHELLS = new Set(['', 'bash', 'zsh', 'sh', 'fish', 'tcsh', 'csh', 'ksh', 'tmux', 'screen'])
+
+/** What a session is, in words: the agent's name, "VS Code" for its tunnel, "Terminal" for a shell (bash, screen),
+ *  else the program running in it (python). */
+export function sessionKind(s: Pick<TmuxSession, 'agent' | 'command'>): string {
+  if (AGENT_NAMES[s.agent]) return AGENT_NAMES[s.agent]
+  if (s.command === 'code') return 'VS Code'
+  return SHELLS.has(s.command.replace(/^-/, '')) ? 'Terminal' : s.command
+}

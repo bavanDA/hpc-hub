@@ -1,5 +1,5 @@
 // Before Globus works: your Globus app's client id, then a sign-in. Plus the account sheet behind the gear:
-// client id, sign out, and the collection that holds each cluster's files.
+// sign out, the collection that holds each cluster's files, and under Advanced the client id.
 import { ArrowLeftRight, LogIn, LogOut, RotateCw } from 'lucide-react'
 import { useState } from 'react'
 
@@ -43,6 +43,7 @@ export function AccountSheet({ status, onClose, onChange, onSignIn, onChoose }: 
   onChoose: (c: GlobusCluster) => void
 }) {
   const toast = useToast()
+  const [advanced, setAdvanced] = useState(false)
   const signOut = () => call<GlobusStatus>('globus.logout')
     .then((s) => { toast('Signed out of Globus'); onChange(s) })
     .catch((e: Error) => toast(`Could not sign out: ${e.message}`))
@@ -54,7 +55,7 @@ export function AccountSheet({ status, onClose, onChange, onSignIn, onChoose }: 
           : <Row icon={LogIn} label="Sign in to Globus" opens onPress={onSignIn} />}
       </div>
       {status.signed_in && status.clusters.some((c) => c.personal) && (
-        <Section title="Globus Connect" note="Runs on the login node with your home, project and scratch folders.">
+        <Section title="Globus Connect" note="Shares your home, project and scratch folders with your own Globus account.">
           {status.clusters.filter((c) => c.personal).map((c) => (
             <Row key={c.id} icon={RotateCw} label={`Restart on ${shortCluster(c.name)}`} onPress={() => {
               toast(`Restarting Globus Connect on ${shortCluster(c.name)}…`)
@@ -73,11 +74,13 @@ export function AccountSheet({ status, onClose, onChange, onSignIn, onChoose }: 
           ))}
         </Section>
       )}
-      <section className="px-4 pt-6">
-        <h3 className="pb-1.5 text-xs font-semibold tracking-wide text-dim uppercase">Client ID</h3>
-        <p className="text-sm text-dim">{HELP}</p>
-        <ClientId value={status.client_id} onSaved={onChange} />
-      </section>
+      <Section><Row label="Advanced" sub="Your own Globus app" opens onPress={() => setAdvanced(true)} /></Section>
+      {advanced && <Sheet title="Advanced" onClose={() => setAdvanced(false)}>
+        <div className="px-4">
+          <ClientId value={status.client_id} onSaved={(s) => { onChange(s); setAdvanced(false) }} />
+          <p className="pt-3 text-sm text-dim">{HELP}</p>
+        </div>
+      </Sheet>}
     </Sheet>
   )
 }
