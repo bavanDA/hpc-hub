@@ -6,15 +6,16 @@ const ACCOUNTS: Record<string, Account[]> = {
     { account: 'mygroup', quota: 300000, used: 184520, mine: 21340, period: '', rate: 0 },
     { account: 'abc123', quota: 50000, used: 46100, mine: 0, period: '', rate: 0 },
   ],
-  yale: [{ account: 'mygroup', quota: 0, used: 48210, mine: 9120, period: 'FY27', rate: 0.012 }],
+  yale: [{ account: 'pi_doe', quota: 0, used: 48210, mine: 9120, period: 'FY27', rate: 0.012 }],
 }
 
 // SU charged and core hours over the last 30 days; other periods scale from it
 const PEOPLE: Record<string, [string, string, number, number][]> = {
   mygroup: [['asmith', 'Alex Smith', 9120, 11400], ['jdoe', 'Jane Doe', 6210, 9800], ['bkim', 'Bo Kim', 3480, 3480],
-    ['cwong', 'Chris Wong', 940, 2210], ['dpatel', 'Dev Patel', 0, 120], ['elopez', 'Eva Lopez', 0, 0],
+    ['cwong', 'Chris Wong', 940, 2210], ['dpatel', 'Dev Patel', 60, 120], ['elopez', 'Eva Lopez', 0, 0],
     ['fnguyen', 'Finn Nguyen', 0, 0]],
   abc123: [['cwong', 'Chris Wong', 4210, 4210], ['asmith', 'Alex Smith', 1990, 2050], ['jdoe', 'Jane Doe', 0, 0]],
+  pi_doe: [['jdoe', 'Jane Doe', 9120, 9120], ['mlee', 'Mia Lee', 21400, 21400], ['tross', 'Tom Ross', 17690, 18020]],
 }
 
 function people({ account, days }: Record<string, unknown>): People {

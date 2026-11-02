@@ -107,7 +107,14 @@ function details({ cluster, job_id }: Record<string, unknown>): JobDetails {
   const j = find(String(cluster), String(job_id))
   if (!j) throw new Error('Job not found')
   const active = ['RUNNING', 'PENDING'].includes(j.state)
-  const start = j.state === 'PENDING' ? '' : 'Oct 24, 09:31'
+  // started at 09:31; a running job ends when its time is up, a finished one ended after its run time
+  const at = (secs: number) => {
+    const t = new Date(2026, 9, 24, 9, 31 + Math.round(secs / 60))
+    return `${t.toLocaleString('en-US', { month: 'short' })} ${t.getDate()}, ${String(t.getHours()).padStart(2, '0')}:${
+      String(t.getMinutes()).padStart(2, '0')}`
+  }
+  const start = j.state === 'PENDING' ? '' : at(0)
+  const end = start && at(active ? j.limit_seconds : j.seconds)
   const dir = `/project/mygroup/${ME}/${j.name}`
   const STATE: Record<string, string> = { RUNNING: 'Running', COMPLETED: 'Finished', FAILED: 'Failed',
     CANCELLED: 'Cancelled', TIMEOUT: 'Ran out of time' }
@@ -115,7 +122,7 @@ function details({ cluster, job_id }: Record<string, unknown>): JobDetails {
     { title: 'Status', rows: [
       ['State', j.state === 'PENDING' ? j.reason : STATE[j.state] ?? j.state],
       ['Run time', j.state === 'PENDING' ? `${j.limit_text} asked` : `${j.elapsed_text} of ${j.limit_text}`],
-      ['Started', start], [active ? 'Ends' : 'Ended', start && 'Oct 24, 13:31'], ['Submitted', 'Oct 24, 09:30'],
+      ['Started', start], [active ? 'Ends' : 'Ended', end], ['Submitted', 'Oct 24, 09:30'],
       ['Exit code', active ? '' : j.state === 'COMPLETED' ? '0, finished without errors'
         : '1, the program reported an error']] },
     { title: 'Resources', rows: [
