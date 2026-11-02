@@ -68,7 +68,7 @@ function QueueRows({ cluster, value, onChange }: { cluster: string; value?: stri
   const close = () => { setEdit(null); setPick('') }
   return <>
     <Section title="Tried in this order">
-      {list.map(([q, b], i) => <Row key={`${q}:${b}:${i}`} label={q} value={b || 'Default billing'} opens
+      {list.map(([q, b], i) => <Row key={`${q}:${b}:${i}`} label={q} value={b ? `Billing: ${b}` : 'Default billing'} opens
         onPress={() => setEdit(i)} />)}
       <Row icon={Plus} label="Add a queue" onPress={() => setEdit(list.length)} />
     </Section>
