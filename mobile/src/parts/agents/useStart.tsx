@@ -3,6 +3,7 @@
 // const start = useStart(); start.open('wulver', 'Wulver (NJIT)', 'agent:claude'); and render {start.sheet}.
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
 
+import { shortName } from '@shared/components/clusters/loginCopy'
 import { setNotify, whenConnected } from '@shared/components/tools/run'
 import { call } from '@shared/rpc'
 import type { ToolSetup, VsFound } from '@shared/types/tools'
@@ -21,7 +22,7 @@ export function useStart() {
     const [kind, what = ''] = key.split(':')
     try {
       await whenConnected(cluster, name)
-      if (kind === 'vscode') toast(`Looking for VS Code on ${name.split(' (')[0]}…`)
+      if (kind === 'vscode') toast(`Looking for VS Code on ${shortName({ name })}…`)
       const [setup, found] = await Promise.all([call<ToolSetup>('tools.setup', { cluster }),
         kind === 'vscode' ? call<VsFound>('tools.vscode_find', { cluster }) : Promise.resolve(null)])
       if (kind === 'vscode' && found) {

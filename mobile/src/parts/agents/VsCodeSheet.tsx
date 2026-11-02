@@ -3,6 +3,7 @@
 import { Globe } from 'lucide-react'
 import { useState } from 'react'
 
+import { shortName } from '@shared/components/clusters/loginCopy'
 import { sendable } from '@shared/components/tools/format'
 import { startVscode } from '@shared/components/tools/run'
 import { useGo } from '@shared/nav'
@@ -30,7 +31,7 @@ export function VsCodeSheet({ setup, found, folder: first = '', onClose }:
   }
 
   return (
-    <Sheet title={`VS Code on ${setup.name.split(' (')[0]}`} flush onClose={onClose}
+    <Sheet title={`VS Code on ${shortName({ name: setup.name })}`} flush onClose={onClose}
       actions={<MainButton icon={Globe} onClick={open}>Open in the browser</MainButton>}>
       <div className="px-4">
         <p className="pb-2 text-dim">It opens at vscode.dev in your browser. The first time, sign in with GitHub

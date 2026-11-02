@@ -2,12 +2,12 @@
 // starts in. It runs in tmux, so it keeps going when you leave it.
 import { useState } from 'react'
 
+import { shortName } from '@shared/components/clusters/loginCopy'
 import type { Live } from '@shared/components/terminals/data'
 import { openNew } from '@shared/components/terminals/tabs'
 import { FolderField } from '../agents/FolderField'
 import { Field, List, MainButton, Row, Segments, Sheet, useToast } from '../../ui'
 
-const short = (name: string) => name.split(' (')[0]
 
 export function NewTerminalSheet({ live, cluster: first = '', onClose, onOpened }:
   { live: Live[]; cluster?: string; onClose: () => void; onOpened: () => void }) {
@@ -36,7 +36,7 @@ export function NewTerminalSheet({ live, cluster: first = '', onClose, onOpened 
         {live.length > 1 && (
           <div className="py-2">
             <span className="mb-1.5 block text-sm text-dim">Cluster</span>
-            <Segments label="Cluster" value={c?.id ?? ''} options={live.map((x) => [x.id, short(x.name)] as const)}
+            <Segments label="Cluster" value={c?.id ?? ''} options={live.map((x) => [x.id, shortName(x)] as const)}
               onChange={(id) => { setPicked(id); setWhere('') }} />
           </div>
         )}
@@ -55,7 +55,7 @@ export function NewTerminalSheet({ live, cluster: first = '', onClose, onOpened 
         </List>
       )}
       <div className="px-4 pt-2">
-        {c && <FolderField cluster={c.id} name={short(c.name)} label="Start in" value={folder} onChange={setFolder} />}
+        {c && <FolderField cluster={c.id} name={shortName(c)} label="Start in" value={folder} onChange={setFolder} />}
         <p className="pt-2 text-sm text-dim">It keeps running when you leave it or close the app.</p>
       </div>
     </Sheet>

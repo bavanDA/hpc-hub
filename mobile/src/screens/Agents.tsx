@@ -4,6 +4,7 @@
 import { Play, ShieldCheck } from 'lucide-react'
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 
+import { shortName } from '@shared/components/clusters/loginCopy'
 import { setActiveCluster } from '@shared/components/clusters/active'
 import { useClusters } from '@shared/components/clusters/store'
 import { ToastProvider as SharedToasts } from '@shared/components/toast'
@@ -17,7 +18,6 @@ import { Skills } from '../parts/agents/Skills'
 import { StartPicker } from '../parts/agents/StartPicker'
 import { useStart } from '../parts/agents/useStart'
 import { Header } from '../parts/Header'
-import { shortName } from '../parts/NodeSheet'
 import { Button, Chips, Row, Section, Sheet } from '../ui'
 
 const Permissions = lazy(() => import('@shared/pages/Permissions').then((m) => ({ default: m.Permissions })))

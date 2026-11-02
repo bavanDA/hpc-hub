@@ -2,6 +2,7 @@
 // dialog as a phone sheet.
 import { useEffect, useState } from 'react'
 
+import { shortName } from '@shared/components/clusters/loginCopy'
 import { answersFolder, sendable } from '@shared/components/tools/format'
 import { startAsk } from '@shared/components/tools/run'
 import { useGo } from '@shared/nav'
@@ -48,7 +49,7 @@ export function AskAllSheet({ setup, folder: first = '', onClose }:
       profile: setup.node ? null : sendable(profile), remember }, go)
   }
 
-  const short = setup.name.split(' (')[0]
+  const short = shortName({ name: setup.name })
   return (
     <Sheet title={`Ask all on ${short}`} flush onClose={onClose} actions={<MainButton onClick={ask}>Ask all</MainButton>}>
       <div className="px-4">

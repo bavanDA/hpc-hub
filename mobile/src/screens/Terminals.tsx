@@ -5,6 +5,7 @@
 import { Plus, RefreshCw, SquareTerminal, WifiOff } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
+import { shortName } from '@shared/components/clusters/loginCopy'
 import { useListings, useLive } from '@shared/components/terminals/data'
 import { openSession, select, setNotify, tabKey, useTabs } from '@shared/components/terminals/tabs'
 import { usePageParams } from '@shared/nav'
@@ -17,7 +18,6 @@ import { SessionRow } from '../parts/terminal/SessionRow'
 import { TerminalScreen } from '../parts/TerminalScreen'
 import { EmptyState, List, MainButton, useToast } from '../ui'
 
-const short = (name: string) => name.split(' (')[0]
 
 export function Terminals({ shown }: { shown: boolean }) {
   const toast = useToast()
@@ -72,10 +72,10 @@ export function Terminals({ shown }: { shown: boolean }) {
           return (
             <section key={c.id} className="pt-5">
               <h2 className="px-4 pb-1.5 text-sm font-semibold text-dim">
-                {short(c.name)}{c.node ? ` · ${c.node}` : ''}</h2>
+                {shortName(c)}{c.node ? ` · ${c.node}` : ''}</h2>
               {l?.error && <p className="px-4 pb-2 text-bad">{l.error}</p>}
               {l?.listing && !l.listing.has_tmux && !sessions.length &&
-                <p className="px-4 pb-2 text-dim">tmux isn't installed on {short(c.name)}.</p>}
+                <p className="px-4 pb-2 text-dim">tmux isn't installed on {shortName(c)}.</p>}
               {l?.listing && l.listing.has_tmux && !sessions.length &&
                 <p className="px-4 pb-2 text-dim">No sessions yet.</p>}
               {sessions.length > 0 && (
