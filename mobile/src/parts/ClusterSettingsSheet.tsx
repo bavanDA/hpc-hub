@@ -107,8 +107,8 @@ function AgentRows({ a, value: s, onChange }: { a: SettingsInfo['agents'][number
           onPress={() => setChoosing(o.key)} />
       ))}
       <div className="border-b border-line px-4 pb-2">
-        <Field label="Folder it starts in" {...TEXT} value={s.workdir} placeholder="Your home folder"
-          onChange={(e) => onChange({ workdir: e.target.value })} />
+        <Field label="Folder it starts in" {...TEXT} value={s.workdir === '~' ? '' : s.workdir}
+          placeholder="Home folder" onChange={(e) => onChange({ workdir: e.target.value || '~' })} />
       </div>
       {option && <PickerSheet title={option.label} value={String(s[option.key] ?? '')}
         options={option.choices.map(([value, label]) => ({ value, label }))}
@@ -190,8 +190,8 @@ export function ClusterSettingsSheet({ cluster, onClose }: { cluster: Cluster; o
             <Field label="Command" {...TEXT} value={d.vscode.command} onChange={(e) => upVs({ command: e.target.value })} />
             <Field label="Runs first" {...TEXT} value={d.vscode.setup} placeholder="module load VSCode"
               onChange={(e) => upVs({ setup: e.target.value })} />
-            <Field label="Folder it opens" {...TEXT} value={d.vscode.workdir} placeholder="Your home folder"
-              onChange={(e) => upVs({ workdir: e.target.value })} />
+            <Field label="Folder it opens" {...TEXT} value={d.vscode.workdir === '~' ? '' : d.vscode.workdir}
+              placeholder="Home folder" onChange={(e) => upVs({ workdir: e.target.value || '~' })} />
           </div>
           <h3 className="px-4 pt-5 pb-1.5 text-xs font-semibold tracking-wide text-dim uppercase">Its own node</h3>
           <NodeFields cluster={d} value={d.vscode.compute} onChange={(compute) => upVs({ compute })} />
