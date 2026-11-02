@@ -1,6 +1,6 @@
 //! HPC Hub on Android: the phone screens in a webview, the Python backend as a child process (backend.rs),
-//! QR scans with the camera (scan.rs), Duo Mobile opened for its push (duo.rs), web sign-ins in a page of their
-//! own (websignin.rs), files, notifications and staying connected (phone.rs).
+//! QR scans with the camera (scan.rs), Duo Mobile opened for its push (duo.rs), web sign-ins (the VPN's, a
+//! portal's) in a page of their own (websignin.rs), files, notifications and staying connected (phone.rs).
 //! See docs/design/android.md.
 
 mod backend;
@@ -26,7 +26,8 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![backend::rpc_send, scan::scan_qr, duo::open_duo,
-            websignin::web_sign_in, phone::pick_files, phone::save_to_downloads, phone::open_with,
+            websignin::web_sign_in, websignin::vpn_sign_in,
+            websignin::close_sign_in, phone::pick_files, phone::save_to_downloads, phone::open_with,
             phone::share_file, phone::keep_alive])
         .build(tauri::generate_context!())
         .expect("error while building HPC Hub")
