@@ -2,6 +2,7 @@
 // dialog as a phone sheet.
 import { useEffect, useState } from 'react'
 
+import { agentIcon } from '@shared/components/agents/AgentIcon'
 import { shortName } from '@shared/components/clusters/loginCopy'
 import { answersFolder, sendable } from '@shared/components/tools/format'
 import { startAsk } from '@shared/components/tools/run'
@@ -55,7 +56,7 @@ export function AskAllSheet({ setup, folder: first = '', onClose }:
       <Section title="Who answers" note={checkFailed ? "Couldn't check which agents are installed."
         : !found ? 'Checking which ones are installed…' : undefined}>
         {setup.agents.map((a) => (
-          <ToggleRow key={a.id} label={a.name} checked={Boolean(picked[a.id]) && usable(a.id)}
+          <ToggleRow key={a.id} icon={agentIcon(a.id)} label={a.name} checked={Boolean(picked[a.id]) && usable(a.id)}
             sub={usable(a.id) ? undefined : 'Not installed'}
             onChange={(on) => { if (usable(a.id)) { setPicked({ ...picked, [a.id]: on }); setNote('') } }} />
         ))}

@@ -225,10 +225,11 @@ export function Switch({ label, hint, checked, onChange }:
 }
 
 /** A switch as a row of a list. */
-export function ToggleRow({ label, sub, checked, onChange }:
-  { label: string; sub?: ReactNode; checked: boolean; onChange: (on: boolean) => void }) {
+export function ToggleRow({ label, sub, checked, onChange, icon: Icon }:
+  { label: string; sub?: ReactNode; checked: boolean; onChange: (on: boolean) => void; icon?: LucideIcon }) {
   return (
     <label className="flex min-h-14 w-full items-center gap-3 border-b border-line px-4 py-2 active:bg-pressed">
+      {Icon && <Icon size={22} className="shrink-0" />}
       <span className="min-w-0 flex-1 break-words">
         <span className="block">{label}</span>
         {sub && <span className="block text-sm text-dim">{sub}</span>}
