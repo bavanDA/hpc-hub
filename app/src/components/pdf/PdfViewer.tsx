@@ -4,11 +4,13 @@ import 'pdfjs-dist/web/pdf_viewer.css'
 import './pdf.css'
 
 import { ChevronDown, ChevronUp, Minus, Moon, Plus, Search, Sun, X } from 'lucide-react'
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import { Spinner } from '../ui'
 import { engine, open } from './engine'
 import type { PdfProps, PdfTarget } from './index'
+import type { Spot } from './reader'
+import { Tool } from './tool'
 
 type Engine = Awaited<ReturnType<typeof engine>>
 type Live = {
@@ -29,17 +31,8 @@ function stored(key: string): boolean {
   try { return localStorage.getItem(key) === '1' } catch { return false }
 }
 
-function Tool({ label, onClick, children, on = false, disabled = false }:
-  { label: string; onClick: () => void; children: ReactNode; on?: boolean; disabled?: boolean }) {
-  return (
-    <button aria-label={label} title={label} onClick={onClick} disabled={disabled}
-      className={`grid size-7 shrink-0 place-items-center rounded-md disabled:opacity-40 pointer-coarse:size-11 ${
-        on ? 'bg-selected' : 'hover:bg-hover'}`}>{children}</button>
-  )
-}
-
-export default function PdfViewer({ data, memory, compact, zoom: start = 'page-width', loading, progress, message, onSync, target, extra }:
-  PdfProps) {
+export default function PdfViewer({ data, memory, compact, zoom: start = 'page-width', loading, progress, message, onSync,
+  target, extra, reader, onWord, bar, footer }: PdfProps) {
   const scroller = useRef<HTMLDivElement>(null)
   const inner = useRef<HTMLDivElement>(null)
   const live = useRef<Live | null>(null)
@@ -47,6 +40,8 @@ export default function PdfViewer({ data, memory, compact, zoom: start = 'page-w
   const pending = useRef<PdfTarget | null>(null)
   const sync = useRef(onSync)
   sync.current = onSync
+  const picked = useRef(onWord)
+  picked.current = onWord
   const mem = useRef({ memory, start })
   mem.current = { memory, start }
   const [ready, setReady] = useState(false)
@@ -108,6 +103,7 @@ export default function PdfViewer({ data, memory, compact, zoom: start = 'page-w
     if (!ready || !me || !data) return
     let dead = false
     setFailed('')
+    reader?.reset()  // a new build: the old narration no longer fits
     restoring.current = true
     const task = open(me.lib, data)
     task.promise.then((doc) => {
@@ -120,7 +116,7 @@ export default function PdfViewer({ data, memory, compact, zoom: start = 'page-w
       old?.loadingTask.destroy()
     }).catch((e: Error) => { if (!dead) { restoring.current = false; setFailed(e.message) } })
     return () => { dead = true }
-  }, [ready, data])
+  }, [ready, data])  // eslint-disable-line react-hooks/exhaustive-deps
 
   // -- remember zoom and scroll; refit when the pane changes size --------------------------
   useEffect(() => {
@@ -173,6 +169,89 @@ export default function PdfViewer({ data, memory, compact, zoom: start = 'page-w
       cancelAnimationFrame(frame)
     }
   }, [ready])
+
+  // -- read aloud: the spoken word drawn and followed, a click reads from a word, right-click or hold looks it up
+  useEffect(() => {
+    const me = live.current, el = scroller.current
+    if (!ready || !me || !el) return
+    const spotOf = (x: number, y: number, target: EventTarget | null): Spot | null => {
+      const div = (target as HTMLElement | null)?.closest?.('.page') as HTMLElement | null
+      const view = div && me.viewer.getPageView(Number(div.dataset.pageNumber) - 1)
+      if (!div || !view?.viewport) return null
+      const r = div.getBoundingClientRect(), box = view.viewport.viewBox
+      const [px, py] = view.viewport.convertToPdfPoint(x - r.left - div.clientLeft, y - r.top - div.clientTop)
+      return { page: Number(div.dataset.pageNumber), x: px - box[0], y: box[3] - py }
+    }
+    const pick = (x: number, y: number, target: EventTarget | null, touch: boolean) => {
+      const text = textAt(x, y), spot = spotOf(x, y, target)
+      if (!text || !spot || !picked.current) return false
+      picked.current({ text, spot, x, y, touch })
+      return true
+    }
+
+    let mark: HTMLDivElement | null = null, scrolled = 0, wait = 0, hold = 0, held = 0, at = { x: 0, y: 0 }
+    const draw = (follow: boolean) => {
+      const id = reader?.current ?? null
+      const w = id === null ? undefined : reader?.words.get(id)
+      const view = w && me.viewer.getPageView(w[0] - 1)
+      if (!w || !view?.viewport || !view.div) { mark?.remove(); return }
+      const box = view.viewport.viewBox
+      const [ax, ay] = view.viewport.convertToViewportPoint(w[1] + box[0], box[3] - w[2])
+      const [bx, by] = view.viewport.convertToViewportPoint(w[3] + box[0], box[3] - w[4])
+      mark ??= Object.assign(document.createElement('div'), { className: 'pdf-word' })
+      if (mark.parentNode !== view.div) view.div.appendChild(mark)
+      Object.assign(mark.style, { left: `${Math.min(ax, bx) - 2}px`, top: `${Math.min(ay, by) - 1}px`,
+        width: `${Math.abs(bx - ax) + 4}px`, height: `${Math.abs(by - ay) + 2}px` })
+      if (!follow || Date.now() - scrolled < 4000) return  // you just scrolled yourself: leave the view alone
+      const m = mark.getBoundingClientRect(), c = el.getBoundingClientRect()
+      if (m.bottom > c.bottom - 40 || m.top < c.top + 40) {
+        el.scrollBy({ top: m.top - c.top - c.height / 3, behavior: 'smooth' })
+      }
+    }
+    const redraw = () => draw(false)
+    const off = reader?.onWord(() => draw(true))
+    if (reader) reader.pageNow = () => me.viewer.currentPageNumber || 1
+    me.bus.on('pagerendered', redraw)
+    const mine = () => { scrolled = Date.now() }
+
+    const click = (e: MouseEvent) => {
+      if (e.detail !== 1 || !reader?.ready || Date.now() - held < 800) return
+      if ((e.target as HTMLElement).closest('a, .annotationLayer') || !window.getSelection()?.isCollapsed) return
+      const spot = spotOf(e.clientX, e.clientY, e.target)
+      if (!spot || reader.wordAt(spot.page, spot.x, spot.y) === null) return
+      clearTimeout(wait)
+      wait = window.setTimeout(() => reader.readFrom(spot), 380)  // a double click is SyncTeX instead
+    }
+    const dbl = () => clearTimeout(wait)
+    const menu = (e: MouseEvent) => {
+      if (Date.now() - held < 800) { e.preventDefault(); return }
+      if (picked.current && pick(e.clientX, e.clientY, e.target, false)) e.preventDefault()
+    }
+    const down = (e: PointerEvent) => {
+      if (e.pointerType === 'mouse' || !picked.current) return
+      at = { x: e.clientX, y: e.clientY }
+      const target = e.target
+      clearTimeout(hold)
+      hold = window.setTimeout(() => {
+        if (pick(at.x, at.y, target, true)) { held = Date.now(); window.getSelection()?.removeAllRanges() }
+      }, 500)
+    }
+    const move = (e: PointerEvent) => { if (Math.hypot(e.clientX - at.x, e.clientY - at.y) > 10) clearTimeout(hold) }
+    const up = () => clearTimeout(hold)
+    const listen: [string, EventListener][] = [['click', click as EventListener], ['dblclick', dbl],
+      ['contextmenu', menu as EventListener], ['pointerdown', down as EventListener],
+      ['pointermove', move as EventListener], ['pointerup', up], ['pointercancel', up], ['wheel', mine],
+      ['touchmove', mine], ['keydown', mine]]
+    for (const [name, fn] of listen) el.addEventListener(name, fn, { passive: name !== 'contextmenu' })
+    return () => {
+      off?.()
+      me.bus.off('pagerendered', redraw)
+      for (const [name, fn] of listen) el.removeEventListener(name, fn)
+      clearTimeout(wait)
+      clearTimeout(hold)
+      mark?.remove()
+    }
+  }, [ready, reader])
 
   // -- SyncTeX: scroll to a spot and flash it ----------------------------------------------
   useEffect(() => {
@@ -246,9 +325,11 @@ export default function PdfViewer({ data, memory, compact, zoom: start = 'page-w
           {dark ? <Sun size={16} /> : <Moon size={16} />}</Tool>}
         {extra}
       </div>
+      {bar}
       <div className="relative min-h-0 flex-1">
         <div ref={scroller} tabIndex={0}
-          className={`pdf-scroll ${dark ? 'pdf-dark' : ''} ${compact ? 'pdf-compact' : ''} ${has ? '' : 'invisible'}`}>
+          className={`pdf-scroll ${dark ? 'pdf-dark' : ''} ${compact ? 'pdf-compact' : ''} ${onWord ? 'pdf-hold' : ''} ${
+            has ? '' : 'invisible'}`}>
           <div ref={inner} className="pdfViewer" />
         </div>
         {searching && (
@@ -280,8 +361,29 @@ export default function PdfViewer({ data, memory, compact, zoom: start = 'page-w
           </div>
         )}
       </div>
+      {footer}
     </div>
   )
+}
+
+/** The word of the PDF's text under a point, or ''. */
+function textAt(x: number, y: number): string {
+  const d = document as Document & { caretPositionFromPoint?: (x: number, y: number) =>
+    { offsetNode: Node; offset: number } | null }
+  let node: Node | null = null, offset = 0
+  if (d.caretRangeFromPoint) {
+    const r = d.caretRangeFromPoint(x, y)
+    if (r) { node = r.startContainer; offset = r.startOffset }
+  } else if (d.caretPositionFromPoint) {
+    const p = d.caretPositionFromPoint(x, y)
+    if (p) { node = p.offsetNode; offset = p.offset }
+  }
+  if (!node || node.nodeType !== Node.TEXT_NODE || !node.parentElement?.closest('.textLayer')) return ''
+  const t = node.textContent ?? '', ok = (ch: string) => /[\p{L}\p{N}'’-]/u.test(ch)
+  let a = offset, b = offset
+  while (a > 0 && ok(t[a - 1])) a--
+  while (b < t.length && ok(t[b])) b++
+  return t.slice(a, b).replace(/^['’-]+|['’-]+$/g, '')
 }
 
 /** Scroll so the spot sits near the top, and pulse a bar over that line. */

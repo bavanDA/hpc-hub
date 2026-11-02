@@ -46,3 +46,19 @@
   0%, 60% { opacity: 1; }
   100% { opacity: 0; }
 }
+
+/* Read aloud: the word being spoken, in grey with a dark line under it (no color) */
+.pdf-word {
+  position: absolute;
+  z-index: 6;
+  border-radius: 3px;
+  background: rgb(0 0 0 / 0.11);
+  box-shadow: inset 0 -2px 0 rgb(10 10 10 / 0.85);
+  pointer-events: none;
+  transition: left 0.08s linear, top 0.08s linear, width 0.08s linear;
+}
+.pdf-dark .pdf-word { background: rgb(255 255 255 / 0.16); box-shadow: inset 0 -2px 0 rgb(240 240 240 / 0.9); }
+/* a held word is looked up, so the phone doesn't start selecting text */
+@media (pointer: coarse) {
+  .pdf-hold .textLayer { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+}
