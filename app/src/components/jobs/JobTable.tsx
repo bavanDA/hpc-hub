@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from 'react'
 
 import type { Job } from '../../types/jobs'
 import { Meter, StatusPill } from '../ui'
-import { memText, stateName, type SortKey } from './format'
+import { memText, reasonText, stateName, type SortKey } from './format'
 
 type Column = { key: SortKey; title: string; right?: boolean; hide?: string; grow?: boolean }
 // hide: the container width under which the column goes
@@ -76,7 +76,7 @@ function JobRow({ job: j, cols, anyCancel, onOpen, onCancel }: {
       case 'res': return <>{j.cpus} · {memText(j.mem)}</>
       case 'su': return <span className={j.su === 'free' ? 'text-dim' : ''}>{j.su}</span>
       case 'where': return j.reason
-        ? <span className="block max-w-[200px] truncate text-dim" title={j.reason}>{j.reason}</span>
+        ? <span className="block max-w-[200px] truncate text-dim" title={reasonText(j.reason)}>{reasonText(j.reason)}</span>
         : <span className="block max-w-[180px] truncate font-mono text-sm" title={j.where}>{j.where}</span>
       default: return null
     }

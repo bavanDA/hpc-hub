@@ -43,3 +43,9 @@ export function usageText(accounts: Account[]): string {
       : `${a.account}: ${n(a.used)} hours used${su}${a.period ? ` in ${a.period}` : ''}, you used ${n(a.mine)}`
   }).join(' · ')
 }
+
+/** The wait reason without the "Waiting:" the state column already says: "Higher-priority jobs go first". */
+export function reasonText(reason: string): string {
+  const r = reason.replace(/^(waiting|pending)\s*:\s*/i, '')
+  return r.charAt(0).toUpperCase() + r.slice(1)
+}
