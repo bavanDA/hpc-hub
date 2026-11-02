@@ -4,6 +4,7 @@ changes go out as events, and questions a login asks you, answered from the UI."
 import json
 import secrets
 import threading
+from collections.abc import Callable
 from concurrent.futures import Future, InvalidStateError
 from concurrent.futures import TimeoutError as Timeout
 
@@ -23,6 +24,9 @@ def session_json(s: ClusterSession) -> dict:
             "pick_node": s.pick_node}
 
 
+CONNECTED: list[Callable[[str], None]] = []  # run (on a thread of their own) when a cluster connects
+
+
 class Hub:
     """Listener of every session (called on worker threads): changes become events, questions wait for the UI."""
 
@@ -34,6 +38,7 @@ class Hub:
         self.clusters = config.chosen(config.load(), config.load_app())
         self.sessions: dict[str, ClusterSession] = {}
         self._questions: dict[str, Future] = {}
+        self._up: dict[str, bool] = {}
 
     def start(self) -> None:
         if not single.take():
@@ -109,6 +114,10 @@ class Hub:
     # -- Listener ------------------------------------------------------------------------
     def state_changed(self, s: ClusterSession) -> None:
         self.emit("session", session_json(s))
+        was, self._up[s.cfg.id] = self._up.get(s.cfg.id, False), s.connected
+        if s.connected and not was:
+            for hook in CONNECTED:
+                threading.Thread(target=hook, args=(s.cfg.id,), daemon=True).start()
 
     def log(self, s: ClusterSession, line: str) -> None:
         self.emit("log", {"id": s.cfg.id, "line": line})

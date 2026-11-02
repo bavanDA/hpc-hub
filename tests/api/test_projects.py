@@ -1,3 +1,4 @@
+import json
 import time
 
 import pytest
@@ -48,6 +49,8 @@ def hub(tmp_path, monkeypatch):
     monkeypatch.setattr(config, "APP_FILE", tmp_path / "app.toml")
     monkeypatch.setattr(api, "_places", {})
     monkeypatch.setattr(api, "_homes", {})
+    monkeypatch.setattr(api, "_synced", {})
+    monkeypatch.setattr(api, "sync_soon", lambda cluster: None)  # tests call api.sync themselves
     h = FakeHub(FakeSession("wulver", "Wulver"), FakeSession("yale", "Yale"), FakeSession("sdsc", "Expanse", False))
     monkeypatch.setattr(hub_mod, "_hub", h)
     return h
@@ -204,3 +207,31 @@ def test_cancel_stops_a_running_copy(hub, monkeypatch):
     api.cancel_copy(tid)
     last = _finished(hub, tid)
     assert last["status"] == "Cancelled" and last["error"] == "Cancelled"
+
+
+def test_projects_are_shared_through_the_cluster(hub, tmp_path):
+    (tmp_path / "home" / "thesis").mkdir()
+    (tmp_path / "home" / "old").mkdir()
+    api.add("thesis", "wulver", "~/thesis")
+    api.add("old", "wulver", "~/old")
+    api.sync("wulver")
+    shared = tmp_path / "home" / ".hpc-hub" / "projects.json"
+    assert [r["name"] for r in json.loads(shared.read_text())["projects"]] == ["old", "thesis"]
+
+    # the phone renames thesis and removes old; this side hears it on the next sync
+    data = json.loads(shared.read_text())
+    later = int(time.time()) + 5
+    data["projects"] = [{**r, "name": "Thesis 2", "updated": later} for r in data["projects"] if r["name"] == "thesis"]
+    data["removed"] = {str(tmp_path / "home" / "old"): later}
+    shared.write_text(json.dumps(data))
+    assert api.sync("wulver") and ("projects", {"cluster": "wulver"}) in hub.events
+    assert [p.name for p in store.load(store.PROJECTS_FILE)] == ["Thesis 2"]
+
+    # removed here: it leaves the shared file too, and does not come back
+    api.remove(f"wulver:{tmp_path / 'home' / 'thesis'}")
+    api.sync("wulver")
+    assert json.loads(shared.read_text())["projects"] == [] and not store.load(store.PROJECTS_FILE)
+
+
+def test_a_cluster_that_is_not_connected_is_left_alone(hub):
+    assert api.sync("sdsc") is False

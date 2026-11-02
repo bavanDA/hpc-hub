@@ -13,6 +13,7 @@ from ..core.config import CONFIG_DIR, _toml_value
 from ..core.ssh import SshMaster
 
 PROJECTS_FILE = CONFIG_DIR / "projects.toml"
+REMOVED = "projects-removed.json"  # next to the projects: cluster:path -> when, so a sync doesn't bring it back
 TEMPLATES = ["Empty", "LaTeX paper", "Python"]
 
 LATEX_MAIN = r"""\documentclass{article}
@@ -42,6 +43,7 @@ class Project:
     kind: str = ""  # "code" or "latex"; empty in old files
     copy_to: str = ""  # cluster id it was last copied or synced to
     copy_into: str = ""  # folder there it went into
+    updated: int = 0  # last added or changed, unix time: the newer one wins a sync (projects/sync.py)
 
     @property
     def is_latex(self) -> bool:
@@ -62,7 +64,13 @@ def load(path: Path = PROJECTS_FILE) -> list[Project]:
     return out
 
 
-def save(projects: list[Project], path: Path = PROJECTS_FILE) -> None:
+SAME = ("name", "cluster", "path", "main_tex", "kind", "copy_to", "copy_into")
+
+
+def save(projects: list[Project], path: Path = PROJECTS_FILE, stamp: bool = True) -> None:
+    """stamp: mark what changed since the last save as changed now, and what went as removed now."""
+    if stamp:
+        _stamp(projects, path)
     path.parent.mkdir(parents=True, exist_ok=True)
     lines = ["# HPC Hub projects", ""]
     for p in projects:
@@ -71,6 +79,40 @@ def save(projects: list[Project], path: Path = PROJECTS_FILE) -> None:
         lines.append("")
     tmp = path.with_suffix(".tmp")
     tmp.write_text("\n".join(lines), encoding="utf-8")
+    tmp.replace(path)
+
+
+def _key(p: Project) -> str:
+    return f"{p.cluster}:{p.path}"
+
+
+def _stamp(projects: list[Project], path: Path) -> None:
+    now = int(time.time())
+    before = {_key(p): p for p in load(path)}
+    for p in projects:
+        old = before.pop(_key(p), None)
+        if not old or any(getattr(p, k) != getattr(old, k) for k in SAME):
+            p.updated = max(now, p.updated)
+    if before:
+        removed = load_removed(path.parent / REMOVED)
+        removed.update({k: max(now, p.updated) for k, p in before.items()})  # a clock ahead elsewhere
+        save_removed(removed, path.parent / REMOVED)
+
+
+def load_removed(path: Path | None = None) -> dict[str, int]:
+    path = path or PROJECTS_FILE.parent / REMOVED
+    try:
+        data = json.loads(path.read_text())
+    except (OSError, ValueError):
+        return {}
+    return {k: int(v) for k, v in data.items() if isinstance(v, (int, float))} if isinstance(data, dict) else {}
+
+
+def save_removed(removed: dict[str, int], path: Path | None = None) -> None:
+    path = path or PROJECTS_FILE.parent / REMOVED
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_suffix(".tmp")
+    tmp.write_text(json.dumps(removed, indent=1))
     tmp.replace(path)
 
 

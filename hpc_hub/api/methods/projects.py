@@ -1,6 +1,7 @@
 """Projects: named folders on the clusters. Add, create, edit and remove them, choose a folder, and copy or sync one
 with its Claude chats to another cluster, through this laptop or with Globus. Copies report `transfer` events."""
 
+import json
 import posixpath
 import re
 import secrets
@@ -14,8 +15,9 @@ from ...core import config, features
 from ...files import remote_fs, transfer
 from ...globus import api as globus
 from ...projects import store
+from ...projects import sync as shared
 from ...projects.store import Project
-from ..hub import hub
+from ..hub import CONNECTED, hub
 from ..server import method
 
 GLOBUS_POLL = 3
@@ -35,6 +37,71 @@ def _load() -> list[Project]:
 
 def _save(items: list[Project]) -> None:
     store.save(items, store.PROJECTS_FILE)
+    for c in {p.cluster for p in items} | set(_synced):
+        sync_soon(c)
+
+
+# -- shared with your other devices (projects/sync.py) -------------------------------------------
+_synced: dict[str, float] = {}  # cluster -> when it was last merged with ~/.hpc-hub/projects.json
+SYNC_EVERY = 60
+
+
+def sync_soon(cluster: str) -> None:
+    threading.Thread(target=_sync_quietly, args=(cluster,), daemon=True).start()
+
+
+def _sync_quietly(cluster: str) -> None:
+    try:
+        sync(cluster)
+    except Exception as e:  # noqa: BLE001  an unreachable cluster just waits for the next time
+        s = hub().sessions.get(cluster)
+        if s:
+            s._log(f"Projects not shared: {e}")
+
+
+def sync(cluster: str) -> bool:
+    """Merge this cluster's projects with its shared file and write both back. True when ours changed."""
+    s = hub().sessions.get(cluster)
+    if not s or not s.connected:
+        return False
+    home = _home(cluster)
+    path = f"{home}/{shared.FILE}"
+    res = s.ssh.run(f"cat {remote_fs.q(path)} 2>/dev/null || test ! -e {remote_fs.q(path)}", timeout=30)
+    if res.returncode != 0:
+        raise RuntimeError(res.stderr.strip() or "could not read the shared list")
+    try:
+        theirs = json.loads(res.stdout) if res.stdout.strip() else {}
+    except ValueError:
+        theirs = {}
+    theirs = theirs if isinstance(theirs, dict) else {}
+    with _lock:
+        items = _load()
+        for p in items:  # one name for a folder on both sides
+            if p.cluster == cluster and p.path.startswith("~"):
+                p.path = home + p.path[1:]
+        mine = [p for p in items if p.cluster == cluster]
+        removed = store.load_removed()
+        prefix = f"{cluster}:"
+        ours_gone = {k[len(prefix):]: v for k, v in removed.items() if k.startswith(prefix)}
+        merged, gone = shared.merge(cluster, mine, ours_gone, theirs)
+        changed = sorted(map(_id, merged)) != sorted(map(_id, mine)) or any(
+            a != b for a, b in zip(sorted(merged, key=_id), sorted(mine, key=_id)))
+        if changed:
+            store.save([p for p in items if p.cluster != cluster] + merged, store.PROJECTS_FILE, stamp=False)
+        store.save_removed({**{k: v for k, v in removed.items() if not k.startswith(prefix)},
+                            **{prefix + k: v for k, v in gone.items()}})
+        out = shared.shared_json(merged, gone)
+    if out != theirs:
+        remote_fs.mkdir(s.ssh, f"{home}/{shared.FOLDER}")
+        remote_fs.write_bytes(s.ssh, path, json.dumps(out, indent=1).encode())
+    _synced[cluster] = time.time()
+    if changed:
+        hub().emit("projects", {"cluster": cluster})
+    return changed
+
+
+def on_connected(cluster: str) -> None:
+    sync_soon(cluster)
 
 
 def _id(p: Project) -> str:
@@ -68,6 +135,10 @@ def _json(p: Project) -> dict:
 def list_projects() -> dict:
     """Your projects, most recently opened first. LaTeX papers live on the LaTeX page while experimental is on."""
     exp = _experimental()
+    for s in hub().sessions.values():
+        if s.connected and time.time() - _synced.get(s.cfg.id, 0) > SYNC_EVERY:
+            _synced[s.cfg.id] = time.time()
+            sync_soon(s.cfg.id)
     items = sorted(_load(), key=lambda p: (-p.opened, p.name.lower()))
     return {"experimental": exp,
             "clusters": [{"id": s.cfg.id, "name": s.cfg.name, "connected": s.connected}
@@ -419,3 +490,6 @@ def cancel_copy(id: str) -> None:
     p = _running.get(id)
     if p:
         p.cancelled.set()
+
+
+CONNECTED.append(on_connected)
