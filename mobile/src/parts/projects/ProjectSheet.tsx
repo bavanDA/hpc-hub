@@ -7,7 +7,7 @@ import { call } from '@shared/rpc'
 import { TEMPLATES, type Place, type Project, type ProjectCluster } from '@shared/types/projects'
 import { Field, MainButton, PickerSheet, Row, Sheet, ToggleRow } from '../../ui'
 import { shortCluster, wrapPath } from '../code/util'
-import { FolderPicker } from './FolderPicker'
+import { FolderPicker, folderText } from './FolderPicker'
 
 export type Mode = 'add' | 'new' | 'edit'
 
@@ -70,7 +70,7 @@ export function ProjectSheet({ mode, project, clusters, projects, onClose, onSav
           <Row label="Cluster" opens onPress={() => setOpen('cluster')}
             value={c ? (c.connected ? shortCluster(c.name) : `${shortCluster(c.name)}, not connected`) : 'Pick one'} />
           <Row label={create ? 'Inside' : 'Folder'} opens onPress={browse}
-            value={<span className="font-mono text-sm break-words">{wrapPath(path.trim() || 'Choose')}</span>} />
+            value={path.trim() ? folderText(path.trim()) : 'Choose'} />
           {create && <>
             <Row label="Start with" value={template} opens onPress={() => setOpen('template')} />
             <ToggleRow label="Git repository" checked={git} onChange={setGit} />

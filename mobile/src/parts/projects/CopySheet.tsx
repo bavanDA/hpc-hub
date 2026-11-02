@@ -10,7 +10,7 @@ import { call } from '@shared/rpc'
 import type { CopyPlan, CopyTargets, Place, Places, Project } from '@shared/types/projects'
 import { Chips, MainButton, PickerSheet, Row, Segments, Sheet } from '../../ui'
 import { shortCluster, wrapPath } from '../code/util'
-import { FolderPicker } from './FolderPicker'
+import { FolderPicker, folderText } from './FolderPicker'
 
 type How = 'globus' | 'phone'
 const BIG = 5 * 1024 ** 3
@@ -99,7 +99,7 @@ export function CopySheet({ p, onClose, onStarted }:
       id: p.id, to: dst.id, into: intoPath, how: sync ? 'globus' : 'laptop', size: files,
       skip: (plan?.parts ?? []).filter((x) => !keep[x.name]).map((x) => x.name), chats: picked.map((c) => c.id),
     }).then((r) => {
-      onStarted([r.id, r.chats].filter(Boolean), `${sync ? 'Syncing' : 'Copying'} ${p.name} to ${shortCluster(dst.name)}`)
+      onStarted([r.id, r.chats].filter(Boolean), `Copying ${p.name} to ${shortCluster(dst.name)}`)
       onClose()
     }).catch((e: Error) => { setError(e.message); setBusy(false) })
   }
@@ -112,7 +112,7 @@ export function CopySheet({ p, onClose, onStarted }:
     <>
       <Sheet flush title={`Copy ${p.name}`} onClose={onClose} actions={
         <MainButton disabled={!dst || !!missing || busy} onClick={go}>
-          {busy ? <Spinner /> : `${sync ? 'Sync' : 'Copy'}${plan ? ` ${formatSize(files)}` : ''}`}</MainButton>}>
+          {busy ? <Spinner /> : `Copy${plan ? ` ${formatSize(files)}` : ''}`}</MainButton>}>
         {!info ? <div className="grid h-40 place-items-center">
             {error ? <p className="text-bad">{error}</p> : <Spinner size={24} />}</div>
           : info.targets.length === 0 ? <p className="px-4 py-8 text-center text-dim">Add another cluster first.</p> : (
@@ -121,7 +121,7 @@ export function CopySheet({ p, onClose, onStarted }:
               <div className="border-t border-line">
                 <Row label="Cluster" opens onPress={() => setOpen('to')}
                   value={dst ? (dst.connected ? shortCluster(dst.name) : `${shortCluster(dst.name)}, not connected`) : 'Pick one'} />
-                <Row label="Into" opens value={<span className="font-mono text-sm break-words">{wrapPath(intoPath)}</span>}
+                <Row label="Into" opens value={folderText(intoPath)}
                   onPress={() => dst?.connected ? setOpen('folder') : setError(`Connect to ${shortCluster(dst?.name ?? '')} first`)} />
               </div>
               {spots.length > 0 && (

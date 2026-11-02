@@ -110,3 +110,9 @@ export function FolderPicker({ cluster, start, onPick, onClose, projects = [] }:
     </Sheet>
   )
 }
+
+/** A folder as a row's value: "Home folder" for ~, else the path in mono, wrapping after slashes. */
+export function folderText(path: string) {
+  return path === '~' || path === '~/' ? 'Home folder'
+    : <span className="font-mono text-sm break-words">{wrapPath(path)}</span>
+}
