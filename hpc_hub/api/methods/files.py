@@ -201,7 +201,7 @@ def copy(src_cluster: str, src_path: str, dst_cluster: str, dst_dir: str, skip: 
     h = hub()
     src, dst = h.session(src_cluster), h.session(dst_cluster)
     name = posixpath.basename(src_path.rstrip("/"))
-    title = f"{name}: {src.cfg.name} → {dst.cfg.name}:{dst_dir}"
+    title = f"{name}: {src.cfg.short_name} → {dst.cfg.short_name}:{dst_dir}"
     if src_cluster == dst_cluster:
         how, run = "cluster", partial(_on_cluster, ssh=h.connected(src_cluster).ssh, src_path=src_path,
                                       dst_dir=dst_dir)

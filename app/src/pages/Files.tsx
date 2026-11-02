@@ -5,6 +5,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNo
 
 import { ScratchBanner } from '../components/backup/ScratchBanner'
 import { setActiveCluster, useActiveCluster } from '../components/clusters/active'
+import { shortName } from '../components/clusters/loginCopy'
 import { NotConnected } from '../components/clusters/NotConnected'
 import { ActionBar, type Action } from '../components/files/ActionBar'
 import { ClipBanner } from '../components/files/ClipBanner'
@@ -61,6 +62,7 @@ export function Files() {
   const close = useCallback(() => setDialog(null), [])
 
   const info = active ?? undefined
+  const here = info ? shortName(info) : cluster
   const connected = !!sessions[cluster]?.connected
   const path = listing?.path ?? ''
   const shown = useRef(path)
@@ -102,7 +104,7 @@ export function Files() {
   const done = (msg: string) => () => { toast(msg); refresh() }
   const failed = (e: Error) => toast(`Failed: ${e.message}`)
 
-  const local = useLocalFiles(cluster, info?.name ?? cluster)
+  const local = useLocalFiles(cluster, here)
   const upload = () => {
     if (!connected || !path) return
     const into = { cluster, dir: path }
@@ -124,7 +126,7 @@ export function Files() {
     if (isDir(e)) go(p)
     else if (kind(e) === 'image') setDialog(<ImageDialog cluster={cluster} path={p} onClose={close} />)
     else if (kind(e) === 'pdf') {
-      setDialog(<PdfDialog cluster={cluster} path={p} subtitle={`${info?.name}: ${p}`} onClose={close} />)
+      setDialog(<PdfDialog cluster={cluster} path={p} subtitle={`${here}: ${p}`} onClose={close} />)
     }
     else if (isText(e) && e.size < EDIT_LIMIT) edit(e)
     else local.download(p, true)  // no preview here: download and open it, as the GTK app does
@@ -141,7 +143,7 @@ export function Files() {
   }
   const remove = (e: Entry) => setDialog(
     <ConfirmDialog title={`Delete ${e.name}?`} action="Delete" onClose={close}
-      text={`This permanently deletes it on ${info?.name}${isDir(e) ? ' with everything inside.' : '.'}`}
+      text={`This permanently deletes it on ${here}${isDir(e) ? ' with everything inside.' : '.'}`}
       onYes={() => call('files.delete', { cluster, path: join(path, e.name) })
         .then(done(`Deleted ${e.name}`)).catch(failed)} />)
   const zip = (e: Entry) => {
@@ -150,7 +152,7 @@ export function Files() {
       toast(`Extracting ${e.name}…`)
       call('files.extract', { cluster, path: p }).then(done(`Extracted ${e.name}`)).catch(failed)
     } else {
-      toast(`Zipping ${e.name} on ${info?.name}…`)
+      toast(`Zipping ${e.name} on ${here}…`)
       call('files.zip', { cluster, path: p }).then(done(`Zipped ${e.name}`)).catch(failed)
     }
   }
@@ -159,7 +161,7 @@ export function Files() {
     navigator.clipboard.writeText(p).then(() => toast(`Copied ${p}`)).catch(() => toast('Could not copy'))
   }
   const folderOf = (e: Entry | null) => (e && isDir(e) ? join(path, e.name) : path)
-  const copy = (e: Entry) => setClip({ cluster, clusterName: info?.name ?? cluster, path: join(path, e.name),
+  const copy = (e: Entry) => setClip({ cluster, clusterName: here, path: join(path, e.name),
     name: e.name, folder: isDir(e) })
 
   const start = (c: Clip, skip: string[], how: How, total: number) => {
@@ -179,7 +181,7 @@ export function Files() {
     }
     const c = clip
     if (c.cluster === cluster) { setClip(null); start(c, [], 'laptop', 0); return }
-    setDialog(<PasteDialog clip={c} dstName={info?.name ?? cluster} dstDir={path} onClose={close}
+    setDialog(<PasteDialog clip={c} dstName={here} dstDir={path} onClose={close}
       onGo={(skip, how, total) => { setClip(null); start(c, skip, how, total) }} />)
   }
 
@@ -199,8 +201,8 @@ export function Files() {
     copyPath: () => copyPath(menu.entry), download: () => menu.entry && download(menu.entry), rename: () => act('rename', menu.entry),
     zip: () => act('zip', menu.entry), copy: () => act('copy', menu.entry), delete: () => act('delete', menu.entry),
     newFolder, upload, paste,
-    vscode: () => tools.open(cluster, info?.name ?? cluster, 'vscode', folderOf(menu.entry)),
-    claude: () => tools.open(cluster, info?.name ?? cluster, 'agent:claude', folderOf(menu.entry)),
+    vscode: () => tools.open(cluster, here, 'vscode', folderOf(menu.entry)),
+    claude: () => tools.open(cluster, here, 'agent:claude', folderOf(menu.entry)),
     code: () => goPage('code', { cluster, folder: folderOf(menu.entry) }),
   })
 

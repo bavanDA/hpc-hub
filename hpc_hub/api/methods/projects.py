@@ -404,12 +404,12 @@ def copy(id: str, to: str, into: str = "~", how: str = "laptop", skip: list[str]
         _save(items)
     parent = remote_fs.expand(dst.ssh, into).rstrip("/") or "/"
     dest = posixpath.join(parent, posixpath.basename(p.path.rstrip("/")))
-    title = f"{p.name}: {src.cfg.name} → {dst.cfg.name}:{dest}"
+    title = f"{p.name}: {src.cfg.short_name} → {dst.cfg.short_name}:{dest}"
     if client:
         files = _start(f"{title} · Globus", _globus(client, src.cfg, p.path, dst.cfg, dest, skip or []))
     else:
         files = _start(title, _laptop(src, p.path, dst, parent, skip or [], size))
-    talk = _start(f"{len(chats)} Claude chats of {p.name} → {dst.cfg.name}",
+    talk = _start(f"{len(chats)} Claude chats of {p.name} → {dst.cfg.short_name}",
                   _chats(src, chats, dst, dest)) if chats else ""
     return {"id": files, "chats": talk}
 

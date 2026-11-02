@@ -156,9 +156,9 @@ const plan: CopyPlan = {
 }
 
 const transfers: Transfer[] = [
-  { id: 'demo1', title: 'climate-model: Wulver (NJIT) → Yale Bouchet:/home/jdoe/projects', how: 'laptop',
+  { id: 'demo1', title: 'climate-model: Wulver → Yale:/home/jdoe/projects', how: 'laptop',
     done: 1_804_331_008, total: 4_210_993_112, status: '', finished: false, error: '' },
-  { id: 'demo2', title: 'results: Wulver (NJIT) → SDSC Expanse:/expanse/lustre/projects/abc123/jdoe · Globus',
+  { id: 'demo2', title: 'results: Wulver → SDSC:/expanse/lustre/projects/abc123/jdoe · Globus',
     how: 'globus', done: 1204, total: 1204, status: 'Done · 12.4 GB · 1204 files', finished: true, error: '' },
 ]
 

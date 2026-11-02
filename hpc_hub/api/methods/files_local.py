@@ -119,7 +119,7 @@ def upload(cluster: str, local_paths: list[str], remote_dir: str) -> dict:
             p.done = sum(sizes[:i + 1])
         t.status = f"Done · {files.size_text(p.total)}"
 
-    t = _start(f"{what}: {HERE} → {s.cfg.name}:{remote_dir}", work)
+    t = _start(f"{what}: {HERE} → {s.cfg.short_name}:{remote_dir}", work)
     return {"id": t.id}
 
 
@@ -150,5 +150,5 @@ def download(cluster: str, remote_path: str, local_dir: str) -> dict:
         t.progress.done = local_size(target)
         t.status = f"Done · {files.size_text(t.progress.done)} · {target}"
 
-    t = _start(f"{name}: {s.cfg.name} → {HERE}", work)
+    t = _start(f"{name}: {s.cfg.short_name} → {HERE}", work)
     return {"id": t.id, "path": str(target)}
