@@ -27,13 +27,14 @@ export function Terminals({ shown }: { shown: boolean }) {
   const { tabs, current } = useTabs()
   const params = usePageParams()
   const [creating, setCreating] = useState<string | null>(null)  // the cluster a new terminal starts on
+  const [startIn, setStartIn] = useState('')  // and its folder, from a project or a paper
   const [acting, setActing] = useState<Target | null>(null)
   const open = tabs.find((t) => t.key === current)
 
-  // go('terminals', { cluster, new: '1' }) from a cluster card: the New terminal sheet for that cluster
-  // each go() brings new params, so the same card button opens the sheet again after it was closed
+  // go('terminals', { cluster, new: '1', folder? }) from a cluster card or a project: the New terminal sheet for that
+  // cluster. Each go() brings new params, so the same card button opens the sheet again after it was closed
   useEffect(() => {
-    if (shown && params.new && params.cluster) setCreating(params.cluster)
+    if (shown && params.new && params.cluster) { setStartIn(params.folder ?? ''); setCreating(params.cluster) }
   }, [shown, params])
 
   if (open) return <TerminalScreen tab={open} shown={shown} onChanged={refresh}
@@ -50,6 +51,7 @@ export function Terminals({ shown }: { shown: boolean }) {
     }
     return listed
   }
+  const newOne = () => { setStartIn(''); setCreating(live[0].id) }
   const none = live.length > 0 && live.every((c) => listings[c.id]?.listing && !sessionsOf(c.id).length)
 
   return (
@@ -57,14 +59,14 @@ export function Terminals({ shown }: { shown: boolean }) {
       <Header title="Terminals">
         {live.length > 0 && <button aria-label="Refresh" onClick={refresh}
           className="grid size-12 place-items-center rounded-full active:bg-pressed"><RefreshCw size={22} /></button>}
-        {live.length > 0 && <button aria-label="New terminal" onClick={() => setCreating(live[0].id)}
+        {live.length > 0 && <button aria-label="New terminal" onClick={newOne}
           className="grid size-12 place-items-center rounded-full active:bg-pressed"><Plus size={24} /></button>}
       </Header>
       <div className="min-h-0 flex-1 overflow-y-auto pb-6">
         {!live.length && <EmptyState icon={WifiOff} title="Not connected" text="Connect a cluster to open terminals." />}
         {none && <EmptyState icon={SquareTerminal} title="No terminals yet"
           text="A terminal keeps running when you leave it or close the app."
-          action={<MainButton icon={Plus} className="px-6" onClick={() => setCreating(live[0].id)}>New terminal</MainButton>} />}
+          action={<MainButton icon={Plus} className="px-6" onClick={newOne}>New terminal</MainButton>} />}
         <OpenOthers tabs={tabs} />
         {!none && live.map((c) => {
           const l = listings[c.id]
@@ -95,7 +97,8 @@ export function Terminals({ shown }: { shown: boolean }) {
         {live.length > 0 && !none && <p className="px-4 pt-3 text-sm text-dim">Sessions keep running when you leave
           them. Press and hold one to rename or stop it.</p>}
       </div>
-      {creating !== null && <NewTerminalSheet live={live} cluster={creating} onClose={() => setCreating(null)}
+      {creating !== null && <NewTerminalSheet live={live} cluster={creating} folder={startIn}
+        onClose={() => setCreating(null)}
         onOpened={() => setTimeout(refresh, 2000)} />}
       {acting && <SessionActions target={acting} onClose={() => setActing(null)} onChanged={refresh} />}
     </div>

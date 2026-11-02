@@ -20,16 +20,19 @@ export function useTools() {
   useEffect(() => setNotify(toast), [toast])
   const close = useCallback(() => setDialog(null), [])
 
-  /** prepare: runs once connected and answers the folder to use (a project's path with ~ expanded). */
+  /** prepare: runs once connected and answers the folder to use (a project's path with ~ expanded). back: the
+   * window it opens gets an arrow back (to an Open window). Answers 'window' when a window opened, 'done' when it
+   * went straight on (a page, VS Code with the saved choices) and 'failed'. */
   const open = useCallback(async (cluster: string, name: string, key: string, folder = '',
-    prepare?: () => Promise<string>) => {
+    prepare?: () => Promise<string>, back?: () => void): Promise<'window' | 'done' | 'failed'> => {
     const [kind, what = ''] = key.split(':')
+    const onBack = back && (() => { setDialog(null); back() })
     try {
       await whenConnected(cluster, name)
       const where = prepare ? await prepare() : folder
       if (kind === 'files' || kind === 'latex') {
         go(kind, where ? { cluster, path: where } : { cluster })
-        return
+        return 'done'
       }
       const looking = kind === 'vscode' ? toast(`Looking for VS Code on ${shortName({ name })}…`) : undefined
       const [setup, found] = await Promise.all([call<ToolSetup>('tools.setup', { cluster }),
@@ -41,21 +44,25 @@ export function useTools() {
           startVscode(cluster, { folder: where || setup.vscode.workdir || '~', target: target ?? setup.vscode.open_in,
             job: found.job?.id ?? '', replace_job: false, profile: null, remember: false, remember_folder: false },
           setup.vscode.open_links, go)
-          return
+          return 'done'
         }
-        setDialog(<VsCodeDialog setup={setup} found={found} folder={where} target={target} onClose={close} />)
+        setDialog(<VsCodeDialog setup={setup} found={found} folder={where} target={target} onClose={close}
+          onBack={onBack} />)
       } else if (kind === 'agent') {
         const agent = setup.agents.find((a) => a.id === what)
         if (!agent) throw new Error(`No agent ${what}`)
         setDialog(<AgentDialog key={`${cluster}-${what}`} setup={setup} agent={agent} project={where}
-          onClose={close} />)
+          onClose={close} onBack={onBack} />)
       } else if (kind === 'ask') {
-        setDialog(<AskAllDialog setup={setup} folder={where} onClose={close} />)
+        setDialog(<AskAllDialog setup={setup} folder={where} onClose={close} onBack={onBack} />)
       } else {
         toast(`Can't open ${key}`)
+        return 'failed'
       }
+      return 'window'
     } catch (e) {
       toast((e as Error).message)
+      return 'failed'
     }
   }, [go, toast, close])
 

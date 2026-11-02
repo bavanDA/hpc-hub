@@ -2,7 +2,7 @@
 // Build saves and runs latexmk on the cluster; a double-tap in the PDF jumps to the source line, and "Show in PDF"
 // goes the other way (SyncTeX). Errors in the log jump to their line.
 import { ArrowLeft, Check, FileText, FolderOpen, GitBranch, LocateFixed, MoreVertical, Pencil, RefreshCw,
-  Save, Settings2, X } from 'lucide-react'
+  Save, Settings2, SquareArrowOutUpRight, X } from 'lucide-react'
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import type { EditorHandle } from '@shared/components/code/Editor'
@@ -20,6 +20,7 @@ import type { BuildDone, Issue, Opened, PdfInfo, Settings, SourceSpot, Spot, Tre
 import { useBackLayer } from '../../nav'
 import { ActionSheet, MainButton, Segments, useToast } from '../../ui'
 import { shortCluster } from '../code/util'
+import { useOpenIn } from '../projects/openIn'
 import { BuildSheet } from './BuildSheet'
 import { FilesSheet, type FileActions } from './FilesSheet'
 import { GitSheet } from './GitSheet'
@@ -30,7 +31,7 @@ const Editor = lazy(() => import('@shared/components/code/Editor'))
 type Pane = 'source' | 'pdf' | 'log'
 type Doc = { path: string; text: string; version: number; line?: number }
 type PdfState = { data: Uint8Array | null; path?: string; none?: boolean; error?: string }
-type Open = 'files' | 'git' | 'build' | 'menu' | null
+type Open = 'files' | 'git' | 'build' | 'menu' | 'open' | null
 
 function remembered(key: string): boolean {
   try { return localStorage.getItem(key) === '1' } catch { return false }
@@ -38,6 +39,7 @@ function remembered(key: string): boolean {
 
 export function Paper({ paper, onClose }: { paper: Opened; onClose: () => void }) {
   const toast = useToast()
+  const openIn = useOpenIn()
   const { cluster, folder } = paper
   const where = useMemo(() => ({ cluster, folder }), [cluster, folder])
   const [main, setMain] = useState(paper.main)
@@ -283,8 +285,11 @@ export function Paper({ paper, onClose }: { paper: Opened; onClose: () => void }
         { label: 'Show this line in the PDF', icon: LocateFixed, onPick: toPdf },
         { label: 'Git', icon: GitBranch, onPick: () => setOpen('git') },
         { label: 'Build settings', icon: Settings2, onPick: () => setOpen('build') },
+        { label: 'Open the folder', icon: SquareArrowOutUpRight, onPick: () => { void save(); setOpen('open') } },
         { label: 'Close the paper', icon: X, onPick: leave },
       ]} />}
+      {open === 'open' && <ActionSheet title={`Open ${paper.name}`} onClose={() => setOpen(null)}
+        actions={openIn({ cluster, clusterName: paper.cluster_name, folder }, toast)} />}
       {open === 'files' && <FilesSheet entries={tree} current={docRel} main={rel(folder, main)} actions={files}
         onClose={() => setOpen(null)} />}
       {open === 'git' && <GitSheet where={where} before={save} onClose={() => setOpen(null)}

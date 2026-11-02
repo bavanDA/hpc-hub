@@ -9,15 +9,15 @@ import { FolderField } from '../agents/FolderField'
 import { Field, List, MainButton, Row, Segments, Sheet, useToast } from '../../ui'
 
 
-export function NewTerminalSheet({ live, cluster: first = '', onClose, onOpened }:
-  { live: Live[]; cluster?: string; onClose: () => void; onOpened: () => void }) {
+export function NewTerminalSheet({ live, cluster: first = '', folder: startIn = '', onClose, onOpened }:
+  { live: Live[]; cluster?: string; folder?: string; onClose: () => void; onOpened: () => void }) {
   const toast = useToast()
   const [name, setName] = useState(() => `Terminal ${new Date().toTimeString().slice(0, 5)}`)
   const [picked, setPicked] = useState(first)
   const c = live.find((x) => x.id === picked) ?? live[0]
   const [where, setWhere] = useState<'login' | 'node' | ''>('')  // '': the node when there is one
   const onNode = Boolean(c?.node) && (where || (c?.node ? 'node' : 'login')) === 'node'
-  const [folder, setFolder] = useState('~')
+  const [folder, setFolder] = useState(startIn || '~')
 
   const open = () => {
     if (!c) return

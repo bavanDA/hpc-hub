@@ -16,8 +16,9 @@ import { FolderField } from './fields'
 import { chatPlace, sendable, when } from './format'
 import { startAgent } from './run'
 
-export function AgentDialog({ setup, agent: a, project = '', onClose }:
-  { setup: ToolSetup; agent: AgentInfo; project?: string; onClose: () => void }) {
+/** onBack: opened from another window (a project's Open), with an arrow back to it. */
+export function AgentDialog({ setup, agent: a, project = '', onClose, onBack }:
+  { setup: ToolSetup; agent: AgentInfo; project?: string; onClose: () => void; onBack?: () => void }) {
   const go = useGo()
   const s = a.settings
   const [remote, setRemote] = useState(s.remote)
@@ -61,7 +62,7 @@ export function AgentDialog({ setup, agent: a, project = '', onClose }:
       : project ? 'No chats here yet.' : 'No chats yet.'
 
   return (
-    <EDialog title={`${a.name} ${where}`} icon={agentIcon(a.id)} width={560} onClose={onClose}
+    <EDialog title={`${a.name} ${where}`} icon={agentIcon(a.id)} width={560} onClose={onClose} onBack={onBack}
       actions={<MainButton disabled={asks && !fits} onClick={() => run(folder.trim() || '~', '')}>Start</MainButton>}>
       <div className="px-5">
         <TextArea label="Task (optional)" value={task} rows={3} onChange={(e) => setTask(e.target.value)}

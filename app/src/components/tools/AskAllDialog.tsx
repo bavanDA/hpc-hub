@@ -14,8 +14,8 @@ import { FolderField } from './fields'
 import { answersFolder, sendable } from './format'
 import { startAsk } from './run'
 
-export function AskAllDialog({ setup, folder: start = '', onClose }:
-  { setup: ToolSetup; folder?: string; onClose: () => void }) {
+export function AskAllDialog({ setup, folder: start = '', onClose, onBack }:
+  { setup: ToolSetup; folder?: string; onClose: () => void; onBack?: () => void }) {
   const go = useGo()
   const claude = setup.agents.find((a) => a.id === 'claude')
   const [folder, setFolderState] = useState(start || claude?.settings.workdir || '~')
@@ -49,7 +49,7 @@ export function AskAllDialog({ setup, folder: start = '', onClose }:
   }
 
   return (
-    <EDialog title={`Ask all on ${shortName(setup)}`} width={560} onClose={onClose}
+    <EDialog title={`Ask all on ${shortName(setup)}`} width={560} onClose={onClose} onBack={onBack}
       actions={<MainButton disabled={!setup.node && !fits} onClick={ask}>Ask all</MainButton>}>
       <div className="px-5">
         {note && <p className="pb-1 font-semibold text-bad">{note}</p>}

@@ -1,5 +1,6 @@
 // The list of papers on the phone: your LaTeX projects, papers found on the clusters, and a .tex file by path.
-// Tap one to open it; ⋮ removes it from the list (the folder stays on the cluster).
+// Tap one to open it; ⋮ opens its folder elsewhere (Code, Files, an agent) or removes it from the list (the folder
+// stays on the cluster).
 import { FileText, FolderSearch, MoreVertical, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 
@@ -9,10 +10,12 @@ import { call } from '@shared/rpc'
 import type { LatexProject, Paper, Picker } from '@shared/types/latex'
 import { ActionSheet, PickerSheet, PromptSheet, Row, SearchField, Section, useToast } from '../../ui'
 import { shortCluster, wrapPath } from '../code/util'
+import { useOpenIn } from '../projects/openIn'
 
 export function PaperList({ data, onOpen, onReload }:
   { data: Picker; onOpen: (cluster: string, path: string) => void; onReload: () => void }) {
   const toast = useToast()
+  const openIn = useOpenIn()
   const [query, setQuery] = useState('')
   const [papers, setPapers] = useState<Paper[]>(data.papers)
   const [searching, setSearching] = useState(false)
@@ -90,8 +93,9 @@ export function PaperList({ data, onOpen, onReload }:
       </Section>
 
       {menu && <ActionSheet title={menu.name} onClose={() => setMenu(null)} actions={[
-        { label: 'Open', icon: FileText, onPick: () => open(menu.cluster, menu.main_tex ? `${menu.path}/${menu.main_tex}`
+        { label: 'Open the paper', icon: FileText, onPick: () => open(menu.cluster, menu.main_tex ? `${menu.path}/${menu.main_tex}`
           : menu.path) },
+        ...openIn({ cluster: menu.cluster, clusterName: menu.cluster_name, folder: menu.path }, toast),
         { label: 'Remove from the list', icon: Trash2, danger: true, onPick: () => forget(menu) },
       ]} />}
       {byPath === 'cluster' && <PickerSheet title="Cluster" value={cluster} onClose={() => setByPath(null)}

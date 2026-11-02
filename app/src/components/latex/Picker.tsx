@@ -1,5 +1,6 @@
 // Pick a paper, like Overleaf's project list: your LaTeX projects, papers found on the clusters, or a .tex path.
-import { ChevronRight, FileText, FolderSearch, Plus, Search, X } from 'lucide-react'
+// Each paper's Open offers its folder in Code, Files, a terminal, VS Code or an agent.
+import { FileText, FolderSearch, Plus, Search, X } from 'lucide-react'
 import { useState } from 'react'
 
 import { call } from '../../rpc'
@@ -7,8 +8,20 @@ import type { LatexCluster, Paper, Picker as PickerData } from '../../types/late
 import { shortName } from '../clusters/loginCopy'
 import { Select } from '../jobs/Select'
 import { useToast } from '../toast'
+import { OpenDialog } from '../tools/OpenDialog'
 import { Button, Dialog, FIELD, Spinner } from '../ui'
-import { ago, short } from './bits'
+import { ago, basename, short } from './bits'
+
+type Folder = { name: string; cluster: string; clusterName: string; folder: string }
+
+/** A paper row's Open: a window with where to open its folder. */
+function OpenButton({ onClick }: { onClick: () => void }) {
+  return (
+    <button type="button" onClick={(e) => { e.stopPropagation(); onClick() }}
+      className="flex h-8 shrink-0 items-center rounded-lg border border-line-strong px-3 text-sm font-semibold
+        hover:bg-hover">Open</button>
+  )
+}
 
 export function Picker({ data, onOpen, onReload }:
   { data: PickerData; onOpen: (cluster: string, path: string) => void; onReload: () => void }) {
@@ -21,6 +34,7 @@ export function Picker({ data, onOpen, onReload }:
   const live = data.clusters.filter((c) => c.connected)
   const [cluster, setCluster] = useState(live[0]?.id ?? data.clusters[0]?.id ?? '')
   const [path, setPath] = useState('')
+  const [openIn, setOpenIn] = useState<Folder | null>(null)
 
   const f = filter.trim().toLowerCase()
   const projects = data.projects.filter((p) => !f || `${p.name} ${p.path}`.toLowerCase().includes(f))
@@ -78,6 +92,8 @@ export function Picker({ data, onOpen, onReload }:
                 onClick={(e) => { e.stopPropagation(); forget(p.cluster, p.path) }}
                 className="grid size-7 place-items-center rounded-md text-dim opacity-0 hover:bg-hover group-hover:opacity-100">
                 <X size={14} /></button>
+              <OpenButton onClick={() => setOpenIn({ name: p.name, cluster: p.cluster, clusterName: p.cluster_name,
+                folder: p.path })} />
             </div>
           ))}
           {!projects.length && <p className="px-4 py-6 text-center text-base text-dim">
@@ -108,7 +124,8 @@ export function Picker({ data, onOpen, onReload }:
                     {p.others ? ` (+${p.others} more)` : ''}</div>
                 </div>
                 <span className="w-28 text-right text-sm text-dim">{ago(p.mtime)}</span>
-                <ChevronRight size={16} className="text-dim" />
+                <OpenButton onClick={() => setOpenIn({ name: basename(p.folder), cluster: p.cluster,
+                  clusterName: p.cluster_name, folder: p.folder })} />
               </div>
             ))}
           </div>
@@ -123,6 +140,7 @@ export function Picker({ data, onOpen, onReload }:
           <Button disabled={!path.trim()} onClick={() => open(cluster, path.trim())}>Open</Button>
         </div>
       </div>
+      {openIn && <OpenDialog {...openIn} onClose={() => setOpenIn(null)} />}
       {creating && <NewProject clusters={data.clusters} start={cluster} onClose={() => setCreating(false)}
         onMade={(c, p) => { setCreating(false); onOpen(c, p) }} />}
     </div>
