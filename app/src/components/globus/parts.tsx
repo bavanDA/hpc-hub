@@ -19,7 +19,7 @@ export function formatSize(n: number): string {
   const units = ['kB', 'MB', 'GB', 'TB', 'PB']
   let v = n / 1000, u = 0
   while (v >= 1000 && u < units.length - 1) { v /= 1000; u++ }
-  return `${v.toFixed(1)} ${units[u]}`
+  return `${v >= 100 ? Math.round(v) : +v.toFixed(1)} ${units[u]}`  // no ".0"
 }
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
