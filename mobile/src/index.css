@@ -88,3 +88,6 @@ body { font-feature-settings: "tnum" 1; }
 /* Shared desktop pieces still say "bg-accent text-white": on dark the accent is white, so their text follows the
    accent instead. Phone code says text-on-accent. */
 .bg-accent.text-white:not(:disabled) { color: var(--color-on-accent); }
+
+/* The desktop's monitor bar is one 24 px line; on a phone its items wrap to a second line instead of being cut off. */
+.phone-monitor > div { height: auto; flex-wrap: wrap; row-gap: 2px; padding-block: 3px; }
