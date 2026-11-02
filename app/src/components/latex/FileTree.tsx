@@ -26,8 +26,8 @@ function build(entries: TreeEntry[]): Node[] {
 function Icon({ node, open }: { node: Node; open: boolean }) {
   const x = ext(node.name)
   const cls = 'shrink-0'
-  if (node.dir) return open ? <FolderOpen size={16} className={`${cls} text-accent-text`} />
-    : <Folder size={16} className={`${cls} text-accent-text`} />
+  if (node.dir) return open ? <FolderOpen size={16} className={`${cls} text-dim`} />
+    : <Folder size={16} className={`${cls} text-dim`} />
   if (x === '.tex') return <FileText size={16} className={`${cls} text-dim`} />
   if (x === '.bib') return <BookOpen size={16} className={`${cls} text-dim`} />
   if (IMAGE_EXT.includes(x) || x === '.pdf' || x === '.eps') return <Image size={16} className={`${cls} text-dim`} />

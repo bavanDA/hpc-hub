@@ -38,7 +38,7 @@ function Link({ item, page, onPick }: { item: Item; page: Page; onPick: (p: Page
     <button onClick={() => onPick(item.page)} aria-current={on ? 'page' : undefined}
       className={`flex h-[38px] items-center gap-3 rounded-md px-3 text-left transition-colors ${
         on ? 'bg-selected font-semibold' : 'hover:bg-hover'}`}>
-      <Icon size={16} className={on ? 'text-accent-text' : ''} />
+      <Icon size={16} />
       <span>{item.title}</span>
     </button>
   )

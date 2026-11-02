@@ -131,7 +131,7 @@ export function ClusterCard({ cluster: c, session: s, log }: { cluster: Cluster;
                     {a.owned ? '' : ', started elsewhere'}</span></span>
                 : <><span className="text-dim">No compute node</span>
                     <button type="button" onClick={() => setOpen('compute')} disabled={busy}
-                      className="font-semibold text-accent-text hover:underline disabled:opacity-50">Get one</button></>}
+                      className="font-semibold underline-offset-2 hover:underline disabled:opacity-50">Get one</button></>}
             </div>
             <div className="flex flex-wrap gap-2">
               <Action icon={SquareTerminal} label="Terminal" onClick={() => go('terminals', { cluster: c.id, new: '1' })} />

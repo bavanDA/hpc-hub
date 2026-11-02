@@ -34,7 +34,7 @@ function remembered(): string {
 
 const CHIP = 'inline-flex min-h-[34px] items-center gap-1.5 rounded-full px-3 text-sm font-semibold transition-colors ' +
   'duration-90 pointer-coarse:min-h-11 pointer-coarse:px-4 pointer-coarse:text-base'
-const chip = (on: boolean) => `${CHIP} ${on ? 'bg-accent-soft text-accent-text' : 'bg-control text-text hover:bg-hover'}`
+const chip = (on: boolean) => `${CHIP} ${on ? 'bg-text text-window' : 'bg-control text-text hover:bg-hover'}`
 
 export function AskForm({ context, kind: firstKind = 'free', errorText = '', errorSources = [], running = [],
   fileKey, onStarted, onSent }: Props) {

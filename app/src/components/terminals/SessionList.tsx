@@ -115,7 +115,7 @@ function SessionRow({ cluster, s, nodes, open, selected, onRefresh }: {
       {(code || s.remote.startsWith('http')) && (
         <button onClick={(e) => { e.stopPropagation(); remoteAction() }}
           title={code ? `Copy pairing code ${s.remote.slice(5)}` : `Open remote: ${s.remote}`}
-          className="rounded-md px-2 py-1 text-sm font-semibold text-accent-text hover:bg-hover">
+          className="rounded-md px-2 py-1 text-sm font-semibold hover:bg-hover">
           {code ? 'Copy code' : 'Open'}</button>
       )}
       <SessionMenu target={{ cluster, name: s.name, kind: s.kind, node: s.node, title: s.title }} onChanged={onRefresh} />
