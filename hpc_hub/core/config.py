@@ -139,7 +139,7 @@ class ClusterConfig:
     fast: str = ""
     request_node_on_connect: bool = True
     ask_node: bool = False  # with request_node_on_connect: show the node's settings first instead of asking Slurm
-    reuse_running_job: bool = False
+    reuse_running_job: bool = True  # a node you already have is used before asking for one
     vpn: VpnSettings = field(default_factory=VpnSettings)
     profile: ComputeProfile = field(default_factory=ComputeProfile)
     vscode: VsCodeSettings = field(default_factory=VsCodeSettings)

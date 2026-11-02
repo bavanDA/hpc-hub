@@ -23,7 +23,7 @@ import { putCluster } from './store'
 import { minutes, slurmTime } from './time'
 
 const MAIN = [['login', 'Sign-in'], ['compute', 'Compute']] as const
-const ADVANCED = [['server', 'Server and VPN'], ['queues', 'Queues and Slurm'], ['vscode', 'VS Code'],
+const ADVANCED = [['server', 'Server and VPN'], ['queues', 'Queues'], ['vscode', 'VS Code'],
   ['agents', 'Agents']] as const
 export type Tab = typeof MAIN[number][0] | typeof ADVANCED[number][0]
 const TABS: readonly (readonly [Tab, string])[] = [...MAIN, ...ADVANCED]
@@ -73,7 +73,7 @@ function ProfileRows({ cluster, p, onChange, extra, rows = 'all' }:
       <Duration total={minutes(p.time) ?? 240} onChange={(m) => set({ time: slurmTime(m) })} limits={limits} />
       <div className="px-4 pt-3 text-sm font-semibold text-dim">GPU</div>
       <GpuPicker gpus={gpus} known={known} value={p} onChange={onChange} />
-      <EntryRow label="Partition" value={p.partition} onChange={(partition) => set({ partition })}
+      <EntryRow label="Queue" value={p.partition} onChange={(partition) => set({ partition })}
         list={limits?.partitions} placeholder={limits?.default_partition} />
     </>}
     {rows !== 'size' && <More p={p} set={set} limits={limits} extra={extra} />}
@@ -84,7 +84,7 @@ function More({ p, set, limits, extra }:
   { p: Profile; set: (c: Partial<Profile>) => void; limits: Limits | null; extra: string }) {
   return <>
     <EntryRow label="Account" value={p.account ?? ''} onChange={(account) => set({ account })} />
-    <EntryRow label="QOS" value={p.qos ?? ''} onChange={(qos) => set({ qos })} list={limits?.qos}
+    <EntryRow label="Billing" value={p.qos ?? ''} onChange={(qos) => set({ qos })} list={limits?.qos}
       placeholder={limits?.default_qos} />
     <EntryRow label={extra} value={p.extra_args ?? ''} onChange={(extra_args) => set({ extra_args })}
       placeholder="--constraint=gpu" />
@@ -219,7 +219,7 @@ export function SettingsDialog({ cluster, hint, onClose, start = 'login', advanc
     </List>
     <div className="mb-5 mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 px-1 text-sm text-dim">
       {remember && <span className="flex items-center gap-1.5"><Lock size={14} />{copy.passwordNote(d)}</span>}
-      <span>{secondStep(d)}</span>
+      {secondStep(d) && <span>{secondStep(d)}</span>}
       {code && d.code_setup && <button type="button" onClick={() => openSystem(d.code_setup!)}
         className="inline-flex items-center gap-1 font-semibold text-accent-text hover:underline">
         {copy.codeSetup}<ExternalLink size={14} /></button>}
@@ -227,7 +227,7 @@ export function SettingsDialog({ cluster, hint, onClose, start = 'login', advanc
     {instead}
     {d.portal && (
       <div className="mb-5 flex items-center gap-4 rounded-xl bg-card px-4 py-3 shadow-[var(--shadow-card)]">
-        <KeyRound size={20} className="shrink-0 text-accent-text" />
+        <KeyRound size={20} className="shrink-0 text-dim" />
         <p className="min-w-0 flex-1 text-base">Skip the password: add this computer's SSH key through the portal.
           <span className="text-dim"> You'll still need the code.</span></p>
         <Button type="button" onClick={() => setOpen('key')}>{copy.portal(d)}</Button>
@@ -244,7 +244,7 @@ export function SettingsDialog({ cluster, hint, onClose, start = 'login', advanc
           width={72} />
       </ActionRow>
     </Group>
-    <Group title="VPN" description="Web sign-in (SSO) opens in a window of HPC Hub's own, never your browser.">
+    <Group title="VPN">
       <SwitchRow label="Use VPN" checked={v.enabled} onChange={(enabled) => upVpn({ enabled })} />
       {v.enabled && <>
         <EntryRow label="Gateway" value={v.gateway} onChange={(gateway) => upVpn({ gateway })}
@@ -274,8 +274,8 @@ export function SettingsDialog({ cluster, hint, onClose, start = 'login', advanc
           onChange={(same_login_as_ssh) => upVpn({ same_login_as_ssh })} />
         {ownVpnLogin && <>
           <EntryRow label="VPN username" value={vpnUser} onChange={setVpnUser} placeholder="jane.doe@example.edu" />
-          <EntryRow label={saved?.vpn.password ? 'VPN password (saved, leave empty to keep)'
-            : 'VPN password (empty = cluster password)'} value={vpnPassword} onChange={setVpnPassword} password />
+          <EntryRow label="VPN password" value={vpnPassword} onChange={setVpnPassword} password
+            placeholder={saved?.vpn.password ? copy.saved : 'Same as the cluster password'} />
         </>}
       </Group>
     )}
@@ -289,24 +289,23 @@ export function SettingsDialog({ cluster, hint, onClose, start = 'login', advanc
         <SwitchRow label="Review these before each request" checked={d.ask_node ?? false}
           onChange={(ask_node) => up({ ask_node })} />
       )}
-      <SwitchRow label="Reuse a node you already have" checked={d.reuse_running_job ?? false}
+      <SwitchRow label="Reuse a node you already have" checked={d.reuse_running_job ?? true}
         onChange={(reuse_running_job) => up({ reuse_running_job })} />
     </Group>
     <Group title="Node size">
       <ProfileRows cluster={d.id} p={d.profile} onChange={(profile) => up({ profile })} rows="size"
-        extra="Extra salloc arguments" />
+        extra="Extra options" />
     </Group>
   </>
 
   const queues = <>
-    <Group title="Slurm">
+    <Group title="Account and billing">
       <ProfileRows cluster={d.id} p={d.profile} onChange={(profile) => up({ profile })} rows="more"
-        extra="Extra salloc arguments" />
+        extra="Extra options" />
     </Group>
-    <Group title="Queues"
-      description="Queues to choose from, cheapest first. The first that starts in time wins, else the one that
-        starts soonest. Empty: always the partition and QOS above.">
-      <EntryRow label="Queues (partition:qos, comma separated)" value={d.queues ?? ''}
+    <Group title="Queues to try"
+      description="Cheapest first. Your node comes from the first one that can start within the wait below.">
+      <EntryRow label="Queues" value={d.queues ?? ''}
         onChange={(queues) => up({ queues })} placeholder="general:low,general:standard" />
       <SpinRow label="Wait for a cheaper queue (seconds)" value={d.queue_wait ?? 60}
         onChange={(queue_wait) => up({ queue_wait })} min={0} max={3600} />
@@ -315,9 +314,7 @@ export function SettingsDialog({ cluster, hint, onClose, start = 'login', advanc
 
   const vs = d.vscode
   const vscode = vs && <>
-    <Group title="VS Code job"
-      description="The VS Code button submits this as its own batch job (sbatch) and shows its log. If a VS Code job
-        is already running, it opens that one instead.">
+    <Group title="VS Code job">
       <EntryRow label="Run first (for example module load VSCode)" value={vs.setup} onChange={(setup) => upVs({ setup })} />
       <EntryRow label="Command" value={vs.command} onChange={(command) => upVs({ command })} />
       <EntryRow label="Start in folder" value={vs.workdir} onChange={(workdir) => upVs({ workdir })} placeholder="~" />
@@ -326,8 +323,8 @@ export function SettingsDialog({ cluster, hint, onClose, start = 'login', advanc
       <SwitchRow label="Open automatically" sub="When the tunnel is ready, and the GitHub sign-in page"
         checked={vs.open_links} onChange={(open_links) => upVs({ open_links })} />
     </Group>
-    <Group title="Job resources">
-      <ProfileRows cluster={d.id} p={vs.compute} onChange={(c) => upVs({ compute: c })} extra="Extra sbatch arguments" />
+    <Group title="Node size" description="VS Code gets its own node with this size.">
+      <ProfileRows cluster={d.id} p={vs.compute} onChange={(c) => upVs({ compute: c })} extra="Extra options" />
     </Group>
   </>
 
@@ -344,7 +341,7 @@ export function SettingsDialog({ cluster, hint, onClose, start = 'login', advanc
               onChange={(x) => upAgent(a.id, { [o.key]: x })} />
           ))}
           <SwitchRow label="Use a new compute node" checked={s.new_node}
-            sub="Off: the node you have (requested if needed)" onChange={(new_node) => upAgent(a.id, { new_node })} />
+            sub={s.new_node ? 'A node of its own' : 'Shares your compute node'} onChange={(new_node) => upAgent(a.id, { new_node })} />
           {a.remote_label && <SwitchRow label={a.remote_label} sub={a.remote_hint} checked={s.remote}
             onChange={(remote) => upAgent(a.id, { remote })} />}
           <EntryRow label="Start in folder" value={s.workdir} onChange={(workdir) => upAgent(a.id, { workdir })}
