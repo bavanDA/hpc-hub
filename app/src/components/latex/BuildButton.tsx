@@ -22,14 +22,14 @@ export function BuildButton({ cluster, clusterName, running, settings, onSetting
   }
   return (
     <div className="flex">
-      <Button kind="suggested" onClick={onBuild} disabled={running} title="Save and build (Ctrl+Enter)"
+      <Button kind="primary" onClick={onBuild} disabled={running} title="Save and build (Ctrl+Enter)"
         className="!h-8 rounded-r-none !px-3 text-sm">
         {running ? <Spinner size={14} /> : <RefreshCw size={14} />} {running ? 'Compiling' : 'Recompile'}</Button>
       <Popover width={330} button={(open, toggle) => (
         <button onClick={() => { if (!open) setDraft(settings); toggle() }} aria-label="Build settings"
           title="Build settings"
-          className="grid h-8 w-7 place-items-center rounded-r-md border-l border-white/25 bg-accent text-white
-            hover:brightness-110"><ChevronDown size={14} /></button>
+          className="grid h-8 w-7 place-items-center rounded-r-md border-l border-on-accent/25 bg-accent text-on-accent
+            hover:bg-accent-hover"><ChevronDown size={14} /></button>
       )}>
         {(close) => (
           <div className="flex flex-col gap-3 p-2 text-sm">
@@ -58,7 +58,7 @@ export function BuildButton({ cluster, clusterName, running, settings, onSetting
               Build on my compute node
             </label>
             <div className="flex justify-end">
-              <Button kind="suggested" className="!h-8 text-sm" onClick={() => save(close)}>Save settings</Button>
+              <Button kind="primary" className="!h-8 text-sm" onClick={() => save(close)}>Save settings</Button>
             </div>
           </div>
         )}
