@@ -1,13 +1,13 @@
-// Add skills from a git repository: it is cloned on the cluster, you tick skills and the agents to give them to.
-import { Search } from 'lucide-react'
+// Add skills from a git repository: it is cloned on the cluster, you switch on the skills and the agents to give
+// them to. Style E, like the phone's FromGitSheet.
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { call } from '../../rpc'
 import type { Skill, Target } from '../../types/skills'
-import { EntryRow, Group } from '../clusters/fields'
-import { Check, SwitchRow } from '../permissions/controls'
+import { EButton, SearchField } from '../e/extra'
+import { EDialog, Field, MainButton, Section, ToggleRow } from '../e/ui'
 import { useToast } from '../toast'
-import { Button, Dialog, Spinner } from '../ui'
+import { Spinner } from '../ui'
 
 export function AddSkillsDialog({ cluster, name, targets, repo, onClose, onDone }: {
   cluster: string; name: string; targets: Target[]; repo: string; onClose: () => void; onDone: () => void
@@ -24,13 +24,12 @@ export function AddSkillsDialog({ cluster, name, targets, repo, onClose, onDone 
 
   const load = useCallback((address: string) => {
     setLoading(true)
-    setNote('Getting the repository...')
+    setNote('')
     setFound(null)
     setPicked([])
     call<Skill[]>('skills.browse', { cluster, url: address.trim() })
-      .then((got) => { setFound(got); setNote(got.length ? `${got.length} skills. Tick the ones you want.`
-        : 'No skills found.') })
-      .catch((e: Error) => setNote(`Could not load: ${e.message}`))
+      .then((got) => { setFound(got); if (!got.length) setNote('No skills found there.') })
+      .catch((e: Error) => setNote(`Could not load it: ${e.message}`))
       .finally(() => setLoading(false))
   }, [cluster])
   useEffect(() => load(repo), [load, repo])
@@ -44,7 +43,6 @@ export function AddSkillsDialog({ cluster, name, targets, repo, onClose, onDone 
   const turn = (id: string, on: boolean) => setTo((t) => on ? [...t, id] : t.filter((x) => x !== id))
 
   const add = () => {
-    if (!picked.length || !to.length) { setNote('Tick at least one skill and one agent.'); return }
     setAdding(true)
     call('skills.install', { cluster, paths: picked, targets: to })
       .then(() => { toast(`Added ${picked.length} ${picked.length === 1 ? 'skill' : 'skills'}`); onDone(); onClose() })
@@ -52,51 +50,32 @@ export function AddSkillsDialog({ cluster, name, targets, repo, onClose, onDone 
   }
 
   return (
-    <Dialog title={`Add skills on ${name}`} onClose={onClose} width={640}
-      actions={<>
-        <Button onClick={onClose}>Cancel</Button>
-        <Button kind="suggested" disabled={adding || !picked.length || !to.length} onClick={add}>
-          {adding && <Spinner size={14} />}Add {picked.length || ''} {picked.length === 1 ? 'skill' : 'skills'}
-        </Button>
-      </>}>
-      <Group description="A git repository with SKILL.md folders. It is cloned on the cluster.">
-        <div onKeyDown={(e) => e.key === 'Enter' && url.trim() && load(url)} className="flex items-center pr-3">
-          <div className="min-w-0 flex-1"><EntryRow label="Repository" value={url} onChange={setUrl} /></div>
-          <Button disabled={loading || !url.trim()} onClick={() => load(url)}>Load</Button>
-        </div>
-      </Group>
-      <div className="mb-2 flex items-end gap-3 px-1">
-        <div className="min-w-0 flex-1">
-          <h3 className="text-md font-semibold">Skills in it</h3>
-          <p className="text-sm text-dim">{note}</p>
-        </div>
-        {(found?.length ?? 0) > 8 && (
-          <label className="flex h-9 w-48 items-center gap-2 rounded-md bg-pill px-2.5 focus-within:ring-2
-            focus-within:ring-accent">
-            <Search size={16} className="shrink-0 text-dim" />
-            <input value={filter} onChange={(e) => setFilter(e.target.value)} placeholder="Filter"
-              className="min-w-0 flex-1 bg-transparent outline-none placeholder:text-dim" />
-          </label>
-        )}
-      </div>
+    <EDialog title={`Skills from git on ${name}`} width={600} onClose={onClose}
+      actions={<MainButton disabled={adding || !picked.length || !to.length} onClick={add}>
+        {adding && <Spinner size={16} />}Add {picked.length || ''} {picked.length === 1 ? 'skill' : 'skills'}
+      </MainButton>}>
+      <form className="flex items-end gap-2 px-5" onSubmit={(e) => { e.preventDefault(); if (url.trim()) load(url) }}>
+        <div className="min-w-0 flex-1"><Field label="Repository" value={url} onChange={(e) => setUrl(e.target.value)} /></div>
+        <EButton type="submit" className="mb-1.5" disabled={loading || !url.trim()}>Look for skills</EButton>
+      </form>
+      {note && <p className="px-5 pt-2 text-dim">{note}</p>}
       {loading && <div className="grid h-24 place-items-center"><Spinner size={20} /></div>}
-      {!!shown.length && (
-        <div className="mb-5"><Group>
+      {found && found.length > 0 && <>
+        <Section title={`Skills (${found.length})`}>
+          {found.length > 8 && <div className="border-b border-line px-5 py-2">
+            <SearchField value={filter} onChange={setFilter} placeholder="Filter skills" /></div>}
           {shown.map((k) => (
-            <label key={k.path} title={k.path} className="flex min-h-[56px] items-center gap-3 px-4 py-2 hover:bg-hover">
-              <Check on={picked.includes(k.path)} onChange={(v) => tick(k.path, v)} label={k.name} />
-              <div className="min-w-0 flex-1">
-                <div className="truncate">{k.name}</div>
-                {k.description && <div className="line-clamp-2 text-sm text-dim">{k.description}</div>}
-              </div>
-            </label>
+            <div key={k.path} title={k.path}>
+              <ToggleRow label={k.name} sub={k.description} checked={picked.includes(k.path)}
+                onChange={(on) => tick(k.path, on)} />
+            </div>
           ))}
-        </Group></div>
-      )}
-      <Group title="Add them for">
-        {targets.map((t) => <SwitchRow key={t.id} title={t.label} subtitle={t.folder} on={to.includes(t.id)}
-          onChange={(v) => turn(t.id, v)} />)}
-      </Group>
-    </Dialog>
+        </Section>
+        <Section title="Add them to">
+          {targets.map((t) => <ToggleRow key={t.id} label={t.label} sub={t.folder} checked={to.includes(t.id)}
+            onChange={(on) => turn(t.id, on)} />)}
+        </Section>
+      </>}
+    </EDialog>
   )
 }
