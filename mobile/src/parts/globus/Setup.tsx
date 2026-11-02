@@ -4,10 +4,10 @@ import { ArrowLeftRight, LogIn, LogOut } from 'lucide-react'
 import { useState } from 'react'
 
 import { HELP } from '@shared/components/globus/parts'
-import { EmptyState } from '@shared/components/ui'
 import { call } from '@shared/rpc'
 import type { GlobusCluster, GlobusStatus } from '@shared/types/globus'
-import { Button, Card, Field, ListRow, Sheet, useToast } from '../../ui'
+import { EmptyState, Field, MainButton, Row, Section, Sheet, useToast } from '../../ui'
+import { shortCluster } from '../code/util'
 
 function ClientId({ value, onSaved }: { value: string; onSaved: (s: GlobusStatus) => void }) {
   const toast = useToast()
@@ -18,7 +18,7 @@ function ClientId({ value, onSaved }: { value: string; onSaved: (s: GlobusStatus
     <form className="w-full" onSubmit={(e) => { e.preventDefault(); if (id.trim()) save() }}>
       <Field label="Client ID" value={id} placeholder="Paste it here" autoCapitalize="none" autoCorrect="off"
         spellCheck={false} onChange={(e) => setId(e.target.value)} />
-      <Button kind="primary" className="mt-1 w-full" disabled={!id.trim() || id.trim() === value}>Save</Button>
+      <MainButton className="mt-1" disabled={!id.trim() || id.trim() === value}>Save</MainButton>
     </form>
   )
 }
@@ -34,7 +34,7 @@ export function SignIn({ onSignIn }: { onSignIn: () => void }) {
   return (
     <EmptyState icon={ArrowLeftRight} title="Sign in to Globus"
       text="Use your university login. Globus then moves files between clusters, even with this app closed."
-      action={<Button kind="primary" icon={LogIn} onClick={onSignIn}>Sign in</Button>} />
+      action={<MainButton icon={LogIn} onClick={onSignIn}>Sign in</MainButton>} />
   )
 }
 
@@ -47,24 +47,25 @@ export function AccountSheet({ status, onClose, onChange, onSignIn, onChoose }: 
     .then((s) => { toast('Signed out of Globus'); onChange(s) })
     .catch((e: Error) => toast(`Could not sign out: ${e.message}`))
   return (
-    <Sheet title="Globus" onClose={onClose}>
-      <h2 className="mb-1 font-bold">Account</h2>
-      <p className="mb-2 text-sm text-dim">{HELP}</p>
-      <ClientId value={status.client_id} onSaved={onChange} />
-      <Card className="mt-3 py-1">
-        <ListRow icon={status.signed_in ? LogOut : LogIn} title={status.signed_in ? 'Signed in' : 'Not signed in'}
-          trailing={status.signed_in
-            ? <Button kind="danger" onClick={signOut}>Sign out</Button>
-            : <Button kind="primary" disabled={!status.client_id} onClick={onSignIn}>Sign in</Button>} />
-      </Card>
-      <h2 className="mt-6 mb-1 font-bold">Collections</h2>
-      <p className="mb-2 text-sm text-dim">The Globus collection that holds each cluster's files.</p>
-      <Card className={`py-1 ${status.signed_in ? '' : 'pointer-events-none opacity-50'}`}>
-        {status.clusters.map((c) => (
-          <ListRow key={c.id} title={c.name} subtitle={c.collection_id ? c.collection_name : 'Not set'}
-            onClick={() => onChoose(c)} />
-        ))}
-      </Card>
+    <Sheet flush title="Globus account" onClose={onClose}>
+      <div className="border-t border-line">
+        {status.signed_in
+          ? <Row icon={LogOut} label="Sign out of Globus" onPress={signOut} />
+          : <Row icon={LogIn} label="Sign in to Globus" opens onPress={onSignIn} />}
+      </div>
+      {status.signed_in && (
+        <Section title="Collections" note="Where Globus finds each cluster's files.">
+          {status.clusters.map((c) => (
+            <Row key={c.id} label={shortCluster(c.name)} value={c.collection_id ? c.collection_name : 'Not set'} opens
+              onPress={() => onChoose(c)} />
+          ))}
+        </Section>
+      )}
+      <section className="px-4 pt-6">
+        <h3 className="pb-1.5 text-xs font-semibold tracking-wide text-dim uppercase">Client ID</h3>
+        <p className="text-sm text-dim">{HELP}</p>
+        <ClientId value={status.client_id} onSaved={onChange} />
+      </section>
     </Sheet>
   )
 }

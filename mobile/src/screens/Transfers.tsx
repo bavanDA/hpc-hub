@@ -5,10 +5,12 @@ import { ArrowLeftRight, CircleAlert, KeyRound, Plus, RefreshCw, Settings } from
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { useTransfers } from '@shared/components/files/useTransfers'
-import { EmptyState, Spinner } from '@shared/components/ui'
+import { Spinner } from '@shared/components/ui'
 import { useGo, usePageParams } from '@shared/nav'
 import { call } from '@shared/rpc'
+import type { Transfer } from '@shared/types/files'
 import type { CheckResult, GlobusCluster, GlobusStatus, Task } from '@shared/types/globus'
+import { shortCluster } from '../parts/code/util'
 import { TransferRow } from '../parts/files/TransferRow'
 import { CollectionSheet } from '../parts/globus/CollectionSheet'
 import { CopySheet } from '../parts/globus/CopySheet'
@@ -16,7 +18,7 @@ import { AccountSheet, SetUp, SignIn } from '../parts/globus/Setup'
 import { SignInSheet } from '../parts/globus/SignInSheet'
 import { TaskRow } from '../parts/globus/TaskRow'
 import { Header } from '../parts/Header'
-import { Button, Card, ConfirmSheet, Segments, useToast } from '../ui'
+import { Button, ConfirmSheet, EmptyState, List, MainButton, Row, Section, Segments, useToast } from '../ui'
 
 type View = 'copies' | 'globus'
 const POLL_MS = 10_000
@@ -24,18 +26,21 @@ const POLL_MS = 10_000
 function Copies() {
   const go = useGo()
   const toast = useToast()
+  const [stop, setStop] = useState<Transfer | null>(null)
   const { items, x } = useTransfers((t) => {
     if (!t.error && !t.title.includes('this computer')) toast(`Copied ${t.title.split(':')[0]}`)
   })
   if (!items.length) {
     return <EmptyState icon={ArrowLeftRight} title="No copies yet"
-      text="In Files, use Copy, then Paste here in another folder or cluster."
+      text="In Files, tap Copy on a file, then Paste here in another folder or cluster."
       action={<Button onClick={() => go('files')}>Open Files</Button>} />
   }
   return (
-    <Card className="py-1">
-      <div className="divide-y divide-line">{items.map((t) => <TransferRow key={t.id} t={t} onX={x} />)}</div>
-    </Card>
+    <>
+      <List>{items.map((t) => <TransferRow key={t.id} t={t} onX={(t) => t.finished || t.error ? x(t) : setStop(t)} />)}</List>
+      {stop && <ConfirmSheet danger keep="Keep copying" confirm="Stop copy" title={`Stop copying ${stop.title.split(':')[0]}?`}
+        text="What's copied so far stays where it is." onClose={() => setStop(null)} onConfirm={() => x(stop)} />}
+    </>
   )
 }
 
@@ -70,8 +75,8 @@ function Globus() {
       checked.current = true
       call<CheckResult>('globus.check').then((r) => {
         setStatus(r)
-        r.changes.forEach((c) => toast(c.collection ? `${c.name} uses Globus collection ${c.collection}`
-          : `No Globus collection found for ${c.name}. Pick one`))
+        r.changes.forEach((c) => toast(c.collection ? `${shortCluster(c.name)} uses Globus collection ${c.collection}`
+          : `No Globus collection found for ${shortCluster(c.name)}. Pick one in Globus account.`))
       }).catch((e: Error) => toast(`Globus: ${e.message}`))
     }
     loadTasks()
@@ -87,47 +92,47 @@ function Globus() {
     if (consent) setStamp((n) => n + 1)
   }
   const doCancel = (t: Task) => call('globus.cancel', { task_id: t.task_id })
-    .then(() => toast('Transfer cancelled')).catch((e: Error) => toast(`Could not cancel: ${e.message}`))
+    .then(() => toast('Copy stopped')).catch((e: Error) => toast(`Couldn't stop it: ${e.message}`))
     .finally(loadTasks)
   const names = Object.fromEntries((status?.clusters ?? []).filter((c) => c.collection_name)
-    .map((c) => [c.collection_name, c.name]))
+    .map((c) => [c.collection_name, shortCluster(c.name)]))
 
   let body
-  if (error) body = <EmptyState icon={CircleAlert} title="Could not load Globus" text={error} />
+  if (error) body = <EmptyState icon={CircleAlert} title="Couldn't load Globus" text={error} />
   else if (!status) body = <div className="grid h-40 place-items-center"><Spinner size={28} /></div>
   else if (!status.client_id) body = <SetUp onSaved={setStatus} />
   else if (!status.signed_in) body = <SignIn onSignIn={() => setLogin('globus.login_url')} />
   else body = (
-    <div className="flex flex-col gap-4">
+    <>
       {status.wants.length > 0 && (
-        <button onClick={() => setLogin('globus.consent_url')} className="flex items-center gap-3 rounded-2xl
-          bg-warn-bg p-4 text-left text-warn">
-          <KeyRound size={22} className="shrink-0" />
-          <span className="min-w-0 flex-1"><span className="block font-semibold">Globus needs your OK</span>
-            <span className="block text-sm">For {status.wants.map((w) => w.name).join(' and ')}. Tap to allow.</span></span>
-        </button>
+        <List>
+          <Row icon={KeyRound} opens onPress={() => setLogin('globus.consent_url')}
+            label={`Allow Globus for ${status.wants.map((w) => shortCluster(w.name)).join(' and ')}`} />
+        </List>
       )}
-      <Button kind="primary" icon={Plus} onClick={() => setCopying(true)}>New Globus copy</Button>
-      <div className="flex items-center gap-2">
-        <h2 className="flex-1 font-bold">Recent transfers</h2>
-        <button aria-label="Refresh" onClick={loadTasks}
-          className="grid size-11 place-items-center rounded-full text-dim active:bg-hover"><RefreshCw size={20} /></button>
-      </div>
-      {tasksError && <p className="text-sm text-bad">{tasksError}</p>}
-      {!tasks && !tasksError && <div className="grid h-24 place-items-center"><Spinner size={24} /></div>}
-      {tasks && !tasks.length && <p className="text-center text-dim">No Globus transfers yet.</p>}
-      {tasks && tasks.length > 0 && (
-        <Card className="py-1"><div className="divide-y divide-line">
-          {tasks.map((t) => <TaskRow key={t.task_id} t={t} names={names} onCancel={setCancel} />)}</div></Card>
-      )}
-    </div>
+      <div className="px-4 pt-4"><MainButton icon={Plus} onClick={() => setCopying(true)}>New Globus copy</MainButton></div>
+      <section className="pt-5">
+        <div className="flex items-center pr-2 pl-4">
+          <h3 className="flex-1 text-xs font-semibold tracking-wide text-dim uppercase">Recent</h3>
+          <button aria-label="Refresh" onClick={loadTasks}
+            className="grid size-12 place-items-center rounded-full text-dim active:bg-pressed"><RefreshCw size={20} /></button>
+        </div>
+        <List>
+          {tasksError && <p className="px-4 py-3 text-bad">{tasksError}</p>}
+          {!tasks && !tasksError && <div className="grid h-24 place-items-center"><Spinner size={24} /></div>}
+          {tasks && !tasks.length && <p className="px-4 py-3 text-dim">No Globus copies yet.</p>}
+          {tasks?.map((t) => <TaskRow key={t.task_id} t={t} names={names} onCancel={setCancel} />)}
+        </List>
+      </section>
+    </>
   )
 
   return (
     <>
-      {status?.client_id && <div className="mb-3 flex justify-end">
-        <Button icon={Settings} onClick={() => setAccount(true)}>Globus account</Button></div>}
       {body}
+      {status?.client_id && (
+        <Section><Row icon={Settings} label="Globus account" opens onPress={() => setAccount(true)} /></Section>
+      )}
       {account && status && <AccountSheet status={status} onClose={() => setAccount(false)} onChange={setStatus}
         onSignIn={() => { setAccount(false); setLogin('globus.login_url') }}
         onChoose={(c) => { setAccount(false); setChoosing(c) }} />}
@@ -138,7 +143,7 @@ function Globus() {
         onPicked={(s) => { setStatus(s); setChoosing(null); setStamp((n) => n + 1) }} />}
       {login && <SignInSheet start={login} onClose={() => setLogin(null)} onDone={signedInNow} />}
       {cancel && <ConfirmSheet danger keep="Keep copying" confirm="Stop copy" title={`Stop ${cancel.label.replace(/^HPC Hub /, '')}?`}
-        text="Globus stops copying. Files already copied stay where they are." onClose={() => setCancel(null)}
+        text="What's copied so far stays where it is." onClose={() => setCancel(null)}
         onConfirm={() => doCancel(cancel)} />}
     </>
   )
@@ -153,7 +158,7 @@ export function Transfers() {
       <div className="px-4 pb-3">
         <Segments value={view} options={[['copies', 'Copies'], ['globus', 'Globus']]} onChange={setView} />
       </div>
-      <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4">
+      <div className="min-h-0 flex-1 overflow-y-auto pb-6">
         {view === 'copies' ? <Copies /> : <Globus />}
       </div>
     </div>

@@ -4,7 +4,8 @@ import { useEffect, useRef, useState } from 'react'
 import { Spinner } from '@shared/components/ui'
 import { call } from '@shared/rpc'
 import type { Collection, GlobusCluster, GlobusStatus } from '@shared/types/globus'
-import { Card, ListRow, SearchField, Sheet, useToast } from '../../ui'
+import { Row, SearchField, Sheet, useToast } from '../../ui'
+import { shortCluster } from '../code/util'
 
 type Found = { query: string; results: Collection[] }
 
@@ -41,27 +42,24 @@ export function CollectionSheet({ cluster, onClose, onPicked }:
 
   const pick = (c: Collection) => {
     call<GlobusStatus>('globus.set_collection', { cluster: cluster.id, id: c.id, name: c.name })
-      .then((s) => { toast(`${cluster.name} uses ${c.name}`); onPicked(s) })
-      .catch((e: Error) => toast(`Could not save: ${e.message}`))
+      .then((s) => { toast(`${shortCluster(cluster.name)} uses ${c.name}`); onPicked(s) })
+      .catch((e: Error) => toast(`Couldn't save: ${e.message}`))
   }
 
   const results = found?.results ?? []
   return (
-    <Sheet title={`Collection for ${cluster.name}`} onClose={onClose}>
-      <SearchField value={query} onChange={setQuery} placeholder="Search, like Expanse or Bouchet" />
-      <div className="mt-3">
+    <Sheet flush title={`Collection for ${cluster.name}`} onClose={onClose}>
+      <div className="px-4 pb-3">
+        <SearchField value={query} onChange={setQuery} placeholder="Search, like Expanse or Bouchet" />
+      </div>
+      <div className="border-t border-line">
         {loading && !found && <div className="grid h-24 place-items-center"><Spinner size={24} /></div>}
-        {error && <p className="p-2 text-bad">Search failed: {error}</p>}
-        {found && !results.length && !error && <p className="p-2 text-dim">Nothing found. Try another word.</p>}
-        {results.length > 0 && (
-          <Card className="py-1">
-            {results.map((c) => (
-              <ListRow key={c.id} title={c.name} subtitle={c.owner || 'No owner'} onClick={() => pick(c)}
-                trailing={c.best ? <span className="text-sm font-semibold text-accent-text">Best match</span>
-                  : c.mine ? <span className="text-sm text-dim">Yours</span> : undefined} />
-            ))}
-          </Card>
-        )}
+        {error && <p className="px-4 py-3 text-bad">Search failed: {error}</p>}
+        {found && !results.length && !error && <p className="px-4 py-3 text-dim">Nothing found. Try another word.</p>}
+        {results.map((c) => (
+          <Row key={c.id} label={c.name} sub={c.owner || undefined} onPress={() => pick(c)}
+            value={c.best ? 'Best match' : c.mine ? 'Yours' : undefined} />
+        ))}
       </div>
     </Sheet>
   )
