@@ -4,6 +4,7 @@ import type { CopyPlan, Entry, FileData, Listing, Place, Transfer } from '../typ
 const now = Math.floor(Date.now() / 1000)
 const HOUR = 3600, DAY = 24 * HOUR
 const HOME = '/home/jdoe'
+const THESIS = '/mmfs1/project/mygroup/jdoe/thesis'
 
 const d = (name: string, age: number): Entry => ({ name, kind: 'd', size: 4096, mtime: now - age })
 const f = (name: string, size: number, age: number): Entry => ({ name, kind: 'f', size, mtime: now - age })
@@ -30,6 +31,16 @@ const TREE: Record<string, Entry[]> = {
   [`${HOME}/data`]: [d('raw', 30 * DAY), d('processed', 3 * DAY), f('stations.csv', 5_812_331, 30 * DAY)],
   [`${HOME}/envs`]: [d('torch', 40 * DAY), d('jax', 60 * DAY)],
   [`${HOME}/.cache`]: [],
+  [THESIS]: [
+    d('src', 2 * HOUR), d('data', 6 * DAY), d('results', 40 * 60), d('slurm-logs', 25 * 60),
+    f('README.md', 1_845, 9 * DAY), f('train.py', 1_204, 30 * 60), f('run.slurm', 702, 5 * HOUR),
+    f('config.yaml', 1_310, 5 * HOUR), f('environment.yml', 734, 40 * DAY),
+  ],
+  [`${THESIS}/src`]: [f('model.py', 6_120, 2 * HOUR), f('data.py', 3_410, DAY), f('metrics.py', 1_980, 3 * DAY)],
+  [`${THESIS}/data`]: [d('raw', 30 * DAY), d('processed', 6 * DAY)],
+  [`${THESIS}/results`]: [f('metrics.csv', 96_120, 40 * 60), f('loss_curve.png', 184_220, 40 * 60)],
+  [`${THESIS}/slurm-logs`]: [f('slurm-123456.out', 48_311, 12 * 60), f('slurm-123455.out', 12_904, 3 * HOUR)],
+  [`${HOME}/paper`]: [d('figures', 2 * DAY), f('main.tex', 18_204, 3 * HOUR), f('refs.bib', 9_310, 4 * DAY)],
   '/project/mygroup/jdoe': [d('shared-data', 20 * DAY), d('models', 8 * DAY), f('ACCESS.md', 420, 200 * DAY)],
   '/scratch/jdoe': [d('tmp-run-0412', 6 * HOUR), f('big_output.h5', 48_210_993_112, 6 * HOUR)],
 }

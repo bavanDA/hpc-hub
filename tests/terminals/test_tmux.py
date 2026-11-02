@@ -55,10 +55,11 @@ def test_real_tmux(tmp_path, monkeypatch):
         assert res.returncode == 0 or "SCREEN_LIST" in res.stdout, res.stderr
         return res.stdout
 
-    sh(tmux.create("hpchub-term-1", "sleep 60", label="My shell", color="#e01b24"))
+    sh(tmux.create("hpchub-term-1", "sleep 60", label="My shell", color="#e01b24", cwd=str(tmp_path)))
     sh(tmux.create("hpchub-term-1", "sleep 60", label="ignored"))  # already there: untouched
     s = tmux.parse(sh(tmux.LIST)).sessions
-    assert [(x.name, x.label, x.color) for x in s] == [("hpchub-term-1", "My shell", "#e01b24")]
+    assert [(x.name, x.label, x.color, x.path) for x in s] == [("hpchub-term-1", "My shell", "#e01b24",
+                                                                 str(tmp_path))]
     sh(tmux.set_label(s[0], "renamed") + " && " + tmux.set_color(s[0], "#2ec27e"))
     s = tmux.parse(sh(tmux.LIST)).sessions
     assert (s[0].label, s[0].color) == ("renamed", "#2ec27e")
