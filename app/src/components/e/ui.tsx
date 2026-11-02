@@ -1,15 +1,17 @@
 // The phone's style E pieces (mobile/src/ui.tsx) at desktop size, for the windows moved to it: rows on a plain
 // background with hairlines, label left and value right, numbers typed in place, one solid main button. Everything
 // sits inside an EDialog, which carries the style-e colors (index.css).
-import { Check, ChevronRight, X, type LucideIcon } from 'lucide-react'
+import { ArrowLeft, Check, ChevronRight, Eye, EyeOff, X, type LucideIcon } from 'lucide-react'
 import { useState, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode } from 'react'
 
 import { human } from '../clusters/time'
 import { useEscape } from '../ui'
 
-/** A window over the app in style E: title on the left, X on the right, rows, the main button at the bottom. */
-export function EDialog({ title, onClose, children, actions, width = 520 }:
-  { title: string; onClose: () => void; children: ReactNode; actions?: ReactNode; width?: number }) {
+/** A window over the app in style E: title on the left, X on the right, rows, the main button at the bottom.
+ *  onBack: a part of a bigger window (a settings section), with an arrow back before the title. */
+export function EDialog({ title, onClose, onBack, children, actions, width = 520 }: {
+  title: string; onClose: () => void; onBack?: () => void; children: ReactNode; actions?: ReactNode; width?: number
+}) {
   useEscape(onClose)
   return (
     <div className="style-e dialog-scrim fixed inset-0 z-40 grid place-items-center bg-scrim p-4"
@@ -17,7 +19,9 @@ export function EDialog({ title, onClose, children, actions, width = 520 }:
       <div role="dialog" aria-modal="true" aria-label={title} onMouseDown={(e) => e.stopPropagation()}
         style={{ width }} className="dialog-in flex max-h-[90vh] max-w-full flex-col rounded-xl bg-window
           shadow-[var(--shadow-dialog)]">
-        <header className="flex h-14 shrink-0 items-center gap-2 pr-2 pl-5">
+        <header className={`flex h-14 shrink-0 items-center gap-2 pr-2 ${onBack ? 'pl-2' : 'pl-5'}`}>
+          {onBack && <button aria-label="Back" onClick={onBack} className="grid size-9 place-items-center rounded-md
+            text-dim hover:bg-hover active:bg-pressed"><ArrowLeft size={18} /></button>}
           <h2 className="min-w-0 flex-1 text-lg font-semibold">{title}</h2>
           <button aria-label="Close" onClick={onClose} className="grid size-9 place-items-center rounded-md
             text-dim hover:bg-hover active:bg-pressed"><X size={18} /></button>
@@ -58,14 +62,17 @@ export function Section({ title, note, children }: { title?: string; note?: Reac
 
 const ROW = 'flex min-h-12 w-full items-center gap-3 border-b border-line px-5 py-2 text-left'
 
-/** One row: label on the left, value on the right. A chevron only when it opens another window (opens). */
-export function Row({ label, sub, value, opens = false, onPress, children }: {
-  label: ReactNode; sub?: ReactNode; value?: ReactNode; opens?: boolean; onPress?: () => void; children?: ReactNode
+/** One row: label on the left, value on the right. A chevron only when it opens another window (opens). An icon
+ *  is grey; danger makes the row red (Forget, Remove). */
+export function Row({ label, sub, value, icon: Icon, opens = false, onPress, danger = false, children }: {
+  label: ReactNode; sub?: ReactNode; value?: ReactNode; icon?: LucideIcon; opens?: boolean; onPress?: () => void
+  danger?: boolean; children?: ReactNode
 }) {
   const body = (
     <>
+      {Icon && <Icon size={18} className={`shrink-0 ${danger ? 'text-bad' : 'text-dim'}`} />}
       <span className="min-w-0 flex-1 break-words">
-        <span className="block">{label}</span>
+        <span className={`block ${danger ? 'text-bad' : ''}`}>{label}</span>
         {sub && <span className="block text-sm text-dim">{sub}</span>}
       </span>
       {value !== undefined && <span className="max-w-[60%] text-right font-medium break-words tabular-nums">
@@ -212,11 +219,20 @@ export function Segments<T extends string>({ value, options, onChange, label }:
 const BOX = 'h-10 w-full rounded-lg border border-line-strong bg-window px-3 outline-none placeholder:text-faint '
   + 'focus:border-accent focus:ring-1 focus:ring-accent'
 
-export function Field({ label, ...props }: { label: string } & InputHTMLAttributes<HTMLInputElement>) {
+/** A text field with its label above. A password gets an eye to show what was typed. */
+export function Field({ label, type, ...props }: { label: ReactNode } & InputHTMLAttributes<HTMLInputElement>) {
+  const [shown, setShown] = useState(false)
+  const secret = type === 'password'
   return (
     <label className="block py-1.5">
       <span className="mb-1.5 block text-sm text-dim">{label}</span>
-      <input spellCheck={false} autoComplete="off" {...props} className={BOX} />
+      <span className="relative block">
+        <input spellCheck={false} autoComplete="off" {...props} type={secret && shown ? 'text' : type}
+          className={`${BOX} ${secret ? 'pr-10' : ''}`} />
+        {secret && <button type="button" aria-label={shown ? 'Hide' : 'Show'} onClick={() => setShown(!shown)}
+          className="absolute top-1 right-1 grid size-8 place-items-center rounded-md text-dim hover:bg-hover">
+          {shown ? <EyeOff size={16} /> : <Eye size={16} />}</button>}
+      </span>
     </label>
   )
 }

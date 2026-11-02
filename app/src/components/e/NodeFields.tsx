@@ -50,8 +50,8 @@ function GpuDialog({ gpus, value: p, onChange, onClose }:
   )
 }
 
-function QueueDialog({ limits, value: p, onChange, onClose }:
-  { limits: Limits | null; value: Profile; onChange: (p: Profile) => void; onClose: () => void }) {
+function QueueDialog({ limits, value: p, onChange, onClose, extra }:
+  { limits: Limits | null; value: Profile; onChange: (p: Profile) => void; onClose: () => void; extra: boolean }) {
   const set = (change: Partial<Profile>) => onChange({ ...p, ...change })
   const list = (id: string, xs?: string[]) => xs?.length
     ? <datalist id={id}>{xs.map((x) => <option key={x} value={x} />)}</datalist> : null
@@ -65,8 +65,8 @@ function QueueDialog({ limits, value: p, onChange, onClose }:
           onChange={(e) => set({ qos: e.target.value.trim() })} />
         <Field label="Group to bill" value={p.account ?? ''} placeholder="Your default group"
           onChange={(e) => set({ account: e.target.value.trim() })} />
-        <Field label="Extra options" value={p.extra_args ?? ''} placeholder="--constraint=intel"
-          onChange={(e) => set({ extra_args: e.target.value })} />
+        {extra && <Field label="Extra options" value={p.extra_args ?? ''} placeholder="--constraint=intel"
+          onChange={(e) => set({ extra_args: e.target.value })} />}
         {list('e-queues', limits?.partitions)}{list('e-qos', limits?.qos)}
       </div>
     </EDialog>
@@ -76,9 +76,11 @@ function QueueDialog({ limits, value: p, onChange, onClose }:
 const quickLabel = (x: { id: string; label: string; hint: string }) => x.id === 'gpu' && x.label === '1 GPU'
   ? `1 × ${x.hint.split(',')[0].replace(/^(NVIDIA|RTX|Tesla) /, '')}` : x.label
 
-/** onValid hears whether every number is allowed, so the window can turn its button off. */
-export function NodeFields({ cluster, value: p, onChange, onValid }:
-  { cluster: string; value: Profile; onChange: (p: Profile) => void; onValid?: (ok: boolean) => void }) {
+/** onValid hears whether every number is allowed, so the window can turn its button off. extra: false where the
+ *  extra options can't be kept (a request for a node now). */
+export function NodeFields({ cluster, value: p, onChange, onValid, extra = true }: {
+  cluster: string; value: Profile; onChange: (p: Profile) => void; onValid?: (ok: boolean) => void; extra?: boolean
+}) {
   const [open, setOpen] = useState<'' | 'gpu' | 'queue'>('')
   const { gpus } = useGpus(cluster)
   const limits = useLimits(cluster, p)
@@ -107,7 +109,8 @@ export function NodeFields({ cluster, value: p, onChange, onValid }:
         <Row label="Queue and billing" value={queue} opens onPress={() => setOpen('queue')} />
       </List>
       {open === 'gpu' && <GpuDialog gpus={gpus} value={p} onChange={onChange} onClose={() => setOpen('')} />}
-      {open === 'queue' && <QueueDialog limits={limits} value={p} onChange={onChange} onClose={() => setOpen('')} />}
+      {open === 'queue' && <QueueDialog limits={limits} value={p} onChange={onChange} extra={extra}
+        onClose={() => setOpen('')} />}
     </>
   )
 }
