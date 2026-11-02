@@ -62,13 +62,14 @@ def _accounts(s: ClusterSession) -> list[dict]:
 
 
 @method("jobs.list")
-def list_jobs(cluster: str, scope: str = jobs.MINE) -> dict:
-    """Jobs of one scope (mine, group, history, all), newest first, plus the SU totals of your accounts."""
+def list_jobs(cluster: str, scope: str = jobs.MINE, account: str = "") -> dict:
+    """Jobs of one scope (mine, group, history, all), newest first, plus the SU totals of your accounts. account:
+    one of your groups (groups) for the group scope; none means all of them."""
     if scope not in jobs.SCOPES:
         raise ValueError(f"No scope {scope}")
     s = hub().connected(cluster)
     try:
-        found = jobs.list_jobs(s.ssh, scope)
+        found = jobs.list_jobs(s.ssh, scope, account=account.strip())
     except Exception:
         try:
             lost = not s.healthy()  # the link died, not Slurm: let the cluster card say so
@@ -78,7 +79,9 @@ def list_jobs(cluster: str, scope: str = jobs.MINE) -> dict:
             s.mark_lost()
         raise
     me = s.ssh.username
-    return {"jobs": [job_json(j, me) for j in found], "user": me, "accounts": _accounts(s),
+    lim = getattr(s, "limits", None)
+    groups = sorted(lim.account_qos) if lim else []
+    return {"jobs": [job_json(j, me) for j in found], "user": me, "accounts": _accounts(s), "groups": groups,
             "app_job": s.allocation.job_id if s.allocation else ""}
 
 

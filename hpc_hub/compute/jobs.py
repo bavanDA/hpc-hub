@@ -69,10 +69,14 @@ def seconds(text: str) -> int:
 MY_ACCOUNTS = 'a=$(sacctmgr -n -P show assoc user="$USER" format=account 2>/dev/null | sort -u | paste -sd, -); '
 
 
-def jobs_command(scope: str, days: int = 7) -> str:
+def jobs_command(scope: str, days: int = 7, account: str = "") -> str:
+    """account: with the group scope, only that group's jobs."""
     if scope == HISTORY:
         return (f'sacct -n -P -X -u "$USER" -S now-{int(days)}days '
                 f"-o {SACCT_FIELDS} | tail -n {MAX_ROWS}; {QOS_PART}")
+    if scope == GROUP and account:
+        return (f"squeue -h -A {shlex.quote(account)} -o {shlex.quote(SQUEUE_FORMAT)} | head -n {MAX_ROWS}; "
+                f"{BILLING_PART}; {QOS_PART}")
     if scope == GROUP:  # no accounts found: just yours
         return (f'{MY_ACCOUNTS}squeue -h $([ -n "$a" ] && echo "-A $a" || echo "-u $USER") '
                 f"-o {shlex.quote(SQUEUE_FORMAT)} | head -n {MAX_ROWS}; {BILLING_PART}; {QOS_PART}")
@@ -112,8 +116,8 @@ def parse_jobs(text: str) -> list[JobInfo]:
     return jobs
 
 
-def list_jobs(ssh: SshMaster, scope: str, days: int = 7) -> list[JobInfo]:
-    res = ssh.run(jobs_command(scope, days), timeout=60)
+def list_jobs(ssh: SshMaster, scope: str, days: int = 7, account: str = "") -> list[JobInfo]:
+    res = ssh.run(jobs_command(scope, days, account), timeout=60)
     if res.returncode != 0 and not res.stdout.strip():
         raise SlurmError(res.stderr.strip() or "Could not list jobs")
     jobs = parse_jobs(res.stdout)

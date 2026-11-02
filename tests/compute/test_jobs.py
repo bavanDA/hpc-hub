@@ -34,6 +34,8 @@ def test_seconds():
 def test_jobs_command():
     assert '-u "$USER"' in jobs.jobs_command(jobs.MINE)
     assert "-u" not in jobs.jobs_command(jobs.ALL).split(";")[0]
+    assert "-A mygroup" in jobs.jobs_command(jobs.GROUP, account="mygroup")
+    assert "sacctmgr" in jobs.jobs_command(jobs.GROUP)  # no group picked: all of yours
     assert jobs.jobs_command(jobs.HISTORY, 3).startswith('sacct -n -P -X -u "$USER" -S now-3days')
 
 
