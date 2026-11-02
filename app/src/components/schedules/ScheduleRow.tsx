@@ -1,9 +1,11 @@
-// One scheduled agent: what runs where and when, its state, the on switch and its actions.
-import { AlarmClock, FileText, Pencil, Play, Trash2 } from 'lucide-react'
+// One scheduled agent as a style E row: what runs where and when, its state, the on switch and ⋮ with its actions.
+// Clicking the row edits it.
+import { EllipsisVertical, FileText, Pencil, Play, Trash2 } from 'lucide-react'
 
 import type { ScheduleStatus } from '../../types/schedules'
-import { Switch } from '../permissions/controls'
-import { IconButton, Pill, Spinner } from '../ui'
+import { ItemRow, StatusDot, Switch } from '../e/extra'
+import { Menu } from '../projects/Menu'
+import { Spinner } from '../ui'
 import { computeText, localWhen, status } from './format'
 
 /** The backup agent's weekly check (methods/backup.py): shown by what it does, edited on the Backup agent page. */
@@ -14,30 +16,31 @@ export function ScheduleRow({ st, busy, onToggle, onRun, onLog, onEdit, onDelete
   onEdit: () => void; onDelete: () => void
 }) {
   const s = status(st)
-  const own = computeText(st.compute)
   const backup = isBackupCheck(st)
-  const what = backup ? ['Backup agent', 'scratch', st.when].join(' · ') : [st.agent_name, st.folder.replace(/\/+$/, '') === '~' ? 'Home folder' : st.folder, st.when].join(' · ')
-  const how = [s.note, st.last_run ? `Last run ${localWhen(st.last_run)}` : 'Not run yet', own].filter(Boolean)
+  const where = st.folder.replace(/\/+$/, '') === '~' ? 'Home folder' : st.folder
+  const what = backup ? ['Backup agent', 'scratch', st.when] : [st.agent_name, where, st.when]
+  const how = [s.kind === 'ok' ? '' : s.note, st.last_run ? `Last run ${localWhen(st.last_run)}` : 'Not run yet',
+    computeText(st.compute)].filter(Boolean)
   return (
-    <div className="flex min-h-[64px] items-center gap-3 px-4 py-2.5">
-      <span className={`grid size-9 shrink-0 place-items-center rounded-full ${
-        st.enabled ? 'bg-pill text-text' : 'bg-pill text-dim'}`}><AlarmClock size={20} /></span>
-      <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2">
-          <span className="truncate font-semibold">{backup ? 'Weekly scratch check' : st.name}</span>
-          <Pill kind={s.kind}>{s.label}</Pill>
-        </div>
-        <div className="truncate text-sm text-dim" title={st.task}>{what}</div>
-        <div className="truncate text-sm text-dim">{how.join(' · ')}</div>
-      </div>
-      {busy ? <Spinner /> : null}
-      <Switch on={st.enabled} onChange={onToggle} label={st.enabled ? 'On: runs on schedule' : 'Paused'} />
-      <div className="flex shrink-0">
-        <IconButton icon={Play} label="Run once now" size={16} onClick={onRun} />
-        <IconButton icon={FileText} label="Last answer" size={16} onClick={onLog} />
-        <IconButton icon={Pencil} label={backup ? 'Change in Backup agent' : 'Edit'} size={16} onClick={onEdit} />
-        <IconButton icon={Trash2} label="Delete" size={16} onClick={onDelete} />
-      </div>
-    </div>
+    <ItemRow title={st.task} onPress={onEdit}
+      label={<span className="font-medium">{backup ? 'Weekly scratch check' : st.name}</span>}
+      sub={<>
+        <span className="flex items-center gap-1.5">
+          <StatusDot tone={s.kind === 'ok' ? 'busy' : s.kind === 'warn' ? 'error' : st.enabled ? 'on' : 'off'} />
+          {[s.label, ...what].join(' · ')}</span>
+        <span className="block">{how.join(' · ')}</span>
+      </>}
+      trailing={<>
+        {busy ? <span className="grid size-10 place-items-center"><Spinner /></span>
+          : <span className="grid h-10 w-12 place-items-center">
+              <Switch checked={st.enabled} onChange={onToggle}
+                label={st.enabled ? `${st.name} is on` : `${st.name} is paused`} /></span>}
+        <Menu label={`Actions for ${st.name}`} trigger={<EllipsisVertical size={18} />}
+          className="grid size-9 place-items-center rounded-md text-dim hover:bg-hover" groups={[[
+            { label: 'Run once now', icon: Play, onClick: onRun },
+            { label: 'Last answer', icon: FileText, onClick: onLog },
+            { label: backup ? 'Change in Backup' : 'Edit', icon: Pencil, onClick: onEdit },
+          ], [{ label: 'Delete', icon: Trash2, danger: true, onClick: onDelete }]]} />
+      </>} />
   )
 }

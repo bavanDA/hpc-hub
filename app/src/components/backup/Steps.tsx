@@ -1,14 +1,29 @@
 // The backup agent's first two steps on the desktop: start (what it does, Check my scratch) and the check while it
-// runs. Wording in copy.ts.
-import { ShieldCheck, TimerOff } from 'lucide-react'
+// runs. Wording in copy.ts. Style E, like the phone's StartView and ScanView.
 import { useState } from 'react'
 
 import type { BackupPolicy, Scan } from '../../types/backup'
 import { agentIcon } from '../agents/AgentIcon'
-import { Button, Card, IconTile, Meter, Spinner, Switch } from '../ui'
+import { EButton, IconToggleRow } from '../e/extra'
+import { List, Row } from '../e/ui'
+import { Spinner } from '../ui'
 import { count, scanning, start } from './copy'
 
-const Claude = agentIcon('claude')
+/** How far a check or a copy is: black (white on dark) on grey, never red. */
+export function Bar({ value, label }: { value: number; label: string }) {
+  const v = Math.max(0, Math.min(1, Number.isFinite(value) ? value : 0))
+  return (
+    <div role="progressbar" aria-label={label} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(v * 100)}
+      className="h-1.5 overflow-hidden rounded-full bg-soft">
+      <div className="h-full rounded-full bg-text transition-[width] duration-200" style={{ width: `${v * 100}%` }} />
+    </div>
+  )
+}
+
+/** The step's buttons, under its rows: the main one solid. */
+export function Actions({ children }: { children: React.ReactNode }) {
+  return <div className="flex flex-wrap items-center gap-2 px-5 pt-5">{children}</div>
+}
 
 export function StartStep({ name, policy, last, busy, onCheck, onLast }: {
   name: string; policy: BackupPolicy | null; last: Scan | null; busy: boolean
@@ -18,25 +33,19 @@ export function StartStep({ name, policy, last, busy, onCheck, onLast }: {
   const days = policy?.purge.days ?? 0
   const noTimer = !!policy && days <= 0
   return (
-    <Card className="flex flex-col gap-5 p-6">
-      <div className="flex items-start gap-4">
-        <IconTile icon={noTimer ? TimerOff : ShieldCheck} size={56} />
-        <p className="text-md">{!policy ? <Spinner /> : noTimer ? start.noTimer(name) : start.intro(name, days)}</p>
-      </div>
-      <label className="flex items-start gap-3">
-        <Switch on={agent} onChange={setAgent} label={start.agent} />
-        <span className="flex flex-col">
-          <span className="flex items-center gap-1.5"><Claude size={14} />{start.agent}</span>
-          <span className="text-sm text-dim">{start.agentHint}</span>
-        </span>
-      </label>
-      <div className="flex flex-wrap items-center gap-3">
-        <Button kind="primary" size="lg" disabled={busy || !policy}
-          onClick={() => onCheck(noTimer, agent ? 'claude' : '')}>{noTimer ? start.anyway : start.check}</Button>
-        {last?.state === 'done' && <Button kind="ghost" onClick={onLast}>{start.seeLast}</Button>}
-      </div>
-      <p className="text-sm text-dim">{start.hint}</p>
-    </Card>
+    <>
+      <p className="px-5 pb-5 text-md">{!policy ? <Spinner /> : noTimer ? start.noTimer(name) : start.intro(name, days)}</p>
+      <List>
+        <IconToggleRow icon={agentIcon('claude')} label={start.agent} sub={start.agentHint} checked={agent}
+          onChange={setAgent} />
+        {last?.state === 'done' && <Row label={start.seeLast} opens onPress={onLast} />}
+      </List>
+      <p className="px-5 pt-2 text-sm text-dim">{start.hint}</p>
+      <Actions>
+        <EButton kind="primary" disabled={busy || !policy} onClick={() => onCheck(noTimer, agent ? 'claude' : '')}>
+          {noTimer ? start.anyway : start.check}</EButton>
+      </Actions>
+    </>
   )
 }
 
@@ -45,22 +54,16 @@ export function ScanningStep({ scan, onStop, onAgain }: { scan: Scan | null; onS
   const share = p.expected ? (p.checked ?? 0) / p.expected : 0
   const failed = scan?.state === 'failed'
   return (
-    <Card className="flex flex-col gap-4 p-6">
-      <div className="flex items-center gap-3">
-        {!failed && <Spinner size={20} />}
-        <h2 className="text-lg font-semibold">{failed ? scanning.failed : scanning.title}</h2>
-      </div>
-      <p className="text-md text-dim">{scan?.detail || 'Waiting for a node'}</p>
-      {scan?.state === 'scanning' && p.expected ? (
-        <div className="flex flex-col gap-1.5">
-          <Meter value={share} label="Files checked" />
-          <span className="text-sm text-dim tabular-nums">{count(p.checked ?? 0)} of {(p.checked ?? 0) >= p.expected
-            ? '' : 'about '}{count(p.expected)}</span>
-        </div>
-      ) : null}
-      <p className="text-sm text-dim">{start.hint}</p>
-      <div>{failed ? <Button kind="primary" onClick={onAgain}>{scanning.again}</Button>
-        : <Button onClick={onStop}>{scanning.stop}</Button>}</div>
-    </Card>
+    <div className="flex flex-col gap-3">
+      <h2 className="flex items-center gap-3 px-5 text-lg font-semibold">{!failed && <Spinner size={18} />}
+        {failed ? scanning.failed : scanning.title}</h2>
+      {scan?.state === 'scanning' && p.expected
+        ? <div className="px-5"><Bar value={share} label="Files checked" /></div> : null}
+      <p className="px-5 text-dim tabular-nums">{scan?.detail || (p.expected
+        ? `${count(p.checked ?? 0)} of about ${count(p.expected)} files` : 'Waiting for a node')}</p>
+      {!failed && <p className="px-5 text-sm text-dim">{start.hint}</p>}
+      <Actions>{failed ? <EButton kind="primary" onClick={onAgain}>{scanning.again}</EButton>
+        : <EButton onClick={onStop}>Stop checking</EButton>}</Actions>
+    </div>
   )
 }

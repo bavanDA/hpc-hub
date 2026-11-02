@@ -1,25 +1,34 @@
-// Copy or sync a project to another cluster: through this laptop or with Globus, leaving big subfolders behind,
-// and with its Claude chats so you can continue them there.
-import { FolderOpen, TriangleAlert } from 'lucide-react'
-import { useEffect, useState } from 'react'
+// Copy or sync a project to another cluster: where it goes, how (Globus cluster to cluster, or through this
+// laptop), what to leave behind, and which Claude chats come along. Style E, like the phone's CopySheet.
+import { FolderOpen } from 'lucide-react'
+import { useEffect, useState, type ReactNode } from 'react'
 
 import { useEvent } from '../../hooks'
 import { call } from '../../rpc'
 import type { CopyPlan, CopyTargets, Place, Places, Project } from '../../types/projects'
-import { Button, Dialog, IconButton, Spinner } from '../ui'
+import { shortName } from '../clusters/loginCopy'
+import { CheckRow, ChoiceRow } from '../e/extra'
+import { EDialog, Field, List, MainButton, Segments, ToggleRow } from '../e/ui'
+import { Spinner } from '../ui'
 import { FolderPicker } from './FolderPicker'
-import { CheckRow, EntryRow, Group, PropertyRow, SelectRow, Toggles } from './form'
 import { formatSize } from './size'
 
 type How = 'laptop' | 'globus'
-const HOW: { value: How; label: string; note: string }[] = [
-  { value: 'laptop', label: 'Through this laptop', note: 'Simple; fine for smaller projects' },
-  { value: 'globus', label: 'Globus',
-    note: 'Cluster to cluster, for big projects. Copying again only sends what changed' },
-]
 const BIG = 5 * 1024 ** 3
 
 const inside = (into: string, path: string) => into === path || into.startsWith(path.replace(/\/+$/, '') + '/')
+
+/** A titled part of the window: a small grey title over its rows. */
+function Step({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <section className="pt-5">
+      <h3 className="px-5 pb-1.5 text-xs font-semibold tracking-wide text-dim uppercase">{title}</h3>
+      {children}
+    </section>
+  )
+}
+
+const NOTE = 'px-5 pt-2 text-sm text-dim'
 
 export function CopyDialog({ p, onClose, onStarted }:
   { p: Project; onClose: () => void; onStarted: (ids: string[], text: string) => void }) {
@@ -68,114 +77,108 @@ export function CopyDialog({ p, onClose, onStarted }:
   const files = (plan?.parts ?? []).filter((x) => keep[x.name]).reduce((n, x) => n + x.size, 0)
   const picked = (plan?.chats ?? []).filter((c) => chats[c.id])
   const sync = how === 'globus'
-  const pickSpot = (name: string) => {
-    const s = spots.find((x) => x.label === name)
-    if (s && !inside(intoPath, s.path)) setInto(s.path)
-  }
+  const dstName = dst ? shortName(dst) : ''
 
   const go = () => {
     if (!dst) return
-    if (!dst.connected) return setError(`Connect to ${dst.name} first`)
+    if (!dst.connected) return setError(`Connect to ${dstName} first`)
     setBusy(true)
     call<{ id: string; chats: string }>('projects.copy', {
       id: p.id, to: dst.id, into: intoPath, how, size: files,
       skip: (plan?.parts ?? []).filter((x) => !keep[x.name]).map((x) => x.name), chats: picked.map((c) => c.id),
     }).then((r) => {
-      onStarted([r.id, r.chats].filter(Boolean), `${sync ? 'Syncing' : 'Copying'} ${p.name} to ${dst.name}`)
+      onStarted([r.id, r.chats].filter(Boolean), `${sync ? 'Syncing' : 'Copying'} ${p.name} to ${dstName}`)
       onClose()
     }).catch((e: Error) => { setError(e.message); setBusy(false) })
   }
 
-  let what = 'Measuring sizes…'
+  let what = 'Measuring sizes'
   if (planError || plan?.parts_error) what = `Could not measure it: ${planError || plan?.parts_error}`
-  else if (plan) {
-    what = `${formatSize(files)} ${sync ? 'with Globus' : 'through this laptop'}. Untick what to leave behind.`
-    if (!sync && files > BIG) what += ' That is big: Globus is much faster.'
-  }
-  let talk = 'Loading…'
-  if (planError || plan?.chats_error) talk = `Could not read chats: ${planError || plan?.chats_error}`
-  else if (plan) talk = plan.chats.length ? 'Tick the ones to continue there. Paths move to the new folder.'
-    : 'No Claude chats in this folder.'
+  else if (plan) what = 'Untick what stays behind.'
   const allChats = picked.length > 0 && picked.length === plan?.chats.length
 
   return (
     <>
-      <Dialog title={`Copy or sync ${p.name}`} onClose={picking ? () => {} : onClose} width={580}
-        actions={<>
-          {busy && <Spinner />}
-          <Button onClick={onClose}>Cancel</Button>
-          <Button kind="suggested" disabled={!dst || !!missing || busy} onClick={go}>{sync ? 'Sync' : 'Copy'}</Button>
-        </>}>
+      <EDialog title={`Copy or sync ${p.name}`} width={580} onClose={picking ? () => {} : onClose}
+        actions={info && info.targets.length > 0 && <MainButton disabled={!dst || !!missing || busy} onClick={go}>
+          {busy && <Spinner size={16} />}{sync ? 'Sync' : 'Copy'}{plan ? ` ${formatSize(files)}` : ''}</MainButton>}>
         {!info ? <div className="grid h-40 place-items-center">
             {error ? <p className="text-bad">{error}</p> : <Spinner size={24} />}</div>
-          : info.targets.length === 0 ? <p className="py-8 text-center text-dim">Add another cluster first.</p> : (
-          <div className="flex flex-col gap-6 pt-1 pb-2">
-            <Group title="To">
-              <SelectRow title="Cluster" value={to} onChange={(v) => { setTo(v); setError('') }}
-                options={info.targets.map((t) => ({
-                  value: t.id, label: t.connected ? t.name : `${t.name} (not connected)` }))} />
-              <div className="flex min-h-[56px] items-center gap-3 px-4 py-2">
-                <div className="min-w-0 flex-1">
-                  <div>Where</div>
-                  <div className="text-sm text-dim">
-                    {!dst?.connected ? `Connect to ${dst?.name} on the Clusters page to choose Home, Project or Scratch`
-                      : spot?.label.startsWith('Scratch')
-                        ? 'Scratch may be cleaned up after a while. Keep work you need in Project.' : ''}
-                  </div>
-                </div>
-                {dst?.connected && (spots.length ? <Toggles active={spot?.label ?? null}
-                  items={spots.map((s) => ({ name: s.label, tip: s.path }))}
-                  onPick={pickSpot} />
-                  : <Spinner />)}
-              </div>
-              <EntryRow title="Into folder" value={into} onChange={setInto} mono
-                suffix={<IconButton icon={FolderOpen} label="Choose folder"
-                  onClick={() => dst?.connected ? setPicking(true) : setError(`Connect to ${dst?.name} first`)} />} />
-              <PropertyRow title="Will be"
-                value={<span className="font-mono text-base">
-                  {dst?.name}:{intoPath.replace(/\/+$/, '')}/{info.name}</span>} />
-            </Group>
-
-            <Group title="How">
-              <SelectRow title="Copy with" subtitle={HOW.find((h) => h.value === how)?.note} value={how}
-                onChange={setHow} options={HOW} />
-              {missing && (
-                <div className="flex items-center gap-3 bg-warn-bg px-4 py-3 text-warn">
-                  <TriangleAlert size={20} className="shrink-0" />
-                  <div>
-                    <div className="font-semibold">Globus is not ready</div>
-                    <div className="text-sm">Needs {missing}. Set it up in Files, Transfers.</div>
-                  </div>
-                </div>
+          : info.targets.length === 0 ? <p className="px-5 py-8 text-center text-dim">Add another cluster first.</p> : (
+          <>
+            <List>
+              <ChoiceRow label="To" value={to} onChange={(v) => {
+                setTo(v)
+                setError('')
+                if (info.targets.find((t) => t.id === v)?.globus_missing) setHow('laptop')
+              }} options={info.targets.map((t) => ({ value: t.id, label: shortName(t),
+                hint: t.connected ? 'Connected' : 'Not connected' }))} />
+            </List>
+            <div className="px-5 pt-3">
+              {dst && !dst.connected
+                ? <p className="text-sm text-dim">Connect to {dstName} on Clusters to choose Home, Project or Scratch.</p>
+                : spots.length > 0 ? <Segments label="Into" value={spot?.label ?? ''}
+                    options={spots.map((s) => [s.label, s.label] as const)}
+                    onChange={(label) => {
+                      const s = spots.find((x) => x.label === label)
+                      if (s && !inside(intoPath, s.path)) setInto(s.path)
+                    }} />
+                  : <Spinner />}
+              {spot?.label.startsWith('Scratch') && (
+                <p className="pt-2 text-sm text-dim">Scratch gets cleaned up. Keep work you need in Project.</p>
               )}
-            </Group>
+              <div className="flex items-end gap-2 pt-1">
+                <div className="min-w-0 flex-1"><Field label="Into folder" value={into}
+                  onChange={(e) => setInto(e.target.value)} /></div>
+                <button aria-label="Choose a folder" title="Choose a folder"
+                  onClick={() => dst?.connected ? setPicking(true) : setError(`Connect to ${dstName} first`)}
+                  className="mb-1.5 grid size-10 shrink-0 place-items-center rounded-lg border border-line-strong
+                    hover:bg-hover active:bg-pressed"><FolderOpen size={18} className="text-dim" /></button>
+              </div>
+              <p className="text-sm text-dim">Lands in <span className="font-mono break-all">
+                {intoPath.replace(/\/+$/, '')}/{info.name}</span></p>
+            </div>
 
-            <Group title="What" description={what}>
-              {plan?.parts.map((x) => (
-                <CheckRow key={x.name} title={x.name} checked={!!keep[x.name]}
-                  onChange={(v) => setKeep({ ...keep, [x.name]: v })}
-                  suffix={<span className="text-base text-dim tabular-nums">{formatSize(x.size)}</span>} />
-              ))}
-            </Group>
+            <Step title="How">
+              <div className="px-5">
+                <Segments label="How" value={how} onChange={setHow}
+                  options={[['globus', 'Globus'], ['laptop', 'Through this laptop']] as const} />
+              </div>
+              <p className={NOTE}>
+                {sync ? 'Cluster to cluster, for big projects. Copying again only sends what changed.'
+                  : 'Simple, fine for smaller projects.'}
+                {!sync && files > BIG && ' That is big: Globus is much faster.'}</p>
+              {missing && <p className={`${NOTE} text-bad`}>Globus needs {missing} first. Set it up in Files, Transfers.</p>}
+            </Step>
 
-            <Group title="Claude chats in this project" description={talk}
-              suffix={plan && plan.chats.length > 0 && (
-                <label className="flex shrink-0 items-center gap-2 text-base">
-                  <input type="checkbox" checked={allChats} className="size-[16px] accent-[var(--color-accent)]"
-                    onChange={(e) => setChats(Object.fromEntries(plan.chats.map((c) => [c.id, e.target.checked])))} />
-                  Select all
-                </label>
-              )}>
-              {plan?.chats.map((c) => (
-                <CheckRow key={c.id} title={c.name} checked={!!chats[c.id]}
-                  onChange={(v) => setChats({ ...chats, [c.id]: v })}
-                  suffix={<span className="text-base text-dim tabular-nums">{formatSize(c.size)}</span>} />
-              ))}
-            </Group>
-            {error && <p className="select-text px-1 text-base text-bad">{error}</p>}
-          </div>
+            <Step title="What to take">
+              <List>
+                {plan?.parts.map((x) => (
+                  <CheckRow key={x.name} label={x.name} value={formatSize(x.size)} checked={!!keep[x.name]}
+                    onChange={(v) => setKeep({ ...keep, [x.name]: v })} />
+                ))}
+              </List>
+              <p className={NOTE}>{what}</p>
+            </Step>
+
+            {plan && (plan.chats.length > 0 || plan.chats_error) && (
+              <Step title="Claude chats">
+                <List>
+                  {plan.chats.length > 1 && <ToggleRow label="All of them" checked={allChats}
+                    onChange={(on) => setChats(Object.fromEntries(plan.chats.map((c) => [c.id, on])))} />}
+                  {plan.chats.map((c) => (
+                    <CheckRow key={c.id} label={c.name} value={formatSize(c.size)} checked={!!chats[c.id]}
+                      onChange={(v) => setChats({ ...chats, [c.id]: v })} />
+                  ))}
+                </List>
+                <p className={NOTE}>{plan.chats_error ? `Could not read chats: ${plan.chats_error}`
+                  : 'Tick the ones to keep going there. Paths move to the new folder.'}</p>
+              </Step>
+            )}
+            {error && <p className="px-5 pt-4 select-text text-bad">{error}</p>}
+          </>
         )}
-      </Dialog>
+      </EDialog>
       {picking && dst && (
         <FolderPicker cluster={dst} start={intoPath} onPick={setInto} onClose={() => setPicking(false)} />
       )}

@@ -1,16 +1,18 @@
 // Claude, ChatGPT, Antigravity or Cursor: pick a past chat to resume, or start a new one in a folder
-// (hpc_hub/agents/ui/agent_dialog.py).
-import { ChevronDown, ChevronRight, Cpu, Search } from 'lucide-react'
+// (hpc_hub/agents/ui/agent_dialog.py). Style E, like the phone's AgentSheet; a new node's size is right in the window.
 import { useEffect, useState } from 'react'
 
 import { useGo } from '../../nav'
 import { call } from '../../rpc'
-import type { AgentInfo, Chat, Chats, ToolSetup } from '../../types/tools'
-import { Group, SwitchRow } from '../clusters/fields'
+import type { AgentInfo, Chats, ToolSetup } from '../../types/tools'
+import { shortName } from '../clusters/loginCopy'
+import { ChoiceRow, SearchField, TextArea } from '../e/extra'
+import { NodeFields } from '../e/NodeFields'
+import { EDialog, MainButton, Row, Section, ToggleRow } from '../e/ui'
 import { basename } from '../files/format'
 import { formatSize } from '../projects/size'
-import { Button, Dialog, List, Row, Spinner } from '../ui'
-import { ComputeGroup, FolderRow, Section, SelectRow, TextBox } from './fields'
+import { Spinner } from '../ui'
+import { FolderField } from './fields'
 import { sendable, short, when } from './format'
 import { startAgent } from './run'
 
@@ -24,11 +26,11 @@ export function AgentDialog({ setup, agent: a, project = '', onClose }:
     () => Object.fromEntries(a.options.map((o) => [o.key, String(s[o.key] ?? '')])))
   const [task, setTask] = useState('')
   const [profile, setProfile] = useState(a.profile)
+  const [fits, setFits] = useState(true)
   const [folder, setFolder] = useState(project || s.workdir || '~')
   const [chats, setChats] = useState<Chats | null>(null)
   const [error, setError] = useState('')
   const [query, setQuery] = useState('')
-  const [more, setMore] = useState(false)
 
   useEffect(() => {
     // the last list at once (reading chats can take seconds on a cold cluster), then the fresh one
@@ -40,10 +42,7 @@ export function AgentDialog({ setup, agent: a, project = '', onClose }:
       .catch((e: Error) => { fresh = true; setError(e.message) })
   }, [setup.id, a.id, project])
 
-  const hasNode = Boolean(setup.node)
-  const asks = newNode || !hasNode
-  const nodeNote = newNode ? 'A new node with:' : 'You have no node yet, so it asks for one with:'
-
+  const asks = newNode || !setup.node
   const run = (where: string, chatId: string, label = '') => {
     onClose()
     startAgent(setup.id, { agent: a.id, name: a.name, folder: where, chat_id: chatId, label, task: task.trim(),
@@ -56,69 +55,48 @@ export function AgentDialog({ setup, agent: a, project = '', onClose }:
     const hay = `${c.name} ${c.first} ${c.last} ${c.cwd}`.toLowerCase()
     return words.every((w) => hay.includes(w))
   })
-  const where = project ? `in ${basename(project)}` : `on ${setup.name}`
-  const chatsNote = error ? `Could not read chats: ${error}` : !chats ? 'Loading…'
-    : list.length ? `Pick one to continue it.${chats.cached ? ' Checking for newer ones…' : ''}`
-      : project ? 'No chats here yet.' : 'No chats yet on this cluster.'
+  const where = project ? `in ${basename(project)}` : `on ${shortName(setup)}`
+  const status = error ? `Could not read chats: ${error}` : !chats ? 'Loading your chats'
+    : list.length ? (chats.cached ? 'Checking for newer ones' : '')
+      : project ? 'No chats here yet.' : 'No chats yet.'
 
-  const nodeLine = asks
-    ? (newNode ? 'Runs on a new compute node' : 'Asks for a compute node first')
-    : `Runs on your node ${setup.node} (no new job needed)`
   return (
-    <Dialog title={`${a.name} ${where}`} onClose={onClose} width={600}
-      actions={<>
-        <Button onClick={onClose}>Cancel</Button>
-        <Button kind="primary" onClick={() => run(folder.trim() || '~', '')}>Start</Button>
-      </>}>
-      <Section title="Task" description="Optional. What it should work on.">
-        <TextBox value={task} onChange={setTask} placeholder="Fix the failing test in train.py" />
+    <EDialog title={`${a.name} ${where}`} width={560} onClose={onClose}
+      actions={<MainButton disabled={asks && !fits} onClick={() => run(folder.trim() || '~', '')}>Start</MainButton>}>
+      <div className="px-5">
+        <TextArea label="Task (optional)" value={task} rows={3} onChange={(e) => setTask(e.target.value)}
+          placeholder="Fix the failing test in train.py" />
+        <FolderField cluster={setup} value={folder} onChange={setFolder} />
+      </div>
+      <Section>
+        <ToggleRow label="Use a new compute node" checked={newNode} onChange={setNewNode}
+          sub={newNode ? 'A node just for this agent' : setup.node ? `Shares ${setup.node} with your terminals`
+            : 'Gets a node when it starts'} />
+        {a.remote_label && <ToggleRow label={a.remote_label} sub={a.remote_hint} checked={remote}
+          onChange={setRemote} />}
+        {a.options.map((o) => (
+          <ChoiceRow key={o.key} label={o.label} value={options[o.key] ?? ''}
+            options={o.choices.map(([value, label]) => ({ value, label }))}
+            onChange={(v) => setOptions({ ...options, [o.key]: v })} />
+        ))}
       </Section>
-      <Group>
-        <FolderRow cluster={setup} value={folder} onChange={setFolder} />
-        <Row prefix={<Cpu size={16} className="text-dim" />} title={nodeLine}
-          subtitle={asks ? undefined : `Job ${setup.job}`} />
-      </Group>
-      <button type="button" onClick={() => setMore(!more)}
-        className="mb-3 flex items-center gap-1 font-semibold">
-        {more ? <ChevronDown size={16} /> : <ChevronRight size={16} />} Options</button>
-      {more && <>
-        <Group>
-          {a.remote_label && <SwitchRow label={a.remote_label} sub={a.remote_hint} checked={remote}
-            onChange={setRemote} />}
-          <SwitchRow label="Use a new compute node" checked={newNode} onChange={setNewNode}
-            sub={newNode ? undefined : hasNode ? `Shares ${setup.node} with your terminals` : 'Gets a node when it starts'} />
-        </Group>
-        {a.options.length > 0 && (
-          <Group title={`${a.name} options`}>
-            {a.options.map((o) => (
-              <SelectRow key={o.key} label={o.label} value={options[o.key] ?? ''} choices={o.choices}
-                onChange={(v) => setOptions({ ...options, [o.key]: v })} />
-            ))}
-          </Group>
-        )}
-        {asks && <ComputeGroup cluster={setup.id} value={profile} onChange={setProfile} description={nodeNote} />}
-      </>}
-      <Section title={project ? 'Or continue a chat in this project' : 'Or continue a chat'} description={chatsNote}>
-        {list.length > 6 && (
-          <label className="mb-2 flex h-9 items-center gap-2 rounded-lg bg-pill px-3 focus-within:ring-2
-            focus-within:ring-accent">
-            <Search size={16} className="shrink-0 text-dim" />
-            <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search"
-              className="min-w-0 flex-1 bg-transparent outline-none placeholder:text-dim" />
-          </label>
-        )}
-        {!chats && !error && <div className="grid place-items-center py-4"><Spinner /></div>}
-        {shown.length > 0 && (
-          <List>
-            {shown.map((c: Chat) => (
-              <Row key={c.id} title={c.name} onClick={() => run(c.cwd || '~', c.id, c.name.slice(0, 40))}
-                subtitle={[when(c.mtime), short(c.cwd, chats?.home ?? ''), c.size ? formatSize(c.size) : '']
-                  .filter(Boolean).join(' · ')}
-                suffix={<ChevronRight size={16} className="text-dim" />} />
-            ))}
-          </List>
-        )}
+      {asks && <section className="pt-5">
+        <h3 className="px-5 pb-1 text-xs font-semibold tracking-wide text-dim uppercase">
+          {newNode ? 'New compute node' : 'Compute node'}</h3>
+        <p className="px-5 pb-2.5 text-sm text-dim">{newNode ? 'Asked for when the agent starts.'
+          : 'You have no node yet, so it asks for one.'}</p>
+        <NodeFields cluster={setup.id} value={profile} onChange={setProfile} onValid={setFits} />
+      </section>}
+      <Section title={project ? 'Or continue a chat here' : 'Or continue a chat'} note={status || undefined}>
+        {list.length > 6 && <div className="border-b border-line px-5 py-2">
+          <SearchField value={query} onChange={setQuery} placeholder="Search chats" /></div>}
+        {!chats && !error && <div className="grid place-items-center border-b border-line py-5"><Spinner /></div>}
+        {shown.map((c) => (
+          <Row key={c.id} label={c.name} onPress={() => run(c.cwd || '~', c.id, c.name.slice(0, 40))}
+            sub={[when(c.mtime), short(c.cwd, chats?.home ?? ''), c.size ? formatSize(c.size) : '']
+              .filter(Boolean).join(' · ')} />
+        ))}
       </Section>
-    </Dialog>
+    </EDialog>
   )
 }

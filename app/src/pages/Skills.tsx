@@ -1,21 +1,22 @@
 // Skills (experimental): what Claude, ChatGPT and the other agents know on each cluster. Add HPC Hub's own skills,
-// any from a git repository, and remove the ones you added. Spec: hpc_hub/agents/ui/skills_page.py.
-import { CircleAlert, Plus, RefreshCw, Trash2 } from 'lucide-react'
+// any from a git repository, and remove the ones you added. Spec: hpc_hub/agents/ui/skills_page.py. Style E rows,
+// like the phone's Skills.
+import { CircleAlert, GitBranch, Plus, RefreshCw, Sparkles, Trash2 } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 
 import { useActiveCluster } from '../components/clusters/active'
 import { shortName } from '../components/clusters/loginCopy'
 import { NotConnected } from '../components/clusters/NotConnected'
-import { Group } from '../components/permissions/controls'
+import { Confirm, EButton, EmptyState, EPage, IconBtn, ItemRow } from '../components/e/extra'
+import { Row, Section } from '../components/e/ui'
 import { AddSkillsDialog } from '../components/skills/AddSkillsDialog'
-import { AddTo } from '../components/skills/AddTo'
-import { BuiltIn, SkillRow } from '../components/skills/parts'
+import { AddToDialog } from '../components/skills/AddTo'
 import { useToast } from '../components/toast'
-import { AlertDialog, Button, EmptyState, IconButton, Spinner } from '../components/ui'
+import { Spinner } from '../components/ui'
 import { useEvent } from '../hooks'
 import { call } from '../rpc'
 import type { Session } from '../types'
-import type { Skill, SkillList } from '../types/skills'
+import type { CatalogSkill, Skill, SkillList } from '../types/skills'
 
 export function Skills() {
   const toast = useToast()
@@ -25,6 +26,7 @@ export function Skills() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [adding, setAdding] = useState('')  // the catalog skill being added
+  const [choosing, setChoosing] = useState<CatalogSkill | null>(null)
   const [dialog, setDialog] = useState(false)
   const [removing, setRemoving] = useState<Skill | null>(null)
 
@@ -60,52 +62,53 @@ export function Skills() {
   if (active && (!connected || error.startsWith('Connect to'))) body = <div className="h-[60vh]"><NotConnected
     cluster={active} session={session} what="skills" /></div>
   else if ((!cluster && !error) || (!list && !error)) body = <div className="grid h-64 place-items-center"><Spinner size={24} /></div>
-  else if (error || !list) body = <div className="h-[60vh]"><EmptyState icon={CircleAlert}
-    title="Could not read skills" text={error} /></div>
+  else if (error || !list) body = <EmptyState icon={CircleAlert} title="Could not read the skills" text={error} />
   else body = (
-    <div className="flex flex-col gap-6">
-      <Group title="HPC Hub skills" description="Ready to use. Add them to your favourite agents.">
+    <>
+      <Section title="HPC Hub skills">
         {list.catalog.map((k) => (
-          <SkillRow key={k.folder} name={k.name} description={k.on.length
-            ? <><span className="font-semibold">In {k.on.map(label).join(', ')}</span> · {k.description}</>
-            : k.description}
-            suffix={<AddTo name={k.name} targets={list.targets} has={k.on} busy={adding === k.folder}
-              onAdd={(t) => addOwn(k.folder, k.name, t)} />} />
+          <ItemRow key={k.folder} icon={Sparkles} label={<span className="font-medium">{k.name}</span>}
+            sub={<>{k.on.length > 0 && <span className="text-text">In {k.on.map(label).join(', ')} · </span>}
+              {k.description}</>}
+            trailing={adding === k.folder ? <span className="grid size-9 place-items-center"><Spinner /></span>
+              : <EButton small icon={Plus} onClick={() => setChoosing(k)}>Add</EButton>} />
         ))}
-      </Group>
+      </Section>
       {list.targets.map((t) => {
         const mine = list.installed.filter((k) => k.target === t.id && !k.managed)
         const builtIn = list.installed.filter((k) => k.target === t.id && k.managed)
         return (
-          <Group key={t.id} title={`${t.label} skills`} description={t.folder}>
-            {mine.map((k) => <SkillRow key={k.path} name={k.name} description={k.description} path={k.path}
-              suffix={<IconButton icon={Trash2} label={`Remove ${k.name}`} size={16}
-                onClick={() => setRemoving(k)} />} />)}
-            {!mine.length && <SkillRow name="None added yet" description="Press Add skills." />}
-            {!!builtIn.length && <BuiltIn label={t.label} skills={builtIn} />}
-          </Group>
+          <Section key={t.id} title={t.label}
+            note={builtIn.length > 0 && `Comes with ${t.label}: ${builtIn.map((k) => k.name).join(', ')}`}>
+            {mine.map((k) => (
+              <ItemRow key={k.path} title={k.path} label={k.name} sub={k.description || k.path}
+                trailing={<IconBtn icon={Trash2} label={`Remove ${k.name}`} onClick={() => setRemoving(k)} />} />
+            ))}
+            {!mine.length && <Row label={<span className="text-dim">None added yet</span>} />}
+          </Section>
         )
       })}
-    </div>
+    </>
   )
 
   return (
-    <div className="mx-auto flex max-w-[760px] flex-col gap-5 px-4 py-6">
-      {connected && <div className="flex items-center gap-2">
-        <span className="flex-1" />
-        {loading && list && <Spinner />}
-        <IconButton icon={RefreshCw} label="Refresh" size={16} onClick={load} />
-        <Button kind="suggested" disabled={!list} onClick={() => setDialog(true)}><Plus size={16} />Add skills</Button>
-      </div>}
-      {body}
-      {dialog && list && <AddSkillsDialog cluster={cluster} name={list.name} targets={list.targets}
+    <EPage actions={connected && <>
+      {loading && list && <Spinner />}
+      <IconBtn icon={RefreshCw} label="Refresh" onClick={load} />
+      <EButton kind="primary" icon={GitBranch} disabled={!list} onClick={() => setDialog(true)}>
+        Add skills from git</EButton>
+    </>}>
+      <div className="-mt-5">{body}</div>
+      {choosing && list && <AddToDialog skill={choosing} targets={list.targets} onClose={() => setChoosing(null)}
+        onAdd={(t) => addOwn(choosing.folder, choosing.name, t)} />}
+      {dialog && list && <AddSkillsDialog cluster={cluster} name={shortName(list)} targets={list.targets}
         repo={list.default_repo} onClose={() => setDialog(false)} onDone={load} />}
       {removing && (
-        <AlertDialog title={`Remove ${removing.name}?`} keep="Keep it" act="Remove" onClose={() => setRemoving(null)}
+        <Confirm title={`Remove ${removing.name}?`} keep="Keep it" act="Remove" onClose={() => setRemoving(null)}
           onAct={() => remove(removing)}>
           <p>{label(removing.target)} no longer has it on {list ? shortName(list) : ''}. Its folder is deleted.</p>
-        </AlertDialog>
+        </Confirm>
       )}
-    </div>
+    </EPage>
   )
 }

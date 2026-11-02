@@ -1,11 +1,14 @@
 // The copy while it runs (progress, Stop with a question) and what it ended with: done, partly done, or files
-// that still do not match. Desktop.
-import { CircleAlert, CircleCheck, FileText } from 'lucide-react'
+// that still do not match. Desktop, style E like the phone's CopyCard and DoneCard.
+import { BellRing, CircleAlert, CircleCheck, FileText } from 'lucide-react'
 import { useState } from 'react'
 
 import type { CopyResult, Plan, Progress } from '../../types/backup'
-import { AlertDialog, Button, Card, IconTile, Meter, Spinner } from '../ui'
+import { Confirm, EButton, ItemRow } from '../e/extra'
+import { List, Row, Section } from '../e/ui'
+import { Spinner } from '../ui'
 import { copying, count, done as copy, gb, helpFor } from './copy'
+import { Actions, Bar } from './Steps'
 
 export function CopyView({ plan, progress, job, onStop }: {
   plan: Plan | null; progress: Progress | null; job: string; onStop: () => void
@@ -14,18 +17,18 @@ export function CopyView({ plan, progress, job, onStop }: {
   const total = progress?.total_bytes || plan?.bytes || 0
   const share = total ? (progress?.done_bytes ?? 0) / total : 0
   return (
-    <Card className="flex flex-col gap-4 p-6">
-      <div className="flex items-center gap-3"><Spinner size={20} />
-        <h2 className="text-lg font-semibold">{copying.title(gb(total))}</h2></div>
-      <Meter value={share} label="Copied" />
-      <p className="text-md text-dim tabular-nums">
+    <div className="flex flex-col gap-3">
+      <h2 className="flex items-center gap-3 px-5 text-lg font-semibold"><Spinner size={18} />
+        {copying.title(gb(total))}</h2>
+      <div className="px-5"><Bar value={share} label="Copied" /></div>
+      <p className="px-5 text-dim tabular-nums">
         {progress?.state === 'verifying' ? copying.verifying : progress?.detail || 'Starting'}</p>
-      {job && <p className="text-sm text-dim">{copying.job(job)}</p>}
-      <div><Button onClick={() => setAsking(true)}>{copying.stop}</Button></div>
-      {asking && <AlertDialog title={copying.stopTitle} keep={copying.keep} act={copying.stop}
+      {job && <p className="px-5 text-sm text-dim">{copying.job(job)}</p>}
+      <Actions><EButton onClick={() => setAsking(true)}>{copying.stop}</EButton></Actions>
+      {asking && <Confirm title={copying.stopTitle} keep={copying.keep} act={copying.stop}
         onAct={() => { setAsking(false); onStop() }} onClose={() => setAsking(false)}>
-        <p>{copying.stopText}</p></AlertDialog>}
-    </Card>
+        <p>{copying.stopText}</p></Confirm>}
+    </div>
   )
 }
 
@@ -38,40 +41,33 @@ export function DoneView({ cluster, result, onOpen, onWeekly, onAgain }: {
   const bad = result.mismatches > 0
   const partial = busy + failed > 0
   return (
-    <div className="flex flex-col gap-5">
-      <Card className="flex flex-col gap-4 p-6">
-        <div className="flex items-start gap-4">
-          <IconTile icon={bad ? CircleAlert : CircleCheck} size={56} />
-          <div className="flex flex-col gap-1.5">
-            <h2 className="text-xl font-semibold">{bad ? copy.mismatch(result.mismatches)
-              : partial ? copy.partial(result.copied_files, result.copied_files + busy + failed)
-                : copy.title(result.copied_files)}</h2>
-            <p className="text-md text-dim">{bad ? copy.mismatchHelp(helpFor(cluster)) : copy.checked(result.verified)}</p>
-            {busy > 0 && <p className="text-md text-dim">{copy.busy(busy)}</p>}
-            {failed > 0 && <p className="text-md text-dim">{copy.failed(failed)}</p>}
-          </div>
-        </div>
-        {result.notes_path && (
-          <p className="flex items-center gap-2 text-sm text-dim"><FileText size={14} />{copy.notes}
-            <span className="font-mono">{result.notes_path.split('/').slice(-2).join('/')}</span></p>
-        )}
-        <div className="flex flex-wrap gap-3">
-          {bad ? <Button kind="primary" onClick={onAgain}>{copy.again}</Button>
-            : <Button kind="primary" onClick={onOpen}>{copy.open}</Button>}
-          <Button onClick={onWeekly}>{copy.weekly}</Button>
-        </div>
-      </Card>
-      {partial && (
-        <Card className="divide-y divide-line overflow-hidden">
-          {result.busy.map((p) => <div key={p} className="flex min-h-11 items-center gap-3 px-4">
-            <span className="flex-1 truncate font-mono text-sm">{p}</span>
-            <span className="text-sm text-dim">Busy</span></div>)}
-          {result.failed.map((f) => <div key={f.path} className="flex min-h-11 items-center gap-3 px-4">
-            <span className="flex-1 truncate font-mono text-sm">{f.path}</span>
-            <span className="text-sm text-dim">{f.why}</span></div>)}
-        </Card>
-      )}
-      <p className="text-sm text-dim tabular-nums">{count(result.copied_files)} files, {gb(result.bytes)}</p>
-    </div>
+    <>
+      <div className="flex flex-col gap-1.5 px-5">
+        <h2 className={`flex items-start gap-2 text-xl font-semibold ${bad ? 'text-bad' : ''}`}>
+          {bad ? <CircleAlert size={22} className="mt-0.5 shrink-0" /> : <CircleCheck size={22} className="mt-0.5 shrink-0" />}
+          {bad ? copy.mismatch(result.mismatches)
+            : partial ? copy.partial(result.copied_files, result.copied_files + busy + failed)
+              : copy.title(result.copied_files)}</h2>
+        <p className="text-md text-dim">{bad ? copy.mismatchHelp(helpFor(cluster)) : copy.checked(result.verified)}</p>
+        {busy > 0 && <p className="text-md text-dim">{copy.busy(busy)}</p>}
+        {failed > 0 && <p className="text-md text-dim">{copy.failed(failed)}</p>}
+        <p className="text-sm text-dim tabular-nums">{count(result.copied_files)} files, {gb(result.bytes)}</p>
+      </div>
+      <div className="pt-5"><List>
+        {result.notes_path && <ItemRow icon={FileText} label="Notes on what was copied and left out"
+          sub={<span className="font-mono break-all">{result.notes_path.split('/').slice(-2).join('/')}</span>} />}
+        <ItemRow icon={BellRing} label={copy.weekly} onPress={onWeekly} />
+      </List></div>
+      {partial && <Section title="Not copied">
+        {[...result.busy.map((p) => [p, 'A job was still writing it']),
+          ...result.failed.map((x) => [x.path, x.why])].map(([p, why]) => (
+          <Row key={p} label={<span className="font-mono text-sm break-all">{p}</span>} sub={why} />
+        ))}
+      </Section>}
+      <Actions>
+        {bad ? <EButton kind="primary" onClick={onAgain}>{copy.again}</EButton>
+          : <EButton kind="primary" onClick={onOpen}>{copy.open}</EButton>}
+      </Actions>
+    </>
   )
 }
