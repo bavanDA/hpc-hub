@@ -43,8 +43,8 @@ export function useQuit() {
 
   const askBusy = useCallback((list: Named[]) => setDialog(
     <Dialog title="Still connecting" onClose={close} width={420} actions={<>
-      <Button onClick={close}>Cancel</Button>
-      <Button kind="suggested" onClick={() => {
+      <Button onClick={close}>Keep it open</Button>
+      <Button kind="primary" onClick={() => {
         Promise.all(list.map((s) => call('clusters.cancel', { cluster: s.id }).catch(() => {}))).finally(end)
       }}>Quit</Button>
     </>}>
@@ -73,12 +73,11 @@ export function useQuit() {
     }
     setDialog(
       <Dialog title="Disconnect everything and quit?" onClose={close} width={460} actions={<>
-        <Button onClick={close}>Cancel</Button>
-        <Button kind="destructive" onClick={go}>Disconnect and Quit</Button>
+        <Button onClick={close}>Keep running</Button>
+        <Button kind="danger-solid" onClick={go}>Disconnect and quit</Button>
       </>}>
-        <p>{names(list)}: the VPN goes down and compute nodes the app requested are released, which ends anything
-          running on them (Claude remote, ChatGPT remote…). Jobs you started yourself and VS Code jobs keep
-          running.</p>
+        <p>{names(list)}: the VPN goes down and the nodes HPC Hub got for you are released. Anything running on
+          them stops. Jobs you started yourself and VS Code jobs keep running.</p>
       </Dialog>)
   }, [close, end])
 

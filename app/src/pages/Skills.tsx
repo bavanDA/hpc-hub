@@ -4,13 +4,14 @@ import { CircleAlert, Plus, RefreshCw, Trash2 } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 
 import { useActiveCluster } from '../components/clusters/active'
+import { shortName } from '../components/clusters/loginCopy'
 import { NotConnected } from '../components/clusters/NotConnected'
 import { Group } from '../components/permissions/controls'
 import { AddSkillsDialog } from '../components/skills/AddSkillsDialog'
 import { AddTo } from '../components/skills/AddTo'
 import { BuiltIn, SkillRow } from '../components/skills/parts'
 import { useToast } from '../components/toast'
-import { Button, Dialog, EmptyState, IconButton, Spinner } from '../components/ui'
+import { AlertDialog, Button, EmptyState, IconButton, Spinner } from '../components/ui'
 import { useEvent } from '../hooks'
 import { call } from '../rpc'
 import type { Session } from '../types'
@@ -100,13 +101,10 @@ export function Skills() {
       {dialog && list && <AddSkillsDialog cluster={cluster} name={list.name} targets={list.targets}
         repo={list.default_repo} onClose={() => setDialog(false)} onDone={load} />}
       {removing && (
-        <Dialog title={`Remove ${removing.name}?`} onClose={() => setRemoving(null)} width={420}
-          actions={<>
-            <Button onClick={() => setRemoving(null)}>Cancel</Button>
-            <Button kind="destructive" onClick={() => remove(removing)}>Remove</Button>
-          </>}>
-          <p className="text-dim">{label(removing.target)} no longer has it on {list?.name}. Its folder is deleted.</p>
-        </Dialog>
+        <AlertDialog title={`Remove ${removing.name}?`} keep="Keep it" act="Remove" onClose={() => setRemoving(null)}
+          onAct={() => remove(removing)}>
+          <p>{label(removing.target)} no longer has it on {list ? shortName(list) : ''}. Its folder is deleted.</p>
+        </AlertDialog>
       )}
     </div>
   )

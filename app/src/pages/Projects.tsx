@@ -8,7 +8,7 @@ import { ProjectRow, type RowActions } from '../components/projects/ProjectRow'
 import { Transfers } from '../components/projects/Transfers'
 import { expectCopies } from '../components/projects/copies'
 import { useToast } from '../components/toast'
-import { Button, Dialog, EmptyState, List, Spinner } from '../components/ui'
+import { AlertDialog, Button, EmptyState, List, Spinner } from '../components/ui'
 import { useCall, useEvent } from '../hooks'
 import { useGo } from '../nav'
 import { call } from '../rpc'
@@ -105,13 +105,10 @@ export function Projects() {
           onStarted={(ids, text) => { expectCopies(ids, text); toast(text); reload() }} />
       )}
       {open?.kind === 'remove' && (
-        <Dialog title={`Remove ${open.p.name}?`} onClose={() => setOpen(null)} width={400}
-          actions={<>
-            <Button onClick={() => setOpen(null)}>Cancel</Button>
-            <Button kind="destructive" onClick={() => remove(open.p)}>Remove</Button>
-          </>}>
-          <p className="pb-2 text-center text-dim">Only from this list. The folder on the cluster stays.</p>
-        </Dialog>
+        <AlertDialog title={`Remove ${open.p.name}?`} keep="Keep it" act="Remove" onClose={() => setOpen(null)}
+          onAct={() => remove(open.p)}>
+          <p>Only from this list. The folder on the cluster stays.</p>
+        </AlertDialog>
       )}
     </>
   )

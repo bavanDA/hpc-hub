@@ -8,7 +8,7 @@ import { Commands } from '../components/permissions/Commands'
 import { Group, SwitchRow } from '../components/permissions/controls'
 import { LockGroup, LockSetupDialog, lockConfig } from '../components/permissions/Lock'
 import { useToast } from '../components/toast'
-import { Button, Dialog, EmptyState, IconButton, Spinner } from '../components/ui'
+import { AlertDialog, Button, EmptyState, IconButton, Spinner } from '../components/ui'
 import { useEvent } from '../hooks'
 import { call } from '../rpc'
 import type { Session } from '../types'
@@ -112,14 +112,10 @@ export function Permissions() {
       {lockDialog === 'setup' && <LockSetupDialog cluster={cluster} name={name} onClose={() => setLockDialog(null)}
         onDone={lockDone} />}
       {lockDialog === 'off' && (
-        <Dialog title={`Turn off the passcode lock on ${name}?`} onClose={() => setLockDialog(null)} width={420}
-          actions={<>
-            <Button onClick={() => setLockDialog(null)}>Cancel</Button>
-            <Button kind="destructive" onClick={() => lockAction('permissions.lock_off', 'Passcode lock is off')}>
-              Turn off</Button>
-          </>}>
-          <p className="text-dim">Claude will take messages without a code again.</p>
-        </Dialog>
+        <AlertDialog title={`Turn off the passcode lock on ${name}?`} keep="Keep the lock" act="Turn off"
+          onClose={() => setLockDialog(null)} onAct={() => lockAction('permissions.lock_off', 'Passcode lock is off')}>
+          <p>Claude will take messages without a code again.</p>
+        </AlertDialog>
       )}
     </div>
   )

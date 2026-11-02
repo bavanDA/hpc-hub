@@ -1,7 +1,7 @@
 // Small dialogs: ask for a name (new folder, rename), and confirm before something can't be undone.
 import { useState } from 'react'
 
-import { Button, Dialog } from '../ui'
+import { AlertDialog, Button, Dialog } from '../ui'
 
 export function NameDialog({ title, action, initial = '', onDone, onClose }:
   { title: string; action: string; initial?: string; onDone: (name: string) => void; onClose: () => void }) {
@@ -26,15 +26,11 @@ export function NameDialog({ title, action, initial = '', onDone, onClose }:
   )
 }
 
-export function ConfirmDialog({ title, text, action, onYes, onClose }:
-  { title: string; text: string; action: string; onYes: () => void; onClose: () => void }) {
+export function ConfirmDialog({ title, text, action, keep = 'Keep it', onYes, onClose }:
+  { title: string; text: string; action: string; keep?: string; onYes: () => void; onClose: () => void }) {
   return (
-    <Dialog title={title} onClose={onClose} width={420}
-      actions={<>
-        <Button onClick={onClose}>Cancel</Button>
-        <Button kind="destructive" onClick={() => { onClose(); onYes() }}>{action}</Button>
-      </>}>
-      <p className="text-center text-dim">{text}</p>
-    </Dialog>
+    <AlertDialog title={title} keep={keep} act={action} onClose={onClose} onAct={() => { onClose(); onYes() }}>
+      <p>{text}</p>
+    </AlertDialog>
   )
 }

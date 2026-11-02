@@ -9,7 +9,7 @@ import { LogDialog } from '../components/schedules/LogDialog'
 import { ScheduleDialog } from '../components/schedules/ScheduleDialog'
 import { isBackupCheck, ScheduleRow } from '../components/schedules/ScheduleRow'
 import { useToast } from '../components/toast'
-import { Button, Dialog, EmptyState, IconButton, List, Spinner } from '../components/ui'
+import { AlertDialog, Button, EmptyState, IconButton, List, Spinner } from '../components/ui'
 import { useEvent } from '../hooks'
 import { useGo } from '../nav'
 import { call } from '../rpc'
@@ -96,13 +96,10 @@ export function Schedules() {
         editing={open.st} onClose={() => setOpen(null)} onSaved={saved} />}
       {open?.kind === 'log' && <LogDialog cluster={cluster} name={open.st.name} onClose={() => setOpen(null)} />}
       {open?.kind === 'delete' && (
-        <Dialog title={`Delete ${open.st.name}?`} onClose={() => setOpen(null)} width={420}
-          actions={<>
-            <Button onClick={() => setOpen(null)}>Cancel</Button>
-            <Button kind="destructive" onClick={() => remove(open.st)}>Delete</Button>
-          </>}>
-          <p className="text-dim">It stops running and its task and logs are removed from the cluster.</p>
-        </Dialog>
+        <AlertDialog title={`Delete ${open.st.name}?`} keep="Keep it" act="Delete" onClose={() => setOpen(null)}
+          onAct={() => remove(open.st)}>
+          <p>It stops running and its task and logs are removed from the cluster.</p>
+        </AlertDialog>
       )}
     </div>
   )
