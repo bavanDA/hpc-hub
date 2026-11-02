@@ -18,9 +18,8 @@ PASSWORD = "Password"
 SAVED = "Saved (type to replace)"  # the password field's placeholder when one is saved
 REMEMBER = "Remember password"
 REMEMBER_OFF = "You'll type it each time you open HPC Hub."  # under the switch, only while it's off
-SAVED_IN = "Saved in {store}."
+SAVED_IN = "Kept on this computer."
 SKIP = "Do this later"
-USED_ON_CONNECT = "HPC Hub uses this when you click Connect."  # first start: saving isn't signing in yet
 PASSWORD_NOTE = "Kept in this computer's password store. Changing it here doesn't change your {who} password."
 FORGET_TITLE = "Forget the saved {short} password?"
 FORGET_BODY = "You'll type it next time you connect. Your {label} stays."
@@ -29,7 +28,7 @@ KEEP = "Keep it"
 CONTINUE = "Continue"
 
 # the second step, decided by the cluster's admins (ClusterConfig.second_step)
-SECOND_DUO = "Uses Duo"
+SECOND_DUO = ""  # Duo needs no words: the push explains itself
 SECOND_CODE = "You'll need a code from your authenticator app."
 CODE_SETUP = "Set up your authenticator app"
 DUO_NOW = "Check your phone for a Duo push."
@@ -37,7 +36,7 @@ DUO_LATE = "No answer from Duo yet. Pushes expire after about a minute."
 NEW_PUSH = "Send a new push"
 
 # a cluster with a web portal that adds your key (SDSC)
-PORTAL = "Sign in with the {short} portal"
+PORTAL = "Sign in with the portal"
 OR_PASSWORD = "Or use your username and password:"
 PORTAL_NOTE = "Recommended. No password is stored."
 
@@ -53,7 +52,6 @@ PICK_KEY = "Pick your private SSH key"  # the file dialog's title
 KEY_FOUND = "Found on this computer ({file})"
 KEY_MADE = "Made just now ({file})"
 KEY_PICKED = "Your key ({file})"
-ALREADY_ON = "Already on {who}? Try it"
 STEP_ADD = "Send it to {who}"
 COPY_KEY = "Copy"
 COPIED = "Copied"

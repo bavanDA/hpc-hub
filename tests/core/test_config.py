@@ -104,7 +104,7 @@ def test_agent_compute_roundtrip(tmp_path):
 
 def test_second_step_is_said_not_chosen():
     by_id = {c.id: c for c in config.default_clusters()}
-    assert by_id["wulver"].second_step() == "Uses Duo"
+    assert by_id["wulver"].second_step() == ""  # Duo says nothing: the push explains itself
     assert by_id["sdsc"].second_step() == "You'll need a code from your authenticator app."
 
 

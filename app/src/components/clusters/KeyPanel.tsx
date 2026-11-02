@@ -143,9 +143,6 @@ export function KeyPanel(props: PanelProps) {
           </div>
           {c.key_page_note && <p className="flex gap-2 text-sm text-dim">
             <Info size={14} className="mt-[3px] shrink-0" />{c.key_page_note}</p>}
-          <button type="button" onClick={toTest}
-            className="self-start text-sm text-dim underline-offset-2 hover:text-text hover:underline">
-            {fill(S.ALREADY_ON, { who: org })}</button>
         </>}
       </Step>
       <Step n={3} state={state(TEST)} title={S.STEP_TEST} done={fill(S.SIGNED_IN_AS, { user: user.trim() })} last>
@@ -169,7 +166,6 @@ export function KeyPanel(props: PanelProps) {
             .catch(() => {})}>{copy.connectVpn(c)}</Button></div>
         )}
       </Step>
-      {works && <div className="pb-3"><Result test={s.test!} text={said(s.test!, org)} /></div>}
       {s.error && <p className="pb-2 text-sm text-bad">{s.error}</p>}
     </div>
   )

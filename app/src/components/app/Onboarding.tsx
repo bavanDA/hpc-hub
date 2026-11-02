@@ -13,7 +13,6 @@ import { copy, shortName } from '../clusters/loginCopy'
 import { minutes, slurmTime } from '../clusters/time'
 import { Button, List, Spinner } from '../ui'
 import { openSystem } from './openLink'
-import { keyStore } from './platform'
 
 type Step = { cluster: Cluster; kind: 'login' | 'node' }
 
@@ -53,7 +52,7 @@ function Progress({ steps, at }: { steps: Step[]; at: number }) {
   const which = clusters.findIndex((s) => s.cluster.id === steps[at].cluster.id) + 1
   return (
     <div className="flex items-center gap-3 text-sm text-dim">
-      <span>{steps[at].cluster.name}{clusters.length > 1 ? ` · cluster ${which} of ${clusters.length}` : ''}</span>
+      {clusters.length > 1 && <span>Cluster {which} of {clusters.length}</span>}
       <div className="flex flex-1 gap-1.5" aria-label={`Step ${at + 1} of ${steps.length}`}>
         {steps.map((_, i) => (
           <span key={i} className={`h-1.5 flex-1 rounded-full ${i <= at ? 'bg-accent' : 'bg-selected'}`} />
@@ -66,7 +65,7 @@ function Progress({ steps, at }: { steps: Step[]; at: number }) {
 function Heading({ icon, title, text }: { icon: ReactNode; title: string; text?: ReactNode }) {
   return (
     <div className={`flex gap-4 ${text ? 'items-start' : 'items-center'}`}>
-      <div className="grid size-12 shrink-0 place-items-center rounded-full bg-pill text-accent-text">{icon}</div>
+      <div className="grid size-12 shrink-0 place-items-center rounded-full bg-pill text-dim">{icon}</div>
       <div className={`min-w-0 ${text ? 'pt-1' : ''}`}>
         <h1 className="text-2xl font-bold">{title}</h1>
         {text && <p className="mt-1 text-dim">{text}</p>}
@@ -91,7 +90,7 @@ function Footer({ onSkip, children }: { onSkip?: () => void; children: ReactNode
 function RememberNote({ remember }: { remember: boolean }) {
   return (
     <p className="flex items-center gap-1.5 px-1 text-sm text-dim">
-      {remember ? <><Lock size={14} className="shrink-0" />{copy.savedIn(keyStore)}</> : copy.rememberOff}</p>
+      {remember ? <><Lock size={14} className="shrink-0" />{copy.savedIn}</> : copy.rememberOff}</p>
   )
 }
 
@@ -139,7 +138,7 @@ function LoginStep({ cluster: c, onNext }: { cluster: Cluster; onNext: () => voi
           : <div className="grid h-40 place-items-center"><Spinner size={24} /></div>}
         {instead}
         {error && <p className="text-bad">{error}</p>}
-        <Footer onSkip={works ? undefined : skip}>
+        <Footer onSkip={works || user.trim() ? undefined : skip}>
           <Button kind="primary" pill type="submit" disabled={!works || busy}>{copy.continue}</Button>
         </Footer>
       </form>
@@ -168,11 +167,10 @@ function LoginStep({ cluster: c, onNext }: { cluster: Cluster; onNext: () => voi
           <SwitchRow label={copy.remember} checked={remember} onChange={setRemember} />
         </List>
         <RememberNote remember={remember} />
-        <p className="text-sm text-dim">{copy.usedOnConnect}</p>
       </div>
       {instead}
       {error && <p className="text-bad">{error}</p>}
-      <Footer onSkip={onNext}>
+      <Footer onSkip={user.trim() || saved ? undefined : onNext}>
         <Button kind={c.portal ? 'secondary' : 'primary'} pill type="submit" disabled={!user.trim() || busy}>
           {copy.continue}</Button>
       </Footer>
@@ -202,14 +200,14 @@ function NodeStep({ cluster: c, onNext, last }: { cluster: Cluster; onNext: () =
 
   return (
     <form className="flex flex-col gap-6" onSubmit={(e) => { e.preventDefault(); save() }}>
-      <Heading icon={<Cpu size={20} />} title="Compute node"
+      <Heading icon={<Cpu size={20} />} title={`Compute node on ${shortName(c)}`}
         text="Your terminals and agents run on a compute node, not the busy login node." />
       <div className="overflow-hidden rounded-xl bg-card shadow-[var(--shadow-card)]">
         <label className="flex cursor-pointer items-center gap-4 px-5 py-4">
           <span className="min-w-0 flex-1">
             <span className="block text-md font-semibold">Get a compute node when I connect</span>
             <span className="block text-sm text-dim">
-              {want ? 'HPC Hub asks Slurm for one right after you sign in.' : 'You can still get one from the cluster card.'}
+              {want ? 'Ready as soon as you sign in.' : 'You can still get one from the cluster card.'}
             </span>
           </span>
           <Toggle checked={want} onChange={setWant} label="Get a compute node when I connect" />
@@ -218,7 +216,7 @@ function NodeStep({ cluster: c, onNext, last }: { cluster: Cluster; onNext: () =
           <div className="border-t border-line px-5 py-4">
             {!editing ? (
               <div className="flex items-center gap-4">
-                <div className="grid size-10 shrink-0 place-items-center rounded-lg bg-pill text-accent-text">
+                <div className="grid size-10 shrink-0 place-items-center rounded-lg bg-pill text-dim">
                   <Cpu size={20} /></div>
                 <div className="min-w-0 flex-1">
                   <div className="text-md font-semibold">{summary(p)}</div>
@@ -232,7 +230,7 @@ function NodeStep({ cluster: c, onNext, last }: { cluster: Cluster; onNext: () =
                   <SpinRow label="CPU cores" value={p.cpus} onChange={(cpus) => set({ cpus })} min={1} max={512} />
                   <SpinRow label="Memory (GB)" value={p.mem_gb} onChange={(mem_gb) => set({ mem_gb })} min={1} max={4096} />
                   <Duration total={minutes(p.time) ?? 240} onChange={(m) => set({ time: slurmTime(m) })} limits={null} />
-                  {c.profile.partition && <EntryRow label="Partition" value={p.partition}
+                  {c.profile.partition && <EntryRow label="Queue" value={p.partition}
                     onChange={(partition) => set({ partition })} />}
                 </List>
               </div>

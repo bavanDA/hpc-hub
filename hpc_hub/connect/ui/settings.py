@@ -113,7 +113,7 @@ class ClusterSettingsDialog(Adw.PreferencesDialog):
             group.add(help_row)
         page.add(group)
         # the second step is the cluster's (its admins decide), so it is said, not chosen (key steps say it themselves)
-        if not c.key_page:
+        if not c.key_page and self.cfg.second_step():
             page.add(Adw.PreferencesGroup(description=self.cfg.second_step()))
 
         # the one destructive thing here, in a group of its own at the bottom

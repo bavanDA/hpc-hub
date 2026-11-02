@@ -96,10 +96,7 @@ class KeyGroup(Adw.PreferencesGroup):
         change.connect("clicked", lambda *_: self._change())
         self.steps[ADD].row.add_suffix(change)
         self.change = change
-        already = Adw.ActionRow(title=C.ALREADY_ON.format(who=who), activatable=True, css_classes=["dim-label"])
-        already.add_suffix(Gtk.Image(icon_name="go-next-symbolic"))
-        already.connect("activated", lambda *_: self._added())
-        self.steps[ADD].body = [self.copy_row, page, already]
+        self.steps[ADD].body = [self.copy_row, page]
 
         user.set_title(cfg.username_label)
         user.connect("changed", lambda *_: self._show_result(None))
