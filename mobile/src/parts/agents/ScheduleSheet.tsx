@@ -1,14 +1,13 @@
 // New or edit a scheduled agent on the phone: the job, agent, folder and name, the task, and when it runs.
 // The compute stays as it was (the cluster's node settings for a new one); the desktop can change it.
 // Also the sheet with a schedule's last answer.
-import { ChevronRight } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
 import { Spinner } from '@shared/components/ui'
 import { useGo } from '@shared/nav'
 import { call } from '@shared/rpc'
 import type { ScheduleLog, ScheduleOptions, ScheduleStatus } from '@shared/types/schedules'
-import { Button, Chips, Field, ListRow, PickerSheet, Segments, Sheet, TextArea } from '../../ui'
+import { Button, Chips, DurationRow, Field, List, MainButton, PickerSheet, Row, Sheet, TextArea } from '../../ui'
 import { FolderField } from './FolderField'
 
 const TIME = /^([01]\d|2[0-3]):[0-5]\d$/
@@ -30,8 +29,9 @@ export function ScheduleSheet({ cluster, clusterName, options: o, editing: sc, o
   const [task, setTask] = useState(sc?.task ?? o.presets[0].task)
   const [time, setTime] = useState(sc?.time ?? '02:00')
   const [days, setDays] = useState<string[]>((sc?.days ?? []).map(String))
-  const [hours, setHours] = useState(String(+((sc?.minutes ?? 120) / 60).toFixed(2)))
+  const [runFor, setRunFor] = useState(sc?.minutes ?? 120)
   const [choosing, setChoosing] = useState(false)
+  const [pickAgent, setPickAgent] = useState(false)
   const [problem, setProblem] = useState('')
   const [saving, setSaving] = useState(false)
 
@@ -46,7 +46,7 @@ export function ScheduleSheet({ cluster, clusterName, options: o, editing: sc, o
 
   const save = () => {
     const at = time.trim()
-    const minutes = Math.max(5, Math.round((parseFloat(hours) || 0) * 60))
+    const minutes = Math.max(5, runFor)
     const why = !task.trim() ? 'Write a task first' : !TIME.test(at) ? 'Time must look like 02:00' : ''
     if (why) { setProblem(why); return }
     setSaving(true)
@@ -58,33 +58,37 @@ export function ScheduleSheet({ cluster, clusterName, options: o, editing: sc, o
       .catch((e: Error) => { setProblem(e.message); setSaving(false) })
   }
 
+  // "Every day" is a chip of its own: on when no day is picked (or all of them are)
+  const every = !days.length || days.length === 7
+  const pickDays = (next: string[]) => setDays(!every && next.includes('all') ? [] : next.filter((d) => d !== 'all'))
+
   return (
-    <Sheet title={sc ? 'Edit schedule' : 'New schedule'} onClose={onClose} actions={
-      <Button kind="primary" className="flex-1" disabled={saving} onClick={save}>
-        {saving && <Spinner size={16} />}{sc && !sc.enabled ? 'Save' : 'Save and queue'}</Button>}>
-      {problem && <p className="mb-3 rounded-xl bg-bad-bg p-3 text-bad">{problem}</p>}
-      <ListRow title="Job" subtitle={o.presets[preset]?.label} onClick={() => setChoosing(true)}
-        trailing={<ChevronRight size={20} className="text-dim" />} />
-      {o.agents.length > 1 && (
-        <div className="py-2">
-          <span className="mb-1 block text-sm font-bold text-dim">Agent</span>
-          <Segments value={agent} onChange={setAgent} options={o.agents.map((a) => [a.id, a.name] as const)} />
-        </div>
-      )}
-      <FolderField cluster={cluster} name={clusterName} value={folder} onChange={pickFolder} />
-      <Field label="Name" value={name} autoCapitalize="none" autoCorrect="off" onChange={(e) => setName(e.target.value)} />
-      <TextArea label="Task" value={task} rows={6} onChange={(e) => setTask(e.target.value)}
-        placeholder="Tell the agent what to do, like: update the plots in figures/ with the newest results" />
-      <div className="grid grid-cols-2 gap-x-3">
+    <Sheet title={sc ? 'Edit schedule' : 'New schedule'} flush onClose={onClose} actions={
+      <MainButton disabled={saving} onClick={save}>
+        {saving && <Spinner size={16} />}{sc && !sc.enabled ? 'Save' : 'Save and queue'}</MainButton>}>
+      {problem && <p className="px-4 pb-2 font-semibold text-bad">{problem}</p>}
+      <List>
+        <Row label="Job" value={o.presets[preset]?.label} opens onPress={() => setChoosing(true)} />
+        {o.agents.length > 1 && <Row label="Agent" value={o.agents.find((a) => a.id === agent)?.name} opens
+          onPress={() => setPickAgent(true)} />}
+      </List>
+      <div className="px-4 pt-2">
+        <FolderField cluster={cluster} name={clusterName} value={folder} onChange={pickFolder} />
+        <Field label="Name" value={name} autoCapitalize="none" autoCorrect="off" onChange={(e) => setName(e.target.value)} />
+        <TextArea label="Task" value={task} rows={6} onChange={(e) => setTask(e.target.value)}
+          placeholder="Tell the agent what to do, like: update the plots in figures/ with the newest results" />
         <Field label="Time (cluster time)" type="time" value={time} onChange={(e) => setTime(e.target.value)} />
-        <Field label="Run for (hours)" type="number" inputMode="decimal" min={0.25} step={0.5} value={hours}
-          onChange={(e) => setHours(e.target.value)} />
+        <div className="py-2">
+          <span className="mb-1 block text-sm text-dim">Days</span>
+          <Chips value={every ? ['all'] : days} onChange={pickDays}
+            options={[['all', 'Every day'] as const, ...o.days.map((d, i) => [String(i + 1), d] as const)]} />
+        </div>
       </div>
-      <div className="py-2">
-        <span className="mb-1 block text-sm font-bold text-dim">Days</span>
-        <Chips value={days} onChange={setDays} options={o.days.map((d, i) => [String(i + 1), d] as const)} />
-        <p className="mt-1 text-sm text-dim">{days.length && days.length < 7 ? 'Only on the days picked.' : 'Every day.'}</p>
-      </div>
+      <List className="mt-2">
+        <DurationRow label="Run for" minutes={runFor} onChange={setRunFor} />
+      </List>
+      {pickAgent && <PickerSheet title="Agent" value={agent} onClose={() => setPickAgent(false)}
+        options={o.agents.map((a) => ({ value: a.id, label: a.name }))} onPick={setAgent} />}
       {choosing && <PickerSheet title="Job" value={String(preset)} onClose={() => setChoosing(false)}
         options={o.presets.map((p, i) => ({ value: String(i), label: p.label }))} onPick={(v) => pickPreset(Number(v))} />}
     </Sheet>
@@ -100,14 +104,14 @@ export function LogSheet({ cluster, name, onClose }: { cluster: string; name: st
   }, [cluster, name])
   return (
     <Sheet title={`Last answer of ${name}`} onClose={onClose} actions={log ? (
-      <Button className="flex-1" onClick={() => { onClose(); go('files', { cluster, path: log.folder }) }}>
+      <Button className="w-full" onClick={() => { onClose(); go('files', { cluster, path: log.folder }) }}>
         Open the logs folder</Button>) : undefined}>
       {error ? <p className="py-6 text-center text-bad">{error}</p>
         : !log ? <div className="grid h-40 place-items-center"><Spinner size={24} /></div>
           : !log.path ? <p className="py-6 text-center text-dim">It hasn't run yet. Answers go to {log.folder}.</p>
             : <>
-                <p className="mb-2 truncate text-sm text-dim">{log.path}</p>
-                <pre className="overflow-x-auto rounded-xl bg-view p-3 font-mono text-xs whitespace-pre-wrap select-text">
+                <p className="mb-2 text-sm break-all text-dim">{log.path}</p>
+                <pre className="overflow-x-auto rounded-lg bg-soft p-3 font-mono text-xs whitespace-pre-wrap select-text">
                   {log.text || 'The answer is empty.'}</pre>
               </>}
     </Sheet>

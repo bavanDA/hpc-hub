@@ -19,13 +19,13 @@ export function StartPicker({ onStart, onClose }:
 
   if (!cluster) return (
     <PickerSheet title="Start an agent on" onClose={() => queueMicrotask(() => { if (!picked.current) onClose() })}
-      options={where.map((c) => ({ value: c.id, label: c.name,
+      options={where.map((c) => ({ value: c.id, label: c.name.split(' (')[0],
         hint: sessions[c.id]?.connected ? 'Connected' : 'Connects first' }))}
       onPick={(id) => { picked.current = true; setCluster(where.find((c) => c.id === id) ?? null) }} />
   )
   const go = (key: string) => onStart(cluster.id, cluster.name, key)
   return (
-    <ActionSheet title={`Start on ${cluster.name}`} onClose={onClose} actions={[
+    <ActionSheet title={`Start on ${cluster.name.split(' (')[0]}`} onClose={onClose} actions={[
       ...AGENTS.map((a) => ({ label: AGENT_NAMES[a], icon: agentIcon(a), onPick: () => go(`agent:${a}`) })),
       { label: 'Ask all agents', icon: MessagesSquare, onPick: () => go('ask') },
       { label: 'VS Code in the browser', icon: Code, onPick: () => go('vscode') },
