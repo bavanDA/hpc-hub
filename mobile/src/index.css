@@ -87,4 +87,4 @@ body { font-feature-settings: "tnum" 1; }
 
 /* Shared desktop pieces still say "bg-accent text-white": on dark the accent is white, so their text follows the
    accent instead. Phone code says text-on-accent. */
-.bg-accent.text-white { color: var(--color-on-accent); }
+.bg-accent.text-white:not(:disabled) { color: var(--color-on-accent); }

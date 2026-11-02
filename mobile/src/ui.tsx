@@ -329,9 +329,9 @@ export function ConfirmSheet({ title, text, keep, confirm, danger = false, onCon
     <BottomSheet onClose={onClose}>
       <h2 className="text-lg font-semibold">{title}</h2>
       {text && <p className="pt-1 text-dim">{text}</p>}
-      <div className="mt-5 flex gap-3">
-        <Button className="flex-1" onClick={onClose}>{keep}</Button>
-        <Button kind={danger ? 'danger' : 'primary'} className="flex-1"
+      <div className="mt-5 flex flex-wrap gap-3">
+        <Button className="min-w-fit flex-1 whitespace-nowrap" onClick={onClose}>{keep}</Button>
+        <Button kind={danger ? 'danger' : 'primary'} className="min-w-fit flex-1 whitespace-nowrap"
           onClick={() => { onClose(); onConfirm() }}>{confirm}</Button>
       </div>
     </BottomSheet>
