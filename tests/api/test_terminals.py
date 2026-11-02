@@ -53,6 +53,7 @@ def test_list_gives_sessions_with_colors(ssh):
     assert claude["node"] == "n0042" and claude["agent"] == "claude" and claude["job"] == "123"
     assert claude["color"] == tmux.AGENT_COLORS["claude"] and claude["title"] == claude["name"]
     assert build["title"] == "Build" and build["color"] == "#2ec27e" and build["node"] == ""
+    assert (build["path"], claude["path"]) == ("/home/jdoe", "/h")  # the folder each one is in now
 
 
 def test_not_connected_says_so(ssh):
