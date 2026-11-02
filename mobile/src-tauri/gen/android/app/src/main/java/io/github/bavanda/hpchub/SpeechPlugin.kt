@@ -5,6 +5,7 @@ import android.media.AudioAttributes
 import android.os.Bundle
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
+import androidx.appcompat.app.AppCompatActivity
 import app.tauri.annotation.Command
 import app.tauri.annotation.InvokeArg
 import app.tauri.annotation.TauriPlugin
@@ -132,7 +133,7 @@ class SpeechPlugin(private val activity: Activity) : Plugin(activity) {
     invoke.resolve()
   }
 
-  override fun onDestroy() {
+  override fun onDestroy(activity: AppCompatActivity) {
     tts?.shutdown()
     tts = null
   }
