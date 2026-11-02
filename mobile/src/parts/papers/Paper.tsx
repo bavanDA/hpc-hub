@@ -29,7 +29,7 @@ import { PdfPane } from './PdfPane'
 const Editor = lazy(() => import('@shared/components/code/Editor'))
 type Pane = 'source' | 'pdf' | 'log'
 type Doc = { path: string; text: string; version: number; line?: number }
-type PdfState = { data: Uint8Array | null; none?: boolean; error?: string }
+type PdfState = { data: Uint8Array | null; path?: string; none?: boolean; error?: string }
 type Open = 'files' | 'git' | 'build' | 'menu' | null
 
 function remembered(key: string): boolean {
@@ -104,7 +104,7 @@ export function Paper({ paper, onClose }: { paper: Opened; onClose: () => void }
   const loadPdf = useCallback(() => {
     setProgress(0)
     call<PdfInfo | null>('latex.pdf', { cluster, main })
-      .then((info) => info ? readFile(cluster, info.path, setProgress).then((data) => setPdf({ data }))
+      .then((info) => info ? readFile(cluster, info.path, setProgress).then((data) => setPdf({ data, path: info.path }))
         : setPdf({ data: null, none: true }))
       .catch((e: Error) => setPdf({ data: null, error: e.message }))
   }, [cluster, main])
@@ -254,7 +254,8 @@ export function Paper({ paper, onClose }: { paper: Opened; onClose: () => void }
                 </Suspense>}
           </div>
         </div>
-        {pane === 'pdf' && <PdfPane data={pdf.data} memory={`latex:${cluster}:${main}`} target={target} onSync={fromPdf}
+        {pane === 'pdf' && <PdfPane data={pdf.data} path={pdf.path} cluster={cluster} memory={`latex:${cluster}:${main}`}
+          target={target} onSync={fromPdf}
           loading={!pdf.none && !pdf.error} progress={progress}
           message={pdf.none ? <Empty title="No PDF yet" text="Tap Build to make it on the cluster." />
             : pdf.error ? <Empty title="Couldn't read the PDF" text={pdf.error} /> : undefined} />}
