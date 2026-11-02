@@ -1,10 +1,12 @@
-// One question a login asks (prompts.py): a password, a 6-digit code, or the VPN's web sign-in (SignIn.tsx).
+// One question a login asks (prompts.py), in style E: a password, a 6-digit code, a yes or no, or the VPN's web
+// sign-in (SignIn.tsx).
+import { ShieldCheck } from 'lucide-react'
 import { useState } from 'react'
 
 import type { Cluster, Question } from '../../types/clusters'
-import { Button, Dialog } from '../ui'
+import { Button } from '../e/parts'
+import { EDialog, Field, List, MainButton, Row } from '../e/ui'
 import { AuthenticatorHelp } from './AuthenticatorHelp'
-import { EntryRow, Group } from './fields'
 import { ChromeWindowLogin, WebLogin } from './SignIn'
 
 const digits = (text: string) => text.replace(/\s/g, '')
@@ -19,11 +21,12 @@ export function QuestionDialog({ q, cluster, onAnswer }:
   if (q.kind === 'web-login') return <WebLogin q={q} onAnswer={onAnswer} />
   if (q.kind === 'confirm') {
     return (
-      <Dialog title={q.title ?? q.name} onClose={cancel} width={440}
-        actions={<><Button onClick={cancel}>Not now</Button>
-          <Button kind="suggested" autoFocus onClick={() => onAnswer('yes')}>Set up</Button></>}>
-        <p className="text-dim">{q.prompt}</p>
-      </Dialog>
+      <EDialog title={q.title ?? q.name} width={440} onClose={cancel} actions={<>
+        <Button onClick={cancel}>Not now</Button>
+        <MainButton className="flex-1" autoFocus onClick={() => onAnswer('yes')}>Set up</MainButton>
+      </>}>
+        <p className="px-5 pb-2 text-dim">{q.prompt}</p>
+      </EDialog>
     )
   }
 
@@ -34,35 +37,35 @@ export function QuestionDialog({ q, cluster, onAnswer }:
     }
     return (
       <>
-        <Dialog title={`Code for ${cluster?.name ?? q.name}`} onClose={cancel} width={420}
-          actions={<><Button onClick={cancel}>Stop signing in</Button>
-            <Button kind="suggested" disabled={!digits(text)} onClick={() => onAnswer(digits(text))}>Send</Button></>}>
-          <p className="mb-4 text-center text-dim">Open your authenticator app and type the 6-digit code.</p>
-          <form onSubmit={(e) => { e.preventDefault(); if (digits(text)) onAnswer(digits(text)) }}>
+        <EDialog title={`Code for ${cluster?.name ?? q.name}`} width={440} onClose={cancel} actions={<>
+          <Button onClick={cancel}>Stop signing in</Button>
+          <MainButton className="flex-1" disabled={!digits(text)} onClick={() => onAnswer(digits(text))}>Send
+          </MainButton>
+        </>}>
+          <p className="px-5 pb-3 text-dim">Open your authenticator app and type the 6-digit code.</p>
+          <form className="px-5 pb-4" onSubmit={(e) => { e.preventDefault(); if (digits(text)) onAnswer(digits(text)) }}>
             <input autoFocus inputMode="numeric" maxLength={8} placeholder="123456" value={text}
               onChange={(e) => typed(e.target.value)} aria-label="Code"
-              className="h-14 w-full rounded-xl bg-pill text-center text-3xl font-bold tracking-[0.2em] tabular-nums
-                outline-none placeholder:text-dim focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus" />
+              className="h-14 w-full rounded-lg border-[1.5px] border-accent bg-window text-center text-3xl font-semibold
+                tracking-[0.2em] tabular-nums outline-none placeholder:text-faint" />
           </form>
-          {cluster && (
-            <button type="button" onClick={() => setHelp(true)}
-              className="mx-auto mt-3 block rounded-md px-3 py-1.5 font-semibold hover:bg-hover">
-              No code yet? How to set it up</button>
-          )}
-        </Dialog>
+          {cluster && <List><Row icon={ShieldCheck} label="No code yet? How to set it up" opens
+            onPress={() => setHelp(true)} /></List>}
+        </EDialog>
         {help && cluster && <AuthenticatorHelp cluster={cluster} onClose={() => setHelp(false)} />}
       </>
     )
   }
 
   return (
-    <Dialog title={`${q.name} is asking`} onClose={cancel} width={440}
-      actions={<><Button onClick={cancel}>Cancel</Button>
-        <Button kind="suggested" onClick={() => onAnswer(text)}>Send</Button></>}>
-      {q.prompt?.trim() && <p className="mb-4 whitespace-pre-wrap text-center text-dim">{q.prompt.trim()}</p>}
-      <form onSubmit={(e) => { e.preventDefault(); onAnswer(text) }}>
-        <Group><EntryRow label="Answer" value={text} onChange={setText} password autoFocus /></Group>
+    <EDialog title={`${q.name} is asking`} width={440} onClose={cancel} actions={<>
+      <Button onClick={cancel}>Stop signing in</Button>
+      <MainButton className="flex-1" onClick={() => onAnswer(text)}>Send</MainButton>
+    </>}>
+      {q.prompt?.trim() && <p className="px-5 pb-1 whitespace-pre-wrap text-dim">{q.prompt.trim()}</p>}
+      <form className="px-5 pb-2" onSubmit={(e) => { e.preventDefault(); onAnswer(text) }}>
+        <Field label="Answer" type="password" value={text} autoFocus onChange={(e) => setText(e.target.value)} />
       </form>
-    </Dialog>
+    </EDialog>
   )
 }
