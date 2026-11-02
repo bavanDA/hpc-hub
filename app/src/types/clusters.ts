@@ -32,6 +32,7 @@ export type VsCode = {
   workdir: string
   open_links: boolean
   open_in: 'desktop' | 'browser'
+  ask?: boolean  // show the VS Code window before it starts
   compute: Profile
 }
 

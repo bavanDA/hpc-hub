@@ -6,10 +6,11 @@ import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { useGo } from '../../nav'
 import { call } from '../../rpc'
 import type { Target, ToolSetup, VsFound } from '../../types/tools'
+import { shortName } from '../clusters/loginCopy'
 import { useToast } from '../toast'
 import { AgentDialog } from './AgentDialog'
 import { AskAllDialog } from './AskAllDialog'
-import { setNotify, whenConnected } from './run'
+import { setNotify, startVscode, whenConnected } from './run'
 import { VsCodeDialog } from './VsCodeDialog'
 
 export function useTools() {
@@ -30,11 +31,17 @@ export function useTools() {
         go(kind, where ? { cluster, path: where } : { cluster })
         return
       }
-      if (kind === 'vscode') toast(`Looking for VS Code on ${name}…`)
+      if (kind === 'vscode') toast(`Looking for VS Code on ${shortName({ name })}…`)
       const [setup, found] = await Promise.all([call<ToolSetup>('tools.setup', { cluster }),
         kind === 'vscode' ? call<VsFound>('tools.vscode_find', { cluster }) : Promise.resolve(null)])
       if (kind === 'vscode' && found) {
         const target = what === 'desktop' || what === 'browser' ? what as Target : undefined
+        if (setup.vscode.ask === false) {  // Ask every time is off: the saved choices, a running job if there is one
+          startVscode(cluster, { folder: where || setup.vscode.workdir || '~', target: target ?? setup.vscode.open_in,
+            job: found.job?.id ?? '', replace_job: false, profile: null, remember: false, remember_folder: false },
+          setup.vscode.open_links, go)
+          return
+        }
         setDialog(<VsCodeDialog setup={setup} found={found} folder={where} target={target} onClose={close} />)
       } else if (kind === 'agent') {
         const agent = setup.agents.find((a) => a.id === what)

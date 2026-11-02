@@ -37,7 +37,7 @@ function setup({ cluster }: { cluster: string }): ToolSetup {
   const wulver = cluster === 'wulver'
   return { id: cluster, name: wulver ? 'Wulver (NJIT)' : 'Yale Bouchet', connected: true, node: wulver ? 'n0042' : '',
     job: wulver ? '123456' : '', profile,
-    vscode: { workdir: '~', open_in: 'desktop', open_links: true,
+    vscode: { workdir: '~', open_in: 'desktop', open_links: true, ask: true,
       profile: { cpus: 2, mem_gb: 8, time: '08:00:00', partition: '', account: '', qos: '', gpus: 0 } },
     agents: AGENTS }
 }

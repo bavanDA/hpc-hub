@@ -24,7 +24,7 @@ export type ToolSetup = {
   node: string
   job: string
   profile: Profile
-  vscode: { workdir: string; open_in: Target; open_links: boolean; profile: Profile }
+  vscode: { workdir: string; open_in: Target; open_links: boolean; ask?: boolean; profile: Profile }
   agents: AgentInfo[]
 }
 

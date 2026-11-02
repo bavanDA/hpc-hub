@@ -110,7 +110,7 @@ function onLink(cluster: string, job: string, key: string, openLinks: boolean, o
 }
 
 export type VsRun = { folder: string; target: Target; job: string; replace_job: boolean
-  profile: Record<string, unknown> | null; remember: boolean; remember_folder: boolean }
+  profile: Record<string, unknown> | null; remember: boolean; remember_folder: boolean; ask?: boolean }
 
 export function startVscode(cluster: string, run: VsRun, openLinks: boolean, _go?: Go) {
   if (!run.job || run.replace_job) notify(run.job ? `Stopping VS Code job ${run.job}…` : 'Submitting the VS Code job…')

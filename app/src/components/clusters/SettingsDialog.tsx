@@ -11,6 +11,7 @@ import { secondStep, type AgentId, type AgentSettings, type Cluster, type Limits
   type SettingsInfo, type VsCode } from '../../types/clusters'
 import { openSystem } from '../app/openLink'
 import { useToast } from '../toast'
+import { ASK_VS, ASK_VS_SUB } from '../tools/VsCodeDialog'
 import { AlertDialog, Button, Dialog, List } from '../ui'
 import { Duration, GpuPicker } from './ComputeDialog'
 import { useGpus } from './gpus'
@@ -147,8 +148,8 @@ export function SettingsDialog({ cluster, hint, onClose, start = 'login', advanc
       queues: d.queues, queue_wait: d.queue_wait, vpn: pick(d.vpn, VPN_KEYS), profile: pick(d.profile, PROFILE_KEYS),
     }
     if (d.vscode) {
-      const { setup, command, workdir, open_links, open_in, compute } = d.vscode
-      out.vscode = { setup, command, workdir, open_links, open_in, compute: pick(compute, PROFILE_KEYS) }
+      const { setup, command, workdir, open_links, open_in, ask, compute } = d.vscode
+      out.vscode = { setup, command, workdir, open_links, open_in, ask, compute: pick(compute, PROFILE_KEYS) }
     }
     for (const a of info?.agents ?? []) {
       const s = d[a.id]
@@ -331,6 +332,7 @@ export function SettingsDialog({ cluster, hint, onClose, start = 'login', advanc
         onChange={(x) => upVs({ open_in: x as VsCode['open_in'] })} />
       <SwitchRow label="Open automatically" sub="When the tunnel is ready, and the GitHub sign-in page"
         checked={vs.open_links} onChange={(open_links) => upVs({ open_links })} />
+      <SwitchRow label={ASK_VS} sub={ASK_VS_SUB} checked={vs.ask ?? true} onChange={(ask) => upVs({ ask })} />
     </Group>
     <Group title="Node size" description="VS Code gets its own node with this size.">
       <ProfileRows cluster={d.id} p={vs.compute} onChange={(c) => upVs({ compute: c })} extra="Extra options" />
