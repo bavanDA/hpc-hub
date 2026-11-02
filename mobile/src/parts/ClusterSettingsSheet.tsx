@@ -105,7 +105,7 @@ export function ClusterSettingsSheet({ cluster, onClose }: { cluster: Cluster; o
         {section === 'compute' && <>
           <Switch label="Get a compute node when I connect" hint="Your terminals and agents run there."
             checked={want} onChange={(on) => up({ request_node_on_connect: on })} />
-          {want && <NodeFields cluster={d} value={d.profile} onChange={(profile) => up({ profile })} />}
+          {want && <div className="-mx-4 py-2"><NodeFields cluster={d} value={d.profile} onChange={(profile) => up({ profile })} /></div>}
           <Switch label="Reuse a node you already have" hint="A node an agent or VS Code got earlier, instead of a new one."
             checked={d.reuse_running_job ?? false} onChange={(on) => up({ reuse_running_job: on })} />
           {want && <AskFirst checked={d.ask_node ?? false} onChange={(on) => up({ ask_node: on })} />}
@@ -132,7 +132,7 @@ export function ClusterSettingsSheet({ cluster, onClose }: { cluster: Cluster; o
           <Field label="Folder it opens" autoCapitalize="none" autoCorrect="off" spellCheck={false} value={d.vscode.workdir}
             placeholder="Your home folder" onChange={(e) => upVs({ workdir: e.target.value })} />
           <p className="mt-3 text-sm font-bold text-dim">Its compute node</p>
-          <NodeFields cluster={d} value={d.vscode.compute} onChange={(compute) => upVs({ compute })} />
+          <div className="-mx-4"><NodeFields cluster={d} value={d.vscode.compute} onChange={(compute) => upVs({ compute })} /></div>
         </>}
         {section === 'agents' && (info?.agents ?? []).map((a) => d[a.id] && (
           <AgentRows key={a.id} a={a} value={d[a.id]!} onChange={(change) => upAgent(a.id, change)} />

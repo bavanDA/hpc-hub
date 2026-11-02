@@ -105,11 +105,12 @@ export function Amount({ n, unit }: { n: ReactNode; unit?: string }) {
 export const inRange = (v: number, min: number, max?: number | null) => v >= min && (!max || v <= max)
 
 /** The box you type a number in: big, with its unit inside on the right. */
-function NumberBox({ label, value, unit, bad, onChange, autoFocus }: {
+function NumberBox({ label, value, unit, bad, onChange, autoFocus, inline = false }: {
   label: string; value: string; unit: string; bad: boolean; onChange: (text: string) => void; autoFocus?: boolean
+  inline?: boolean  // one of several side by side
 }) {
   return (
-    <label className={`flex h-[52px] min-w-0 flex-1 items-center rounded-lg border-[1.5px] bg-window px-3.5
+    <label className={`flex h-[52px] min-w-0 shrink-0 items-center ${inline ? 'grow basis-0' : ''} rounded-lg border-[1.5px] bg-window px-3.5
       ${bad ? 'border-bad' : 'border-accent'}`}>
       <input aria-label={label} aria-invalid={bad} type="text" inputMode="numeric" pattern="[0-9]*"
         enterKeyHint="done" autoFocus={autoFocus} value={value}
@@ -177,9 +178,9 @@ export function DurationRow({ label, minutes: total, max, onChange }:
         <div className="flex justify-between gap-3 text-sm text-dim">
           <span>{label}</span><span className={ok ? '' : 'font-semibold text-bad'}>{limit}</span></div>
         <div className="flex gap-2">
-          <NumberBox label="Days" value={draft[0]} unit="d" bad={!ok} onChange={(t) => set(0, t)} />
-          <NumberBox label="Hours" value={draft[1]} unit="h" bad={!ok} autoFocus onChange={(t) => set(1, t)} />
-          <NumberBox label="Minutes" value={draft[2]} unit="min" bad={!ok} onChange={(t) => set(2, t)} />
+          <NumberBox inline label="Days" value={draft[0]} unit="d" bad={!ok} onChange={(t) => set(0, t)} />
+          <NumberBox inline label="Hours" value={draft[1]} unit="h" bad={!ok} autoFocus onChange={(t) => set(1, t)} />
+          <NumberBox inline label="Minutes" value={draft[2]} unit="min" bad={!ok} onChange={(t) => set(2, t)} />
         </div>
       </div>
     )
