@@ -27,7 +27,7 @@ export function EDialog({ title, onClose, onBack, children, actions, width = 520
             text-dim hover:bg-hover active:bg-pressed"><X size={18} /></button>
         </header>
         <div className="min-h-0 flex-1 overflow-y-auto pb-2">{children}</div>
-        {actions && <footer className="flex shrink-0 gap-2 px-5 pt-3 pb-5">{actions}</footer>}
+        {actions && <footer className="flex shrink-0 gap-2 px-5 pt-3 pb-5 [&>button]:h-11">{actions}</footer>}
       </div>
     </div>
   )
