@@ -3,13 +3,13 @@ import { CircleAlert, ListChecks, RefreshCw, Search } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { NotConnected } from '../components/clusters/NotConnected'
-import { CancelDialog } from '../components/jobs/CancelDialog'
+import { CancelDialog, CancelManyDialog } from '../components/jobs/CancelDialog'
 import { useClusters } from '../components/jobs/clusters'
 import { DetailsDialog } from '../components/jobs/DetailsDialog'
 import { sortJobs, stateName, usageText } from '../components/jobs/format'
 import { JobTable, type Sort } from '../components/jobs/JobTable'
 import { Select } from '../components/jobs/Select'
-import { EmptyState, IconButton, SkeletonRows, Spinner } from '../components/ui'
+import { Button, EmptyState, IconButton, SkeletonRows, Spinner } from '../components/ui'
 import { usePageParams } from '../nav'
 import { call } from '../rpc'
 import type { Job, JobList, Scope } from '../types/jobs'
@@ -38,6 +38,8 @@ export function Jobs() {
   const [loading, setLoading] = useState(false)
   const [open, setOpen] = useState<Job | null>(null)
   const [cancel, setCancel] = useState<Job | null>(null)
+  const [picked, setPicked] = useState<Set<string>>(new Set())
+  const [cancelMany, setCancelMany] = useState(false)
   const turn = useRef(0) // answers to an older cluster or scope are dropped
   const busy = useRef(false)
   const id = cluster?.id ?? ''
@@ -68,6 +70,9 @@ export function Jobs() {
     return () => clearInterval(t)
   }, [refresh])
 
+  useEffect(() => setPicked(new Set()), [key])
+  const chosen = (list?.jobs ?? []).filter((j) => j.cancellable && picked.has(j.job_id))  // gone ones drop out
+
   const shown = useMemo(() => {
     const q = query.trim().toLowerCase()
     const jobs = (list?.jobs ?? []).filter((j) => (!state || j.state === state) &&
@@ -89,7 +94,7 @@ export function Jobs() {
     // scrolls sideways itself, so the ⋮ column can stay pinned on the right
     <div className="overflow-x-auto">
       <JobTable jobs={shown} showUser={scope === 'all' || scope === 'group'} sort={sort} onSort={setSort} onOpen={setOpen}
-        onCancel={setCancel} />
+        onCancel={setCancel} picked={picked} onPick={setPicked} />
     </div>
   )
   const usage = list ? usageText(list.accounts) : ''
@@ -109,6 +114,12 @@ export function Jobs() {
         {loading ? <span className="grid size-9 shrink-0 place-items-center"><Spinner /></span>
           : <IconButton icon={RefreshCw} label="Refresh" onClick={() => refresh()} disabled={!connected} />}
       </div>}
+      {!off && chosen.length > 0 && <div className="flex shrink-0 items-center gap-3 border-y border-line px-4 py-2">
+        <span className="flex-1 font-medium">{chosen.length} {chosen.length === 1 ? 'job' : 'jobs'} picked</span>
+        <Button onClick={() => setPicked(new Set())}>Clear</Button>
+        <Button kind="danger-solid" onClick={() => chosen.length === 1 ? setCancel(chosen[0]) : setCancelMany(true)}>
+          {chosen.length === 1 ? 'Cancel job' : `Cancel ${chosen.length} jobs`}</Button>
+      </div>}
       <div className="@container min-h-0 flex-1 overflow-auto scheme-light-dark">{body}</div>
       {!off && !error && <footer className="flex h-11 shrink-0 items-center gap-4 border-t border-line bg-window px-4
         text-sm">
@@ -121,7 +132,9 @@ export function Jobs() {
       {open && <DetailsDialog cluster={cluster.id} job={open} onClose={() => setOpen(null)}
         onCancel={() => { setOpen(null); setCancel(open) }} />}
       {cancel && <CancelDialog cluster={cluster.id} job={cancel} appJob={list?.app_job ?? ''}
-        onClose={() => setCancel(null)} onDone={() => refresh(true)} />}
+        onClose={() => setCancel(null)} onDone={() => { setPicked(new Set()); refresh(true) }} />}
+      {cancelMany && <CancelManyDialog cluster={cluster.id} jobs={chosen} appJob={list?.app_job ?? ''}
+        onClose={() => setCancelMany(false)} onDone={() => { setPicked(new Set()); refresh(true) }} />}
     </div>
   )
 }
