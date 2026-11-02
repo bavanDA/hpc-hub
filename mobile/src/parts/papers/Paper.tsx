@@ -164,7 +164,7 @@ export function Paper({ paper, onClose }: { paper: Opened; onClose: () => void }
   }
   const fromPdf = (page: number, x: number, y: number) => {
     call<SourceSpot | null>('latex.sync_edit', { cluster, main, page, x, y })
-      .then((s) => s ? switchTo(s.path, s.line) : toast('No source for that spot'))
+      .then((s) => { if (s) void switchTo(s.path, s.line); else toast('No source for that spot') })
       .catch((e: Error) => toast(e.message))
   }
   const goIssue = (i: Issue) => {

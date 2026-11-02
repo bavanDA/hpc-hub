@@ -2,13 +2,15 @@
 // black on light and white on dark, its button underlined words in the same color.
 // An error stays until you close it, and a toast can carry one button:
 // toast('Could not connect', { kind: 'error', action: { label: 'Retry', run: retry } })
+// It answers a function that takes the toast away early (a "Looking for…" once the answer is in).
 import { CircleAlert, X } from 'lucide-react'
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react'
 
 export type ToastOptions = { kind?: 'info' | 'error'; action?: { label: string; run: () => void } }
 type Toast = { id: number; text: string } & ToastOptions
 
-const ToastContext = createContext<(text: string, options?: ToastOptions) => void>(() => {})
+type Show = (text: string, options?: ToastOptions) => () => void
+const ToastContext = createContext<Show>(() => () => {})
 const SHOWN_MS = 4000
 
 export function ToastProvider({ children }: { children: ReactNode }) {
@@ -18,6 +20,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     const id = Date.now() + Math.random()
     setToasts((t) => [...t.filter((x) => x.text !== text), { id, text, ...options }].slice(-4))
     if (options.kind !== 'error') setTimeout(() => drop(id), options.action ? SHOWN_MS * 2 : SHOWN_MS)
+    return () => drop(id)
   }, [drop])
   useEffect(() => {  // a plain browser (design work): ?toast=error shows one
     if ('__TAURI_INTERNALS__' in window || new URLSearchParams(location.search).get('toast') !== 'error') return

@@ -31,9 +31,10 @@ export function useTools() {
         go(kind, where ? { cluster, path: where } : { cluster })
         return
       }
-      if (kind === 'vscode') toast(`Looking for VS Code on ${shortName({ name })}…`)
+      const looking = kind === 'vscode' ? toast(`Looking for VS Code on ${shortName({ name })}…`) : undefined
       const [setup, found] = await Promise.all([call<ToolSetup>('tools.setup', { cluster }),
         kind === 'vscode' ? call<VsFound>('tools.vscode_find', { cluster }) : Promise.resolve(null)])
+        .finally(() => looking?.())  // found it: the window opens, the note would only cover it
       if (kind === 'vscode' && found) {
         const target = what === 'desktop' || what === 'browser' ? what as Target : undefined
         if (setup.vscode.ask === false) {  // Ask every time is off: the saved choices, a running job if there is one
