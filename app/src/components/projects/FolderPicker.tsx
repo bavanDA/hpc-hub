@@ -1,10 +1,14 @@
-// Choose a folder on a cluster, like the desktop file chooser: places, path bar, browse by double-clicking.
+// Choose a folder on a cluster, like the desktop file chooser: places on the left, the path, the folders in it as
+// rows. Click one to pick it, double-click to go in. Style E.
 import { ArrowUp, Eye, EyeOff, Folder, FolderPlus, HardDrive, House, Pencil } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 
 import { call } from '../../rpc'
 import type { Folder as FolderList, Place, Places, ProjectCluster } from '../../types/projects'
-import { Button, Dialog, IconButton, Spinner } from '../ui'
+import { shortName } from '../clusters/loginCopy'
+import { EButton, IconBtn, SearchField } from '../e/extra'
+import { EDialog } from '../e/ui'
+import { Spinner } from '../ui'
 
 const join = (a: string, b: string) => `${a.replace(/\/+$/, '')}/${b}`
 const parent = (p: string) => p.replace(/\/+$/, '').replace(/\/[^/]*$/, '') || '/'
@@ -14,21 +18,25 @@ function short(path: string, home: string) {
   return home && (path === home || path.startsWith(home + '/')) ? '~' + path.slice(home.length) : path
 }
 
+const INPUT = 'h-9 min-w-0 flex-1 rounded-lg border border-line-strong bg-window px-3 outline-none '
+  + 'placeholder:text-faint focus:border-accent focus:ring-1 focus:ring-accent'
+
 function Crumbs({ path, home, go }: { path: string; home: string; go: (p: string) => void }) {
   const inHome = home && (path === home || path.startsWith(home + '/'))
   const base = inHome ? home : ''
   const parts = path.slice(base.length).split('/').filter(Boolean)
-  const crumb = 'h-8 shrink-0 rounded-md px-2.5 text-base font-semibold'
+  const crumb = 'h-8 shrink-0 rounded-md px-2 hover:bg-hover'
   return (
     <div className="flex min-w-0 flex-1 items-center gap-0.5 overflow-x-auto">
-      <button onClick={() => go(base || '/')} className={`${crumb} flex items-center gap-1.5 hover:bg-hover`}>
+      <button onClick={() => go(base || '/')} className={`${crumb} flex items-center gap-1.5 ${parts.length
+        ? 'text-dim' : 'font-semibold'}`}>
         {inHome ? <><House size={14} /> Home</> : <><HardDrive size={14} /> /</>}
       </button>
       {parts.map((part, i) => (
         <span key={i} className="flex shrink-0 items-center">
-          <span className="text-dim">/</span>
+          <span className="text-faint">/</span>
           <button onClick={() => go(`${base}/${parts.slice(0, i + 1).join('/')}`)}
-            className={`${crumb} ${i === parts.length - 1 ? 'bg-accent text-white' : 'hover:bg-hover'}`}>{part}</button>
+            className={`${crumb} ${i === parts.length - 1 ? 'font-semibold' : 'text-dim'}`}>{part}</button>
         </span>
       ))}
     </div>
@@ -75,14 +83,16 @@ export function FolderPicker({ cluster, start, onPick, onClose, projects = [] }:
   const shown = (at?.folders ?? []).filter((f) => (hidden || !f.startsWith('.')) &&
     f.toLowerCase().includes(filter.toLowerCase()))
   const side = (title: string, items: Place[], project: boolean) => items.length > 0 && (
-    <div className="mb-2">
-      <div className="px-2 pt-2 pb-1 text-sm font-semibold text-dim">{title}</div>
+    <div className="mb-3">
+      <div className="px-2 pb-1 text-xs font-semibold tracking-wide text-dim uppercase">{title}</div>
       {items.map((p) => {
         const Icon = p.label === 'Home' ? House : project ? Folder : HardDrive
+        const here = at && (p.path === at.path || (p.path === '~' && at.path === at.home))
         return (
           <button key={title + p.path} title={p.path} onClick={() => go(p.path)}
-            className="flex h-9 w-full items-center gap-2.5 rounded-md px-2 text-left text-base hover:bg-hover">
-            <Icon size={16} className="shrink-0" /><span className="truncate">{p.label}</span>
+            className={`flex h-9 w-full items-center gap-2.5 rounded-md px-2 text-left hover:bg-hover ${here
+              ? 'bg-selected font-semibold' : ''}`}>
+            <Icon size={16} className="shrink-0 text-dim" /><span className="truncate">{p.label}</span>
           </button>
         )
       })}
@@ -90,50 +100,43 @@ export function FolderPicker({ cluster, start, onPick, onClose, projects = [] }:
   )
 
   return (
-    <Dialog title={`Choose a folder on ${cluster.name}`} onClose={onClose} width={860}
+    <EDialog title={`Choose a folder on ${shortName(cluster)}`} width={860} onClose={onClose}
       actions={<>
-        <span className="mr-auto min-w-0 self-center truncate text-base text-dim" dir="rtl">
-          {target && <bdi>Choose: {short(target, at?.home ?? '')}</bdi>}</span>
-        <Button onClick={onClose}>Cancel</Button>
-        <Button kind="suggested" disabled={!target} onClick={() => { onClose(); onPick(target) }}>Choose</Button>
+        <span className="min-w-0 flex-1 self-center truncate font-mono text-sm text-dim" dir="rtl">
+          {target && <bdi>{short(target, at?.home ?? '')}</bdi>}</span>
+        <EButton kind="primary" disabled={!target} onClick={() => { onClose(); onPick(target) }}>
+          {picked ? `Choose ${picked}` : 'Choose this folder'}</EButton>
       </>}>
-      <div className="flex h-[440px] gap-3">
-        <nav className="w-[190px] shrink-0 overflow-y-auto border-r border-line pr-2">
+      <div className="flex h-[440px] gap-4 px-5">
+        <nav className="w-[180px] shrink-0 overflow-y-auto border-r border-line pr-3">
           {side('Places', places, false)}
           {side('Projects', projects, true)}
         </nav>
         <div className="flex min-w-0 flex-1 flex-col gap-2">
-          <div className="flex items-center gap-1.5">
-            <IconButton icon={ArrowUp} label="Up" onClick={() => at && at.path !== '/' && go(parent(at.path))} />
+          <div className="flex items-center gap-1">
+            <IconBtn icon={ArrowUp} label="Up one folder" disabled={!at || at.path === '/'}
+              onClick={() => at && go(parent(at.path))} />
             {typing
-              ? <input autoFocus value={typed} onChange={(e) => setTyped(e.target.value)}
-                  placeholder="Type a path, e.g. ~/project or /scratch" spellCheck={false}
-                  onKeyDown={(e) => { if (e.key === 'Enter' && typed.trim()) go(typed.trim()) }}
-                  className="h-9 min-w-0 flex-1 rounded-md bg-pill px-3 outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus" />
+              ? <form className="flex min-w-0 flex-1" onSubmit={(e) => { e.preventDefault(); if (typed.trim()) go(typed.trim()) }}>
+                  <input autoFocus value={typed} onChange={(e) => setTyped(e.target.value)} aria-label="Go to a path"
+                    placeholder="~/project or /scratch" spellCheck={false} className={INPUT} /></form>
               : at && <Crumbs path={at.path} home={at.home} go={go} />}
-            <IconButton icon={Pencil} label="Type a path"
-              onClick={() => { setTyped(at?.path ?? ''); setTyping(!typing) }} />
-          </div>
-          <div className="flex items-center gap-1.5">
-            <input value={filter} onChange={(e) => setFilter(e.target.value)} placeholder="Filter"
-              className="h-9 min-w-0 flex-1 rounded-md bg-pill px-3 outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus" />
-            <IconButton icon={hidden ? EyeOff : Eye} label={hidden ? 'Hide hidden' : 'Show hidden'}
+            <IconBtn icon={Pencil} label="Type a path" onClick={() => { setTyped(at?.path ?? ''); setTyping(!typing) }} />
+            <IconBtn icon={hidden ? EyeOff : Eye} label={hidden ? 'Hide hidden folders' : 'Show hidden folders'}
               onClick={() => setHidden(!hidden)} />
-            <IconButton icon={FolderPlus} label="New folder here" onClick={() => setNaming('')} />
+            <IconBtn icon={FolderPlus} label="New folder here" onClick={() => setNaming('')} />
           </div>
+          {(at?.folders.length ?? 0) > 8 && <SearchField value={filter} onChange={setFilter} placeholder="Filter" />}
           {naming !== null && (
-            <div className="flex items-center gap-2">
+            <form className="flex items-center gap-2" onSubmit={(e) => { e.preventDefault(); newFolder() }}>
               <input autoFocus value={naming} onChange={(e) => setNaming(e.target.value)} placeholder="New folder name"
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') newFolder()
-                  if (e.key === 'Escape') { e.stopPropagation(); setNaming(null) }
-                }}
-                className="h-9 min-w-0 flex-1 rounded-md bg-pill px-3 outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus" />
-              <Button onClick={() => setNaming(null)}>Cancel</Button>
-              <Button kind="suggested" disabled={!naming.trim()} onClick={newFolder}>Create</Button>
-            </div>
+                aria-label="New folder name" spellCheck={false} className={INPUT}
+                onKeyDown={(e) => { if (e.key === 'Escape') { e.stopPropagation(); setNaming(null) } }} />
+              <EButton type="button" small onClick={() => setNaming(null)}>Don't make it</EButton>
+              <EButton type="submit" small kind="primary" disabled={!naming.trim()}>Make folder</EButton>
+            </form>
           )}
-          <div className="min-h-0 flex-1 overflow-y-auto rounded-lg bg-view p-1">
+          <div className="min-h-0 flex-1 overflow-y-auto border-t border-line">
             {loading && !at ? <div className="grid h-full place-items-center"><Spinner size={24} /></div>
               : shown.length === 0
                 ? <p className="grid h-full place-items-center text-dim">
@@ -141,16 +144,16 @@ export function FolderPicker({ cluster, start, onPick, onClose, projects = [] }:
                 : shown.map((f) => (
                   <button key={f} onClick={() => setPicked(picked === f ? '' : f)}
                     onDoubleClick={() => at && go(join(at.path, f))}
-                    className={`flex h-9 w-full items-center gap-2.5 rounded-md px-2.5 text-left ${
-                      picked === f ? 'bg-accent text-white' : 'hover:bg-hover'}`}>
-                    <Folder size={16} className="shrink-0" /><span className="truncate">{f}</span>
+                    className={`flex h-10 w-full items-center gap-2.5 border-b border-line px-2.5 text-left ${
+                      picked === f ? 'bg-selected font-semibold' : 'hover:bg-hover'}`}>
+                    <Folder size={16} className="shrink-0 text-dim" /><span className="truncate">{f}</span>
                   </button>
                 ))}
           </div>
           {loading && at && <div className="flex justify-center"><Spinner /></div>}
-          {error && <p className="select-text text-base text-bad">{error}</p>}
+          {error && <p className="text-bad select-text">{error}</p>}
         </div>
       </div>
-    </Dialog>
+    </EDialog>
   )
 }

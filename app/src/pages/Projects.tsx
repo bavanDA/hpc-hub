@@ -1,14 +1,17 @@
 // Projects: your named folders on the clusters. Open one in VS Code, an agent, Files or LaTeX; copy it elsewhere.
-import { Folder, FolderOpen, Plus, Search } from 'lucide-react'
+// Style E rows, like the phone's Projects.
+import { Folder, FolderOpen, Plus } from 'lucide-react'
 import { useState } from 'react'
 
+import { Confirm, EButton, EmptyState, EPage, SearchField } from '../components/e/extra'
+import { List } from '../components/e/ui'
 import { CopyDialog } from '../components/projects/CopyDialog'
 import { ProjectDialog, type Mode } from '../components/projects/ProjectDialog'
 import { ProjectRow, type RowActions } from '../components/projects/ProjectRow'
 import { Transfers } from '../components/projects/Transfers'
 import { expectCopies } from '../components/projects/copies'
 import { useToast } from '../components/toast'
-import { AlertDialog, Button, EmptyState, List, Spinner } from '../components/ui'
+import { Spinner } from '../components/ui'
 import { useCall, useEvent } from '../hooks'
 import { useGo } from '../nav'
 import { call } from '../rpc'
@@ -67,33 +70,28 @@ export function Projects() {
   return (
     <>
       {data.projects.length === 0 ? (
-        <EmptyState icon={Folder} title="No projects yet"
-          text="Add a folder you already have on a cluster (myproj, thesis, a paper…) or create a new one. Then open it
-            in VS Code, Claude, Files or LaTeX."
-          action={<div className="mt-2 flex gap-2">
-            <Button onClick={add}>Add folder</Button>
-            <Button kind="primary" onClick={create}>New project</Button>
-          </div>} />
+        <div className="grid h-full place-items-center">
+          <EmptyState icon={Folder} title="No projects yet"
+            text="Add a folder you already have on a cluster, or make a new one. Then open it in Code, VS Code, an
+              agent or Files with one click."
+            action={<>
+              <EButton icon={FolderOpen} onClick={add}>Add a folder you have</EButton>
+              <EButton kind="primary" icon={Plus} onClick={create}>New project</EButton>
+            </>} />
+        </div>
       ) : (
-        <div className="mx-auto flex max-w-[900px] flex-col gap-3 px-4 pt-[18px] pb-6">
-          <div className="flex items-center gap-2 pb-1">
-            <h1 className="flex-1 text-2xl font-extrabold">Projects</h1>
-            <Button onClick={add} title="Use a folder that is already on a cluster">
-              <FolderOpen size={16} /> Add folder</Button>
-            <Button kind="suggested" onClick={create}><Plus size={16} /> New project</Button>
-          </div>
-          <label className="flex h-9 items-center gap-2 rounded-lg bg-pill px-3 focus-within:ring-2
-            focus-within:ring-accent">
-            <Search size={16} className="shrink-0 text-dim" />
-            <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search projects"
-              className="min-w-0 flex-1 bg-transparent outline-none placeholder:text-dim" />
-          </label>
+        <EPage width={860} note={data.projects.length > 6 && <SearchField value={query} onChange={setQuery}
+          placeholder="Search projects" />} actions={<>
+          <EButton icon={FolderOpen} onClick={add} title="Use a folder that is already on a cluster">
+            Add folder</EButton>
+          <EButton kind="primary" icon={Plus} onClick={create}>New project</EButton>
+        </>}>
           {shown.length
             ? <List>{shown.map((p) =>
                 <ProjectRow key={p.id} p={p} experimental={data.experimental} act={act} />)}</List>
-            : <p className="py-10 text-center text-dim">No projects match “{query}”</p>}
-          <div className="mt-3"><Transfers /></div>
-        </div>
+            : <p className="py-10 text-center text-dim">Nothing matches “{query}”</p>}
+          <Transfers />
+        </EPage>
       )}
 
       {open?.kind === 'edit' && (
@@ -106,10 +104,10 @@ export function Projects() {
           onStarted={(ids, text) => { expectCopies(ids, text); toast(text); reload() }} />
       )}
       {open?.kind === 'remove' && (
-        <AlertDialog title={`Remove ${open.p.name}?`} keep="Keep it" act="Remove" onClose={() => setOpen(null)}
+        <Confirm title={`Remove ${open.p.name}?`} keep="Keep it" act="Remove" onClose={() => setOpen(null)}
           onAct={() => remove(open.p)}>
           <p>Only from this list. The folder on the cluster stays.</p>
-        </AlertDialog>
+        </Confirm>
       )}
     </>
   )

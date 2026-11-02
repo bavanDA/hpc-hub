@@ -1,43 +1,45 @@
-// The copies started from Projects, with progress and a cancel button.
+// The copies started from Projects, with progress and a button to stop a running one (after Keep copying / Stop
+// copy) or clear a finished one. Style E rows, like the phone's Copies.
 import { X } from 'lucide-react'
-import { useSyncExternalStore } from 'react'
+import { useState, useSyncExternalStore } from 'react'
 
 import { call } from '../../rpc'
-import { IconButton } from '../ui'
+import { Confirm, IconBtn } from '../e/extra'
+import { Section } from '../e/ui'
 import { getCopies, setCopies, subscribe } from './copies'
 import { formatSize } from './size'
 
 export function Transfers() {
   const list = useSyncExternalStore(subscribe, getCopies)
+  const [stop, setStop] = useState<(typeof list)[number] | null>(null)
   if (!list.length) return null
   return (
-    <section className="flex flex-col gap-2">
-      <h3 className="px-1 text-md font-semibold">Copies</h3>
-      <div className="divide-y divide-line overflow-hidden rounded-xl bg-card shadow-[var(--shadow-card)]">
-        {list.map((t) => {
-          const part = t.total ? Math.min(1, t.done / t.total) : 0
-          const bytes = t.total > 0 && !t.finished && !t.title.endsWith('Globus')
-            ? ` · ${formatSize(t.done)} of ${formatSize(t.total)}` : ''
-          return (
-            <div key={t.id} className="flex items-center gap-3 py-2.5 pr-2 pl-4">
-              <div className="min-w-0 flex-1">
-                <div className="truncate text-base" title={t.title}>{t.title}</div>
-                <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-pill">
-                  <div className={`h-full rounded-full ${t.error ? 'bg-bad' : t.finished ? 'bg-ok' : 'bg-accent'}`}
-                    style={{ width: `${(t.finished && !t.error ? 1 : part) * 100}%` }} />
+    <Section title="Copies">
+      {list.map((t) => {
+        const part = t.total ? Math.min(1, t.done / t.total) : 0
+        const bytes = t.total > 0 && !t.finished && !t.title.endsWith('Globus')
+          ? ` · ${formatSize(t.done)} of ${formatSize(t.total)}` : ''
+        return (
+          <div key={t.id} className="flex items-center gap-2 border-b border-line py-2 pr-3 pl-5">
+            <div className="min-w-0 flex-1">
+              <div className="break-all" title={t.title}>{t.title}</div>
+              {!t.finished && (
+                <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-soft">
+                  <div className="h-full rounded-full bg-text" style={{ width: `${part * 100}%` }} />
                 </div>
-                <div className={`mt-1 truncate text-sm ${t.error ? 'text-bad' : 'text-dim'}`}>
-                  {t.status}{bytes}</div>
-              </div>
-              {t.finished
-                ? <IconButton icon={X} label="Clear" size={16}
-                    onClick={() => setCopies(getCopies().filter((x) => x.id !== t.id))} />
-                : <IconButton icon={X} label="Cancel" size={16}
-                    onClick={() => call('projects.cancel_copy', { id: t.id }).catch(() => {})} />}
+              )}
+              <div className={`mt-1 text-sm ${t.error ? 'text-bad' : 'text-dim'}`}>{t.status}{bytes}</div>
             </div>
-          )
-        })}
-      </div>
-    </section>
+            <IconBtn icon={X} label={t.finished ? 'Clear' : 'Stop copy'}
+              onClick={() => t.finished ? setCopies(getCopies().filter((x) => x.id !== t.id)) : setStop(t)} />
+          </div>
+        )
+      })}
+      {stop && <Confirm title="Stop this copy?" keep="Keep copying" act="Stop copy"
+        onClose={() => setStop(null)} onAct={() => {
+          setStop(null)
+          void call('projects.cancel_copy', { id: stop.id }).catch(() => {})
+        }}><p>{stop.title}. What's copied so far stays where it is.</p></Confirm>}
+    </Section>
   )
 }
