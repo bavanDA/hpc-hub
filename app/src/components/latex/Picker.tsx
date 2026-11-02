@@ -88,12 +88,12 @@ export function Picker({ data, onOpen, onReload }:
               </div>
               {!connected(p.cluster) && <span className="text-xs text-dim">not connected</span>}
               <span className="w-28 text-right text-sm text-dim">{ago(p.opened)}</span>
-              <OpenButton onClick={() => setOpenIn({ name: p.name, cluster: p.cluster, clusterName: p.cluster_name,
-                folder: p.path })} />
               <button aria-label="Remove from the list" title="Remove from the list (the folder stays)"
                 onClick={(e) => { e.stopPropagation(); forget(p.cluster, p.path) }}
                 className="grid size-7 place-items-center rounded-md text-dim opacity-0 hover:bg-hover group-hover:opacity-100">
                 <X size={14} /></button>
+              <OpenButton onClick={() => setOpenIn({ name: p.name, cluster: p.cluster, clusterName: p.cluster_name,
+                folder: p.path })} />
             </div>
           ))}
           {!projects.length && <p className="px-4 py-6 text-center text-base text-dim">
