@@ -3,7 +3,7 @@ import type { Collection, GlobusCluster, GlobusStatus, Item, Listing, Task, Want
 
 const clusters: GlobusCluster[] = [
   { id: 'wulver', name: 'Wulver (NJIT)', collection_id: 'a1b2c3d4-0000-4000-8000-000000000001',
-    collection_name: 'NJIT Wulver' },
+    collection_name: 'NJIT Wulver', personal: true },
   { id: 'yale', name: 'Yale Bouchet', collection_id: 'a1b2c3d4-0000-4000-8000-000000000002',
     collection_name: 'Yale Bouchet Storage' },
   { id: 'sdsc', name: 'SDSC Expanse', collection_id: 'a1b2c3d4-0000-4000-8000-000000000003',

@@ -3,6 +3,7 @@ import { ArrowLeftRight, LogIn } from 'lucide-react'
 import { useState } from 'react'
 
 import { call } from '../../rpc'
+import { shortName } from '../clusters/loginCopy'
 import type { GlobusCluster, GlobusStatus } from '../../types/globus'
 import { useToast } from '../toast'
 import { Button, Dialog, EmptyState, List, Row } from '../ui'
@@ -44,6 +45,7 @@ export function SettingsDialog({ status, onClose, onChange, onSignIn, onChoose }
   const toast = useToast()
   const signOut = () => call<GlobusStatus>('globus.logout').then((s) => { toast('Signed out of Globus'); onChange(s) })
     .catch((e: Error) => toast(`Could not sign out: ${e.message}`))
+  const own = status.clusters.filter((c) => c.personal)
   return (
     <Dialog title="Globus" onClose={onClose} width={560}>
       <div className="flex flex-col gap-5 pt-1">
@@ -69,7 +71,29 @@ export function SettingsDialog({ status, onClose, onChange, onSignIn, onChoose }
             ))}
           </List>
         </section>
+        {own.length > 0 && <section className="flex flex-col gap-2">
+          <h3 className="font-semibold">Globus Connect</h3>
+          <p className="text-sm text-dim">Runs on the login node with your home, project and scratch folders.</p>
+          <List>
+            {own.map((c) => <Row key={c.id} title={c.name} suffix={<RestartButton cluster={c} />} />)}
+          </List>
+        </section>}
       </div>
     </Dialog>
   )
+}
+
+/** Stop Globus Connect on the cluster and start it again, with every folder you have there now. */
+export function RestartButton({ cluster: c }: { cluster: GlobusCluster }) {
+  const toast = useToast()
+  const [busy, setBusy] = useState(false)
+  const restart = () => {
+    setBusy(true)
+    toast(`Restarting Globus Connect on ${shortName(c)}…`)
+    call('globus.start_personal', { cluster: c.id, restart: true })
+      .then(() => toast(`Globus Connect is running on ${shortName(c)}`))
+      .catch((e: Error) => toast(`Could not restart it: ${e.message}`))
+      .finally(() => setBusy(false))
+  }
+  return <Button disabled={busy} onClick={restart}>{busy ? 'Restarting…' : 'Restart'}</Button>
 }

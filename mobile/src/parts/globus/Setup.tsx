@@ -1,6 +1,6 @@
 // Before Globus works: your Globus app's client id, then a sign-in. Plus the account sheet behind the gear:
 // client id, sign out, and the collection that holds each cluster's files.
-import { ArrowLeftRight, LogIn, LogOut } from 'lucide-react'
+import { ArrowLeftRight, LogIn, LogOut, RotateCw } from 'lucide-react'
 import { useState } from 'react'
 
 import { HELP } from '@shared/components/globus/parts'
@@ -53,6 +53,18 @@ export function AccountSheet({ status, onClose, onChange, onSignIn, onChoose }: 
           ? <Row icon={LogOut} label="Sign out of Globus" onPress={signOut} />
           : <Row icon={LogIn} label="Sign in to Globus" opens onPress={onSignIn} />}
       </div>
+      {status.signed_in && status.clusters.some((c) => c.personal) && (
+        <Section title="Globus Connect" note="Runs on the login node with your home, project and scratch folders.">
+          {status.clusters.filter((c) => c.personal).map((c) => (
+            <Row key={c.id} icon={RotateCw} label={`Restart on ${shortCluster(c.name)}`} onPress={() => {
+              toast(`Restarting Globus Connect on ${shortCluster(c.name)}…`)
+              call('globus.start_personal', { cluster: c.id, restart: true })
+                .then(() => toast(`Globus Connect is running on ${shortCluster(c.name)}`))
+                .catch((e: Error) => toast(`Couldn't restart it: ${e.message}`))
+            }} />
+          ))}
+        </Section>
+      )}
       {status.signed_in && (
         <Section title="Collections" note="Where Globus finds each cluster's files.">
           {status.clusters.map((c) => (

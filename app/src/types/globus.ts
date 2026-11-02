@@ -1,5 +1,6 @@
 // Shapes of what hpc_hub/api/methods/globus.py sends.
-export type GlobusCluster = { id: string; name: string; collection_id: string; collection_name: string }
+export type GlobusCluster = { id: string; name: string; collection_id: string; collection_name: string
+  personal?: boolean }  // your own Globus Connect runs there (Wulver): it can be restarted
 
 /** What a cluster's collection wants before it lists files: an Allow, or an account from a domain. */
 export type Want = {
