@@ -5,7 +5,7 @@ import { BellRing, CircleAlert } from 'lucide-react'
 import { useState } from 'react'
 
 import { CopyView, DoneView } from '../components/backup/CopyDone'
-import { gb, risk as riskCopy, shortName, start as startCopy } from '../components/backup/copy'
+import { gb, risk as riskCopy, shortName } from '../components/backup/copy'
 import { PlanView } from '../components/backup/PlanView'
 import { RemindersDialog } from '../components/backup/RemindersDialog'
 import { FolderLine, RiskHead, RiskNotes, groupsOf } from '../components/backup/Risk'
@@ -104,7 +104,7 @@ function Flow({ id, name }: { id: string; name: string }) {
   return (
     <div className="h-full overflow-auto">
       <div className="mx-auto max-w-[760px] px-6 pt-6 pb-10">
-        <PageHead title={startCopy.title} subtitle={b.policy?.scratch}
+        <PageHead subtitle={b.policy?.scratch}
           actions={<Button kind="ghost" onClick={() => setRemind('open')}>
             <BellRing size={16} />{b.reminders?.enabled ? 'Weekly check on' : 'Reminders'}</Button>} />
         <Steps step={b.step} />

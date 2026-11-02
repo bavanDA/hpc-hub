@@ -29,11 +29,13 @@ export function sortJobs(jobs: Job[], key: SortKey, desc: boolean): Job[] {
 
 const n = (v: number) => v.toLocaleString('en-US')
 
-/** "mygroup: 500 of 1,000 SU used (50%), yours 20", like the GTK footer. */
+/** "mygroup: 500 hours left (SU) of 1,000, you used 20". "SU" is said once, in brackets. */
 export function usageText(accounts: Account[]): string {
   const used = accounts.filter((a) => a.used || a.mine)
-  return (used.length ? used : accounts.slice(0, 1)).map((a) => a.quota
-    ? `${a.account}: ${n(a.used)} of ${n(a.quota)} SU used (${((100 * a.used) / a.quota).toFixed(1)}%), ` +
-      `yours ${n(a.mine)}`
-    : `${a.account}: ${n(a.used)} SU used${a.period ? ` in ${a.period}` : ''}, yours ${n(a.mine)}`).join(' · ')
+  return (used.length ? used : accounts.slice(0, 1)).map((a, i) => {
+    const su = i ? '' : ' (SU)'
+    return a.quota
+      ? `${a.account}: ${n(Math.max(0, a.quota - a.used))} hours left${su} of ${n(a.quota)}, you used ${n(a.mine)}`
+      : `${a.account}: ${n(a.used)} hours used${su}${a.period ? ` in ${a.period}` : ''}, you used ${n(a.mine)}`
+  }).join(' · ')
 }

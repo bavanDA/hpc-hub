@@ -161,11 +161,12 @@ export function EmptyState({ icon: Icon, title, text, action, secondary }:
 }
 
 /** The top of a narrow page (lists, settings): its title, an optional line under it, actions on the right. */
-export function PageHead({ title, subtitle, actions }: { title: string; subtitle?: ReactNode; actions?: ReactNode }) {
+/** title: left out where the header bar already names the page. */
+export function PageHead({ title, subtitle, actions }: { title?: string; subtitle?: ReactNode; actions?: ReactNode }) {
   return (
     <div className="mb-6 flex flex-wrap items-end gap-4">
       <div className="min-w-0 flex-1">
-        <h1 className="text-xl font-semibold">{title}</h1>
+        {title && <h1 className="text-xl font-semibold">{title}</h1>}
         {subtitle && <p className="mt-0.5 text-sm text-dim">{subtitle}</p>}
       </div>
       {actions && <div className="flex shrink-0 items-center gap-2">{actions}</div>}

@@ -32,7 +32,7 @@ export function CancelDialog({ cluster, job: j, appJob, onClose, onDone }: {
 
   const confirm = () => {
     onClose()
-    toast(`Cancelling job ${j.job_id}…`)
+    toast(appNode && running ? `Releasing node ${j.where}…` : `Cancelling job ${j.job_id}…`)
     call<{ gone: boolean }>('jobs.cancel', { cluster, job_id: j.job_id })
       .then(({ gone }) => toast(gone ? `Job ${j.job_id} is cancelled`
         : `Cancel sent. Job ${j.job_id} is still stopping`))

@@ -119,7 +119,7 @@ export function Jobs() {
         <span className="shrink-0 text-dim">
           {list ? `${list.jobs.length} jobs · updated ${got.updated}` : 'Loading…'}</span>
         <span className="min-w-0 flex-1 truncate text-right" title={usage &&
-          'Service units (core hours) of your Slurm accounts. A QoS that charges 0 (like low on Wulver) is free.'}>
+          "Service units, the cluster's currency. 1 SU is roughly 1 core for 1 hour. Free queues cost nothing."}>
           {usage}</span>
       </footer>}
       {open && <DetailsDialog cluster={cluster.id} job={open} onClose={() => setOpen(null)}
