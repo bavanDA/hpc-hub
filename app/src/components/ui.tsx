@@ -3,15 +3,16 @@
 import { Loader2, X, type LucideIcon } from 'lucide-react'
 import { useEffect, type ReactNode } from 'react'
 
+/** A plain block on the page (style E has no boxes): it only groups and clips what is inside. */
 export function Card({ children, className = '' }: { children: ReactNode; className?: string }) {
-  return <section className={`rounded-xl bg-card shadow-[var(--shadow-card)] ${className}`}>{children}</section>
+  return <section className={`bg-card ${className}`}>{children}</section>
 }
 
 // -- buttons ---------------------------------------------------------------------------------------------------
 
-/** primary: the one main action of a view. secondary: everything else that matters. ghost: quiet (toolbars, Cancel
- * in a dialog). danger: a soft red for a risky choice in a list. danger-solid: the confirm button of a destructive
- * question. The old names still work: suggested = primary, pill = secondary, flat = ghost, destructive = danger. */
+/** Style E. primary: the one main action of a view, solid (black on light, white on dark). secondary: outlined, for
+ * everything else that matters. ghost: quiet (toolbars). danger: outlined with red words, a risky choice in a list.
+ * danger-solid: the confirm button of a destructive question. The old names still work: suggested = primary, pill = secondary, flat = ghost, destructive = danger. */
 export type ButtonKind = 'primary' | 'secondary' | 'ghost' | 'danger' | 'danger-solid'
   | 'suggested' | 'pill' | 'flat' | 'destructive'
 export type ButtonSize = 'sm' | 'md' | 'lg'
@@ -21,24 +22,23 @@ const KIND: Record<ButtonKind, ButtonKind> = {
   suggested: 'primary', pill: 'secondary', flat: 'ghost', destructive: 'danger',
 }
 const LOOK: Record<string, string> = {
-  primary: 'bg-accent text-white hover:bg-accent-hover active:bg-accent-pressed '
-    + 'disabled:bg-control disabled:text-faint',
-  secondary: 'bg-control text-text hover:bg-pressed active:bg-pressed disabled:opacity-45',
+  primary: 'bg-accent text-on-accent hover:bg-accent-hover active:bg-accent-pressed disabled:opacity-40',
+  secondary: 'border border-line-strong text-text hover:bg-hover active:bg-pressed disabled:opacity-45',
   ghost: 'text-text hover:bg-hover active:bg-pressed disabled:opacity-45',
-  danger: 'bg-bad-bg text-bad hover:bg-bad/20 active:bg-bad/25 disabled:opacity-45',
+  danger: 'border border-line-strong text-bad hover:bg-bad-bg active:bg-bad-bg disabled:opacity-45',
   'danger-solid': 'bg-bad-fill text-white hover:brightness-95 active:brightness-90 disabled:opacity-45',
 }
 const SIZE: Record<ButtonSize, string> = {
-  sm: 'h-7 gap-1.5 rounded-md px-2.5 text-sm',
-  md: 'h-[34px] gap-2 rounded-md px-3 text-base',
-  lg: 'h-10 gap-2 rounded-md px-4 text-md',
+  sm: 'h-8 gap-1.5 rounded-md px-3 text-sm',
+  md: 'h-9 gap-2 rounded-lg px-3.5 text-base',
+  lg: 'h-11 gap-2 rounded-lg px-5 text-base',
 }
 
-/** pill: the rounded call to action of the first-start steps only. `round` is the old name for it. */
+/** pill: the big call to action of the first-start steps only. `round` is the old name for it. */
 export function Button({ kind = 'secondary', size = 'md', pill = false, round = false, className = '', ...props }:
   { kind?: ButtonKind; size?: ButtonSize; pill?: boolean; round?: boolean }
   & React.ButtonHTMLAttributes<HTMLButtonElement>) {
-  const shape = pill || round ? 'h-10 gap-2 rounded-full px-6 text-md' : SIZE[size]
+  const shape = pill || round ? 'h-11 gap-2 rounded-lg px-6 text-md' : SIZE[size]
   return (
     <button {...props}
       className={`inline-flex shrink-0 items-center justify-center whitespace-nowrap font-semibold transition-colors
@@ -46,15 +46,15 @@ export function Button({ kind = 'secondary', size = 'md', pill = false, round = 
   )
 }
 
-/** A button with only an icon: for well-known glyphs (settings, refresh, close, more, search), always with a label
- * for the tooltip and screen readers. size is the icon's; small makes the button 28px instead of 34px. */
+/** A grey button with only an icon: for well-known glyphs (settings, refresh, close, more, search), always with a
+ * label for the tooltip and screen readers. size is the icon's; small makes the button 28px instead of 36px. */
 export function IconButton({ icon: Icon, label, onClick, size = 16, small = false, disabled, className = '' }:
   { icon: LucideIcon; label: string; onClick?: () => void; size?: number; small?: boolean; disabled?: boolean
     className?: string }) {
   return (
     <button type="button" aria-label={label} title={label} onClick={onClick} disabled={disabled}
-      className={`grid shrink-0 place-items-center rounded-md text-text transition-colors duration-90 hover:bg-hover
-        active:bg-pressed disabled:opacity-45 ${small ? 'size-7' : 'size-[34px]'} ${className}`}>
+      className={`grid shrink-0 place-items-center rounded-md text-dim transition-colors duration-90 hover:bg-hover
+        hover:text-text active:bg-pressed disabled:opacity-45 ${small ? 'size-7' : 'size-9'} ${className}`}>
       <Icon size={size} />
     </button>
   )
@@ -70,12 +70,14 @@ const PILL_KIND: Record<PillKind, 'success' | 'info' | 'warning' | 'danger' | 'n
   success: 'success', info: 'info', warning: 'warning', danger: 'danger', neutral: 'neutral',
   ok: 'success', warn: 'warning', bad: 'danger', dim: 'neutral',
 }
+// Style E: no box, a small dot and the word. Solid when on, breathing while busy, grey while waiting, hollow when
+// off, red on an error.
 const PILL: Record<string, { box: string; dot: string }> = {
-  success: { box: 'bg-pill text-text', dot: 'bg-current' },
-  info: { box: 'bg-pill text-text', dot: 'bg-current dot-pulse' },
-  warning: { box: 'bg-pill text-dim', dot: 'bg-current' },
-  danger: { box: 'bg-bad-bg text-bad', dot: 'bg-bad-dot' },
-  neutral: { box: 'bg-pill text-dim', dot: 'border-[1.5px] border-current' },
+  success: { box: 'text-text', dot: 'bg-text' },
+  info: { box: 'text-text', dot: 'bg-dim animate-pulse' },
+  warning: { box: 'text-text', dot: 'bg-dim' },
+  danger: { box: 'text-bad', dot: 'bg-bad' },
+  neutral: { box: 'text-dim', dot: 'border-[1.5px] border-dim' },
 }
 
 /** Which kind a state is, for sessions ("Connected", "Approve Duo on your phone") and Slurm jobs ("RUNNING"). */
@@ -93,15 +95,15 @@ export function Pill({ kind = 'neutral', dot = true, children, title }:
   { kind?: PillKind; dot?: boolean; children: ReactNode; title?: string }) {
   const look = PILL[PILL_KIND[kind]]
   return (
-    <span title={title} className={`inline-flex h-[22px] items-center gap-1.5 whitespace-nowrap rounded-full px-2
-      text-xs font-semibold ${look.box}`}>
-      {dot && <span aria-hidden className={`size-1.5 shrink-0 rounded-full text-current ${look.dot}`} />}
+    <span title={title} className={`inline-flex h-[22px] items-center gap-1.5 whitespace-nowrap text-sm font-medium
+      ${look.box}`}>
+      {dot && <span aria-hidden className={`size-2 shrink-0 rounded-full ${look.dot}`} />}
       {children}
     </span>
   )
 }
 
-/** A pill for a session or job state, its color picked from the state. */
+/** A session or job state: its dot picked from the state, then the word. */
 export function StatusPill({ state, children }: { state: string; children?: ReactNode }) {
   return <Pill kind={statusKind(state)}>{children ?? state}</Pill>
 }
@@ -132,7 +134,7 @@ export function SkeletonRows({ rows = 5, height = 40 }: { rows?: number; height?
   )
 }
 
-/** How full something is (time used, SUs, disk): blue, amber from 85%, red when full. */
+/** How full something is (time used, SUs, disk): black (white on dark), red when full. */
 export function Meter({ value, label, className = '' }: { value: number; label?: string; className?: string }) {
   const v = Math.max(0, Math.min(1, Number.isFinite(value) ? value : 0))
   const color = v >= 1 ? 'bg-bad-dot' : 'bg-text'
@@ -144,15 +146,13 @@ export function Meter({ value, label, className = '' }: { value: number; label?:
   )
 }
 
-/** A whole page with nothing to show (empty, not connected, error): a tile, a title, one sentence, one action. */
+/** A whole page with nothing to show (empty, not connected, error): a grey icon, a title, one sentence, one action. */
 export function EmptyState({ icon: Icon, title, text, action, secondary }:
   { icon: LucideIcon; title: string; text?: ReactNode; action?: ReactNode; secondary?: ReactNode }) {
   return (
-    <div className="flex h-full flex-col items-center justify-center gap-3 p-8 text-center">
-      <div className="mb-1 grid size-14 place-items-center rounded-xl bg-pill text-dim">
-        <Icon size={24} />
-      </div>
-      <h2 className="text-lg font-semibold">{title}</h2>
+    <div className="flex h-full flex-col items-center justify-center gap-2 p-8 text-center">
+      <Icon size={28} className="mb-1 text-dim" />
+      <h2 className="text-md font-semibold">{title}</h2>
       {text && <p className="max-w-[44ch] text-base text-dim">{text}</p>}
       {(action || secondary) && <div className="mt-2 flex flex-wrap items-center justify-center gap-2">
         {action}{secondary}</div>}
@@ -176,24 +176,23 @@ export function PageHead({ title, subtitle, actions }: { title?: string; subtitl
 
 // -- controls ----------------------------------------------------------------------------------------------------
 
-/** An on/off switch (Adwaita's). stop: don't let the click reach a clickable row around it. */
+/** An on/off switch, black (white on dark) when on. stop: don't let the click reach a clickable row around it. */
 export function Switch({ on, onChange, label, stop = false, disabled }:
   { on: boolean; onChange: (on: boolean) => void; label?: string; stop?: boolean; disabled?: boolean }) {
   return (
     <button type="button" role="switch" aria-checked={on} aria-label={label} disabled={disabled}
       onClick={(e) => { if (stop) e.stopPropagation(); onChange(!on) }}
-      className={`relative h-[26px] w-[48px] shrink-0 rounded-full transition-colors duration-150 disabled:opacity-45 ${
+      className={`relative h-6 w-10 shrink-0 rounded-full transition-colors duration-150 disabled:opacity-45 ${
         on ? 'bg-accent' : 'bg-line-strong'}`}>
-      <span className={`absolute left-[3px] top-[3px] size-5 rounded-full bg-white shadow-[0_1px_2px_rgb(0_0_6/0.3)]
-        transition-transform duration-150 ease-enter ${on ? 'translate-x-[22px]' : ''}`} />
+      <span className={`absolute top-1 left-1 size-4 rounded-full transition-transform duration-150 ease-enter ${
+        on ? 'translate-x-4 bg-on-accent' : 'bg-window'}`} />
     </button>
   )
 }
 
-/** Shared look of text inputs and selects: a filled field with an inset ring on focus. */
-export const FIELD = 'h-[34px] rounded-md bg-control px-3 text-base text-text outline-none placeholder:text-faint '
-  + 'transition-shadow duration-90 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus '
-  + 'disabled:opacity-45'
+/** Shared look of text inputs and selects: outlined, the line turns black (white on dark) on focus. */
+export const FIELD = 'h-9 rounded-lg border border-line-strong bg-window px-3 text-base text-text outline-none '
+  + 'placeholder:text-faint focus:border-accent focus:ring-1 focus:ring-accent disabled:opacity-45'
 
 // -- dialogs -----------------------------------------------------------------------------------------------------
 
@@ -213,7 +212,8 @@ export function useEscape(onClose: () => void) {
   }, [onClose])
 }
 
-/** A dialog over the window. Escape or the X closes it. Actions go in the footer: Cancel (ghost) then the primary. */
+/** A dialog over the window, style E: title on the left, X on the right. Escape or the X closes it. Actions go in
+ * the footer: the other choices first, the one solid main button last. */
 export function Dialog({ title, onClose, children, actions, width = 480, height, bare = false }:
   { title: string; onClose: () => void; children: ReactNode; actions?: ReactNode; width?: number; height?: number
     bare?: boolean }) {
@@ -222,23 +222,22 @@ export function Dialog({ title, onClose, children, actions, width = 480, height,
     <div className="dialog-scrim fixed inset-0 z-40 grid place-items-center bg-scrim p-4" onMouseDown={onClose}>
       <div role="dialog" aria-modal="true" aria-label={title} onMouseDown={(e) => e.stopPropagation()}
         style={{ width, height }}
-        className="dialog-in flex max-h-[90vh] max-w-full flex-col rounded-2xl bg-raised shadow-[var(--shadow-dialog)]">
-        <div className="flex h-12 shrink-0 items-center px-2">
-          <div className="w-[34px]" />
-          <h2 className="flex-1 text-center text-base font-semibold">{title}</h2>
-          <IconButton icon={X} label="Close" onClick={onClose} />
+        className="dialog-in flex max-h-[90vh] max-w-full flex-col rounded-xl bg-window shadow-[var(--shadow-dialog)]">
+        <div className="flex h-14 shrink-0 items-center gap-2 pr-2 pl-5">
+          <h2 className="min-w-0 flex-1 truncate text-lg font-semibold">{title}</h2>
+          <IconButton icon={X} label="Close" size={18} onClick={onClose} />
         </div>
         {/* bare: the children lay out and scroll the body themselves (a dialog with side navigation) */}
-        <div className={bare ? 'flex min-h-0 flex-1 border-t border-line' : 'overflow-auto px-6 pb-4'}>{children}</div>
-        {actions && <div className="flex items-center justify-end gap-2 border-t border-line px-6 pb-5 pt-4">
+        <div className={bare ? 'flex min-h-0 flex-1 border-t border-line' : 'overflow-auto px-5 pb-4'}>{children}</div>
+        {actions && <div className="flex items-center justify-end gap-2 px-5 pt-3 pb-5">
           {actions}</div>}
       </div>
     </div>
   )
 }
 
-/** A short question with two answers (Adwaita's alert dialog): the safe answer has focus, the risky one is on the
- * right, red when it destroys something. Esc or a click outside is the safe answer. */
+/** A short question with two answers: the safe answer (outlined) has focus, the risky one is on the right, solid
+ * red when it destroys something. Esc or a click outside is the safe answer. */
 export function AlertDialog({ title, children, keep, act, danger = true, disabled, onAct, onClose }: {
   title: string; children?: ReactNode; keep: string; act: string; danger?: boolean; disabled?: boolean
   onAct: () => void; onClose: () => void
@@ -247,9 +246,9 @@ export function AlertDialog({ title, children, keep, act, danger = true, disable
   return (
     <div className="dialog-scrim fixed inset-0 z-40 grid place-items-center bg-scrim p-4" onMouseDown={onClose}>
       <div role="alertdialog" aria-modal="true" aria-labelledby="alert-title" onMouseDown={(e) => e.stopPropagation()}
-        className="dialog-in w-[420px] max-w-full rounded-2xl bg-raised p-6 shadow-[var(--shadow-dialog)]">
-        <h2 id="alert-title" className="text-xl font-semibold">{title}</h2>
-        {children && <div className="mt-2 flex flex-col gap-2 text-md text-dim">{children}</div>}
+        className="dialog-in w-[420px] max-w-full rounded-xl bg-window p-5 shadow-[var(--shadow-dialog)]">
+        <h2 id="alert-title" className="text-lg font-semibold">{title}</h2>
+        {children && <div className="mt-2 flex flex-col gap-2 text-base text-dim">{children}</div>}
         <div className="mt-6 flex justify-end gap-2">
           <Button autoFocus onClick={onClose}>{keep}</Button>
           <Button kind={danger ? 'danger-solid' : 'primary'} onClick={onAct} disabled={disabled}>{act}</Button>
@@ -261,9 +260,9 @@ export function AlertDialog({ title, children, keep, act, danger = true, disable
 
 // -- lists -------------------------------------------------------------------------------------------------------
 
-/** A list in a card, rows separated by lines (Adwaita's boxed list). */
+/** Rows on the plain background with a hairline above, between and under them (style E). */
 export function List({ children }: { children: ReactNode }) {
-  return <Card className="divide-y divide-line overflow-hidden">{children}</Card>
+  return <section className="divide-y divide-line overflow-hidden border-y border-line">{children}</section>
 }
 
 /** A row of a boxed list: 48px, or taller with a subtitle. */
@@ -282,13 +281,13 @@ export function Row({ title, subtitle, prefix, suffix, onClick }:
   )
 }
 
-/** A rounded tile behind an icon (cluster cards, welcome, empty states). */
+/** A hairline tile around a grey icon (cluster cards, welcome). */
 export function IconTile({ icon: Icon, size = 40, tone = 'neutral' }:
   { icon: LucideIcon; size?: 40 | 56; tone?: 'neutral' | 'accent' | 'success' }) {
-  const look = tone !== 'neutral' ? 'bg-pill text-text'
-    : 'bg-pill text-dim'
+  const look = tone !== 'neutral' ? 'text-text' : 'text-dim'
   return (
-    <div className={`grid shrink-0 place-items-center rounded-lg ${size === 56 ? 'size-14' : 'size-10'} ${look}`}>
+    <div className={`grid shrink-0 place-items-center rounded-lg border border-line ${size === 56 ? 'size-14' : 'size-10'}
+      ${look}`}>
       <Icon size={size === 56 ? 24 : 20} />
     </div>
   )
