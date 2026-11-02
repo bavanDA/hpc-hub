@@ -2,6 +2,7 @@
 import type { ITheme } from '@xterm/xterm'
 
 import { call } from '../../rpc'
+import { copyText as appCopy } from '../app/clipboard'
 import { isDark } from '../../theme'
 import type { Tab } from './tabs'
 
@@ -19,7 +20,8 @@ export const setSelectToCopy = (on: boolean) => { selectToCopy = on }
 
 export async function copyText(text: string): Promise<boolean> {
   try {
-    await navigator.clipboard.writeText(text)
+    // WebKit drops a web copy that isn't right after a click (select to copy waits 300 ms), so try Tauri's first
+    await appCopy(text).catch(() => navigator.clipboard.writeText(text))
     return true
   } catch {
     // Some webviews only allow the old way
