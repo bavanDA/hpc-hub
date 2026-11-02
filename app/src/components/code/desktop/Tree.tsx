@@ -5,7 +5,7 @@ import { useCallback, useEffect, useState } from 'react'
 
 import { call } from '../../../rpc'
 import type { Entry, Listing } from '../../../types/files'
-import type { Project } from '../../../types/projects'
+import type { Project, ProjectList } from '../../../types/projects'
 import { isDir, isText, join, parent } from '../../files/format'
 import { IconButton, Spinner } from '../../ui'
 
@@ -47,7 +47,7 @@ export function Tree({ cluster, root, current, onRoot, onOpen, onOther }: {
     setNodes({})
     setOpen(new Set())
     load(root)
-    call<Project[]>('projects.list').then((all) => setProjects(all.filter((p) => p.cluster === cluster)))
+    call<ProjectList>('projects.list').then((l) => setProjects(l.projects.filter((p) => p.cluster === cluster)))
       .catch(() => setProjects([]))
   }, [cluster])  // eslint-disable-line react-hooks/exhaustive-deps
 
