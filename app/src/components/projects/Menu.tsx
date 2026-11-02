@@ -41,15 +41,14 @@ export function Menu({ groups, trigger, label, className = '' }:
       </button>
       {open && (
         <div ref={menu} role="menu" style={{ top: at?.top ?? -9999, right: at?.right ?? 0 }}
-          className="fixed z-50 min-w-[200px] rounded-xl bg-header p-1.5 shadow-[0_2px_12px_rgb(0_0_6/0.25)]
-            ring-1 ring-line">
+          className="menu-in fixed z-50 min-w-[200px] rounded-xl bg-raised p-1.5 shadow-[var(--shadow-menu)]">
           {groups.filter((g) => g.length).map((g, n) => (
             <div key={n} className={n ? 'mt-1.5 border-t border-line pt-1.5' : ''}>
               {g.map(({ label: text, icon: Icon, onClick, danger }) => (
                 <button key={text} role="menuitem" onClick={() => { setOpen(false); onClick() }}
                   className={`flex h-9 w-full items-center gap-3 rounded-md px-2.5 text-left hover:bg-hover ${
                     danger ? 'text-bad' : ''}`}>
-                  {Icon && <Icon size={16} className="shrink-0" />}
+                  {Icon && <Icon size={16} className={`shrink-0 ${danger ? '' : 'text-dim'}`} />}
                   <span className="truncate">{text}</span>
                 </button>
               ))}
