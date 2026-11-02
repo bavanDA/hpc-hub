@@ -50,8 +50,8 @@ export function SidebarFooter({ page, onPick, onSettings }:
         {!shown.length && <p className="px-3 py-1.5 text-xs text-dim">No cluster connected</p>}
       </>}
       <button onClick={onSettings}
-        className="mt-1 flex h-[34px] w-full items-center gap-3 rounded-md px-3 text-left hover:bg-hover">
-        <Settings size={16} />
+        className="mt-1 flex h-9 w-full items-center gap-3 rounded-md px-3 text-left hover:bg-hover active:bg-pressed">
+        <Settings size={16} className="text-dim" />
         <span>Settings</span>
       </button>
     </div>
