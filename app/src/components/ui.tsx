@@ -200,7 +200,7 @@ export const FIELD = 'h-[34px] rounded-md bg-control px-3 text-base text-text ou
 // Open dialogs, newest last: Escape closes only the top one
 const open: symbol[] = []
 
-function useEscape(onClose: () => void) {
+export function useEscape(onClose: () => void) {
   useEffect(() => {
     const me = Symbol('dialog')
     open.push(me)

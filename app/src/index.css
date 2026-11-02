@@ -111,6 +111,31 @@
   --shadow-dialog: 0 0 0 1px rgb(255 255 255 / 0.08), 0 24px 56px -12px rgb(0 0 0 / 0.65);
 }
 
+/* Style E (docs/design/style-e), the phone's look, for the desktop windows moved to it so far: black and white
+   rows, hairlines, the accent black on light and white on dark. */
+@theme { --color-on-accent: #ffffff; --color-soft: #f4f4f4; }
+.style-e {
+  --color-window: #ffffff;  --color-raised: #ffffff;  --color-card: #ffffff;  --color-soft: #f4f4f4;
+  --color-hover: rgb(0 0 0 / 0.04);  --color-pressed: rgb(0 0 0 / 0.07);
+  --color-line: #e6e6e6;    --color-line-strong: #d4d4d4;
+  --color-text: #0a0a0a;    --color-dim: #6b6b6b;     --color-faint: #9a9a9a;
+  --color-accent: #0a0a0a;  --color-accent-hover: #262626;  --color-accent-pressed: #333333;
+  --color-on-accent: #ffffff;  --color-focus: #0a0a0a;
+  --color-bad: #b42318;     --color-bad-fill: #b42318;
+  --shadow-dialog: 0 0 0 1px #e6e6e6, 0 24px 48px -16px rgb(0 0 0 / 0.20);
+  color: var(--color-text);
+}
+[data-theme="dark"] .style-e {
+  --color-window: #0b0b0b;  --color-raised: #0b0b0b;  --color-card: #0b0b0b;  --color-soft: #171717;
+  --color-hover: rgb(255 255 255 / 0.05);  --color-pressed: rgb(255 255 255 / 0.09);
+  --color-line: #232323;    --color-line-strong: #333333;
+  --color-text: #f2f2f2;    --color-dim: #8f8f8f;     --color-faint: #6a6a6a;
+  --color-accent: #f2f2f2;  --color-accent-hover: #dcdcdc;  --color-accent-pressed: #c8c8c8;
+  --color-on-accent: #0b0b0b;  --color-focus: #f2f2f2;
+  --color-bad: #ff8577;     --color-bad-fill: #c4281c;
+  --shadow-dialog: 0 0 0 1px #232323, 0 24px 56px -12px rgb(0 0 0 / 0.70);
+}
+
 /* native scrollbars and form controls follow the theme */
 :root { color-scheme: light; }
 :root[data-theme="dark"] { color-scheme: dark; }
