@@ -47,7 +47,7 @@ CLAUDE = Agent("claude", "Claude", "starred-symbolic",
                            ("dontAsk", "Don't ask"))),
                    Option("effort", "Effort", "--effort", EFFORT)), remote_setting="remoteControlAtStartup")
 CODEX = Agent("codex", "ChatGPT", "chat-message-new-symbolic",
-              "ChatGPT remote", "Use it from the ChatGPT app. One at a time: this stops the previous one", (
+              "ChatGPT remote", "Use this session from the ChatGPT app, one session at a time", (
                   Option("sandbox", "Sandbox", "-s", (DEFAULT, ("read-only", "Read only"),
                                                       ("workspace-write", "Write in the folder"))),
                   Option("approval", "Ask before running commands", "-a",

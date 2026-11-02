@@ -13,7 +13,7 @@ import { Spinner } from '../ui'
 
 export const inTauri = '__TAURI_INTERNALS__' in window
 
-export const CHROME_WINDOW = { title: 'Chrome window (faster)', sub: 'A separate Chrome profile, signs in instantly' }
+export const CHROME_WINDOW = { title: 'Chrome window', sub: 'Its own Chrome profile, kept apart from yours' }
 
 function Waiting({ title, text }: { title: string; text: string }) {
   return (

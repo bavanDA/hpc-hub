@@ -9,7 +9,7 @@ export const S = {
   "REMEMBER_OFF": "You'll type it each time you open HPC Hub.",
   "SAVED_IN": "Kept on this computer.",
   "SKIP": "Do this later",
-  "PASSWORD_NOTE": "Kept in this computer's password store. Changing it here doesn't change your {who} password.",
+  "PASSWORD_NOTE": "Kept on this computer.",
   "FORGET_TITLE": "Forget the saved {short} password?",
   "FORGET_BODY": "You'll type it next time you connect. Your {label} stays.",
   "FORGET": "Forget password",

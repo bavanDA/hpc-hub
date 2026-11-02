@@ -121,7 +121,7 @@ export function Globus() {
   else body = (
     <div className="flex h-full min-h-[560px] flex-col gap-3 px-4 py-4 [color-scheme:light_dark]">
       <div className="flex items-center gap-2 pl-1">
-        <p className="flex-1 text-sm text-dim">Copies run on Globus, so you can close the app or your laptop.</p>
+        <p className="flex-1 text-sm text-dim">You can close the app or your laptop while files copy.</p>
         <IconButton icon={Settings} label="Globus settings" size={16} onClick={() => setSettings(true)} />
       </div>
       <div className="flex min-h-[340px] flex-1 gap-3">

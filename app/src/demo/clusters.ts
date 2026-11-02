@@ -53,7 +53,7 @@ const agentInfo: SettingsInfo['agents'] = [
         ['auto', 'Auto'], ['dontAsk', "Don't ask"]] },
       { key: 'effort', label: 'Effort', choices: EFFORT }] },
   { id: 'codex', name: 'ChatGPT', remote_label: 'ChatGPT remote',
-    remote_hint: 'Use it from the ChatGPT app. One at a time: this stops the previous one', options: [
+    remote_hint: 'Use this session from the ChatGPT app, one session at a time', options: [
       { key: 'sandbox', label: 'Sandbox', choices: [DEFAULT, ['read-only', 'Read only'],
         ['workspace-write', 'Write in the folder']] },
       { key: 'approval', label: 'Ask before running commands', choices: [DEFAULT,

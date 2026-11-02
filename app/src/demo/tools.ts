@@ -23,8 +23,7 @@ const AGENTS: AgentInfo[] = [
     { key: 'mode', label: 'Permission mode', choices: [['', 'Default'], ['acceptEdits', 'Accept edits'],
       ['plan', 'Plan only'], ['auto', 'Auto']] },
     { key: 'effort', label: 'Effort', choices: EFFORT }]),
-  agent('codex', 'ChatGPT', 'codex', ['ChatGPT remote', 'Use it from the ChatGPT app. One at a time: this stops the '
-    + 'previous one'], [
+  agent('codex', 'ChatGPT', 'codex', ['ChatGPT remote', 'Use this session from the ChatGPT app, one session at a time'], [
     { key: 'sandbox', label: 'Sandbox', choices: [['', 'Default'], ['read-only', 'Read only'],
       ['workspace-write', 'Write in the folder']] },
     { key: 'effort', label: 'Reasoning effort', choices: EFFORT.slice(0, 5) }]),

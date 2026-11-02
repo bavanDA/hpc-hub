@@ -220,7 +220,7 @@ export function SettingsDialog({ cluster, hint, onClose, start = '', advanced = 
         <Row label="Protocol" value={v.protocol ?? 'anyconnect'} opens onPress={() => choose('Protocol',
           v.protocol ?? 'anyconnect', (info?.protocols ?? [v.protocol ?? 'anyconnect']).map((p) => [p, p]),
           (protocol) => upVpn({ protocol }))} />
-        <ToggleRow label="Split tunnel" sub="Only these networks and domains use this VPN, so other VPNs can run too."
+        <ToggleRow label="Split tunnel" sub="Only the domains and networks below go through this VPN."
           checked={v.split_tunnel ?? true} onChange={(split_tunnel) => upVpn({ split_tunnel })} />
       </List></div>
       <div className="px-5 pt-3">
