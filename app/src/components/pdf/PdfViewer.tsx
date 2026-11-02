@@ -210,7 +210,7 @@ export default function PdfViewer({ data, memory, compact, zoom: start = 'page-w
     }
     const redraw = () => draw(false)
     const off = reader?.onWord(() => draw(true))
-    if (reader) reader.pageNow = () => me.viewer.currentPageNumber || 1
+    reader?.watchPage(() => me.viewer.currentPageNumber || 1)
     me.bus.on('pagerendered', redraw)
     const mine = () => { scrolled = Date.now() }
 
@@ -233,7 +233,13 @@ export default function PdfViewer({ data, memory, compact, zoom: start = 'page-w
       const target = e.target
       clearTimeout(hold)
       hold = window.setTimeout(() => {
-        if (pick(at.x, at.y, target, true)) { held = Date.now(); window.getSelection()?.removeAllRanges() }
+        if (!pick(at.x, at.y, target, true)) return
+        held = Date.now()
+        window.getSelection()?.removeAllRanges()
+        // lifting the finger may still click, now on what the hold opened: that click is not meant
+        const swallow = (c: MouseEvent) => { c.stopPropagation(); c.preventDefault() }
+        window.addEventListener('click', swallow, { capture: true, once: true })
+        setTimeout(() => window.removeEventListener('click', swallow, { capture: true }), 1500)
       }, 500)
     }
     const move = (e: PointerEvent) => { if (Math.hypot(e.clientX - at.x, e.clientY - at.y) > 10) clearTimeout(hold) }

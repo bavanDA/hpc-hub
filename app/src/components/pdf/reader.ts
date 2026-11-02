@@ -73,9 +73,8 @@ export class Reader {
   source: Source | null = null
   words = new Map<number, Box>()
   current: number | null = null
-  /** the page in view, set by the viewer: reading starts there */
-  pageNow: () => number = () => 1
   private snap: Snapshot
+  private pageNow: () => number = () => 1  // the page in view: reading starts there
   private listeners = new Set<() => void>()
   private wordListeners = new Set<(id: number | null) => void>()
   private byPage = new Map<number, number[]>()
@@ -108,6 +107,8 @@ export class Reader {
     this.listeners.forEach((f) => f())
   }
   get ready() { return !!this.audio }
+  /** The viewer says how to find the page you are looking at. */
+  watchPage(fn: () => number) { this.pageNow = fn }
 
   // -- what the PDF is --------------------------------------------------------------------------------------------
   setSource(s: Source | null) {
