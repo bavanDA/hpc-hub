@@ -68,8 +68,8 @@ function ProfileRows({ cluster, p, onChange, extra, rows = 'all' }:
   const { gpus, known } = useGpus(cluster)
   return <>
     {rows !== 'more' && <>
-      <SpinRow label="CPU cores" value={p.cpus} onChange={(cpus) => set({ cpus })} min={1} max={512} />
-      <SpinRow label="Memory (GB)" value={p.mem_gb} onChange={(mem_gb) => set({ mem_gb })} min={1} max={4096} />
+      <SpinRow label="Cores" value={p.cpus} onChange={(cpus) => set({ cpus })} min={1} max={512} />
+      <SpinRow label="Memory" unit="GB" value={p.mem_gb} onChange={(mem_gb) => set({ mem_gb })} min={1} max={4096} />
       <Duration total={minutes(p.time) ?? 240} onChange={(m) => set({ time: slurmTime(m) })} limits={limits} />
       <div className="px-4 pt-3 text-sm font-semibold text-dim">GPU</div>
       <GpuPicker gpus={gpus} known={known} value={p} onChange={onChange} />
@@ -83,7 +83,7 @@ function ProfileRows({ cluster, p, onChange, extra, rows = 'all' }:
 function More({ p, set, limits, extra }:
   { p: Profile; set: (c: Partial<Profile>) => void; limits: Limits | null; extra: string }) {
   return <>
-    <EntryRow label="Account" value={p.account ?? ''} onChange={(account) => set({ account })} />
+    <EntryRow label="Group to bill" value={p.account ?? ''} onChange={(account) => set({ account })} />
     <EntryRow label="Billing" value={p.qos ?? ''} onChange={(qos) => set({ qos })} list={limits?.qos}
       placeholder={limits?.default_qos} />
     <EntryRow label={extra} value={p.extra_args ?? ''} onChange={(extra_args) => set({ extra_args })}
@@ -286,7 +286,7 @@ export function SettingsDialog({ cluster, hint, onClose, start = 'login', advanc
       <SwitchRow label="Get a compute node when I connect" checked={d.request_node_on_connect ?? true}
         onChange={(request_node_on_connect) => up({ request_node_on_connect })} />
       {(d.request_node_on_connect ?? true) && (
-        <SwitchRow label="Review these before each request" checked={d.ask_node ?? false}
+        <SwitchRow label="Ask before each request" checked={d.ask_node ?? false}
           onChange={(ask_node) => up({ ask_node })} />
       )}
       <SwitchRow label="Reuse a node you already have" checked={d.reuse_running_job ?? true}

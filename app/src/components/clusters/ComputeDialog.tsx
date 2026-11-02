@@ -153,8 +153,8 @@ export function ComputeDialog({ cluster: c, onClose, saveOnly = false }:
         })}
       </div>
       <Group title="Size">
-        <SpinRow label="CPU cores" value={p.cpus} onChange={(v) => set({ cpus: v })} min={1} max={512} />
-        <SpinRow label="Memory (GB)" value={p.mem_gb} onChange={(v) => set({ mem_gb: v })} min={1} max={4096} />
+        <SpinRow label="Cores" value={p.cpus} onChange={(v) => set({ cpus: v })} min={1} max={512} />
+        <SpinRow label="Memory" unit="GB" value={p.mem_gb} onChange={(v) => set({ mem_gb: v })} min={1} max={4096} />
       </Group>
       <Group title="GPU">
         <GpuPicker gpus={gpus} value={p} onChange={setP} />

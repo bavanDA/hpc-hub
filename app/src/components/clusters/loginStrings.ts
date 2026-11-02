@@ -51,7 +51,7 @@ export const S = {
   "USE_PASSWORD": "Use a password instead",
   "USE_KEY": "Use an SSH key instead",
   "TEST": {
-    "ok": "You're in.",
+    "ok": "Signed in.",
     "not_yet": "{who} hasn't picked up your key yet. It can take up to 10 minutes.",
     "no_vpn": "{who} is only reachable on the VPN, and you're not on it right now.",
     "unreachable": "Can't get through to {who} from this network.",

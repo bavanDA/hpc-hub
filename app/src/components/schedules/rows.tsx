@@ -10,8 +10,11 @@ import { Term } from '../Term'
 export function DaysRow({ names, days, onChange }: { names: string[]; days: number[]; onChange: (d: number[]) => void }) {
   const flip = (d: number) => onChange(days.includes(d) ? days.filter((x) => x !== d) : [...days, d].sort())
   return (
-    <ActionRow label="Days" sub="None picked means every day">
+    <ActionRow label="Days">
       <div className="flex overflow-hidden rounded-md">
+        <button type="button" aria-pressed={!days.length} onClick={() => onChange([])}
+          className={`h-9 px-3 text-base font-semibold transition-colors duration-90 border-r border-line ${
+            !days.length ? 'bg-accent text-white' : 'bg-pill hover:bg-selected'}`}>Every day</button>
         {names.map((n, i) => (
           <button key={n} type="button" aria-pressed={days.includes(i + 1)} title={n} onClick={() => flip(i + 1)}
             className={`h-9 w-10 text-base font-semibold transition-colors duration-90 ${i ? 'border-l border-line' : ''} ${
@@ -66,8 +69,8 @@ export function ComputeRows({ cluster, value, limits, onChange }:
   const asProfile = { ...value, time: '' } as Profile
   return (
     <>
-      <SpinRow label="CPU cores" value={value.cpus} onChange={(cpus) => set({ cpus })} min={1} max={512} />
-      <SpinRow label="Memory (GB)" value={value.mem_gb} onChange={(mem_gb) => set({ mem_gb })} min={1} max={4096} />
+      <SpinRow label="Cores" value={value.cpus} onChange={(cpus) => set({ cpus })} min={1} max={512} />
+      <SpinRow label="Memory" unit="GB" value={value.mem_gb} onChange={(mem_gb) => set({ mem_gb })} min={1} max={4096} />
       <div className="px-4 pt-3 text-sm font-semibold text-dim">GPU</div>
       <GpuPicker gpus={gpus} value={asProfile}
         onChange={(p) => set({ gpus: p.gpus ?? 0, gpu_type: p.gpu_type ?? '', partition: p.partition })} />

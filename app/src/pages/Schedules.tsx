@@ -77,7 +77,7 @@ export function Schedules() {
           onEdit={() => isBackupCheck(st) ? goPage('backup', { cluster }) : setOpen({ kind: 'edit', st })} onDelete={() => setOpen({ kind: 'delete', st })} />)}
       </List>
       <p className="px-1 text-sm text-dim">
-        Runs at the set time, even with your laptop off. Answers are saved in its logs folder.</p>
+        Runs at the set time, even with your laptop off.</p>
     </>
   )
 

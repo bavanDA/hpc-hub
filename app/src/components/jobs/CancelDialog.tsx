@@ -44,7 +44,7 @@ export function CancelDialog({ cluster, job: j, appJob, onClose, onDone }: {
   if (appNode && running) return (
     <AlertDialog title={`Release node ${j.where}?`} keep="Keep it" act="Release node" onAct={confirm}
       onClose={onClose}>
-      <p>Job {j.job_id} ends and the node goes back to the cluster. Anything running there stops.</p>
+      <p>Anything running on it stops.</p>
       {inside && inside.sessions.length > 0 && <p>These stop too: {inside.sessions.join(', ')}.</p>}
     </AlertDialog>
   )

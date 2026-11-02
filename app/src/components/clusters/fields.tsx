@@ -73,9 +73,14 @@ export function NumberBox({ value, onChange, min, max, label, width = 56 }:
   )
 }
 
-export function SpinRow({ label, sub, value, onChange, min, max }:
-  { label: string; sub?: string; value: number; onChange: (v: number) => void; min: number; max: number }) {
-  return <RowBox label={label} sub={sub}><NumberBox {...{ value, onChange, min, max, label }} /></RowBox>
+export function SpinRow({ label, sub, unit, value, onChange, min, max }:
+  { label: string; sub?: string; unit?: string; value: number; onChange: (v: number) => void; min: number; max: number }) {
+  return (
+    <RowBox label={label} sub={sub}>
+      <NumberBox {...{ value, onChange, min, max, label: unit ? `${label} in ${unit}` : label }} />
+      {unit && <span className="pl-2 text-dim">{unit}</span>}
+    </RowBox>
+  )
 }
 
 export function Toggle({ checked, onChange, label }:

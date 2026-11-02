@@ -15,8 +15,8 @@ function Summary({ a }: { a: Account | null }) {
   return (
     <Card className="flex flex-col gap-3 p-4">
       {a.quota > 0
-        ? <p className="text-2xl font-bold tabular-nums">{n(Math.max(0, a.quota - a.used))} <Term name="su">SU</Term> left</p>
-        : <p className="text-2xl font-bold tabular-nums">{n(a.used)} <Term name="su">SU</Term> used{span}</p>}
+        ? <p className="text-2xl font-bold tabular-nums">{n(Math.max(0, a.quota - a.used))} <Term name="su">hours left (SU)</Term></p>
+        : <p className="text-2xl font-bold tabular-nums">{n(a.used)} <Term name="su">hours used (SU)</Term>{span}</p>}
       <p className="text-dim">
         {a.quota > 0
           ? `${a.account} used ${n(a.used)} of ${n(a.quota)} (${pct(a.used, a.quota)})${span}. You used ${n(a.mine)} of it.`
@@ -38,11 +38,11 @@ export function SuTab({ account, people, error, loading, period, onPerson }: {
   const total = all.reduce((s, p) => s + p.charged, 0)
   const hours = all.reduce((s, p) => s + p.hours, 0)
   const note = error ? `Could not load: ${error}` : !people ? `${period}. Loading…`
-    : `${n(total)} SU across ${n(hours)} core hours, free queues included. Click a person to see their jobs.`
+    : `${n(total)} SU across ${n(hours)} core hours, free queues included.`
 
   return (
     <>
-      <Section title="Account"><Summary a={account} /></Section>
+      <Section title="Group"><Summary a={account} /></Section>
       {account && (
         <Section title={`Who used it, ${period.toLowerCase()}`} note={<span className="inline-flex items-center gap-2">
           {loading && people && <Spinner size={14} />}{note}</span>}>

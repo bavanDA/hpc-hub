@@ -15,7 +15,7 @@ import type { Account, Partition, People, Storage } from '../types/usage'
 
 const PERIODS = [['7', 'Last 7 days'], ['30', 'Last 30 days'], ['90', 'Last 90 days'], ['365', 'Last year']] as const
 type Tab = 'su' | 'storage' | 'load'
-const TABS = [['su', 'SU', Coins], ['storage', 'Storage', HardDrive], ['load', 'Load', Cpu]] as const
+const TABS = [['su', 'Hours', Coins], ['storage', 'Storage', HardDrive], ['load', 'Load', Cpu]] as const
 
 export function Usage() {
   const { clusters, cluster, session, connected, error: clustersError } = useClusters()
@@ -62,7 +62,7 @@ export function Usage() {
   return (
     <div className="flex h-full flex-col">
       {!off && <div className="flex shrink-0 items-center gap-2 p-3">
-        {tab !== 'load' && <Select label="Account" value={name} onChange={setPick} disabled={!list.length}
+        {tab !== 'load' && <Select label="Group to bill" value={name} onChange={setPick} disabled={!list.length}
           options={list.length ? list.map((a) => [a.account, a.account] as const) : [['', '(no account)'] as const]} />}
         {tab === 'su' && <Select label="Period" value={days} onChange={setDays} options={PERIODS} />}
         <div className="flex flex-1 justify-center">

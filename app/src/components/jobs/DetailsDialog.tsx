@@ -22,7 +22,7 @@ export function DetailsDialog({ cluster, job: j, onClose, onCancel }:
   }, [cluster, j.job_id])
 
   const groups: DetailGroup[] = (details?.groups ?? []).map((g) => g.title === 'Resources' && j.su
-    ? { ...g, rows: [...g.rows, { label: 'SU', value: j.su }] } : g)
+    ? { ...g, rows: [...g.rows, { label: 'Hours (SU)', value: j.su }] } : g)
   const copy = (v: string) => navigator.clipboard.writeText(v).then(() => toast('Path copied'), () => {})
   // the output file in the Code page, to read; while the job runs it follows the file as it grows
   const view = (path: string) => {

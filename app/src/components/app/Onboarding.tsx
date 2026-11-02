@@ -227,8 +227,8 @@ function NodeStep({ cluster: c, onNext, last }: { cluster: Cluster; onNext: () =
             ) : (
               <div className="-mx-5 -my-4">
                 <List>
-                  <SpinRow label="CPU cores" value={p.cpus} onChange={(cpus) => set({ cpus })} min={1} max={512} />
-                  <SpinRow label="Memory (GB)" value={p.mem_gb} onChange={(mem_gb) => set({ mem_gb })} min={1} max={4096} />
+                  <SpinRow label="Cores" value={p.cpus} onChange={(cpus) => set({ cpus })} min={1} max={512} />
+                  <SpinRow label="Memory" unit="GB" value={p.mem_gb} onChange={(mem_gb) => set({ mem_gb })} min={1} max={4096} />
                   <Duration total={minutes(p.time) ?? 240} onChange={(m) => set({ time: slurmTime(m) })} limits={null} />
                   {c.profile.partition && <EntryRow label="Queue" value={p.partition}
                     onChange={(partition) => set({ partition })} />}
@@ -238,7 +238,7 @@ function NodeStep({ cluster: c, onNext, last }: { cluster: Cluster; onNext: () =
             <label className="mt-4 flex cursor-pointer items-center gap-2.5 text-base">
               <input type="checkbox" checked={ask} onChange={(e) => setAsk(e.target.checked)}
                 className="size-4 accent-[var(--color-accent)]" />
-              Review these before each request
+              Ask before each request
             </label>
           </div>
         )}

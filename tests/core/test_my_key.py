@@ -91,7 +91,7 @@ def test_verdict(output, code, reason, kind):
 
 
 def test_sentences():
-    assert my_key.Result("ok", "Yale").text == "You're in."
+    assert my_key.Result("ok", "Yale").text == "Signed in."
     assert my_key.Result("not_yet", "Yale").text.startswith("Yale hasn't picked up your key yet.")
     assert my_key.verdict("No route to host", 255, "Yale", True).text.startswith("Yale is only reachable on the VPN")
     last = "kex_exchange_identification: read: Connection reset by peer"

@@ -17,7 +17,7 @@ const COLUMNS: Column[] = [
   { key: 'state', title: 'State' },
   { key: 'time', title: 'Time used' },
   { key: 'res', title: 'CPUs · memory', right: true, hide: '@max-[1180px]:hidden' },
-  { key: 'su', title: 'SU', right: true, hide: '@max-[1000px]:hidden' },
+  { key: 'su', title: 'Hours (SU)', right: true, hide: '@max-[1000px]:hidden' },
   { key: 'where', title: 'Node or reason', hide: '@max-[640px]:hidden' },
 ]
 

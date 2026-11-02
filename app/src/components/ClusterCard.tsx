@@ -166,7 +166,7 @@ export function ClusterCard({ cluster: c, session: s, log }: { cluster: Cluster;
       {open === 'phone' && <PairPhoneDialog only={[c.id]} onClose={() => setOpen(null)} />}
       {open === 'release' && a && <AlertDialog title={`Release node ${a.node}?`} keep="Keep it" act="Release node"
         onAct={() => { setOpen(null); run('clusters.release_node') }} onClose={() => setOpen(null)}>
-        <p>Job {a.job} ends and the node goes back to the cluster. Anything running there stops.</p>
+        <p>Anything running on it stops.</p>
         <p>You stay connected, and your files stay where they are.</p>
       </AlertDialog>}
       {open && typeof open === 'object' && (

@@ -71,9 +71,9 @@ const PILL_KIND: Record<PillKind, 'success' | 'info' | 'warning' | 'danger' | 'n
   ok: 'success', warn: 'warning', bad: 'danger', dim: 'neutral',
 }
 const PILL: Record<string, { box: string; dot: string }> = {
-  success: { box: 'bg-ok-bg text-ok', dot: 'bg-ok-dot' },
-  info: { box: 'bg-accent-soft text-accent-text', dot: 'bg-accent dot-pulse' },
-  warning: { box: 'bg-warn-bg text-warn', dot: 'bg-warn-dot' },
+  success: { box: 'bg-pill text-text', dot: 'bg-current' },
+  info: { box: 'bg-pill text-text', dot: 'bg-current dot-pulse' },
+  warning: { box: 'bg-pill text-dim', dot: 'bg-current' },
   danger: { box: 'bg-bad-bg text-bad', dot: 'bg-bad-dot' },
   neutral: { box: 'bg-pill text-dim', dot: 'border-[1.5px] border-current' },
 }

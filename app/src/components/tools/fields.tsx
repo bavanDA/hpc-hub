@@ -99,9 +99,9 @@ export function ComputeGroup({ cluster, value, onChange, disabled = false, descr
   return (
     <div className={disabled ? 'pointer-events-none opacity-50' : ''} aria-disabled={disabled}>
       <Group title={title} description={description}>
-        <ActionRow label="CPU cores"><NumberBox label="CPU cores" value={value.cpus} min={1} max={512}
+        <ActionRow label="Cores"><NumberBox label="Cores" value={value.cpus} min={1} max={512}
           onChange={(cpus) => set({ cpus })} /></ActionRow>
-        <ActionRow label="Memory (GB)"><NumberBox label="Memory (GB)" value={value.mem_gb} min={1} max={4096}
+        <ActionRow label="Memory"><NumberBox label="Memory in GB" value={value.mem_gb} min={1} max={4096}
           onChange={(mem_gb) => set({ mem_gb })} /></ActionRow>
         <div className="px-4 pt-3 text-sm font-semibold text-dim">GPU</div>
         <GpuPicker gpus={gpus} value={value} onChange={onChange} />

@@ -3,7 +3,11 @@ import type { Job } from '../../types/jobs'
 import type { Account } from '../../types/usage'
 
 /** "Running", "Out of memory" for Slurm's RUNNING, OUT_OF_MEMORY. */
-export const stateName = (s: string) => s.charAt(0) + s.slice(1).toLowerCase().replaceAll('_', ' ')
+const WORDS: Record<string, string> = {
+  PENDING: 'Waiting', TIMEOUT: 'Out of time', OUT_OF_MEMORY: 'Out of memory', NODE_FAIL: 'Node failed',
+  PREEMPTED: 'Stopped for another job',
+}
+export const stateName = (s: string) => WORDS[s] ?? s.charAt(0) + s.slice(1).toLowerCase().replaceAll('_', ' ')
 
 export const queue = (j: Job) => [j.partition, j.qos].filter(Boolean).join(' · ')
 

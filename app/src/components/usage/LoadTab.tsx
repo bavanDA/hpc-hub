@@ -9,7 +9,7 @@ export function LoadTab({ parts, error }: { name?: string; parts: Partition[] | 
   const total = (parts ?? []).reduce((s, p) => s + p.cpus_total, 0)
   const gpus = (parts ?? []).some((p) => p.gpus_total)
   const note = error ? `Could not load: ${error}` : !parts ? 'Loading…'
-    : `${n(busy)} of ${n(total)} CPUs busy (${pct(busy, total)}). Many jobs waiting means a long queue.`
+    : `${n(busy)} of ${n(total)} CPUs busy (${pct(busy, total)}).`
   return (
     <Section title="Queues" note={note}>
       {parts && parts.length > 0 && (
