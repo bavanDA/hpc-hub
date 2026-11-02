@@ -1,6 +1,6 @@
 // One LaTeX project, like Overleaf: files on the left, the editor, and the PDF with its logs on the right.
 // Saves go to the cluster; Recompile runs latexmk there; double-clicks jump between the PDF and the source.
-import { ArrowRight, Columns2, FileText, PanelLeft, ScrollText, X } from 'lucide-react'
+import { ArrowRight, Columns2, FileText, FolderOpen, PanelLeft, ScrollText, X } from 'lucide-react'
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 
 import { useEvent } from '../../hooks'
@@ -13,6 +13,7 @@ import { PdfDialog } from '../pdf/PdfDialog'
 import { readFile } from '../pdf/load'
 import { ReadablePdf } from '../pdf/ReadAloud'
 import { useToast } from '../toast'
+import { OpenDialog } from '../tools/OpenDialog'
 import { Spinner } from '../ui'
 import { basename, ext, IMAGE_EXT, rel, Split, TEXT_EXT } from './bits'
 import { BuildButton } from './BuildButton'
@@ -56,6 +57,7 @@ export function Project({ project, onClose }: { project: Opened; onClose: () => 
   const [target, setTarget] = useState<PdfTarget | null>(null)
   const [dialog, setDialog] = useState<ReactNode>(null)
   const [cites, setCites] = useState<string[]>([])
+  const [openIn, setOpenIn] = useState(false)
   const editor = useRef<EditorHandle | null>(null)
   const text = useRef('')
   const docRef = useRef(doc)
@@ -330,6 +332,9 @@ export function Project({ project, onClose }: { project: Opened; onClose: () => 
             onBuild={build} />
           <GitMenu where={where} before={save} onPulled={() => { refresh(); if (doc) load(doc.path,
             editor.current?.line()) }} />
+          <button onClick={() => setOpenIn(true)} title="Open the folder in Code, VS Code, an agent and more"
+            className="flex h-8 items-center gap-1.5 rounded-md px-2.5 text-sm font-semibold hover:bg-hover">
+            <FolderOpen size={16} /> Open</button>
           <button onClick={async () => { if (await save()) onClose() }} aria-label="Close project"
             title="Close project" className="grid size-8 place-items-center rounded-md hover:bg-hover"><X size={16} /></button>
         </div>
@@ -342,6 +347,8 @@ export function Project({ project, onClose }: { project: Opened; onClose: () => 
           left={editorPane} right={pdfPane} />
       </div>
       {dialog}
+      {openIn && <OpenDialog name={project.name} cluster={cluster} clusterName={project.cluster_name} folder={folder}
+        onClose={() => setOpenIn(false)} />}
     </div>
   )
 }
