@@ -2,6 +2,7 @@
 (it can hold API keys): saving reads it again on the cluster and changes only our keys."""
 
 import base64
+import re
 import secrets
 import shutil
 import subprocess
@@ -14,6 +15,28 @@ from ..server import method
 _setups: dict[str, tuple[str, str]] = {}  # setup id: (cluster, secret), until the lock is on the cluster
 
 
+_EVENTS = ((r"ok \S+ \(open (\d+) min\)", "Code accepted, open for {} min"), (r"ok \S+", "Code accepted"),
+           (r"wrong code (\d+) of (\d+) in \S+", "Wrong code, {} of {}"), (r"locked: stopping Claude", "Locked, Claude stopped"),
+           (r"locked by hand", "Locked"), (r"set up", "Lock turned on"), (r"set .*", "Lock settings changed"),
+           (r"reset", "Unlocked"))
+_MONTHS = "Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec".split()
+
+
+def activity(line: str) -> str:
+    """A lock log line in words: "2026-10-24 09:12:03 ok main (open 10 min)" -> "Oct 24, 09:12 · Code accepted, open
+    for 10 min"."""
+    m = re.match(r"(\d{4})-(\d\d)-(\d\d) (\d\d:\d\d)(?::\d\d)? (.*)", line)
+    if not m:
+        return line
+    _, month, day, clock, what = m.groups()
+    for pattern, words in _EVENTS:
+        e = re.fullmatch(pattern, what)
+        if e:
+            what = words.format(*e.groups())
+            break
+    return f"{_MONTHS[int(month) - 1]} {int(day)}, {clock} · {what}"
+
+
 def _json(name: str, p: permissions.Permissions, lock_status: dict) -> dict:
     implied = {"trash"} if p.trash else set()  # saved with the trash switch, not a command you ticked
     return {"name": name, "allowed": sorted(p.allowed - implied), "custom": [c for c in p.custom if c not in implied],
@@ -23,7 +46,7 @@ def _json(name: str, p: permissions.Permissions, lock_status: dict) -> dict:
             "asks": [{"key": k, "label": label, "hint": COMMANDS[k]} for k, label in ASKS],
             "lock": {"set_up": bool(lock_status.get("set_up")), "locked": bool(lock_status.get("locked")),
                      "config": lock_status.get("config") or {}, "open": lock_status.get("open", 0),
-                     "log": list(reversed((lock_status.get("log") or [])[-10:]))}}
+                     "log": [activity(x) for x in reversed((lock_status.get("log") or [])[-10:])]}}
 
 
 @method("permissions.get")

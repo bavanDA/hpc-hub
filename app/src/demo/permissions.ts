@@ -29,8 +29,8 @@ const perms: Record<string, ClaudePermissions> = {
     'conda', 'apptainer'], custom: ['apptainer', 'conda'], trash: true, ask: ['force_push', 'scancel'],
   accept_edits: true, groups, asks, lock: { set_up: true, locked: false, open: 1,
     config: { minutes: 10, tries: 3, logout: true, scancel: true },
-    log: ['2026-10-24 09:12 code ok, session open for 10 min', '2026-10-23 18:40 wrong code (1 of 3)',
-      '2026-10-23 18:41 code ok, session open for 10 min', '2026-10-22 11:05 lock set up'] } },
+    log: ['Oct 24, 09:12 · Code accepted, open for 10 min', 'Oct 23, 18:41 · Code accepted, open for 10 min',
+      'Oct 23, 18:40 · Wrong code, 1 of 3', 'Oct 22, 11:05 · Lock turned on'] } },
   yale: { name: 'Yale Bouchet', allowed: groups[0].commands.concat(groups[5].commands), custom: [], trash: true,
     ask: ['discard', 'force_push', 'scancel'], accept_edits: false, groups, asks, lock: noLock },
 }
