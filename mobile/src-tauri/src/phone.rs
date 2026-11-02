@@ -10,14 +10,23 @@ use tauri::{AppHandle, Manager, Runtime};
 struct Files<R: Runtime>(tauri::plugin::PluginHandle<R>);
 struct KeepAlive<R: Runtime>(tauri::plugin::PluginHandle<R>);
 
+// One Tauri plugin per Kotlin plugin: Android keeps one Kotlin plugin per name, so a second one under the same
+// name would take the first one's place.
 pub fn init<R: Runtime>() -> TauriPlugin<R> {
     Builder::new("phone")
         .setup(|_app, _api| {
             #[cfg(target_os = "android")]
-            {
-                _app.manage(Files(_api.register_android_plugin("io.github.bavanda.hpchub", "FilesPlugin")?));
-                _app.manage(KeepAlive(_api.register_android_plugin("io.github.bavanda.hpchub", "KeepAlivePlugin")?));
-            }
+            _app.manage(Files(_api.register_android_plugin("io.github.bavanda.hpchub", "FilesPlugin")?));
+            Ok(())
+        })
+        .build()
+}
+
+pub fn keep_alive_init<R: Runtime>() -> TauriPlugin<R> {
+    Builder::new("keepalive")
+        .setup(|_app, _api| {
+            #[cfg(target_os = "android")]
+            _app.manage(KeepAlive(_api.register_android_plugin("io.github.bavanda.hpchub", "KeepAlivePlugin")?));
             Ok(())
         })
         .build()

@@ -20,6 +20,7 @@ pub fn run() {
         .plugin(duo::init())
         .plugin(websignin::init())
         .plugin(phone::init())
+        .plugin(phone::keep_alive_init())
         .setup(|app| {
             let backend = backend::start(app.handle())?;
             app.manage(backend);
