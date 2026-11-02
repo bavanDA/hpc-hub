@@ -31,6 +31,7 @@ export function Tree({ cluster, root, current, onRoot, onOpen, onOther }: {
   const [home, setHome] = useState('')
   const [projects, setProjects] = useState<Project[]>([])
   const [hidden, setHidden] = useState(false)
+  const [typing, setTyping] = useState<string | null>(null)  // the folder path being typed
 
   const load = useCallback((dir: string) => {
     setNodes((n) => ({ ...n, [dir]: { entries: n[dir]?.entries ?? null, error: '' } }))
@@ -134,8 +135,24 @@ export function Tree({ cluster, root, current, onRoot, onOpen, onOther }: {
       <div className="flex h-9 shrink-0 items-center gap-1 px-2">
         <IconButton icon={FolderUp} label="Up one folder" small disabled={!root || root === '/'}
           onClick={() => onRoot(parent(root))} />
-        <span className={`min-w-0 flex-1 truncate text-xs text-dim ${root === home ? '' : 'font-mono'}`}
-          title={root}>{short || '…'}</span>
+        {typing !== null ? (
+          <input autoFocus value={typing} aria-label="Go to folder" spellCheck={false}
+            className="h-7 min-w-0 flex-1 rounded-md border border-line bg-window px-2 font-mono text-xs outline-none
+              focus:border-accent"
+            onChange={(e) => setTyping(e.target.value)} onBlur={() => setTyping(null)}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') setTyping(null)
+              if (e.key !== 'Enter') return
+              const t = typing.trim().replace(/\/+$/, '') || '/'
+              const path = t === '~' ? home : t.startsWith('~/') ? `${home}${t.slice(1)}` : t
+              setTyping(null)
+              if (path && path !== root) onRoot(path)
+            }} />
+        ) : (
+          <button type="button" title="Type a folder to go to" onClick={() => setTyping(root)}
+            className={`h-7 min-w-0 flex-1 truncate rounded-md px-1 text-left text-xs text-dim hover:bg-hover
+              ${root === home ? '' : 'font-mono'}`}>{short || '…'}</button>
+        )}
         <button type="button" onClick={() => setHidden(!hidden)} title="Show files whose name starts with a dot"
           className={`rounded-md px-1.5 text-xs font-semibold ${hidden ? 'bg-selected text-text' : 'text-dim hover:bg-hover'}`}>
           .files</button>
