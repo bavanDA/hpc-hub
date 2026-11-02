@@ -162,8 +162,8 @@ export function ClusterCard({ cluster: c, session: s, log }: { cluster: Cluster;
 
       {tools.dialog}
       {open === 'settings' && <SettingsDialog cluster={c} hint={hint} onClose={() => setOpen(null)} />}
-      {open === 'compute' && <ComputeDialog cluster={c} onClose={() => setOpen(null)} />}
-      {open === 'size' && <ComputeDialog cluster={c} saveOnly onClose={() => setOpen(null)} />}
+      {open === 'compute' && <ComputeDialog cluster={c} mode="request" onClose={() => setOpen(null)} />}
+      {open === 'size' && <ComputeDialog cluster={c} mode="setup" onClose={() => setOpen(null)} />}
       {open === 'phone' && <PairPhoneDialog only={[c.id]} onClose={() => setOpen(null)} />}
       {open === 'release' && a && <AlertDialog title={`Release node ${a.node}?`} keep="Keep it" act="Release node"
         onAct={() => { setOpen(null); run('clusters.release_node') }} onClose={() => setOpen(null)}>
