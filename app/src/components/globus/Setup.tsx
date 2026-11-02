@@ -1,12 +1,13 @@
 // Before Globus works: your app's client id, then a sign-in. Plus the settings dialog behind the gear.
-import { ArrowLeftRight, LogIn } from 'lucide-react'
+import { ArrowLeftRight, LogIn, LogOut, RotateCw } from 'lucide-react'
 import { useState } from 'react'
 
 import { call } from '../../rpc'
 import { shortName } from '../clusters/loginCopy'
 import type { GlobusCluster, GlobusStatus } from '../../types/globus'
 import { useToast } from '../toast'
-import { Button, Dialog, EmptyState, List, Row } from '../ui'
+import { EDialog, Field as EField, List, MainButton, Row, Section } from '../e/ui'
+import { Button, EmptyState } from '../ui'
 import { Field, HELP } from './parts'
 
 function ClientId({ value, onSaved }: { value: string; onSaved: (s: GlobusStatus) => void }) {
@@ -38,56 +39,63 @@ export function SignIn({ onSignIn }: { onSignIn: () => void }) {
   )
 }
 
+/** The gear on Transfers, in style E like the phone's AccountSheet: the account, where each cluster's files are,
+ *  Globus Connect, and under Advanced the client ID of your own Globus app. */
 export function SettingsDialog({ status, onClose, onChange, onSignIn, onChoose }: {
   status: GlobusStatus; onClose: () => void; onChange: (s: GlobusStatus) => void; onSignIn: () => void
   onChoose: (c: GlobusCluster) => void
 }) {
   const toast = useToast()
+  const [advanced, setAdvanced] = useState(false)
+  const [id, setId] = useState(status.client_id)
   const signOut = () => call<GlobusStatus>('globus.logout').then((s) => { toast('Signed out of Globus'); onChange(s) })
     .catch((e: Error) => toast(`Could not sign out: ${e.message}`))
+  const saveId = () => call<GlobusStatus>('globus.set_client', { id: id.trim() })
+    .then((s) => { toast('Client ID saved'); onChange(s); setAdvanced(false) })
+    .catch((e: Error) => toast(`Could not save: ${e.message}`))
   const own = status.clusters.filter((c) => c.personal)
+
+  if (advanced) {
+    return (
+      <EDialog title="Advanced" width={520} onClose={onClose} onBack={() => setAdvanced(false)}
+        actions={<MainButton disabled={!id.trim() || id.trim() === status.client_id} onClick={saveId}>
+          Save client ID</MainButton>}>
+        <div className="px-5">
+          <EField label="Client ID of your Globus app" value={id}
+            onChange={(e) => setId(e.target.value)} />
+          <p className="pt-2 text-sm text-dim">{HELP}</p>
+        </div>
+      </EDialog>
+    )
+  }
   return (
-    <Dialog title="Globus" onClose={onClose} width={560}>
-      <div className="flex flex-col gap-5 pt-1">
-        <section className="flex flex-col gap-2">
-          <h3 className="font-semibold">Account</h3>
-          <p className="text-sm text-dim">{HELP}</p>
-          <ClientId value={status.client_id} onSaved={onChange} />
-          <List>
-            <Row title="Status" subtitle={status.signed_in ? 'Signed in' : 'Not signed in'}
-              suffix={status.signed_in ? <Button kind="destructive" onClick={signOut}>Sign out</Button>
-                : <Button kind="suggested" disabled={!status.client_id} onClick={onSignIn}>
-                  Sign in to Globus</Button>} />
-          </List>
-        </section>
-        <section className={`flex flex-col gap-2 ${status.signed_in ? '' : 'pointer-events-none opacity-50'}`}>
-          <h3 className="font-semibold">Collections</h3>
-          <p className="text-sm text-dim">Pick the Globus collection that holds each cluster's files.</p>
-          <List>
-            {status.clusters.map((c) => (
-              <Row key={c.id} title={c.name}
-                subtitle={c.collection_id ? `${c.collection_name} · ${c.collection_id}` : 'Not set'}
-                suffix={<Button onClick={() => onChoose(c)}>Choose…</Button>} />
-            ))}
-          </List>
-        </section>
-        {own.length > 0 && <section className="flex flex-col gap-2">
-          <h3 className="font-semibold">Globus Connect</h3>
-          <p className="text-sm text-dim">Runs on the login node with your home, project and scratch folders.</p>
-          <List>
-            {own.map((c) => <Row key={c.id} title={c.name} suffix={<RestartButton cluster={c} />} />)}
-          </List>
-        </section>}
-      </div>
-    </Dialog>
+    <EDialog title="Globus" width={520} onClose={onClose} actions={<MainButton onClick={onClose}>Done</MainButton>}>
+      <List>
+        {status.signed_in
+          ? <Row icon={LogOut} label="Sign out of Globus" onPress={signOut} />
+          : <Row icon={LogIn} label="Sign in to Globus" opens onPress={onSignIn} />}
+      </List>
+      {status.signed_in && <Section title="Collections" note="Where Globus finds each cluster's files.">
+        {status.clusters.map((c) => (
+          <Row key={c.id} label={shortName(c)} value={c.collection_id ? c.collection_name : 'Not set'} opens
+            onPress={() => onChoose(c)} />
+        ))}
+      </Section>}
+      {status.signed_in && own.length > 0 && <Section title="Globus Connect"
+        note="Shares your home, project and scratch folders with your own Globus account.">
+        {own.map((c) => <RestartRow key={c.id} cluster={c} />)}
+      </Section>}
+      <Section><Row label="Advanced" sub="Your own Globus app" opens onPress={() => setAdvanced(true)} /></Section>
+    </EDialog>
   )
 }
 
 /** Stop Globus Connect on the cluster and start it again, with every folder you have there now. */
-export function RestartButton({ cluster: c }: { cluster: GlobusCluster }) {
+function RestartRow({ cluster: c }: { cluster: GlobusCluster }) {
   const toast = useToast()
   const [busy, setBusy] = useState(false)
   const restart = () => {
+    if (busy) return
     setBusy(true)
     toast(`Restarting Globus Connect on ${shortName(c)}…`)
     call('globus.start_personal', { cluster: c.id, restart: true })
@@ -95,5 +103,6 @@ export function RestartButton({ cluster: c }: { cluster: GlobusCluster }) {
       .catch((e: Error) => toast(`Could not restart it: ${e.message}`))
       .finally(() => setBusy(false))
   }
-  return <Button disabled={busy} onClick={restart}>{busy ? 'Restarting…' : 'Restart'}</Button>
+  return <Row icon={RotateCw} label={busy ? `Restarting on ${shortName(c)}…` : `Restart on ${shortName(c)}`}
+    onPress={restart} />
 }
