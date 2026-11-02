@@ -29,6 +29,8 @@ android {
     ndkVersion = "27.3.13750724" // the one Python for Android is built with
     // unpacked on install: the backend launcher runs from the native libraries folder
     packaging { jniLibs { useLegacyPackaging = true } }
+    // openconnect and ocproxy (mobile/vpn/build.sh), kept apart: mobile/python/build.sh empties jniLibs
+    sourceSets.getByName("main").jniLibs.srcDir("src/main/vpnLibs")
     buildTypes {
         getByName("debug") {
             manifestPlaceholders["usesCleartextTraffic"] = "true"
