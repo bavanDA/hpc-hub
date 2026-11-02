@@ -95,6 +95,18 @@ def from_docs(cluster_id: str) -> list[Gpu]:
     return options(gres, cluster_id)
 
 
+def amount(tres: str, cluster_id: str = "") -> str:
+    """A job's GPUs from Slurm's TRES ("gres/gpu=2,gres/gpu:a100=2") in words: "2 × A100", "A100, 10 GB slice"."""
+    typed = re.findall(r"gres/gpu:([A-Za-z0-9_.-]+)=(\d+)", tres)
+    plain = re.findall(r"gres/gpu=(\d+)", tres)
+    found = [(t, int(n)) for t, n in typed] or [("", int(n)) for n in plain]
+    out = []
+    for gtype, n in found:
+        name, _, is_slice = describe(gtype, UNTYPED_NAME.get(cluster_id))
+        out.append(name if n == 1 and is_slice else f"{n} × {name}")
+    return ", ".join(out)
+
+
 def gres_arg(gtype: str, count: int) -> str:
     """The Slurm option for count GPUs of a type ("" type: any GPU)."""
     return f"--gres=gpu:{gtype}:{count}" if gtype else f"--gres=gpu:{count}"

@@ -120,7 +120,7 @@ function details({ cluster, job_id }: Record<string, unknown>): JobDetails {
         : '1, the program reported an error']] },
     { title: 'Resources', rows: [
       ['Node', j.state === 'PENDING' ? '' : j.where], ['Cores', j.cpus], ['Memory', j.mem.replace(/G$/, ' GB')],
-      ['GPUs', j.partition === 'gpu' ? '2' : ''], ['Queue', j.partition], ['Billing', j.qos_shown],
+      ['GPU', j.partition === 'gpu' ? '2 × A100' : ''], ['Queue', j.partition], ['Billing', j.qos_shown],
       ['Charged to', 'mygroup']] },
     { title: 'Files', rows: [['Work folder', dir], ['Output', `${dir}/slurm-${j.job_id}.out`]] },
   ].map((g) => ({ title: g.title, rows: g.rows.filter(([, v]) => v).map(([label, value]) => ({ label, value })) }))

@@ -5,6 +5,7 @@ import time
 from dataclasses import asdict
 from datetime import datetime
 
+from ...compute import gpus as gpu_names
 from ...compute import jobs, slurm, usage
 from ...compute.jobs import JobInfo
 from ...connect.session import ClusterSession
@@ -117,7 +118,7 @@ def mem_text(v: str) -> str:
     return f"{mb:.0f} MB"
 
 
-def detail_groups(d: dict[str, str]) -> list[dict]:
+def detail_groups(d: dict[str, str], cluster_id: str = "") -> list[dict]:
     """The few fields people look at, grouped like the GTK dialog, in words; empty ones left out."""
     def get(*keys: str) -> str:
         for k in keys:
@@ -131,7 +132,6 @@ def detail_groups(d: dict[str, str]) -> list[dict]:
         return date_text(v) if v else ""
 
     tres = get("AllocTRES", "ReqTRES")
-    gpus = re.findall(r"gres/gpu(?::[^=,]+)?=(\d+)", tres)
     mem = re.search(r"mem=([^,]+)", tres)
     state, reason = get("JobState", "State"), get("Reason")
     active = state in ("RUNNING", "PENDING")
@@ -154,7 +154,7 @@ def detail_groups(d: dict[str, str]) -> list[dict]:
             ("Node", get("NodeList")),
             ("Cores", get("NumCPUs", "AllocCPUS")),
             ("Memory", mem_text(mem.group(1) if mem else get("ReqMem"))),
-            ("GPUs", str(sum(int(g) for g in gpus)) if gpus else ""),
+            ("GPU", gpu_names.amount(tres, cluster_id)),
             ("Queue", queue),
             ("Billing", "" if qos in ("normal", queue) else qos),
             ("Charged to", get("Account")),
@@ -172,7 +172,7 @@ def detail_groups(d: dict[str, str]) -> list[dict]:
 def details(cluster: str, job_id: str) -> dict:
     """scontrol (or sacct for finished jobs): grouped fields, and the whole text for "All fields"."""
     text = jobs.job_details(hub().connected(cluster).ssh, job_id)
-    return {"groups": detail_groups(jobs.parse_details(text)), "text": text}
+    return {"groups": detail_groups(jobs.parse_details(text), cluster), "text": text}
 
 
 @method("jobs.inside")

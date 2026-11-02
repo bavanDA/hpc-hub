@@ -55,6 +55,13 @@ def test_the_request_names_the_type():
     assert "2 × H100" in ComputeProfile(gpus=2, gpu_type="h100").summary()
 
 
+def test_a_jobs_gpus_have_a_type():
+    assert gpus.amount("cpu=8,mem=64G,gres/gpu=2,gres/gpu:a100=2") == "2 × A100"
+    assert gpus.amount("cpu=4,gres/gpu=1,gres/gpu:a100_10g=1") == "A100, 10 GB slice"
+    assert gpus.amount("cpu=4,gres/gpu=2", "sdsc") == "2 × V100"
+    assert gpus.amount("cpu=4,mem=8G") == ""
+
+
 class Session:
     def __init__(self, cfg, lim=None):
         self.cfg, self.limits = cfg, lim

@@ -35,10 +35,26 @@ export function gpuHint(g: Gpu) {
   return g.slice || g.max_per_job <= 1 ? '' : `Up to ${g.max_per_job} per job`
 }
 
-/** Each GPU's line, left out when they would all say the same. */
+/** Each GPU's line, only where it differs from the usual one ("Up to 8 per job" when the rest allow 4). */
 export function gpuHints(gpus: Gpu[]): string[] {
   const all = gpus.map(gpuHint)
-  return new Set(all.filter(Boolean)).size > 1 ? all : all.map(() => '')
+  const count = new Map<string, number>()
+  all.filter(Boolean).forEach((h) => count.set(h, (count.get(h) ?? 0) + 1))
+  const usual = [...count].sort((a, b) => b[1] - a[1])[0]?.[0]
+  return all.map((h) => (h === usual ? '' : h))
+}
+
+// Names people know for Slurm's GPU types, as in hpc_hub/compute/gpus.py, for rows that have no GPU list at hand.
+const NAMES: Record<string, string> = {
+  a100: 'A100', a100_10g: 'A100, 10 GB slice', a100_20g: 'A100, 20 GB slice', a100_40g: 'A100, 40 GB slice',
+  a100_80gb: 'A100', v100: 'V100', h100: 'H100', h200: 'H200', b200: 'B200', l40s: 'L40S', a40: 'A40',
+  a5000: 'RTX A5000', rtx_5000_ada: 'RTX 5000 Ada', rtx_pro_6000_blackwell: 'RTX PRO 6000 Blackwell',
+}
+
+/** "A100, 10 GB slice", "2 × H100", "2 × V100" (SDSC names none): never a bare count. */
+export function gpuAmount(count: number, type = '', cluster = '') {
+  const name = NAMES[type] ?? (type ? type.replace(/_/g, ' ').toUpperCase() : cluster === 'sdsc' ? 'V100' : 'GPU')
+  return count === 1 && /slice/.test(name) ? name : `${count} × ${name}`
 }
 
 /** The GPU a profile asks for, or null for none. */

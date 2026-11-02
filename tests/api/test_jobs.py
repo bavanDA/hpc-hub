@@ -85,7 +85,7 @@ def test_details(session):
     groups = {g["title"]: {r["label"]: r["value"] for r in g["rows"]} for g in got["groups"]}
     assert groups["Status"] == {"State": "Running", "Run time": "1 h 30 min of 4 h",
                                 "Started": "Oct 19, 17:07", "Ends": "Oct 19, 21:07"}
-    assert groups["Resources"]["Memory"] == "16 GB" and groups["Resources"]["GPUs"] == "2"
+    assert groups["Resources"]["Memory"] == "16 GB" and groups["Resources"]["GPU"] == "2 × A100"
     assert groups["Files"] == {"Work folder": "/home/jdoe/run", "Output": "/home/jdoe/run/out.txt"}
     assert got["text"].startswith("JobId=7")
     with pytest.raises(jobs.SlurmError):

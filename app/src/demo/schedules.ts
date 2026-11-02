@@ -45,7 +45,7 @@ const lists: Record<string, ScheduleStatus[]> = {
     { job_id: '812345', state: 'PENDING', start: '2026-10-26T02:00:00', last_run: ago(9),
       last_log: '/home/jdoe/.hpc-hub/schedules/cleanup-thesis/logs/2026-10-24-0200.md' }),
     status({ ...base, name: 'bugs-solver', agent: 'codex', folder: '~/project/solver', task: presets[1].task,
-      time: '03:30', days: [6, 7], compute: { cpus: 8, mem_gb: 32, gpus: 1, partition: 'gpu' } },
+      time: '03:30', days: [6, 7], compute: { cpus: 8, mem_gb: 32, gpus: 1, gpu_type: 'a100_10g', partition: 'gpu' } },
     { job_id: '812399', state: 'RUNNING', start: '2026-10-24T03:30:00', last_run: ago(30),
       last_log: '/home/jdoe/.hpc-hub/schedules/bugs-solver/logs/2026-10-23-0330.md' }),
     status({ ...base, name: 'jobs-home', agent: 'claude', folder: '~', task: presets[2].task, time: '06:00',
