@@ -52,6 +52,7 @@ export function SettingsDialog({ cluster, hint, onClose, start = '', advanced = 
   const toast = useToast()
   const session = useClusters().sessions[cluster.id]
   const [part, setPart] = useState<Part>(() => firstPart(start, advanced))
+  const [entry] = useState<Part>(part)  // opened straight at a section (the card's Compute node): it saves
   const [d, setD] = useState<Cluster>(cluster)
   const [info, setInfo] = useState<SettingsInfo | null>(null)
   const [saved, setSaved] = useState<Logins | null>(null)
@@ -341,7 +342,7 @@ export function SettingsDialog({ cluster, hint, onClose, start = '', advanced = 
     <>
       <EDialog title={part ? TITLES[part] : `${cluster.name} settings`} width={580} onClose={close}
         onBack={part ? back : undefined}
-        actions={part ? <MainButton onClick={back}>Done</MainButton>
+        actions={part && part !== entry ? <MainButton onClick={back}>Done</MainButton>
           : <MainButton disabled={busy || !saved || !info} onClick={save}>Save</MainButton>}>
         {hint && (part === '' || part === 'login') && <Note>{hint}</Note>}
         {error && <Note error>{error}</Note>}
