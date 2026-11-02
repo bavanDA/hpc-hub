@@ -51,7 +51,8 @@ export function ScanningStep({ scan, onStop, onAgain }: { scan: Scan | null; onS
       {scan?.state === 'scanning' && p.expected ? (
         <div className="flex flex-col gap-1.5">
           <Meter value={share} label="Files checked" />
-          <span className="text-sm text-dim tabular-nums">{count(p.checked ?? 0)} of about {count(p.expected)}</span>
+          <span className="text-sm text-dim tabular-nums">{count(p.checked ?? 0)} of {(p.checked ?? 0) >= p.expected
+            ? '' : 'about '}{count(p.expected)}</span>
         </div>
       ) : null}
       <p className="text-sm text-dim">{start.hint}</p>

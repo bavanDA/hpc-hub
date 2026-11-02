@@ -10,7 +10,7 @@
    "keep": true,
    "files": 14,
    "bytes": 1073741,
-   "why": "Code.",
+   "why": "",
    "by": "rule"
   },
   {
@@ -19,7 +19,7 @@
    "keep": true,
    "files": 1260,
    "bytes": 45097156608,
-   "why": "Results. These are the point of the work.",
+   "why": "",
    "by": "rule"
   },
   {
@@ -28,7 +28,7 @@
    "keep": true,
    "files": 840,
    "bytes": 322122547,
-   "why": "Part of a git repository. It gets copied whole.",
+   "why": "Git repo, copied whole",
    "by": "rule"
   },
   {
@@ -37,7 +37,7 @@
    "keep": true,
    "files": 40,
    "bytes": 2576980377,
-   "why": "Part of a git repository. It gets copied whole.",
+   "why": "Git repo, copied whole",
    "by": "rule"
   },
   {
@@ -46,7 +46,7 @@
    "keep": true,
    "files": 12,
    "bytes": 53687091,
-   "why": "Part of a git repository. It gets copied whole.",
+   "why": "Git repo, copied whole",
    "by": "rule"
   },
   {
@@ -93,7 +93,7 @@
    "keep": false,
    "files": 48210,
    "bytes": 37580963840,
-   "why": "Can be made again: packages, caches and builds.",
+   "why": "Packages, caches and builds",
    "by": "rule"
   }
  ],

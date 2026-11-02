@@ -29,9 +29,8 @@ export function CopyView({ plan, progress, job, onStop }: {
   )
 }
 
-export function DoneView({ cluster, result, onOpen, onWeekly, onAgain, onNewCheck }: {
+export function DoneView({ cluster, result, onOpen, onWeekly, onAgain }: {
   cluster: string; result: CopyResult | null; onOpen: () => void; onWeekly: () => void; onAgain: () => void
-  onNewCheck: () => void
 }) {
   if (!result) return <div className="grid h-40 place-items-center"><Spinner size={20} /></div>
   const busy = result.busy.length
@@ -60,7 +59,6 @@ export function DoneView({ cluster, result, onOpen, onWeekly, onAgain, onNewChec
           {bad ? <Button kind="primary" onClick={onAgain}>{copy.again}</Button>
             : <Button kind="primary" onClick={onOpen}>{copy.open}</Button>}
           <Button onClick={onWeekly}>{copy.weekly}</Button>
-          <Button kind="ghost" onClick={onNewCheck}>{copy.newCheck}</Button>
         </div>
       </Card>
       {partial && (

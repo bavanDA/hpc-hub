@@ -13,6 +13,7 @@ import re
 import shlex
 
 from ..compute import slurm
+from ..compute.jobs import duration_text
 from ..core.config import ComputeProfile
 from .model import Progress, Result
 from .plan import FROM_SCRATCH
@@ -265,7 +266,7 @@ def detail(p: Progress) -> str:
     if p.state == "tried":
         return "Ready"
     if p.state == "copying":
-        left = f", about {max(p.eta_s // 60, 1)} minutes left" if p.eta_s else ""
+        left = f", about {duration_text(max(p.eta_s, 60))} left" if p.eta_s else ""
         return f"{p.done_bytes / gb:.1f} GB done{left}"
     if p.state == "verifying":
         return "Checking every file against the one in scratch"

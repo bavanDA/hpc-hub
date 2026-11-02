@@ -55,7 +55,7 @@ export const start = {
   noTimer: (cluster: string) => `Scratch on ${cluster} has no timer. Nothing here gets deleted by age.`,
   check: 'Check my scratch',
   anyway: 'Copy important work anyway',
-  hint: 'Runs as a small job on a compute node, about 20 minutes. You can close the app.',
+  hint: 'Takes about 20 minutes. You can close the app.',
   agent: 'Let Claude sort the folders the rules can\'t place',
   agentHint: 'It reads names, READMEs and job scripts. It can\'t run anything.',
   last: (when: string) => `Last check ${when}.`,
@@ -81,11 +81,9 @@ export const risk = {
   },
   groups: [[0, 'Could be deleted any day now'], [7, 'Within a week'], [14, 'Within 2 weeks'],
     [Infinity, 'Later']] as const,
-  basis: (cluster: string, p: Purge) => ({
-    oldest: `Days are counted from the dates on each file. ${cluster} does not say which date it uses, so we count `
-      + 'from the oldest one.',
-    created: 'Days are counted from when each file was made. Where the file system does not keep that date, we use '
-      + 'the oldest date on the file.',
+  basis: (_cluster: string, p: Purge) => ({
+    oldest: 'Days are counted from the oldest date on each file.',
+    created: 'Days are counted from when each file was made.',
     mtime: 'Days are counted from when each file last changed.',
     atime: 'Days are counted from when each file was last opened.',
   })[p.basis],
@@ -105,7 +103,7 @@ export const plan = {
   whole: 'Copy whole folders so each one stays complete',
   wholeHint: 'Git repositories are always copied whole.',
   onlySoon: (days: number) => `Only files deleted in the next ${days} days`,
-  onlySoonHint: 'Off: everything important in scratch, also files that are safe for now.',
+  onlySoonHint: 'Everything important in scratch is copied, also files that are safe for now.',
   by: { rule: '', agent: 'Claude', you: 'You' } as Record<string, string>,
   space: 'Check space',
   empty: 'Nothing is kept. Turn on a row to copy it.',
@@ -126,6 +124,7 @@ export const space = {
   files: (adds: number, limit: number, has: number) =>
     `This adds ${count(adds)} files. Project allows ${count(limit)} and has ${count(has)}.`,
   tryFirst: 'Try it first',
+  retry: 'Try again',
   tryHint: 'A trial run lists every file and checks the space. Nothing is copied yet.',
   trying: 'Making the list of files',
   ready: (files: number, bytes: string) => `Ready: ${count(files)} files, ${bytes}.`,
@@ -140,7 +139,7 @@ export const space = {
 
 export const copying = {
   title: (bytes: string) => `Copying ${bytes} to project`,
-  job: (id: string) => `Runs as job ${id}. You can close the app.`,
+  job: (_id: string) => 'You can close the app.',
   stop: 'Stop copying',
   stopTitle: 'Stop the copy?',
   stopText: 'Files copied so far stay in project. Start again later and it goes on from there.',
@@ -170,7 +169,7 @@ export const done = {
 export const reminders = {
   title: 'Reminders',
   weekly: 'Check scratch every week',
-  weeklyHint: 'A small job on the cluster, so it runs with your laptop off.',
+  weeklyHint: 'Runs even with your laptop off.',
   day: 'Day',
   time: 'Time',
   every: (dayName: string, time: string) => `Every ${dayName} at ${time}`,
@@ -186,7 +185,7 @@ export const notices = {
 }
 
 export const banner = {
-  files: (files: number, soonest: number) => `${count(files)} files in scratch will be deleted ${when(soonest)}.`,
+  files: (_files: number, soonest: number) => `Some scratch files go ${when(soonest)}.`,
   see: 'See the plan',
   usage: (days: number) => `Files here are deleted after ${days} days.`,
   usageLink: 'See what is at risk',

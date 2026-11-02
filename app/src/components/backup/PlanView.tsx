@@ -1,19 +1,23 @@
 // The plan on the desktop: what is kept and what is left out, a switch per row with the reason in plain words, the
 // two plan switches, then Check space.
-import { Bot, UserRound } from 'lucide-react'
+import { UserRound } from 'lucide-react'
 
 import type { Plan, PlanItem } from '../../types/backup'
+import { agentIcon } from '../agents/AgentIcon'
 import { Button, Card, Pill, Spinner, Switch } from '../ui'
 import { CLASS, count, gb, plan as copy } from './copy'
 import type { Options } from './useBackup'
 
+const Claude = agentIcon('claude')
+
 export function By({ by }: { by: string }) {
-  if (by === 'agent') return <Pill kind="info" dot={false}><Bot size={12} />{copy.by.agent}</Pill>
+  if (by === 'agent') return <Pill kind="neutral" dot={false}><Claude size={12} />{copy.by.agent}</Pill>
   if (by === 'you') return <Pill kind="neutral" dot={false}><UserRound size={12} />{copy.by.you}</Pill>
   return null
 }
 
-function Item({ i, busy, onToggle }: { i: PlanItem; busy: boolean; onToggle: (keep: boolean) => void }) {
+function Item({ i, busy, why, onToggle }:
+  { i: PlanItem; busy: boolean; why: string; onToggle: (keep: boolean) => void }) {
   return (
     <div className="flex min-h-14 items-center gap-3 px-4 py-2.5">
       <div className="min-w-0 flex-1">
@@ -22,7 +26,7 @@ function Item({ i, busy, onToggle }: { i: PlanItem; busy: boolean; onToggle: (ke
           <span className="text-sm font-semibold">{CLASS[i.kind]}</span>
           <By by={i.by} />
         </div>
-        <div className="text-sm text-dim">{i.why}</div>
+        {why && <div className="text-sm text-dim">{why}</div>}
       </div>
       <span className="w-20 shrink-0 text-right text-sm tabular-nums text-dim">{gb(i.bytes)}</span>
       <Switch on={i.keep} disabled={busy} label={`${i.keep ? copy.leave : copy.keep}: ${i.folder}`}
@@ -43,7 +47,8 @@ export function PlanView({ plan, options, busy, onToggle, onOptions, onNext }: {
         {total && <span className="text-sm text-dim tabular-nums">{total}</span>}
       </div>
       <Card className="divide-y divide-line overflow-hidden">
-        {items.length ? items.map((i) => <Item key={`${i.folder}|${i.kind}`} i={i} busy={busy}
+        {items.length ? items.map((i, n) => <Item key={`${i.folder}|${i.kind}`} i={i} busy={busy}
+          why={n && items[n - 1].folder === i.folder && items[n - 1].why === i.why ? '' : i.why}
           onToggle={(keep) => onToggle(i, keep)} />)
           : <p className="px-4 py-4 text-sm text-dim">{empty}</p>}
       </Card>
@@ -53,7 +58,7 @@ export function PlanView({ plan, options, busy, onToggle, onOptions, onNext }: {
     <div className="flex flex-col gap-6">
       {plan.agent_summary && (
         <p className="flex items-start gap-2 rounded-lg bg-pill p-3 text-md">
-          <Bot size={16} className="mt-1 shrink-0 text-dim" />{plan.agent_summary}
+          <Claude size={16} className="mt-1 shrink-0" />{plan.agent_summary}
         </p>
       )}
       {section(copy.keep, plan.items, copy.empty, `${count(plan.files)} files, ${plan.exact ? '' : 'about '}${gb(plan.bytes)}`)}
@@ -66,7 +71,7 @@ export function PlanView({ plan, options, busy, onToggle, onOptions, onNext }: {
         </label>
         <label className="flex min-h-14 items-center gap-3 px-4 py-2">
           <span className="flex-1"><span className="block">{copy.onlySoon(options.horizon)}</span>
-            <span className="text-sm text-dim">{copy.onlySoonHint}</span></span>
+            {options.everything && <span className="text-sm text-dim">{copy.onlySoonHint}</span>}</span>
           <Switch on={!options.everything} disabled={busy} label={copy.onlySoon(options.horizon)}
             onChange={(on) => onOptions({ everything: !on })} />
         </label>

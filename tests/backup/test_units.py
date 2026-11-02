@@ -219,7 +219,7 @@ def test_progress_and_result():
             "\x1f" + json.dumps({"files": 500, "bytes": 3_000_000_000}) + "\x1f2\x1f")
     p = copy.parse_progress(text)
     assert (p.done_bytes, p.eta_s, p.files_done, p.files_total, p.resubmits) == (1234567890, 754, 120, 500, 2)
-    assert p.detail == "1.1 GB done, about 12 minutes left"
+    assert p.detail == "1.1 GB done, about 12 min left"
     failed = copy.parse_progress("failed\x1f\x1f\x1f\x1fNot enough space.")
     assert failed.state == "failed" and failed.detail == "Not enough space."
     assert copy.parse_result(json.dumps(fixture("result.json"))).mismatches == 0

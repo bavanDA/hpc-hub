@@ -75,7 +75,6 @@ function Flow({ id, name }: { id: string; name: string }) {
           ))}
           {!s.at_risk_files && <p className="text-md text-dim">{riskCopy.nothing}</p>}
           <RiskNotes s={s} name={name} />
-          <p className="text-sm text-dim">{b.policy?.no_tricks.replace('Clusters do not', `${name} does not`)}</p>
           <div className="flex gap-3">
             {s.at_risk_files > 0 || b.options.everything
               ? <Button kind="primary" size="lg" onClick={b.openPlan}>{riskCopy.plan}</Button> : null}
@@ -99,13 +98,13 @@ function Flow({ id, name }: { id: string; name: string }) {
     case 'done':
       body = <DoneView cluster={id} result={b.result}
         onOpen={() => go('files', { cluster: id, path: (b.result?.notes_path ?? '').replace(/\/[^/]*$/, '') })}
-        onWeekly={() => setRemind('on')} onAgain={() => b.setStep('space')} onNewCheck={b.restart} />
+        onWeekly={() => setRemind('on')} onAgain={() => b.setStep('space')} />
       break
   }
   return (
     <div className="h-full overflow-auto">
       <div className="mx-auto max-w-[760px] px-6 pt-6 pb-10">
-        <PageHead title={startCopy.title} subtitle={b.policy ? `${name} · ${b.policy.scratch}` : name}
+        <PageHead title={startCopy.title} subtitle={b.policy?.scratch}
           actions={<Button kind="ghost" onClick={() => setRemind('open')}>
             <BellRing size={16} />{b.reminders?.enabled ? 'Weekly check on' : 'Reminders'}</Button>} />
         <Steps step={b.step} />

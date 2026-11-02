@@ -1,6 +1,7 @@
 // Space and the trial run on the desktop: how much of project the copy uses, warnings, the way out when it does not
 // fit, then Try it first and Copy.
 import { CircleAlert, CircleCheck, Info } from 'lucide-react'
+import { useEffect, useRef } from 'react'
 
 import type { BackupPolicy, Plan, Progress } from '../../types/backup'
 import { Button, Card, Meter, Spinner, Switch } from '../ui'
@@ -28,6 +29,14 @@ export function SpaceView({ plan, policy, options, tried, progress, busy, onLeav
   busy: boolean; onLeaveOut: () => void; onOptions: (o: Partial<Options>) => void; onTry: () => void
   onCopy: () => void; onBack: () => void
 }) {
+  // the trial run starts by itself, once per plan; Try again only after it failed
+  const asked = useRef<Plan | null>(null)
+  const blocked = plan ? !plan.space.fits : true
+  useEffect(() => {
+    if (!plan || busy || blocked || tried === 'yes' || tried === 'running' || asked.current === plan) return
+    asked.current = plan
+    onTry()
+  }, [plan, busy, blocked, tried, onTry])
   if (!plan) return <div className="grid h-40 place-items-center"><Spinner size={20} /></div>
   const f = spaceFacts(plan, policy)
   const s = f.s
@@ -73,15 +82,15 @@ export function SpaceView({ plan, policy, options, tried, progress, busy, onLeav
         </Card>
       ) : trying ? (
         <p className="flex items-center gap-2 text-md text-dim"><Spinner />{progress?.detail || copy.trying}</p>
-      ) : <p className="text-sm text-dim">{copy.tryHint}</p>}
+      ) : null}
 
       <div className="flex flex-wrap items-center gap-3">
         <Button kind="ghost" onClick={onBack}>{copy.back}</Button>
         <span className="flex-1" />
         {ready ? <Button kind="primary" size="lg" disabled={busy || f.blocked} onClick={onCopy}>
           {copy.copy(gb(plan.bytes))}</Button>
-          : <Button kind="primary" size="lg" disabled={busy || trying || f.blocked} onClick={onTry}>
-            {copy.tryFirst}</Button>}
+          : trying || f.blocked ? <Button kind="primary" size="lg" disabled>{copy.copy(gb(plan.bytes))}</Button>
+            : <Button kind="primary" size="lg" disabled={busy} onClick={onTry}>{copy.retry}</Button>}
       </div>
     </div>
   )

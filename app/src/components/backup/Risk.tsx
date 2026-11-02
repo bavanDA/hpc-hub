@@ -1,6 +1,6 @@
 // What the check found: the headline, files grouped by when they go, folder by folder, and the notes about how days
 // are counted. Shared by the desktop page and the phone screen (both render it, the phone in one column).
-import { CircleAlert, Clock, GitBranch } from 'lucide-react'
+import { CircleAlert, GitBranch } from 'lucide-react'
 
 import type { Folder, Summary } from '../../types/backup'
 import { Pill } from '../ui'
@@ -65,8 +65,6 @@ export function RiskNotes({ s, name }: { s: Summary; name: string }) {
       ) : null}
       {s.partial && <p className="flex items-start gap-2 rounded-lg bg-warn-bg p-3 text-sm text-warn">
         <CircleAlert size={16} className="mt-0.5 shrink-0" />{risk.partial}</p>}
-      <p className="flex items-start gap-2 text-sm text-dim"><Clock size={14} className="mt-0.5 shrink-0" />
-        {risk.basis(name, s.purge)}</p>
     </div>
   )
 }

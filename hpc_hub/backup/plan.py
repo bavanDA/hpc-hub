@@ -17,13 +17,9 @@ WARN_PCT = 90
 FROM_SCRATCH = "from-scratch"
 DEST_ONLY = "Copies only go to a from-scratch folder in your project or home space."
 
+# what a row says under its kind; nothing when the kind says it all
 WHY = {
-    "results": "Results. These are the point of the work.",
-    "code": "Code.",
-    "writing": "Writing and notes.",
-    "inputs": "Inputs and settings.",
-    "logs": "Small logs.",
-    "regen": "Can be made again: packages, caches and builds.",
+    "regen": "Packages, caches and builds",
     "checkpoint": "Old checkpoints. The newest one is kept.",
 }
 
@@ -53,7 +49,7 @@ def _numbers(c: dict, scope: str) -> tuple[int, int]:
 def _default(folder: dict, cls: str, files: int, size: int, whole: bool) -> tuple[bool, str, int]:
     """keep, why, how many of the newest to keep anyway"""
     if whole and folder.get("git") and cls not in ("regen",):
-        return True, "Part of a git repository. It gets copied whole.", 0
+        return True, "Git repo, copied whole", 0
     if cls == "checkpoint":
         return False, WHY["checkpoint"], 1
     if cls == "logs" and size > BIG_LOGS:
