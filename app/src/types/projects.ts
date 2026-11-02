@@ -44,4 +44,7 @@ export type Transfer = {
   error: string
 }
 
-export const TEMPLATES = ['Empty', 'LaTeX paper', 'Python'] as const
+/** projects.status: by project path, for git folders only. changed -1: git took too long to count. */
+export type GitStatus = Record<string, { branch: string; changed: number }>
+
+export const TEMPLATES =['Empty', 'LaTeX paper', 'Python'] as const
