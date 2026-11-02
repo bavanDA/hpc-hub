@@ -1,15 +1,14 @@
-// Cancel a job: the desktop's one short question (what you lose: the time it ran, what runs in it, HPC Hub's node),
-// from the bottom of the screen. Keep is the safe choice on the left.
+// Cancel a job: one short question with what you lose (the time it ran, what runs in it), from the bottom of the
+// screen. Keep is the safe choice on the left, the confirm is solid red. HPC Hub's own node gets "Release node".
 import { useEffect, useState } from 'react'
 
-import { ranFor } from '@shared/components/jobs/CancelDialog'
 import { Spinner } from '@shared/components/ui'
 import { call } from '@shared/rpc'
 import type { Inside, Job } from '@shared/types/jobs'
 import { BottomSheet, Button, useToast } from '../ui'
 
-export function CancelSheet({ cluster, job: j, appJob, onClose, onDone }: {
-  cluster: string; job: Job; appJob: string; onClose: () => void; onDone: () => void
+export function CancelSheet({ cluster, job: j, appNode: known, onClose, onDone }: {
+  cluster: string; job: Job; appNode: boolean; onClose: () => void; onDone: () => void
 }) {
   const toast = useToast()
   const [inside, setInside] = useState<Inside | null>(null)
@@ -20,32 +19,44 @@ export function CancelSheet({ cluster, job: j, appJob, onClose, onDone }: {
   }, [cluster, j.job_id])
 
   const running = j.state === 'RUNNING'
-  const appNode = inside?.app_node || appJob === j.job_id
+  const appNode = known || !!inside?.app_node
+  const node = j.where || `job ${j.job_id}`
+  const name = j.name || `job ${j.job_id}`
 
   const confirm = () => {
     onClose()
-    toast(`Cancelling job ${j.job_id}…`)
+    if (appNode) {
+      toast(`Releasing node ${node}…`)
+      call('clusters.release_node', { cluster })
+        .then(() => toast(`Node ${node} is released`))
+        .catch((e: Error) => toast(`Couldn't release node ${node}: ${e.message}`))
+        .finally(onDone)
+      return
+    }
+    toast(`Cancelling ${name}…`)
     call<{ gone: boolean }>('jobs.cancel', { cluster, job_id: j.job_id })
-      .then(({ gone }) => toast(gone ? `Job ${j.job_id} is cancelled`
-        : `Cancel sent. Slurm is still stopping job ${j.job_id}`))
-      .catch((e: Error) => toast(`Couldn't cancel job ${j.job_id}: ${e.message}`))
+      .then(({ gone }) => toast(gone ? `${name} is cancelled` : `${name} is still stopping`))
+      .catch((e: Error) => toast(`Couldn't cancel ${name}: ${e.message}`))
       .finally(onDone)
   }
 
+  const sessions = inside?.sessions.length ? `These stop too: ${inside.sessions.join(', ')}.` : ''
   return (
     <BottomSheet onClose={onClose}>
-      <h2 className="px-1 text-lg font-bold">Cancel {j.name || `job ${j.job_id}`}?</h2>
-      <div className="flex flex-col gap-2 px-1 pt-1 text-dim">
-        <p>{running
-          ? `It has run ${ranFor(j.elapsed)}. Its output so far stays in your folder.`
-          : "It's still waiting in the queue. Nothing has started yet."}</p>
-        {inside && inside.sessions.length > 0 && <p>These stop too: {inside.sessions.join(', ')}.</p>}
-        {appNode && <p>HPC Hub runs your terminals on this node, so you'll be left without one.</p>}
+      <h2 className="text-lg font-semibold">{appNode ? `Release node ${node}?` : `Cancel ${name}?`}</h2>
+      <div className="flex flex-col gap-2 pt-1 text-dim">
+        {appNode
+          ? <p>Anything running on it stops. You stay connected, and your files stay where they are.</p>
+          : <p>{running ? `It has run ${j.elapsed_text || '0 min'}. Its output so far stays in your folder.`
+              : "It's still waiting in the queue. Nothing has started yet."}</p>}
+        {sessions && <p>{sessions}</p>}
         {!inside && <p className="flex items-center gap-2 text-sm"><Spinner size={14} />Checking what runs in it…</p>}
       </div>
-      <div className="mt-4 flex gap-3">
-        <Button className="flex-1" onClick={onClose}>{running ? 'Keep running' : 'Keep waiting'}</Button>
-        <Button kind="danger" className="flex-1" disabled={!inside} onClick={confirm}>Cancel job</Button>
+      <div className="mt-5 flex gap-3">
+        <Button className="flex-1" onClick={onClose}>{appNode ? 'Keep it' : running ? 'Keep running' : 'Keep waiting'}
+        </Button>
+        <Button kind="danger" className="flex-1" disabled={!inside} onClick={confirm}>
+          {appNode ? 'Release node' : 'Cancel job'}</Button>
       </div>
     </BottomSheet>
   )
