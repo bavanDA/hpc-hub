@@ -41,6 +41,13 @@ def test_fit_cuts_time():
     assert p.time == "04:00:00" and not note
 
 
+def test_groups_to_bill_and_their_priorities():
+    L = limits.parse("general*|infinite\n@ASSOC\nmygroup|debug,low,standard|\ndept_x|debug,high_dept_x,normal|\n"
+                     "@USER\nmygroup\n")
+    assert L.account_qos == {"mygroup": ["debug", "low", "standard"], "dept_x": ["debug", "high_dept_x", "normal"]}
+    assert L.default_account == "mygroup" and L.allowed_qos == ["debug", "low", "standard", "high_dept_x", "normal"]
+
+
 def test_biggest_node():
     L = limits.parse("general*|infinite|128|515000\ngeneral*|infinite|64+|256000\ngpu|2-00:00:00|64|512000\n"
                      "debug|8:00:00\n")

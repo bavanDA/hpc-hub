@@ -221,18 +221,20 @@ def forget_logins(cluster: str, keep_username: bool = False) -> None:
 
 
 @method("clusters.partitions")
-def partitions(cluster: str, partition: str = "", qos: str = "") -> dict:
-    """What Slurm allows here (read at the last login): partitions, your QoS, the longest time (minutes) a job on
-    this partition and QoS may ask for, and the cores and GB of its biggest node. known is false until you
-    connected once."""
+def partitions(cluster: str, partition: str = "", qos: str = "", account: str = "") -> dict:
+    """What Slurm allows here (read at the last login): partitions, the groups you may bill (accounts) and the QoS
+    of the one picked (or all yours), the longest time (minutes) a job on this partition and QoS may ask for, and
+    the cores and GB of its biggest node. known is false until you connected once."""
     lim = hub().session(cluster).limits
     if not lim:
         return {"known": False, "partitions": [], "default_partition": "", "qos": [], "default_qos": "",
-                "longest": None, "why": "", "cores": None, "memory_gb": None}
+                "accounts": [], "default_account": "", "longest": None, "why": "", "cores": None, "memory_gb": None}
     longest, why = lim.longest(partition.strip(), qos.strip())
     cores, memory_gb = lim.biggest(partition.strip())
     return {"known": True, "partitions": list(lim.partitions), "default_partition": lim.default_partition,
-            "qos": lim.allowed_qos, "default_qos": lim.default_qos, "longest": longest, "why": why,
+            "qos": lim.account_qos.get(account.strip() or lim.default_account) or lim.allowed_qos,
+            "default_qos": lim.default_qos, "accounts": list(lim.account_qos), "default_account": lim.default_account,
+            "longest": longest, "why": why,
             "cores": cores, "memory_gb": memory_gb}
 
 

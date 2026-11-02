@@ -10,7 +10,8 @@ from ..core.paths import log_dir
 from . import gpus
 
 FETCH = ("sinfo -h -o '%P|%l|%c|%m'; echo @QOS; sacctmgr -nP show qos format=name,maxwall 2>/dev/null; "
-         "echo @ASSOC; sacctmgr -nP show assoc user=\"$USER\" format=qos,defaultqos 2>/dev/null; "
+         "echo @ASSOC; sacctmgr -nP show assoc user=\"$USER\" format=account,qos,defaultqos 2>/dev/null; "
+         "echo @USER; sacctmgr -nP show user \"$USER\" format=defaultaccount 2>/dev/null; "
          "echo @GRES; sinfo -h -o '%P|%G' 2>/dev/null; true")
 SLURM_TIME = re.compile(r"^(?:(\d+)-)?(\d+)(?::(\d+))?(?::(\d+))?$")
 
@@ -53,6 +54,8 @@ class Limits:
     qos: dict[str, int | None] = field(default_factory=dict)
     allowed_qos: list[str] = field(default_factory=list)  # the QoS your account may use
     default_qos: str = ""
+    account_qos: dict[str, list[str]] = field(default_factory=dict)  # each group you may bill -> its QoS
+    default_account: str = ""
     gres: dict[str, list[str]] = field(default_factory=dict)  # partition -> GPU gres ("gpu:a100_10g:2")
     cores: dict[str, int] = field(default_factory=dict)  # partition -> cores of its biggest node
     memory_gb: dict[str, int] = field(default_factory=dict)  # partition -> memory of its biggest node
@@ -96,7 +99,7 @@ def parse(text: str) -> Limits:
     section = "part"
     gres_lines = []
     for line in text.splitlines():
-        if line in ("@QOS", "@ASSOC", "@GRES"):
+        if line in ("@QOS", "@ASSOC", "@USER", "@GRES"):
             section = line[1:].lower()
             continue
         if section == "gres":
@@ -116,11 +119,16 @@ def parse(text: str) -> Limits:
                     out.memory_gb[name] = max(mb // 1024, out.memory_gb.get(name, 0))
         elif section == "qos" and len(cells) == 2 and cells[0]:
             out.qos[cells[0]] = minutes(cells[1]) if cells[1] else None
-        elif section == "assoc" and len(cells) == 2:
-            for q in cells[0].split(","):
-                if q and q not in out.allowed_qos:
-                    out.allowed_qos.append(q)
-            out.default_qos = out.default_qos or cells[1]
+        elif section == "assoc" and len(cells) in (2, 3):
+            account, qos, default = cells if len(cells) == 3 else ("", *cells)
+            mine = [q for q in qos.split(",") if q]
+            if account:
+                out.account_qos.setdefault(account, [])
+                out.account_qos[account] += [q for q in mine if q not in out.account_qos[account]]
+            out.allowed_qos += [q for q in mine if q not in out.allowed_qos]
+            out.default_qos = out.default_qos or default
+        elif section == "user" and cells[0]:
+            out.default_account = cells[0]
     out.gres = gpus.parse("\n".join(gres_lines))
     return out
 
