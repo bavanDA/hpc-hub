@@ -285,7 +285,7 @@ export function Row({ title, subtitle, prefix, suffix, onClick }:
 /** A rounded tile behind an icon (cluster cards, welcome, empty states). */
 export function IconTile({ icon: Icon, size = 40, tone = 'neutral' }:
   { icon: LucideIcon; size?: 40 | 56; tone?: 'neutral' | 'accent' | 'success' }) {
-  const look = tone === 'accent' ? 'bg-accent-soft text-accent-text' : tone === 'success' ? 'bg-ok-bg text-ok'
+  const look = tone !== 'neutral' ? 'bg-pill text-text'
     : 'bg-pill text-dim'
   return (
     <div className={`grid shrink-0 place-items-center rounded-lg ${size === 56 ? 'size-14' : 'size-10'} ${look}`}>

@@ -1,12 +1,12 @@
 // Pieces of the Usage page: level bars and sections.
 import type { ReactNode } from 'react'
 
-/** Blue while there is room, orange from 75%, red from 90% (like GTK's). A share bar stays blue.
+/** Neutral while there is room, red from 90%. A share bar stays neutral.
  * mine: the part that is yours, drawn stronger inside the whole. */
 export function Bar({ value, mine, share = false, className = 'w-40' }:
   { value: number; mine?: number | null; share?: boolean; className?: string }) {
   const v = Math.max(0, Math.min(value, 1))
-  const color = share || v <= 0.75 ? 'bg-accent' : v <= 0.9 ? 'bg-[#e66100] dark:bg-[#ffa348]' : 'bg-bad'
+  const color = share || v <= 0.9 ? 'bg-text' : 'bg-bad'
   const part = mine == null ? null : Math.max(0, Math.min(mine, v))
   return (
     <div className={`relative h-2 shrink-0 overflow-hidden rounded-full bg-pill ${className}`}>

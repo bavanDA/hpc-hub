@@ -19,20 +19,20 @@ const reason = (t: Task) =>
   (t.problem || t.nice_status || 'Globus did not say why').replace(/_/g, ' ').toLowerCase().replace(/^./, (c) => c.toUpperCase())
 
 function Icon({ t }: { t: Task }) {
-  if (t.status === 'SUCCEEDED') return <CircleCheck size={20} className="shrink-0 text-ok" />
+  if (t.status === 'SUCCEEDED') return <CircleCheck size={20} className="shrink-0 text-dim" />
   if (t.status === 'FAILED') {
     return <CircleX size={20} className={`shrink-0 ${t.cancelled ? 'text-dim' : 'text-bad'}`} />
   }
   if (t.status === 'INACTIVE') return <Pause size={20} className="shrink-0 text-warn" />
-  return <Loader2 size={20} className="shrink-0 animate-spin text-accent-text" />
+  return <Loader2 size={20} className="shrink-0 animate-spin text-dim" />
 }
 
 function Progress({ t }: { t: Task }) {
   const part = t.files ? Math.min(1, t.files_done / t.files) : 0
   return (
     <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-pill">
-      {t.files ? <div className="h-full rounded-full bg-accent transition-[width] duration-220" style={{ width: `${part * 100}%` }} />
-        : <div className="h-full w-1/3 animate-pulse rounded-full bg-accent/60" />}
+      {t.files ? <div className="h-full rounded-full bg-text transition-[width] duration-220" style={{ width: `${part * 100}%` }} />
+        : <div className="h-full w-1/3 animate-pulse rounded-full bg-dim" />}
     </div>
   )
 }

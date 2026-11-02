@@ -41,7 +41,7 @@ export function LoadTab({ parts, error }: { name?: string; parts: Partition[] | 
                   {gpus && <td className="px-2 text-right whitespace-nowrap">
                     {p.gpus_total ? `${p.gpus_used} of ${p.gpus_total}` : <span className="text-dim">none</span>}</td>}
                   <td className="px-2 text-right">{n(p.running)}</td>
-                  <td className={`pr-4 pl-2 text-right ${p.pending > p.running ? 'font-semibold text-warn' : ''}`}>
+                  <td className={`pr-4 pl-2 text-right ${p.pending > p.running ? 'font-semibold' : ''}`}>
                     {n(p.pending)}</td>
                 </tr>
               ))}

@@ -38,7 +38,7 @@ export function Welcome({ status, onDone }: { status: SetupStatus; onDone: (chos
                 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent
                 ${on ? 'bg-accent/10 ring-2 ring-accent' : 'bg-card shadow-[var(--shadow-card)] hover:bg-hover'}`}>
               <span className={`grid size-11 place-items-center rounded-xl ${
-                on ? 'bg-accent text-white' : 'bg-pill text-accent-text'}`}><Server size={20} /></span>
+                on ? 'bg-accent text-white' : 'bg-pill text-dim'}`}><Server size={20} /></span>
               <span>
                 <span className="block text-lg font-semibold leading-tight">{uni ? shortName(c) : c.name}</span>
                 <span className="block text-sm text-dim">{uni || ' '}</span>

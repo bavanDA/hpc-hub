@@ -46,7 +46,7 @@ function ItemRow({ it, selected, onSelect, onOpen }:
       className={`grid h-9 grid-cols-[1fr_64px_96px] items-center gap-2 rounded-md px-2 ${
         selected ? 'bg-accent/20' : 'hover:bg-hover'}`}>
       <span className="flex min-w-0 items-center gap-2">
-        <Icon size={16} className={`shrink-0 ${it.is_dir ? 'text-accent-text' : 'text-dim'}`} />
+        <Icon size={16} className={`shrink-0 ${'text-dim'}`} />
         <span className="truncate">{it.name}</span>
       </span>
       <span className="text-right text-sm tabular-nums text-dim">{it.is_dir ? '' : formatSize(it.size)}</span>

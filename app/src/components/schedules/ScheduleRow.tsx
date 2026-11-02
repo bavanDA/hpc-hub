@@ -21,7 +21,7 @@ export function ScheduleRow({ st, busy, onToggle, onRun, onLog, onEdit, onDelete
   return (
     <div className="flex min-h-[64px] items-center gap-3 px-4 py-2.5">
       <span className={`grid size-9 shrink-0 place-items-center rounded-full ${
-        st.enabled ? 'bg-accent/15 text-accent-text' : 'bg-pill text-dim'}`}><AlarmClock size={20} /></span>
+        st.enabled ? 'bg-pill text-text' : 'bg-pill text-dim'}`}><AlarmClock size={20} /></span>
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
           <span className="truncate font-semibold">{backup ? 'Weekly scratch check' : st.name}</span>

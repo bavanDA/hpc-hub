@@ -27,7 +27,7 @@ function Steps({ step }: { step: Step }) {
       {STEPS.map(([, title], i) => (
         <li key={title} aria-current={i === at ? 'step' : undefined} className="flex items-center gap-2">
           <span className={`grid size-6 place-items-center rounded-full text-xs font-semibold ${
-            i < at ? 'bg-ok-bg text-ok' : i === at ? 'bg-accent text-white' : 'bg-pill text-dim'}`}>{i + 1}</span>
+            i < at ? 'bg-pill text-text' : i === at ? 'bg-accent text-white' : 'bg-pill text-dim'}`}>{i + 1}</span>
           <span className={i === at ? 'font-semibold' : 'text-dim'}>{title}</span>
           {i < STEPS.length - 1 && <span aria-hidden className="mx-1 h-px w-6 bg-line-strong" />}
         </li>
