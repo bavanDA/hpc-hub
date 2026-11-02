@@ -4,7 +4,7 @@ import { Server } from 'lucide-react'
 
 import { LinkPicker } from './components/app/LinkPicker'
 import { Onboarding } from './components/app/Onboarding'
-import { PreferencesDialog } from './components/app/Preferences'
+import { AppKeys } from './components/app/AppKeys'
 import { Welcome, type SetupStatus } from './components/app/Welcome'
 import { useSessionNotifications } from './components/app/notify'
 import type { Preferences } from './components/app/types'
@@ -115,7 +115,7 @@ export default function App() {
   if (setup?.first_run && !blocked) {
     return (
       <div className="flex h-full flex-col">
-        <HeaderBar title="HPC Hub" onExperimental={() => {}} />
+        <HeaderBar title="HPC Hub" />
         {onboard
           ? <Onboarding ids={onboard} onDone={() => location.reload()} />
           : <Welcome status={setup} onDone={setOnboard} />}
@@ -125,7 +125,7 @@ export default function App() {
   if (blocked) {
     return (
       <div className="flex h-full flex-col">
-        <HeaderBar title="HPC Hub" onExperimental={() => {}} />
+        <HeaderBar title="HPC Hub" />
         <EmptyState icon={Server} title="HPC Hub is already open" text={blocked} />
       </div>
     )
@@ -141,7 +141,7 @@ export default function App() {
         {narrow && floating && <div className="fixed inset-0 z-30 bg-scrim" onClick={() => setFloating(false)} />}
         <main className="flex min-w-0 flex-1 flex-col">
           <HeaderBar title={TITLES[page]} onSidebar={toggle} sidebar={sidebar && !narrow}
-            onExperimental={showExperimental} chip={picksCluster(page, params.tab) ? <ClusterPicker /> : undefined} />
+            chip={picksCluster(page, params.tab) ? <ClusterPicker /> : undefined} />
           <div className="min-h-0 flex-1 overflow-auto">
             <Suspense fallback={<div className="grid h-full place-items-center"><Spinner size={24} /></div>}>
               {page === 'agents' ? <Agents experimental={experimental} />
@@ -152,7 +152,8 @@ export default function App() {
           </div>
         </main>
       </div>
-      {settings && <PreferencesDialog onClose={() => setSettings(false)} onExperimental={showExperimental} />}
+      <AppKeys settings={settings} onSettings={() => setSettings(true)} onClose={() => setSettings(false)}
+        onExperimental={showExperimental} />
       <Questions />
       <LinkPicker />
     </ToastProvider>

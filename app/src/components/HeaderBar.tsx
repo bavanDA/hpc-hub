@@ -3,7 +3,6 @@
 import { Minus, PanelLeft, Square, X } from 'lucide-react'
 import { useRef } from 'react'
 
-import { AppMenu } from './app/AppMenu'
 import { inTauri, isMac } from './app/platform'
 
 async function win(action: 'minimize' | 'toggleMaximize' | 'close' | 'startDragging') {
@@ -40,9 +39,8 @@ function useDrag() {
 }
 
 /** chip: the cluster picker, on pages that show one cluster at a time. No onSidebar: no sidebar button (Welcome). */
-export function HeaderBar({ title, onSidebar, sidebar = false, onExperimental, chip }: {
-  title: string; onSidebar?: () => void; sidebar?: boolean; onExperimental: (on: boolean) => void
-  chip?: React.ReactNode
+export function HeaderBar({ title, onSidebar, sidebar = false, chip }: {
+  title: string; onSidebar?: () => void; sidebar?: boolean; chip?: React.ReactNode
 }) {
   const drag = useDrag()
   return (
@@ -57,7 +55,6 @@ export function HeaderBar({ title, onSidebar, sidebar = false, onExperimental, c
         <span data-drag className="truncate text-md font-semibold">{title}</span>
         {chip}
       </div>
-      <AppMenu onExperimental={onExperimental} />
       {!isMac && (
         <div className="ml-1 flex gap-1 pr-1">
           <Round label="Minimize" onClick={() => win('minimize')}><Minus size={14} strokeWidth={2.5} /></Round>

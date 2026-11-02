@@ -8,13 +8,16 @@ import { setMonitorBar } from '../terminals/MonitorBar'
 import { setSelectToCopy } from '../terminals/xterm'
 import { useToast } from '../toast'
 import { Spinner } from '../ui'
+import { AboutDialog } from './About'
 import { AppearanceGroup } from './Appearance'
 import { forgetProfiles, getProfiles } from './openLink'
+import { PairPhoneDialog } from './PairPhoneDialog'
 import type { Preferences, Profiles } from './types'
 import { university, type SetupStatus } from './Welcome'
 
-export function PreferencesDialog({ onClose, onExperimental }:
-  { onClose: () => void; onExperimental: (on: boolean) => void }) {
+export function PreferencesDialog({ onClose, onExperimental, onDisconnectAndQuit }:
+  { onClose: () => void; onExperimental: (on: boolean) => void; onDisconnectAndQuit: () => void }) {
+  const [inner, setInner] = useState<'' | 'phone' | 'about'>('')
   const toast = useToast()
   const [prefs, setPrefs] = useState<Preferences | null>(null)
   const [found, setFound] = useState<Profiles | null>(null)
@@ -74,8 +77,15 @@ export function PreferencesDialog({ onClose, onExperimental }:
           <ToggleRow label="Experimental features" sub="Papers, and the Scheduled and Skills tabs of Agents. They may change or break."
             checked={prefs.experimental} onChange={(on) => save({ experimental: on })} />
         </Section>
+        <Section title="HPC Hub">
+          <Row label="Set up the phone app" opens onPress={() => setInner('phone')} />
+          <Row label="About HPC Hub" opens onPress={() => setInner('about')} />
+          <Row label="Disconnect all and quit" danger onPress={onDisconnectAndQuit} />
+        </Section>
         <div className="h-3" />
       </>}
+      {inner === 'phone' && <PairPhoneDialog onClose={() => setInner('')} />}
+      {inner === 'about' && <AboutDialog onClose={() => setInner('')} />}
     </EDialog>
   )
 }
