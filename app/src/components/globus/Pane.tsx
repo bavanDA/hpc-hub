@@ -8,6 +8,7 @@ import { useEffect, useState, type ReactNode } from 'react'
 
 import { call } from '../../rpc'
 import type { GlobusCluster, Item } from '../../types/globus'
+import { shortName } from '../clusters/loginCopy'
 import { Menu } from '../projects/Menu'
 import { useToast } from '../toast'
 import { Button, Dialog, IconButton, Spinner } from '../ui'
@@ -46,14 +47,16 @@ function ItemRow({ it, selected, onSelect, onOpen }:
   const Icon = it.is_dir ? Folder : File
   return (
     <div onClick={onSelect} onDoubleClick={onOpen}
-      className={`grid h-10 grid-cols-[1fr_64px_96px] items-center gap-2 border-b border-line px-3 ${
+      className={`grid min-h-10 grid-cols-[1fr_64px_96px] items-center gap-2 border-b border-line px-3 py-1.5
+        @max-[400px]:grid-cols-[1fr_64px] ${
         selected ? 'bg-selected' : 'hover:bg-hover'}`}>
       <span className="flex min-w-0 items-center gap-2">
         <Icon size={16} className={`shrink-0 ${'text-dim'}`} />
-        <span className="truncate">{it.name}</span>
+        <span className="min-w-0 [overflow-wrap:anywhere]">{it.name}</span>
       </span>
       <span className="text-right text-sm tabular-nums text-dim">{it.is_dir ? '' : formatSize(it.size)}</span>
-      <span className="truncate text-sm tabular-nums text-dim">{shortDate(it.modified)}</span>
+      {/* a narrow side drops the date first, so names stay whole */}
+      <span className="truncate text-sm tabular-nums text-dim @max-[400px]:hidden">{shortDate(it.modified)}</span>
     </div>
   )
 }
@@ -100,8 +103,9 @@ export function Pane({ pane, clusters, onChoose, onConsent, onStart }: {
   else body = (
     <div className="flex flex-col">
       <div className="sticky top-0 grid grid-cols-[1fr_64px_96px] gap-2 border-b border-line bg-window px-3 py-2
-        text-xs font-semibold text-dim">
-        <span className="pl-6">Name</span><span className="text-right">Size</span><span>Modified</span>
+        text-xs font-semibold text-dim @max-[400px]:grid-cols-[1fr_64px]">
+        <span className="pl-6">Name</span><span className="text-right">Size</span>
+        <span className="@max-[400px]:hidden">Modified</span>
       </div>
       {l.items.map((it) => (
         <ItemRow key={it.name} it={it} selected={pane.selected?.name === it.name}
@@ -113,14 +117,14 @@ export function Pane({ pane, clusters, onChoose, onConsent, onStart }: {
 
   const browsing = l?.state === 'ok' && !!pane.path
   return (
-    <section className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-lg border border-line">
+    <section className="@container flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-lg border border-line">
       <div className="flex flex-col gap-2 border-b border-line p-2">
         <div className="flex items-center gap-1">
           <div className="relative min-w-0 flex-1">
             <select value={pane.cluster} onChange={(e) => pane.pick(e.target.value)} aria-label="Cluster"
               className="h-9 w-full appearance-none truncate rounded-lg border border-line-strong bg-window pr-8 pl-3
                 font-medium outline-none hover:bg-hover focus-visible:border-accent">
-              {clusters.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+              {clusters.map((c) => <option key={c.id} value={c.id}>{shortName(c)}</option>)}
             </select>
             <ChevronDown size={16} className="pointer-events-none absolute top-1/2 right-2.5 -translate-y-1/2 text-dim" />
           </div>

@@ -111,8 +111,8 @@ function SessionRow({ cluster, s, nodes, open, selected, onRefresh }: {
         selected ? 'bg-selected' : 'hover:bg-hover active:bg-pressed'}`}>
       <SessionIcon agent={s.agent} session={s.name} />
       <div className="min-w-0 flex-1">
-        <div className="truncate">{s.title.startsWith(`${what} · `) ? s.title.slice(what.length + 3) : s.title}</div>
-        <div className="truncate text-sm text-dim">{bits.join(' · ')}</div>
+        <div className="break-words">{s.title.startsWith(`${what} · `) ? s.title.slice(what.length + 3) : s.title}</div>
+        <div className="text-sm break-words text-dim">{bits.join(' · ')}</div>
       </div>
       {(code || s.remote.startsWith('http')) && (
         <button onClick={(e) => { e.stopPropagation(); remoteAction() }}
