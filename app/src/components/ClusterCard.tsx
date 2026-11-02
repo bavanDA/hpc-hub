@@ -31,10 +31,10 @@ const AGENTS: [string, string, LucideIcon][] = [['agent:claude', 'Claude', agent
 
 function Status({ s, vpnOnly }: { s: Session; vpnOnly: boolean }) {
   const [text, dot, look] = s.state === 'Connected'
-    ? [vpnOnly ? 'VPN only' : 'Connected', 'bg-ok', 'text-ok']
+    ? [vpnOnly ? 'VPN only' : 'Connected', 'bg-text', 'text-text']
     : s.state === 'Error' ? ["Didn't connect", 'bg-bad', 'text-bad']
       : s.state === 'Disconnected' ? ['Not connected', 'bg-dim/50', 'text-dim']
-        : [s.state === DUO ? 'Approve Duo' : s.state, 'bg-warn animate-pulse', 'text-warn']
+        : [s.state === DUO ? 'Approve Duo' : s.state, 'bg-dim animate-pulse', 'text-text']
   return (
     <span className={`flex items-center gap-2 whitespace-nowrap text-sm font-semibold ${look}`}>
       <span className={`size-2 rounded-full ${dot}`} />{text}</span>

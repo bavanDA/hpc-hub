@@ -99,7 +99,7 @@ export function Tree({ cluster, root, current, onRoot, onOpen, onOther }: {
             style={{ paddingLeft: 6 + depth * 14 }}>
             {folder ? (isOpen ? <ChevronDown size={14} className="shrink-0 text-dim" />
               : <ChevronRight size={14} className="shrink-0 text-dim" />) : <span className="w-3.5 shrink-0" />}
-            <Icon size={14} className={`shrink-0 ${folder ? 'text-accent-text' : 'text-dim'}`} />
+            <Icon size={14} className={`shrink-0 text-dim`} />
             <span className="truncate">{e.name}</span>
           </button>
           {folder && isOpen && rows(path, depth + 1)}
@@ -118,7 +118,7 @@ export function Tree({ cluster, root, current, onRoot, onOpen, onOther }: {
             <button key={p.id} type="button" title={p.path} onClick={() => onRoot(p.path)}
               className={`flex h-7 w-full items-center gap-2 truncate rounded-md px-2 text-left text-sm hover:bg-hover
                 ${root === p.path ? 'bg-selected font-semibold' : ''}`}>
-              <Folder size={14} className="shrink-0 text-accent-text" />
+              <Folder size={14} className="shrink-0 text-dim" />
               <span className="truncate">{p.name}</span>
             </button>
           ))}

@@ -29,7 +29,7 @@ function Quota({ r, onBackup }: { r: StorageRow; onBackup?: () => void }) {
             <div className="flex flex-wrap items-center gap-x-2 text-sm text-dim">
               {purgeDays(r) > 0 && <span>{banner.usage(purgeDays(r))}</span>}
               <button onClick={(e) => { e.stopPropagation(); onBackup() }}
-                className="inline-flex items-center gap-1 font-semibold text-accent-text hover:underline">
+                className="inline-flex items-center gap-1 font-semibold text-text underline">
                 <ArchiveRestore size={14} />{banner.usageLink}</button>
             </div>
           )}

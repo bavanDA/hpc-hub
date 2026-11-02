@@ -8,7 +8,7 @@ import { statusKind } from '../ui'
 import { useActiveCluster } from './active'
 
 const DOT: Record<string, string> = {
-  success: 'bg-ok-dot', info: 'bg-accent dot-pulse', warning: 'bg-warn-dot', danger: 'bg-bad-dot',
+  success: 'bg-text', info: 'bg-dim dot-pulse', warning: 'bg-dim', danger: 'bg-bad-dot',
   neutral: 'border-[1.5px] border-dim',
 }
 

@@ -1,18 +1,17 @@
 // Pieces of the Usage page: level bars and sections.
 import type { ReactNode } from 'react'
 
-/** Neutral while there is room, red from 90%. A share bar stays neutral.
+/** Always neutral: the percent next to it says how full it is.
  * mine: the part that is yours, drawn stronger inside the whole. */
-export function Bar({ value, mine, share = false, className = 'w-40' }:
+export function Bar({ value, mine, className = 'w-40' }:
   { value: number; mine?: number | null; share?: boolean; className?: string }) {
   const v = Math.max(0, Math.min(value, 1))
-  const color = share || v <= 0.9 ? 'bg-text' : 'bg-bad'
   const part = mine == null ? null : Math.max(0, Math.min(mine, v))
   return (
     <div className={`relative h-2 shrink-0 overflow-hidden rounded-full bg-pill ${className}`}>
-      <div className={`absolute inset-y-0 left-0 rounded-full ${color} ${part != null ? 'opacity-40' : ''}`}
+      <div className={`absolute inset-y-0 left-0 rounded-full bg-text ${part != null ? 'opacity-40' : ''}`}
         style={{ width: `${v * 100}%` }} />
-      {part != null && <div className={`absolute inset-y-0 left-0 rounded-full ${color}`}
+      {part != null && <div className={`absolute inset-y-0 left-0 rounded-full bg-text`}
         style={{ width: `${part * 100}%` }} />}
     </div>
   )
