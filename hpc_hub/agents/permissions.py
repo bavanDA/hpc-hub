@@ -32,7 +32,7 @@ GROUPS = [
     ("LaTeX and PDF", "", "pdflatex latexmk bibtex biber pdftotext pdfinfo pdftoppm"),
     ("Jobs", "Submitting uses your group's hours", "squeue sacct sinfo sacctmgr sreport sstat seff sshare sprio "
                                                   "scontrol sbatch srun module ml quota"),
-    ("Git", "Force push has its own switch below", "git gh"),
+    ("Git", "Force push has its own switch", "git gh"),
     ("Network", "Download, copy to and sign in to other machines", "ssh scp rsync curl wget"),
     ("Processes and agents", "", "kill pkill codex claude"),
 ]

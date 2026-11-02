@@ -14,7 +14,7 @@ const groups: CommandGroup[] = [
   { title: 'LaTeX and PDF', note: '', commands: w('pdflatex latexmk bibtex biber pdftotext pdfinfo pdftoppm') },
   { title: 'Jobs', note: "Submitting uses your group's hours",
     commands: w('squeue sacct sinfo sacctmgr sreport sstat seff sshare sprio scontrol sbatch srun module ml quota') },
-  { title: 'Git', note: 'Force push has its own switch below', commands: w('git gh') },
+  { title: 'Git', note: 'Force push has its own switch', commands: w('git gh') },
   { title: 'Network', note: 'Download, copy to and sign in to other machines', commands: w('ssh scp rsync curl wget') },
   { title: 'Processes and agents', note: '', commands: w('kill pkill codex claude') },
 ]
