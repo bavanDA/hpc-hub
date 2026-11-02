@@ -59,13 +59,27 @@ def _want_json(cid: str, w: globus.NeedsSignIn) -> dict:
             "kind": "domain" if domains else "consent", "domains": domains, "message": str(w)}
 
 
+_kinds: dict[str, str] = {}  # collection id -> kind, asked once per run
+
+
+def _kind(collection_id: str) -> str:
+    if collection_id and collection_id not in _kinds:
+        try:
+            _kinds[collection_id] = client().collection(collection_id).kind
+        except globus.GlobusError:
+            return ""
+    return _kinds.get(collection_id, "")
+
+
 def _status(signed_in: bool | None = None) -> dict:
     cid = _app().globus_client_id
     if signed_in is None:
         signed_in = bool(cid) and client().logged_in
     return {"client_id": cid, "signed_in": signed_in,
             "clusters": [{"id": c.id, "name": c.name, "collection_id": c.globus.collection_id,
-                          "collection_name": c.globus.collection_name} for c in hub().clusters],
+                          "collection_name": c.globus.collection_name,
+                          "personal": signed_in and _kind(c.globus.collection_id) == "GCP_mapped_collection"}
+                         for c in hub().clusters],
             "wants": [_want_json(k, w) for k, w in list(_wants.items())]}
 
 
@@ -219,10 +233,7 @@ def ls(cluster: str, path: str = "") -> dict:
 
 
 def _personal(c) -> bool:
-    try:
-        return client().collection(c.globus.collection_id).kind == "GCP_mapped_collection"
-    except globus.GlobusError:
-        return False
+    return _kind(c.globus.collection_id) == "GCP_mapped_collection"
 
 
 @method("globus.mkdir")
@@ -261,10 +272,11 @@ def cancel(task_id: str) -> None:
 
 
 @method("globus.start_personal")
-def start_personal(cluster: str) -> None:
-    """Your own collection (Wulver): start Globus Connect Personal on the login node, sharing your storage."""
+def start_personal(cluster: str, restart: bool = False) -> None:
+    """Your own collection (Wulver): start Globus Connect Personal on the login node, sharing your storage; restart:
+    stop it first even when it runs with those folders."""
     s = hub().connected(cluster)
     folders = [p.path for p in remote_fs.storage(remote_fs.places(s.ssh)) if p.label != "Home"]
-    res = s.ssh.run(globus.personal_start(folders), timeout=90)
+    res = s.ssh.run(globus.personal_start(folders, restart), timeout=90)
     if res.returncode != 0:
         raise RuntimeError(res.stderr.strip() or "Could not start it")

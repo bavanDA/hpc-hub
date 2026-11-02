@@ -38,6 +38,8 @@ class FakeGlobus:
         self.tokens = {}
 
     def collection(self, cid):
+        if cid not in self.collections:
+            raise globus.GlobusError(f"No collection {cid}")
         return self.collections[cid]
 
     def find_for(self, name, host):
@@ -99,7 +101,7 @@ def h(tmp_path, monkeypatch):
     fake = FakeHub()
     monkeypatch.setattr(hub_mod, "_hub", fake)
     monkeypatch.setattr(m, "_client", None)
-    for state in (m._logins, m._wants, m._checked):
+    for state in (m._logins, m._wants, m._checked, m._kinds):
         state.clear()
     return fake
 
@@ -176,6 +178,7 @@ def test_ls_states(h):
     assert m.ls("sdsc", "/scratch/mygroup/jdoe")["state"] == "hidden"
     with pytest.raises(globus.GlobusError):  # a cluster's own collection: a real no
         m.ls("wulver", "/scratch/mygroup/jdoe")
+    assert [c["personal"] for c in m.status()["clusters"]] == [False, True]
 
 
 def test_transfer_tasks_cancel(h):

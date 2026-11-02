@@ -153,6 +153,10 @@ esac
     new = subprocess.run(["bash", "-c", globus.personal_start(["/a", "/b"])], env=env, capture_output=True, text=True)
     assert new.returncode == 0, new.stderr
     assert "-stop" in log.read_text() and running.read_text().strip() == "rw~/,rw/a,rw/a,rw/b,rw/b"
+    log.write_text("")
+    again = subprocess.run(["bash", "-c", globus.personal_start(["/a", "/b"], restart=True)], env=env, text=True,
+                           capture_output=True, timeout=30)
+    assert again.returncode == 0 and "-stop" in log.read_text()  # the same folders, but asked to restart
 
 
 def test_task_info():
