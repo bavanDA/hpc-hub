@@ -85,7 +85,7 @@ export function Terminals({ shown }: { shown: boolean }) {
                       open={tabs.some((t) => t.key === tabKey(c.id, s.name))}
                       onOpen={() => openSession(c.id, s)}
                       onActions={() => setActing({ cluster: c.id, name: s.name, kind: s.kind, node: s.node,
-                        title: s.title || s.name })} />
+                        title: s.title || s.name, remote: s.remote })} />
                   ))}
                 </List>
               )}

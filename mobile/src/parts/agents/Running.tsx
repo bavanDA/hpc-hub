@@ -41,7 +41,7 @@ export function Running() {
           <SessionRow key={`${cluster}/${s.name}`} s={s} extra={live.length > 1 ? name : ''}
             nodes={listings[cluster]?.listing?.nodes ?? null} open={tabs.some((t) => t.key === tabKey(cluster, s.name))}
             onOpen={() => { openSession(cluster, s); go('terminals') }}
-            onActions={() => setActing({ cluster, name: s.name, kind: s.kind, node: s.node, title: s.title || s.name })} />
+            onActions={() => setActing({ cluster, name: s.name, kind: s.kind, node: s.node, title: s.title || s.name, remote: s.remote })} />
         ))}
       </List>}
       {acting && <SessionActions target={acting} onClose={() => setActing(null)} onChanged={refresh} />}

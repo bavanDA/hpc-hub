@@ -1,13 +1,18 @@
-// What a long press on a session offers: rename or stop it. The same calls as the desktop's ⋯ menu.
-import { Pencil, Square, X } from 'lucide-react'
+// What a long press on a session offers: rename or stop it, and open an agent's remote control or copy ChatGPT's
+// pairing code. The same calls as the desktop's ⋯ menu.
+import { Copy, ExternalLink, Pencil, Square, X } from 'lucide-react'
 import { useRef, useState } from 'react'
 
+import { openLink } from '@shared/components/app/openLink'
 import { close, getTab, tabKey, update } from '@shared/components/terminals/tabs'
+import { copyText } from '@shared/components/terminals/xterm'
 import { call } from '@shared/rpc'
 import { ActionSheet, ConfirmSheet, Field, MainButton, Sheet, useToast } from '../../ui'
 
-/** The session the actions are for: one listed, or an open terminal's. */
-export type Target = { cluster: string; name: string; kind: 'tmux' | 'screen'; node: string; title: string }
+/** The session the actions are for: one listed, or an open terminal's. remote: the agent's remote-control link, or
+ *  code:<pairing code> for ChatGPT. */
+export type Target = { cluster: string; name: string; kind: 'tmux' | 'screen'; node: string; title: string
+  remote?: string }
 
 /** detach: from an open terminal, "Close" leaves the session running and goes back to the list. */
 export function SessionActions({ target, onClose, onChanged, detach }:
@@ -31,10 +36,20 @@ export function SessionActions({ target, onClose, onChanged, detach }:
       text="Everything running in it ends, like an agent or a build."
       onConfirm={() => { if (getTab(key)) close(key); run('terminals.stop', { kind: target.kind }) }} />
   )
+  const remote = target.remote ?? ''
+  const pair = remote.startsWith('code:') ? remote.slice(5) : ''
+  const others = pair
+    ? [{ label: 'Copy ChatGPT pairing code', icon: Copy, onPick: () => { onClose(); copyText(pair).then((ok) =>
+        toast(ok ? `Pairing code ${pair} copied. In the ChatGPT app: Codex, connect a machine.` : 'Could not copy')) } }]
+    : remote.startsWith('http')
+      ? [{ label: 'Open in the Claude app', icon: ExternalLink, onPick: () => { onClose()
+          openLink(remote).catch((err) => toast(`Could not open it: ${err}`)) } }]
+      : []
   return (
     <ActionSheet title={target.title} onClose={() => queueMicrotask(() => { if (!chosen.current) onClose() })}
       actions={[
       ...(detach ? [{ label: 'Close (it keeps running)', icon: X, onPick: () => { onClose(); detach() } }] : []),
+      ...others,
       { label: 'Rename', icon: Pencil, onPick: () => pick('rename') },
       { label: 'Stop session', icon: Square, danger: true, onPick: () => pick('stop') },
     ]} />
