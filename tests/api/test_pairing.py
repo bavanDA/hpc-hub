@@ -84,3 +84,10 @@ def test_apply_needs_a_known_cluster(store):
     with pytest.raises(pairing.PairingError, match="no login"):
         methods.apply(pairing.code(Code([Entry("elsewhere", "x")])))
     assert not ssh_keys.key_path().exists()
+
+
+def test_apply_saves_a_vpn_login_of_its_own(store):
+    seed = ssh_keys.new()
+    methods.apply(pairing.code(Code([Entry("yale", "jd123", key=True, vpn_user="jane.doe@example.edu",
+                                           vpn_password="vpnpass")], seed)))
+    assert store == {("yale", "ssh"): Login("jd123", ""), ("yale", "vpn"): Login("jane.doe@example.edu", "vpnpass")}
