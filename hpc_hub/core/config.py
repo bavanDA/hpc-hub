@@ -78,6 +78,7 @@ class VsCodeSettings:
     workdir: str = "~"
     open_links: bool = True
     open_in: str = "desktop"  # desktop (VS Code app) or browser (vscode.dev)
+    ask: bool = True  # off: VS Code starts with these choices, no window first
     compute: ComputeProfile = field(default_factory=_vscode_compute)
 
 

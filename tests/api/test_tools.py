@@ -196,6 +196,13 @@ def test_vscode_uses_the_running_job(env, monkeypatch):
     assert "follow" in tools.vscode_start("wulver", "", "desktop", job="991")
 
 
+def test_vscode_saves_ask_every_time(env):
+    env.s.ssh.answers.update({"sbatch --parsable": "4242\n"})
+    assert env.s.cfg.vscode.ask and tools.setup("wulver")["vscode"]["ask"]
+    tools.vscode_start("wulver", "", "desktop", ask=False)
+    assert not env.s.cfg.vscode.ask and not tools.setup("wulver")["vscode"]["ask"]
+
+
 def test_vscode_replaces_the_running_job(env):
     env.s.ssh.answers.update({"sbatch --parsable": "5000\n"})
     got = tools.vscode_start("wulver", "", "desktop", job="991", replace_job=True)

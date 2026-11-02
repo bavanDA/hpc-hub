@@ -29,7 +29,7 @@ TOP = {"host", "port", "second_factor", "duo_answer", "request_node_on_connect",
        "queue_wait", "vpn", "profile", "vscode", *BY_ID}
 VPN = {"enabled", "gateway", "protocol", "useragent", "authgroup", "same_login_as_ssh", "split_tunnel", "domains",
        "routes", "browser"}
-VSCODE = {"setup", "command", "workdir", "open_links", "open_in", "compute"}
+VSCODE = {"setup", "command", "workdir", "open_links", "open_in", "ask", "compute"}
 
 
 def _known(changes, allowed: set[str], where: str) -> dict:
@@ -171,6 +171,8 @@ def apply(cfg, changes: dict, windows: list[str]):
                     c.vscode.compute = _profile(c.vscode.compute, vx, "VS Code job")
                 elif vk == "open_links":
                     c.vscode.open_links = _bool(vx, "Open automatically")
+                elif vk == "ask":
+                    c.vscode.ask = _bool(vx, "Ask every time")
                 elif vk == "open_in":
                     if vx not in TARGETS:
                         raise ValueError(f"VS Code can't open in {vx}")

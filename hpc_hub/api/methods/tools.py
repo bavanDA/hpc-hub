@@ -66,7 +66,7 @@ def setup(cluster: str) -> dict:
     v = cfg.vscode
     return {"id": cfg.id, "name": cfg.name, "connected": s.connected, "node": a.node if a else "",
             "job": a.job_id if a else "", "profile": asdict(cfg.profile),
-            "vscode": {"workdir": v.workdir, "open_in": v.open_in, "open_links": v.open_links,
+            "vscode": {"workdir": v.workdir, "open_in": v.open_in, "open_links": v.open_links, "ask": v.ask,
                        "profile": asdict(v.compute)},
             "agents": [_agent_json(cfg, x) for x in catalog.AGENTS]}
 
@@ -247,10 +247,12 @@ def _follow(s, job_id: str) -> dict:
 
 @method("tools.vscode_start")
 def vscode_start(cluster: str, folder: str = "", target: str = "", job: str = "", replace_job: bool = False,
-                 profile: dict | None = None, remember: bool = False, remember_folder: bool = False) -> dict:
+                 profile: dict | None = None, remember: bool = False, remember_folder: bool = False,
+                 ask: bool | None = None) -> dict:
     """Open folder in VS Code through the VS Code job's tunnel. job: the running one to use (with its tunnel
     known: {"open": ...} from vscode_open), or to stop first (replace_job). With none, submits one; then
-    {"follow": ...} is the command line that shows its log, where the tunnel link appears."""
+    {"follow": ...} is the command line that shows its log, where the tunnel link appears. ask: saves Ask every
+    time."""
     s = hub().connected(cluster)
     v = s.cfg.vscode
     target = target or v.open_in
@@ -258,6 +260,9 @@ def vscode_start(cluster: str, folder: str = "", target: str = "", job: str = ""
         raise ValueError(f"Open in {target}?")
     picked = _profile(v.compute, profile) if profile else v.compute
     where = remote_fs.expand(s.ssh, folder.strip() or v.workdir)
+    if ask is not None and ask != v.ask:
+        v.ask = ask
+        hub().save_clusters()
     if remember:
         v.open_in = target
         if not job or replace_job:
