@@ -152,7 +152,7 @@ class AndroidVpn(Vpn):
                 return
             time.sleep(0.5)
         self.down()
-        raise VpnError(f"The VPN started, but {self.cfg.host} did not answer through it")
+        raise VpnError(f"The VPN is on, but {self.cfg.host} doesn't answer. Try again in a minute.")
 
     def _pump(self, proc: subprocess.Popen, last: list[str]) -> None:
         """openconnect's and ocproxy's messages go to the log (never the cookie: that only goes in on stdin)."""

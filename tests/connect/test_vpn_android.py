@@ -172,7 +172,7 @@ def test_no_answer_through_the_tunnel_times_out(fake_vpn, monkeypatch):
         monkeypatch.setenv("FAKE_VPN_TARGET", f"127.0.0.1:{silent.getsockname()[1]}")
         monkeypatch.setattr(vpn_android, "UP_TIMEOUT", 3)
         vpn = vpn_android.AndroidVpn(cluster(), print)
-        with pytest.raises(VpnError, match="did not answer through it"):
+        with pytest.raises(VpnError, match="VPN is on, but login.example.edu doesn.t answer"):
             vpn.up(AUTH)
     assert not vpn.is_active()
 
