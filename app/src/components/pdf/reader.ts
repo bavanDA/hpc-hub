@@ -1,6 +1,7 @@
 // Read aloud for the PDF viewer, shared by the desktop and the phone: asks the backend for the narration of a PDF
 // on a cluster (readaloud.start, then `readaloud` events), plays it, and says which word is being spoken. The
 // viewer draws that word; the player and the dictionary are the screens' own.
+import type { PDFDocumentProxy } from 'pdfjs-dist'
 import { useEffect, useState, useSyncExternalStore } from 'react'
 
 import { call, on } from '../../rpc'
@@ -25,6 +26,20 @@ export type Snapshot = {
   total: number
   voice: string
   rate: number
+}
+
+/** What the viewer needs from a reader: this narration, or the phone's own voice (which reads the PDF's words
+ *  itself, from the document the viewer hands it). */
+export interface Narrator {
+  words: Map<number, Box>
+  current: number | null
+  readonly ready: boolean
+  onWord(fn: (id: number | null) => void): () => void
+  watchPage(fn: () => number): void
+  readFrom(spot: Spot): void
+  wordAt(page: number, x: number, y: number): number | null
+  reset(): void
+  setDocument?(doc: PDFDocumentProxy): void
 }
 
 export const SPEEDS = [0.75, 1, 1.25, 1.5, 1.75, 2]
@@ -69,7 +84,7 @@ export function useVoices(): Voice[] {
   return list
 }
 
-export class Reader {
+export class Reader implements Narrator {
   source: Source | null = null
   words = new Map<number, Box>()
   current: number | null = null

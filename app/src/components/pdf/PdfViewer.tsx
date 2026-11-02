@@ -112,6 +112,7 @@ export default function PdfViewer({ data, memory, compact, zoom: start = 'page-w
       me.doc = doc
       me.viewer.setDocument(doc)
       me.link.setDocument(doc, null)
+      reader?.setDocument?.(doc)
       setPages(doc.numPages)
       old?.loadingTask.destroy()
     }).catch((e: Error) => { if (!dead) { restoring.current = false; setFailed(e.message) } })
