@@ -1,4 +1,4 @@
-// Clusters: one block each in style E, to connect, get a compute node and open things on it.
+// Clusters: one card each, to connect, get a compute node and open things on it.
 import { useEffect } from 'react'
 
 import { ClusterCard } from '../components/ClusterCard'
@@ -15,7 +15,7 @@ export function Clusters() {
   // one main button on the page: Connect on the first cluster that isn't connected
   const first = clusters.find((c) => ['Disconnected', 'Error'].includes(session(c.id).state))?.id
   return (
-    <div className="mx-auto flex max-w-[760px] flex-col gap-10 py-6">
+    <div className="mx-auto flex max-w-[700px] flex-col gap-[18px] px-4 py-6">
       {clusters.map((c) => (
         <ClusterCard key={c.id} cluster={c} session={session(c.id)} log={logs[c.id] ?? []} primary={c.id === first} />
       ))}
