@@ -63,6 +63,13 @@ where you browse to read or edit, so Files moved under More.
 - **Terminals** have a key row over the keyboard (Esc, Tab, Ctrl, arrows).
 - **What only Android can do** (pick files, save to Downloads, open or share a file, stay connected in the
   background) goes through `mobile/src/parts/native.ts`.
+- **Read aloud** in the PDF viewers speaks with the phone's own text to speech (`SpeechPlugin.kt`,
+  `mobile/src/parts/readaloud/`), not the desktop's edge-tts, whose Python setup can't be made on Android. pdf.js
+  gives the words and their boxes; they are spoken a sentence at a time with a few queued, and Android says which
+  word it is on (onRangeStart, Android 8+), which the viewer marks. There is no clock, so back and forward go by
+  sentence. The voice list is Android's, offline voices first. Hear it in the dictionary plays the dictionary's
+  recording, or says the word with the phone's voice. In a browser the demo uses the browser's voices, or a quiet
+  one that only keeps time (`?speech=quiet`).
 
 `npm run dev` in `mobile/` shows the screens in a browser with the desktop's demo data; `?tab=jobs`, `?tab=usage`
 or any desktop page name opens that screen.

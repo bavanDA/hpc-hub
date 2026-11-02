@@ -1,23 +1,34 @@
 //! What only the phone does: pick files and copy them in, save into Downloads, open or share with other apps
-//! (FilesPlugin.kt), and stay connected in the background (KeepAliveService.kt). The screens call these through
-//! mobile/src/parts/native.ts. Desktop builds of this crate (cargo check) have none.
+//! (FilesPlugin.kt), stay connected in the background (KeepAliveService.kt), and speak with the phone's own voice
+//! (SpeechPlugin.kt). The screens call these through mobile/src/parts/native.ts and parts/readaloud/speech.ts.
+//! Desktop builds of this crate (cargo check) have none.
 
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use tauri::ipc::Channel;
 use tauri::plugin::{Builder, TauriPlugin};
 use tauri::{AppHandle, Manager, Runtime};
 
 struct Files<R: Runtime>(tauri::plugin::PluginHandle<R>);
 struct KeepAlive<R: Runtime>(tauri::plugin::PluginHandle<R>);
 
+// One Tauri plugin per Kotlin plugin: Android keeps one Kotlin plugin per name, so a second one under the same
+// name would take the first one's place.
 pub fn init<R: Runtime>() -> TauriPlugin<R> {
     Builder::new("phone")
         .setup(|_app, _api| {
             #[cfg(target_os = "android")]
-            {
-                _app.manage(Files(_api.register_android_plugin("io.github.bavanda.hpchub", "FilesPlugin")?));
-                _app.manage(KeepAlive(_api.register_android_plugin("io.github.bavanda.hpchub", "KeepAlivePlugin")?));
-            }
+            _app.manage(Files(_api.register_android_plugin("io.github.bavanda.hpchub", "FilesPlugin")?));
+            Ok(())
+        })
+        .build()
+}
+
+pub fn keep_alive_init<R: Runtime>() -> TauriPlugin<R> {
+    Builder::new("keepalive")
+        .setup(|_app, _api| {
+            #[cfg(target_os = "android")]
+            _app.manage(KeepAlive(_api.register_android_plugin("io.github.bavanda.hpchub", "KeepAlivePlugin")?));
             Ok(())
         })
         .build()
@@ -112,4 +123,67 @@ struct KeepAliveArgs {
 pub async fn keep_alive<R: Runtime>(app: AppHandle<R>, on: bool, text: Option<String>) -> Result<Value, String> {
     let handle = app.try_state::<KeepAlive<R>>().ok_or(NOT_HERE)?.0.clone();
     call(handle, "set", KeepAliveArgs { on, text }).await
+}
+
+// -- the phone's own voice, for Read aloud (SpeechPlugin.kt) -------------------------------------------------------
+
+struct Speech<R: Runtime>(tauri::plugin::PluginHandle<R>);
+
+pub fn speech_init<R: Runtime>() -> TauriPlugin<R> {
+    Builder::new("speech")
+        .setup(|_app, _api| {
+            #[cfg(target_os = "android")]
+            _app.manage(Speech(_api.register_android_plugin("io.github.bavanda.hpchub", "SpeechPlugin")?));
+            Ok(())
+        })
+        .build()
+}
+
+fn speech<R: Runtime>(app: &AppHandle<R>) -> Result<tauri::plugin::PluginHandle<R>, String> {
+    Ok(app.try_state::<Speech<R>>().ok_or(NOT_HERE)?.0.clone())
+}
+
+#[derive(Serialize)]
+struct ListenArgs {
+    channel: Channel<Value>,
+}
+
+/// Where the progress events go: {kind: start | range | done | stop | error, id, start?, end?}.
+#[tauri::command]
+pub async fn speech_listen<R: Runtime>(app: AppHandle<R>, channel: Channel<Value>) -> Result<Value, String> {
+    call(speech(&app)?, "listen", ListenArgs { channel }).await
+}
+
+/// {voices: [{name, lang, offline}], default}
+#[tauri::command]
+pub async fn speech_voices<R: Runtime>(app: AppHandle<R>) -> Result<Value, String> {
+    call(speech(&app)?, "voices", ()).await
+}
+
+#[derive(Serialize)]
+struct SpeakArgs {
+    id: String,
+    text: String,
+    voice: Option<String>,
+    rate: f32,
+    flush: bool,
+}
+
+/// Queues a text to be spoken (flush: instead of what is queued); its events carry the id.
+#[tauri::command]
+pub async fn speech_speak<R: Runtime>(
+    app: AppHandle<R>,
+    id: String,
+    text: String,
+    voice: Option<String>,
+    rate: Option<f32>,
+    flush: Option<bool>,
+) -> Result<Value, String> {
+    let args = SpeakArgs { id, text, voice, rate: rate.unwrap_or(1.0), flush: flush.unwrap_or(false) };
+    call(speech(&app)?, "speak", args).await
+}
+
+#[tauri::command]
+pub async fn speech_stop<R: Runtime>(app: AppHandle<R>) -> Result<Value, String> {
+    call(speech(&app)?, "stop", ()).await
 }

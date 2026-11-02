@@ -256,7 +256,7 @@ export function Paper({ paper, onClose }: { paper: Opened; onClose: () => void }
                 </Suspense>}
           </div>
         </div>
-        {pane === 'pdf' && <PdfPane data={pdf.data} path={pdf.path} cluster={cluster} memory={`latex:${cluster}:${main}`}
+        {pane === 'pdf' && <PdfPane data={pdf.data} memory={`latex:${cluster}:${main}`}
           target={target} onSync={fromPdf}
           loading={!pdf.none && !pdf.error} progress={progress}
           message={pdf.none ? <Empty title="No PDF yet" text="Tap Build to make it on the cluster." />
