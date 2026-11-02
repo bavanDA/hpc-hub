@@ -30,6 +30,12 @@ export function QueueRows({ cluster, value, onChange }:
     <div>
       <datalist id={queueList}>{limits?.partitions.map((p) => <option key={p} value={p} />)}</datalist>
       <datalist id={billingList}>{limits?.qos.map((p) => <option key={p} value={p} />)}</datalist>
+      {rows.length > 0 && (
+        <div className="flex items-center gap-2 border-b border-line px-4 py-1.5 text-sm font-semibold text-dim">
+          <span className="w-5" /><span className="flex-1">Queue</span><span className="flex-1">Billing</span>
+          <span className="w-9" />
+        </div>
+      )}
       {rows.map((q, i) => (
         <div key={i} className="flex min-h-[56px] items-center gap-2 border-b border-line px-4">
           <span className="w-5 text-sm text-dim tabular-nums">{i + 1}</span>

@@ -55,8 +55,9 @@ const pick = <T extends object, K extends keyof T>(o: T, keys: readonly K[]) =>
 
 
 /** Cores, memory, GPUs, time, partition, account, QOS and extra arguments (settings.py ProfileRows). */
-function ProfileRows({ cluster, p, onChange, extra, rows = 'all' }:
-  { cluster: string; p: Profile; onChange: (p: Profile) => void; extra: string; rows?: 'all' | 'size' | 'more' }) {
+function ProfileRows({ cluster, p, onChange, extra, rows = 'all', billing = true }:
+  { cluster: string; p: Profile; onChange: (p: Profile) => void; extra: string; rows?: 'all' | 'size' | 'more'
+    billing?: boolean }) {
   const [limits, setLimits] = useState<Limits | null>(null)
   useEffect(() => {
     const t = setTimeout(() => {
@@ -77,16 +78,17 @@ function ProfileRows({ cluster, p, onChange, extra, rows = 'all' }:
       <EntryRow label="Queue" value={p.partition} onChange={(partition) => set({ partition })}
         list={limits?.partitions} placeholder={limits?.default_partition} />
     </>}
-    {rows !== 'size' && <More p={p} set={set} limits={limits} extra={extra} />}
+    {rows !== 'size' && <More p={p} set={set} limits={limits} extra={extra} billing={billing} />}
   </>
 }
 
-function More({ p, set, limits, extra }:
-  { p: Profile; set: (c: Partial<Profile>) => void; limits: Limits | null; extra: string }) {
+/** billing: off where each queue row sets its own. */
+function More({ p, set, limits, extra, billing }:
+  { p: Profile; set: (c: Partial<Profile>) => void; limits: Limits | null; extra: string; billing: boolean }) {
   return <>
     <EntryRow label="Group to bill" value={p.account ?? ''} onChange={(account) => set({ account })} />
-    <EntryRow label="Billing" value={p.qos ?? ''} onChange={(qos) => set({ qos })} list={limits?.qos}
-      placeholder={limits?.default_qos} />
+    {billing && <EntryRow label="Billing" value={p.qos ?? ''} onChange={(qos) => set({ qos })} list={limits?.qos}
+      placeholder={limits?.default_qos} />}
     <EntryRow label={extra} value={p.extra_args ?? ''} onChange={(extra_args) => set({ extra_args })}
       placeholder="--constraint=gpu" />
   </>
@@ -300,9 +302,9 @@ export function SettingsDialog({ cluster, hint, onClose, start = 'login', advanc
   </>
 
   const queues = <>
-    <Group title="Account and billing">
+    <Group title="Group and options">
       <ProfileRows cluster={d.id} p={d.profile} onChange={(profile) => up({ profile })} rows="more"
-        extra="Extra options" />
+        extra="Extra options" billing={!(d.queues ?? '').trim()} />
     </Group>
     <Group title="Queues to try"
       description="Cheapest first. Your node comes from the first one that can start within the wait below.">
