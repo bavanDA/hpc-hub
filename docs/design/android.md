@@ -15,6 +15,7 @@ copying it. App id `io.github.bavanda.hpchub` (permanent), license MIT.
       src-tauri/gen/android/ the Gradle project (Tauri generates it)
       launcher/              a tiny C program that runs Python: `libhpchub_backend.so`
       python/                builds the Python bundle (stdlib, hpc_hub, asyncssh, cryptography)
+      vpn/                   builds openconnect and ocproxy, the VPN (THIRD_PARTY.md: their licenses)
       metadata/              store text and screenshots (fastlane layout, read by Play and F-Droid)
 
 Rule: `mobile/` uses `hpc_hub/` and the shared parts of `app/src/`, never edits them. Something new the phone needs
@@ -66,24 +67,47 @@ where you browse to read or edit, so Files moved under More.
 `npm run dev` in `mobile/` shows the screens in a browser with the desktop's demo data; `?tab=jobs`, `?tab=usage`
 or any desktop page name opens that screen.
 
-## VPN (later)
+## VPN
 
-Android's `VpnService` with libopenconnect built for Android. Sign-in pages open in an Android WebView, the cookie
-goes to openconnect as on Windows and macOS. Play asks for a declaration for VPN apps; if it says no, the `play`
-build leaves the VPN out and the `fdroid` build keeps it. Until then: SDSC anywhere, Wulver on campus Wi-Fi.
+NJIT (vpn.njit.edu) and Yale (access.yale.edu) are both Cisco AnyConnect, so one openconnect does both. There is
+no `VpnService` and no system-wide VPN: openconnect runs as one of the app's programs with `--script-tun`, and
+hands the tunnel to ocproxy, a TCP/IP stack in userspace, which forwards a local port to the cluster's SSH port
+(openconnect's "running as a non-root user", https://www.infradead.org/openconnect/nonroot.html). Only HPC Hub's
+SSH goes through it, so Wulver and Yale can be up at the same time, each with its own port.
+
+- **Programs:** `mobile/vpn/build.sh` builds openconnect (with OpenSSL, libxml2, zlib) and ocproxy (with libevent)
+  with the NDK's clang from pinned source tarballs. They ship as `libhpchub_openconnect.so` and
+  `libhpchub_ocproxy.so` (from `vpnLibs/`, which the Python build leaves alone), next to the launcher.
+- **Connect** (`hpc_hub/connect/vpn_android.py`, the laptop's flow from `session.py`): the cluster isn't reachable
+  directly, so the VPN signs in. openconnect `--authenticate` first; a SAML gateway (NJIT's Okta, Yale's Microsoft)
+  answers "No SSO handler", so the app asks the gateway for its sign-in page (`vpn_sso.py`) and shows it in a page
+  of its own (`websignin.rs`, `WebSignInPlugin.kt`). That page fills in the saved login from the backend's askpass
+  socket, as the desktop's `sso.rs` does (the password never reaches the UI); you approve Duo; at the final URL it
+  reads the token cookie, which the backend trades for the VPN cookie and the server's certificate pin. Then
+  openconnect starts with the cookie on stdin and the pin, and ocproxy forwards `127.0.0.1:<free port>` to
+  `<cluster>:22`, looking the name up with the VPN's DNS. It is up when the cluster's SSH server greets through
+  that port. SSH dials the port (`core/tunnels.py`) but checks the host key under the cluster's own name.
+  Disconnect stops openconnect (it logs out); ocproxy stops by itself.
+- **Logins:** the same saved logins as the laptop. A VPN with a login of its own (Yale's) has it in the phone's
+  sign-in sheet, and the desktop's QR code brings it along.
+- **In the background:** "Keep connected in the background" (`KeepAliveService.kt`) keeps the tunnels up with the
+  SSH sessions: they are the app's own processes, and Android lets an app with that service use the network in
+  Doze.
 
 ## Builds
 
 - **Local:** Python from the python.org Android release (checksum pinned), `cryptography` built with cibuildwheel,
   APK installed over USB with adb. No GitHub minutes.
-- **F-Droid:** builds from source: Python with CPython's `Android/android.py`, `cryptography` from source, the
-  Tauri app as other Tauri apps on F-Droid do. Nothing prebuilt in git.
-- **Flavors:** `play` and `fdroid` differ only in signing and the VPN switch above.
+- **F-Droid:** builds from source: Python with CPython's `Android/android.py`, `cryptography` from source,
+  openconnect and ocproxy with `mobile/vpn/build.sh`, the Tauri app as other Tauri apps on F-Droid do. Nothing
+  prebuilt in git.
+- **Flavors:** `play` and `fdroid` differ only in signing.
 - **Releases:** tags `vX.Y.Z`; versionCode from the tag.
 
 ## Build it
 
     mobile/python/build.sh arm64-v8a          # Python bundle and launcher into the Android project
+    mobile/vpn/build.sh arm64-v8a             # openconnect and ocproxy (mobile/vpn/build.sh host: for tests)
     cd mobile && npx tauri android build --debug --apk --target aarch64
     adb install -r src-tauri/gen/android/app/build/outputs/apk/universal/debug/app-universal-debug.apk
 
