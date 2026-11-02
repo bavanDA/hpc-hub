@@ -14,12 +14,12 @@ call<{ monitor_bar: boolean }>('preferences.get').then((p) => setMonitorBar(p.mo
 const useEnabled = () =>
   useSyncExternalStore((fn) => { subscribers.add(fn); return () => subscribers.delete(fn) }, () => enabled)
 
-// The same as monitor.py's size, rate, duration, level and used_of
-const UNITS = ['B', 'KB', 'MB', 'GB', 'TB']
+// monitor.py's size, rate, duration, level and used_of, in the app's units: kB, "2 h 47 min"
+const UNITS = ['B', 'kB', 'MB', 'GB', 'TB']
 
 function size(n: number): string {
   let i = 0
-  while (n >= 1024 && i < UNITS.length - 1) { n /= 1024; i++ }
+  while (n >= 1000 && i < UNITS.length - 1) { n /= 1000; i++ }
   return `${i === 0 || n >= 100 ? n.toFixed(0) : n.toFixed(1)} ${UNITS[i]}`
 }
 
@@ -28,7 +28,8 @@ const rate = (n: number | null) => (n === null ? '...' : `${size(n)}/s`)
 function duration(seconds: number): string {
   const days = Math.floor(seconds / 86400)
   const hours = Math.floor((seconds % 86400) / 3600)
-  return days ? `${days}d ${hours}h` : `${hours}h ${Math.floor((seconds % 3600) / 60)}m`
+  const minutes = Math.floor((seconds % 3600) / 60)
+  return days ? `${days} d ${hours} h` : hours ? `${hours} h ${minutes} min` : `${minutes} min`
 }
 
 type Level = '' | 'warn' | 'high'
@@ -67,7 +68,8 @@ function useStats(cluster: string, node: string, active: boolean): MonitorStats 
   return stats
 }
 
-const COLORS: Record<Level, string> = { '': '', warn: 'text-orange', high: 'font-semibold text-bad' }
+// a level, not an error: bold and the text color, never red
+const COLORS: Record<Level, string> = { '': '', warn: 'text-text', high: 'font-semibold text-text' }
 
 function Item({ icon: Icon, text, tip, level = '' }: { icon: LucideIcon; text: string; tip: string; level?: Level }) {
   return (
