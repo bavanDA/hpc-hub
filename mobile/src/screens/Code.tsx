@@ -2,7 +2,7 @@
 // view mode so scrolling never brings up the keyboard; Edit switches to typing with a row of keys above it. Ask
 // sends the file or the selected lines to an agent on the cluster and shows its change as a diff to accept. Open
 // files stay open while you look at other tabs (code/store.ts), and unsaved edits survive the app being closed.
-import { Copy, Folder, FolderOpen, Hash, MoreVertical, Pencil, Save, Search } from 'lucide-react'
+import { Copy, Folder, FolderOpen, Hash, MoreVertical, Pencil, Save } from 'lucide-react'
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 
 import { getAsk, isRunning, loadAsks, unseenCount, useAsks } from '@shared/components/code/ask'
@@ -285,7 +285,10 @@ export function Code() {
   const menuActions: SheetAction[] = []
   if (f && !f.loading) {
     const command = runCommand(f.path, f.text)
-    if (!isLog(f.path)) menuActions.push({ label: 'Go to line', onPick: () => setGotoLine(true) })
+    if (!isLog(f.path)) {
+      menuActions.push({ label: 'Find in file', onPick: () => setSearching(true) },
+        { label: 'Go to line', onPick: () => setGotoLine(true) })
+    }
     if (isLog(f.path)) menuActions.push({ label: follow ? 'Stop following' : 'Follow as it grows', onPick: () => setFollow((x) => !x) })
     menuActions.push(
       { label: view.wrap ? "Don't wrap long lines" : 'Wrap long lines', onPick: () => changeView({ wrap: !view.wrap }) },
@@ -320,9 +323,6 @@ export function Code() {
               {isDirty(f) && <span className="size-2 shrink-0 rounded-full bg-text" aria-label="Unsaved" />}
             </button>
           : <h1 className="min-w-0 flex-1 px-1 text-2xl font-bold">Code</h1>}
-        {f && !isLog(f.path) && !f.loading && (
-          <button aria-label="Find in file" className={ICON} onClick={() => setSearching((s) => !s)}><Search size={20} /></button>
-        )}
         {f && !f.loading && (
           <Button aria-label={running ? `Ask an agent, ${running} running` : unseen ? 'Ask an agent, new answer' : 'Ask an agent'}
             className="mx-1 px-3.5" onClick={() => startAsk('free')}>
