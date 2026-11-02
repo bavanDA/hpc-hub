@@ -1,10 +1,17 @@
-// What the Jobs screen narrows and orders by: state chips, a search over the fields people type, and sort orders as
-// an action sheet (the desktop's sortable columns, without columns).
-import { sortJobs, stateName, type SortKey } from '@shared/components/jobs/format'
-import type { Job } from '@shared/types/jobs'
+// What the Jobs screen narrows and orders by: whose jobs, state chips, a search over the fields people type, and
+// sort orders (the desktop's sortable columns, without columns). All of it lives in the filter sheet.
+import { sortJobs, type SortKey } from '@shared/components/jobs/format'
+import type { Job, Scope } from '@shared/types/jobs'
+import { stateWord } from './words'
+
+export const SCOPES = [['mine', 'Mine'], ['group', 'Group'], ['history', '7 days'], ['all', 'All']] as const
+/** The line above the list: whose jobs it shows. */
+export const SCOPE_TEXT: Record<Scope, string> = {
+  mine: 'Your jobs', group: "Your group's jobs", history: 'Your last 7 days', all: "Everyone's jobs",
+}
 
 export const STATES = ['RUNNING', 'PENDING', 'COMPLETED', 'FAILED', 'CANCELLED', 'TIMEOUT']
-export const STATE_CHIPS = STATES.map((s) => [s, stateName(s)] as const)
+export const STATE_CHIPS = STATES.map((s) => [s, stateWord(s)] as const)
 
 export type Order = { key: SortKey; desc: boolean; label: string }
 export const ORDERS: Order[] = [
@@ -18,7 +25,7 @@ export const ORDERS: Order[] = [
 ]
 
 /** CANCELLED shows as "CANCELLED by 123" in some Slurm versions: the first word is the state. */
-const stateOf = (j: Job) => j.state.split(' ')[0]
+export const stateOf = (j: Job) => j.state.split(' ')[0]
 
 export function shownJobs(jobs: Job[], states: string[], query: string, order: Order): Job[] {
   const q = query.trim().toLowerCase()

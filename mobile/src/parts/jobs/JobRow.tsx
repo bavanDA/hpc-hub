@@ -1,35 +1,45 @@
-// One job in the list: name and state, then why it waits or how long it ran, then id, person, cores and node.
-import { Meter, StatusPill } from '@shared/components/ui'
-import { stateName } from '@shared/components/jobs/format'
+// One job in the list, as a row: name and state, then why it waits or how long it ran, then id, person, cores, node.
 import type { Job } from '@shared/types/jobs'
+import { StatusDot } from '../../ui'
+import { Bar } from '../usage/Bar'
+import { cores, stateTone, stateWord } from './words'
 
 /** How far into its time limit a job is, as the bar shows it: full when it ran out. */
 export const timeUsed = (j: Job) => (j.state === 'TIMEOUT' ? 1 : j.limit_seconds ? j.seconds / j.limit_seconds : 0)
 
+/** "3 h 41 min of 12 h" */
+export const timeText = (j: Job) => [j.elapsed_text || '0 min', j.limit_text && `of ${j.limit_text}`]
+  .filter(Boolean).join(' ')
+
+export function JobState({ state }: { state: string }) {
+  return (
+    <span className="flex shrink-0 items-center gap-1.5 text-sm font-medium">
+      <StatusDot tone={stateTone(state)} />
+      <span className={stateTone(state) === 'error' ? 'text-bad' : ''}>{stateWord(state)}</span>
+    </span>
+  )
+}
+
 export function JobTime({ job: j }: { job: Job }) {
   return (
-    <div className="flex items-center gap-2 text-sm">
-      {j.limit_seconds > 0 && <Meter value={timeUsed(j)} label="Time used" className="w-12 shrink-0" />}
-      <span className="tabular-nums">{j.elapsed_text || '0 min'}</span>
-      {j.limit_text && <span className="text-dim">of {j.limit_text}</span>}
+    <div className="flex flex-col gap-1.5">
+      <span className="tabular-nums">{timeText(j)}</span>
+      {j.limit_seconds > 0 && <Bar value={timeUsed(j)} label="Time used" />}
     </div>
   )
 }
 
 export function JobRow({ job: j, showUser, onOpen }: { job: Job; showUser: boolean; onOpen: () => void }) {
+  const facts = [j.job_id, showUser ? j.user : '', cores(j.cpus), j.reason ? '' : j.where].filter(Boolean)
   return (
-    <button onClick={onOpen} className="w-full rounded-2xl bg-card p-4 text-left shadow-[var(--shadow-card)]
-      active:bg-hover">
-      <div className="flex items-center gap-2">
-        <span className="min-w-0 flex-1 truncate font-semibold">{j.name || `Job ${j.job_id}`}</span>
-        <StatusPill state={j.state}>{stateName(j.state)}</StatusPill>
-      </div>
-      <div className="mt-1.5">
-        {j.reason ? <p className="truncate text-sm text-dim">{j.reason}</p> : <JobTime job={j} />}
-      </div>
-      <p className="mt-1 truncate text-sm text-dim tabular-nums">
-        {[j.job_id, showUser ? j.user : '', `${j.cpus} cores`, j.partition, j.reason ? '' : j.where]
-          .filter(Boolean).join(' · ')}</p>
+    <button onClick={onOpen} className="flex min-h-14 w-full flex-col gap-0.5 border-b border-line px-4 py-2.5
+      text-left active:bg-pressed">
+      <span className="flex w-full items-baseline gap-3">
+        <span className="min-w-0 flex-1 font-medium break-words">{j.name || `Job ${j.job_id}`}</span>
+        <JobState state={j.state} />
+      </span>
+      <span className="text-sm break-words text-dim tabular-nums">{j.reason || timeText(j)}</span>
+      <span className="text-sm break-words text-dim tabular-nums">{facts.join(' · ')}</span>
     </button>
   )
 }
