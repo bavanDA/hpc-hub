@@ -133,7 +133,8 @@ export function NumberRow({ label, value, unit, showUnit = true, min = 1, max, o
 }) {
   const [draft, setDraft] = useState<string | null>(null)
   const ok = inRange(value, min, max)
-  const limit = value < min ? `At least ${min} ${unit}` : max ? `Up to ${max} ${unit}` : ''
+  const units = (n: number) => `${n} ${n === 1 && unit.endsWith('s') ? unit.slice(0, -1) : unit}`  // 1 core
+  const limit = value < min ? `At least ${units(min)}` : max ? `Up to ${units(max)}` : ''
   if (draft !== null) {
     return (
       <div className="flex flex-col gap-2 border-b border-line bg-soft px-4 pt-3 pb-3.5"
