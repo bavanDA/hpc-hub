@@ -20,11 +20,11 @@ export function EDialog({ title, onClose, onBack, children, actions, width = 520
         style={{ width }} className="dialog-in flex max-h-[90vh] max-w-full flex-col rounded-xl bg-window
           shadow-[var(--shadow-dialog)]">
         <header className={`flex h-14 shrink-0 items-center gap-2 pr-2 ${onBack ? 'pl-2' : 'pl-5'}`}>
-          {onBack && <button aria-label="Back" onClick={onBack} className="grid size-9 place-items-center rounded-md
-            text-dim hover:bg-hover active:bg-pressed"><ArrowLeft size={18} /></button>}
+          {onBack && <button type="button" aria-label="Back" onClick={onBack} className="grid size-9
+            place-items-center rounded-md text-dim hover:bg-hover active:bg-pressed"><ArrowLeft size={18} /></button>}
           <h2 className="min-w-0 flex-1 text-lg font-semibold">{title}</h2>
-          <button aria-label="Close" onClick={onClose} className="grid size-9 place-items-center rounded-md
-            text-dim hover:bg-hover active:bg-pressed"><X size={18} /></button>
+          <button type="button" aria-label="Close" onClick={onClose} className="grid size-9 place-items-center
+            rounded-md text-dim hover:bg-hover active:bg-pressed"><X size={18} /></button>
         </header>
         <div className="min-h-0 flex-1 overflow-y-auto pb-2">{children}</div>
         {actions && <footer className="flex shrink-0 gap-2 px-5 pt-3 pb-5 [&>button]:h-11">{actions}</footer>}
@@ -82,7 +82,7 @@ export function Row({ label, sub, value, icon: Icon, opens = false, onPress, dan
     </>
   )
   return onPress
-    ? <button onClick={onPress} className={`${ROW} hover:bg-hover active:bg-pressed`}>{body}</button>
+    ? <button type="button" onClick={onPress} className={`${ROW} hover:bg-hover active:bg-pressed`}>{body}</button>
     : <div className={ROW}>{body}</div>
 }
 
@@ -106,7 +106,8 @@ function NumberBox({ label, value, unit, bad, onChange, autoFocus, inline = fals
       border-[1.5px] bg-window px-3 ${bad ? 'border-bad' : 'border-accent'}`}>
       <input aria-label={label} aria-invalid={bad} type="text" inputMode="numeric" autoFocus={autoFocus}
         value={value} onChange={(e) => onChange(e.target.value.replace(/\D/g, '').slice(0, 6))}
-        onFocus={(e) => e.target.select()} onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur() }}
+        onFocus={(e) => e.target.select()}
+        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur() } }}
         className="w-full min-w-0 bg-transparent text-[18px] font-semibold tabular-nums outline-none" />
       <span className="ml-2 shrink-0 text-dim">{unit}</span>
     </label>
@@ -207,7 +208,7 @@ export function Segments<T extends string>({ value, options, onChange, label }:
     <div role="radiogroup" aria-label={label} className="flex min-h-10 gap-[3px] rounded-lg border
       border-line-strong p-[3px]">
       {options.map(([v, text]) => (
-        <button key={v} role="radio" aria-checked={v === value} onClick={() => onChange(v)}
+        <button key={v} type="button" role="radio" aria-checked={v === value} onClick={() => onChange(v)}
           className={`min-w-0 flex-1 rounded-md px-2 py-1 text-sm leading-tight break-words ${v === value
             ? 'bg-accent font-semibold text-on-accent' : 'font-medium text-dim hover:bg-hover active:bg-pressed'}`}>
           {text}</button>
