@@ -1,33 +1,47 @@
-// Jobs: yours, your group's, your last week, or everyone's, on one cluster. State chips and a search narrow the list,
-// Sort orders it, and a job opens its details (with Cancel). Usage opens it on one person's jobs ({ cluster, user }).
-import { ArrowUpDown, ListChecks, RefreshCw, SearchX, WifiOff } from 'lucide-react'
+// Jobs: yours, your group's, your last week, or everyone's, on one cluster. Search sits over the list; whose jobs,
+// states and order are in the filter sheet, and one line says what the list shows. A job opens its details (with
+// Cancel). Usage opens it on one person's jobs ({ cluster, user }).
+import { ListChecks, RefreshCw, SearchX, SlidersHorizontal, WifiOff } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
-import { usageText } from '@shared/components/jobs/format'
-import { EmptyState, Spinner } from '@shared/components/ui'
-import { usePageParams } from '@shared/nav'
+import { Spinner } from '@shared/components/ui'
+import { useGo, usePageParams } from '@shared/nav'
 import { call } from '@shared/rpc'
 import type { Job, JobList, Scope } from '@shared/types/jobs'
+import type { Account } from '@shared/types/usage'
 import { usePhoneNav } from '../nav'
+import { FilterSheet } from '../parts/jobs/FilterSheet'
+import { ORDERS, SCOPE_TEXT, shownJobs } from '../parts/jobs/filters'
+import { JobRow } from '../parts/jobs/JobRow'
+import { stateWord } from '../parts/jobs/words'
 import { Header } from '../parts/Header'
 import { JobSheet } from '../parts/JobSheet'
-import { ORDERS, shownJobs, STATE_CHIPS } from '../parts/jobs/filters'
-import { JobRow } from '../parts/jobs/JobRow'
 import { useConnected } from '../parts/useConnected'
-import { ActionSheet, Button, Chips, SearchField, Segments } from '../ui'
+import { Button, EmptyState, List, Row, SearchField, Segments } from '../ui'
 
 const REFRESH_MS = 15_000
-const SCOPES = [['mine', 'Mine'], ['group', 'Group'], ['history', '7 days'], ['all', 'All']] as const
+const n = (v: number) => Math.round(v).toLocaleString('en-US')
+
+/** The account most of your hours go to, as one row that opens Usage. */
+function HoursRow({ accounts, onOpen }: { accounts: Account[]; onOpen: () => void }) {
+  const a = accounts.reduce<Account | null>((x, y) => (!x || y.used > x.used ? y : x), null)
+  if (!a) return null
+  return a.quota > 0
+    ? <Row label="Hours left (SU)" sub={a.account} value={n(Math.max(0, a.quota - a.used))} opens onPress={onOpen} />
+    : <Row label="Hours used (SU)" sub={[a.account, a.period].filter(Boolean).join(' · ')} value={n(a.used)} opens
+        onPress={onOpen} />
+}
 
 export function Jobs() {
   const { live, current, pick } = useConnected()
   const { open: openTab } = usePhoneNav()
+  const go = useGo()
   const params = usePageParams()  // from Usage: { cluster, user } shows that person's jobs
   const [scope, setScope] = useState<Scope>(params.user ? 'all' : 'mine')
   const [states, setStates] = useState<string[]>([])
   const [query, setQuery] = useState(params.user ?? '')
   const [order, setOrder] = useState(ORDERS[0])
-  const [sorting, setSorting] = useState(false)
+  const [filtering, setFiltering] = useState(false)
   const [got, setGot] = useState({ key: '', list: null as JobList | null, error: '' })
   const [loading, setLoading] = useState(false)
   const [open, setOpen] = useState<Job | null>(null)
@@ -58,53 +72,62 @@ export function Jobs() {
   const list = got.key === key ? got.list : null
   const error = got.key === key ? got.error : ''
   const shown = useMemo(() => shownJobs(list?.jobs ?? [], states, query, order), [list, states, query, order])
-  const filtered = states.length > 0 || query.trim() !== ''
+  const filtered = scope !== 'mine' || states.length > 0 || order !== ORDERS[0]
+  const reset = () => { setScope('mine'); setStates([]); setOrder(ORDERS[0]) }
+  const total = list?.jobs.length ?? 0
+  const narrowed = states.length > 0 || query.trim() !== ''
+  const what = [SCOPE_TEXT[scope], states.map(stateWord).join(', '), order === ORDERS[0] ? '' : order.label]
+    .filter(Boolean).join(' · ')
 
   return (
     <div className="flex h-full flex-col">
       <Header title="Jobs">
         {current && <>
-          <button aria-label="Sort" onClick={() => setSorting(true)}
-            className="grid size-12 place-items-center rounded-full active:bg-hover"><ArrowUpDown size={22} /></button>
+          <button aria-label={filtered ? 'Filter, some on' : 'Filter'} onClick={() => setFiltering(true)}
+            className="relative grid size-12 place-items-center rounded-full active:bg-pressed">
+            <SlidersHorizontal size={22} />
+            {filtered && <span className="absolute top-3 right-3 size-2 rounded-full bg-text" />}</button>
           <button aria-label="Refresh" onClick={refresh}
-            className="grid size-12 place-items-center rounded-full active:bg-hover">
+            className="grid size-12 place-items-center rounded-full active:bg-pressed">
             {loading ? <Spinner size={22} /> : <RefreshCw size={22} />}</button>
         </>}
       </Header>
       {!current
-        ? <div className="flex flex-1 flex-col items-center justify-center gap-4 px-6">
-            <EmptyState icon={WifiOff} title="No cluster connected" text="Connect a cluster to see its jobs." />
-            <Button kind="primary" onClick={() => openTab('clusters')}>Go to Clusters</Button>
+        ? <div className="flex flex-1 flex-col justify-center">
+            <EmptyState icon={WifiOff} title="No cluster connected" text="Connect a cluster to see its jobs."
+              action={<Button kind="primary" onClick={() => openTab('clusters')}>Go to Clusters</Button>} />
           </div>
         : (
-          <div className="flex min-h-0 flex-1 flex-col gap-3 px-4">
-            {live.length > 1 && <Segments value={current.id} options={live.map((c) => [c.id, c.name] as const)}
-              onChange={pick} />}
-            <Segments value={scope} options={SCOPES} onChange={setScope} />
-            <SearchField value={query} onChange={setQuery} placeholder="Search id, name, person, queue" />
-            <Chips options={STATE_CHIPS} value={states} onChange={setStates} />
+          <div className="flex min-h-0 flex-1 flex-col">
+            <div className="flex flex-col gap-3 px-4 pb-1">
+              {live.length > 1 && <Segments label="Cluster" value={current.id}
+                options={live.map((c) => [c.id, c.name.split(' (')[0]] as const)} onChange={pick} />}
+              <SearchField value={query} onChange={setQuery} placeholder="Search id, name, person, queue" />
+            </div>
             <div className="min-h-0 flex-1 overflow-y-auto pb-4">
-              {list?.accounts.length ? <p className="mb-2 text-sm text-dim">{usageText(list.accounts)}</p> : null}
-              {error && <p className="rounded-xl bg-bad-bg p-3 text-bad">{error}</p>}
+              <button onClick={() => setFiltering(true)} className="flex min-h-12 w-full items-center px-4 text-left
+                text-sm break-words text-dim active:bg-pressed">
+                {list && total > 0 ? `${what} · ${narrowed ? `${shown.length} of ${total}` : total}` : what}</button>
+              {error && <p className="px-4 py-3 text-bad">{error}</p>}
               {!list && !error && <div className="grid h-40 place-items-center"><Spinner size={28} /></div>}
-              {list && !list.jobs.length && <EmptyState icon={ListChecks} title="No jobs"
+              {list && !total && <EmptyState icon={ListChecks} title="No jobs"
                 text={scope === 'mine' ? "You don't have any jobs running or waiting." : 'Nothing to show here.'} />}
-              {list && list.jobs.length > 0 && !shown.length && <div className="flex flex-col items-center gap-3">
-                <EmptyState icon={SearchX} title="No jobs match" text="Try another state or search." />
-                <Button onClick={() => { setStates([]); setQuery('') }}>Show all</Button>
-              </div>}
-              {shown.length > 0 && <p className="mb-2 text-sm text-dim">
-                {filtered ? `${shown.length} of ${list?.jobs.length} jobs` : `${shown.length} jobs`} · {order.label}</p>}
-              <div className="flex flex-col gap-2">
+              {list && total > 0 && !shown.length && <EmptyState icon={SearchX} title="No jobs match"
+                text="Try another state or search."
+                action={<Button onClick={() => { setStates([]); setQuery('') }}>Show all</Button>} />}
+              {shown.length > 0 && <List>
                 {shown.map((j) => <JobRow key={j.job_id} job={j} showUser={scope === 'all' || scope === 'group'}
                   onOpen={() => setOpen(j)} />)}
-              </div>
+              </List>}
+              {list?.accounts.length ? <List className="mt-6">
+                <HoursRow accounts={list.accounts} onOpen={() => go('usage', { cluster: id })} />
+              </List> : null}
             </div>
           </div>
         )}
-      {sorting && <ActionSheet title="Sort jobs" onClose={() => setSorting(false)}
-        actions={ORDERS.map((o) => ({ label: o.label === order.label ? `${o.label} ✓` : o.label,
-          onPick: () => setOrder(o) }))} />}
+      {filtering && <FilterSheet scope={scope} states={states} order={order} onScope={setScope} onStates={setStates}
+        onOrder={setOrder} onReset={reset} onClose={() => setFiltering(false)}
+        count={list ? shown.length : null} />}
       {open && current && <JobSheet cluster={current.id} job={open} appJob={list?.app_job ?? ''}
         onClose={() => setOpen(null)} onChanged={refresh} />}
     </div>

@@ -1,17 +1,40 @@
-// One job: its state and time, Slurm's details grouped (with its SU), the output and error files (View opens them in
-// Code, read-only), and every field folded under "All fields". Cancel asks first (CancelSheet).
-import { ChevronDown, ChevronRight, Copy, FileText } from 'lucide-react'
+// One job: its state and time once at the top, then Slurm's details as rows in plain words (with its SU), the output
+// and error files (a tap opens them in Code, read-only), and every field under "All fields". Cancel asks first
+// (CancelSheet); HPC Hub's own node is released instead.
+import { Copy } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
-import { stateName } from '@shared/components/jobs/format'
 import { copyText } from '@shared/components/terminals/xterm'
-import { Spinner, StatusPill } from '@shared/components/ui'
+import { Spinner } from '@shared/components/ui'
 import { useGo } from '@shared/nav'
 import { call } from '@shared/rpc'
-import type { DetailGroup, Job, JobDetails } from '@shared/types/jobs'
-import { Button, Card, Sheet, useToast } from '../ui'
+import type { Job, JobDetails } from '@shared/types/jobs'
+import { Button, Row, Section, Sheet, useToast } from '../ui'
 import { CancelSheet } from './CancelSheet'
-import { JobTime } from './jobs/JobRow'
+import { JobState, JobTime } from './jobs/JobRow'
+import { phoneGroups } from './jobs/words'
+
+/** A file of the job: a tap opens it (or nothing, for the folder), the copy button copies its path. */
+function FileRow({ label, path, onView, onCopy }:
+  { label: string; path: string; onView?: () => void; onCopy: () => void }) {
+  const text = (
+    <span className="min-w-0 flex-1">
+      <span className="block">{label}</span>
+      <span className="block font-mono text-sm break-all text-dim select-text">{path}</span>
+    </span>
+  )
+  return (
+    <div className="flex min-h-14 items-center border-b border-line pr-1">
+      {onView
+        ? <button onClick={onView} className="flex min-h-14 min-w-0 flex-1 items-center py-2 pl-4 text-left
+            active:bg-pressed">{text}</button>
+        : <div className="flex min-h-14 min-w-0 flex-1 items-center py-2 pl-4">{text}</div>}
+      <button aria-label={`Copy the path of ${label.toLowerCase()}`} onClick={onCopy}
+        className="grid size-12 shrink-0 place-items-center rounded-full text-dim active:bg-pressed"><Copy size={20} />
+      </button>
+    </div>
+  )
+}
 
 export function JobSheet({ cluster, job: j, appJob, onClose, onChanged }: {
   cluster: string; job: Job; appJob: string; onClose: () => void; onChanged: () => void
@@ -27,8 +50,13 @@ export function JobSheet({ cluster, job: j, appJob, onClose, onChanged }: {
       .catch((e: Error) => setError(e.message))
   }, [cluster, j.job_id])
 
-  const groups: DetailGroup[] = (details?.groups ?? []).map((g) => g.title === 'Resources' && j.su
+  const appNode = !!appJob && appJob === j.job_id
+  const found = phoneGroups(details?.groups ?? []).map((g) => g.title === 'Resources' && j.su
     ? { ...g, rows: [...g.rows, { label: 'SU', value: j.su }] } : g)
+  // the job's id leads the first group (the times), or stands alone while the details load
+  const id = { label: 'Job ID', value: j.job_id }
+  const groups = found[0]?.title === '' ? [{ ...found[0], rows: [id, ...found[0].rows] }, ...found.slice(1)]
+    : [{ title: '', rows: [id] }, ...found]
   const copy = async (path: string) => toast(await copyText(path) ? 'Path copied' : "Couldn't copy the path")
   const view = (path: string) => {
     onClose()
@@ -36,49 +64,32 @@ export function JobSheet({ cluster, job: j, appJob, onClose, onChanged }: {
   }
 
   return (
-    <Sheet title={`Job ${j.job_id}`} onClose={onClose} actions={j.cancellable
-      ? <Button kind="danger" className="flex-1" onClick={() => setCancelling(true)}>Cancel job</Button> : undefined}>
-      <Card className="mb-5">
-        <div className="flex items-center gap-2">
-          <span className="min-w-0 flex-1 truncate text-lg font-semibold">{j.name || `Job ${j.job_id}`}</span>
-          <StatusPill state={j.state}>{stateName(j.state)}</StatusPill>
-        </div>
-        <div className="mt-2">{j.reason ? <p className="text-dim">{j.reason}</p> : <JobTime job={j} />}</div>
-      </Card>
-      {error && <p className="rounded-xl bg-bad-bg p-3 text-bad">{error}</p>}
+    <Sheet title={j.name || `Job ${j.job_id}`} onClose={onClose} flush actions={j.cancellable
+      ? <Button kind="danger" className="h-[52px] flex-1 text-base" onClick={() => setCancelling(true)}>
+          {appNode ? 'Release node' : 'Cancel job'}</Button> : undefined}>
+      <div className="flex flex-col gap-2 px-4">
+        <JobState state={j.state} />
+        {j.reason ? <p className="text-dim">{j.reason}</p> : <JobTime job={j} />}
+      </div>
+      {groups.map((g) => g.title === 'Files'
+        ? <Section key={g.title} title="Files">
+            {g.rows.map((r) => <FileRow key={r.label} label={r.label} path={r.value} onCopy={() => copy(r.value)}
+              onView={r.label === 'Work folder' ? undefined : () => view(r.value)} />)}
+          </Section>
+        : <Section key={g.title || 'times'} title={g.title || undefined}>
+            {g.rows.map((r) => <Row key={r.label} label={r.label}
+              value={<span className="select-text">{r.value}</span>} />)}
+          </Section>)}
+      {error && <p className="px-4 py-3 text-bad">{error}</p>}
       {!details && !error && <div className="grid h-40 place-items-center"><Spinner size={28} /></div>}
-      {groups.filter((g) => g.rows.length).map((g) => (
-        <section key={g.title} className="mb-5">
-          <h2 className="mb-1 text-sm font-bold text-dim">{g.title}</h2>
-          <div className="rounded-2xl bg-card shadow-[var(--shadow-card)]">
-            {g.rows.map((r) => g.title === 'Files'
-              ? <div key={r.label} className="border-b border-line px-4 py-3 last:border-0">
-                  <p className="text-sm text-dim">{r.label}</p>
-                  <p className="mt-0.5 font-mono text-sm break-all select-text">{r.value}</p>
-                  <div className="mt-2 flex gap-2">
-                    {r.label !== 'Work folder' && <Button icon={FileText} className="flex-1"
-                      onClick={() => view(r.value)}>View {r.label === 'Errors' ? 'errors' : 'output'}</Button>}
-                    <Button icon={Copy} className={r.label === 'Work folder' ? 'flex-1' : ''}
-                      onClick={() => copy(r.value)}>Copy path</Button>
-                  </div>
-                </div>
-              : <div key={r.label} className="flex gap-3 border-b border-line px-4 py-3 last:border-0">
-                  <span className="w-28 shrink-0 text-dim">{r.label}</span>
-                  <span className="min-w-0 flex-1 select-text break-words">{r.value}</span>
-                </div>)}
-          </div>
-        </section>
-      ))}
-      {details && (
-        <section>
-          <button onClick={() => setAll(!all)} className="flex h-11 items-center gap-1 font-semibold">
-            {all ? <ChevronDown size={18} /> : <ChevronRight size={18} />} All fields
-          </button>
-          {all && <pre className="mt-1 rounded-xl bg-pill p-3 font-mono text-xs break-all whitespace-pre-wrap
-            select-text">{details.text}</pre>}
-        </section>
-      )}
-      {cancelling && <CancelSheet cluster={cluster} job={j} appJob={appJob} onClose={() => setCancelling(false)}
+      {details && <Section>
+        <Row label="All fields" value={<span className="font-normal text-dim">{all ? 'Hide' : 'Show'}</span>}
+          onPress={() => setAll(!all)} />
+        {all && <pre className="m-4 rounded-lg bg-soft p-3 font-mono text-xs break-all whitespace-pre-wrap
+          select-text">{details.text}</pre>}
+      </Section>}
+      <div className="h-4" />
+      {cancelling && <CancelSheet cluster={cluster} job={j} appNode={appNode} onClose={() => setCancelling(false)}
         onDone={() => { onChanged(); onClose() }} />}
     </Sheet>
   )

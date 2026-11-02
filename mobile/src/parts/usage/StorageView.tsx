@@ -1,52 +1,58 @@
-// Storage: each quota with a bar (yours inside the group's); tap one to see who uses it, where the cluster tells.
-import { ChevronDown, ChevronRight } from 'lucide-react'
-import { useState } from 'react'
+// Storage: each quota as a row with a bar (yours solid inside the group's); a tap shows who uses it, where the
+// cluster tells.
+import { useState, type ReactNode } from 'react'
 
 import { n, pct } from '@shared/components/usage/format'
-import { Bar } from '@shared/components/usage/parts'
 import type { Storage, StorageRow } from '@shared/types/usage'
+import { List } from '../../ui'
+import { Bar } from './Bar'
 
 function Quota({ r }: { r: StorageRow }) {
   const [open, setOpen] = useState(false)
   const people = Object.entries(r.people).sort((a, b) => b[1] - a[1])
-  const yours = r.mine != null && r.label !== 'Home' ? ` · yours ${n(r.mine)} GB` : ''
-  const size = r.quota ? `${n(r.used)} of ${n(r.quota)} GB (${pct(r.used, r.quota)})` : `${n(r.used)} GB, no quota`
+  const yours = r.mine != null && r.label !== 'Home' ? `Yours ${n(r.mine)} GB` : ''
   const body = (
     <>
-      <div className="flex items-center gap-2">
-        <span className="min-w-0 flex-1 truncate">{r.label}</span>
-        {people.length > 0 && (open ? <ChevronDown size={18} className="text-dim" />
-          : <ChevronRight size={18} className="text-dim" />)}
-      </div>
-      <p className="truncate text-sm text-dim tabular-nums">{size}{yours}</p>
-      <Bar value={r.quota ? r.used / r.quota : 0} mine={r.quota && r.mine != null ? r.mine / r.quota : null}
-        className="mt-2 w-full" />
+      <span className="flex w-full items-baseline gap-3">
+        <span className="min-w-0 flex-1 break-words">{r.label}</span>
+        <span className="text-right font-medium tabular-nums">
+          {r.quota ? `${n(r.used)} of ${n(r.quota)} GB` : `${n(r.used)} GB`}</span>
+      </span>
+      {r.quota ? <Bar value={r.used / r.quota} mine={r.mine != null ? r.mine / r.quota : null} label={r.label}
+        className="my-1 w-full" /> : null}
+      <span className="flex w-full gap-3 text-sm text-dim tabular-nums">
+        <span className="flex-1"><span className={r.quota && r.used / r.quota >= 0.9 ? 'text-bad' : ''}>
+          {r.quota ? `${pct(r.used, r.quota)} full` : 'No limit'}</span>{yours && ` · ${yours}`}</span>
+        {people.length > 0 && <span>{open ? 'Hide people' : 'People'}</span>}
+      </span>
     </>
   )
+  const cls = 'flex min-h-14 w-full flex-col gap-1 border-b border-line px-4 py-2.5 text-left'
   return (
-    <div className="border-b border-line last:border-0">
+    <>
       {people.length
-        ? <button onClick={() => setOpen(!open)} className="block w-full px-4 py-3 text-left active:bg-hover">{body}</button>
-        : <div className="px-4 py-3">{body}</div>}
+        ? <button onClick={() => setOpen(!open)} className={`${cls} active:bg-pressed`}>{body}</button>
+        : <div className={cls}>{body}</div>}
       {open && people.map(([user, gb]) => (
-        <div key={user} className="flex min-h-11 items-center border-t border-line pr-4 pl-8 text-sm">
+        <div key={user} className="flex min-h-12 items-center gap-3 border-b border-line pr-4 pl-8 text-sm">
           <span className="flex-1">{user}</span>
-          <span className="tabular-nums">{n(gb, 1)} GB · <span className="text-dim">{pct(gb, r.used)}</span></span>
+          <span className="tabular-nums">{n(gb, 1)} GB <span className="text-dim">· {pct(gb, r.used)}</span></span>
         </div>
       ))}
-    </div>
+    </>
   )
 }
 
-export function StorageView({ storage }: { storage: Storage }) {
+export function StorageView({ storage, top }: { storage: Storage; top?: ReactNode }) {
   return (
-    <div className="flex flex-col gap-3">
-      {storage.rows.length > 0 && <section className="overflow-hidden rounded-2xl bg-card shadow-[var(--shadow-card)]">
-        {storage.rows.map((r) => <Quota key={r.label} r={r} />)}</section>}
-      {storage.rows.some((r) => r.mine != null) && <p className="text-sm text-dim">The darker part of each bar is yours.</p>}
-      {storage.raw && <pre className="overflow-x-auto rounded-xl bg-pill p-3 font-mono text-xs select-text">
+    <>
+      <List>{top}{storage.rows.map((r) => <Quota key={r.label} r={r} />)}</List>
+      {storage.rows.some((r) => r.mine != null && r.label !== 'Home') &&
+        <p className="px-4 pt-2 text-sm text-dim">The solid part of each bar is yours.</p>}
+      {storage.raw && <pre className="m-4 overflow-x-auto rounded-lg bg-soft p-3 font-mono text-xs select-text">
         {storage.raw}</pre>}
-      {!storage.rows.length && !storage.raw && <p className="text-dim">This cluster doesn't report storage quotas.</p>}
-    </div>
+      {!storage.rows.length && !storage.raw && <p className="px-4 py-3 text-dim">This cluster doesn't report storage
+        limits.</p>}
+    </>
   )
 }
