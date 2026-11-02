@@ -1,6 +1,7 @@
 // A cluster's sign-in on the phone: scanned from the desktop app's QR code (scanPairing.ts), or typed here. Kept on
 // the phone in the encrypted vault (vault_file.py). The words are the desktop's (loginCopy.ts). A cluster that takes
-// only SSH keys (Yale) gets this phone's key instead of a password: make it, copy it to the cluster's key page.
+// only SSH keys (Yale) gets this phone's key instead of a password: make it, copy it to the cluster's key page. A
+// VPN with a login of its own (Yale's) has its username and password here too, for its sign-in page.
 import { Copy, ExternalLink, KeyRound, ScanQrCode, ShieldCheck } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
@@ -52,14 +53,18 @@ export function LoginSheet({ cluster: c, hint, onClose }: { cluster: Cluster; hi
   const [saved, setSaved] = useState<Logins | null>(null)
   const [user, setUser] = useState('')
   const [password, setPassword] = useState('')
+  const [vpnUser, setVpnUser] = useState('')
+  const [vpnPassword, setVpnPassword] = useState('')
   const [remember, setRemember] = useState(true)
   const [ask, setAsk] = useState<'' | 'forget' | 'code'>('')
   const label = c.username_label || 'Username'
   const key = usesKey(c)
+  const ownVpnLogin = c.vpn.enabled && !(c.vpn.same_login_as_ssh ?? true)
   useEffect(() => {
     call<Logins>('clusters.login', { cluster: c.id }).then((l) => {
       setSaved(l)
       setUser(l.ssh.username)
+      setVpnUser(l.vpn.username)
       setRemember(l.remember ?? true)
     }).catch((e: Error) => toast(e.message))
   }, [c.id, toast])
@@ -68,6 +73,10 @@ export function LoginSheet({ cluster: c, hint, onClose }: { cluster: Cluster; hi
     try {
       await call('clusters.set_login', { cluster: c.id, kind: 'ssh', username: user, password: key ? '' : password,
         remember })
+      if (ownVpnLogin && vpnUser.trim()) {
+        await call('clusters.set_login', { cluster: c.id, kind: 'vpn', username: vpnUser, password: vpnPassword,
+          remember })
+      }
       onClose()
     } catch (e) {
       toast((e as Error).message)
@@ -108,6 +117,16 @@ export function LoginSheet({ cluster: c, hint, onClose }: { cluster: Cluster; hi
         {!key && <Field label={copy.password} type="password" autoComplete="current-password" value={password}
           onChange={(e) => setPassword(e.target.value)} placeholder={saved?.ssh.password ? copy.saved : ''} />}
       </form>
+      {ownVpnLogin && <>
+        <h3 className="px-4 pt-6 text-xs font-semibold tracking-wide text-dim uppercase">VPN login</h3>
+        <p className="px-4 pt-1 text-sm text-dim">What you type on the {who(c)} VPN sign-in page.</p>
+        <form className="px-4 pt-1" onSubmit={(e) => { e.preventDefault(); save() }}>
+          <Field label="VPN username" type="email" autoCapitalize="none" autoCorrect="off" spellCheck={false}
+            placeholder="jane.doe@example.edu" value={vpnUser} onChange={(e) => setVpnUser(e.target.value)} />
+          <Field label="VPN password" type="password" value={vpnPassword}
+            onChange={(e) => setVpnPassword(e.target.value)} placeholder={saved?.vpn.password ? copy.saved : ''} />
+        </form>
+      </>}
       {key ? <KeyRows cluster={c} /> : <>
         <p className="px-4 pb-3 text-sm text-dim">Kept encrypted on this phone. Changing it here doesn't change your
           {' '}{who(c)} password.</p>
