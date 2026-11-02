@@ -18,11 +18,11 @@ function useLimits(cluster: string, p: Profile) {
   const [limits, setLimits] = useState<Limits | null>(null)
   useEffect(() => {
     const t = setTimeout(() => {
-      call<Limits>('clusters.partitions', { cluster, partition: p.partition, qos: p.qos ?? '' })
+      call<Limits>('clusters.partitions', { cluster, partition: p.partition, qos: p.qos ?? '', account: p.account ?? '' })
         .then(setLimits).catch(() => {})
     }, 250)
     return () => clearTimeout(t)
-  }, [cluster, p.partition, p.qos])
+  }, [cluster, p.partition, p.qos, p.account])
   return limits
 }
 
@@ -59,10 +59,8 @@ function QueueDialog({ limits, value: p, onChange, onClose, extra }:
     <EDialog title="Queue and priority" width={440} onClose={onClose}
       actions={<MainButton onClick={onClose}>Done</MainButton>}>
       <QueuePickers limits={limits} queue={p.partition} qos={p.qos ?? ''} onQueue={(partition) => set({ partition })}
-        onQos={(qos) => set({ qos })} />
+        onQos={(qos) => set({ qos })} account={p.account ?? ''} onAccount={(account) => set({ account })} />
       <div className="px-5 pt-3">
-        <Field label="Group to bill" value={p.account ?? ''} placeholder="Your default group"
-          onChange={(e) => set({ account: e.target.value.trim() })} />
         {extra && <Field label="Extra options" value={p.extra_args ?? ''} placeholder="--constraint=intel"
           onChange={(e) => set({ extra_args: e.target.value })} />}
       </div>

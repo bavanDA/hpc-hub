@@ -10,7 +10,7 @@ import { useEffect, useState } from 'react'
 
 import { shortName } from '@shared/components/clusters/loginCopy'
 import { chosen, gpuName, gpuSummary, isPreset, presets, useGpus, withGpu, type Gpu } from '@shared/components/clusters/gpus'
-import { priorityName, queueText } from '@shared/components/clusters/priority'
+import { groupName, priorityName, queueText } from '@shared/components/clusters/priority'
 import { human, minutes, slurmTime } from '@shared/components/clusters/time'
 import { putCluster } from '@shared/components/clusters/store'
 import { call } from '@shared/rpc'
@@ -28,11 +28,11 @@ function useLimits(cluster: string, p: Profile) {
   const [limits, setLimits] = useState<Limits | null>(null)
   useEffect(() => {
     const t = setTimeout(() => {
-      call<Limits>('clusters.partitions', { cluster, partition: p.partition, qos: p.qos ?? '' })
+      call<Limits>('clusters.partitions', { cluster, partition: p.partition, qos: p.qos ?? '', account: p.account ?? '' })
         .then(setLimits).catch(() => {})
     }, 250)
     return () => clearTimeout(t)
-  }, [cluster, p.partition, p.qos])
+  }, [cluster, p.partition, p.qos, p.account])
   return limits
 }
 
@@ -69,8 +69,10 @@ function GpuSheet({ gpus, value: p, onChange, onClose }:
 /** Queue, priority, group and extra options: set once, then left alone. */
 function QueueSheet({ limits, value: p, onChange, onClose }:
   { limits: Limits | null; value: Profile; onChange: (p: Profile) => void; onClose: () => void }) {
-  const [pick, setPick] = useState<'' | 'queue' | 'priority'>('')
+  const [pick, setPick] = useState<'' | 'queue' | 'priority' | 'group'>('')
   const set = (change: Partial<Profile>) => onChange({ ...p, ...change })
+  const def = limits?.default_account ?? ''
+  const groups = (limits?.accounts ?? []).map((a) => ({ value: a, label: groupName(a, def) }))
   const queue = p.partition || limits?.default_partition || ''
   const qos = p.qos || limits?.default_qos || ''
   const queues = (limits?.partitions ?? []).map((q) => ({ value: q, label: q }))
@@ -83,19 +85,23 @@ function QueueSheet({ limits, value: p, onChange, onClose }:
         {queues.length ? <Row label="Queue" value={queue || 'Default'} opens onPress={() => setPick('queue')} /> : null}
         {levels.length ? <Row label="Priority" value={priorityName(qos)} opens onPress={() => setPick('priority')} />
           : null}
+        {groups.length ? <Row label="Group to bill" value={groupName(p.account, def)} opens
+          onPress={() => setPick('group')} /> : null}
       </List>
       <div className="px-4 pt-2">
         {!queues.length && <Field label="Queue" {...text} value={p.partition} placeholder="Default"
           onChange={(e) => set({ partition: e.target.value.trim() })} />}
         {!levels.length && <Field label="Priority" {...text} value={p.qos ?? ''} placeholder="Default"
           onChange={(e) => set({ qos: e.target.value.trim() })} />}
-        <Field label="Group to bill" {...text} value={p.account ?? ''} placeholder="Your default group"
-          onChange={(e) => set({ account: e.target.value.trim() })} />
+        {!groups.length && <Field label="Group to bill" {...text} value={p.account ?? ''}
+          placeholder="Your default group" onChange={(e) => set({ account: e.target.value.trim() })} />}
         <Field label="Extra options" {...text} value={p.extra_args ?? ''} placeholder="--constraint=intel"
           onChange={(e) => set({ extra_args: e.target.value })} />
       </div>
       {pick === 'queue' && <PickerSheet title="Queue" options={queues} value={queue}
         onPick={(v) => set({ partition: v })} onClose={() => setPick('')} />}
+      {pick === 'group' && <PickerSheet title="Group to bill" options={groups} value={p.account || def}
+        onPick={(v) => set({ account: v })} onClose={() => setPick('')} />}
       {pick === 'priority' && <PickerSheet title="Priority" options={levels} value={qos}
         onPick={(v) => set({ qos: v })} onClose={() => setPick('')} />}
     </Sheet>

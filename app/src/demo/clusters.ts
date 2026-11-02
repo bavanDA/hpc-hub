@@ -229,7 +229,8 @@ export const answers: Record<string, unknown> = {
     const top = caps.sort((a, b) => a[0] - b[0])[0]
     const [cores, memory_gb] = limits.nodes[part] ?? [null, null]
     return { known: true, partitions: Object.keys(limits.partitions), default_partition: 'general',
-      qos: Object.keys(limits.qos), default_qos: 'low', longest: top?.[0] ?? null, why: top?.[1] ?? '', cores, memory_gb }
+      qos: Object.keys(limits.qos), default_qos: 'low', accounts: ['mygroup', 'abc123', 'dept_x'],
+      default_account: 'mygroup', longest: top?.[0] ?? null, why: top?.[1] ?? '', cores, memory_gb }
   },
   // what Slurm's gres column says on each cluster (hpc_hub/compute/gpus.py)
   'clusters.gpus': ({ cluster }: { cluster: string }) => ({ known: cluster !== 'sdsc', gpus: DEMO_GPUS[cluster] ?? [] }),

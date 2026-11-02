@@ -120,6 +120,8 @@ export type Limits = {
   default_partition: string
   qos: string[]
   default_qos: string
+  accounts?: string[]  // the groups you may bill (Slurm accounts)
+  default_account?: string
   longest: number | null
   why: string
   cores?: number | null      // the biggest node on this queue: the most one job can ask for
