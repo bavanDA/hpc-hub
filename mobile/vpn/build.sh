@@ -153,7 +153,7 @@ PY
 (cd openconnect && quiet ../openconnect.log ./configure "${CONFIGURE_HOST[@]}" --prefix="$PREFIX" --disable-shared \
 	--enable-static --without-gnutls --with-vpnc-script=/system/bin/false --disable-nls --without-lz4 \
 	--without-libproxy --without-stoken --without-libpcsclite --without-libpskc --without-gssapi --without-java \
-	--with-builtin-json --disable-docs &&
+	--with-builtin-json --disable-docs --disable-vhost-net &&
 	quiet ../openconnect.log make -j"$JOBS" openconnect)
 # libtool's wrapper script stands in for the program until it is installed; the real one is in .libs when shared
 OC=openconnect/openconnect
