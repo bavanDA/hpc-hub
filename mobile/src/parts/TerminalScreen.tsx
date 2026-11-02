@@ -9,7 +9,7 @@ import { openLink } from '@shared/components/app/openLink'
 import { MonitorBar } from '@shared/components/terminals/MonitorBar'
 import { close, start, useTabs, type Tab } from '@shared/components/terminals/tabs'
 import { copyText, paste } from '@shared/components/terminals/xterm'
-import { Sheet, useToast } from '../ui'
+import { Button, List, Sheet, useToast } from '../ui'
 import { screenLinks } from './screenLinks'
 import { OpenSwitcher } from './terminal/OpenTabs'
 import { SelectSheet } from './terminal/SelectSheet'
@@ -20,7 +20,7 @@ const KEYS: [string, string][] = [['Esc', '\x1b'], ['Tab', '\t'], ['↑', '\x1b[
 const CTRL = ['C', 'D', 'Z', 'L', 'R', 'A', 'B', 'E', 'U', 'W']
 const FONT = 12
 
-const iconButton = 'grid size-11 shrink-0 place-items-center rounded-full active:bg-hover'
+const iconButton = 'grid size-12 shrink-0 place-items-center rounded-full active:bg-pressed'
 
 export function TerminalScreen({ tab, shown, onBack, onChanged = () => {} }:
   { tab: Tab; shown: boolean; onBack: () => void; onChanged?: () => void }) {
@@ -47,19 +47,20 @@ export function TerminalScreen({ tab, shown, onBack, onChanged = () => {} }:
   const send = (data: string) => { tab.term.input(data, true); tab.term.focus() }
   const key = (label: string, onClick: () => void) => (
     <button key={label} onPointerDown={(e) => e.preventDefault()} onClick={onClick}
-      className="h-11 min-w-11 shrink-0 rounded-lg bg-pill px-3 font-mono text-sm font-bold active:bg-selected">
+      className="h-12 min-w-12 shrink-0 rounded-lg border border-line-strong px-3 font-mono text-sm font-semibold
+        active:bg-pressed">
       {label}</button>
   )
 
   return (
     <div className="flex h-full flex-col bg-view">
-      <header className="flex h-12 shrink-0 items-center gap-1 border-b border-line px-1">
+      <header className="flex min-h-14 shrink-0 items-center border-b border-line px-1">
         <button aria-label="Back" onClick={onBack} className={iconButton}><ArrowLeft size={22} /></button>
-        <span className="size-2.5 shrink-0 rounded-full" style={{ background: tab.color || 'var(--color-dim)' }} />
-        <h1 className="min-w-0 flex-1 truncate font-bold">{tab.title}</h1>
+        <h1 className="line-clamp-2 min-w-0 flex-1 pl-1 leading-tight font-semibold break-words">{tab.title}</h1>
         {tabs.length > 1 && (
-          <button onClick={() => setSheet('switch')} className="h-9 shrink-0 rounded-full bg-pill px-3 text-sm
-            font-semibold active:bg-selected">{tabs.length} open</button>
+          <button onClick={() => setSheet('switch')} className="flex h-12 shrink-0 items-center px-1">
+            <span className="flex h-8 items-center rounded-full border border-line-strong px-2.5 text-sm font-medium
+              active:bg-pressed">{tabs.length} open</span></button>
         )}
         <button aria-label="Copy text" onClick={() => setSheet('select')} className={iconButton}>
           <TextSelect size={20} /></button>
@@ -74,13 +75,14 @@ export function TerminalScreen({ tab, shown, onBack, onChanged = () => {} }:
               <X size={22} /></button>}
       </header>
       {tab.banners.map((b) => (
-        <div key={b.id} className="shrink-0 border-b border-line bg-accent/15 px-4 py-2 text-sm">
-          {b.text}{b.button && <button className="ml-2 font-bold text-accent-text" onClick={b.action}>{b.button}</button>}
+        <div key={b.id} className="flex shrink-0 items-center gap-3 border-b border-line bg-soft py-1 pr-2 pl-4 text-sm">
+          <span className="min-w-0 flex-1 break-words">{b.text}</span>
+          {b.button && <Button className="shrink-0 text-sm" onClick={b.action}>{b.button}</Button>}
         </div>
       ))}
       <div ref={host} className="min-h-0 flex-1 py-1 pl-1" onClick={() => tab.term.focus()} />
       {tab.session && <MonitorBar cluster={tab.cluster} node={tab.node} shown={shown} />}
-      <div className="flex shrink-0 gap-1.5 overflow-x-auto border-t border-line bg-header p-1.5">
+      <div className="flex shrink-0 gap-1.5 overflow-x-auto border-t border-line bg-window p-1.5">
         {ctrl
           ? <>{key('Ctrl', () => setCtrl(false))}{CTRL.map((c) =>
               key(`^${c}`, () => { send(String.fromCharCode(c.charCodeAt(0) - 64)); setCtrl(false) }))}</>
@@ -94,18 +96,21 @@ export function TerminalScreen({ tab, shown, onBack, onChanged = () => {} }:
           detach={() => { close(tab.key); onBack() }} />
       )}
       {links && (
-        <Sheet title="Links on the screen" onClose={() => setLinks(null)}>
-          {!links.length && <p className="text-dim">No links on the screen.</p>}
-          <div className="flex flex-col gap-2">
-            {links.map((url) => (
-              <div key={url} className="flex items-center gap-2 rounded-2xl bg-card p-2 shadow-[var(--shadow-card)]">
-                <button onClick={() => { openLink(url).catch((e) => toast(`Could not open it: ${e}`)); setLinks(null) }}
-                  className="min-w-0 flex-1 break-all p-2 text-left text-sm text-accent-text active:bg-hover">{url}</button>
-                <button aria-label="Copy" onClick={() => copyText(url).then((ok) => toast(ok ? 'Copied' : 'Could not copy'))}
-                  className={iconButton}><Copy size={20} /></button>
-              </div>
-            ))}
-          </div>
+        <Sheet title="Links on the screen" flush onClose={() => setLinks(null)}>
+          {!links.length && <p className="px-4 py-6 text-center text-dim">No links on the screen.</p>}
+          {links.length > 0 && (
+            <List>
+              {links.map((url) => (
+                <div key={url} className="flex items-center border-b border-line pr-1">
+                  <button onClick={() => { openLink(url).catch((e) => toast(`Could not open it: ${e}`)); setLinks(null) }}
+                    className="min-h-14 min-w-0 flex-1 py-2 pl-4 text-left text-sm break-all underline
+                      decoration-line-strong underline-offset-2 active:bg-pressed">{url}</button>
+                  <button aria-label="Copy" onClick={() => copyText(url).then((ok) => toast(ok ? 'Copied' : 'Could not copy'))}
+                    className={`${iconButton} text-dim`}><Copy size={20} /></button>
+                </div>
+              ))}
+            </List>
+          )}
         </Sheet>
       )}
     </div>

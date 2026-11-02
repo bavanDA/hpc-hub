@@ -17,7 +17,8 @@ import { Skills } from '../parts/agents/Skills'
 import { StartPicker } from '../parts/agents/StartPicker'
 import { useStart } from '../parts/agents/useStart'
 import { Header } from '../parts/Header'
-import { Button, Card, Chips, ListRow, Sheet } from '../ui'
+import { shortName } from '../parts/NodeSheet'
+import { Button, Chips, Row, Section, Sheet } from '../ui'
 
 const Permissions = lazy(() => import('@shared/pages/Permissions').then((m) => ({ default: m.Permissions })))
 
@@ -62,26 +63,25 @@ export function Agents() {
   return (
     <div className="flex h-full flex-col">
       <Header title="Agents">
-        <Button kind="primary" icon={Play} className="h-11" onClick={() => setStarting(true)}>Start</Button>
+        <Button kind="primary" icon={Play} onClick={() => setStarting(true)}>Start</Button>
       </Header>
       {/* chips, not segments: four labels don't fit side by side on a phone */}
       <div className="px-4 pb-2"><Chips one value={[shown]} onChange={([p]) => p && setPart(p)} options={parts} /></div>
-      <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4">
+      <div className="min-h-0 flex-1 overflow-y-auto pb-6">
         {shown === 'running' && <Running />}
         {shown === 'scheduled' && <Scheduled />}
         {shown === 'skills' && <Skills />}
-        {shown === 'permissions' && <>
-          <p className="mb-2 text-sm text-dim">What Claude may do on each cluster without asking you.</p>
-          <Card className="py-1">
+        {shown === 'permissions' && (
+          <Section note="What Claude may do on each cluster without asking you.">
             {(clusters ?? []).map((c) => (
-              <ListRow key={c.id} icon={ShieldCheck} title={c.name} subtitle="Allowed commands and files"
-                onClick={() => { setActiveCluster(c.id); setPerms(c) }} />
+              <Row key={c.id} icon={ShieldCheck} label={shortName(c)} opens
+                onPress={() => { setActiveCluster(c.id); setPerms(c) }} />
             ))}
-          </Card>
-        </>}
+          </Section>
+        )}
       </div>
       {perms && (
-        <Sheet title={`${perms.name} permissions`} onClose={() => setPerms(null)}>
+        <Sheet title={`Permissions on ${shortName(perms)}`} onClose={() => setPerms(null)}>
           <SharedToasts>
             <Suspense fallback={<Spinner />}><Permissions /></Suspense>
           </SharedToasts>

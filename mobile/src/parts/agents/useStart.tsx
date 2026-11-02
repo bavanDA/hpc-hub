@@ -21,7 +21,7 @@ export function useStart() {
     const [kind, what = ''] = key.split(':')
     try {
       await whenConnected(cluster, name)
-      if (kind === 'vscode') toast(`Looking for VS Code on ${name}…`)
+      if (kind === 'vscode') toast(`Looking for VS Code on ${name.split(' (')[0]}…`)
       const [setup, found] = await Promise.all([call<ToolSetup>('tools.setup', { cluster }),
         kind === 'vscode' ? call<VsFound>('tools.vscode_find', { cluster }) : Promise.resolve(null)])
       if (kind === 'vscode' && found) {

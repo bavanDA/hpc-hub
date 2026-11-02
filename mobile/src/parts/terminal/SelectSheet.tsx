@@ -32,7 +32,7 @@ export function SelectSheet({ tab, onClose }: { tab: Tab; onClose: () => void })
       <Button kind="primary" icon={Copy} className="flex-1" onClick={() => copy(text).then(onClose)}>Copy screen</Button>
     </>}>
       <p className="mb-3 text-sm text-dim">Press and hold to select part of it, or copy the whole screen.</p>
-      <pre className="overflow-x-auto rounded-xl bg-view p-3 font-mono text-xs leading-relaxed whitespace-pre
+      <pre className="overflow-x-auto rounded-lg bg-soft p-3 font-mono text-xs leading-relaxed whitespace-pre
         select-text">{text || 'The screen is empty.'}</pre>
     </Sheet>
   )
