@@ -37,18 +37,19 @@ function Screens() {
           {tab === 'more' && <More />}
         </Suspense>
       </main>
-      {/* Material 3's navigation bar: 80 px, the icon in a 64x32 pill when active, labels always shown */}
-      <nav aria-label="Main" className={`${typing ? 'hidden' : 'flex'} shrink-0 bg-card px-1 pb-[var(--bottom)]
-        shadow-[0_-1px_0_var(--color-line)]`}>
+      {/* Material 3's navigation bar (80 px, the icon in a 64x32 pill when active, labels always shown), in black and
+          white: a hairline on top, grey when not chosen */}
+      <nav aria-label="Main" className={`${typing ? 'hidden' : 'flex'} shrink-0 border-t border-line bg-window px-1
+        pb-[var(--bottom)]`}>
         {TABS.map(([id, label, Icon]) => {
           const on = tab === id
           return (
             <button key={id} onClick={() => open(id)} aria-current={on ? 'page' : undefined}
               className="flex h-20 min-w-0 flex-1 flex-col items-center justify-center gap-1">
               <span className={`grid h-8 w-16 place-items-center rounded-full transition-colors
-                ${on ? 'bg-accent/20 text-accent-text' : 'text-dim'}`}>
+                ${on ? 'bg-pressed text-text' : 'text-dim'}`}>
                 <Icon size={24} strokeWidth={on ? 2.25 : 1.75} /></span>
-              <span className={`max-w-full truncate text-xs ${on ? 'font-bold text-text' : 'font-medium text-dim'}`}>
+              <span className={`max-w-full truncate text-xs ${on ? 'font-semibold text-text' : 'font-medium text-dim'}`}>
                 {label}</span>
             </button>
           )
