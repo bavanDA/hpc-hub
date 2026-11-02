@@ -8,6 +8,7 @@ import { lazy, Suspense, useCallback, useEffect, useRef, useState, type ReactNod
 import { isMac } from '../components/app/platform'
 import { setActiveCluster, useActiveCluster } from '../components/clusters/active'
 import { ClusterPicker } from '../components/clusters/ClusterPicker'
+import { shortName } from '../components/clusters/loginCopy'
 import { NotConnected } from '../components/clusters/NotConnected'
 import { runningCount, unseenCount, useAsks } from '../components/code/ask'
 import { AskPanel } from '../components/code/desktop/AskPanel'
@@ -67,7 +68,7 @@ export function Code() {
   const close = useCallback(() => setDialog(null), [])
 
   const file = files.find((f) => f.key === current) ?? null
-  const name = (id: string) => clusters?.find((c) => c.id === id)?.name ?? id
+  const name = (id: string) => shortName(clusters?.find((c) => c.id === id) ?? { name: id })
   const connected = !!sessions[cluster]?.connected
 
   const setRoot = useCallback((path: string) => {
@@ -171,13 +172,11 @@ export function Code() {
   function conflict(f: OpenFile) {
     setDialog(
       <Dialog title={`${f.name} changed on ${name(f.cluster)}`} onClose={close} width={460} actions={<>
-        <Button kind="ghost" onClick={close}>Cancel</Button>
-        <Button onClick={() => { close(); void reloadFile(f.key) }}>Use theirs</Button>
         <Button onClick={() => { close(); void compare(f, 'keep') }}>Compare</Button>
-        <Button kind="primary" onClick={() => { close(); void save(true) }}>Keep mine</Button>
+        <Button onClick={() => { close(); void reloadFile(f.key) }}>Use the cluster's</Button>
+        <Button onClick={() => { close(); void save(true) }}>Save mine</Button>
       </>}>
-        <p className="text-dim">Something saved it after you opened it, an agent or a job maybe. Keep mine writes your
-          version over theirs.</p>
+        <p className="text-dim">It changed while you were editing. Save mine writes over the cluster's version.</p>
       </Dialog>)
   }
 
@@ -363,8 +362,9 @@ function BannerRow({ file, banner, clusterName, onDismiss, onReload, onCompare, 
   let actions: ReactNode
   if (banner.kind === 'changed') {
     text = `${file.name} changed on ${clusterName} while you were editing it.`
-    actions = <><Button size="sm" kind="ghost" onClick={onDismiss}>Keep mine</Button>
-      <Button size="sm" onClick={onReload}>Reload</Button><Button size="sm" onClick={onCompare}>Compare</Button></>
+    actions = <><Button size="sm" onClick={onCompare}>Compare</Button>
+      <Button size="sm" onClick={onReload}>Use the cluster's</Button>
+      <Button size="sm" onClick={onSaveAgain}>Save mine</Button></>
   } else if (banner.kind === 'agent') {
     text = `${banner.agent} changed ${file.name}.`
     actions = <><Button size="sm" kind="ghost" onClick={() => onUndo(banner.before)}>Undo</Button>

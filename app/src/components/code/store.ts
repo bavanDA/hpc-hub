@@ -166,7 +166,7 @@ export async function reloadFile(key: string, keepEdits = false): Promise<void> 
   }
 }
 
-/** Saves the editor's text. force writes over a newer file on the cluster (the user chose "Keep mine"). */
+/** Saves the editor's text. force writes over a newer file on the cluster (the user chose "Save mine"). */
 export async function saveFile(key: string, force = false): Promise<SaveOutcome> {
   const f = getFile(key)
   if (!f) return { saved: false, conflict: false, error: 'This file is not open' }
