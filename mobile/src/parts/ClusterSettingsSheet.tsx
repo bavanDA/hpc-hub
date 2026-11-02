@@ -8,7 +8,8 @@ import { putCluster } from '@shared/components/clusters/store'
 import { Spinner } from '@shared/components/ui'
 import { call } from '@shared/rpc'
 import type { AgentId, AgentSettings, Cluster, Limits, Logins, Profile, SettingsInfo, VsCode } from '@shared/types/clusters'
-import { Field, List, MainButton, NumberRow, PickerSheet, Row, Section, Sheet, ToggleRow, useToast } from '../ui'
+import { Field, List, MainButton, NumberRow, PickerSheet, Row, Section, Sheet, ToggleRow, useAskBeforeClose, useToast }
+  from '../ui'
 import { AuthenticatorSheet } from './AuthenticatorSheet'
 import { LoginSheet } from './LoginSheet'
 import { ASK, NodeFields, nodeSize } from './NodeSheet'
@@ -150,6 +151,7 @@ export function ClusterSettingsSheet({ cluster, onClose }: { cluster: Cluster; o
   }
 
   const want = d.request_node_on_connect ?? true
+  const [close, ask] = useAskBeforeClose(!!info && JSON.stringify(d) !== JSON.stringify(info.cluster), onClose)
 
   if (section === 'signin') return <LoginSheet cluster={d} onClose={back} />
   if (section === 'code') return <AuthenticatorSheet cluster={d} onClose={back} />
@@ -201,8 +203,8 @@ export function ClusterSettingsSheet({ cluster, onClose }: { cluster: Cluster; o
     )
   }
 
-  return (
-    <Sheet title={`${cluster.name} settings`} onClose={onClose} flush
+  return (<>
+    <Sheet title={`${cluster.name} settings`} onClose={close} flush
       actions={<MainButton disabled={busy || !info} onClick={save}>Save</MainButton>}>
       {!info ? <div className="grid h-40 place-items-center"><Spinner size={28} /></div> : <>
         <List>
@@ -221,5 +223,6 @@ export function ClusterSettingsSheet({ cluster, onClose }: { cluster: Cluster; o
         </Section>
       </>}
     </Sheet>
-  )
+    {ask}
+  </>)
 }

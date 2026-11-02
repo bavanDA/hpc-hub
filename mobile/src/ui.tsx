@@ -148,7 +148,8 @@ export function NumberRow({ label, value, unit, showUnit = true, min = 1, max, o
   return (
     <Row label={label} sub={!ok && <span className="font-semibold text-bad">{limit}</span>}
       onPress={() => setDraft(String(value || ''))}
-      value={<span className={ok ? '' : 'text-bad'}><Amount n={value} unit={showUnit ? unit : undefined} /></span>} />
+      value={<span className={ok ? '' : 'text-bad'}>{value >= 0
+        ? <Amount n={value} unit={showUnit ? unit : undefined} /> : 'Not set'}</span>} />
   )
 }
 
@@ -319,6 +320,15 @@ export function ActionSheet({ title, actions, onClose }:
       </div>
     </BottomSheet>
   )
+}
+
+/** X on a sheet with unsaved changes asks first. Returns the close to give the sheet and the question to render. */
+export function useAskBeforeClose(dirty: boolean, onClose: () => void): [() => void, ReactNode] {
+  const [asking, setAsking] = useState(false)
+  const close = () => (dirty ? setAsking(true) : onClose())
+  const ask = asking && <ConfirmSheet title="Throw away your changes?" keep="Keep editing" confirm="Throw away" danger
+    onClose={() => setAsking(false)} onConfirm={onClose} />
+  return [close, ask]
 }
 
 /** Are you sure: what happens, then two buttons that say what they do. keep is the safe one ("Keep it", "Keep

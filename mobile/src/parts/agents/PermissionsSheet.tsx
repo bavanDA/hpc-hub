@@ -10,7 +10,7 @@ import { call } from '@shared/rpc'
 import type { Cluster } from '@shared/types/clusters'
 import type { ClaudePermissions, CommandGroup, LockConfig, LockSetup, LockStatus } from '@shared/types/permissions'
 import { Button, ConfirmSheet, EmptyState, Field, List, MainButton, NumberRow, Row, Section, Sheet, ToggleRow,
-  inRange, useToast } from '../../ui'
+  inRange, useAskBeforeClose, useToast } from '../../ui'
 
 type Draft = { allowed: string[]; custom: string[]; trash: boolean; ask: string[]; accept_edits: boolean
   lock: LockConfig }
@@ -50,6 +50,7 @@ export function PermissionsSheet({ cluster, onClose }: { cluster: Cluster; onClo
     cmds.forEach((c) => (on ? next.add(c) : next.delete(c)))
     edit({ allowed: [...next].sort() })
   }
+  const [close, ask] = useAskBeforeClose(dirty, onClose)
   const lockOk = !draft || !perm?.lock.set_up
     || (inRange(draft.lock.minutes, 0, 240) && inRange(draft.lock.tries, 1, 10))
 
@@ -104,7 +105,7 @@ export function PermissionsSheet({ cluster, onClose }: { cluster: Cluster; onClo
   const group = open && typeof open === 'object' ? open : null
   return (
     <>
-      <Sheet flush title={`Permissions on ${short}`} onClose={onClose}
+      <Sheet flush title={`Permissions on ${short}`} onClose={close}
         actions={draft && <MainButton disabled={!dirty || saving || !lockOk} onClick={save}>
           {saving && <Spinner size={16} />}Save</MainButton>}>
         {body}
@@ -123,6 +124,7 @@ export function PermissionsSheet({ cluster, onClose }: { cluster: Cluster; onClo
           keep="Keep the lock" confirm="Turn off" danger onClose={() => setOpen(null)}
           onConfirm={() => lockAction('permissions.lock_off', 'Passcode lock is off')} />
       )}
+      {ask}
     </>
   )
 }
@@ -138,7 +140,9 @@ function LockSection({ status, config, onConfig, onSetUp, onOff, onActivity, onU
     </Section>
   )
   const set = (part: Partial<LockConfig>) => onConfig({ ...config, ...part })
-  const every = config.minutes === 0
+  // "Every message" is its own choice: clearing the minutes while typing (-1) must not turn it on.
+  const [every, setEvery] = useState(config.minutes === 0)
+  useEffect(() => { if (config.minutes >= 0) setEvery(config.minutes === 0) }, [config.minutes])
   return (
     <Section title="Passcode lock" note={note}>
       {status.locked && (
@@ -146,9 +150,9 @@ function LockSection({ status, config, onConfig, onSetUp, onOff, onActivity, onU
           sub="Check Recent activity"><Button onClick={onUnlock}>Unlock</Button></Row>
       )}
       <ToggleRow label="Ask for the code on every message" checked={every}
-        onChange={(v) => set({ minutes: v ? 0 : 10 })} />
+        onChange={(v) => { setEvery(v); set({ minutes: v ? 0 : 10 }) }} />
       {!every && <NumberRow label="A code lasts" unit="min" min={1} max={240} value={config.minutes}
-        onChange={(minutes) => set({ minutes })} />}
+        onChange={(minutes) => set({ minutes: minutes > 0 ? minutes : -1 })} />}
       <NumberRow label="Wrong codes allowed" unit={config.tries === 1 ? 'code' : 'codes'} min={1} max={10}
         value={config.tries} onChange={(tries) => set({ tries })} />
       <ToggleRow label="Then sign Claude out" checked={config.logout} onChange={(logout) => set({ logout })} />
