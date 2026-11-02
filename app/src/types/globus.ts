@@ -25,7 +25,7 @@ export type Listing = {
   collection: string
   path: string
   items: Item[]
-  state: 'ok' | 'none' | 'consent' | 'domain' | 'offline'
+  state: 'ok' | 'none' | 'consent' | 'domain' | 'offline' | 'hidden'
   want?: Want
 }
 

@@ -93,6 +93,9 @@ export function Pane({ pane, clusters, onChoose, onConsent, onStart }: {
     text={`Your ${l.collection} collection only works while it runs there. Start it on the login node? It shares ` +
       'your home, project and scratch folders, only with your own Globus account.'}
     button="Start it" onClick={() => onStart(cfg).then(pane.reload)} />
+  else if (l.state === 'hidden') body = <Empty icon={FolderSearch} title="Globus can't open this folder yet"
+    text={`Let it use all your Project and Scratch folders on ${cfg.name}, only with your own Globus account.`}
+    button="Allow" onClick={() => onStart(cfg).then(pane.reload)} />
   else if (!l.items.length) body = <Empty icon={FolderOpen} title="Empty folder" />
   else body = (
     <div className="flex flex-col px-2 pb-2">

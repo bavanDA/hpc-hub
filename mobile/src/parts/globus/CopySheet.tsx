@@ -37,6 +37,10 @@ function PaneView({ pane, side, clusters, onChooseCluster, onConsent, onChooseCo
     body = <EmptyState icon={Plug} title={`Globus Connect isn't running on ${shortCluster(c.name)}`}
       text="Start it to reach your files there." action={
         <Button icon={Play} onClick={() => onStart(c)}>Start it</Button>} />
+  } else if (l.state === 'hidden') {
+    body = <EmptyState icon={KeyRound} title="Globus can't open this folder yet"
+      text={`Let it use all your Project and Scratch folders on ${shortCluster(c.name)}.`}
+      action={<Button onClick={() => onStart(c)}>Allow</Button>} />
   } else if (l.state === 'consent' || l.state === 'domain') {
     body = <EmptyState icon={KeyRound} title={`Globus needs your OK for ${shortCluster(c.name)}`}
       text={l.want?.message || 'Once. Globus remembers it.'}
