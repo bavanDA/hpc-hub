@@ -150,7 +150,7 @@ export function ClusterCard({ cluster: c, session: s, log, primary = false }:
         confirm="Release node" onConfirm={() => run('clusters.release_node')} onClose={close}
         text={<><p>Anything running on it stops.</p><p>You stay connected, and your files stay where they are.</p></>} />}
       {open === 'disconnect' && a && <ConfirmDialog title={`Disconnect ${short}?`} danger keep="Stay connected"
-        confirm="Disconnect" text={`Node ${a.node} is released.`} onConfirm={() => run('clusters.disconnect')}
+        confirm="Disconnect" text={`This releases node ${a.node}.`} onConfirm={() => run('clusters.disconnect')}
         onClose={close} />}
       {open && typeof open === 'object' && (
         <ConfirmDialog title={`Disconnect ${shortName(open.switch)}?`} danger keep={`Stay on ${shortName(open.switch)}`}

@@ -1,5 +1,5 @@
 // SU: the account's total against its limit (or its cost where SU are billed), and who used it.
-import { ChevronDown, ChevronRight } from 'lucide-react'
+import { ChevronDown } from 'lucide-react'
 import { useState } from 'react'
 
 import type { Account, People } from '../../types/usage'
@@ -70,9 +70,10 @@ export function SuTab({ account, people, error, loading, period, onPerson }: {
         <section className="flex flex-col">
           <button onClick={() => setIdleOpen(!idleOpen)} className="flex min-h-12 items-center gap-3 border-y
             border-line px-4 text-left hover:bg-hover active:bg-pressed">
-            <span className="flex-1">No usage in this period</span>
-            <span className="font-medium tabular-nums">{idle.length}</span>
-            {idleOpen ? <ChevronDown size={16} className="text-dim" /> : <ChevronRight size={16} className="text-dim" />}
+            <span className="flex-1">{idle.length === 1 ? '1 person with no usage' : `${idle.length} people with no usage`}
+            </span>
+            <ChevronDown size={16} aria-label={idleOpen ? 'Hide' : 'Show'}
+              className={`text-dim transition-transform ${idleOpen ? 'rotate-180' : ''}`} />
           </button>
           {idleOpen && <List>{idle.map((p) => <Row key={p.user} title={p.name || p.user} subtitle={p.user} />)}</List>}
         </section>

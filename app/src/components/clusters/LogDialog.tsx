@@ -11,7 +11,7 @@ export function LogDialog({ name, lines, onClose }: { name: string; lines: strin
     if (el && pinned.current) el.scrollTop = el.scrollHeight
   }, [lines])
   return (
-    <EDialog title={`Log, ${name}`} width={720} onClose={onClose}>
+    <EDialog title={`${name} log`} width={720} onClose={onClose}>
       <pre ref={box} onScroll={(e) => {
         const el = e.currentTarget
         pinned.current = el.scrollHeight - el.scrollTop - el.clientHeight < 24

@@ -33,7 +33,7 @@ function status(s: Session, vpnOnly: boolean): [string, Tone] {
 /** The log, full screen: what happened, newest at the bottom. */
 function LogSheet({ name, lines, onClose }: { name: string; lines: string[]; onClose: () => void }) {
   return (
-    <Sheet title={`Log, ${name}`} onClose={onClose}>
+    <Sheet title={`${name} log`} onClose={onClose}>
       <pre className="font-mono text-xs leading-[1.5] break-all whitespace-pre-wrap select-text">
         {lines.length ? lines.join('\n') : <span className="text-dim">Nothing yet</span>}</pre>
     </Sheet>
@@ -143,7 +143,7 @@ export function ClusterCard({ cluster: c, session: s, log, primary = false }:
         text="Anything running on it stops. You stay connected, and your files stay where they are."
         onConfirm={() => run('clusters.release_node')} onClose={close} />}
       {open === 'disconnect' && <ConfirmSheet title={`Disconnect ${short}?`} danger keep="Stay connected"
-        confirm="Disconnect" text={`Node ${s.node} is released.`}
+        confirm="Disconnect" text={`This releases node ${s.node}.`}
         onConfirm={() => run('clusters.disconnect')} onClose={close} />}
       {open === 'more' && <ActionSheet title={short} actions={more} onClose={close} />}
       {open === 'agents' && <ActionSheet title={`Start an agent on ${short}`} actions={agents} onClose={close} />}
