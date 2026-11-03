@@ -23,6 +23,7 @@ export type PdfProps = {
   extra?: ReactNode  // more buttons at the right of the toolbar
   reader?: Narrator  // read aloud: the spoken word is drawn and followed; a click on a word reads from there
   onWord?: (w: WordPick) => void  // right-click (or hold, on a touch screen) on a word
+  onLookUp?: (w: WordPick) => void  // double-click on a word, where a double-click isn't SyncTeX (no onSync)
   bar?: ReactNode  // under the toolbar
   footer?: ReactNode  // under the pages
 }

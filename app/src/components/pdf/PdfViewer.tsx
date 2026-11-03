@@ -32,7 +32,7 @@ function stored(key: string): boolean {
 }
 
 export default function PdfViewer({ data, memory, compact, zoom: start = 'page-width', loading, progress, message, onSync,
-  target, extra, reader, onWord, bar, footer }: PdfProps) {
+  target, extra, reader, onWord, onLookUp, bar, footer }: PdfProps) {
   const scroller = useRef<HTMLDivElement>(null)
   const inner = useRef<HTMLDivElement>(null)
   const live = useRef<Live | null>(null)
@@ -42,6 +42,8 @@ export default function PdfViewer({ data, memory, compact, zoom: start = 'page-w
   sync.current = onSync
   const picked = useRef(onWord)
   picked.current = onWord
+  const looked = useRef(onLookUp)
+  looked.current = onLookUp
   const mem = useRef({ memory, start })
   mem.current = { memory, start }
   const [ready, setReady] = useState(false)
@@ -223,7 +225,12 @@ export default function PdfViewer({ data, memory, compact, zoom: start = 'page-w
       clearTimeout(wait)
       wait = window.setTimeout(() => reader.readFrom(spot), 380)  // a double click is SyncTeX instead
     }
-    const dbl = () => clearTimeout(wait)
+    const dbl = (e: MouseEvent) => {
+      clearTimeout(wait)
+      if (sync.current || !looked.current) return  // SyncTeX has it (PdfViewer's other dblclick)
+      const text = textAt(e.clientX, e.clientY), spot = spotOf(e.clientX, e.clientY, e.target)
+      if (text && spot) looked.current({ text, spot, x: e.clientX, y: e.clientY, touch: false })
+    }
     const menu = (e: MouseEvent) => {
       if (Date.now() - held < 800) { e.preventDefault(); return }
       if (picked.current && pick(e.clientX, e.clientY, e.target, false)) e.preventDefault()
@@ -245,7 +252,7 @@ export default function PdfViewer({ data, memory, compact, zoom: start = 'page-w
     }
     const move = (e: PointerEvent) => { if (Math.hypot(e.clientX - at.x, e.clientY - at.y) > 10) clearTimeout(hold) }
     const up = () => clearTimeout(hold)
-    const listen: [string, EventListener][] = [['click', click as EventListener], ['dblclick', dbl],
+    const listen: [string, EventListener][] = [['click', click as EventListener], ['dblclick', dbl as EventListener],
       ['contextmenu', menu as EventListener], ['pointerdown', down as EventListener],
       ['pointermove', move as EventListener], ['pointerup', up], ['pointercancel', up], ['wheel', mine],
       ['touchmove', mine], ['keydown', mine]]

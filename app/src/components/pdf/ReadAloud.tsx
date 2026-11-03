@@ -1,7 +1,7 @@
 // The desktop PDF viewer with Read aloud: a player under the toolbar (voice, speed, play, 10 s back and forward,
 // stop, the clock), the spoken word marked on the page, a click on a word reads from there, and a right-click on
 // a word looks it up in a Dictionary panel beside the PDF.
-import { Headphones, Loader2, Pause, Play, RotateCcw, RotateCw, Square, Volume2, X } from 'lucide-react'
+import { BookOpen, Headphones, Loader2, Pause, Play, RotateCcw, RotateCw, Square, Volume2, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
 import { ContextMenu } from '../files/ContextMenu'
@@ -15,9 +15,18 @@ import { Tool } from './tool'
 
 const NARROW = 760  // below this the dictionary lies over the PDF instead of beside it
 
-export function ReadablePdf({ source, extra, ...props }: PdfProps & { source?: Source }) {
+/** Reading mode (LaTeX, where a double-click opens the source): a double-click looks the word up instead. */
+const READING = 'pdf-reading-mode'
+const remembered = () => { try { return localStorage.getItem(READING) === '1' } catch { return false } }
+
+export function ReadablePdf({ source, extra, onSync, ...props }: PdfProps & { source?: Source }) {
   const reader = useReader(source)
   const [open, setOpen] = useState(false)
+  const [reading, setReading] = useState(remembered)
+  const read = (on: boolean) => {
+    setReading(on)
+    try { localStorage.setItem(READING, on ? '1' : '0') } catch { /* private window: this visit only */ }
+  }
   const [menu, setMenu] = useState<WordPick | null>(null)
   const [word, setWord] = useState<WordPick | null>(null)
   const [narrow, setNarrow] = useState(false)
@@ -36,11 +45,14 @@ export function ReadablePdf({ source, extra, ...props }: PdfProps & { source?: S
   const readFrom = (w: WordPick) => { setOpen(true); reader.readFrom(w.spot) }
   const toggle = source && <Tool label="Read aloud" on={open} disabled={!props.data}
     onClick={() => open ? close() : setOpen(true)}><Headphones size={16} /></Tool>
+  const mode = onSync && <Tool label={reading ? 'Reading mode: double-click looks a word up' : 'Reading mode'}
+    on={reading} disabled={!props.data} onClick={() => read(!reading)}><BookOpen size={16} /></Tool>
 
   return (
     <div ref={box} className="relative flex h-full min-w-0">
       <div className="min-w-0 flex-1">
-        <Pdf {...props} reader={reader} extra={<>{toggle}{extra}</>} onWord={setMenu}
+        <Pdf {...props} reader={reader} extra={<>{mode}{toggle}{extra}</>} onWord={setMenu}
+          onSync={reading ? undefined : onSync} onLookUp={setWord}
           bar={open && <Player reader={reader} onClose={close} />} />
       </div>
       {word && <Dictionary key={`${word.text}:${word.x}:${word.y}`} pick={word} reader={reader} overlay={narrow}
