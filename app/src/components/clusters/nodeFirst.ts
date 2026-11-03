@@ -7,11 +7,9 @@ import { useEffect, useState } from 'react'
 import type { Cluster } from '../../types/clusters'
 import { load, useClusters } from './store'
 
-/** What the window says. */
-export const nodeWords = (what: string) => ({
-  title: 'This needs a compute node',
-  text: `${what} runs on a compute node. It starts by itself once your node is ready. The login node is shared by `
-    + "everyone on the cluster, so it's best for opening and editing files.",
+/** What the window says: one short line, the same for every kind of work. */
+export const nodeWords = () => ({
+  title: 'You need a compute node to do this',
   confirm: 'Get a compute node',
   keep: 'Not now',
 })
@@ -41,7 +39,7 @@ export function useNodeFirst() {
   }
   return {
     guard, getting,
-    words: asking && nodeWords(asking.what),
+    words: asking && nodeWords(),
     getNode: () => { setGetting(asking?.cluster ?? null); setWaiting(asking) },
     runHere: () => setAsking(null),  // Not now: nothing runs on the login node
     close: () => setAsking(null),
