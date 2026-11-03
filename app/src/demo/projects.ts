@@ -10,7 +10,8 @@ const clusters = [
 const name = (id: string) => clusters.find((c) => c.id === id)?.name ?? ''
 
 function project(n: string, cluster: string, path: string, extra: Partial<Project> = {}): Project {
-  return { id: `${cluster}:${path}`, name: n, cluster, cluster_name: name(cluster), path, main_tex: '', kind: 'code',
+  return { id: `${cluster}:${path}`, name: n, cluster, cluster_name: name(cluster), path,
+    group: /\/(?:project|projects|scratch)\/([^/]+)\/jdoe\//.exec(path)?.[1] ?? '', main_tex: '', kind: 'code',
     latex: false, opened: 0, copy_to: '', copy_into: '', ...extra }
 }
 

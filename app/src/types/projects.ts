@@ -5,6 +5,7 @@ export type Project = {
   cluster: string
   cluster_name: string  // empty: a cluster you no longer have
   path: string
+  group: string  // the shared folder's group (/scratch/<group>/you); '' in your own space
   main_tex: string
   kind: string
   latex: boolean

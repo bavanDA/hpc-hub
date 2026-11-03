@@ -126,8 +126,10 @@ def _experimental() -> bool:
 
 def _json(p: Project) -> dict:
     s = hub().sessions.get(p.cluster)
+    user = getattr(getattr(s, "ssh", None), "username", "") or ""
     return {"id": _id(p), "name": p.name, "cluster": p.cluster, "cluster_name": s.cfg.name if s else "",
-            "path": p.path, "main_tex": p.main_tex, "kind": p.kind, "latex": p.is_latex, "opened": p.opened,
+            "path": p.path, "group": store.group_of(p.path, user),
+            "main_tex": p.main_tex, "kind": p.kind, "latex": p.is_latex, "opened": p.opened,
             "copy_to": p.copy_to, "copy_into": p.copy_into}
 
 

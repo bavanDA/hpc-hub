@@ -79,8 +79,9 @@ export function Projects() {
               <List>
                 {shown.map((p) => (
                   <Row key={p.id} icon={p.main_tex ? FileText : Folder} label={p.name}
-                    sub={<>{wrapPath(many ? `${p.cluster_name ? shortCluster(p.cluster_name) : `${p.cluster}, not set up`} · ${p.path}`
-                      : p.path)}{liveLine(live, p) && <span className="block">{liveLine(live, p)}</span>}</>}
+                    sub={<>{p.group && <span className="block">Group {p.group}</span>}
+                      {wrapPath(many ? `${p.cluster_name ? shortCluster(p.cluster_name) : `${p.cluster}, not set up`} · ${p.path}`
+                        : p.path)}{liveLine(live, p) && <span className="block">{liveLine(live, p)}</span>}</>}
                     onPress={() => setOpen({ kind: 'actions', p })} />
                 ))}
               </List>

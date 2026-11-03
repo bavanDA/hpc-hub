@@ -51,6 +51,24 @@ class Project:
         return self.kind == "latex" or not self.kind and bool(self.main_tex) and "/" not in self.main_tex
 
 
+GROUP_TREES = ("project", "projects", "scratch")  # /scratch/<group>/<you>, /expanse/lustre/projects/<group>/<you>
+GROUP_LINKS = ("project_", "palmer_scratch_", "scratch_")  # Yale's links in home: ~/project_pi_abc
+
+
+def group_of(path: str, user: str = "") -> str:
+    """The group a project's folder belongs to: the folder above yours in a shared tree; "" in your own space."""
+    parts = [x for x in path.split("/") if x]
+    for i, seg in enumerate(parts):
+        for link in GROUP_LINKS:
+            if seg.startswith(link) and len(seg) > len(link):
+                return seg[len(link):]
+        if seg in GROUP_TREES and i + 2 < len(parts):
+            group, below = parts[i + 1], parts[i + 2]
+            if group != user and (not user or below == user):
+                return group
+    return ""
+
+
 def load(path: Path = PROJECTS_FILE) -> list[Project]:
     if not path.exists():
         return []
