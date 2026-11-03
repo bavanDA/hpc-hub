@@ -182,7 +182,7 @@ svg.lucide[stroke-width="2"]:is([width="20"], [width="24"], [width="40"]) { stro
   --color-accent: #0a0a0a;  --color-accent-hover: #262626;  --color-accent-pressed: #333333;
   --color-on-accent: #ffffff;
   --color-accent-text: #0a0a0a;  --color-accent-soft: #f4f4f4;  --color-focus: #0a0a0a;
-  --color-ok: #0a0a0a;      --color-ok-bg: #f4f4f4;   --color-ok-dot: #0a0a0a;
+  --color-ok: #0a0a0a;      --color-ok-bg: #f4f4f4;   --color-ok-dot: #1f9d55;
   --color-warn: #0a0a0a;    --color-warn-bg: #f4f4f4; --color-warn-dot: #6b6b6b;
   --color-bad: #b42318;     --color-bad-bg: rgb(180 35 24 / 0.08);  --color-bad-dot: #b42318;
   --color-bad-fill: #b42318;
@@ -193,24 +193,24 @@ svg.lucide[stroke-width="2"]:is([width="20"], [width="24"], [width="40"]) { stro
   --font-sans: "Inter", "Adwaita Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 :root[data-theme="dark"] {
-  --color-window: #0b0b0b;  --color-header: #0b0b0b;  --color-sidebar: #171717;
-  --color-card: #0b0b0b;    --color-view: #0b0b0b;    --color-raised: #171717;
-  --color-inset: #171717;   --color-control: #171717; --color-soft: #171717;
-  --color-hover: rgb(255 255 255 / 0.05);  --color-pressed: rgb(255 255 255 / 0.09);
-  --color-selected: rgb(255 255 255 / 0.08);
-  --color-line: #232323;    --color-line-strong: #333333;  --color-scrim: rgb(0 0 0 / 0.60);
-  --color-text: #f2f2f2;    --color-dim: #8f8f8f;     --color-faint: #6a6a6a;
-  --color-accent: #f2f2f2;  --color-accent-hover: #dcdcdc;  --color-accent-pressed: #c8c8c8;
-  --color-on-accent: #0b0b0b;
-  --color-accent-text: #f2f2f2;  --color-accent-soft: #171717;  --color-focus: #f2f2f2;
-  --color-ok: #f2f2f2;      --color-ok-bg: #171717;   --color-ok-dot: #f2f2f2;
-  --color-warn: #f2f2f2;    --color-warn-bg: #171717; --color-warn-dot: #8f8f8f;
+  --color-window: #1c1c1f;  --color-header: #1c1c1f;  --color-sidebar: #252529;
+  --color-card: #1c1c1f;    --color-view: #1c1c1f;    --color-raised: #2a2a2e;
+  --color-inset: #26262a;   --color-control: #2c2c31; --color-soft: #26262a;
+  --color-hover: rgb(255 255 255 / 0.06);  --color-pressed: rgb(255 255 255 / 0.10);
+  --color-selected: rgb(255 255 255 / 0.09);
+  --color-line: #333338;    --color-line-strong: #46464c;  --color-scrim: rgb(0 0 0 / 0.50);
+  --color-text: #f2f2f4;    --color-dim: #a3a3ab;     --color-faint: #7c7c84;
+  --color-accent: #f2f2f4;  --color-accent-hover: #dcdce0;  --color-accent-pressed: #c8c8cc;
+  --color-on-accent: #1c1c1f;
+  --color-accent-text: #f2f2f4;  --color-accent-soft: #2a2a2e;  --color-focus: #f2f2f4;
+  --color-ok: #f2f2f4;      --color-ok-bg: #26262a;   --color-ok-dot: #3ccf7e;
+  --color-warn: #f2f2f4;    --color-warn-bg: #26262a; --color-warn-dot: #a3a3ab;
   --color-bad: #ff8577;     --color-bad-bg: rgb(255 133 119 / 0.12);  --color-bad-dot: #ff8577;
   --color-bad-fill: #c4281c;
-  --color-pill: #171717;    --color-orange: #f2f2f2;
+  --color-pill: #2c2c31;    --color-orange: #f2f2f4;
   --shadow-card: none;
-  --shadow-menu: 0 0 0 1px #333333, 0 8px 24px -8px rgb(0 0 0 / 0.6);
-  --shadow-dialog: 0 0 0 1px #333333;
+  --shadow-menu: 0 0 0 1px #46464c, 0 8px 24px -8px rgb(0 0 0 / 0.5);
+  --shadow-dialog: 0 0 0 1px #46464c;
 }
 
 /* Pieces that say "bg-accent text-white": on dark the accent is white, so their text follows the accent. */
