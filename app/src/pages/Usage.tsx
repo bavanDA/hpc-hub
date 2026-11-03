@@ -50,7 +50,7 @@ export function Usage() {
   }
   else if (!accounts.data) body = <div className="grid h-full place-items-center"><Spinner size={24} /></div>
   else body = (
-    <div className="mx-auto flex max-w-[900px] flex-col gap-6 px-4 pt-2 pb-6">
+    <div className="flex max-w-[900px] flex-col gap-6 px-4 pt-2 pb-6">
       {tab === 'su' && <SuTab account={account} people={people.data} error={people.error} loading={people.loading}
         period={PERIODS.find(([d]) => d === days)![1]}
         onPerson={(user) => go('jobs', { cluster: cluster.id, user })} />}
