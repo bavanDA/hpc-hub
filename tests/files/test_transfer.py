@@ -60,3 +60,24 @@ def test_copy_here_into_another_folder_and_again(tmp_path):
 def test_copy_here_missing_source(tmp_path):
     with pytest.raises(transfer.TransferError):
         transfer.copy_here(LocalShell(), str(tmp_path / "nope"), str(tmp_path / "d"), transfer.Progress(), total=1)
+
+
+def test_copy_here_stops_while_rsync_is_silent(tmp_path, monkeypatch):
+    import threading
+    import time
+    # a "copy" that prints its process id, then nothing for a long time, like rsync listing a big folder
+    monkeypatch.setattr(transfer, "rsync_command", lambda *a, **k: "echo PID:$$ && exec sleep 30")
+    progress, out = transfer.Progress(), {}
+
+    def run():
+        try:
+            transfer.copy_here(LocalShell(), str(tmp_path), str(tmp_path / "d"), progress, total=1)
+        except transfer.TransferError as e:
+            out["error"] = str(e)
+    t = threading.Thread(target=run)
+    started = time.monotonic()
+    t.start()
+    time.sleep(0.5)
+    progress.cancelled.set()
+    t.join(10)
+    assert not t.is_alive() and time.monotonic() - started < 5 and out["error"] == "Cancelled"

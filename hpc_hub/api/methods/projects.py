@@ -452,7 +452,9 @@ def _laptop(src, path: str, dst, parent: str, skip: list[str], size: int):
 
 def _here(s, path: str, parent: str, skip: list[str], size: int):
     def work(p: transfer.Progress, report: _Report):
-        transfer.copy_here(s.ssh, path, parent, p, lambda pr: pr.finished or report("Copying", now=False), skip, size)
+        job = s.allocation.job_id if getattr(s, "allocation", None) else ""  # the node's disks, not the login node's
+        transfer.copy_here(s.ssh, path, parent, p, lambda pr: pr.finished or report("Copying", now=False), skip, size,
+                           job)
         report(f"Done · {size_text(p.done)}")
     return work
 
