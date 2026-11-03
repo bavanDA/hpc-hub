@@ -3,7 +3,7 @@
 // opening its screen. The rest (the node's size, sign-in, settings, Release node, Disconnect) are in ⋮.
 // The node shows here only: Clusters has no status strip.
 import { Bot, Code, Cpu, FileCode2, Folder, MoreVertical, Power, ScanQrCode, ScrollText, Settings, SquareTerminal,
-  Users, Zap } from 'lucide-react'
+  Users } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
 import { leftText, useTimeLeft } from '@shared/components/app/watch'
@@ -11,7 +11,7 @@ import { agentIcon } from '@shared/components/agents/AgentIcon'
 import { Spinner } from '@shared/components/ui'
 import { useGo } from '@shared/nav'
 import { call } from '@shared/rpc'
-import { BUSY, DUO, fastLabel, type Cluster, type Session } from '@shared/types/clusters'
+import { BUSY, DUO, type Cluster, type Session } from '@shared/types/clusters'
 import { ActionSheet, Button, ConfirmSheet, List, Row, Sheet, StatusDot, useToast, type SheetAction, type Tone } from '../ui'
 import { ClusterSettingsSheet } from './ClusterSettingsSheet'
 import { LoginSheet } from './LoginSheet'
@@ -73,11 +73,9 @@ export function ClusterCard({ cluster: c, session: s, log, primary = false }:
     }
   }
 
-  const fast = fastLabel(c)
   const more: SheetAction[] = [
     ...(connected && s.node ? [{ label: s.owned ? 'Release node' : 'Stop using this node', icon: Power,
       onPick: () => (s.owned ? setOpen('release') : run('clusters.release_node')) }] : []),
-    ...(connected && !s.node && fast ? [{ label: fast, icon: Zap, onPick: () => run('clusters.request_fast_node') }] : []),
     { label: 'Compute node', icon: Cpu, onPick: () => setOpen('setup') },
     { label: 'Sign in', icon: ScanQrCode, onPick: () => { setHint(''); setOpen('login') } },
     { label: 'Settings', icon: Settings, onPick: () => setOpen('settings') },

@@ -3,12 +3,12 @@
 // VS Code, Files, Agents) sit in one row. The gear opens the settings; ⋮ has the rest (the node's size, Release
 // node, Disconnect). With Ask every time (ask_node) the node window opens by itself once connected.
 import { Bot, ChevronDown, Code, Cpu, Folder, MoreVertical, Plug, Power, Server, Settings, Smartphone,
-  SquareTerminal, Users, Zap, type LucideIcon } from 'lucide-react'
+  SquareTerminal, Users, type LucideIcon } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
 import { useGo } from '../nav'
 import { call } from '../rpc'
-import { BUSY, DUO, fastLabel, type Cluster, type Session } from '../types/clusters'
+import { BUSY, DUO, type Cluster, type Session } from '../types/clusters'
 import { agentIcon } from './agents/AgentIcon'
 import { PairPhoneDialog } from './app/PairPhoneDialog'
 import { leftText, useTimeLeft } from './app/watch'
@@ -85,11 +85,9 @@ export function ClusterCard({ cluster: c, session: s, log, primary = false }:
   }
 
   const a = s.node ? s : null
-  const fast = fastLabel(c)
   const more: MenuItem[][] = [
     [...(connected && a ? [{ label: a.owned ? 'Release node' : 'Stop using this node', icon: Power,
       onClick: () => (a.owned ? setOpen('release') : run('clusters.release_node')) }] : []),
-    ...(connected && !a && fast ? [{ label: fast, icon: Zap, onClick: () => run('clusters.request_fast_node') }] : []),
     { label: 'Compute node', icon: Cpu, onClick: () => { setHint(''); setOpen('compute') } }],
     [{ label: 'Connect phone', icon: Smartphone, onClick: () => setOpen('phone') }],
     [...(idle && c.vpn.enabled ? [{ label: 'Connect VPN only', icon: Plug, onClick: () => connect(true) }] : []),
