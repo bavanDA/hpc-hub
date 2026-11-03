@@ -299,7 +299,7 @@ export function Code() {
     if (lang === 'slurm') menuActions.push({ label: 'Submit this job', onPick: () => void submit(f) })
     if (command && !isLog(f.path)) {
       menuActions.push({ label: 'Run in a terminal',
-        onPick: () => nodeFirst.guard(f.cluster, 'Running a script', () => void runInTerminal(f, command)) })
+        onPick: () => nodeFirst.guard(f.cluster, 'Your script', () => void runInTerminal(f, command)) })
     }
     menuActions.push(
       { label: `Reload from ${clusterName(f.cluster)}`, onPick: () => isDirty(f) ? setConfirm({ kind: 'reload', file: f })

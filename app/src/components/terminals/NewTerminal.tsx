@@ -47,9 +47,10 @@ export function NewTerminalDialog({ live, cluster: start = '', folder: startIn =
           <Segments label="Cluster" value={cluster} options={live.map((x) => [x.id, shortName(x)] as const)}
             onChange={(id) => { setCluster(id); setOnNode(null) }} />
         </Pick>}
-        <Pick label="Run on" hint={where === 'node' ? 'Your own node, for real work.'
-          : c?.node ? "The login node is for editing and submitting jobs. Don't run heavy work there."
-            : "No compute node right now, so it runs on the login node. Don't run heavy work there."}>
+        <Pick label="Run on" hint={where === 'node' ? 'Your own compute node. Best for builds, scripts and heavy work.'
+          : c?.node ? 'Shared with everyone on the cluster. Best for editing files and submitting jobs.'
+            : "You have no compute node yet, so this opens on the shared login node. It's best for editing files and "
+              + 'submitting jobs.'}>
           <Segments label="Run on" value={where} options={places} onChange={(v) => setOnNode(v === 'node')} />
         </Pick>
         <Field label="Start in" value={folder} onChange={(e) => setFolder(e.target.value)}

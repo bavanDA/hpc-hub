@@ -1,5 +1,5 @@
 // Ask for a compute node before real work runs on the login node (@shared nodeFirst.ts): const node =
-// useAskForNode(); node.guard(cluster, 'Running a script', run), and render {node.sheet}.
+// useAskForNode(); node.guard(cluster, 'Your script', run), and render {node.sheet}.
 import { useNodeFirst } from '@shared/components/clusters/nodeFirst'
 import { ConfirmSheet } from '../ui'
 import { NodeSheet } from './NodeSheet'

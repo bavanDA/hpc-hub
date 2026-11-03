@@ -26,8 +26,8 @@ export function NewTerminalSheet({ live, cluster: first = '', folder: startIn = 
       .then(onOpened).catch((e: Error) => toast(`Could not open the terminal: ${e.message}`))
   }
 
-  const hint = onNode ? 'Your own compute node, for real work.'
-    : 'Shared with everyone. Fine for editing files and submitting jobs, not for heavy work.'
+  const hint = onNode ? 'Your own compute node. Best for builds, scripts and heavy work.'
+    : 'Shared with everyone on the cluster. Best for editing files and submitting jobs.'
   return (
     <Sheet title="New terminal" flush onClose={onClose}
       actions={<MainButton disabled={!c} onClick={open}>Open terminal</MainButton>}>

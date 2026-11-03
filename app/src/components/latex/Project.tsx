@@ -158,7 +158,7 @@ export function Project({ project, onClose }: { project: Opened; onClose: () => 
   // "Build on my compute node" with none yet would build on the login node: ask first
   const build = () => {
     if (runningRef.current) return
-    if (settings.on_node) nodeFirst.guard(cluster, 'Building the PDF', runBuild)
+    if (settings.on_node) nodeFirst.guard(cluster, 'The PDF build', runBuild)
     else void runBuild()
   }
   useEvent<{ id: string; text: string }>('latex-log', ({ id, text: t }) => {
