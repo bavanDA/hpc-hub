@@ -5,7 +5,9 @@ from gi.repository import Adw, Gtk
 CHOICES = [("system", "System", "computer-symbolic"), ("light", "Light", "weather-clear-symbolic"),
            ("dark", "Dark", "weather-clear-night-symbolic")]
 SCHEMES = {"system": Adw.ColorScheme.DEFAULT, "light": Adw.ColorScheme.FORCE_LIGHT,
-           "dark": Adw.ColorScheme.FORCE_DARK, "blue": Adw.ColorScheme.FORCE_DARK}
+           "dark": Adw.ColorScheme.FORCE_DARK,
+           "charcoal": Adw.ColorScheme.FORCE_DARK, "daylight": Adw.ColorScheme.FORCE_LIGHT,
+           "frost": Adw.ColorScheme.FORCE_DARK, "dusk": Adw.ColorScheme.FORCE_DARK, "sand": Adw.ColorScheme.FORCE_LIGHT}
 
 
 def apply(appearance: str) -> None:

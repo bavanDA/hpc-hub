@@ -1,20 +1,20 @@
 // More › Settings: light or dark, the clusters you use, staying connected in the background, which notifications to
 // get (parts/watchPhone.ts), the monitoring bar, experimental pages, and disconnecting everything at once.
-import { Power } from 'lucide-react'
+import { Check, Power } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
 import type { SetupStatus } from '@shared/components/app/Welcome'
 import { useClusters } from '@shared/components/clusters/store'
 import { setMonitorBar } from '@shared/components/terminals/MonitorBar'
 import { call } from '@shared/rpc'
-import { setAppearance, type Appearance } from '@shared/theme'
+import { ThemeSample } from '@shared/components/app/ThemeSample'
+import { setAppearance, THEMES, type Appearance } from '@shared/theme'
 import { Header } from '../parts/Header'
 import { askForNotifications, EXPLAIN, KINDS, notificationsAllowed, setPhonePrefs, usePhonePrefs } from '../parts/watchPhone'
-import { ConfirmSheet, Row, Section, Segments, ToggleRow, useToast } from '../ui'
+import { ConfirmSheet, Row, Section, ToggleRow, useToast } from '../ui'
 
 type Prefs = { monitor_bar: boolean; appearance: Appearance; experimental: boolean }
 
-const THEMES = [['system', 'System'], ['light', 'Light'], ['dark', 'Dark'], ['blue', 'Blue']] as const
 
 export function Settings() {
   const toast = useToast()
@@ -67,13 +67,14 @@ export function Settings() {
     <div className="flex h-full flex-col">
       <Header title="Settings" />
       <div className="min-h-0 flex-1 overflow-y-auto pb-8">
-        <section>
-          <h3 className="px-4 pb-1.5 text-xs font-semibold tracking-wide text-dim uppercase">Appearance</h3>
-          <div className="px-4">
-            <Segments label="Appearance" value={prefs?.appearance ?? 'system'} options={THEMES}
-              onChange={(appearance) => { setAppearance(appearance); save({ appearance }) }} />
-          </div>
-        </section>
+        <Section title="Appearance">
+          {THEMES.map((t) => (
+            <Row key={t.id} label={<span className="flex items-center gap-3"><ThemeSample theme={t} />{t.label}</span>}
+              onPress={() => { setAppearance(t.id); save({ appearance: t.id }) }}>
+              {(prefs?.appearance ?? 'system') === t.id
+                ? <Check size={20} aria-label="Chosen" className="shrink-0" /> : <span className="w-5" />}</Row>
+          ))}
+        </Section>
 
         {setup && (
           <Section title="Clusters you use" note="Hidden clusters keep their settings.">

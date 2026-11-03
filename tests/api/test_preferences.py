@@ -50,7 +50,7 @@ def test_monitor_bar(app_file):
 def test_appearance(app_file):
     assert preferences.set_(appearance="dark")["appearance"] == "dark"
     assert config.load_app(app_file).appearance == "dark"
-    assert preferences.set_(appearance="blue")["appearance"] == "blue"
+    assert preferences.set_(appearance="frost")["appearance"] == "frost"
     assert preferences.set_(appearance="dark")["appearance"] == "dark"
     with pytest.raises(ValueError, match="Appearance"):
         preferences.set_(appearance="purple")

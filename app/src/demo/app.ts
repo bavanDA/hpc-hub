@@ -1,5 +1,6 @@
 // Demo answers for the app menu, Preferences, links, and upload and download.
 import type { Preferences, Profiles } from '../components/app/types'
+import { THEMES } from '../theme'
 
 // ?theme=light|dark forces one for design work; otherwise the last pick in this browser
 function demoAppearance(): Preferences['appearance'] {
@@ -7,7 +8,7 @@ function demoAppearance(): Preferences['appearance'] {
   let last: string | null = null
   try { last = localStorage.getItem('hpchub-appearance') } catch { /* blocked */ }
   const a = asked ?? last
-  return a === 'light' || a === 'dark' || a === 'blue' ? a : 'system'
+  return THEMES.some((t) => t.id === a) ? a as Preferences['appearance'] : 'system'
 }
 
 // ?experimental shows the experimental parts (design work)

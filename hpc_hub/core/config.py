@@ -360,10 +360,10 @@ class AppSettings:
     clusters: str = ""  # ids of the clusters you use, comma separated; empty = all of them
     select_to_copy: bool = True  # highlighting text in a terminal copies it
     monitor_bar: bool = True  # CPU, memory and network of the host under each terminal
-    appearance: str = "system"  # system (follows the computer), light, dark or blue
+    appearance: str = "system"  # system (follows the computer), light, dark or a named one
 
 
-APPEARANCES = ("system", "light", "dark", "blue")
+APPEARANCES = ("system", "light", "dark", "charcoal", "daylight", "frost", "dusk", "sand")
 
 
 def load_app(path: Path = APP_FILE) -> AppSettings:

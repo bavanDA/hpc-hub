@@ -213,26 +213,73 @@ svg.lucide[stroke-width="2"]:is([width="20"], [width="24"], [width="40"]) { stro
   --shadow-dialog: 0 0 0 1px #46464c;
 }
 
-/* Blue (Settings, Appearance): the dark theme a little lighter, in blue-grey, with the blue accent of the earlier
-   design for the main button and the current choice. */
-:root[data-theme="dark"][data-tint="blue"] {
-  --color-window: #262f3d;  --color-header: #262f3d;  --color-sidebar: #1f2733;
-  --color-card: #262f3d;    --color-view: #262f3d;    --color-raised: #2f394a;
-  --color-inset: #2d3747;   --color-control: #334052; --color-soft: #2d3747;
-  --color-hover: rgb(255 255 255 / 0.06);  --color-pressed: rgb(255 255 255 / 0.10);
-  --color-selected: rgb(74 144 226 / 0.16);
-  --color-line: #36414f;    --color-line-strong: #4a5668;  --color-scrim: rgb(8 12 20 / 0.55);
-  --color-text: #eef2f7;    --color-dim: #a9b4c4;     --color-faint: #7f8a9b;
-  --color-accent: #3b82e0;  --color-accent-hover: #4a8fe6;  --color-accent-pressed: #2f72cc;
-  --color-on-accent: #ffffff;
-  --color-accent-text: #8cbcf3;  --color-accent-soft: rgb(74 144 226 / 0.18);  --color-focus: #8cbcf3;
-  --color-ok: #eef2f7;      --color-ok-bg: #2d3747;   --color-ok-dot: #3ccf7e;
-  --color-warn: #eef2f7;    --color-warn-bg: #2d3747; --color-warn-dot: #a9b4c4;
-  --color-bad: #ff8f82;     --color-bad-bg: rgb(255 143 130 / 0.12);  --color-bad-dot: #ff8f82;
-  --color-bad-fill: #c4281c;
-  --color-pill: #334052;    --color-orange: #eef2f7;
-  --shadow-menu: 0 0 0 1px #4a5668, 0 8px 24px -8px rgb(0 0 0 / 0.45);
-  --shadow-dialog: 0 0 0 1px #4a5668;
+/* The named themes (Settings, Appearance), each from a code editor's colors: Charcoal and Daylight (VS Code's
+   Modern), Frost (Nord), Dusk (Ayu Mirage), Sand (Solarized Light). data-theme is their light or dark base, so
+   the editors, terminals and status colors follow; data-tint swaps the surfaces and the accent. */
+:root[data-tint="charcoal"] {
+  --color-window: #1f1f1f;  --color-header: #1f1f1f;  --color-sidebar: #181818;
+  --color-card: #1f1f1f;    --color-view: #1f1f1f;    --color-raised: #222222;
+  --color-inset: #313131;   --color-control: #313131; --color-soft: #313131;  --color-pill: #313131;
+  --color-ok-bg: #313131;   --color-warn-bg: #313131; --color-accent-soft: #313131;  --color-selected: rgb(255 255 255 / 0.08);
+  --color-line: #2b2b2b;    --color-line-strong: #3c3c3c;
+  --color-text: #cccccc;    --color-dim: #9d9d9d;     --color-faint: #989898;
+  --color-ok: #cccccc;      --color-warn: #cccccc;   --color-orange: #cccccc;
+  --color-accent: #0078d4;  --color-accent-hover: #0078d4;  --color-accent-pressed: #0078d4;  --color-on-accent: #ffffff;
+  --color-accent-text: #0078d4;  --color-focus: #0078d4;
+  --shadow-menu: 0 0 0 1px #3c3c3c, 0 8px 24px -8px rgb(0 0 0 / 0.45);
+  --shadow-dialog: 0 0 0 1px #3c3c3c;
+}
+:root[data-tint="daylight"] {
+  --color-window: #ffffff;  --color-header: #ffffff;  --color-sidebar: #f8f8f8;
+  --color-card: #ffffff;    --color-view: #ffffff;    --color-raised: #f8f8f8;
+  --color-inset: #f2f2f2;   --color-control: #f2f2f2; --color-soft: #f2f2f2;  --color-pill: #f2f2f2;
+  --color-ok-bg: #f2f2f2;   --color-warn-bg: #f2f2f2; --color-accent-soft: #f2f2f2;  --color-selected: rgb(0 0 0 / 0.05);
+  --color-line: #e5e5e5;    --color-line-strong: #cecece;
+  --color-text: #3b3b3b;    --color-dim: #616161;     --color-faint: #767676;
+  --color-ok: #3b3b3b;      --color-warn: #3b3b3b;   --color-orange: #3b3b3b;
+  --color-accent: #005fb8;  --color-accent-hover: #005fb8;  --color-accent-pressed: #005fb8;  --color-on-accent: #ffffff;
+  --color-accent-text: #3b3b3b;  --color-focus: #005fb8;
+  --shadow-menu: 0 0 0 1px #cecece, 0 8px 24px -8px rgb(0 0 0 / 0.16);
+  --shadow-dialog: 0 0 0 1px #cecece;
+}
+:root[data-tint="frost"] {
+  --color-window: #2e3440;  --color-header: #2e3440;  --color-sidebar: #2e3440;
+  --color-card: #2e3440;    --color-view: #2e3440;    --color-raised: #3b4252;
+  --color-inset: #434c5e;   --color-control: #434c5e; --color-soft: #434c5e;  --color-pill: #434c5e;
+  --color-ok-bg: #434c5e;   --color-warn-bg: #434c5e; --color-accent-soft: #434c5e;  --color-selected: rgb(255 255 255 / 0.08);
+  --color-line: #3b4252;    --color-line-strong: #4c566a;
+  --color-text: #d8dee9;    --color-dim: #969ca6;     --color-faint: #727884;
+  --color-ok: #d8dee9;      --color-warn: #d8dee9;   --color-orange: #d8dee9;
+  --color-accent: #82b7c6;  --color-accent-hover: #82b7c6;  --color-accent-pressed: #82b7c6;  --color-on-accent: #2e3440;
+  --color-accent-text: #82b7c6;  --color-focus: #82b7c6;
+  --shadow-menu: 0 0 0 1px #4c566a, 0 8px 24px -8px rgb(0 0 0 / 0.45);
+  --shadow-dialog: 0 0 0 1px #4c566a;
+}
+:root[data-tint="dusk"] {
+  --color-window: #242936;  --color-header: #242936;  --color-sidebar: #1f2430;
+  --color-card: #242936;    --color-view: #242936;    --color-raised: #282e3b;
+  --color-inset: #2d3445;   --color-control: #2d3445; --color-soft: #2d3445;  --color-pill: #2d3445;
+  --color-ok-bg: #2d3445;   --color-warn-bg: #2d3445; --color-accent-soft: #2d3445;  --color-selected: rgb(255 255 255 / 0.08);
+  --color-line: #171b24;    --color-line-strong: #343a48;
+  --color-text: #cccac2;    --color-dim: #87909f;     --color-faint: #4c5363;
+  --color-ok: #cccac2;      --color-warn: #cccac2;   --color-orange: #cccac2;
+  --color-accent: #ffcc66;  --color-accent-hover: #ffcc66;  --color-accent-pressed: #ffcc66;  --color-on-accent: #715822;
+  --color-accent-text: #ffcc66;  --color-focus: #ffcc66;
+  --shadow-menu: 0 0 0 1px #343a48, 0 8px 24px -8px rgb(0 0 0 / 0.45);
+  --shadow-dialog: 0 0 0 1px #343a48;
+}
+:root[data-tint="sand"] {
+  --color-window: #fdf6e3;  --color-header: #fdf6e3;  --color-sidebar: #eee8d5;
+  --color-card: #fdf6e3;    --color-view: #fdf6e3;    --color-raised: #eee8d5;
+  --color-inset: #ddd6c1;   --color-control: #ddd6c1; --color-soft: #ddd6c1;  --color-pill: #ddd6c1;
+  --color-ok-bg: #ddd6c1;   --color-warn-bg: #ddd6c1; --color-accent-soft: #ddd6c1;  --color-selected: rgb(0 0 0 / 0.05);
+  --color-line: #ddd6c1;    --color-line-strong: #d3af86;
+  --color-text: #073642;    --color-dim: #586e75;     --color-faint: #8f9b9a;
+  --color-ok: #073642;      --color-warn: #073642;   --color-orange: #073642;
+  --color-accent: #ac9d57;  --color-accent-hover: #ac9d57;  --color-accent-pressed: #ac9d57;  --color-on-accent: #002b36;
+  --color-accent-text: #073642;  --color-focus: #ac9d57;
+  --shadow-menu: 0 0 0 1px #d3af86, 0 8px 24px -8px rgb(0 0 0 / 0.16);
+  --shadow-dialog: 0 0 0 1px #d3af86;
 }
 
 /* Pieces that say "bg-accent text-white": on dark the accent is white, so their text follows the accent. */
