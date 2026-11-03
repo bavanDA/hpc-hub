@@ -62,8 +62,8 @@ export function Usage() {
 
   return (
     <div className="flex h-full flex-col">
-      {!off && <div className="flex shrink-0 items-center gap-2 px-4 py-3">
-        <div className="mr-2 w-[300px] shrink-0">
+      {!off && <div className="flex shrink-0 flex-wrap items-center gap-2 px-4 py-3">
+        <div className="mr-2 w-[300px] max-w-full shrink">
           <Segments label="Show" value={tab} onChange={setTab} options={TABS} /></div>
         {tab !== 'load' && <Select label="Group to bill" value={name} onChange={setPick} disabled={!list.length}
           options={list.length ? list.map((a) => [a.account, a.account] as const) : [['', '(no account)'] as const]} />}

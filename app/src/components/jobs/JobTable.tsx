@@ -19,7 +19,7 @@ const COLUMNS: Column[] = [
   { key: 'user', title: 'User', hide: '@max-[760px]:hidden' },
   { key: 'state', title: 'State' },
   { key: 'time', title: 'Time used' },
-  { key: 'res', title: 'CPUs · memory', right: true, hide: '@max-[860px]:hidden' },
+  { key: 'res', title: 'CPUs · memory', right: true, hide: '@max-[940px]:hidden' },
   { key: 'su', title: 'Hours (SU)', right: true, hide: '@max-[1000px]:hidden' },
   { key: 'where', title: 'Node or reason', hide: '@max-[640px]:hidden' },
 ]
@@ -90,7 +90,7 @@ function JobRow({ job: j, cols, anyCancel, picked, onPick, onOpen, onCancel }: {
       case 'res': return <>{j.cpus} · {memText(j.mem)}</>
       case 'su': return <span className={j.su === 'free' ? 'text-dim' : ''}>{j.su}</span>
       case 'where': return j.reason
-        ? <span className="block max-w-[200px] truncate text-dim" title={reasonText(j.reason)}>{reasonText(j.reason)}</span>
+        ? <span className="block max-w-[200px] truncate text-dim @max-[820px]:max-w-[120px]" title={reasonText(j.reason)}>{reasonText(j.reason)}</span>
         : <span className="block max-w-[180px] truncate font-mono text-sm" title={j.where}>{j.where}</span>
       default: return null
     }
@@ -124,7 +124,7 @@ function TimeUsed({ job: j }: { job: Job }) {
     <span className="flex items-center gap-2" title={`${j.elapsed_text} of ${j.limit_text}`}>
       {j.limit_seconds > 0 && <Meter value={share} label="Time used" className="w-9 shrink-0" />}
       <span>{j.elapsed_text}</span>
-      <span className="text-sm text-dim @max-[700px]:hidden">of {j.limit_text}</span>
+      <span className="text-sm text-dim @max-[820px]:hidden">of {j.limit_text}</span>
     </span>
   )
 }

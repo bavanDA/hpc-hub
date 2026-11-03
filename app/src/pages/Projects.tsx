@@ -95,14 +95,15 @@ export function Projects() {
       ) : (
         <div className="@container h-full overflow-auto scheme-light-dark">
           <div className="px-6 pt-5 pb-10">
-            <div className="flex items-center gap-2.5 pb-4">
+            <div className="flex flex-wrap items-center gap-2.5 pb-4">
               {places.length > 1 && <Segments fit label="Cluster" value={at} onChange={setWhere}
                 options={[[ALL, 'All'], ...places.map((c) => [c.id, shortName(c)] as const)]} />}
-              <div className="ml-auto w-[240px] min-w-[120px] shrink">
+              <div className="ml-auto w-[240px] min-w-[140px] shrink">
                 <SearchField value={query} onChange={setQuery} placeholder="Search projects" />
               </div>
-              <EButton icon={FolderOpen} onClick={add} title="Use a folder that is already on a cluster">
-                Add folder</EButton>
+              <EButton icon={FolderOpen} onClick={add} title="Use a folder that is already on a cluster"
+                aria-label="Add folder" className="@max-[860px]:px-3">
+                <span className="@max-[860px]:hidden">Add folder</span></EButton>
               <EButton kind="primary" icon={Plus} onClick={create}>New project</EButton>
             </div>
             {shown.length

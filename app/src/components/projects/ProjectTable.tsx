@@ -22,11 +22,11 @@ type Column = { key: SortKey | 'group' | 'running' | 'git'; title: string; hide?
 // hide: the container width under which the column goes
 const COLUMNS: Column[] = [
   { key: 'name', title: 'Name and folder' },
-  { key: 'cluster', title: 'Cluster', hide: '@max-[520px]:hidden' },
-  { key: 'group', title: 'Group', hide: '@max-[560px]:hidden' },
-  { key: 'opened', title: 'Last opened', hide: '@max-[600px]:hidden' },
-  { key: 'running', title: 'Running', hide: '@max-[680px]:hidden' },
-  { key: 'git', title: 'Git', hide: '@max-[780px]:hidden' },
+  { key: 'cluster', title: 'Cluster', hide: '@max-[540px]:hidden' },
+  { key: 'group', title: 'Group', hide: '@max-[760px]:hidden' },
+  { key: 'opened', title: 'Last opened', hide: '@max-[620px]:hidden' },
+  { key: 'running', title: 'Running', hide: '@max-[860px]:hidden' },
+  { key: 'git', title: 'Git', hide: '@max-[1000px]:hidden' },
 ]
 const SORTED = new Set<string>(['name', 'cluster', 'opened'])
 
@@ -101,7 +101,8 @@ function ProjectRow({ p, live, act }: { p: Project; live: Live; act: RowActions 
       <td className="pr-1 pl-2">
         <div className="flex items-center justify-end gap-1">
           {known && <EButton small onClick={() => act.show(p)}>Open</EButton>}
-          {known && <EButton small icon={Copy} onClick={() => act.copy(p)}>Copy or sync</EButton>}
+          {known && <EButton small icon={Copy} aria-label="Copy or sync" title="Copy or sync" className="@max-[1160px]:px-2"
+            onClick={() => act.copy(p)}><span className="@max-[1160px]:hidden">Copy or sync</span></EButton>}
           <Menu label={`More for ${p.name}`} className="grid size-9 place-items-center rounded-md text-dim
             hover:bg-hover hover:text-text" trigger={<EllipsisVertical size={18} />}
             groups={[[
