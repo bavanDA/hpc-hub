@@ -1,4 +1,4 @@
-// The projects as a table, like Jobs: name with its folder under it, cluster, last opened, how many terminals run
+// The projects as a table, like Jobs: name with its folder under it, cluster, group, last opened, how many terminals run
 // in it, its git branch and changes, then Open (the Open window) and ⋮ with the rest.
 // Narrow windows drop the less important columns (container queries).
 import { ChevronDown, ChevronUp, ClipboardCopy, Copy, EllipsisVertical, FileText, Folder, GitBranch, Pencil,
@@ -18,11 +18,12 @@ export type RowActions = {
 }
 
 
-type Column = { key: SortKey | 'running' | 'git'; title: string; hide?: string }
+type Column = { key: SortKey | 'group' | 'running' | 'git'; title: string; hide?: string }
 // hide: the container width under which the column goes
 const COLUMNS: Column[] = [
   { key: 'name', title: 'Name and folder' },
   { key: 'cluster', title: 'Cluster', hide: '@max-[520px]:hidden' },
+  { key: 'group', title: 'Group', hide: '@max-[560px]:hidden' },
   { key: 'opened', title: 'Last opened', hide: '@max-[600px]:hidden' },
   { key: 'running', title: 'Running', hide: '@max-[680px]:hidden' },
   { key: 'git', title: 'Git', hide: '@max-[780px]:hidden' },
@@ -79,6 +80,7 @@ function ProjectRow({ p, live, act }: { p: Project; live: Live; act: RowActions 
         </div>)
       case 'cluster': return known ? clusterOf(p)
         : <span className="text-dim" title={`${p.cluster} is not set up in HPC Hub`}>Not set up</span>
+      case 'group': return p.group || <span className="text-dim">Yours</span>
       case 'opened': return openedText(p.opened)
       case 'running': return running > 0 &&
         <span className="flex items-center gap-2"><StatusDot tone="on" />{running} running</span>
@@ -99,10 +101,10 @@ function ProjectRow({ p, live, act }: { p: Project; live: Live; act: RowActions 
       <td className="pr-1 pl-2">
         <div className="flex items-center justify-end gap-1">
           {known && <EButton small onClick={() => act.show(p)}>Open</EButton>}
+          {known && <EButton small icon={Copy} onClick={() => act.copy(p)}>Copy or sync</EButton>}
           <Menu label={`More for ${p.name}`} className="grid size-9 place-items-center rounded-md text-dim
             hover:bg-hover hover:text-text" trigger={<EllipsisVertical size={18} />}
             groups={[[
-              ...known ? [{ label: 'Copy or sync to another cluster', icon: Copy, onClick: () => act.copy(p) }] : [],
               { label: 'Edit', icon: Pencil, onClick: () => act.edit(p) },
               { label: 'Copy path', icon: ClipboardCopy, onClick: () => act.copyPath(p) },
             ], [{ label: 'Remove from the list', icon: Trash2, danger: true, onClick: () => act.remove(p) }]]} />

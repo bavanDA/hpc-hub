@@ -24,7 +24,7 @@ export function ProjectActions({ p, experimental, act, onClose }:
   const tools: SheetAction[] = known ? [
     ...openIn({ cluster: p.cluster, clusterName: p.cluster_name, folder: p.path, prepare: opened }, act.failed),
     ...(experimental ? [{ label: 'LaTeX', icon: FileText, onPick: paper }] : []),
-    { label: 'Copy to another cluster', icon: ArrowRightLeft, onPick: () => act.copy(p) },
+    { label: 'Copy or sync to another cluster', icon: ArrowRightLeft, onPick: () => act.copy(p) },
   ] : []
   const rest: SheetAction[] = [
     { label: 'Edit', icon: Pencil, onPick: () => act.edit(p) },
