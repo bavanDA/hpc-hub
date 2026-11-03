@@ -225,12 +225,13 @@ def partitions(cluster: str, partition: str = "", qos: str = "", account: str = 
     """What Slurm allows here (read at the last login): partitions, the groups you may bill (accounts) and the QoS
     of the one picked (or all yours), the longest time (minutes) a job on this partition and QoS may ask for, and
     the cores and GB one job may ask for there, the memory each core comes with (more memory takes more cores), and
-    the QoS's GPU caps ({"l40": 0}: not with this QoS). known is false until you connected once."""
+    the QoS's GPU caps ({"l40": 0}: not with this QoS), and billing: what an hour costs in SUs (None: Slurm sets
+    no weights here). known is false until you connected once."""
     lim = hub().session(cluster).limits
     if not lim:
         return {"known": False, "partitions": [], "default_partition": "", "qos": [], "default_qos": "",
                 "accounts": [], "default_account": "", "longest": None, "why": "", "cores": None, "memory_gb": None,
-                "mem_per_core_gb": None, "gpu_caps": {}}
+                "mem_per_core_gb": None, "gpu_caps": {}, "billing": None}
     longest, why = lim.longest(partition.strip(), qos.strip())
     part = partition.strip() or lim.default_partition
     cores, memory_gb = lim.biggest(part, qos.strip())
@@ -240,7 +241,8 @@ def partitions(cluster: str, partition: str = "", qos: str = "", account: str = 
             "default_qos": lim.default_qos, "accounts": list(lim.account_qos), "default_account": lim.default_account,
             "longest": longest, "why": why,
             "cores": cores, "memory_gb": memory_gb,
-            "mem_per_core_gb": round(per_core / 1024, 2) if per_core else None, "gpu_caps": lim.gpu_caps(qos.strip())}
+            "mem_per_core_gb": round(per_core / 1024, 2) if per_core else None, "gpu_caps": lim.gpu_caps(qos.strip()),
+            "billing": lim.billing_for(part, qos.strip())}
 
 
 @method("clusters.gpus")

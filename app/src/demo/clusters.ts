@@ -233,7 +233,9 @@ export const answers: Record<string, unknown> = {
       qos: Object.keys(limits.qos), default_qos: 'low', accounts: ['mygroup', 'abc123', 'dept_x'],
       default_account: 'mygroup', longest: top?.[0] ?? null, why: top?.[1] ?? '', cores, memory_gb,
       // like Wulver: the GPU queue gives each core 3.9 GB, and Standard leaves out the L40
-      mem_per_core_gb: part === 'gpu' ? 3.92 : null, gpu_caps: (qos || 'low') === 'standard' ? { l40: 0 } : {} }
+      mem_per_core_gb: part === 'gpu' ? 3.92 : null, gpu_caps: (qos || 'low') === 'standard' ? { l40: 0 } : {},
+      billing: { weights: { cpu: 1, mem: 0.25, gpu: 0, 'gpu:a100': 16, 'gpu:a100_40g': 8, 'gpu:a100_20g': 4,
+        'gpu:a100_10g': 2, 'gpu:l40': 8 }, max: 'gres', factor: ['low', 'debug'].includes(qos || 'low') ? 0 : 1 } }
   },
   // what Slurm's gres column says on each cluster (hpc_hub/compute/gpus.py)
   'clusters.gpus': ({ cluster }: { cluster: string }) => ({ known: cluster !== 'sdsc', gpus: DEMO_GPUS[cluster] ?? [] }),

@@ -64,3 +64,17 @@ def test_priority_caps_and_memory_per_core():
     assert L.biggest("debug", "debug") == (4, 16) and L.biggest("gpu", "standard") == (128, 501)
     assert L.mem_per_core_mb == {"gpu": 4015}
     assert L.gpu_caps("standard") == {"l40": 0} and L.gpu_caps("course") == {"": 1} and L.gpu_caps("low") == {}
+
+
+def test_billing_weights_and_usage_factor():
+    L = limits.parse("general*|infinite|128|450000+\ngpu|infinite|128|514000\n"
+                     "@QOS\nstandard|3-00:00:00|||1.000000\nlow|3-00:00:00|||0.000000\n"
+                     "@ASSOC\nmygroup|low,standard|standard\n@PARTS\n"
+                     "PartitionName=gpu TRESBillingWeights=CPU=1.0,Mem=0.25G,GRES/gpu=0,gres/gpu:a100=16.0 State=UP\n"
+                     "PartitionName=bigmem TRESBillingWeights=CPU=1.5,Mem=96 State=UP\n"
+                     "PartitionName=general State=UP\n@FLAGS\nPriorityFlags           = MAX_TRES_GRES\n")
+    assert L.billing["gpu"] == {"cpu": 1.0, "mem": 0.25, "gpu": 0.0, "gpu:a100": 16.0}
+    assert L.billing["bigmem"] == {"cpu": 1.5, "mem": 96 * 1024}
+    assert L.billing_for("gpu") == {"weights": L.billing["gpu"], "max": "gres", "factor": 1.0}
+    assert L.billing_for("gpu", "low")["factor"] == 0.0
+    assert L.billing_for("general") is None

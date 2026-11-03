@@ -1,12 +1,14 @@
 // A compute node's size in style E, the desktop twin of the phone's NodeFields (mobile/src/parts/NodeSheet.tsx):
 // Small CPU, Medium CPU or GPU, then Cores, Memory, Time and the queue as rows. Numbers are typed in place up to what
-// the queue and priority allow. With a GPU, the GPU memory you need is typed too and the GPUs that fit are listed
-// right here. Where each core comes with a set amount of memory (Wulver's GPU queue), more memory takes more cores.
-// Queue opens its own window. NodeRow is the one row a tool window shows for it.
+// the queue and priority allow. With a GPU, the GPU memory you need and how many are typed too, and the GPU that
+// gives that much is picked and shown. Where each core comes with a set amount of memory (Wulver's GPU queue), more memory takes more cores.
+// Queue opens its own window. Cost says what it takes in SUs, from Slurm's billing weights. NodeRow is the one row
+// a tool window shows for it.
 import { useEffect, useState } from 'react'
 
 import { chosen, fitting, gpuName, isPreset, presets, useGpus, withGpu, type Gpu, type GpuFit } from '../clusters/gpus'
 import { queueText } from '../clusters/priority'
+import { suText } from '../clusters/su'
 import { QueuePickers } from '../clusters/queues'
 import { human, minutes, slurmTime } from '../clusters/time'
 import { call } from '../../rpc'
@@ -110,6 +112,7 @@ export function NodeFields({ cluster, value: p, onChange, onValid, extra = true 
   useEffect(() => { if (p.cpus < fewest) onChange({ ...p, cpus: fewest }) }, [p, fewest, onChange])
   const on = quick.find((x) => isPreset(p, x))?.id ?? (p.gpus ? 'gpu' : '')  // GPU with cores raised still is GPU
   const queue = queueText(p.partition, p.qos)
+  const su = limits?.billing ? suText(limits.billing, p, minutes(p.time) ?? 240, p.qos || limits.default_qos) : null
   // a CPU size leaves a GPU-only queue for the usual one
   const gpuQueue = (q: Profile) => gpus.some((x) => x.partitions.includes(q.partition))
     && !(limits?.default_partition && gpus.some((x) => x.partitions.includes(limits.default_partition)))
@@ -134,6 +137,7 @@ export function NodeFields({ cluster, value: p, onChange, onValid, extra = true 
         <Row label="Queue and priority" value={queue} opens onPress={() => setOpen(true)} />
       </List>
       {!!p.gpus && gpus.length > 0 && <GpuPart gpus={gpus} limits={limits} value={p} onChange={onChange} />}
+      {su && <List><Row label="Cost" sub={su.sub} value={su.value} /></List>}
       {open && <QueueDialog limits={limits} value={p} onChange={onChange} extra={extra} onClose={() => setOpen(false)} />}
     </>
   )

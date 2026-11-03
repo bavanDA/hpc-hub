@@ -114,6 +114,11 @@ export type Session = {
 export type Logins = Record<'ssh' | 'vpn', { username: string; password: boolean }> & { remember?: boolean }
 
 /** What Slurm allows (clusters.partitions); longest in minutes, null = no limit. */
+/** Slurm's billing weights: SUs an hour per core, per GB and per GPU ("gpu:a100"; "gpu" for any), how they add up
+ *  ('gres': the bigger of cores and memory, plus the GPUs; 'all': the biggest; '': all added), and the priority's
+ *  factor (0: free). */
+export type Billing = { weights: Record<string, number>; max: '' | 'all' | 'gres'; factor: number }
+
 export type Limits = {
   known: boolean
   partitions: string[]
@@ -128,6 +133,7 @@ export type Limits = {
   memory_gb?: number | null
   mem_per_core_gb?: number | null  // each core comes with this much memory: asking more takes more cores
   gpu_caps?: Record<string, number>  // the priority's GPU caps: {"l40": 0} not allowed, {"": 1} at most one
+  billing?: Billing | null  // what an hour costs in SUs; null where Slurm sets no weights
 }
 
 /** A question a login asks (hpc_hub/api/hub.py). chrome-window: signing in in our Chrome window (answer
