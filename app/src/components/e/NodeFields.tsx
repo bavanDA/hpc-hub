@@ -11,7 +11,7 @@ import { QueuePickers } from '../clusters/queues'
 import { human, minutes, slurmTime } from '../clusters/time'
 import { call } from '../../rpc'
 import { gpuText, type Limits, type Profile } from '../../types/clusters'
-import { DurationRow, EDialog, Field, inRange, List, MainButton, NumberRow, Row, Section, Segments, Tick } from './ui'
+import { DurationRow, EDialog, Field, inRange, List, MainButton, NumberRow, Row, Section, Segments } from './ui'
 
 export const profileText = (p: Profile) => [`${p.cpus} cores`, `${p.mem_gb} GB`, gpuText(p),
   human(minutes(p.time) ?? 240)].filter(Boolean).join(' · ')
@@ -36,33 +36,41 @@ const fits = (p: Profile, limits: Limits | null, g: Gpu | null) =>
   && inRange(minutes(p.time) ?? 0, 1, limits?.longest) && (!g || inRange(p.gpus ?? 1, 1, g.max_per_job))
   && (!g || limits?.gpu_caps?.[g.type] !== 0)
 
-const fitName = (f: GpuFit) => (f.count === 1 ? gpuName(f.gpu) : `${f.count} × ${f.gpu.label}`)
+const fitName = (f: GpuFit) =>
+  (f.count === 1 ? gpuName(f.gpu) : `${f.count} × ${f.gpu.label}, ${f.count * f.gpu.memory_gb} GB`)
 
-/** GPU memory typed in, then the GPUs that give that much on one node; the first that fits is picked for you. */
+/** GPU memory and the number of GPUs, both typed; the GPU that gives that much is picked for you and shown. */
 function GpuPart({ gpus, limits, value: p, onChange }:
   { gpus: Gpu[]; limits: Limits | null; value: Profile; onChange: (p: Profile) => void }) {
   const g = chosen(p, gpus)
   const [need, setNeed] = useState(() => (g?.memory_gb ? g.memory_gb * (p.gpus || 1) : 16))
   const caps = limits?.gpu_caps ?? {}
-  const fits = fitting(need, gpus, caps)
-  const on = (f: GpuFit) => !!g && g.type === f.gpu.type && (p.gpus ?? 1) === f.count
+  const allowed = (x: Gpu) => caps[x.type] !== 0
+  const most = (x: Gpu) => (x.slice ? 1 : Math.min(x.max_per_job || 1, caps[''] ?? Infinity))
+  const biggest = Math.max(0, ...gpus.filter(allowed).map((x) => x.memory_gb * most(x)))
   const changeNeed = (n: number) => {
     setNeed(n)
-    const now = fitting(n, gpus, caps).filter((f) => !f.blocked)
-    if (now.length && !now.some(on)) onChange(withGpu(p, now[0].gpu, now[0].count))
+    const best = fitting(n, gpus, caps).find((f) => !f.blocked)
+    if (best) onChange(withGpu(p, best.gpu, best.count))
   }
-  const most = Math.max(0, ...gpus.filter((x) => caps[x.type] !== 0)
-    .map((x) => x.memory_gb * (x.slice ? 1 : Math.min(x.max_per_job, caps[''] ?? Infinity))))
+  // more than one: a whole GPU, the one you have if it allows that many
+  const wholes = gpus.filter((x) => !x.slice && allowed(x))
+  const countMax = Math.max(1, ...wholes.map(most))
+  const changeCount = (n: number) => {
+    const x = (g && !g.slice && n <= most(g) ? g : null) ?? (n > 1 ? wholes.find((w) => n <= most(w)) : g)
+    if (!x) return onChange({ ...p, gpus: n })
+    onChange(withGpu(p, x, n))
+    setNeed(x.memory_gb * n)
+  }
+  const blocked = fitting(need, gpus, caps).filter((f) => f.blocked).map((f) => f.gpu.label)
   return (
     <Section title="GPU">
-      <NumberRow label="GPU memory you need" unit="GB" value={need} max={most || null} onChange={changeNeed} />
-      {fits.map((f) => (
-        <Row key={`${f.gpu.type}-${f.count}`} label={fitName(f)}
-          sub={f.blocked ? 'Not with this priority. Change it under Queue and priority'
-            : f.count > 1 ? `${f.count * f.gpu.memory_gb} GB in all` : undefined}
-          onPress={f.blocked ? undefined : () => onChange(withGpu(p, f.gpu, f.count))}>
-          {!f.blocked && <Tick on={on(f)} />}</Row>
-      ))}
+      <NumberRow label="GPU memory you need" unit="GB" value={need} max={biggest || null} onChange={changeNeed} />
+      <NumberRow label="GPUs" unit="GPUs" showUnit={false} value={p.gpus ?? 1} max={countMax}
+        onChange={changeCount} />
+      <Row label="You get" value={g ? fitName({ gpu: g, count: p.gpus ?? 1, blocked: false }) : 'None'}
+        sub={blocked.length ? `${[...new Set(blocked)].join(', ')} needs another priority, under Queue and priority`
+          : undefined} />
     </Section>
   )
 }
