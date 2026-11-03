@@ -105,8 +105,9 @@ export const answers: Record<string, unknown> = {
   'projects.copy_targets': ({ id }: { id: string }): CopyTargets => {
     const p = projects.find((x) => x.id === id)!
     return { name: p.path.split('/').pop()!, copy_to: '', copy_into: '',
-      targets: clusters.filter((c) => c.id !== p.cluster).map((c) => ({
-        ...c, globus_missing: c.id === 'sdsc' ? 'a Globus collection for SDSC Expanse' : '' })) }
+      targets: [...clusters.filter((c) => c.id === p.cluster), ...clusters.filter((c) => c.id !== p.cluster)]
+        .map((c) => ({ ...c, same: c.id === p.cluster,
+          globus_missing: c.id === 'sdsc' && c.id !== p.cluster ? 'a Globus collection for SDSC Expanse' : '' })) }
   },
   'projects.copy_plan': () => new Promise((done) => setTimeout(() => done(plan), 600)),
   'projects.copy': ({ id, to }: { id: string; to: string }) => {

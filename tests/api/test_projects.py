@@ -172,7 +172,8 @@ def test_copy_plan_sizes_and_chats(hub, tmp_path, monkeypatch):
 def test_copy_through_the_laptop_leaves_out_what_you_skip(hub, tmp_path):
     _project(tmp_path)
     targets = api.copy_targets("proj")["targets"]
-    assert [t["id"] for t in targets] == ["yale", "sdsc"] and "Globus app id" in targets[0]["globus_missing"]
+    assert [t["id"] for t in targets] == ["wulver", "yale", "sdsc"] and targets[0]["same"]
+    assert "Globus app id" in targets[1]["globus_missing"]
     got = api.copy("proj", "yale", str(tmp_path / "there"), skip=["data"])
     last = _finished(hub, got["id"])
     assert not last["error"] and last["status"].startswith("Done") and got["chats"] == ""
@@ -256,3 +257,14 @@ def test_projects_are_shared_through_the_cluster(hub, tmp_path):
 
 def test_a_cluster_that_is_not_connected_is_left_alone(hub):
     assert api.sync("sdsc") is False
+
+
+def test_copy_into_another_group_on_the_same_cluster(hub, tmp_path):
+    _project(tmp_path)
+    got = api.copy("proj", "wulver", str(tmp_path / "groupB"), skip=["data"])
+    last = _finished(hub, got["id"])
+    assert not last["error"] and last["status"].startswith("Done")
+    assert (tmp_path / "groupB" / "proj" / "code" / "run.py").exists()
+    assert not (tmp_path / "groupB" / "proj" / "data").exists()
+    with pytest.raises(ValueError, match="outside the project"):
+        api.copy("proj", "wulver", str(tmp_path / "home" / "proj" / "code"))

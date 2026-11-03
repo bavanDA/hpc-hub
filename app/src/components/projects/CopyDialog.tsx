@@ -1,5 +1,6 @@
-// Copy or sync a project to another cluster: where it goes, how (Globus cluster to cluster, or through this
-// laptop), what to leave behind, and which Claude chats come along. Style E, like the phone's CopySheet.
+// Copy or sync a project to another cluster, or to another folder on its own (another group's Project): where it
+// goes, how (Globus cluster to cluster, or through this laptop; on its own cluster the cluster copies it), what to
+// leave behind, and which Claude chats come along. Style E, like the phone's CopySheet.
 import { FolderOpen } from 'lucide-react'
 import { useEffect, useState, type ReactNode } from 'react'
 
@@ -47,7 +48,7 @@ export function CopyDialog({ p, onClose, onStarted }:
 
   useEffect(() => {
     call<CopyTargets>('projects.copy_targets', { id: p.id }).then((t) => {
-      const dst = t.targets.find((x) => x.id === t.copy_to) ?? t.targets[0]
+      const dst = t.targets.find((x) => x.id === t.copy_to) ?? t.targets.find((x) => !x.same) ?? t.targets[0]
       setInfo(t)
       setTo(dst?.id ?? '')
       setInto(t.copy_into || '~')
@@ -73,10 +74,11 @@ export function CopyDialog({ p, onClose, onStarted }:
   const intoPath = into.trim() || '~'
   const spots = dst?.connected && found.cluster === dst.id ? found.storage : []
   const spot = spots.filter((s) => inside(intoPath, s.path)).sort((a, b) => b.path.length - a.path.length)[0]
-  const missing = how === 'globus' ? dst?.globus_missing ?? '' : ''
+  const missing = how === 'globus' && !dst?.same ? dst?.globus_missing ?? '' : ''
   const files = (plan?.parts ?? []).filter((x) => keep[x.name]).reduce((n, x) => n + x.size, 0)
   const picked = (plan?.chats ?? []).filter((c) => chats[c.id])
-  const sync = how === 'globus'
+  const same = !!dst?.same
+  const sync = how === 'globus' && !same
   const dstName = dst ? shortName(dst) : ''
 
   const go = () => {
@@ -87,7 +89,8 @@ export function CopyDialog({ p, onClose, onStarted }:
       id: p.id, to: dst.id, into: intoPath, how, size: files,
       skip: (plan?.parts ?? []).filter((x) => !keep[x.name]).map((x) => x.name), chats: picked.map((c) => c.id),
     }).then((r) => {
-      onStarted([r.id, r.chats].filter(Boolean), `${sync ? 'Syncing' : 'Copying'} ${p.name} to ${dstName}`)
+      const where = same ? intoPath : dstName
+      onStarted([r.id, r.chats].filter(Boolean), `${sync ? 'Syncing' : 'Copying'} ${p.name} to ${where}`)
       onClose()
     }).catch((e: Error) => { setError(e.message); setBusy(false) })
   }
@@ -104,15 +107,16 @@ export function CopyDialog({ p, onClose, onStarted }:
           {busy && <Spinner size={16} />}{sync ? 'Sync' : 'Copy'}{plan ? ` ${formatSize(files)}` : ''}</MainButton>}>
         {!info ? <div className="grid h-40 place-items-center">
             {error ? <p className="text-bad">{error}</p> : <Spinner size={24} />}</div>
-          : info.targets.length === 0 ? <p className="px-5 py-8 text-center text-dim">Add another cluster first.</p> : (
+          : (
           <>
             <List>
               <ChoiceRow label="To" value={to} onChange={(v) => {
                 setTo(v)
                 setError('')
                 if (info.targets.find((t) => t.id === v)?.globus_missing) setHow('laptop')
-              }} options={info.targets.map((t) => ({ value: t.id, label: shortName(t),
-                hint: t.connected ? 'Connected' : 'Not connected' }))} />
+              }} options={info.targets.map((t) => ({ value: t.id,
+                label: t.same ? `${shortName(t)}, another folder` : shortName(t),
+                hint: t.same ? 'Like another group\'s Project' : t.connected ? 'Connected' : 'Not connected' }))} />
             </List>
             <div className="px-5 pt-3">
               {dst && !dst.connected
@@ -139,7 +143,8 @@ export function CopyDialog({ p, onClose, onStarted }:
                 {intoPath.replace(/\/+$/, '')}/{info.name}</span></p>
             </div>
 
-            <Step title="How">
+            {same ? <p className={NOTE}>{dstName} copies it from folder to folder itself. Copying again only sends
+              what changed, and the files count for the group whose folder they land in.</p> : <Step title="How">
               <div className="px-5">
                 <Segments label="How" value={how} onChange={setHow}
                   options={[['globus', 'Globus'], ['laptop', 'Through this laptop']] as const} />
@@ -149,7 +154,7 @@ export function CopyDialog({ p, onClose, onStarted }:
                   : 'Simple, fine for smaller projects.'}
                 {!sync && files > BIG && ' That is big: Globus is much faster.'}</p>
               {missing && <p className={`${NOTE} text-bad`}>Globus needs {missing} first. Set it up in Files, Transfers.</p>}
-            </Step>
+            </Step>}
 
             <Step title="What to take">
               <List>

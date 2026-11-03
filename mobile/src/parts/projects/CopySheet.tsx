@@ -60,7 +60,7 @@ export function CopySheet({ p, onClose, onStarted }:
 
   useEffect(() => {
     call<CopyTargets>('projects.copy_targets', { id: p.id }).then((t) => {
-      const dst = t.targets.find((x) => x.id === t.copy_to) ?? t.targets[0]
+      const dst = t.targets.find((x) => x.id === t.copy_to) ?? t.targets.find((x) => !x.same) ?? t.targets[0]
       setInfo(t)
       setTo(dst?.id ?? '')
       setInto(t.copy_into || '~')
@@ -86,10 +86,11 @@ export function CopySheet({ p, onClose, onStarted }:
   const intoPath = into.trim() || '~'
   const spots = dst?.connected && found.cluster === dst.id ? found.storage : []
   const spot = spots.filter((s) => inside(intoPath, s.path)).sort((a, b) => b.path.length - a.path.length)[0]
-  const missing = how === 'globus' ? dst?.globus_missing ?? '' : ''
+  const missing = how === 'globus' && !dst?.same ? dst?.globus_missing ?? '' : ''
   const files = (plan?.parts ?? []).filter((x) => keep[x.name]).reduce((n, x) => n + x.size, 0)
   const picked = (plan?.chats ?? []).filter((c) => chats[c.id])
-  const sync = how === 'globus'
+  const same = !!dst?.same
+  const sync = how === 'globus' && !same
 
   const go = () => {
     if (!dst) return
@@ -117,12 +118,14 @@ export function CopySheet({ p, onClose, onStarted }:
           {busy ? <Spinner /> : `Copy${plan ? ` ${formatSize(files)}` : ''}`}</MainButton>}>
         {!info ? <div className="grid h-40 place-items-center">
             {error ? <p className="text-bad">{error}</p> : <Spinner size={24} />}</div>
-          : info.targets.length === 0 ? <p className="px-4 py-8 text-center text-dim">Add another cluster first.</p> : (
+          : (
           <>
             <Step title="Where to">
               <div className="border-t border-line">
                 <Row label="Cluster" opens onPress={() => setOpen('to')}
-                  value={dst ? (dst.connected ? shortCluster(dst.name) : `${shortCluster(dst.name)}, not connected`) : 'Pick one'} />
+                  value={dst ? `${shortCluster(dst.name)}${dst.same ? ', another folder'
+                    : dst.connected ? '' : ', not connected'}`
+                    : 'Pick one'} />
               </div>
               {spots.length > 0 && (
                 <div className="px-4 pt-3">
@@ -142,7 +145,9 @@ export function CopySheet({ p, onClose, onStarted }:
               </div>
             </Step>
 
-            <Step title="How">
+            {same ? <p className={NOTE}>{shortCluster(dst?.name ?? '')} copies it from folder to folder itself. Copying
+              again only sends what changed, and the files count for the group whose folder they land in.</p>
+              : <Step title="How">
               <div className="px-4">
                 <Segments label="How" value={how} onChange={setHow}
                   options={[['globus', 'Globus'], ['phone', 'Through this phone']] as const} />
@@ -152,7 +157,7 @@ export function CopySheet({ p, onClose, onStarted }:
                   : 'Uses your mobile data. Keep HPC Hub open until it finishes.'}
                 {!sync && files > BIG && ' Globus is much faster for this much.'}</p>
               {missing && <p className={NOTE}>Globus needs {missing} first. Set it up in Transfers.</p>}
-            </Step>
+            </Step>}
 
             <Step title="What to take">
               <div className="border-t border-line">
@@ -188,8 +193,9 @@ export function CopySheet({ p, onClose, onStarted }:
             setError('')
             if (info.targets.find((t) => t.id === v)?.globus_missing) setHow('phone')
           }}
-          options={info.targets.map((t) => ({ value: t.id, label: shortCluster(t.name),
-            hint: t.connected ? 'Connected' : 'Not connected' }))} />
+          options={info.targets.map((t) => ({ value: t.id,
+            label: t.same ? `${shortCluster(t.name)}, another folder` : shortCluster(t.name),
+            hint: t.same ? 'Like another group\'s Project' : t.connected ? 'Connected' : 'Not connected' }))} />
       )}
       {open === 'folder' && dst && (
         <FolderPicker cluster={dst} start={intoPath} onPick={setInto} onClose={() => setOpen('')} />

@@ -56,7 +56,7 @@ export function Projects() {
     go('latex', { cluster: p.cluster, path: p.main_tex ? `${p.path.replace(/\/$/, '')}/${p.main_tex}` : p.path })
   const act: RowActions = {
     show: (p) => setOpen({ kind: 'open', p }),
-    copy: (p) => data && data.clusters.length < 2 ? toast('Add another cluster first') : setOpen({ kind: 'copy', p }),
+    copy: (p) => setOpen({ kind: 'copy', p }),
     edit: (p) => setOpen({ kind: 'edit', mode: 'edit', p }),
     copyPath: (p) => copyText(p.path).then(() => toast('Path copied')),
     remove: (p) => setOpen({ kind: 'remove', p }),

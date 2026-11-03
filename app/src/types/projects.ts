@@ -24,7 +24,7 @@ export type Places = { home: string; places: Place[]; storage: Place[] }
 
 export type Folder = { path: string; home: string; folders: string[] }
 
-export type CopyTarget = ProjectCluster & { globus_missing: string }
+export type CopyTarget = ProjectCluster & { globus_missing: string; same?: boolean }  // same: the project's own
 
 export type CopyTargets = { name: string; copy_to: string; copy_into: string; targets: CopyTarget[] }
 

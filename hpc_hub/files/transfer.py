@@ -1,6 +1,7 @@
 """Copy files between clusters directly: tar | ssh | tar, streamed through the laptop."""
 
 import posixpath
+import re
 import shlex
 import subprocess
 import threading
@@ -57,6 +58,59 @@ def pack_command(src: str, skip: list[str] | None = None) -> str:
 
 def unpack_command(dest_dir: str) -> str:
     return f"mkdir -p -- {shlex.quote(dest_dir)} && tar xf - -C {shlex.quote(dest_dir)}"
+
+
+def rsync_command(src: str, dest_dir: str, skip: list[str] | None = None) -> str:
+    """rsync of src into dest_dir on the same cluster (another group's folder), reporting bytes as it goes. Files
+    take the group of the folder they land in, not the one they came from, so they count for that group. The first
+    line is its process id, for cancel_command."""
+    name = posixpath.basename(src.rstrip("/"))
+    excludes = "".join(f" --exclude={shlex.quote('/' + name + '/' + s)}" for s in skip or [])
+    return (f"mkdir -p -- {shlex.quote(dest_dir)} && echo PID:$$ && exec nice -n 10 "
+            f"rsync -rlpt --info=progress2 --no-inc-recursive{excludes} -- "
+            f"{shlex.quote(src.rstrip('/'))} {shlex.quote(dest_dir.rstrip('/') + '/')}")
+
+
+def cancel_command(pid: int) -> str:
+    return f"kill {int(pid)} 2>/dev/null || true"
+
+
+PROGRESS2 = re.compile(rb"^\s*([\d,]+)\s+\d+%")
+
+
+def copy_here(ssh: SshMaster, src: str, dest_dir: str, progress: Progress,
+              on_update: Callable[[Progress], None] = lambda p: None, skip: list[str] | None = None,
+              total: int = 0) -> None:
+    """Blocking. Copies src into dest_dir on the same cluster with rsync on the cluster itself (nothing passes
+    through the laptop). Copying again only sends what changed."""
+    progress.total = total or total_size(ssh, src)
+    proc = subprocess.Popen(ssh.argv(rsync_command(src, dest_dir, skip)), stdin=subprocess.DEVNULL,
+                            stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    pid, line = 0, b""
+    try:
+        while chunk := proc.stdout.read1(4096):
+            if progress.cancelled.is_set():
+                if pid:
+                    ssh.run(cancel_command(pid), timeout=30)
+                raise TransferError("Cancelled")
+            *done, line = re.split(rb"[\r\n]", line + chunk)
+            for part in done:
+                if part.startswith(b"PID:"):
+                    pid = int(part[4:])
+            if m := next((PROGRESS2.match(x) for x in reversed(done) if PROGRESS2.match(x)), None):
+                progress.done = int(m.group(1).replace(b",", b""))
+                on_update(progress)
+        if proc.wait() != 0:
+            raise TransferError(proc.stderr.read().decode(errors="replace").strip() or "Copy failed")
+        progress.done = max(progress.done, progress.total)
+    except (TransferError, OSError) as e:
+        if proc.poll() is None:
+            proc.kill()
+        progress.error = str(e)
+        raise TransferError(progress.error) from e
+    finally:
+        progress.finished = True
+        on_update(progress)
 
 
 def copy(src_ssh: SshMaster, src: str, dst_ssh: SshMaster, dest_dir: str, progress: Progress,

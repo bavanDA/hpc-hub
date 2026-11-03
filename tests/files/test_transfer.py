@@ -38,3 +38,25 @@ def test_copy_leaves_out_skipped_subfolders(tmp_path):
     transfer.copy(LocalShell(), str(src), LocalShell(), str(dest), transfer.Progress(), skip=["baselines"])
     assert (dest / "myproj" / "results" / "r.txt").read_text() == "ok"
     assert not (dest / "myproj" / "baselines").exists() and (dest / "myproj" / "build" / "baselines").is_dir()
+
+
+def test_copy_here_into_another_folder_and_again(tmp_path):
+    src = tmp_path / "groupA" / "myproj"
+    (src / "data").mkdir(parents=True)
+    (src / "data" / "x.bin").write_bytes(b"0" * 2_000_000)
+    (src / "skipme").mkdir()
+    (src / "notes.txt").write_text("hi")
+    dest = tmp_path / "groupB"
+    progress = transfer.Progress()
+    transfer.copy_here(LocalShell(), str(src), str(dest), progress, skip=["skipme"])
+    assert (dest / "myproj" / "data" / "x.bin").stat().st_size == 2_000_000
+    assert (dest / "myproj" / "notes.txt").read_text() == "hi" and not (dest / "myproj" / "skipme").exists()
+    assert progress.finished and progress.done >= 2_000_000
+    (src / "notes.txt").write_text("changed")
+    transfer.copy_here(LocalShell(), str(src), str(dest), transfer.Progress())
+    assert (dest / "myproj" / "notes.txt").read_text() == "changed"
+
+
+def test_copy_here_missing_source(tmp_path):
+    with pytest.raises(transfer.TransferError):
+        transfer.copy_here(LocalShell(), str(tmp_path / "nope"), str(tmp_path / "d"), transfer.Progress(), total=1)

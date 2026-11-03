@@ -344,13 +344,15 @@ def _globus_missing(src: config.ClusterConfig, dst: config.ClusterConfig) -> str
 
 @method("projects.copy_targets")
 def copy_targets(id: str) -> dict:
-    """Clusters it can go to, whether each is connected and what Globus still needs for it."""
+    """Clusters it can go to, whether each is connected and what Globus still needs for it. Its own cluster comes
+    first (same: true), for a copy into another group's folder there."""
     p = _find(_load(), id)
     src = hub().session(p.cluster)
+    others = [s for s in hub().sessions.values() if s is not src]
     return {"name": posixpath.basename(p.path.rstrip("/")), "copy_to": p.copy_to, "copy_into": p.copy_into,
-            "targets": [{"id": s.cfg.id, "name": s.cfg.name, "connected": s.connected,
-                         "globus_missing": _globus_missing(src.cfg, s.cfg)}
-                        for s in hub().sessions.values() if s is not src]}
+            "targets": [{"id": s.cfg.id, "name": s.cfg.name, "connected": s.connected, "same": s is src,
+                         "globus_missing": "" if s is src else _globus_missing(src.cfg, s.cfg)}
+                        for s in [src, *others]]}
 
 
 def _project_chats(ssh, path: str) -> list[chat_list.Chat]:
@@ -448,6 +450,13 @@ def _laptop(src, path: str, dst, parent: str, skip: list[str], size: int):
     return work
 
 
+def _here(s, path: str, parent: str, skip: list[str], size: int):
+    def work(p: transfer.Progress, report: _Report):
+        transfer.copy_here(s.ssh, path, parent, p, lambda pr: pr.finished or report("Copying", now=False), skip, size)
+        report(f"Done · {size_text(p.done)}")
+    return work
+
+
 def _globus(client: globus.Globus, src: config.ClusterConfig, path: str, dst: config.ClusterConfig, dest: str,
             skip: list[str]):
     def work(p: transfer.Progress, report: _Report):
@@ -499,15 +508,15 @@ def _chats(src, picked: list[str], dst, dest: str):
 @method("projects.copy")
 def copy(id: str, to: str, into: str = "~", how: str = "laptop", skip: list[str] | None = None,
          chats: list[str] | None = None, size: int = 0) -> dict:
-    """Start copying (laptop) or syncing (Globus) the project into a folder on another cluster, leaving out skip
-    (names directly inside it), plus the picked Claude chats. Answers the transfer ids at once."""
+    """Start copying (laptop) or syncing (Globus) the project into a folder on another cluster, or on the same one
+    (how "here": rsync on the cluster, into another group's folder), leaving out skip (names directly inside it),
+    plus the picked Claude chats. Answers the transfer ids at once."""
     into = into.strip() or "~"
     with _lock:
         items = _load()
         p = _find(items, id)
         src, dst = hub().connected(p.cluster), hub().connected(to)
-        if src is dst:
-            raise ValueError("Pick another cluster")
+        how = "here" if src is dst else how
         client = None
         if how == "globus":
             if missing := _globus_missing(src.cfg, dst.cfg):
@@ -518,7 +527,15 @@ def copy(id: str, to: str, into: str = "~", how: str = "laptop", skip: list[str]
     parent = remote_fs.expand(dst.ssh, into).rstrip("/") or "/"
     dest = posixpath.join(parent, posixpath.basename(p.path.rstrip("/")))
     title = f"{p.name}: {src.cfg.short_name} → {dst.cfg.short_name}:{dest}"
-    if client:
+    if how == "here":
+        real = src.ssh.run(f"readlink -f {remote_fs.q(p.path)} {remote_fs.q(parent)}", timeout=30).stdout.split()
+        here, there = (real + ["", ""])[:2] if len(real) == 2 else (p.path, parent)
+        if there == here or there.startswith(here.rstrip("/") + "/"):
+            raise ValueError("Pick a folder outside the project")
+        if posixpath.dirname(here.rstrip("/")) == there.rstrip("/"):
+            raise ValueError("That is where it is now. Pick another folder")
+        files = _start(f"{p.name} → {dest}", _here(src, p.path, parent, skip or [], size))
+    elif client:
         files = _start(f"{title} · Globus", _globus(client, src.cfg, p.path, dst.cfg, dest, skip or []))
     else:
         files = _start(title, _laptop(src, p.path, dst, parent, skip or [], size))

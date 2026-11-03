@@ -35,7 +35,7 @@ export function Projects() {
     ...d, clusters: d.clusters.map((c) => c.id === s.id ? { ...c, connected: s.connected } : c) }))
 
   const act: Act = {
-    copy: (p) => data && data.clusters.length < 2 ? toast('Add another cluster first') : setOpen({ kind: 'copy', p }),
+    copy: (p) => setOpen({ kind: 'copy', p }),
     edit: (p) => setOpen({ kind: 'edit', mode: 'edit', p }),
     copyPath: (p) => copyText(p.path).then((ok) => toast(ok ? 'Path copied' : "Couldn't copy")),
     remove: (p) => setOpen({ kind: 'remove', p }),
