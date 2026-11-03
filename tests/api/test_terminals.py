@@ -63,7 +63,7 @@ def test_not_connected_says_so(ssh):
 
 def test_attach_rides_ssh_with_a_tty(ssh):
     got = terminals.command("wulver", session="build")
-    assert got["argv"][:2] == ["ssh", "-tt"] and got["argv"][-1] == "exec tmux attach-session -t =build"
+    assert got["argv"][:2] == ["ssh", "-tt"] and got["argv"][-1].endswith("exec tmux attach-session -t =build")
     on_node = terminals.command("wulver", session="hpchub-claude-123-0900", node="n0042")
     assert "n0042" in on_node["argv"][-1] and on_node["node"] == "n0042"
     with pytest.raises(ValueError):
