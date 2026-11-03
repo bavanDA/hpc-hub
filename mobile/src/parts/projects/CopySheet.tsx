@@ -8,6 +8,7 @@ import { Spinner } from '@shared/components/ui'
 import { useEvent } from '@shared/hooks'
 import { call } from '@shared/rpc'
 import type { CopyPlan, CopyTargets, Place, Places, Project } from '@shared/types/projects'
+import { useAskForNode } from '../AskForNode'
 import { MainButton, PickerSheet, Row, Segments, Sheet } from '../../ui'
 import { shortCluster, wrapPath } from '../code/util'
 import { startFolder } from '@shared/components/projects/copyInto'
@@ -92,7 +93,8 @@ export function CopySheet({ p, onClose, onStarted }:
   const same = !!dst?.same
   const sync = how === 'globus' && !same
 
-  const go = () => {
+  const nodeFirst = useAskForNode()
+  const start = () => {
     if (!dst) return
     if (!dst.connected) return setError(`Connect to ${shortCluster(dst.name)} first`)
     setBusy(true)
@@ -104,6 +106,8 @@ export function CopySheet({ p, onClose, onStarted }:
       onClose()
     }).catch((e: Error) => { setError(e.message); setBusy(false) })
   }
+  // on its own cluster the copy runs there, on your compute node: never on the login node
+  const go = () => (dst?.same ? nodeFirst.guard(dst.id, 'The copy', start) : start())
 
   const pickFolder = () => dst?.connected ? setOpen('folder') : setError(`Connect to ${shortCluster(dst?.name ?? '')} first`)
 
@@ -185,6 +189,7 @@ export function CopySheet({ p, onClose, onStarted }:
           </>
         )}
       </Sheet>
+      {nodeFirst.sheet}
 
       {open === 'to' && info && (
         <PickerSheet title="Copy to" value={to} onClose={() => setOpen('')}

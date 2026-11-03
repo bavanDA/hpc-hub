@@ -1,6 +1,7 @@
 import json
 import subprocess
 import time
+from types import SimpleNamespace
 
 import pytest
 
@@ -9,6 +10,7 @@ from hpc_hub.api import hub as hub_mod
 from hpc_hub.api.methods import projects as api
 from hpc_hub.core import config
 from hpc_hub.core.config import ClusterConfig
+from hpc_hub.files import transfer
 from hpc_hub.globus.api import TaskInfo
 from hpc_hub.projects import store
 from hpc_hub.projects.store import Project
@@ -259,12 +261,19 @@ def test_a_cluster_that_is_not_connected_is_left_alone(hub):
     assert api.sync("sdsc") is False
 
 
-def test_copy_into_another_group_on_the_same_cluster(hub, tmp_path):
+def test_copy_into_another_group_on_the_same_cluster(hub, tmp_path, monkeypatch):
     _project(tmp_path)
+    with pytest.raises(RuntimeError, match="compute node"):  # never on the login node
+        api.copy("proj", "wulver", str(tmp_path / "groupB"))
+    hub.sessions["wulver"].allocation = SimpleNamespace(job_id="123")
+    plain = transfer.rsync_command
+    ran_on = []
+    monkeypatch.setattr(transfer, "rsync_command",  # no Slurm here: run it as the node would
+                        lambda src, dest, skip=None, job="": ran_on.append(job) or plain(src, dest, skip))
     got = api.copy("proj", "wulver", str(tmp_path / "groupB"), skip=["data"])
     last = _finished(hub, got["id"])
     assert not last["error"] and last["status"].startswith("Done")
-    assert (tmp_path / "groupB" / "proj" / "code" / "run.py").exists()
+    assert (tmp_path / "groupB" / "proj" / "code" / "run.py").exists() and ran_on == ["123"]
     assert not (tmp_path / "groupB" / "proj" / "data").exists()
     with pytest.raises(ValueError, match="outside the project"):
         api.copy("proj", "wulver", str(tmp_path / "home" / "proj" / "code"))

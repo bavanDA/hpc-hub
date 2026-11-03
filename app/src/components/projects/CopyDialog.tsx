@@ -8,6 +8,7 @@ import { useEvent } from '../../hooks'
 import { call } from '../../rpc'
 import type { CopyPlan, CopyTargets, Place, Places, Project } from '../../types/projects'
 import { shortName } from '../clusters/loginCopy'
+import { useAskForNode } from '../clusters/AskForNode'
 import { CheckRow, ChoiceRow } from '../e/extra'
 import { EDialog, Field, List, MainButton, Segments, ToggleRow } from '../e/ui'
 import { Spinner } from '../ui'
@@ -81,7 +82,8 @@ export function CopyDialog({ p, onClose, onStarted }:
   const sync = how === 'globus' && !same
   const dstName = dst ? shortName(dst) : ''
 
-  const go = () => {
+  const nodeFirst = useAskForNode()
+  const start = () => {
     if (!dst) return
     if (!dst.connected) return setError(`Connect to ${dstName} first`)
     setBusy(true)
@@ -94,6 +96,8 @@ export function CopyDialog({ p, onClose, onStarted }:
       onClose()
     }).catch((e: Error) => { setError(e.message); setBusy(false) })
   }
+  // on its own cluster the copy runs there, on your compute node: never on the login node
+  const go = () => (dst?.same ? nodeFirst.guard(dst.id, 'The copy', start) : start())
 
   let what = 'Measuring sizes'
   if (planError || plan?.parts_error) what = `Could not measure it: ${planError || plan?.parts_error}`
@@ -185,6 +189,7 @@ export function CopyDialog({ p, onClose, onStarted }:
           </>
         )}
       </EDialog>
+      {nodeFirst.dialog}
       {picking && dst && (
         <FolderPicker cluster={dst} start={intoPath} onPick={setInto} onClose={() => setPicking(false)} />
       )}

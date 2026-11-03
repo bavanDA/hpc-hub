@@ -450,9 +450,8 @@ def _laptop(src, path: str, dst, parent: str, skip: list[str], size: int):
     return work
 
 
-def _here(s, path: str, parent: str, skip: list[str], size: int):
+def _here(s, path: str, parent: str, skip: list[str], size: int, job: str):
     def work(p: transfer.Progress, report: _Report):
-        job = s.allocation.job_id if getattr(s, "allocation", None) else ""  # the node's disks, not the login node's
         transfer.copy_here(s.ssh, path, parent, p, lambda pr: pr.finished or report("Copying", now=False), skip, size,
                            job)
         report(f"Done · {size_text(p.done)}")
@@ -536,7 +535,10 @@ def copy(id: str, to: str, into: str = "~", how: str = "laptop", skip: list[str]
             raise ValueError("Pick a folder outside the project")
         if posixpath.dirname(here.rstrip("/")) == there.rstrip("/"):
             raise ValueError("That is where it is now. Pick another folder")
-        files = _start(f"{p.name} → {dest}", _here(src, p.path, parent, skip or [], size))
+        alloc = getattr(src, "allocation", None)
+        if not alloc:  # real work: on your compute node, never the login node
+            raise RuntimeError(f"The copy runs on a compute node. Get one on {src.cfg.short_name} first")
+        files = _start(f"{p.name} → {dest}", _here(src, p.path, parent, skip or [], size, alloc.job_id))
     elif client:
         files = _start(f"{title} · Globus", _globus(client, src.cfg, p.path, dst.cfg, dest, skip or []))
     else:
