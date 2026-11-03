@@ -47,7 +47,7 @@ export function gpuHints(gpus: Gpu[]): string[] {
 // Names people know for Slurm's GPU types, as in hpc_hub/compute/gpus.py, for rows that have no GPU list at hand.
 const NAMES: Record<string, string> = {
   a100: 'A100', a100_10g: 'A100, 10 GB slice', a100_20g: 'A100, 20 GB slice', a100_40g: 'A100, 40 GB slice',
-  a100_80gb: 'A100', v100: 'V100', h100: 'H100', h200: 'H200', b200: 'B200', l40s: 'L40S', a40: 'A40',
+  a100_80gb: 'A100', v100: 'V100', h100: 'H100', h200: 'H200', b200: 'B200', l40: 'L40', l40s: 'L40S', a40: 'A40',
   a5000: 'RTX A5000', rtx_5000_ada: 'RTX 5000 Ada', rtx_pro_6000_blackwell: 'RTX PRO 6000 Blackwell',
 }
 
@@ -71,18 +71,34 @@ export function withGpu(p: Profile, g: Gpu | null, count = 1): Profile {
   return { ...p, gpus: n, gpu_type: g.type, partition }
 }
 
+/** One way to get the GPU memory you need: count of this GPU. blocked: the priority you picked doesn't allow it. */
+export type GpuFit = { gpu: Gpu; count: number; blocked: boolean }
+
+/** The GPUs that give at least need GB on one node, fewest GPUs first, then the least memory left over. caps are
+ *  the priority's (clusters.partitions gpu_caps): {"l40": 0} blocks a type, {"": 1} caps the count. */
+export function fitting(need: number, gpus: Gpu[], caps: Record<string, number> = {}): GpuFit[] {
+  const out: GpuFit[] = []
+  for (const g of gpus) {
+    const count = !g.memory_gb || g.slice ? 1 : Math.max(1, Math.ceil(need / g.memory_gb))
+    if (g.memory_gb && count * g.memory_gb < need) continue  // a slice too small
+    if (count > Math.min(g.max_per_job || 1, caps[''] ?? Infinity)) continue
+    out.push({ gpu: g, count, blocked: caps[g.type] === 0 })
+  }
+  const total = (f: GpuFit) => f.count * (f.gpu.memory_gb || 999)
+  return out.sort((a, b) => Number(a.blocked) - Number(b.blocked) || a.count - b.count || total(a) - total(b))
+}
+
 export type Preset = { id: string; label: string; hint: string; apply: (p: Profile) => Profile }
 
-/** Quick sizes: small, medium, and the smallest GPU the cluster has (a slice where there is one). */
+/** Quick sizes: Small CPU, Medium CPU, and GPU (the smallest one the cluster has: a slice where there is one). */
 export function presets(gpus: Gpu[]): Preset[] {
   const out: Preset[] = [
-    { id: 'small', label: 'Small', hint: '2 cores · 8 GB', apply: (p) => withGpu({ ...p, cpus: 2, mem_gb: 8 }, null) },
-    { id: 'medium', label: 'Medium', hint: '8 cores · 32 GB',
+    { id: 'small', label: 'Small CPU', hint: '2 cores · 8 GB', apply: (p) => withGpu({ ...p, cpus: 2, mem_gb: 8 }, null) },
+    { id: 'medium', label: 'Medium CPU', hint: '8 cores · 32 GB',
       apply: (p) => withGpu({ ...p, cpus: 8, mem_gb: 32 }, null) },
   ]
   const g = gpus[0]
-  if (g) out.push({ id: 'gpu', label: g.slice ? `GPU ${g.memory_gb} GB` : `1 × ${g.label.replace(/^RTX /, '')}`,
-    hint: g.slice ? gpuName(g) : '4 cores · 16 GB',
+  if (g) out.push({ id: 'gpu', label: 'GPU', hint: `${gpuName(g)} · 4 cores · 16 GB`,
     apply: (p) => withGpu({ ...p, cpus: 4, mem_gb: 16 }, g) })
   return out
 }

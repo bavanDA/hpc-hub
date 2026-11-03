@@ -1,9 +1,11 @@
 // A compute node's size in style E, the desktop twin of the phone's NodeFields (mobile/src/parts/NodeSheet.tsx):
-// quick sizes, then Cores, Memory, GPU, Time and the queue as rows. Numbers are typed in place up to what the queue
-// allows; GPU and Queue open their own windows. NodeRow is the one row a tool window shows for it.
+// Small CPU, Medium CPU or GPU, then Cores, Memory, Time and the queue as rows. Numbers are typed in place up to what
+// the queue and priority allow. With a GPU, the GPU memory you need is typed too and the GPUs that fit are listed
+// right here. Where each core comes with a set amount of memory (Wulver's GPU queue), more memory takes more cores.
+// Queue opens its own window. NodeRow is the one row a tool window shows for it.
 import { useEffect, useState } from 'react'
 
-import { chosen, gpuName, gpuSummary, isPreset, presets, useGpus, withGpu, type Gpu } from '../clusters/gpus'
+import { chosen, fitting, gpuName, isPreset, presets, useGpus, withGpu, type Gpu, type GpuFit } from '../clusters/gpus'
 import { queueText } from '../clusters/priority'
 import { QueuePickers } from '../clusters/queues'
 import { human, minutes, slurmTime } from '../clusters/time'
@@ -26,29 +28,42 @@ function useLimits(cluster: string, p: Profile) {
   return limits
 }
 
-const fits = (p: Profile, limits: Limits | null, g: Gpu | null) =>
-  inRange(p.cpus, 1, limits?.cores) && inRange(p.mem_gb, 1, limits?.memory_gb)
-  && inRange(minutes(p.time) ?? 0, 1, limits?.longest) && (!g || inRange(p.gpus ?? 1, 1, g.max_per_job))
+/** The fewest cores this much memory takes where each core comes with perCore GB. */
+const coresFor = (mem: number, perCore?: number | null) => (perCore ? Math.max(1, Math.ceil(mem / perCore)) : 1)
 
-function GpuDialog({ gpus, value: p, onChange, onClose }:
-  { gpus: Gpu[]; value: Profile; onChange: (p: Profile) => void; onClose: () => void }) {
+const fits = (p: Profile, limits: Limits | null, g: Gpu | null) =>
+  inRange(p.cpus, coresFor(p.mem_gb, limits?.mem_per_core_gb), limits?.cores) && inRange(p.mem_gb, 1, limits?.memory_gb)
+  && inRange(minutes(p.time) ?? 0, 1, limits?.longest) && (!g || inRange(p.gpus ?? 1, 1, g.max_per_job))
+  && (!g || limits?.gpu_caps?.[g.type] !== 0)
+
+const fitName = (f: GpuFit) => (f.count === 1 ? gpuName(f.gpu) : `${f.count} × ${f.gpu.label}`)
+
+/** GPU memory typed in, then the GPUs that give that much on one node; the first that fits is picked for you. */
+function GpuPart({ gpus, limits, value: p, onChange }:
+  { gpus: Gpu[]; limits: Limits | null; value: Profile; onChange: (p: Profile) => void }) {
   const g = chosen(p, gpus)
-  const ok = !g || inRange(p.gpus ?? 1, 1, g.max_per_job)
+  const [need, setNeed] = useState(() => (g?.memory_gb ? g.memory_gb * (p.gpus || 1) : 16))
+  const caps = limits?.gpu_caps ?? {}
+  const fits = fitting(need, gpus, caps)
+  const on = (f: GpuFit) => !!g && g.type === f.gpu.type && (p.gpus ?? 1) === f.count
+  const changeNeed = (n: number) => {
+    setNeed(n)
+    const now = fitting(n, gpus, caps).filter((f) => !f.blocked)
+    if (now.length && !now.some(on)) onChange(withGpu(p, now[0].gpu, now[0].count))
+  }
+  const most = Math.max(0, ...gpus.filter((x) => caps[x.type] !== 0)
+    .map((x) => x.memory_gb * (x.slice ? 1 : Math.min(x.max_per_job, caps[''] ?? Infinity))))
   return (
-    <EDialog title="GPU" width={440} onClose={onClose}
-      actions={<MainButton disabled={!ok} onClick={onClose}>Done</MainButton>}>
-      <List>
-        <Row label="No GPU" onPress={() => onChange(withGpu(p, null))}><Tick on={!p.gpus} /></Row>
-        {gpus.map((x) => (
-          <Row key={x.type || 'any'} label={gpuName(x)} onPress={() => onChange(withGpu(p, x, p.gpus || 1))}>
-            <Tick on={!!g && g.type === x.type} /></Row>
-        ))}
-      </List>
-      {g && !g.slice && g.max_per_job > 1 && <Section>
-        <NumberRow label="How many" unit={p.gpus === 1 ? 'GPU' : 'GPUs'} value={p.gpus ?? 1} max={g.max_per_job}
-          onChange={(n) => onChange({ ...p, gpus: n })} />
-      </Section>}
-    </EDialog>
+    <Section title="GPU">
+      <NumberRow label="GPU memory you need" unit="GB" value={need} max={most || null} onChange={changeNeed} />
+      {fits.map((f) => (
+        <Row key={`${f.gpu.type}-${f.count}`} label={fitName(f)}
+          sub={f.blocked ? 'Not with this priority. Change it under Queue and priority'
+            : f.count > 1 ? `${f.count * f.gpu.memory_gb} GB in all` : undefined}
+          onPress={f.blocked ? undefined : () => onChange(withGpu(p, f.gpu, f.count))}>
+          {!f.blocked && <Tick on={on(f)} />}</Row>
+      ))}
+    </Section>
   )
 }
 
@@ -68,44 +83,50 @@ function QueueDialog({ limits, value: p, onChange, onClose, extra }:
   )
 }
 
-const quickLabel = (x: { id: string; label: string; hint: string }) => x.id === 'gpu' && x.label === '1 GPU'
-  ? `1 × ${x.hint.split(',')[0].replace(/^(NVIDIA|RTX|Tesla) /, '')}` : x.label
-
 /** onValid hears whether every number is allowed, so the window can turn its button off. extra: false where the
  *  extra options can't be kept (a request for a node now). */
 export function NodeFields({ cluster, value: p, onChange, onValid, extra = true }: {
   cluster: string; value: Profile; onChange: (p: Profile) => void; onValid?: (ok: boolean) => void; extra?: boolean
 }) {
-  const [open, setOpen] = useState<'' | 'gpu' | 'queue'>('')
+  const [open, setOpen] = useState(false)
   const { gpus } = useGpus(cluster)
   const limits = useLimits(cluster, p)
   const set = (change: Partial<Profile>) => onChange({ ...p, ...change })
   const g = chosen(p, gpus)
   const ok = fits(p, limits, g)
   useEffect(() => { onValid?.(ok) }, [ok, onValid])
+  const perCore = limits?.mem_per_core_gb
+  const fewest = coresFor(p.mem_gb, perCore)
   const quick = presets(gpus)
-  const on = quick.find((x) => isPreset(p, x))?.id ?? ''
+  // a queue where memory sets the cores (picked just now): raise them to what the memory takes
+  useEffect(() => { if (p.cpus < fewest) onChange({ ...p, cpus: fewest }) }, [p, fewest, onChange])
+  const on = quick.find((x) => isPreset(p, x))?.id ?? (p.gpus ? 'gpu' : '')  // GPU with cores raised still is GPU
   const queue = queueText(p.partition, p.qos)
+  // a CPU size leaves a GPU-only queue for the usual one
+  const gpuQueue = (q: Profile) => gpus.some((x) => x.partitions.includes(q.partition))
+    && !(limits?.default_partition && gpus.some((x) => x.partitions.includes(limits.default_partition)))
+  const pickSize = (id: string) => {
+    const q = quick.find((x) => x.id === id)!.apply(p)
+    onChange(!q.gpus && gpuQueue(q) ? { ...q, partition: limits?.default_partition ?? '' } : q)
+  }
   return (
     <>
       <div className="px-5 pb-4">
-        <Segments label="Quick sizes" value={on} options={quick.map((x) => [x.id, quickLabel(x)] as const)}
-          onChange={(id) => onChange(quick.find((x) => x.id === id)!.apply(p))} />
+        <Segments label="Size" value={on} options={quick.map((x) => [x.id, x.label] as const)} onChange={pickSize} />
       </div>
       <List>
-        <NumberRow label="Cores" unit="cores" showUnit={false} value={p.cpus} max={limits?.cores}
+        <NumberRow label="Cores" unit="cores" showUnit={false} value={p.cpus} min={fewest} max={limits?.cores}
+          note={fewest > 1 ? `At least ${fewest} for ${p.mem_gb} GB of memory here` : undefined}
           onChange={(n) => set({ cpus: n })} />
         <NumberRow label="Memory" unit="GB" value={p.mem_gb} max={limits?.memory_gb}
-          onChange={(n) => set({ mem_gb: n })} />
-        {gpus.length > 0 && <Row label="GPU" value={gpuSummary(p, gpus) || 'No GPU'} opens
-          onPress={() => setOpen('gpu')} />}
+          note={perCore ? `Each core comes with up to ${+perCore.toFixed(1)} GB here, so more memory adds cores` : undefined}
+          onChange={(n) => set({ mem_gb: n, cpus: Math.max(p.cpus, coresFor(n, perCore)) })} />
         <DurationRow label="Time" minutes={minutes(p.time) ?? 240} max={limits?.longest}
           onChange={(m) => set({ time: slurmTime(Math.max(1, m)) })} />
-        <Row label="Queue and priority" value={queue} opens onPress={() => setOpen('queue')} />
+        <Row label="Queue and priority" value={queue} opens onPress={() => setOpen(true)} />
       </List>
-      {open === 'gpu' && <GpuDialog gpus={gpus} value={p} onChange={onChange} onClose={() => setOpen('')} />}
-      {open === 'queue' && <QueueDialog limits={limits} value={p} onChange={onChange} extra={extra}
-        onClose={() => setOpen('')} />}
+      {!!p.gpus && gpus.length > 0 && <GpuPart gpus={gpus} limits={limits} value={p} onChange={onChange} />}
+      {open && <QueueDialog limits={limits} value={p} onChange={onChange} extra={extra} onClose={() => setOpen(false)} />}
     </>
   )
 }

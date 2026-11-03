@@ -107,6 +107,7 @@ const DEMO_GPUS: Record<string, Gpu[]> = {
     { type: 'a100_10g', label: 'A100, 10 GB slice', memory_gb: 10, slice: true, partitions: ['gpu'], max_per_job: 1 },
     { type: 'a100_20g', label: 'A100, 20 GB slice', memory_gb: 20, slice: true, partitions: ['gpu'], max_per_job: 1 },
     { type: 'a100_40g', label: 'A100, 40 GB slice', memory_gb: 40, slice: true, partitions: ['gpu'], max_per_job: 1 },
+    { type: 'l40', label: 'L40', memory_gb: 48, slice: false, partitions: ['gpu'], max_per_job: 2 },
     { type: 'a100', label: 'A100', memory_gb: 80, slice: false, partitions: ['gpu'], max_per_job: 4 }],
   yale: [
     { type: 'a5000', label: 'RTX A5000', memory_gb: 24, slice: false, partitions: ['gpu'], max_per_job: 4 },
@@ -230,7 +231,9 @@ export const answers: Record<string, unknown> = {
     const [cores, memory_gb] = limits.nodes[part] ?? [null, null]
     return { known: true, partitions: Object.keys(limits.partitions), default_partition: 'general',
       qos: Object.keys(limits.qos), default_qos: 'low', accounts: ['mygroup', 'abc123', 'dept_x'],
-      default_account: 'mygroup', longest: top?.[0] ?? null, why: top?.[1] ?? '', cores, memory_gb }
+      default_account: 'mygroup', longest: top?.[0] ?? null, why: top?.[1] ?? '', cores, memory_gb,
+      // like Wulver: the GPU queue gives each core 3.9 GB, and Standard leaves out the L40
+      mem_per_core_gb: part === 'gpu' ? 3.92 : null, gpu_caps: (qos || 'low') === 'standard' ? { l40: 0 } : {} }
   },
   // what Slurm's gres column says on each cluster (hpc_hub/compute/gpus.py)
   'clusters.gpus': ({ cluster }: { cluster: string }) => ({ known: cluster !== 'sdsc', gpus: DEMO_GPUS[cluster] ?? [] }),

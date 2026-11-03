@@ -121,8 +121,9 @@ function NumberBox({ label, value, unit, bad, onChange, autoFocus, inline = fals
 
 /** A number row (cores, GB, GPUs). Click it and it opens in place as a big input with its limit; any whole number
  *  from min to max can be typed. Out of range, the limit turns red and stays under the row. */
-export function NumberRow({ label, value, unit, showUnit = true, min = 1, max, onChange }: {
+export function NumberRow({ label, value, unit, showUnit = true, min = 1, max, note, onChange }: {
   label: string; value: number; unit: string; showUnit?: boolean; min?: number; max?: number | null
+  note?: string  // the line under it while the number is fine
   onChange: (n: number) => void
 }) {
   const [draft, setDraft] = useState<string | null>(null)
@@ -140,7 +141,7 @@ export function NumberRow({ label, value, unit, showUnit = true, min = 1, max, o
     )
   }
   return (
-    <Row label={label} sub={!ok && <span className="font-semibold text-bad">{limit}</span>}
+    <Row label={label} sub={ok ? note : <span className="font-semibold text-bad">{limit}</span>}
       onPress={() => setDraft(String(value || ''))}
       value={<span className={ok ? '' : 'text-bad'}><Amount n={value} unit={showUnit ? unit : undefined} /></span>} />
   )
