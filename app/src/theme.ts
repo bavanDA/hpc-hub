@@ -1,8 +1,11 @@
-// Light or dark (Settings, Appearance): one attribute on <html>, data-theme, that the colors in index.css follow.
+// Light, dark or blue (Settings, Appearance): data-theme on <html>, that the colors in index.css follow. Blue is a
+// dark theme (data-theme="dark") with data-tint="blue" on top: blue-grey surfaces and a blue accent.
 // public/theme.js sets it before the first paint from the last choice; this keeps it right after that, also when
 // the computer switches between light and dark while Appearance is System.
 
-export type Appearance = 'system' | 'light' | 'dark'
+export type Appearance = 'system' | 'light' | 'dark' | 'blue'
+
+const CHOSEN = ['light', 'dark', 'blue']
 
 const KEY = 'hpchub-appearance'
 const media = window.matchMedia('(prefers-color-scheme: dark)')
@@ -12,7 +15,7 @@ let current: Appearance = saved()
 function saved(): Appearance {
   try {
     const a = localStorage.getItem(KEY)
-    return a === 'light' || a === 'dark' ? a : 'system'
+    return a && CHOSEN.includes(a) ? (a as Appearance) : 'system'
   } catch {
     return 'system'  // storage blocked: follow the computer
   }
@@ -27,9 +30,12 @@ export function onThemeChange(fn: () => void): () => void {
 }
 
 function paint() {
-  const next = current === 'dark' || (current === 'system' && media.matches) ? 'dark' : 'light'
-  if (document.documentElement.dataset.theme === next) return
-  document.documentElement.dataset.theme = next
+  const next = current === 'dark' || current === 'blue' || (current === 'system' && media.matches) ? 'dark' : 'light'
+  const root = document.documentElement
+  if (current === 'blue') root.dataset.tint = 'blue'
+  else delete root.dataset.tint
+  if (root.dataset.theme === next) return
+  root.dataset.theme = next
   listeners.forEach((fn) => fn())
 }
 
@@ -38,14 +44,14 @@ async function windowTheme(a: Appearance) {
   if (!('__TAURI_INTERNALS__' in window)) return
   try {
     const { getCurrentWindow } = await import('@tauri-apps/api/window')
-    await getCurrentWindow().setTheme(a === 'system' ? null : a)
+    await getCurrentWindow().setTheme(a === 'system' ? null : a === 'blue' ? 'dark' : a)
   } catch {
     // the phone has no window theme; the page colors are what matter
   }
 }
 
 export function setAppearance(a: Appearance) {
-  current = a === 'light' || a === 'dark' ? a : 'system'
+  current = CHOSEN.includes(a) ? a : 'system'
   try {
     localStorage.setItem(KEY, current)
   } catch {

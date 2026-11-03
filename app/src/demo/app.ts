@@ -7,7 +7,7 @@ function demoAppearance(): Preferences['appearance'] {
   let last: string | null = null
   try { last = localStorage.getItem('hpchub-appearance') } catch { /* blocked */ }
   const a = asked ?? last
-  return a === 'light' || a === 'dark' ? a : 'system'
+  return a === 'light' || a === 'dark' || a === 'blue' ? a : 'system'
 }
 
 // ?experimental shows the experimental parts (design work)

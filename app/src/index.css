@@ -213,5 +213,27 @@ svg.lucide[stroke-width="2"]:is([width="20"], [width="24"], [width="40"]) { stro
   --shadow-dialog: 0 0 0 1px #46464c;
 }
 
+/* Blue (Settings, Appearance): the dark theme a little lighter, in blue-grey, with the blue accent of the earlier
+   design for the main button and the current choice. */
+:root[data-theme="dark"][data-tint="blue"] {
+  --color-window: #262f3d;  --color-header: #262f3d;  --color-sidebar: #1f2733;
+  --color-card: #262f3d;    --color-view: #262f3d;    --color-raised: #2f394a;
+  --color-inset: #2d3747;   --color-control: #334052; --color-soft: #2d3747;
+  --color-hover: rgb(255 255 255 / 0.06);  --color-pressed: rgb(255 255 255 / 0.10);
+  --color-selected: rgb(74 144 226 / 0.16);
+  --color-line: #36414f;    --color-line-strong: #4a5668;  --color-scrim: rgb(8 12 20 / 0.55);
+  --color-text: #eef2f7;    --color-dim: #a9b4c4;     --color-faint: #7f8a9b;
+  --color-accent: #3b82e0;  --color-accent-hover: #4a8fe6;  --color-accent-pressed: #2f72cc;
+  --color-on-accent: #ffffff;
+  --color-accent-text: #8cbcf3;  --color-accent-soft: rgb(74 144 226 / 0.18);  --color-focus: #8cbcf3;
+  --color-ok: #eef2f7;      --color-ok-bg: #2d3747;   --color-ok-dot: #3ccf7e;
+  --color-warn: #eef2f7;    --color-warn-bg: #2d3747; --color-warn-dot: #a9b4c4;
+  --color-bad: #ff8f82;     --color-bad-bg: rgb(255 143 130 / 0.12);  --color-bad-dot: #ff8f82;
+  --color-bad-fill: #c4281c;
+  --color-pill: #334052;    --color-orange: #eef2f7;
+  --shadow-menu: 0 0 0 1px #4a5668, 0 8px 24px -8px rgb(0 0 0 / 0.45);
+  --shadow-dialog: 0 0 0 1px #4a5668;
+}
+
 /* Pieces that say "bg-accent text-white": on dark the accent is white, so their text follows the accent. */
 .bg-accent.text-white:not(:disabled) { color: var(--color-on-accent); }

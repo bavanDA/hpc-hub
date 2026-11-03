@@ -14,7 +14,7 @@ import { ConfirmSheet, Row, Section, Segments, ToggleRow, useToast } from '../ui
 
 type Prefs = { monitor_bar: boolean; appearance: Appearance; experimental: boolean }
 
-const THEMES = [['system', 'System'], ['light', 'Light'], ['dark', 'Dark']] as const
+const THEMES = [['system', 'System'], ['light', 'Light'], ['dark', 'Dark'], ['blue', 'Blue']] as const
 
 export function Settings() {
   const toast = useToast()
