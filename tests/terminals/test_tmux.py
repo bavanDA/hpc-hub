@@ -162,3 +162,8 @@ def test_claude_link_follows_on_and_off(tmp_path):
     f.write_text("".join(json.dumps(r) + "\n" for r in rows))
     assert run() == ""  # turned off: no button
     assert tmux.parse_remotes(f"{tmux.MARK}a\non\n") == {"a": "on"}
+
+
+def test_attach_says_when_the_terminal_is_gone():
+    line = tmux.attach(tmux.Session("hpchub-term-1", "tmux"))
+    assert line.startswith("tmux has-session -t =hpchub-term-1") and "has ended" in line

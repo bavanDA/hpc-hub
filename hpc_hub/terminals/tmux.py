@@ -189,10 +189,15 @@ def attach_argv(ssh: SshMaster, s: Session) -> list[str]:
     return bridge_argv(ssh.argv(line), plain) if line else plain
 
 
+GONE = "This terminal has ended: its compute node's time ran out, or it was closed. Start a new one in Terminals."
+
+
 def attach(s: Session) -> str:
     if s.kind == "screen":
         return f"exec screen -x {shlex.quote(s.name)}"
-    line = f"exec tmux attach-session -t {_t(s.name)}"
+    # without the check tmux only says "no sessions" and the tab closes
+    line = (f"tmux has-session -t {_t(s.name)} 2>/dev/null || {{ echo {shlex.quote(GONE)}; exit 1; }}; "
+            f"exec tmux attach-session -t {_t(s.name)}")
     return f"exec {on(s.node, line, tty=True)}" if s.node else line
 
 
