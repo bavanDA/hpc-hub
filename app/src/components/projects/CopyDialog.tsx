@@ -11,6 +11,7 @@ import { shortName } from '../clusters/loginCopy'
 import { CheckRow, ChoiceRow } from '../e/extra'
 import { EDialog, Field, List, MainButton, Segments, ToggleRow } from '../e/ui'
 import { Spinner } from '../ui'
+import { startFolder } from './copyInto'
 import { FolderPicker } from './FolderPicker'
 import { formatSize } from './size'
 
@@ -37,7 +38,7 @@ export function CopyDialog({ p, onClose, onStarted }:
   const [plan, setPlan] = useState<CopyPlan | null>(null)
   const [planError, setPlanError] = useState('')
   const [to, setTo] = useState('')
-  const [into, setInto] = useState('~')
+  const [into, setInto] = useState<string | null>(null)  // null: startFolder's pick
   const [how, setHow] = useState<How>('laptop')
   const [keep, setKeep] = useState<Record<string, boolean>>({})
   const [chats, setChats] = useState<Record<string, boolean>>({})
@@ -51,7 +52,6 @@ export function CopyDialog({ p, onClose, onStarted }:
       const dst = t.targets.find((x) => x.id === t.copy_to) ?? t.targets.find((x) => !x.same) ?? t.targets[0]
       setInfo(t)
       setTo(dst?.id ?? '')
-      setInto(t.copy_into || '~')
       setHow(dst && !dst.globus_missing ? 'globus' : 'laptop')  // faster, and copying again only sends changes
     }).catch((e: Error) => setError(e.message))
     call<CopyPlan>('projects.copy_plan', { id: p.id }).then((got) => {
@@ -71,8 +71,8 @@ export function CopyDialog({ p, onClose, onStarted }:
       .catch(() => {})
   }, [dst?.id, dst?.connected])
 
-  const intoPath = into.trim() || '~'
   const spots = dst?.connected && found.cluster === dst.id ? found.storage : []
+  const intoPath = (into ?? (info ? startFolder(p, info, dst, spots) : '~')).trim() || '~'
   const spot = spots.filter((s) => inside(intoPath, s.path)).sort((a, b) => b.path.length - a.path.length)[0]
   const missing = how === 'globus' && !dst?.same ? dst?.globus_missing ?? '' : ''
   const files = (plan?.parts ?? []).filter((x) => keep[x.name]).reduce((n, x) => n + x.size, 0)
@@ -112,6 +112,7 @@ export function CopyDialog({ p, onClose, onStarted }:
             <List>
               <ChoiceRow label="To" value={to} onChange={(v) => {
                 setTo(v)
+                setInto(null)
                 setError('')
                 if (info.targets.find((t) => t.id === v)?.globus_missing) setHow('laptop')
               }} options={info.targets.map((t) => ({ value: t.id,
@@ -132,7 +133,7 @@ export function CopyDialog({ p, onClose, onStarted }:
                 <p className="pt-2 text-sm text-dim">Scratch gets cleaned up. Keep work you need in Project.</p>
               )}
               <div className="flex items-end gap-2 pt-1">
-                <div className="min-w-0 flex-1"><Field label="Into folder" value={into}
+                <div className="min-w-0 flex-1"><Field label="Into folder" value={into ?? intoPath}
                   onChange={(e) => setInto(e.target.value)} /></div>
                 <button aria-label="Choose a folder" title="Choose a folder"
                   onClick={() => dst?.connected ? setPicking(true) : setError(`Connect to ${dstName} first`)}

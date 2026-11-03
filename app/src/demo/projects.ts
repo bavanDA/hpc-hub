@@ -57,7 +57,10 @@ const places = (cluster: string): Places => {
     home: '/home/jdoe',
     places: [{ label: 'Home', path: '/home/jdoe' }, { label: 'project/mygroup', path: project },
       { label: 'scratch/mygroup', path: scratch }],
-    storage: [{ label: 'Home', path: '~' }, { label: 'Project', path: project }, { label: 'Scratch', path: scratch }],
+    storage: cluster === 'wulver'  // two groups here, like most Wulver users
+      ? [{ label: 'Home', path: '~' }, { label: 'Project (mygroup)', path: project },
+        { label: 'Project (abc123)', path: '/mmfs1/project/abc123/jdoe' }, { label: 'Scratch', path: scratch }]
+      : [{ label: 'Home', path: '~' }, { label: 'Project', path: project }, { label: 'Scratch', path: scratch }],
   }
 }
 

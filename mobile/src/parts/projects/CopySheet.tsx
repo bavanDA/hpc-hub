@@ -10,6 +10,7 @@ import { call } from '@shared/rpc'
 import type { CopyPlan, CopyTargets, Place, Places, Project } from '@shared/types/projects'
 import { MainButton, PickerSheet, Row, Segments, Sheet } from '../../ui'
 import { shortCluster, wrapPath } from '../code/util'
+import { startFolder } from '@shared/components/projects/copyInto'
 import { FolderPicker } from './FolderPicker'
 
 type How = 'globus' | 'phone'
@@ -49,7 +50,7 @@ export function CopySheet({ p, onClose, onStarted }:
   const [plan, setPlan] = useState<CopyPlan | null>(null)
   const [planError, setPlanError] = useState('')
   const [to, setTo] = useState('')
-  const [into, setInto] = useState('~')
+  const [into, setInto] = useState<string | null>(null)  // null: startFolder's pick
   const [how, setHow] = useState<How>('phone')
   const [keep, setKeep] = useState<Record<string, boolean>>({})
   const [chats, setChats] = useState<Record<string, boolean>>({})
@@ -63,7 +64,6 @@ export function CopySheet({ p, onClose, onStarted }:
       const dst = t.targets.find((x) => x.id === t.copy_to) ?? t.targets.find((x) => !x.same) ?? t.targets[0]
       setInfo(t)
       setTo(dst?.id ?? '')
-      setInto(t.copy_into || '~')
       setHow(dst && !dst.globus_missing ? 'globus' : 'phone')  // cluster to cluster: no phone data, no waiting
     }).catch((e: Error) => setError(e.message))
     call<CopyPlan>('projects.copy_plan', { id: p.id }).then((got) => {
@@ -83,8 +83,8 @@ export function CopySheet({ p, onClose, onStarted }:
       .catch(() => {})
   }, [dst?.id, dst?.connected])
 
-  const intoPath = into.trim() || '~'
   const spots = dst?.connected && found.cluster === dst.id ? found.storage : []
+  const intoPath = (into ?? (info ? startFolder(p, info, dst, spots) : '~')).trim() || '~'
   const spot = spots.filter((s) => inside(intoPath, s.path)).sort((a, b) => b.path.length - a.path.length)[0]
   const missing = how === 'globus' && !dst?.same ? dst?.globus_missing ?? '' : ''
   const files = (plan?.parts ?? []).filter((x) => keep[x.name]).reduce((n, x) => n + x.size, 0)
@@ -190,6 +190,7 @@ export function CopySheet({ p, onClose, onStarted }:
         <PickerSheet title="Copy to" value={to} onClose={() => setOpen('')}
           onPick={(v) => {
             setTo(v)
+            setInto(null)
             setError('')
             if (info.targets.find((t) => t.id === v)?.globus_missing) setHow('phone')
           }}
