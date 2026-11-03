@@ -5,25 +5,25 @@
 
 export type Appearance = 'system' | 'light' | 'dark' | 'charcoal' | 'daylight' | 'frost' | 'dusk' | 'sand'
 
-/** Every choice with its line in Settings and the colors of its little sample (background, line, button). */
+/** Every choice with its line in Settings and the colors of its preview: window, sidebar, line, text, button. */
 export const THEMES: { id: Appearance; label: string; note: string; base: 'light' | 'dark' | '';
-  sample: [string, string, string] }[] = [
+  sample: [string, string, string, string, string] }[] = [
   { id: 'system', label: 'System', note: 'Light or dark, as the computer is', base: '',
-    sample: ['#ffffff', '#1c1c1f', '#0a0a0a'] },
+    sample: ['#ffffff', '#f4f4f4', '#e6e6e6', '#0a0a0a', '#0a0a0a'] },
   { id: 'light', label: 'Light', note: 'White, black buttons', base: 'light',
-    sample: ['#ffffff', '#e6e6e6', '#0a0a0a'] },
+    sample: ['#ffffff', '#f4f4f4', '#e6e6e6', '#0a0a0a', '#0a0a0a'] },
   { id: 'dark', label: 'Dark', note: 'Soft grey, white buttons', base: 'dark',
-    sample: ['#1c1c1f', '#46464c', '#f2f2f4'] },
+    sample: ['#1c1c1f', '#252529', '#333338', '#f2f2f4', '#f2f2f4'] },
   { id: 'charcoal', label: 'Charcoal', note: 'Near-black grey, blue buttons', base: 'dark',
-    sample: ['#1f1f1f', '#3c3c3c', '#0078d4'] },
+    sample: ['#1f1f1f', '#181818', '#2b2b2b', '#cccccc', '#0078d4'] },
   { id: 'daylight', label: 'Daylight', note: 'White and pale grey, blue buttons', base: 'light',
-    sample: ['#ffffff', '#cecece', '#005fb8'] },
+    sample: ['#ffffff', '#f3f3f3', '#e5e5e5', '#3b3b3b', '#005fb8'] },
   { id: 'frost', label: 'Frost', note: 'Cool blue-grey, icy cyan buttons', base: 'dark',
-    sample: ['#2e3440', '#4c566a', '#82b7c6'] },
+    sample: ['#2e3440', '#3b4252', '#434c5e', '#d8dee9', '#82b7c6'] },
   { id: 'dusk', label: 'Dusk', note: 'Dusky blue-grey, golden buttons', base: 'dark',
-    sample: ['#242936', '#343a48', '#ffcc66'] },
+    sample: ['#242936', '#1f2430', '#343a48', '#cccac2', '#ffcc66'] },
   { id: 'sand', label: 'Sand', note: 'Warm cream paper, gold buttons', base: 'light',
-    sample: ['#fdf6e3', '#d3af86', '#ac9d57'] },
+    sample: ['#fdf6e3', '#eee8d5', '#ddd6c1', '#073642', '#ac9d57'] },
 ]
 
 const CHOSEN: string[] = THEMES.filter((t) => t.base).map((t) => t.id)

@@ -2,6 +2,7 @@
 /* shared pieces the phone shows use classes from there: Tailwind only makes the classes it finds in these files */
 @source '../../app/src/components/terminals';
 @source '../../app/src/components/clusters';
+@source '../../app/src/components/app/ThemePicker.tsx';
 @source '../../app/src/components/ui.tsx';
 @source '../../app/src/components/toast.tsx';
 @source '../../app/src/components/Term.tsx';

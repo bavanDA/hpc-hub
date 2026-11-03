@@ -1,17 +1,13 @@
-// Settings, Appearance: System, Light, Dark, or a named theme from a code editor's colors (theme.ts applies it,
-// app.toml remembers it). Each is a row with a little sample.
-import { setAppearance, THEMES, type Appearance } from '../../theme'
-import { Row, Section, Tick } from '../e/ui'
-import { ThemeSample } from './ThemeSample'
+// Settings, Appearance: System, Light, Dark, or a named theme from a code editor's colors, picked from little
+// previews (theme.ts applies it, app.toml remembers it).
+import type { Appearance } from '../../theme'
+import { ThemePicker } from './ThemePicker'
 
 export function AppearanceGroup({ value, onChange }: { value: Appearance; onChange: (a: Appearance) => void }) {
   return (
-    <Section title="Appearance">
-      {THEMES.map((t) => (
-        <Row key={t.id} label={<span className="flex items-center gap-3"><ThemeSample theme={t} />{t.label}</span>}
-          sub={<span className="block pl-14">{t.note}</span>}
-          onPress={() => { setAppearance(t.id); onChange(t.id) }}><Tick on={value === t.id} /></Row>
-      ))}
-    </Section>
+    <section className="pb-6">
+      <h3 className="px-5 pb-3 text-xs font-semibold tracking-wide text-dim uppercase">Appearance</h3>
+      <div className="px-5"><ThemePicker value={value} onChange={onChange} /></div>
+    </section>
   )
 }
