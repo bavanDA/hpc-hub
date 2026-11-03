@@ -334,17 +334,19 @@ export function useAskBeforeClose(dirty: boolean, onClose: () => void): [() => v
 }
 
 /** Are you sure: what happens, then two buttons that say what they do. keep is the safe one ("Keep it", "Keep
- *  running", "Stay connected"), never a bare Cancel; a danger confirm is solid red. */
-export function ConfirmSheet({ title, text, keep, confirm, danger = false, onConfirm, onClose }: {
+ *  running", "Stay connected"), never a bare Cancel; a danger confirm is solid red. onKeep: keep does something too
+ *  (Run on the login node), which closing the sheet doesn't. */
+export function ConfirmSheet({ title, text, keep, confirm, danger = false, onConfirm, onKeep, onClose }: {
   title: string; text?: ReactNode; keep: string; confirm: string; danger?: boolean; onConfirm: () => void
-  onClose: () => void
+  onKeep?: () => void; onClose: () => void
 }) {
   return (
     <BottomSheet onClose={onClose}>
       <h2 className="text-lg font-semibold">{title}</h2>
       {text && <p className="pt-1 text-dim">{text}</p>}
       <div className="mt-5 flex flex-wrap gap-3">
-        <Button className="min-w-fit flex-1 whitespace-nowrap" onClick={onClose}>{keep}</Button>
+        <Button className="min-w-fit flex-1 whitespace-nowrap" onClick={() => { onClose(); onKeep?.() }}>
+          {keep}</Button>
         <Button kind={danger ? 'danger' : 'primary'} className="min-w-fit flex-1 whitespace-nowrap"
           onClick={() => { onClose(); onConfirm() }}>{confirm}</Button>
       </div>

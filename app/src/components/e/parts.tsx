@@ -33,14 +33,15 @@ export function StatusDot({ tone }: { tone: Tone }) {
 }
 
 /** Are you sure: what happens, then two buttons that say what they do. keep is the safe one ("Keep it", "Stay
- *  connected"), never a bare Cancel; a danger confirm is solid red. */
-export function ConfirmDialog({ title, text, keep, confirm, danger = false, onConfirm, onClose }: {
+ *  connected"), never a bare Cancel; a danger confirm is solid red. onKeep: keep does something too (Run on the
+ *  login node), which closing the window doesn't. */
+export function ConfirmDialog({ title, text, keep, confirm, danger = false, onConfirm, onKeep, onClose }: {
   title: string; text?: ReactNode; keep: string; confirm: string; danger?: boolean; onConfirm: () => void
-  onClose: () => void
+  onKeep?: () => void; onClose: () => void
 }) {
   return (
     <EDialog title={title} width={440} onClose={onClose} actions={<>
-      <Button autoFocus className="flex-1" onClick={onClose}>{keep}</Button>
+      <Button autoFocus className="flex-1" onClick={() => { onClose(); onKeep?.() }}>{keep}</Button>
       <Button kind={danger ? 'danger' : 'primary'} className="flex-1"
         onClick={() => { onClose(); onConfirm() }}>{confirm}</Button>
     </>}>
