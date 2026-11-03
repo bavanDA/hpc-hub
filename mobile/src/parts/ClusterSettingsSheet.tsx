@@ -5,11 +5,12 @@ import { Bot, Code, Cpu, KeyRound, ListOrdered, Plus, Server, ShieldCheck } from
 import { useEffect, useState } from 'react'
 
 import { priorityName, queueRowName } from '@shared/components/clusters/priority'
+import { PICKS, pickNote } from '@shared/components/clusters/queuePick'
 import { putCluster } from '@shared/components/clusters/store'
 import { Spinner } from '@shared/components/ui'
 import { call } from '@shared/rpc'
 import type { AgentId, AgentSettings, Cluster, Limits, Logins, Profile, SettingsInfo, VsCode } from '@shared/types/clusters'
-import { Field, List, MainButton, NumberRow, PickerSheet, Row, Section, Sheet, ToggleRow, useAskBeforeClose, useToast }
+import { Field, List, MainButton, NumberRow, PickerSheet, Row, Section, Segments, Sheet, ToggleRow, useAskBeforeClose, useToast }
   from '../ui'
 import { AuthenticatorSheet } from './AuthenticatorSheet'
 import { LoginSheet } from './LoginSheet'
@@ -25,7 +26,7 @@ const TEXT = { autoCapitalize: 'none', autoCorrect: 'off', spellCheck: false } a
 function changes(d: Cluster, info: SettingsInfo | null): Record<string, unknown> {
   const out: Record<string, unknown> = {
     host: d.host, port: d.port, request_node_on_connect: d.request_node_on_connect, ask_node: d.ask_node,
-    reuse_running_job: d.reuse_running_job, queues: d.queues, queue_wait: d.queue_wait,
+    reuse_running_job: d.reuse_running_job, queues: d.queues, queue_wait: d.queue_wait, queue_pick: d.queue_pick,
     profile: pick(d.profile, PROFILE_KEYS),
   }
   if (d.vscode) {
@@ -138,6 +139,11 @@ export function ClusterSettingsSheet({ cluster, onClose }: { cluster: Cluster; o
   const upVs = (change: Partial<VsCode>) => setD((x) => ({ ...x, vscode: { ...x.vscode!, ...change } }))
   const upAgent = (id: AgentId, change: Partial<AgentSettings>) => setD((x) => ({ ...x, [id]: { ...x[id]!, ...change } }))
   const back = () => setSection('')
+  const pickQueue = parseQueues(d.queues).length > 1 && <div className="px-4 pt-6">
+    <Segments label="Pick the queue" value={d.queue_pick ?? 'cheapest'} options={PICKS}
+      onChange={(queue_pick) => up({ queue_pick })} />
+    <p className="pt-2 text-sm text-dim">{pickNote(d.queue_pick, d.queue_wait)}</p>
+  </div>
 
   async function save() {
     setBusy(true)
@@ -167,6 +173,7 @@ export function ClusterSettingsSheet({ cluster, onClose }: { cluster: Cluster; o
               checked={want} onChange={(on) => up({ request_node_on_connect: on })} />
           </List>
           {want && <div className="pt-5"><NodeFields cluster={d} value={d.profile} onChange={(profile) => up({ profile })} /></div>}
+          {want && pickQueue}
           <Section>
             {want && <ToggleRow label={ASK} sub="Shows the node screen when you connect."
               checked={d.ask_node ?? false} onChange={(on) => up({ ask_node: on })} />}
@@ -181,10 +188,11 @@ export function ClusterSettingsSheet({ cluster, onClose }: { cluster: Cluster; o
         </div>}
         {section === 'queues' && <>
           <QueueRows cluster={d.id} value={d.queues} onChange={(queues) => up({ queues })} />
-          <List className="mt-6">
+          {pickQueue}
+          {d.queue_pick !== 'fastest' && <List className="mt-6">
             <NumberRow label="Wait for a cheaper queue" unit="seconds" min={0} value={d.queue_wait ?? 60}
               onChange={(n) => up({ queue_wait: n })} />
-          </List>
+          </List>}
         </>}
         {section === 'vscode' && d.vscode && <>
           <div className="px-4">

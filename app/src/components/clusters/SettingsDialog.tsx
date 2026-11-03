@@ -21,7 +21,8 @@ import { ASK } from './ComputeDialog'
 import { KeyPanel, keyHeading, PasswordInstead } from './KeyPanel'
 import { KeySetupDialog } from './KeySetupDialog'
 import { copy, shortName } from './loginCopy'
-import { queueCount, QueueRows } from './QueueRows'
+import { PICKS, pickNote } from './queuePick'
+import { parseQueues, queueCount, QueueRows } from './QueueRows'
 import { CHROME_WINDOW } from './SignIn'
 import { putCluster, useClusters } from './store'
 
@@ -101,7 +102,7 @@ export function SettingsDialog({ cluster, hint, onClose, start = '', advanced = 
     const out: Record<string, unknown> = {
       host: d.host, port: d.port,
       request_node_on_connect: d.request_node_on_connect, ask_node: d.ask_node, reuse_running_job: d.reuse_running_job,
-      queues: d.queues, queue_wait: d.queue_wait, vpn: pick(d.vpn, VPN_KEYS), profile: pick(d.profile, PROFILE_KEYS),
+      queues: d.queues, queue_wait: d.queue_wait, queue_pick: d.queue_pick, vpn: pick(d.vpn, VPN_KEYS), profile: pick(d.profile, PROFILE_KEYS),
     }
     if (d.vscode) {
       const { setup, command, workdir, open_links, open_in, ask, compute } = d.vscode
@@ -251,6 +252,12 @@ export function SettingsDialog({ cluster, hint, onClose, start = '', advanced = 
 
   const reuse = <ToggleRow label="Reuse a node you already have" sub="One an agent or VS Code got earlier."
     checked={d.reuse_running_job ?? true} onChange={(on) => up({ reuse_running_job: on })} />
+  const several = parseQueues(d.queues ?? '').length > 1
+  const pickQueue = several && <div className="px-5 pt-5">
+    <Segments label="Pick the queue" value={d.queue_pick ?? 'cheapest'} options={PICKS}
+      onChange={(queue_pick) => up({ queue_pick })} />
+    <p className="pt-2 text-sm text-dim">{pickNote(d.queue_pick, d.queue_wait)}</p>
+  </div>
   const compute = <>
     <List>
       <ToggleRow label="Get a compute node when I connect" sub="Your terminals and agents run there."
@@ -259,6 +266,7 @@ export function SettingsDialog({ cluster, hint, onClose, start = '', advanced = 
     </List>
     {want && <div className="pt-5">
       <NodeFields cluster={d.id} value={d.profile} onChange={(profile) => up({ profile })} />
+      {pickQueue && <div className="pb-5">{pickQueue}</div>}
       <ToggleRow label={ASK} sub="Shows the node window when you connect." checked={d.ask_node ?? false}
         onChange={(on) => up({ ask_node: on })} />
       {reuse}
@@ -268,12 +276,13 @@ export function SettingsDialog({ cluster, hint, onClose, start = '', advanced = 
   const queues = <>
     <h3 className="px-5 pb-1.5 text-xs font-semibold tracking-wide text-dim uppercase">Tried in this order</h3>
     <QueueRows cluster={d.id} value={d.queues ?? ''} onChange={(queues) => up({ queues })} />
-    <p className="px-5 pt-2 text-sm text-dim">Cheapest first. Your node comes from the first one that can start
-      within the wait below.</p>
-    <div className="pt-5"><List>
+    <p className="px-5 pt-2 text-sm text-dim">Cheapest first. Slurm says how long each would wait right now, nothing
+      is sent.</p>
+    {pickQueue}
+    {d.queue_pick !== 'fastest' && <div className="pt-5"><List>
       <NumberRow label="Wait for a cheaper queue" unit="seconds" min={0} max={3600} value={d.queue_wait ?? 60}
         onChange={(queue_wait) => up({ queue_wait })} />
-    </List></div>
+    </List></div>}
   </>
 
   const vs = d.vscode

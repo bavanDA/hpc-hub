@@ -133,10 +133,12 @@ class ClusterConfig:
     password_too: bool = False  # with key_page: a password works as well, offered as "Use a password instead"
     key_login: bool = False  # takes SSH keys from ~/.ssh/authorized_keys: the phone app gets a key (pairing.py)
     code_setup: str = ""  # where you set up the authenticator app the cluster asks codes from
-    # "partition:qos" queues to choose from, cheapest first: the first that starts within queue_wait seconds
-    # wins, else the one that starts soonest. Empty: always use the queue you picked.
+    # "partition:qos" queues to choose from, cheapest first. queue_pick "cheapest": the first that starts within
+    # queue_wait seconds wins, else the one that starts soonest; "fastest": the one that starts soonest. Empty: always
+    # use the queue you picked.
     queues: str = ""
     queue_wait: int = 60
+    queue_pick: str = "cheapest"  # "fastest": the one that starts soonest, whatever it costs
     # Fast node: "partition:qos:time" of a short queue that starts quickly (debug); empty: no Fast node button
     fast: str = ""
     request_node_on_connect: bool = True
@@ -284,6 +286,9 @@ def _merge(obj, data: dict):
             setattr(obj, f.name, value)
 
 
+QUEUE_PICKS = ("cheapest", "fastest")
+
+
 def load(path: Path = CONFIG_FILE) -> list[ClusterConfig]:
     clusters = default_clusters()
     if not path.exists():
@@ -297,6 +302,8 @@ def load(path: Path = CONFIG_FILE) -> list[ClusterConfig]:
         c.vscode.command = c.vscode.command or default.vscode.command  # old configs saved an empty alias
         if c.vpn.browser not in ("", CHROME_WINDOW):  # a Chrome profile's name, from before: the app's window
             c.vpn.browser = ""
+        if c.queue_pick not in QUEUE_PICKS:
+            c.queue_pick = "cheapest"
     return clusters
 
 

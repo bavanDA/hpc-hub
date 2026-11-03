@@ -22,7 +22,7 @@ const agents = { claude: { ...agent('claude'), model: 'opus', remote: true }, co
 const clusters: Cluster[] = [
   { id: 'wulver', name: 'Wulver (NJIT)', short: 'Wulver', org: 'NJIT', username_label: 'UCID', password_only: true, host: 'wulver.njit.edu', port: 22,
     duo_answer: 'push', second_factor: 'duo',
-    queues: 'general:low,debug:debug,general:standard', queue_wait: 60, fast: 'debug:debug:08:00:00',
+    queues: 'general:low,debug:debug,general:standard', queue_wait: 60, queue_pick: 'cheapest', fast: 'debug:debug:08:00:00',
     request_node_on_connect: true,
     reuse_running_job: true, vpn: { ...vpn, enabled: true, gateway: 'vpn.njit.edu', same_login_as_ssh: true,
       domains: 'njit.edu', routes: '128.235.0.0/16' }, profile,

@@ -33,9 +33,10 @@ class NodesMixin:
         return self.limits.fit(profile) if self.limits else (profile, "")
 
     def _best_queue(self, profile: ComputeProfile) -> ComputeProfile:
-        """Ask Slurm how long each queue in cfg.queues would wait (nothing is submitted). Of those that start
-        within queue_wait seconds, take the first listed (cheapest); if none does, the one that starts soonest.
-        A queue Slurm would refuse for this request (e.g. more cores than debug allows) is skipped."""
+        """Ask Slurm how long each queue in cfg.queues would wait (nothing is submitted). Cheapest: of those that
+        start within queue_wait seconds, take the first listed; if none does, the one that starts soonest. Fastest
+        (cfg.queue_pick): the one that starts soonest, the cheaper on a tie. A queue Slurm would refuse for this
+        request (e.g. more cores than debug allows) is skipped."""
         listed = [tuple(x.strip() for x in o.split(":", 1)) for o in self.cfg.queues.split(",") if ":" in o]
         if not listed or not self.ssh:
             return profile
@@ -52,10 +53,10 @@ class NodesMixin:
             return profile
         if not found:
             return profile
-        soon = [f for f in found if f[0] <= self.cfg.queue_wait]
+        soon = [f for f in found if f[0] <= self.cfg.queue_wait] if self.cfg.queue_pick != "fastest" else []
         wait, _, best = min(soon, key=lambda f: f[1]) if soon else min(found, key=lambda f: (f[0], f[1]))
         seen = ", ".join(f"{p.partition}/{p.qos} {slurm.human_wait(w)}" for w, _, p in found)
-        self._log(f"Queues: {seen}. Using {best.partition}/{best.qos}")
+        self._log(f"Queues: {seen}. Using {best.partition}/{best.qos} ({self.cfg.queue_pick})")
         return best
 
     def _account(self) -> str:

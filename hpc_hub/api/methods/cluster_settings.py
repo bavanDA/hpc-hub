@@ -12,7 +12,7 @@ from ...agents.catalog import AGENTS, BY_ID
 from ...compute import slurm
 from ...connect import chrome_window
 from ...connect.vpn import split_errors
-from ...core.config import VPN_PROTOCOLS, ComputeProfile
+from ...core.config import QUEUE_PICKS, VPN_PROTOCOLS, ComputeProfile
 from ..hub import hub
 from ..server import method
 
@@ -26,7 +26,7 @@ GROUP = re.compile(r"[A-Za-z0-9 _.-]*")
 NUMBERS = {"cpus": (1, 512), "mem_gb": (1, 4096), "gpus": (0, 16)}
 TOP = {"host", "port", "second_factor", "duo_answer", "request_node_on_connect", "ask_node", "reuse_running_job",
        "queues",
-       "queue_wait", "vpn", "profile", "vscode", *BY_ID}
+       "queue_wait", "queue_pick", "vpn", "profile", "vscode", *BY_ID}
 VPN = {"enabled", "gateway", "protocol", "useragent", "authgroup", "same_login_as_ssh", "split_tunnel", "domains",
        "routes", "browser"}
 VSCODE = {"setup", "command", "workdir", "open_links", "open_in", "ask", "compute"}
@@ -160,6 +160,10 @@ def apply(cfg, changes: dict, windows: list[str]):
             c.queues = _queues(x)
         elif k == "queue_wait":
             c.queue_wait = _int(x, "Queue wait (seconds)", 0, 3600)
+        elif k == "queue_pick":
+            if x not in QUEUE_PICKS:
+                raise ValueError(f"Pick the queue by {' or '.join(QUEUE_PICKS)}")
+            c.queue_pick = x
         elif k == "vpn":
             _vpn(c.vpn, x, windows)
         elif k == "profile":

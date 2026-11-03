@@ -389,6 +389,13 @@ def test_best_queue_on_wulver():
     assert s.fit(std).qos == "low"  # low and debug both start now: low is listed first
     waits.update(low="900000", debug="")  # debug refuses it (say 8 cores)
     assert s.fit(std).qos == "standard"  # nothing starts soon: the soonest
+    waits.update(low="600", debug="5")
+    assert s.fit(std).qos == "debug"  # low waits 10 min, longer than the wait: debug, which starts now
+    waits.update(low="30", debug="5")
+    assert s.fit(std).qos == "low"
+    s.cfg.queue_pick = "fastest"
+    assert s.fit(std).qos == "debug" and "(fastest)" in logged[-1]  # fastest: debug starts sooner, though low is free
+    s.cfg.queue_pick = "cheapest"
     s.cfg.queues = ""
     assert s.fit(config.ComputeProfile(partition="general", qos="low")).qos == "low"  # no list: as asked
 
