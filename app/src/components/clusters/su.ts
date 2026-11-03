@@ -2,8 +2,12 @@
 // shared by the desktop's node window and the phone's. Checked against Wulver's own billing of real jobs.
 import type { Billing, Profile } from '../../types/clusters'
 
-/** SUs an hour for this size, before the priority's factor. */
+/** SUs an hour for this size, before the priority's factor. Slurm drops the fraction (16 cores and 63 GB: 16). */
 export function suPerHour(b: Billing, p: Profile): number {
+  return Math.floor(weighted(b, p))
+}
+
+function weighted(b: Billing, p: Profile): number {
   const w = b.weights
   const cpu = p.cpus * (w.cpu ?? 1), mem = p.mem_gb * (w.mem ?? 0)
   const n = p.gpus ?? 0
