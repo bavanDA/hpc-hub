@@ -20,6 +20,7 @@ import { useGo, usePageParams } from '@shared/nav'
 import { call } from '@shared/rpc'
 import type { Limits } from '@shared/types/clusters'
 import type { TmuxSession } from '@shared/types/terminals'
+import { useAskForNode } from '../parts/AskForNode'
 import { AskSheet, type AskStart } from '../parts/code/AskSheet'
 import { Banners, type Banner } from '../parts/code/Banners'
 import { ConflictChoice, ConflictSheet, type Compare } from '../parts/code/ConflictSheet'
@@ -52,6 +53,7 @@ type Confirm = { kind: 'close' | 'reload' | 'theirs'; file: OpenFile } | null
 export function Code() {
   const toast = useToast()
   const go = useGo()
+  const nodeFirst = useAskForNode()
   const params = usePageParams()
   const { files, current } = useCode()
   const { asks } = useAsks()
@@ -295,7 +297,10 @@ export function Code() {
       { label: 'Bigger text', onPick: () => changeView({ fontSize: Math.min(22, view.fontSize + 1) }) },
       { label: 'Smaller text', onPick: () => changeView({ fontSize: Math.max(10, view.fontSize - 1) }) })
     if (lang === 'slurm') menuActions.push({ label: 'Submit this job', onPick: () => void submit(f) })
-    if (command && !isLog(f.path)) menuActions.push({ label: 'Run in a terminal', onPick: () => void runInTerminal(f, command) })
+    if (command && !isLog(f.path)) {
+      menuActions.push({ label: 'Run in a terminal',
+        onPick: () => nodeFirst.guard(f.cluster, 'Running a script', () => void runInTerminal(f, command)) })
+    }
     menuActions.push(
       { label: `Reload from ${clusterName(f.cluster)}`, onPick: () => isDirty(f) ? setConfirm({ kind: 'reload', file: f })
         : void reloadFile(f.key) },
@@ -448,6 +453,7 @@ export function Code() {
           }} />
       )}
       {result && <ResultSheet askId={result} onClose={() => setResult(null)} onOpenFile={(c, p) => void open(c, p)} />}
+      {nodeFirst.sheet}
     </div>
   )
 }
