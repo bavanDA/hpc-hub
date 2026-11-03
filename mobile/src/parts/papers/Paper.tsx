@@ -19,6 +19,7 @@ import { call } from '@shared/rpc'
 import type { BuildDone, Issue, Opened, PdfInfo, Settings, SourceSpot, Spot, TreeEntry } from '@shared/types/latex'
 import { useBackLayer } from '../../nav'
 import { ActionSheet, MainButton, Segments, useToast } from '../../ui'
+import { useAskForNode } from '../AskForNode'
 import { shortCluster } from '../code/util'
 import { useOpenIn } from '../projects/openIn'
 import { BuildSheet } from './BuildSheet'
@@ -40,6 +41,7 @@ function remembered(key: string): boolean {
 export function Paper({ paper, onClose }: { paper: Opened; onClose: () => void }) {
   const toast = useToast()
   const openIn = useOpenIn()
+  const nodeFirst = useAskForNode()
   const { cluster, folder } = paper
   const where = useMemo(() => ({ cluster, folder }), [cluster, folder])
   const [main, setMain] = useState(paper.main)
@@ -130,7 +132,7 @@ export function Paper({ paper, onClose }: { paper: Opened; onClose: () => void }
     }
   }, [loadPdf, toast])
 
-  const build = async () => {
+  const runBuild = async () => {
     if (runningRef.current || !(await save())) return
     setLog('')
     setRunning('starting')
@@ -143,6 +145,12 @@ export function Paper({ paper, onClose }: { paper: Opened; onClose: () => void }
       setRunning(null)
       toast(`Couldn't build: ${(e as Error).message}`)
     }
+  }
+  // "Build on my compute node" with none yet would build on the login node: ask first
+  const build = () => {
+    if (runningRef.current) return
+    if (settings.on_node) nodeFirst.guard(cluster, 'Building the PDF', runBuild)
+    else void runBuild()
   }
   useEvent<{ id: string; text: string }>('latex-log', ({ id, text }) => {
     logs.current[id] = (logs.current[id] ?? '') + text
@@ -299,6 +307,7 @@ export function Paper({ paper, onClose }: { paper: Opened; onClose: () => void }
           setAuto(on)
           try { localStorage.setItem('latex.auto', on ? '1' : '0') } catch { /* private window */ }
         }} />}
+      {nodeFirst.sheet}
     </div>
   )
 }

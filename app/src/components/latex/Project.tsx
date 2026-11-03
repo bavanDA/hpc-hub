@@ -6,6 +6,7 @@ import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type
 import { useEvent } from '../../hooks'
 import { call } from '../../rpc'
 import type { BuildDone, Issue, Opened, PdfInfo, Settings, SourceSpot, Spot } from '../../types/latex'
+import { useAskForNode } from '../clusters/AskForNode'
 import { ConfirmDialog, NameDialog } from '../files/dialogs'
 import { ImageDialog } from '../files/ImageDialog'
 import { type PdfTarget } from '../pdf'
@@ -36,6 +37,7 @@ function remember(key: string, value: string) {
 
 export function Project({ project, onClose }: { project: Opened; onClose: () => void }) {
   const toast = useToast()
+  const nodeFirst = useAskForNode()
   const { cluster, folder } = project
   const where = useMemo(() => ({ cluster, folder }), [cluster, folder])
   const [main, setMain] = useState(project.main)
@@ -139,7 +141,7 @@ export function Project({ project, onClose }: { project: Opened; onClose: () => 
     }
   }, [loadPdf, toast])
 
-  const build = async () => {
+  const runBuild = async () => {
     if (runningRef.current || !(await save())) return
     setLog('')
     setRunning('starting')
@@ -152,6 +154,12 @@ export function Project({ project, onClose }: { project: Opened; onClose: () => 
       setRunning(null)
       toast(`Could not build: ${(e as Error).message}`)
     }
+  }
+  // "Build on my compute node" with none yet would build on the login node: ask first
+  const build = () => {
+    if (runningRef.current) return
+    if (settings.on_node) nodeFirst.guard(cluster, 'Building the PDF', runBuild)
+    else void runBuild()
   }
   useEvent<{ id: string; text: string }>('latex-log', ({ id, text: t }) => {
     logs.current[id] = (logs.current[id] ?? '') + t
@@ -347,6 +355,7 @@ export function Project({ project, onClose }: { project: Opened; onClose: () => 
           left={editorPane} right={pdfPane} />
       </div>
       {dialog}
+      {nodeFirst.dialog}
       {openIn && <OpenDialog name={project.name} cluster={cluster} clusterName={project.cluster_name} folder={folder}
         onClose={() => setOpenIn(false)} />}
     </div>
