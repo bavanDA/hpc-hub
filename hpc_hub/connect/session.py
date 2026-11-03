@@ -122,6 +122,7 @@ class ClusterSession(NodesMixin):
         self.ssh = ssh if alive else None
         if alive:
             self._reuse_running_job(quiet=True)
+            self._read_limits()  # a newer app may read more of them
         self._log("Picked up running " + ("SSH session" if alive else "VPN"))
         self._set(State.CONNECTED, "" if alive else "VPN only")
 
