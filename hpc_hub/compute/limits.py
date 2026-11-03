@@ -1,5 +1,6 @@
-"""How long a job may run: the partition's and the QoS's time limits, read from Slurm and kept on disk
-so the settings know them before you connect."""
+"""What a job may ask for: the partition's and the QoS's time limits, the biggest node, the memory each core comes
+with, and the QoS's caps on cores, memory and GPUs. Read from Slurm and kept on disk so the settings know them before
+you connect."""
 
 import json
 import re
@@ -9,10 +10,12 @@ from ..core.config import ComputeProfile
 from ..core.paths import log_dir
 from . import gpus
 
-FETCH = ("sinfo -h -o '%P|%l|%c|%m'; echo @QOS; sacctmgr -nP show qos format=name,maxwall 2>/dev/null; "
+FETCH = ("sinfo -h -o '%P|%l|%c|%m'; echo @QOS; "
+         "sacctmgr -nP show qos format=name,maxwall,maxtrespj,maxtrespu 2>/dev/null; "
          "echo @ASSOC; sacctmgr -nP show assoc user=\"$USER\" format=account,qos,defaultqos 2>/dev/null; "
          "echo @USER; sacctmgr -nP show user \"$USER\" format=defaultaccount 2>/dev/null; "
-         "echo @GRES; sinfo -h -o '%P|%G' 2>/dev/null; true")
+         "echo @GRES; sinfo -h -o '%P|%G' 2>/dev/null; "
+         "echo @PARTS; scontrol show partition -o 2>/dev/null; true")
 SLURM_TIME = re.compile(r"^(?:(\d+)-)?(\d+)(?::(\d+))?(?::(\d+))?$")
 
 
@@ -59,11 +62,24 @@ class Limits:
     gres: dict[str, list[str]] = field(default_factory=dict)  # partition -> GPU gres ("gpu:a100_10g:2")
     cores: dict[str, int] = field(default_factory=dict)  # partition -> cores of its biggest node
     memory_gb: dict[str, int] = field(default_factory=dict)  # partition -> memory of its biggest node
+    mem_per_core_mb: dict[str, int] = field(default_factory=dict)  # partition -> MaxMemPerCPU: more memory, more cores
+    qos_caps: dict[str, dict[str, int]] = field(default_factory=dict)  # qos -> {"cpu": 4, "mem": GB, "gpu:l40": 0}
 
-    def biggest(self, partition: str) -> tuple[int | None, int | None]:
-        """Cores and GB of the partition's biggest node: the most one job there can ask for. None = unknown."""
+    def biggest(self, partition: str, qos: str = "") -> tuple[int | None, int | None]:
+        """Cores and GB one job may ask for: the partition's biggest node, cut by the QoS's caps. None = unknown."""
         part = partition or self.default_partition
-        return self.cores.get(part), self.memory_gb.get(part)
+        caps = self.qos_caps.get(qos or self.default_qos, {})
+        cores, mem = self.cores.get(part), self.memory_gb.get(part)
+        if "cpu" in caps:
+            cores = min(cores, caps["cpu"]) if cores else caps["cpu"]
+        if "mem" in caps:
+            mem = min(mem, caps["mem"]) if mem else caps["mem"]
+        return cores, mem
+
+    def gpu_caps(self, qos: str = "") -> dict[str, int]:
+        """The QoS's GPU caps: {"": 1} for any GPU, {"l40": 0} for a type it doesn't allow."""
+        caps = self.qos_caps.get(qos or self.default_qos, {})
+        return {k[4:]: v for k, v in caps.items() if k == "gpu" or k.startswith("gpu:")}
 
     def longest(self, partition: str, qos: str) -> tuple[int | None, str]:
         """The longest time a job may ask for, and what sets it ('QoS standard'). (None, '') = no limit."""
@@ -94,12 +110,33 @@ def _number(text: str) -> int:
     return int(m.group()) if m else 0
 
 
+MB = {"K": 0, "M": 1, "G": 1024, "T": 1024 * 1024}  # Slurm's memory units in MB (no unit: MB)
+
+
+def _tres(text: str) -> dict[str, int]:
+    """'cpu=4,mem=16G,gres/gpu:l40=0' -> {"cpu": 4, "mem": 16, "gpu:l40": 0} (mem in GB)."""
+    out = {}
+    for item in text.split(","):
+        key, _, value = item.partition("=")
+        m = re.match(r"(\d+)([KMGT]?)", value)
+        if not key or not m:
+            continue
+        n = int(m.group(1))
+        if key == "mem":
+            out["mem"] = n * MB.get(m.group(2), 1) // 1024
+        elif key == "cpu":
+            out["cpu"] = n
+        elif key.startswith("gres/gpu"):
+            out[key[5:]] = n
+    return out
+
+
 def parse(text: str) -> Limits:
     out = Limits()
     section = "part"
     gres_lines = []
     for line in text.splitlines():
-        if line in ("@QOS", "@ASSOC", "@USER", "@GRES"):
+        if line in ("@QOS", "@ASSOC", "@USER", "@GRES", "@PARTS"):
             section = line[1:].lower()
             continue
         if section == "gres":
@@ -117,8 +154,18 @@ def parse(text: str) -> Limits:
                     out.cores[name] = max(cores, out.cores.get(name, 0))
                 if mb:
                     out.memory_gb[name] = max(mb // 1024, out.memory_gb.get(name, 0))
-        elif section == "qos" and len(cells) == 2 and cells[0]:
+        elif section == "qos" and len(cells) in (2, 4) and cells[0]:
             out.qos[cells[0]] = minutes(cells[1]) if cells[1] else None
+            caps: dict[str, int] = {}
+            for tres in cells[2:]:  # per job, then per user: the smaller one counts
+                for k, v in _tres(tres).items():
+                    caps[k] = min(v, caps.get(k, v))
+            if caps:
+                out.qos_caps[cells[0]] = caps
+        elif section == "parts":
+            words = dict(w.partition("=")[::2] for w in line.split())
+            if words.get("PartitionName") and words.get("MaxMemPerCPU", "UNLIMITED").isdigit():
+                out.mem_per_core_mb[words["PartitionName"]] = int(words["MaxMemPerCPU"])
         elif section == "assoc" and len(cells) in (2, 3):
             account, qos, default = cells if len(cells) == 3 else ("", *cells)
             mine = [q for q in qos.split(",") if q]

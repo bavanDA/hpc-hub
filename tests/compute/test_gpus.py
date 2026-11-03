@@ -40,7 +40,7 @@ def test_unknown_types_and_untyped_gpus():
 
 
 def test_the_docs_stand_in_before_the_first_login():
-    assert [g.type for g in gpus.from_docs("wulver")] == ["a100_10g", "a100_20g", "a100_40g", "a100"]
+    assert [g.type for g in gpus.from_docs("wulver")] == ["a100_10g", "a100_20g", "a100_40g", "l40", "a100"]
     yale = {g.type: g.partitions for g in gpus.from_docs("yale")}
     assert yale["h100"] == ["gpu_h100"] and yale["l40s"] == ["gpu"]
     assert gpus.from_docs("elsewhere") == []

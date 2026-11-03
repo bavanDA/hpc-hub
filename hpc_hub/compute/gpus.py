@@ -13,7 +13,8 @@ from dataclasses import asdict, dataclass, field
 KNOWN: dict[str, tuple[str, int]] = {
     "a100": ("A100", 80), "a100_10g": ("A100, 10 GB slice", 10), "a100_20g": ("A100, 20 GB slice", 20),
     "a100_40g": ("A100, 40 GB slice", 40), "a100_80gb": ("A100", 80), "v100": ("V100", 32),
-    "h100": ("H100", 80), "h200": ("H200", 141), "b200": ("B200", 193), "l40s": ("L40S", 48), "a40": ("A40", 48),
+    "h100": ("H100", 80), "h200": ("H200", 141), "b200": ("B200", 193), "l40": ("L40", 48), "l40s": ("L40S", 48),
+    "a40": ("A40", 48),
     "a5000": ("RTX A5000", 24), "rtx_5000_ada": ("RTX 5000 Ada", 32),
     "rtx_pro_6000_blackwell": ("RTX PRO 6000 Blackwell", 96),
 }
@@ -22,7 +23,7 @@ GRES = re.compile(r"gpu(?::([A-Za-z0-9_.-]+))?:(\d+)")
 
 # What the docs list, used until the first login reads the real thing (cluster id -> [(type, partition)])
 DOCS: dict[str, list[tuple[str, str]]] = {
-    "wulver": [("a100_10g", "gpu"), ("a100_20g", "gpu"), ("a100_40g", "gpu"), ("a100", "gpu")],
+    "wulver": [("a100_10g", "gpu"), ("a100_20g", "gpu"), ("a100_40g", "gpu"), ("a100", "gpu"), ("l40", "gpu")],
     "yale": [("rtx_5000_ada", "gpu"), ("a5000", "gpu"), ("a40", "gpu"), ("l40s", "gpu"), ("h100", "gpu_h100"),
              ("h200", "gpu_h200"), ("b200", "gpu_b200"), ("rtx_pro_6000_blackwell", "gpu_rtx6000")],
     "sdsc": [("", "gpu-shared"), ("", "gpu"), ("", "gpu-debug")],

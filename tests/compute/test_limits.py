@@ -53,3 +53,14 @@ def test_biggest_node():
                      "debug|8:00:00\n")
     assert L.biggest("") == (128, 502) and L.biggest("gpu") == (64, 500)
     assert L.biggest("debug") == (None, None) and "debug" in L.partitions
+
+
+def test_priority_caps_and_memory_per_core():
+    L = limits.parse("general*|infinite|128|450000+\ngpu|infinite|128|514000\ndebug|8:00:00|128|514000\n"
+                     "@QOS\nstandard|3-00:00:00|gres/gpu:l40=0|\ndebug|08:00:00|cpu=4,mem=16G|cpu=4,mem=16G\n"
+                     "course|3-00:00:00||cpu=128,gres/gpu=1\n@ASSOC\nmygroup|debug,low,standard|standard\n"
+                     "@PARTS\nPartitionName=gpu MaxNodes=UNLIMITED MaxMemPerCPU=4015 State=UP\n"
+                     "PartitionName=general MaxMemPerNode=UNLIMITED State=UP\n")
+    assert L.biggest("debug", "debug") == (4, 16) and L.biggest("gpu", "standard") == (128, 501)
+    assert L.mem_per_core_mb == {"gpu": 4015}
+    assert L.gpu_caps("standard") == {"l40": 0} and L.gpu_caps("course") == {"": 1} and L.gpu_caps("low") == {}
