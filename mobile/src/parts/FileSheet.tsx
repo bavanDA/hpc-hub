@@ -72,7 +72,7 @@ function PdfPreview({ cluster, path, size, onDownload }:
   }
   return (
     <div className="-m-4 h-[calc(100%+2rem)]">
-      <ReadAloudPdf compact data={data} memory={`phone:${cluster}:${path}`} loading={!data && !error} progress={progress}
+      <ReadAloudPdf compact cluster={cluster} data={data} memory={`phone:${cluster}:${path}`} loading={!data && !error} progress={progress}
         message={error ? <EmptyState icon={FileQuestion} title="Can't show this PDF" text={error} /> : undefined} />
     </div>
   )

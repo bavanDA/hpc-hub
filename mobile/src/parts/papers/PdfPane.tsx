@@ -10,7 +10,8 @@ const GAP = 350  // ms between the two taps
 const NEAR = 30  // px between them
 const STILL = 10  // px a finger may move and still count as a tap
 
-export function PdfPane({ data, memory, loading, progress, message, target, onSync }: {
+export function PdfPane({ cluster, data, memory, loading, progress, message, target, onSync }: {
+  cluster?: string
   data: Uint8Array | null; memory: string; loading: boolean; progress: number
   message?: ReactNode
   target: PdfTarget | null; onSync: (page: number, x: number, y: number) => void
@@ -50,7 +51,7 @@ export function PdfPane({ data, memory, loading, progress, message, target, onSy
 
   return (
     <div ref={box} className="h-full">
-      <ReadAloudPdf data={data} memory={memory} compact
+      <ReadAloudPdf cluster={cluster} data={data} memory={memory} compact
         loading={loading} progress={progress} message={message} target={target} onSync={onSync} />
     </div>
   )

@@ -1,7 +1,8 @@
 // The shared PDF viewer with Read aloud, in phone form: the headphones in the toolbar open a player at the bottom
 // (voice, speed, stop, previous sentence, play, next sentence), the spoken word is marked and followed, a tap on a
 // word reads from there, and holding a word opens the dictionary as a sheet. The voice is the phone's own
-// (readaloud/reader.ts), so it reads any PDF, also without the internet when the voice is on the phone.
+// (readaloud/reader.ts), so it reads any PDF, also without the internet when the voice is on the phone. With a
+// cluster and no compute node there, it asks to get one first.
 import { Check, Headphones, Loader2, Pause, Play, SkipBack, SkipForward, Square, Volume2, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
@@ -9,22 +10,27 @@ import { Pdf, type PdfProps, type WordPick } from '@shared/components/pdf'
 import { Meanings, useEntry } from '@shared/components/pdf/Meanings'
 import { speedLabel, SPEEDS } from '@shared/components/pdf/reader'
 import { Tool } from '@shared/components/pdf/tool'
+import { useAskForNode } from './AskForNode'
 import { BottomSheet, Button, PickerSheet, Row, Section } from '../ui'
 import { usePhoneReader, usePhoneVoices, useReaderState, type PhoneReader, type PhoneVoice } from './readaloud/reader'
 
-export function ReadAloudPdf({ extra, ...props }: PdfProps) {
+export function ReadAloudPdf({ extra, cluster, ...props }: PdfProps & { cluster?: string }) {
   const reader = usePhoneReader()
+  const node = useAskForNode()
+  const first = (run: () => void) => (cluster ? node.guard(cluster, 'Read aloud', run) : run())
   const [open, setOpen] = useState(false)
   const [word, setWord] = useState<WordPick | null>(null)
   const close = () => { reader.close(); setOpen(false) }
   const toggle = <Tool label="Read aloud" on={open} disabled={!props.data}
-    onClick={() => open ? close() : setOpen(true)}><Headphones size={20} /></Tool>
+    onClick={() => open ? close() : first(() => setOpen(true))}><Headphones size={20} /></Tool>
   return (
     <>
       <Pdf {...props} reader={reader} extra={<>{toggle}{extra}</>} onWord={setWord}
         footer={open && <Player reader={reader} onClose={close} />} />
       {word && <WordSheet key={`${word.text}:${word.x}:${word.y}`} pick={word} reader={reader}
-        onClose={() => setWord(null)} onRead={() => { setWord(null); setOpen(true); reader.readFrom(word.spot) }} />}
+        onClose={() => setWord(null)}
+        onRead={() => { setWord(null); first(() => { setOpen(true); reader.readFrom(word.spot) }) }} />}
+      {node.sheet}
     </>
   )
 }
