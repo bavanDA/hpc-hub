@@ -409,7 +409,8 @@ export function Code() {
             setHeight(h)
             if (done) try { localStorage.setItem(HEIGHT, String(h)) } catch { /* private window */ }
           }} />}
-        {(root || (file && !file.loading)) && <StatusLine file={file} look={look} left={root ? (
+        {(root || (file && !file.loading)) && <StatusLine file={file} look={look} folder={root || undefined}
+          left={root ? (
           <button type="button" onClick={() => setPanel(!panel)} aria-pressed={panel}
             title={`${panel ? 'Hide' : 'Show'} the terminal (${TOGGLE_KEY})`}
             className={`-ml-1.5 flex h-7 shrink-0 items-center gap-1.5 px-1.5 hover:bg-hover hover:text-text
