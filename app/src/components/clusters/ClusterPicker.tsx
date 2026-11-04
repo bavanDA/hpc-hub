@@ -26,7 +26,15 @@ function stateText(s?: Session): string {
 export function ClusterPicker() {
   const { clusters, sessions, cluster, setCluster } = useActiveCluster()
   const [open, setOpen] = useState(false)
+  const [at, setAt] = useState({ left: 0, top: 0 })
   const box = useRef<HTMLDivElement>(null)
+  const WIDTH = 260
+  const toggle = () => {  // under the button, kept inside the window: a narrow panel never cuts it off
+    const r = box.current?.getBoundingClientRect()
+    if (r) setAt({ top: r.bottom + 6,
+      left: Math.max(8, Math.min(r.left + r.width / 2 - WIDTH / 2, window.innerWidth - WIDTH - 8)) })
+    setOpen(!open)
+  }
   useEffect(() => {
     if (!open) return
     const away = (e: MouseEvent) => !box.current?.contains(e.target as Node) && setOpen(false)
@@ -38,7 +46,7 @@ export function ClusterPicker() {
   if (!clusters?.length || !cluster) return null
   return (
     <div ref={box} className="relative">
-      <button onClick={() => setOpen(!open)} aria-haspopup="listbox" aria-expanded={open}
+      <button onClick={toggle} aria-haspopup="listbox" aria-expanded={open}
         aria-label={`Cluster: ${cluster.name}`} title="Which cluster this page shows"
         className={`flex h-8 items-center gap-2 rounded-md px-2.5 text-sm font-semibold transition-colors ${
           open ? 'bg-selected' : 'bg-control hover:bg-hover'}`}>
@@ -47,8 +55,8 @@ export function ClusterPicker() {
         <ChevronDown size={14} className="text-dim" />
       </button>
       {open && (
-        <div role="listbox" aria-label="Clusters" className="menu-in absolute top-full left-1/2 z-30 mt-1.5 min-w-[260px]
-          -translate-x-1/2 rounded-xl bg-raised p-1 shadow-[var(--shadow-menu)]">
+        <div role="listbox" aria-label="Clusters" style={{ left: at.left, top: at.top, width: WIDTH }}
+          className="menu-in fixed z-50 rounded-xl bg-raised p-1 shadow-[var(--shadow-menu)]">
           {clusters.map((c) => (
             <button key={c.id} role="option" aria-selected={c.id === cluster.id}
               onClick={() => { setCluster(c.id); setOpen(false) }}
