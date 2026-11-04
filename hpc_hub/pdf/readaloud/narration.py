@@ -194,7 +194,7 @@ def _record(py: Path, voice: str, texts: list[str], keys: list[str], store: Path
     """Speech for the given chunks into store/<key>.mp3 + .json, through the edge-tts worker."""
     out = Path(tempfile.mkdtemp(prefix="incoming-", dir=store))  # one per run: two at once don't clash
     proc = subprocess.Popen([str(py), str(WORKER)], stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                            stderr=subprocess.PIPE, text=True)
+                            stderr=subprocess.PIPE, text=True, env=env.clean())
     proc.stdin.write(json.dumps({"voice": voice, "out": str(out), "chunks": texts}))
     proc.stdin.close()
     done = 0
