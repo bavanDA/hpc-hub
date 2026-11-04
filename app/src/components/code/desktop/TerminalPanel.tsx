@@ -1,15 +1,18 @@
-// The terminal panel under the editor, like VS Code's: the cluster's terminals running in the open folder first, new
-// ones started there. They are the Terminals page's tmux sessions, so closing a tab here leaves them running.
-import { ChevronDown, Plus, SquareTerminal, X } from 'lucide-react'
+// The terminal panel under the editor, like VS Code's: the open terminal on the left, the list of this folder's
+// terminals on the right. They are the Terminals page's tmux sessions, so hiding the panel leaves them running; the
+// trash on a row ends one, after asking.
+import { ChevronDown, Plus, SquareTerminal, Trash2, X } from 'lucide-react'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
+
+import { call } from '../../../rpc'
 
 import type { TmuxSession } from '../../../types/terminals'
 import type { Live } from '../../terminals/data'
 import { SessionIcon } from '../../terminals/Popover'
-import { close, openNew, openSession, setNotify, tabKey, useTabs } from '../../terminals/tabs'
+import { close, openNew, openSession, setNotify, tabKey, useTabs, type Tab } from '../../terminals/tabs'
 import { TerminalView } from '../../terminals/TerminalView'
 import { useToast } from '../../toast'
-import { Button, IconButton, Spinner } from '../../ui'
+import { AlertDialog, Button, IconButton, Spinner } from '../../ui'
 import { about, TOGGLE_KEY, usePanelTabs, type FolderSessions } from './panel'
 
 const MIN = 120
@@ -47,11 +50,21 @@ export function TerminalPanel({ cluster, live, folder, name, home, sessions, hei
   }
   const node = live?.node ?? ''
 
-  const shut = (key: string) => {
-    const t = mine.find((x) => x.key === key)
-    close(key)
-    panel.drop(key)
-    if (t?.session && !t.ended) toast(`${t.title} keeps running`)
+  // the trash: an ended terminal just goes; a running one is stopped once you say so
+  const [ending, setEnding] = useState<Item | null>(null)
+  const end = (it: Item) => {
+    if (it.tab && it.tab.ended) {
+      close(it.key)
+      panel.drop(it.key)
+      return
+    }
+    setEnding(it)
+  }
+  const stop = (it: Item) => {
+    if (it.tab) { close(it.key); panel.drop(it.key) }
+    call('terminals.stop', { cluster, session: it.session, node: it.node, kind: it.kind })
+      .catch((e: Error) => toast(`Couldn't stop ${it.title}: ${e.message}`, { kind: 'error' }))
+      .finally(() => setTimeout(sessions.refresh, 500))
   }
 
   // drag the top edge to make it taller or shorter
@@ -76,23 +89,25 @@ export function TerminalPanel({ cluster, live, folder, name, home, sessions, hei
 
   const openKeys = new Set(mine.map((t) => t.key))
   const listed = sessions.listed
-  const here = mine.length ? [] : sessions.here
+  // the list: this folder's terminals, the open ones among them, then ones opened from other folders
+  const items: Item[] = [
+    ...sessions.here.map((x) => {
+      const key = tabKey(cluster, x.name)
+      return { key, title: x.title, session: x.name, node: x.node, kind: x.kind, agent: x.agent, s: x,
+        tab: mine.find((t) => t.key === key) }
+    }),
+    ...mine.filter((t) => !sessions.here.some((x) => tabKey(cluster, x.name) === t.key)).map((t) => (
+      { key: t.key, title: t.title, session: t.session, node: t.node, kind: t.kind, agent: '', tab: t })),
+  ]
+  const pick = (it: Item) => (it.tab ? panel.pick(it.key) : it.s && open(it.s))
   let body: ReactNode = null
-  if (!mine.length) {
+  if (!on) {
     body = !live ? <Note>Connect to use terminals here.</Note>
       : !listed?.listing && listed?.error ? <Note>{listed.error}</Note>
       : !listed?.listing ? <div className="grid h-full place-items-center"><Spinner /></div>
       : !listed.listing.has_tmux ? <Note>tmux is not installed on this cluster.</Note>
-      : here.length ? (
-        <div className="h-full overflow-y-auto border-t border-line">
-          {here.map((s) => (
-            <Line key={s.name} icon={<SessionIcon agent={s.agent} session={s.name} />} title={s.title}
-              sub={about(s, folder, home)} onClick={() => open(s)} />
-          ))}
-          <Line icon={<Plus size={16} className="shrink-0 text-dim" />} title="New terminal"
-            onClick={() => start(Boolean(node))} />
-        </div>
-      ) : (
+      : items.length ? <Note>Pick a terminal on the right, or start a new one with +.</Note>
+      : (
         <div className="flex h-full flex-col items-center justify-center gap-3">
           <span className="text-dim">Nothing running in {name}.</span>
           <Button size="sm" kind="primary" onClick={() => start(Boolean(node))}><Plus size={14} /> New terminal</Button>
@@ -101,60 +116,63 @@ export function TerminalPanel({ cluster, live, folder, name, home, sessions, hei
   }
 
   return (
-    <div ref={box} style={{ height, maxHeight: 'calc(100% - 140px)' }} className="relative flex shrink-0 flex-col border-t border-line bg-window">
+    <div ref={box} style={{ height, maxHeight: 'calc(100% - 140px)' }}
+      className="relative flex shrink-0 flex-col border-t border-line bg-window">
       <div onPointerDown={drag} role="separator" aria-orientation="horizontal" aria-label="Resize the terminal"
         className="absolute inset-x-0 -top-1 z-10 h-2 cursor-row-resize" />
       <div className="flex h-9 shrink-0 items-center gap-0.5 pr-1">
-        <div role="tablist" className="flex h-full min-w-0 flex-1 overflow-x-auto">
-          {!mine.length && <span className="flex items-center px-4 text-xs font-semibold tracking-wide text-dim
-            uppercase">{here.length ? `Running in ${name}` : 'Terminal'}</span>}
-          {mine.map((t) => {
-            const sel = t.key === on?.key
-            return (
-              <div key={t.key} role="tab" aria-selected={sel} title={t.session || t.title}
-                onClick={() => panel.pick(t.key)} onAuxClick={(e) => { if (e.button === 1) shut(t.key) }}
-                className={`group -mb-px flex h-9 max-w-[200px] shrink-0 cursor-pointer items-center gap-1.5 border-b-2
-                  pr-1 pl-3 text-sm ${sel ? 'border-accent font-semibold' : 'border-transparent text-dim hover:bg-hover hover:text-text'}`}>
-                <SessionIcon session={t.session} size={14} />
-                <span className={`truncate ${t.ended ? 'text-dim' : ''}`}>{t.title}</span>
-                <button type="button" aria-label={`Close ${t.title}`} title="Close (keeps running)"
-                  onClick={(e) => { e.stopPropagation(); shut(t.key) }}
-                  className={`grid size-5 shrink-0 place-items-center rounded hover:bg-hover ${sel ? ''
-                    : 'opacity-0 group-hover:opacity-100'}`}><X size={13} /></button>
-              </div>
-            )
-          })}
-        </div>
+        <span className="flex-1 truncate px-4 text-xs font-semibold tracking-wide text-dim uppercase">
+          {on ? on.title : 'Terminal'}</span>
         <IconButton icon={Plus} label={`New terminal in ${name}`} small disabled={!live}
           onClick={() => start(Boolean(node))} />
         <Running sessions={sessions} folder={folder} name={name} home={home} node={node} disabled={!live}
           openKeys={openKeys} cluster={cluster} onOpen={open} onNew={start} />
         <IconButton icon={X} label={`Hide (${TOGGLE_KEY})`} small onClick={onHide} />
       </div>
-      <div className="relative min-h-0 flex-1">
-        {mine.map((t) => <TerminalView key={t.key} tab={t} shown={t.key === on?.key} />)}
-        {body}
+      <div className="flex min-h-0 flex-1">
+        <div className="relative min-w-0 flex-1">
+          {mine.map((t) => <TerminalView key={t.key} tab={t} shown={t.key === on?.key} />)}
+          {body}
+        </div>
+        {items.length > 0 && (
+          <div role="tablist" aria-orientation="vertical" className="flex w-[220px] shrink-0 flex-col gap-0.5
+            overflow-y-auto border-l border-line p-1.5">
+            {items.map((it) => {
+              const sel = it.key === on?.key
+              return (
+                <div key={it.key} role="tab" aria-selected={sel} title={it.s ? about(it.s, folder, home) : it.title}
+                  onClick={() => pick(it)}
+                  className={`group flex h-8 shrink-0 cursor-pointer items-center gap-2 rounded-md pr-1 pl-2 text-sm ${
+                    sel ? 'bg-selected text-text' : 'text-dim hover:bg-hover hover:text-text'}`}>
+                  <SessionIcon agent={it.agent} session={it.session} size={14} />
+                  <span className={`min-w-0 flex-1 truncate ${it.tab?.ended ? 'line-through' : ''}`}>{it.title}</span>
+                  <span className="text-xs text-faint group-hover:hidden">{it.node || 'login'}</span>
+                  <button type="button" aria-label={`End ${it.title}`} title="End terminal"
+                    onClick={(e) => { e.stopPropagation(); end(it) }}
+                    className="hidden size-6 shrink-0 place-items-center rounded text-dim group-hover:grid
+                      hover:bg-hover hover:text-bad"><Trash2 size={14} /></button>
+                </div>
+              )
+            })}
+          </div>
+        )}
       </div>
+      {ending && (
+        <AlertDialog title={`End ${ending.title}?`} keep="Cancel" act="End terminal"
+          onClose={() => setEnding(null)} onAct={() => { const it = ending; setEnding(null); stop(it) }}>
+          <p>What is running in it stops, and its history is gone. Hiding the panel keeps it running instead.</p>
+        </AlertDialog>
+      )}
     </div>
   )
 }
 
+/** One row of the list: a running session of this folder, an open terminal, or both. */
+type Item = { key: string; title: string; session: string; node: string; kind: 'tmux' | 'screen'; agent: string
+  s?: TmuxSession; tab?: Tab }
+
 function Note({ children }: { children: ReactNode }) {
   return <p className="grid h-full place-items-center px-4 text-center text-dim">{children}</p>
-}
-
-function Line({ icon, title, sub, onClick }: { icon: ReactNode; title: string; sub?: string; onClick: () => void }) {
-  return (
-    <button type="button" onClick={onClick}
-      className="flex min-h-11 w-full items-center gap-3 border-b border-line px-4 py-1.5 text-left hover:bg-hover
-        active:bg-pressed">
-      {icon}
-      <span className="min-w-0 flex-1">
-        <span className="block truncate">{title}</span>
-        {sub && <span className="block truncate text-sm text-dim">{sub}</span>}
-      </span>
-    </button>
-  )
 }
 
 /** The ⌄ menu: the running terminals, this folder's first, and new ones on the node or the login node. */
