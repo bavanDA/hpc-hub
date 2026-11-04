@@ -6,6 +6,7 @@ import { useState } from 'react'
 import { shortName } from '../components/clusters/loginCopy'
 import { Confirm, EButton, EmptyState, SearchField } from '../components/e/extra'
 import { Segments } from '../components/e/ui'
+import { Select } from '../components/jobs/Select'
 import { CopyDialog } from '../components/projects/CopyDialog'
 import { useLive } from '../components/projects/live'
 import { ProjectDialog, type Mode } from '../components/projects/ProjectDialog'
@@ -23,6 +24,7 @@ import type { Project, ProjectList } from '../types/projects'
 
 type Open = { kind: 'edit'; mode: Mode; p?: Project } | { kind: 'copy' | 'remove' | 'open'; p: Project }
 const ALL = '*'
+const YOURS = ''  // projects in your own folders, no group's
 
 async function copyText(text: string) {
   try {
@@ -40,6 +42,7 @@ export function Projects() {
   const { data, error, loading, reload, setData } = useCall<ProjectList>('projects.list')
   const [query, setQuery] = useState('')
   const [where, setWhere] = useState(ALL)  // a cluster's id
+  const [group, setGroup] = useState(ALL)  // a group's name, or YOURS
   const [sort, setSort] = useState<Sort>({ key: 'opened', desc: true })
   const [open, setOpen] = useState<Open | null>(null)
   const toast = useToast()
@@ -73,9 +76,13 @@ export function Projects() {
   const words = query.toLowerCase().split(/\s+/).filter(Boolean)
   const places = data.clusters.filter((c) => data.projects.some((p) => p.cluster === c.id))
   const at = places.length > 1 && places.some((c) => c.id === where) ? where : ALL  // its last project went
+  const groups = [...new Set(data.projects.map((p) => p.group || YOURS))]
+    .sort((a, b) => (a === YOURS ? 1 : b === YOURS ? -1 : a.localeCompare(b)))
+  const inGroup = groups.length > 1 && groups.includes(group) ? group : ALL  // its last project went
   const shown = sortProjects(data.projects.filter((p) => {
-    const hay = `${p.name} ${p.path} ${p.cluster_name || p.cluster}`.toLowerCase()
-    return (at === ALL || p.cluster === at) && words.every((w) => hay.includes(w))
+    const hay = `${p.name} ${p.path} ${p.cluster_name || p.cluster} ${p.group}`.toLowerCase()
+    return (at === ALL || p.cluster === at) && (inGroup === ALL || (p.group || YOURS) === inGroup)
+      && words.every((w) => hay.includes(w))
   }), sort)
   const add = () => setOpen({ kind: 'edit', mode: 'add' })
   const create = () => setOpen({ kind: 'edit', mode: 'new' })
@@ -98,7 +105,9 @@ export function Projects() {
             <div className="flex flex-wrap items-center gap-2.5 pb-4">
               {places.length > 1 && <Segments fit label="Cluster" value={at} onChange={setWhere}
                 options={[[ALL, 'All'], ...places.map((c) => [c.id, shortName(c)] as const)]} />}
-              <div className="ml-auto w-[240px] min-w-[140px] shrink">
+              {groups.length > 1 && <div className="ml-auto"><Select label="Group" value={inGroup} onChange={setGroup}
+                options={[[ALL, 'Group: All'], ...groups.map((g) => [g, g === YOURS ? 'Yours' : g] as const)]} /></div>}
+              <div className={`${groups.length > 1 ? '' : 'ml-auto '}w-[240px] min-w-[140px] shrink`}>
                 <SearchField value={query} onChange={setQuery} placeholder="Search projects" />
               </div>
               <EButton icon={FolderOpen} onClick={add} title="Use a folder that is already on a cluster"
