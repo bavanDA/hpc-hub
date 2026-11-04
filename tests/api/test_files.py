@@ -69,6 +69,12 @@ def test_list_home_and_not_connected(h, tmp_path, monkeypatch):
         files.list_dir("sdsc", "")
 
 
+def test_real_path_follows_links(h, tmp_path):
+    (tmp_path / "mmfs1-scratch" / "myproject").mkdir(parents=True)
+    (tmp_path / "scratch").symlink_to(tmp_path / "mmfs1-scratch")
+    assert files.real_path("wulver", str(tmp_path / "scratch/myproject/")) == str(tmp_path / "mmfs1-scratch/myproject")
+
+
 def test_read_text_cut_binary_and_image(h, tmp_path):
     (tmp_path / "run.sh").write_text("écho hi\n" * 10)
     got = files.read("wulver", str(tmp_path / "run.sh"), limit=9)

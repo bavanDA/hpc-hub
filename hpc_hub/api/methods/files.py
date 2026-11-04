@@ -54,6 +54,15 @@ def places(cluster: str) -> list[dict]:
     return [asdict(p) for p in remote_fs.storage(remote_fs.places(_ssh(cluster)))]
 
 
+@method("files.real_path")
+def real_path(cluster: str, path: str) -> str:
+    """The folder with its links followed (Wulver's /scratch is /mmfs1/scratch), as tmux reports where a terminal
+    works; the path itself when it can't be resolved."""
+    s = hub().connected(cluster)
+    got = s.ssh.run(f"readlink -m -- {remote_fs.q(remote_fs.expand(s.ssh, path))}", timeout=30).stdout.strip()
+    return got.rstrip("/") or path
+
+
 @method("files.read")
 def read(cluster: str, path: str, limit: int = 0) -> dict:
     """Images and PDFs as base64 (whole, up to limit), anything else as UTF-8 text (cut at limit)."""

@@ -1,10 +1,11 @@
 // What the Code page's terminal panel keeps outside React, so it stays while you visit other pages: its tabs and the
 // one shown per cluster and folder, and the cluster's sessions with the ones working in the folder first.
-import { useSyncExternalStore } from 'react'
+import { useEffect, useState, useSyncExternalStore } from 'react'
 
 import { isMac } from '../../app/platform'
 import { sessionKind, type TmuxSession } from '../../../types/terminals'
 import { useListings, type Listed, type Live } from '../../terminals/data'
+import { call } from '../../../rpc'
 import { close } from '../../terminals/tabs'
 import { inside, tilde } from './workspace'
 
@@ -45,12 +46,24 @@ export function closeFolderTerminals(cluster: string, folder: string) {
 
 export type FolderSessions = { here: TmuxSession[]; others: TmuxSession[]; listed?: Listed; refresh: () => void }
 
-/** The cluster's sessions, the ones working in folder first. Looked at again every 15 seconds. */
+/** The folder with its links followed, as tmux reports a terminal's folder (/scratch is /mmfs1/scratch on Wulver). */
+function useRealPath(cluster: string, folder: string) {
+  const [real, setReal] = useState({ key: '', path: '' })
+  const key = `${cluster}:${folder}`
+  useEffect(() => {
+    if (!cluster || !folder) return
+    call<string>('files.real_path', { cluster, path: folder }).then((path) => setReal({ key, path })).catch(() => {})
+  }, [cluster, folder, key])
+  return real.key === key ? real.path : ''
+}
+
+/** The cluster's sessions, the ones working in folder (or its real path) first. Looked at again every 15 seconds. */
 export function useFolderSessions(live: Live | null, folder: string): FolderSessions {
   const { listings, refresh } = useListings(live ? [live] : [])
   const listed = live ? listings[live.id] : undefined
   const all = listed?.listing?.sessions ?? []
-  const here = all.filter((s) => s.kind === 'tmux' && inside(s.path, folder))
+  const real = useRealPath(live?.id ?? '', folder)
+  const here = all.filter((s) => s.kind === 'tmux' && (inside(s.path, folder) || (!!real && inside(s.path, real))))
   return { here, others: all.filter((s) => !here.includes(s)), listed, refresh }
 }
 
