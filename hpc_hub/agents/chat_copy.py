@@ -29,11 +29,18 @@ def _exists(ssh: SshMaster, path: str) -> bool:
     return ssh.run(f"test -e {shlex.quote(path)}", timeout=30).returncode == 0
 
 
+def real_path(ssh: SshMaster, path: str) -> str:
+    """The path with its links followed (Wulver's /scratch is /mmfs1/scratch), also where the folder isn't made yet:
+    Claude files a folder's chats under this one."""
+    got = ssh.run(f"readlink -m -- {shlex.quote(path)}", timeout=30).stdout.strip()
+    return got or path
+
+
 def copy(src: SshMaster, chat: Chat, dst: SshMaster, dest_folder: str, progress: transfer.Progress,
          on_update: Callable[[transfer.Progress], None] = lambda p: None) -> str:
     """Blocking. Returns the folder on dst the chat now belongs to."""
     src_home, dst_home = remote_fs.home(src), remote_fs.home(dst)
-    folder = remote_fs.expand(dst, dest_folder).rstrip("/")
+    folder = real_path(dst, remote_fs.expand(dst, dest_folder).rstrip("/")).rstrip("/")
     src_dir = posixpath.join(src_home, ".claude/projects", chat.dir or project_dir(chat.cwd))
     dst_dir = posixpath.join(dst_home, ".claude/projects", project_dir(folder))
     progress.total = progress.total or chat.size

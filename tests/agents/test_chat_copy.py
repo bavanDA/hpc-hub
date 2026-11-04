@@ -46,3 +46,19 @@ def test_copy_chat_with_its_files(tmp_path):
     assert (new / "abc/subagents/agent-1.jsonl").exists()
     assert (expanse / ".claude/file-history/abc/f1").read_text() == "old"
     assert not os.path.exists(new / "abc.jsonl.new")
+
+
+def test_copy_files_the_chat_under_the_real_folder(tmp_path):
+    """Wulver's /scratch is a link to /mmfs1/scratch: Claude looks the chat up under the real path."""
+    wulver = tmp_path / "w"
+    pdir = wulver / ".claude/projects/-s-myproj"
+    pdir.mkdir(parents=True)
+    (pdir / "abc.jsonl").write_text(json.dumps({"type": "user", "cwd": "/s/myproj"}) + "\n")
+    (tmp_path / "mmfs1-scratch").mkdir()
+    (tmp_path / "scratch").symlink_to(tmp_path / "mmfs1-scratch")
+    chat = chats.Chat("abc", "/s/myproj", "t", "", "", 0, 100, "-s-myproj")
+    folder = chat_copy.copy(HomeShell(wulver), chat, HomeShell(wulver), str(tmp_path / "scratch/groupB/myproj"),
+                            transfer.Progress())
+    assert folder == str(tmp_path / "mmfs1-scratch/groupB/myproj")
+    new = wulver / ".claude/projects" / chat_copy.project_dir(folder)
+    assert json.loads((new / "abc.jsonl").read_text())["cwd"] == folder
