@@ -1,10 +1,9 @@
 // The desktop PDF viewer with Read aloud: a player under the toolbar (voice, speed, play, 10 s back and forward,
 // stop, the clock), the spoken word marked on the page, a click on a word reads from there, and a right-click on
-// a word looks it up in a Dictionary panel beside the PDF. With no compute node it asks to get one first.
+// a word looks it up in a Dictionary panel beside the PDF. The voice runs on this computer, not on the cluster.
 import { BookOpen, Headphones, Loader2, Pause, Play, RotateCcw, RotateCw, Square, Volume2, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
-import { useAskForNode } from '../clusters/AskForNode'
 import { ContextMenu } from '../files/ContextMenu'
 import { Spinner } from '../ui'
 import { Pdf, type PdfProps, type WordPick } from './index'
@@ -22,8 +21,6 @@ const remembered = () => { try { return localStorage.getItem(READING) === '1' } 
 
 export function ReadablePdf({ source, extra, onSync, ...props }: PdfProps & { source?: Source }) {
   const reader = useReader(source)
-  const nodeFirst = useAskForNode()
-  const first = (run: () => void) => (source ? nodeFirst.guard(source.cluster, 'Read aloud', run) : run())
   const [open, setOpen] = useState(false)
   const [reading, setReading] = useState(remembered)
   const read = (on: boolean) => {
@@ -45,9 +42,9 @@ export function ReadablePdf({ source, extra, onSync, ...props }: PdfProps & { so
   useEffect(() => { setWord(null); setMenu(null) }, [source?.cluster, source?.path])
 
   const close = () => { reader.close(); setOpen(false) }
-  const readFrom = (w: WordPick) => first(() => { setOpen(true); reader.readFrom(w.spot) })
+  const readFrom = (w: WordPick) => { setOpen(true); reader.readFrom(w.spot) }
   const toggle = source && <Tool label="Read aloud" on={open} disabled={!props.data}
-    onClick={() => open ? close() : first(() => setOpen(true))}><Headphones size={16} /></Tool>
+    onClick={() => open ? close() : setOpen(true)}><Headphones size={16} /></Tool>
   const mode = onSync && <Tool label={reading ? 'Reading mode: double-click looks a word up' : 'Reading mode'}
     on={reading} disabled={!props.data} onClick={() => read(!reading)}><BookOpen size={16} /></Tool>
 
@@ -63,7 +60,6 @@ export function ReadablePdf({ source, extra, onSync, ...props }: PdfProps & { so
       {menu && <ContextMenu x={menu.x} y={menu.y} onClose={() => setMenu(null)} sections={[
         [{ label: `Look up "${menu.text}"`, onClick: () => setWord(menu) }],
         [{ label: 'Read from here', onClick: () => readFrom(menu) }]]} />}
-      {nodeFirst.dialog}
     </div>
   )
 }
