@@ -368,6 +368,11 @@ class AppSettings:
     select_to_copy: bool = True  # highlighting text in a terminal copies it
     monitor_bar: bool = True  # CPU, memory and network of the host under each terminal
     appearance: str = "system"  # system (follows the computer), light, dark or a named one
+    # the agent for a paper's Write message, Ask and Check my list (latex/assist.py): Fast is Claude Haiku, Low
+    paper_agent: str = "claude"
+    paper_model: str = "haiku"
+    paper_effort: str = "low"
+    paper_split: bool = True  # Write message may suggest several commits
 
 
 APPEARANCES = ("system", "light", "dark", "charcoal", "daylight", "frost", "dusk", "sand")
