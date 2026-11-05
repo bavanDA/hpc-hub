@@ -60,6 +60,7 @@ export function Project({ project, onClose }: { project: Opened; onClose: () => 
   const [dialog, setDialog] = useState<ReactNode>(null)
   const [cites, setCites] = useState<string[]>([])
   const [openIn, setOpenIn] = useState(false)
+  const [focused, setFocused] = useState(false)  // Just the PDF: this header, the files and the editor hide
   const editor = useRef<EditorHandle | null>(null)
   const text = useRef('')
   const docRef = useRef(doc)
@@ -308,14 +309,14 @@ export function Project({ project, onClose }: { project: Opened; onClose: () => 
     ? <Logs running={!!running} log={log} last={last} onGo={goIssue} onClose={() => setLogsOpen(false)}
         onStop={() => running && running !== 'starting' && call('latex.stop', { id: running })} />
     : <ReadablePdf data={pdf.data} source={source} memory={`latex:${cluster}:${main}`} onSync={fromPdf} target={target}
-        extra={logsButton}
+        extra={logsButton} focus={focused} onFocus={setFocused}
         loading={!pdf.none && !pdf.error} progress={progress}
         message={pdf.none ? <Empty title="No PDF yet" text="Press Recompile to build it on the cluster." />
           : pdf.error ? <Empty title="Could not read the PDF" text={pdf.error} /> : undefined} />
 
   return (
     <div className="flex h-full flex-col bg-window">
-      <div className="flex h-12 shrink-0 items-center gap-2 border-b border-line bg-window px-2">
+      <div className={`flex h-12 shrink-0 items-center gap-2 border-b border-line bg-window px-2 ${focused ? 'hidden' : ''}`}>
         <button onClick={() => { setShowTree(!showTree); remember('latex.tree', showTree ? '0' : '1') }}
           aria-label="Show or hide the files" title="Show or hide the files"
           className={`grid size-8 place-items-center rounded-md ${showTree ? 'bg-selected' : 'hover:bg-hover'}`}>
@@ -348,10 +349,10 @@ export function Project({ project, onClose }: { project: Opened; onClose: () => 
         </div>
       </div>
       <div className="flex min-h-0 flex-1">
-        {showTree && <div className="w-[236px] shrink-0 border-r border-line">
+        {showTree && !focused && <div className="w-[236px] shrink-0 border-r border-line">
           <FileTree id={`${cluster}:${folder}`} entries={tree} current={docRel} main={rel(folder, main)}
             actions={actions} /></div>}
-        <Split name="editor" show={view === 'split' ? 'both' : view === 'editor' ? 'left' : 'right'}
+        <Split name="editor" show={focused ? 'right' : view === 'split' ? 'both' : view === 'editor' ? 'left' : 'right'}
           left={editorPane} right={pdfPane} />
       </div>
       {dialog}

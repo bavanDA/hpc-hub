@@ -26,6 +26,8 @@ export type PdfProps = {
   onLookUp?: (w: WordPick) => void  // double-click on a word, where a double-click isn't SyncTeX (no onSync)
   bar?: ReactNode  // under the toolbar
   footer?: ReactNode  // under the pages
+  focus?: boolean  // Just the PDF: the toolbar hides (the parent hides its own bars too); left out, the viewer's own
+  onFocus?: (on: boolean) => void
 }
 
 const Viewer = lazy(() => import('./PdfViewer'))

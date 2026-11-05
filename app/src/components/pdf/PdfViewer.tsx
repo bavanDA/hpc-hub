@@ -4,10 +4,11 @@ import 'pdfjs-dist/web/pdf_viewer.css'
 import './pdf.css'
 
 import { ChevronDown, ChevronUp, Minus, Moon, Plus, Search, Sun, X } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 
 import { Spinner } from '../ui'
 import { engine, open } from './engine'
+import { FocusButton, FocusOverlay, useFocus, useFocusKeys, useNoJump } from './focus'
 import type { PdfProps, PdfTarget } from './index'
 import type { Spot } from './reader'
 import { Tool } from './tool'
@@ -32,7 +33,7 @@ function stored(key: string): boolean {
 }
 
 export default function PdfViewer({ data, memory, compact, zoom: start = 'page-width', loading, progress, message, onSync,
-  target, extra, reader, onWord, onLookUp, bar, footer }: PdfProps) {
+  target, extra, reader, onWord, onLookUp, bar, footer, focus, onFocus }: PdfProps) {
   const scroller = useRef<HTMLDivElement>(null)
   const inner = useRef<HTMLDivElement>(null)
   const live = useRef<Live | null>(null)
@@ -57,6 +58,21 @@ export default function PdfViewer({ data, memory, compact, zoom: start = 'page-w
   const [dark, setDark] = useState(() => stored('pdf.dark'))
   const [failed, setFailed] = useState('')
   const queryBox = useRef<HTMLInputElement>(null)
+  const [focused, setFocused] = useFocus(focus, onFocus)
+  const focusKey = useFocusKeys(focused, setFocused)
+  useNoJump(scroller, inner, focused)
+  const fit = useRef<string | null>(null)
+  useLayoutEffect(() => {  // the pane may widen (no files, no editor): keep the zoom, so the page stays put
+    const v = live.current?.viewer
+    if (!v?.pdfDocument) return
+    if (focused && ['page-width', 'page-fit', 'auto'].includes(v.currentScaleValue)) {
+      fit.current = v.currentScaleValue
+      v.currentScaleValue = String(v.currentScale)
+    } else if (!focused && fit.current) {
+      v.currentScaleValue = fit.current
+      fit.current = null
+    }
+  }, [focused])
 
   // -- the viewer, made once ---------------------------------------------------------------
   useEffect(() => {
@@ -296,6 +312,7 @@ export default function PdfViewer({ data, memory, compact, zoom: start = 'page-w
     else if (mod && (e.key === '=' || e.key === '+')) { e.preventDefault(); live.current?.viewer.increaseScale() }
     else if (mod && e.key === '-') { e.preventDefault(); live.current?.viewer.decreaseScale() }
     else if (e.key === 'Escape' && searching) closeSearch()
+    else if (!compact && has) focusKey(e)
   }
 
   const zoom = (value: string) => { if (live.current?.doc) live.current.viewer.currentScaleValue = value }
@@ -313,7 +330,8 @@ export default function PdfViewer({ data, memory, compact, zoom: start = 'page-w
   const preset = ZOOMS.some(([v]) => v === scale.value)
   return (
     <div className="flex h-full min-w-0 flex-col bg-view" onKeyDown={keys}>
-      <div className="flex h-10 shrink-0 items-center gap-1 border-b border-line bg-header px-1.5 text-sm pointer-coarse:h-14 pointer-coarse:overflow-x-auto">
+      <div className={`flex h-10 shrink-0 items-center gap-1 border-b border-line bg-header px-1.5 text-sm pointer-coarse:h-14 pointer-coarse:overflow-x-auto ${
+        focused ? 'hidden' : ''}`}>
         <div className="flex items-center gap-1 px-1 tabular-nums text-dim">
           <input value={pageText} disabled={!has} aria-label="Page"
             onChange={(e) => setPageText(e.target.value.replace(/\D/g, ''))}
@@ -338,8 +356,9 @@ export default function PdfViewer({ data, memory, compact, zoom: start = 'page-w
         {!compact && <Tool label={dark ? 'Light pages' : 'Dark pages'} on={dark} onClick={toggleDark}>
           {dark ? <Sun size={16} /> : <Moon size={16} />}</Tool>}
         {extra}
+        {!compact && <FocusButton onClick={() => has && setFocused(true)} />}
       </div>
-      {bar}
+      {!focused && bar}
       <div className="relative min-h-0 flex-1">
         <div ref={scroller} tabIndex={0}
           className={`pdf-scroll ${dark ? 'pdf-dark' : ''} ${compact ? 'pdf-compact' : ''} ${onWord ? 'pdf-hold' : ''} ${
@@ -364,6 +383,7 @@ export default function PdfViewer({ data, memory, compact, zoom: start = 'page-w
             <Tool label="Close" onClick={closeSearch}><X size={16} /></Tool>
           </div>
         )}
+        {focused && <FocusOverlay what="Just the PDF" page={page} pages={pages} onExit={() => setFocused(false)} />}
         {!has && (
           <div className="absolute inset-0 grid place-items-center p-6 text-center">
             {message ?? (failed ? <p className="text-sm text-bad">Could not open the PDF: {failed}</p>
@@ -375,7 +395,7 @@ export default function PdfViewer({ data, memory, compact, zoom: start = 'page-w
           </div>
         )}
       </div>
-      {footer}
+      {!focused && footer}
     </div>
   )
 }
