@@ -28,6 +28,7 @@ CHANNEL = "hpc-hub-channel"  # argv(tty=True) of a login no local ssh can ride: 
 
 REFUSED = "Session open refused by peer"
 REFUSED_WAITS = (0.5, 1.5, 3)
+PLAIN_SESSIONS = 4  # plain ssh commands at once: with the fast shells and terminals, under the server's MaxSessions
 
 
 class SshError(Exception):
@@ -46,6 +47,7 @@ class SshMaster:
         self._idle: list[FastShell] = []
         self._shells = 0
         self._shell_lock = threading.Lock()
+        self._plain = threading.BoundedSemaphore(PLAIN_SESSIONS)
         self._fast_off_until = 0.0  # after a failed start, use plain ssh for a while
         self._node_shells: dict[str, tuple[FastShell | None, threading.Lock]] = {}  # job id -> shell on its node
 
@@ -126,10 +128,11 @@ class SshMaster:
 
     def _run_plain(self, command: str, timeout: float) -> subprocess.CompletedProcess:
         for wait in (*REFUSED_WAITS, None):
-            res = subprocess.run(
-                self.argv(command), capture_output=True, text=True, timeout=timeout,
-                stdin=subprocess.DEVNULL,
-            )
+            with self._plain:  # a burst (History opening) waits here instead of being refused by the server
+                res = subprocess.run(
+                    self.argv(command), capture_output=True, text=True, timeout=timeout,
+                    stdin=subprocess.DEVNULL,
+                )
             # the server's limit of sessions on one connection (MaxSessions): nothing ran, so wait for a free one
             if wait is None or REFUSED not in res.stderr:
                 return res
