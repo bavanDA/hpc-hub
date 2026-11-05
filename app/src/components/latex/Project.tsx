@@ -21,10 +21,11 @@ import { BuildButton } from './BuildButton'
 import type { EditorHandle } from './CodeEditor'
 import { FileTree, type TreeActions } from './FileTree'
 import { GitMenu } from './Git'
+import { useHistoryTab } from './history/useHistoryTab'
 import { counts, Logs } from './Logs'
 
 const CodeEditor = lazy(() => import('./CodeEditor'))
-type View = 'editor' | 'split' | 'pdf' | 'reader'
+type View = 'editor' | 'split' | 'pdf' | 'reader' | 'history'
 type Doc = { path: string; text: string; version: number; line?: number }
 type PdfState = { data: Uint8Array | null; path?: string; none?: boolean; error?: string }
 
@@ -250,6 +251,15 @@ export function Project({ project, onClose }: { project: Opened; onClose: () => 
     refresh,
   }
 
+  // The History tab (why each change happened, in the LaTeX and the PDF), Who changed it, and safe Push and Pull
+  const inHistory = view === 'history'
+  const history = useHistoryTab({ where, clusterName: project.cluster_name, main, pdf: pdf.data, docPath: doc?.path ?? null,
+    docVersion: doc?.version ?? 0, dirty, active: inHistory, save, build, toPdf,
+    show: (on) => setView(on ? 'history' : 'split'),
+    guard: (what, run) => settings.on_node ? nodeFirst.guard(cluster, what, run) : run(),
+    reload: () => { refresh(); loadPdf(); const d = docRef.current; if (d) load(d.path, editor.current?.line()) },
+    goTo: (path, line) => { void switchTo(path, line) } })
+
   // Ctrl+S, Ctrl+Enter and Ctrl+J also work outside the editor
   const keys = useRef({ saveNow, build, toPdf })
   keys.current = { saveNow, build, toPdf }
@@ -278,6 +288,7 @@ export function Project({ project, onClose }: { project: Opened; onClose: () => 
         <span className="truncate font-semibold" title={doc?.path}>{docRel || basename(main)}</span>
         {dirty && <span className="size-2 shrink-0 rounded-full bg-accent" title="Not saved yet" />}
         <span className="flex-1" />
+        {history.blameButton}
         <button onClick={() => editor.current && toPdf(editor.current.line())} title="Show this line in the PDF (Ctrl+J)"
           className="flex h-7 items-center gap-1 rounded-md px-2 text-dim hover:bg-hover hover:text-text">
           To PDF <ArrowRight size={14} /></button>
@@ -289,7 +300,7 @@ export function Project({ project, onClose }: { project: Opened; onClose: () => 
               <CodeEditor key={`${doc.path}:${doc.version}`} path={doc.path} version={doc.version} text={doc.text}
                 line={doc.line} issues={fileIssues} words={{ labels, cites }} handle={editor}
                 onChange={(t) => { text.current = t; if (!dirty) setDirty(true) }}
-                onSave={saveNow} onBuild={build} onToPdf={toPdf} />
+                onSave={saveNow} onBuild={build} onToPdf={toPdf} extensions={history.extensions} />
             </Suspense>}
       </div>
     </div>
@@ -336,12 +347,13 @@ export function Project({ project, onClose }: { project: Opened; onClose: () => 
                   ? 'bg-accent font-semibold text-on-accent' : 'text-dim hover:bg-hover hover:text-text'}`}>
                 <I size={14} /> {label}</button>
             ))}
+          {history.tab}
         </div>
         <div className="flex flex-1 items-center justify-end gap-1.5">
           <BuildButton cluster={cluster} clusterName={project.cluster_name} running={!!running} settings={settings}
             onSettings={setSettings} auto={auto} onAuto={(on) => { setAuto(on); remember('latex.auto', on ? '1' : '0') }}
             onBuild={build} />
-          <GitMenu where={where} before={save} onPulled={() => { refresh(); if (doc) load(doc.path,
+          <GitMenu where={where} before={save} safe={history} onPulled={() => { refresh(); if (doc) load(doc.path,
             editor.current?.line()) }} />
           <button onClick={() => setOpenIn(true)} title="Open the folder in Code, VS Code, an agent and more"
             className="flex h-8 items-center gap-1.5 rounded-md px-2.5 text-sm font-semibold hover:bg-hover">
@@ -350,15 +362,17 @@ export function Project({ project, onClose }: { project: Opened; onClose: () => 
             title="Close project" className="grid size-8 place-items-center rounded-md hover:bg-hover"><X size={16} /></button>
         </div>
       </div>
-      <div className="flex min-h-0 flex-1">
+      <div className={`flex min-h-0 flex-1 ${inHistory ? 'hidden' : ''}`}>
         {showTree && !focused && <div className="w-[236px] shrink-0 border-r border-line">
           <FileTree id={`${cluster}:${folder}`} entries={tree} current={docRel} main={rel(folder, main)}
             actions={actions} /></div>}
         <Split name="editor" show={focused ? 'right' : view === 'split' ? 'both' : view === 'editor' ? 'left' : 'right'}
           left={editorPane} right={pdfPane} />
       </div>
+      {history.pane}
       {dialog}
       {nodeFirst.dialog}
+      {history.overlay}
       {openIn && <OpenDialog name={project.name} cluster={cluster} clusterName={project.cluster_name} folder={folder}
         onClose={() => setOpenIn(false)} />}
     </div>

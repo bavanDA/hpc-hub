@@ -1,5 +1,5 @@
 // Git for a LaTeX project: the Pull and Push menu, and the dialog with changes, commit, remotes and history.
-import { ArrowDown, ArrowUp, ChevronRight, Copy, GitBranch, GitCommitHorizontal } from 'lucide-react'
+import { ArrowDown, ArrowUp, ChevronRight, Copy, GitBranch, GitCommitHorizontal, History } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 
 import { call } from '../../rpc'
@@ -11,9 +11,13 @@ import { MenuButton, Popover } from './bits'
 type Where = { cluster: string; folder: string }
 const lastLine = (s: string) => s.trim().split('\n').pop() ?? s
 
-/** The Git button: Pull, Push, and the dialog. before() saves the open file first. */
-export function GitMenu({ where, before, onPulled }: { where: Where; before: () => Promise<boolean>;
-  onPulled: () => void }) {
+/** History's safe ways: Push and Get the latest always pull first, in the History tab. */
+export type SafeGit = { push: () => void; pull: () => void; timeline: () => void }
+
+/** The Git button: Pull, Push, and the dialog. before() saves the open file first. With safe, Pull and Push go
+ * through the History tab (pull first, settle any spot, then push). */
+export function GitMenu({ where, before, onPulled, safe }: { where: Where; before: () => Promise<boolean>;
+  onPulled: () => void; safe?: SafeGit }) {
   const toast = useToast()
   const [busy, setBusy] = useState('')
   const [dialog, setDialog] = useState(false)
@@ -36,10 +40,12 @@ export function GitMenu({ where, before, onPulled }: { where: Where; before: () 
           {busy ? <Spinner size={14} /> : <GitBranch size={16} />} Git</button>
       )}>
         {(close) => <>
-          <MenuButton icon={<ArrowDown size={16} />} label="Pull" hint="from the remote" disabled={!!busy}
-            onClick={() => { close(); run('pull') }} />
-          <MenuButton icon={<ArrowUp size={16} />} label="Push" hint="to the remote" disabled={!!busy}
-            onClick={() => { close(); run('push') }} />
+          <MenuButton icon={<ArrowDown size={16} />} label={safe ? 'Get the latest' : 'Pull'} hint="from the remote"
+            disabled={!!busy} onClick={() => { close(); if (safe) safe.pull(); else run('pull') }} />
+          <MenuButton icon={<ArrowUp size={16} />} label="Push" hint={safe ? 'pulls first' : 'to the remote'}
+            disabled={!!busy} onClick={() => { close(); if (safe) safe.push(); else run('push') }} />
+          {safe && <MenuButton icon={<History size={16} />} label="Timeline" hint="compare any two"
+            onClick={() => { close(); safe.timeline() }} />}
           <div className="my-1 border-t border-line" />
           <MenuButton icon={<GitCommitHorizontal size={16} />} label="Commit, history and remote…"
             onClick={() => { close(); setDialog(true) }} />
