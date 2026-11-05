@@ -2,26 +2,31 @@
 // committed yet on top), the picked commit, two versions compared, a saved version or a push on the right, and the
 // branch bar under the list. Git runs over the connection to the cluster; only PDFs of other versions are builds.
 import { Check, Copy, GitCompareArrows, History as HistoryIcon, MoreHorizontal, Pencil, RotateCcw, Search, Undo2,
-  ArrowUp, ArrowLeftRight, ArrowRight, Circle } from 'lucide-react'
+  ArrowUp, ArrowLeftRight, ArrowRight, Circle, MessageCircleQuestion, StickyNote } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 
 import { call } from '../../../rpc'
-import type { Changes, GitJob, GitState, HCommit, Lanes, Pick, Refs, SavedSetting, SavedVersion, SwitchCheck,
+import type { About, Changes, GitJob, GitState, HCommit, Lanes, Pick, Refs, SavedSetting, SavedVersion, SwitchCheck,
   SwitchDone, SyncDone, SyncState } from '../../../types/history'
 import { useToast } from '../../toast'
 import { Button, Spinner } from '../../ui'
+import { AgentChip } from './Agent'
+import { AskBox, Thread, type Go } from './Ask'
 import { Avatar, Counts, fileName, fullDate, git, lastLine, plural, Segments, shortHash, useJob, useSeconds,
   when, type Where } from './bits'
 import { BranchBar, SwitchDialog, SwitchingCard } from './Branches'
 import { CommitList, type Sel } from './CommitList'
-import { DiffView, type Layout, type PutBack } from './DiffView'
+import { DiffView, type Asking, type Layout, type PutBack } from './DiffView'
+import { isLine, NotesPanel, type Spot } from './Notes'
 import { PdfView } from './PdfView'
 import { PushView } from './Push'
 import { SavedSettings, VersionPicker } from './Pickers'
 import { Timeline } from './Timeline'
+import type { Assist } from './useAssist'
+import { DraftCard, WriteButton } from './Write'
 
 /** Asks from outside the tab: the Git menu's Push or Get the latest, the timeline, Open in History from a line. */
-export type HistoryAsk = { kind: 'push' | 'pull' | 'timeline' | 'commit' | 'now'; hash?: string; n: number }
+export type HistoryAsk = { kind: 'push' | 'pull' | 'timeline' | 'commit' | 'now' | 'notes'; hash?: string; n: number }
 
 type Props = {
   where: Where
@@ -36,13 +41,15 @@ type Props = {
   onPause: (paused: boolean) => void  // editing waits while git changes the files
   onOpen: (path: string, line: number) => void  // a file and line in the Editor
   onSave: () => Promise<boolean>
-  messageTools?: ReactNode  // next to the commit message box (later: Write message)
+  assist: Assist  // the agent's help and the notes (useAssist)
+  go: Go  // a cited line or page
+  onSpot: (s: Spot) => void  // the floating card: ask about a spot in the PDF, or note it
 }
 
 type Run = { id: string; push: boolean; error: string }
 
 export function History({ where, clusterName, main, pdf, active, ask, guard, onBuild, onFiles, onPause, onOpen, onSave,
-  messageTools }: Props) {
+  assist, go, onSpot }: Props) {
   const toast = useToast()
   const [state, setState] = useState<GitState | null>(null)
   const [commits, setCommits] = useState<HCommit[]>([])
@@ -66,6 +73,10 @@ export function History({ where, clusterName, main, pdf, active, ask, guard, onB
   const [settling, setSettling] = useState(false)
   const before = useRef<HCommit[]>([])  // the commits before a push or Get the latest, to mark what came in
   const first = useRef(true)
+  // notes
+  const [notesOpen, setNotesOpenState] = useState(() => remembered<string>('history.notes', '0') === '1')
+  const [notesFocus, setNotesFocus] = useState('')
+  const setNotesOpen = (on: boolean) => { setNotesOpenState(on); remember('history.notes', on ? '1' : '0') }
 
   const refresh = useCallback(async () => {
     try {
@@ -100,6 +111,21 @@ export function History({ where, clusterName, main, pdf, active, ask, guard, onB
       return true
     } catch (e) {
       toast(`Could not commit: ${lastLine((e as Error).message)}`, { kind: 'error' })
+      return false
+    }
+  }
+
+  const commitSplit = async (parts: { message: string; files: string[] }[], push: boolean) => {
+    if (!(await onSave())) return false
+    try {
+      const r = await git<{ commits: number }>('commit_split', where, { commits: parts })
+      toast(`Made ${plural(r.commits, 'commit')}`)
+      await refresh()
+      if (push) void startSync(true)
+      return true
+    } catch (e) {
+      toast(`Could not commit: ${lastLine((e as Error).message)}`, { kind: 'error' })
+      await refresh()
       return false
     }
   }
@@ -266,8 +292,9 @@ export function History({ where, clusterName, main, pdf, active, ask, guard, onB
   }
 
   // -- asks from outside ------------------------------------------------------------------------------------------
-  const handlers = useRef({ startSync, openTimeline, setSel })
-  handlers.current = { startSync, openTimeline, setSel }
+  const showNote = (id: string) => { setNotesOpenState(true); setNotesFocus(id) }
+  const handlers = useRef({ startSync, openTimeline, setSel, showNote })
+  handlers.current = { startSync, openTimeline, setSel, showNote }
   const lastAsk = useRef(0)
   const root = state?.root
   useEffect(() => {
@@ -278,6 +305,7 @@ export function History({ where, clusterName, main, pdf, active, ask, guard, onB
     else if (ask.kind === 'timeline') h.openTimeline()
     else if (ask.kind === 'commit' && ask.hash) h.setSel({ kind: 'commit', hash: ask.hash })
     else if (ask.kind === 'now') h.setSel({ kind: 'now' })
+    else if (ask.kind === 'notes') h.showNote(ask.hash ?? '')
   }, [ask, root])
 
   if (error) return <Center><p className="text-bad">{error}</p><Button size="sm" onClick={refresh}>Try again</Button></Center>
@@ -289,6 +317,7 @@ export function History({ where, clusterName, main, pdf, active, ask, guard, onB
         for example after cloning it from GitHub or GitLab.</p></Center>
   }
   const selCommit = sel.kind === 'commit' ? commits.find((c) => c.hash === sel.hash) ?? null : null
+  const openNotes = assist.notes?.notes.filter((n) => !n.done).length ?? 0
   const start = selCommit?.hash ?? state.head
   const busy = switching ? { label: `Switching to ${switching.target}` }
     : run && !paused && !run.error ? { label: run.push ? 'Pushing' : 'Getting the latest' }
@@ -310,6 +339,12 @@ export function History({ where, clusterName, main, pdf, active, ask, guard, onB
               from: selCommit?.parents[0] ?? commits[0]?.hash ?? '', to: selCommit?.hash ?? '' })}
               className="flex h-9 items-center gap-1.5 rounded-lg bg-pill px-3 text-sm font-semibold hover:bg-pressed">
               <GitCompareArrows size={15} /> Compare</button>
+            <button onClick={() => setNotesOpen(!notesOpen)} aria-pressed={notesOpen} title="Notes: comments and to-dos"
+              className={`relative grid size-9 shrink-0 place-items-center rounded-lg ${notesOpen ? 'bg-selected'
+                : 'bg-pill hover:bg-pressed'}`}>
+              <StickyNote size={16} />
+              {openNotes > 0 && <span className="note-pin absolute -top-1 -right-1 grid h-4 min-w-4 place-items-center
+                rounded-full px-1 text-[10px] font-semibold">{openNotes}</span>}</button>
             <button onClick={() => setSettings(!settings)} aria-label="Saved versions" title="Saved versions"
               className={`grid size-9 place-items-center rounded-lg ${settings ? 'bg-selected' : 'bg-pill hover:bg-pressed'}`}>
               <MoreHorizontal size={16} /></button>
@@ -322,7 +357,9 @@ export function History({ where, clusterName, main, pdf, active, ask, guard, onB
           <CommitList state={state} commits={commits} saved={saved} sel={sel} query={query} pulled={pulled}
             aside={paused ? paused.changes : 0} onSelect={select} />
           <BranchBar where={where} state={state} busy={busy} start={start} onSwitch={askSwitch} onNewBranch={newBranch}
-            onCompareBranch={compareBranch} onLatest={() => void startSync(false)} onPush={() => void startSync(true)} />
+            onCompareBranch={compareBranch} onLatest={() => void startSync(false)} onPush={() => void startSync(true)}
+            extra={<AgentChip choice={assist.choice} clusterName={clusterName} installed={assist.installed}
+              onOpen={assist.loadInstalled} onChoose={(c) => void assist.choose(c)} />} />
         </div>
         <div className={`relative flex min-w-0 flex-1 flex-col ${switching ? 'pointer-events-none opacity-60' : ''}`}>
           {sel.kind === 'sync' ? (
@@ -331,11 +368,15 @@ export function History({ where, clusterName, main, pdf, active, ask, guard, onB
               onContinue={settle} onRetry={() => void startSync(run?.push ?? true)}
               onOpen={(p, l) => onOpen(`${state.root}/${p}`, l)} />
           ) : (
-            <Detail key={JSON.stringify(sel)} sel={sel} where={where} state={state} commits={commits} saved={saved} refs={refs}
+            <Detail key={JSON.stringify(sel) + (sel.kind === 'now' ? state.head : '')} sel={sel} where={where} state={state} commits={commits} saved={saved} refs={refs}
               clusterName={clusterName} main={main} pdf={pdf} guard={guard} onOpen={onOpen} onFiles={onFiles}
-              onRefresh={refresh} onSel={setSel} onPickInList={setPicking} onCommit={commit} messageTools={messageTools} />
+              onRefresh={refresh} onSel={setSel} onPickInList={setPicking} onCommit={commit} onCommitSplit={commitSplit}
+              assist={assist} go={go} onSpot={onSpot} onPin={showNote} />
           )}
         </div>
+        {notesOpen && <NotesPanel assist={assist} focus={notesFocus} onClose={() => setNotesOpen(false)}
+          go={{ ...go, place: (p) => 'path' in p ? go.line(p.path, p.line) : 'page' in p ? go.page(p.page)
+            : setSel({ kind: 'commit', hash: commits.find((c) => c.hash.startsWith(p.hash))?.hash ?? p.hash }) }} />}
       </div>
       {switching && <SwitchingCard target={switching.target} steps={switchJob?.steps ?? []} expected={switching.expected}
         brought={switching.brought} seconds={seconds} />}
@@ -368,8 +409,14 @@ type DetailProps = {
   onSel: (s: Sel) => void
   onPickInList: (side: 'from' | 'to') => void
   onCommit: (message: string, push: boolean) => Promise<boolean>
-  messageTools?: ReactNode
+  onCommitSplit: (commits: { message: string; files: string[] }[], push: boolean) => Promise<boolean>
+  assist: Assist
+  go: Go
+  onSpot: (s: Spot) => void
+  onPin: (id: string) => void
 }
+
+type AskOpen = { anchor: string; about: About; title: string }
 
 function remembered<T extends string>(key: string, fallback: T): T {
   try { return (localStorage.getItem(key) as T) || fallback } catch { return fallback }
@@ -384,6 +431,7 @@ function Detail(p: DetailProps) {
   const [changes, setChanges] = useState<Changes | null>(null)
   const [failed, setFailed] = useState('')
   const [more, setMore] = useState(false)
+  const [asking, setAsking] = useState<AskOpen | null>(null)
   const setPane = (v: 'latex' | 'pdf') => { setPaneState(v); remember('history.pane', v) }
   const setLayout = (v: Layout) => { setLayoutState(v); remember('history.layout', v) }
   const commit = sel.kind === 'commit' ? commits.find((c) => c.hash === sel.hash) ?? null : null
@@ -407,12 +455,52 @@ function Detail(p: DetailProps) {
     } catch (e) { toast(lastLine((e as Error).message), { kind: 'error' }) }
   }
   const pdfFrom = sel.kind === 'now' ? state.head : from
+  // asks: threads under the header ("top") or under a row of the diff, for this selection
+  const { assist } = p
+  const scope = sel.kind === 'commit' ? `c:${sel.hash}` : sel.kind === 'compare' ? `r:${sel.from}..${sel.to}`
+    : sel.kind === 'saved' ? `s:${sel.hash}` : 'now'
+  const at = sel.kind === 'commit' ? sel.hash : sel.kind === 'compare' ? sel.to : ''
+  const under = (anchor: string): ReactNode => {
+    const jobs = assist.jobs.filter((j) => j.kind === 'ask' && j.ask?.scope === scope && j.ask.anchor === anchor)
+    const open = asking?.anchor === anchor ? asking : null
+    if (!jobs.length && !open) return null
+    const here = anchor.split('#')[0]
+    const wide = anchor === 'top' ? 'mx-6 my-2' : undefined
+    return <>
+      {jobs.map((j) => <Thread key={j.id} job={j} go={p.go} here={here} className={wide}
+        onNote={(t) => void assist.addNote(t, j.ask?.about.kind === 'lines' ? { path: j.ask.about.path, line: j.ask.about.line }
+          : j.ask?.about.kind === 'commit' ? { hash: j.ask.about.hash } : null)}
+        onMore={() => j.ask && setAsking({ anchor, about: j.ask.about, title: j.ask.title })}
+        onCancel={() => assist.cancel(j.id)} onClose={() => assist.forget(j.id)} />)}
+      {open && <AskBox key={open.title} title={open.title} choice={assist.choice} className={wide}
+        onClose={() => setAsking(null)} onAsk={(question, pick) => {
+          assist.ask({ question, about: open.about, scope, anchor, title: open.title }, pick ?? undefined)
+          setAsking(null)
+        }} />}
+    </>
+  }
+  const top = under('top')
+  const pinsOf = (path: string, n: number) => (assist.notes?.notes ?? [])
+    .filter((x) => isLine(x.place) && x.place.path === path && x.place.line === n).map((x) => ({ n: x.n, done: x.done }))
+  const quote = (t: string) => t.length > 40 ? `${t.slice(0, 18)} ... ${t.slice(-14)}` : t
+  const asks: Asking = {
+    onAsk: (t) => setAsking({ anchor: t.anchor, about: { kind: 'lines', path: t.path, line: t.line, end: t.end, at,
+      text: t.text, diff: t.diff || undefined }, title: t.text ? `the selected text "${quote(t.text)}"`
+      : t.line === t.end ? `line ${t.line}` : `lines ${t.line} to ${t.end}` }),
+    onNote: (t) => p.onSpot({ id: `note-${Date.now()}`, mode: 'note', title: `${fileName(t.path)}, line ${t.line}`,
+      about: { kind: 'lines', path: t.path, line: t.line, end: t.end }, place: { path: t.path, line: t.line } }),
+    under, pins: pinsOf,
+  }
+  const askHead = (about: About, title: string) => () => setAsking({ anchor: 'top', about, title })
+
   const body = sel.kind === 'commit' && !commit ? null : failed ? <p className="px-6 py-10 text-center text-bad">{failed}</p>
     : !changes ? <div className="grid flex-1 place-items-center"><Spinner size={22} /></div>
     : pane === 'pdf' ? <PdfView where={where} main={p.main} root={state.root} clusterName={p.clusterName} current={p.pdf}
         from={pdfFrom} to={to} changes={changes} guard={(run) => p.guard('The PDF build', run)}
-        onSource={(path, line) => p.onOpen(path, line)} />
+        onSource={(path, line) => p.onOpen(path, line)} notes={assist.notes?.notes ?? []} onPin={p.onPin}
+        onSpot={p.onSpot} />
     : <DiffView changes={changes} layout={layout} onLayout={setLayout} onMore={more ? undefined : () => setMore(true)}
+        asking={sel.kind === 'saved' ? undefined : asks}
         onOpen={(path, line) => p.onOpen(abs(path), line)} note={sel.kind === 'now' ? 'Build files are left out' : undefined}
         onPutBack={sel.kind === 'saved' ? putBack : undefined}
         sides={sel.kind === 'commit' && commit ? [<><HistoryIcon size={13} /> Before
@@ -424,18 +512,29 @@ function Detail(p: DetailProps) {
   const switcher = <Segments value={pane} onChange={setPane} options={[['latex', 'LaTeX'], ['pdf', 'PDF']]} />
   return (
     <>
-      {sel.kind === 'commit' && commit && <CommitHead commit={commit} switcher={switcher} />}
+      {sel.kind === 'commit' && commit && <CommitHead commit={commit} switcher={switcher}
+        onAsk={askHead({ kind: 'commit', hash: commit.hash }, `commit ${commit.short}`)} />}
       {sel.kind === 'commit' && !commit && <div className="p-6 text-dim">That commit is not in the last 300.</div>}
-      {sel.kind === 'now' && <NowHead state={state} switcher={switcher} onCommit={p.onCommit} tools={p.messageTools} />}
-      {sel.kind === 'compare' && <CompareHead {...p} from={sel.from} to={sel.to} changes={changes} switcher={switcher} />}
+      {sel.kind === 'now' && <NowHead {...p} switcher={switcher} />}
+      {sel.kind === 'compare' && <CompareHead {...p} from={sel.from} to={sel.to} changes={changes} switcher={switcher}
+        onAsk={askHead({ kind: 'range', frm: sel.from, to: sel.to }, sel.to ? `the changes from ${shortHash(sel.from)} to ${
+          shortHash(sel.to)}` : `the changes since ${shortHash(sel.from)}`)} />}
       {sel.kind === 'saved' && version && <SavedHead {...p} version={version} changes={changes} switcher={switcher}
         onRestored={() => { p.onFiles(); void p.onRefresh().then(() => p.onSel({ kind: 'now' })) }} />}
+      {sel.kind !== 'saved' && top && <div className="shrink-0 border-b border-line py-1">{top}</div>}
       {body}
     </>
   )
 }
 
-function CommitHead({ commit, switcher }: { commit: HCommit; switcher: ReactNode }) {
+function AskButton({ onClick, label }: { onClick: () => void; label: string }) {
+  return (
+    <button onClick={onClick} className="flex h-8 shrink-0 items-center gap-1.5 rounded-md bg-pill px-2.5 text-sm font-semibold
+      hover:bg-pressed"><MessageCircleQuestion size={14} /> {label}</button>
+  )
+}
+
+function CommitHead({ commit, switcher, onAsk }: { commit: HCommit; switcher: ReactNode; onAsk: () => void }) {
   const toast = useToast()
   const lines = commit.added + commit.removed
   return (
@@ -445,6 +544,7 @@ function CommitHead({ commit, switcher }: { commit: HCommit; switcher: ReactNode
           <h2 className="text-xl font-semibold select-text">{commit.subject}</h2>
           {commit.body && <p className="mt-1 max-w-[760px] whitespace-pre-line text-dim select-text">{commit.body}</p>}
         </div>
+        <AskButton onClick={onAsk} label="Ask about this commit" />
         {switcher}
       </div>
       <div className="mt-2.5 flex flex-wrap items-center gap-2 text-sm text-dim">
@@ -462,8 +562,8 @@ function CommitHead({ commit, switcher }: { commit: HCommit; switcher: ReactNode
   )
 }
 
-function NowHead({ state, switcher, onCommit, tools }:
-  { state: GitState; switcher: ReactNode; onCommit: (m: string, push: boolean) => Promise<boolean>; tools?: ReactNode }) {
+function NowHead({ state, switcher, onCommit, onCommitSplit, assist, saved, commits }:
+  DetailProps & { switcher: ReactNode }) {
   const [message, setMessage] = useState('')
   const [busy, setBusy] = useState<'' | 'commit' | 'push'>('')
   const go = async (push: boolean) => {
@@ -473,6 +573,7 @@ function NowHead({ state, switcher, onCommit, tools }:
     setBusy('')
   }
   const none = !state.changes.length
+  const draft = assist.draft?.result.head === state.head ? assist.draft : null  // written for an older commit: gone
   return (
     <div className="shrink-0 border-b border-line px-6 pt-4 pb-3">
       <div className="flex items-center gap-3">
@@ -484,14 +585,16 @@ function NowHead({ state, switcher, onCommit, tools }:
       <p className="mt-1 text-dim">{none ? 'Nothing changed since your last commit.' : <>Your changes since <code
         className="rounded bg-pill px-1.5 font-mono text-sm">{shortHash(state.head)}</code>{state.saved_at
         ? `, saved ${when(state.saved_at)}` : ''}. Co-authors see them after you commit and push.</>}</p>
-      {!none && (
-        <div className="mt-3 flex items-start gap-2">
+      {!none && draft && <DraftCard key={draft.n} assist={assist} draft={draft} state={state} saved={saved}
+        headTime={commits.find((c) => c.hash === state.head)?.time ?? 0} onCommit={onCommit} onCommitSplit={onCommitSplit} />}
+      {!none && !draft && (
+        <div className="mt-3 flex flex-wrap items-start gap-2">
           <textarea value={message} onChange={(e) => setMessage(e.target.value)} placeholder="Say what changed and why"
             aria-label="Commit message" rows={Math.min(5, Math.max(1, message.split('\n').length))}
             onKeyDown={(e) => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) void go(false) }}
-            className="min-h-9 w-[360px] max-w-full resize-none rounded-lg bg-pill px-3 py-2 text-base leading-5 outline-none
+            className="min-h-9 max-w-[360px] min-w-[240px] flex-1 resize-none rounded-lg bg-pill px-3 py-2 text-base leading-5 outline-none
               placeholder:text-faint focus:ring-2 focus:ring-focus" />
-          {tools}
+          <WriteButton assist={assist} />
           <Button kind="primary" disabled={!message.trim() || !!busy} onClick={() => void go(false)}>
             {busy === 'commit' ? <Spinner size={14} /> : <Check size={15} />} Commit</Button>
           <Button disabled={!message.trim() || !!busy || !state.remotes.length} onClick={() => void go(true)}
@@ -499,13 +602,14 @@ function NowHead({ state, switcher, onCommit, tools }:
             {busy === 'push' ? <Spinner size={14} /> : <ArrowUp size={15} />} Commit and push</Button>
         </div>
       )}
-      {!none && <p className="mt-1.5 text-xs text-dim">The first line is the summary; a blank line, then the why.
+      {!none && !draft && <p className="mt-1.5 text-xs text-dim">The first line is the summary; a blank line, then the why.
         Ctrl+Enter commits.</p>}
     </div>
   )
 }
 
-function CompareHead(p: DetailProps & { from: string; to: string; changes: Changes | null; switcher: ReactNode }) {
+function CompareHead(p: DetailProps & { from: string; to: string; changes: Changes | null; switcher: ReactNode
+  onAsk: () => void }) {
   const { from, to, commits, refs, state } = p
   const lo = from === '' ? -1 : commits.findIndex((c) => c.hash === from)
   const hi = to === '' ? -1 : commits.findIndex((c) => c.hash === to)
@@ -524,6 +628,7 @@ function CompareHead(p: DetailProps & { from: string; to: string; changes: Chang
         {to !== '' && <button onClick={() => p.onSel({ kind: 'compare', from: to, to: from })} aria-label="Swap"
           title="Swap" className="grid size-8 place-items-center rounded-md text-dim hover:bg-hover"><ArrowLeftRight size={15} /></button>}
         <span className="flex-1" />
+        <AskButton onClick={p.onAsk} label="Ask about these changes" />
         {p.switcher}
       </div>
       <div className="mt-2 flex items-center gap-2 text-sm text-dim">

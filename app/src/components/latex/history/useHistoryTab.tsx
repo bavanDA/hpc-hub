@@ -1,14 +1,20 @@
 // What a LaTeX project (Project.tsx) needs for its history: the History tab and its pane, the Who changed it button
-// and column for the editor with its card, and asks from the Git menu (Push, Get the latest, the timeline).
+// and column for the editor with its card, asks from the Git menu (Push, Get the latest, the timeline), and the
+// agent's help: Ask and Note on a passage in the editor, note pins in its gutter, and jobs running in the
+// background wherever you are.
 import { EditorState, type Extension } from '@codemirror/state'
 import { EditorView } from '@codemirror/view'
-import { History as HistoryIcon, UsersRound } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { History as HistoryIcon, MessageCircleQuestion, StickyNote, UsersRound } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import type { Blame } from '../../../types/history'
+import type { Go } from './Ask'
 import { blameColumn, cells, LineCard } from './Blame'
-import { git, type Where } from './bits'
+import { fileName, git, type Where } from './bits'
 import { History, type HistoryAsk } from './History'
+import { isLine, notesGutter, SpotCard, type Spot } from './Notes'
+import { useAssist } from './useAssist'
+import { RunningCards } from './Write'
 
 type Args = {
   where: Where
@@ -23,9 +29,13 @@ type Args = {
   save: () => Promise<boolean>
   build: () => void
   guard: (what: string, run: () => void) => void
+  agentGuard: (detail: string, run: () => void) => void  // agents always run on a compute node
+  nodeWaiting: boolean  // an agent job waits for its node
   reload: () => void  // files changed on the cluster: the tree, the open file and the PDF again
   goTo: (path: string, line: number) => void
   toPdf: (line: number) => void
+  toPage: (page: number) => void
+  selection: () => { from: number; to: number; text: string } | null  // in the editor
 }
 
 const PAUSED: Extension[] = [EditorState.readOnly.of(true), EditorView.editable.of(false)]
@@ -41,7 +51,16 @@ export function useHistoryTab(a: Args) {
   const [blameOn, setBlameOn] = useState(() => remembered('latex.blame'))
   const [blame, setBlame] = useState<Blame | null>(null)
   const [card, setCard] = useState<{ path: string; line: number; x: number; y: number } | null>(null)
+  const [spot, setSpot] = useState<Spot | null>(null)
   useEffect(() => { if (a.active) setOpened(true) }, [a.active])
+
+  const send = (kind: HistoryAsk['kind'], hash?: string) => {
+    setAsk({ kind, hash, n: Date.now() })
+    setOpened(true)
+    a.show(true)
+  }
+  const assist = useAssist({ where: a.where, clusterName: a.clusterName, guard: a.agentGuard, waiting: a.nodeWaiting,
+    inHistory: a.active, showHistory: () => send('now') })
 
   const { where, docPath, docVersion, dirty } = a
   const doc = useMemo(() => docPath ? { path: docPath, version: docVersion } : null, [docPath, docVersion])
@@ -55,19 +74,41 @@ export function useHistoryTab(a: Args) {
   const pick = useCallback((line: number, x: number, y: number) => {
     if (doc) setCard({ path: doc.path, line, x, y })
   }, [doc])
-  const extensions = useMemo(() => [...(paused ? PAUSED : []), ...(blameOn && blame ? [blameColumn(cells(blame), pick)] : [])],
-    [paused, blameOn, blame, pick])
-
-  const send = (kind: HistoryAsk['kind'], hash?: string) => {
-    setAsk({ kind, hash, n: Date.now() })
+  // the notes on the file in the editor, as pins in its gutter
+  const root = assist.notes?.root ?? ''
+  const rel = docPath && root && docPath.startsWith(root + '/') ? docPath.slice(root.length + 1) : ''
+  const notes = assist.notes?.notes
+  const pins = useMemo(() => (notes ?? []).filter((n) => isLine(n.place) && n.place.path === rel && !n.done)
+    .map((n) => ({ id: n.id, n: n.n, done: n.done, text: n.text, line: (n.place as { line: number }).line })), [notes, rel])
+  const showNow = useRef(a.show)
+  showNow.current = a.show
+  const openNote = useCallback((id: string) => {
+    setAsk({ kind: 'notes', hash: id, n: Date.now() })
     setOpened(true)
-    a.show(true)
-  }
+    showNow.current(true)
+  }, [])
+  const extensions = useMemo(() => [...(paused ? PAUSED : []), ...(blameOn && blame ? [blameColumn(cells(blame), pick)] : []),
+    ...(pins.length ? [notesGutter(pins, openNote)] : [])], [paused, blameOn, blame, pick, pins, openNote])
+
   const toggleBlame = () => {
     const on = !blameOn
     setBlameOn(on)
     if (!on) setCard(null)
     try { localStorage.setItem('latex.blame', on ? '1' : '0') } catch { /* private window */ }
+  }
+
+  // Ask about a passage in the editor, or note it: the selection, or the line the cursor is on
+  const fromEditor = (mode: Spot['mode']) => {
+    const s = a.selection()
+    if (!s || !rel) return
+    const lines = s.from === s.to ? `line ${s.from}` : `lines ${s.from} to ${s.to}`
+    setSpot({ id: `ed-${Date.now()}`, mode, title: s.text ? `the selected text in ${fileName(rel)}` : `${fileName(rel)}, ${lines}`,
+      about: { kind: 'lines', path: rel, line: s.from, end: s.to, text: s.text || undefined },
+      place: { path: rel, line: s.from }, here: rel })
+  }
+  const go: Go = {
+    line: (path, line) => { a.show(false); a.goTo(root ? `${root}/${path}` : path, line) },
+    page: (page) => { a.show(false); a.toPage(page) },
   }
 
   const tab = (
@@ -76,24 +117,35 @@ export function useHistoryTab(a: Args) {
         ? 'bg-accent font-semibold text-on-accent' : 'text-dim hover:bg-hover hover:text-text'}`}>
       <HistoryIcon size={14} /> History</button>
   )
+  const small = 'flex h-7 items-center gap-1.5 rounded-md px-2 text-sm text-dim hover:bg-hover hover:text-text'
   const blameButton = (
-    <button onClick={toggleBlame} aria-pressed={blameOn} title="Who last changed each line, and why"
-      className={`flex h-7 items-center gap-1.5 rounded-md px-2 text-sm ${blameOn ? 'bg-selected font-semibold text-text'
-        : 'text-dim hover:bg-hover hover:text-text'}`}>
-      <UsersRound size={14} /> Who changed it</button>
+    <>
+      <button onClick={() => fromEditor('ask')} disabled={!rel} title="Ask the agent about the selected text, or this line"
+        className={`${small} disabled:opacity-40`}><MessageCircleQuestion size={14} /> Ask</button>
+      <button onClick={() => fromEditor('note')} disabled={!rel} title="Add a note on this line" className={`${small}
+        disabled:opacity-40`}><StickyNote size={14} /> Note</button>
+      <button onClick={toggleBlame} aria-pressed={blameOn} title="Who last changed each line, and why"
+        className={`flex h-7 items-center gap-1.5 rounded-md px-2 text-sm ${blameOn ? 'bg-selected font-semibold text-text'
+          : 'text-dim hover:bg-hover hover:text-text'}`}>
+        <UsersRound size={14} /> Who changed it</button>
+    </>
   )
   const pane = opened && (
     <div className={a.active ? 'min-h-0 flex-1' : 'hidden'}>
       <History where={where} clusterName={a.clusterName} main={a.main} pdf={a.pdf} active={a.active} ask={ask}
         guard={a.guard} onBuild={a.build} onFiles={a.reload} onPause={setPaused} onSave={a.save}
-        onOpen={(path, line) => { a.show(false); a.goTo(path, line) }} />
+        onOpen={(path, line) => { a.show(false); a.goTo(path, line) }} assist={assist} go={go} onSpot={setSpot} />
     </div>
   )
-  const overlay = card && blameOn && (
-    <LineCard where={where} start={{ path: card.path, line: card.line, at: '' }} x={card.x} y={card.y}
-      onClose={() => setCard(null)} onPdf={(line) => { setCard(null); a.toPdf(line) }}
-      onHistory={(hash) => { setCard(null); send(hash ? 'commit' : 'now', hash) }} />
-  )
+  const overlay = <>
+    {card && blameOn && (
+      <LineCard where={where} start={{ path: card.path, line: card.line, at: '' }} x={card.x} y={card.y}
+        onClose={() => setCard(null)} onPdf={(line) => { setCard(null); a.toPdf(line) }}
+        onHistory={(hash) => { setCard(null); send(hash ? 'commit' : 'now', hash) }} />
+    )}
+    {spot && <SpotCard key={spot.id} spot={spot} assist={assist} go={go} onClose={() => setSpot(null)} />}
+    <RunningCards assist={assist} inHistory={a.active} />
+  </>
   return { tab, pane, blameButton, extensions, overlay, paused,
     push: () => send('push'), pull: () => send('pull'), timeline: () => send('timeline') }
 }

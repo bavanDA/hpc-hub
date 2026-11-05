@@ -38,9 +38,9 @@ export function BranchBar({ where, state, busy, start, onSwitch, onNewBranch, on
   }, [open])
   const status = busy ? <><Loader2 size={13} className="animate-spin" /> {busy.label}</>
     : !state.upstream ? (state.remotes.length ? 'Not on origin yet' : 'No remote')
-    : state.ahead && state.behind ? `${state.ahead} to push, ${state.behind} new on origin`
-    : state.ahead ? `${plural(state.ahead, 'commit')} to push`
-    : state.behind ? `${state.behind} new on origin` : 'Up to date with origin'
+    : state.ahead && state.behind ? `${state.ahead} to push, ${state.behind} new${extra ? '' : ' on origin'}`
+    : state.ahead ? (extra ? `${state.ahead} to push` : `${plural(state.ahead, 'commit')} to push`)
+    : state.behind ? `${state.behind} new${extra ? '' : ' on origin'}` : extra ? 'Up to date' : 'Up to date with origin'
   return (
     <div ref={box} className="relative flex h-11 shrink-0 items-center gap-2 border-t border-line pr-2 pl-2 text-sm">
       <button onClick={() => setOpen(!open)} disabled={!!busy} title="Switch branch"
@@ -51,7 +51,7 @@ export function BranchBar({ where, state, busy, start, onSwitch, onNewBranch, on
       {extra}
       {!busy && state.ahead > 0 && <button onClick={onPush} title="Pull first, then push"
         className="flex h-8 items-center gap-1 rounded-md px-2 font-semibold hover:bg-hover"><ArrowUp size={14} /> Push</button>}
-      {!busy && !state.ahead && state.fetched > 0 && <span className="shrink-0 text-xs text-dim">Pulled {clock(state.fetched)}</span>}
+      {!busy && !state.ahead && state.fetched > 0 && !extra && <span className="shrink-0 text-xs text-dim">Pulled {clock(state.fetched)}</span>}
       {open && <BranchMenu where={where} state={state} start={start} onClose={() => setOpen(false)}
         onSwitch={(b) => { setOpen(false); onSwitch(b) }} onNew={(n) => { setOpen(false); onNewBranch(n, start) }}
         onCompare={(b) => { setOpen(false); onCompareBranch(b) }} onLatest={() => { setOpen(false); onLatest() }} />}

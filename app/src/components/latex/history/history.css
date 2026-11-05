@@ -25,3 +25,7 @@
 .diff-add-ink { color: var(--diff-add-ink); }
 .diff-del-ink { color: var(--diff-del-ink); }
 .diff-bar { background: var(--diff-bar); }
+/* A note's numbered pin: amber while open, grey once done (Notes.tsx) */
+.note-pin { background: #c98a1b; color: #fff; }
+.note-pin.done { background: var(--color-line-strong); color: var(--color-dim); }
+:root[data-theme="dark"] .note-pin:not(.done) { background: #d6a03a; color: #1b1300; }

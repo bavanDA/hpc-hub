@@ -257,6 +257,10 @@ export function Project({ project, onClose }: { project: Opened; onClose: () => 
     docVersion: doc?.version ?? 0, dirty, active: inHistory, save, build, toPdf,
     show: (on) => setView(on ? 'history' : 'split'),
     guard: (what, run) => settings.on_node ? nodeFirst.guard(cluster, what, run) : run(),
+    agentGuard: (detail, run) => nodeFirst.guard(cluster, 'The agent', run, detail),
+    nodeWaiting: nodeFirst.waiting === 'The agent',
+    toPage: (page) => { setLogsOpen(false); setTarget({ page, x: 0, y: 0, n: Date.now() }) },
+    selection: () => editor.current?.selection() ?? null,
     reload: () => { refresh(); loadPdf(); const d = docRef.current; if (d) load(d.path, editor.current?.line()) },
     goTo: (path, line) => { void switchTo(path, line) } })
 

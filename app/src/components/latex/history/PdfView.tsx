@@ -2,21 +2,25 @@
 // paragraph, found with SyncTeX (source line -> page and height) and the page's word boxes; a hover card shows the
 // line before and after. Side by side and Red and blue need PDFs of other versions: built on demand on the cluster,
 // where Recompile builds, and kept for next time.
-import { ChevronDown, ChevronUp, Code2, Loader2, Minus, Plus, ServerCog } from 'lucide-react'
+import { ChevronDown, ChevronUp, Code2, Loader2, MessageCircleQuestion, Minus, Plus, ServerCog, StickyNote } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { useEvent } from '../../../hooks'
 import { call } from '../../../rpc'
-import type { Changes, PdfJob, Row, SyncSpot } from '../../../types/history'
+import type { Changes, Note, PdfJob, Row, SyncSpot } from '../../../types/history'
 import { engine, open } from '../../pdf/engine'
 import { readFile } from '../../pdf/load'
 import { Button } from '../../ui'
 import { git, Segments, shortHash, type Where } from './bits'
 import { Tex } from './DiffView'
+import { isLine, isPage, type Spot } from './Notes'
 
 export type PdfMode = 'marks' | 'side' | 'redblue'
 type Target = { page: number; y: number; words: string[]; path: string; line: number; before: Row | null; after: Row }
 type Group = { page: number; y: number; targets: Target[] }
+type PinAt = { id: string; n: number; page: number; y: number; done: boolean; text: string }
+/** A right-click on a page: where (PDF points from the page's top), the text around it, and where on screen. */
+type Click = { page: number; x: number; y: number; text: string; cx: number; cy: number }
 
 type Props = {
   where: Where
@@ -29,9 +33,13 @@ type Props = {
   changes: Changes | null
   guard: (run: () => void) => void  // asks for a compute node first, like Recompile
   onSource: (path: string, line: number) => void
+  notes: Note[]  // their pins on the PDF
+  onPin: (id: string) => void
+  onSpot: (s: Spot) => void  // ask about a spot, or note it
 }
 
-export function PdfView({ where, main, root, clusterName, current, from, to, changes, guard, onSource }: Props) {
+export function PdfView({ where, main, root, clusterName, current, from, to, changes, guard, onSource, notes, onPin,
+  onSpot }: Props) {
   const [mode, setMode] = useState<PdfMode>('marks')
   const [zoom, setZoom] = useState(1)
   return (
@@ -47,7 +55,7 @@ export function PdfView({ where, main, root, clusterName, current, from, to, cha
           className="grid size-8 place-items-center rounded-md text-dim hover:bg-hover"><Plus size={15} /></button>
       </div>
       {mode === 'marks' ? <Marks where={where} main={main} root={root} current={current} changes={changes} zoom={zoom}
-          onSource={onSource} />
+          onSource={onSource} notes={notes} onPin={onPin} onSpot={onSpot} />
         : mode === 'side' ? <Side where={where} main={main} clusterName={clusterName} current={current} from={from}
           to={to} zoom={zoom} guard={guard} />
         : <Built key={`${from}-${to}`} where={where} main={main} clusterName={clusterName} version={to} against={from}
@@ -64,9 +72,56 @@ function seen(t: string): string[] {
   return t.replace(/\\[A-Za-z@]+/g, ' ').match(WORD) ?? []
 }
 
-function Marks({ where, main, root, current, changes, zoom, onSource }:
+/** Where the notes sit on the PDF: a spot as it is, a line through SyncTeX. */
+function usePins(where: Where, main: string, root: string, notes: Note[]): PinAt[] {
+  const [pins, setPins] = useState<PinAt[]>([])
+  const key = JSON.stringify(notes.filter((n) => n.place && !('hash' in n.place)).map((n) => [n.id, n.place, n.done]))
+  useEffect(() => {
+    let dead = false
+    const placed = (JSON.parse(key) as [string][]).map(([id]) => notes.find((n) => n.id === id)!).filter(Boolean)
+    const out: PinAt[] = placed.filter((n) => isPage(n.place)).map((n) => {
+      const p = n.place as { page: number; y: number }
+      return { id: n.id, n: n.n, page: p.page, y: p.y, done: n.done, text: n.text }
+    })
+    const byPath = new Map<string, Note[]>()
+    for (const n of placed) if (isLine(n.place)) byPath.set(n.place.path, [...(byPath.get(n.place.path) ?? []), n])
+    ;(async () => {
+      for (const [path, list] of byPath) {
+        const spots = await call<SyncSpot[]>('latex.git_sync_lines', { cluster: where.cluster, main, path: `${root}/${path}`,
+          lines: list.map((n) => (n.place as { line: number }).line) }).catch(() => [] as SyncSpot[])
+        list.forEach((n, k) => { const s = spots[k]; if (s) out.push({ id: n.id, n: n.n, page: s.page, y: s.y, done: n.done, text: n.text }) })
+      }
+      if (!dead) setPins(out)
+    })()
+    return () => { dead = true }
+    // notes is read through key
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key, where, main, root])
+  return pins
+}
+
+function Marks({ where, main, root, current, changes, zoom, onSource, notes, onPin, onSpot }:
   { where: Where; main: string; root: string; current: Uint8Array | null; changes: Changes | null; zoom: number
-    onSource: (path: string, line: number) => void }) {
+    onSource: (path: string, line: number) => void; notes: Note[]; onPin: (id: string) => void; onSpot: (s: Spot) => void }) {
+  const pins = usePins(where, main, root, notes)
+  const [menu, setMenu] = useState<Click | null>(null)
+  useEffect(() => {
+    if (!menu) return
+    const off = () => setMenu(null)
+    window.addEventListener('mousedown', off)
+    window.addEventListener('keydown', off)
+    return () => { window.removeEventListener('mousedown', off); window.removeEventListener('keydown', off) }
+  }, [menu])
+  const spot = async (c: Click, mode: Spot['mode']) => {
+    setMenu(null)
+    const place = { page: c.page, x: Math.round(c.x * 10) / 10, y: Math.round(c.y * 10) / 10 }
+    const src = mode === 'ask' ? await call<{ path: string; line: number } | null>('latex.sync_edit', { cluster: where.cluster,
+      main, page: c.page, x: c.x, y: c.y }).catch(() => null) : null
+    const rel = src && src.path.startsWith(root + '/') ? src.path.slice(root.length + 1) : ''
+    onSpot({ id: `pdf-${Date.now()}`, mode, title: `page ${c.page}`, place, here: rel || undefined,
+      about: rel ? { kind: 'pdf', page: c.page, path: rel, line: src!.line, end: src!.line + 2, text: c.text }
+        : { kind: 'pdf', page: c.page, text: c.text } })
+  }
   const [groups, setGroups] = useState<Group[] | null>(null)
   const [note, setNote] = useState('')
   const [at, setAt] = useState(0)
@@ -143,12 +198,24 @@ function Marks({ where, main, root, current, changes, zoom, onSource }:
               className="grid size-7 place-items-center rounded-md hover:bg-hover disabled:opacity-40"><ChevronDown size={15} /></button></>}
       </div>
       <Pages data={current} zoom={zoom} groups={groups ?? []} focus={g ? { page: g.page, y: g.y, n: jump } : null}
-        onSource={onSource} />
+        onSource={onSource} pins={pins} onPin={onPin} onContext={setMenu} />
+      {menu && (
+        <div style={{ left: menu.cx, top: menu.cy }} onMouseDown={(e) => e.stopPropagation()}
+          className="menu-in fixed z-30 w-[220px] rounded-xl border border-line bg-raised p-1.5 shadow-[var(--shadow-dialog)]">
+          <button onClick={() => void spot(menu, 'ask')}
+            className="flex h-9 w-full items-center gap-2 rounded-md px-2.5 text-left text-sm hover:bg-hover">
+            <MessageCircleQuestion size={15} /> Ask about this spot</button>
+          <button onClick={() => void spot(menu, 'note')}
+            className="flex h-9 w-full items-center gap-2 rounded-md px-2.5 text-left text-sm hover:bg-hover">
+            <StickyNote size={15} /> Add a note here</button>
+        </div>
+      )}
       <div className="pointer-events-none absolute bottom-3 left-3 flex flex-col gap-1 rounded-xl border border-line
         bg-raised px-3 py-2 text-sm shadow-md">
         <span className="flex items-center gap-2"><span className="diff-add-mark h-3 w-4" />
           New or changed text</span>
         <span className="flex items-center gap-2"><span className="diff-bar ml-1.5 h-3.5 w-[3px] rounded" /> Paragraph changed</span>
+        <span className="text-xs text-dim">Right-click a spot to ask about it or note it</span>
       </div>
       {note && <p className="absolute right-3 bottom-3 max-w-[320px] rounded-xl border border-line bg-raised px-3 py-2
         text-sm text-dim shadow-md">{note}</p>}
@@ -276,10 +343,11 @@ type Box = { x: number; y: number; w: number; h: number }
 type Drawn = { boxes: Box[]; bar: Box | null; target: Target }
 
 /** A PDF's pages, one under the other, at the pane's width; marks drawn over the pages that have them. */
-function Pages({ data, zoom, groups = [], focus = null, box, onScroll, onSource }:
+function Pages({ data, zoom, groups = [], focus = null, box, onScroll, onSource, pins = [], onPin, onContext }:
   { data: Uint8Array; zoom: number; groups?: Group[]; focus?: { page: number; y: number; n: number } | null
     box?: React.RefObject<HTMLDivElement | null>; onScroll?: () => void
-    onSource?: (path: string, line: number) => void }) {
+    onSource?: (path: string, line: number) => void; pins?: PinAt[]; onPin?: (id: string) => void
+    onContext?: (c: Click) => void }) {
   const own = useRef<HTMLDivElement>(null)
   const el = box ?? own
   const [doc, setDoc] = useState<Doc | null>(null)
@@ -321,15 +389,17 @@ function Pages({ data, zoom, groups = [], focus = null, box, onScroll, onSource 
       {error && <p className="p-6 text-center text-bad">Could not open the PDF: {error}</p>}
       <div className="flex flex-col items-center gap-4 py-4">
         {doc && sizes.map((s, i) => <PageView key={i} doc={doc} n={i + 1} w={s.w * scale} h={s.h * scale} scale={scale}
-          targets={byPage.get(i + 1) ?? []} root={el} onSource={onSource} />)}
+          targets={byPage.get(i + 1) ?? []} root={el} onSource={onSource} pins={pins.filter((p) => p.page === i + 1)}
+          onPin={onPin} onContext={onContext} />)}
       </div>
     </div>
   )
 }
 
-function PageView({ doc, n, w, h, scale, targets, root, onSource }:
+function PageView({ doc, n, w, h, scale, targets, root, onSource, pins = [], onPin, onContext }:
   { doc: Doc; n: number; w: number; h: number; scale: number; targets: Target[]
-    root: React.RefObject<HTMLDivElement | null>; onSource?: (path: string, line: number) => void }) {
+    root: React.RefObject<HTMLDivElement | null>; onSource?: (path: string, line: number) => void
+    pins?: PinAt[]; onPin?: (id: string) => void; onContext?: (c: Click) => void }) {
   const canvas = useRef<HTMLCanvasElement>(null)
   const div = useRef<HTMLDivElement>(null)
   const [seen, setSeen] = useState(false)
@@ -394,8 +464,24 @@ function PageView({ doc, n, w, h, scale, targets, root, onSource }:
     return () => { dead = true }
   }, [seen, targets, doc, n])
   return (
-    <div ref={div} style={{ width: w, height: h }} className="relative shrink-0 bg-white shadow-[0_0_0_1px_rgb(0_0_6/0.06),0_2px_8px_rgb(0_0_6/0.12)]">
+    <div ref={div} style={{ width: w, height: h }} onContextMenu={onContext && ((e) => {
+      e.preventDefault()
+      const r = div.current!.getBoundingClientRect(), x = (e.clientX - r.left) / scale, y = (e.clientY - r.top) / scale
+      const cx = e.clientX, cy = e.clientY
+      doc.getPage(n).then(async (page) => {
+        const height = page.getViewport({ scale: 1 }).height
+        const items = (await page.getTextContent()).items as { str: string; transform: number[] }[]
+        const text = items.filter((it) => it.str?.trim() && Math.abs(height - it.transform[5] - y) < 30).map((it) => it.str)
+          .join(' ').slice(0, 1500)
+        onContext({ page: n, x, y, text, cx, cy })
+      }).catch(() => onContext({ page: n, x, y, text: '', cx, cy }))
+    })} className="relative shrink-0 bg-white shadow-[0_0_0_1px_rgb(0_0_6/0.06),0_2px_8px_rgb(0_0_6/0.12)]">
       <canvas ref={canvas} style={{ width: w, height: h }} className="block" />
+      {pins.map((p) => (
+        <button key={p.id} onClick={() => onPin?.(p.id)} title={p.text} style={{ left: w - 30, top: Math.max(2, p.y * scale - 12) }}
+          className={`note-pin absolute z-[2] grid size-[22px] place-items-center rounded-full text-xs font-semibold shadow
+            ${p.done ? 'done' : ''}`}>{p.n}</button>
+      ))}
       {drawn.map((d, i) => (
         <div key={i} onMouseEnter={() => setHover(d)} onMouseLeave={() => setHover(null)}>
           {d.bar && <span className="diff-bar absolute rounded" style={{ left: d.bar.x * scale, top: d.bar.y * scale,

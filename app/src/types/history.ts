@@ -105,3 +105,33 @@ export type PdfJob = { id: string; cluster: string; folder: string; ok: boolean;
   seconds: number }
 
 export type SyncSpot = { line: number; page: number; x: number; y: number } | null
+
+// -- the agent's help and notes (hpc_hub/api/methods/latex_assist.py) ----------------------------------------------
+export type AgentDesc = { id: string; name: string; models: [string, string][]; efforts: [string, string][] }
+export type AgentPick = { agent: string; model: string; effort: string }
+export type Preset = 'fast' | 'careful' | 'thorough'
+export type AgentChoice = AgentPick & { split: boolean; preset: Preset | ''; label: string; agents: AgentDesc[]
+  presets: Record<Preset, AgentPick> }
+export type AgentStarted = { id: string; node: string; label: string; agent: string }
+export type AgentKind = 'write' | 'ask' | 'check'
+export type AgentEvent = { id: string; cluster: string; folder: string; kind: AgentKind; node: string; label: string
+  done: boolean; seconds: number; stage?: 'preparing' | 'running'; ok?: boolean; error?: string; cancelled?: boolean
+  result?: unknown; about?: { files?: number; lines?: number; notes?: number; title?: string } }
+
+export type Suggested = { subject: string; body: string; files: string[] }
+export type Written = { subject: string; body: string; commits: Suggested[]; files: Change[]; head: string }
+export type Cite = { ref: string; path: string; line: number; end: number; page: number }
+export type Answer = { text: string; cites: Cite[]; question: string }
+export type Verdict = { id: string; verdict: 'done' | 'not_yet' | 'unsure'; reason: string; path: string; line: number }
+export type Checked = { checked: number; results: Verdict[] }
+
+/** What a question is about. Paths are from the repository's top. */
+export type About = { kind: 'commit'; hash: string } | { kind: 'range'; frm: string; to: string } | { kind: 'now' }
+  | { kind: 'lines'; path: string; line: number; end: number; at?: string; text?: string; diff?: string }
+  | { kind: 'pdf'; page: number; path?: string; line?: number; end?: number; text?: string }
+
+/** A line {path, line}, a spot on the PDF {page, x, y} (points from the page's top) or a commit {hash}. */
+export type NotePlace = { path: string; line: number } | { page: number; x: number; y: number } | { hash: string }
+export type Note = { id: string; n: number; text: string; place: NotePlace | null; author: string; time: number
+  done: boolean; done_by: string; done_at: number }
+export type NoteList = { notes: Note[]; user: string; root: string }

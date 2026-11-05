@@ -19,7 +19,8 @@ import { isDark } from '../../theme'
 import type { Issue } from '../../types/latex'
 
 export type EditorHandle = { goto: (line: number) => void; line: () => number; text: () => string;
-  insert: (text: string) => void; focus: () => void }
+  insert: (text: string) => void; focus: () => void
+  selection: () => { from: number; to: number; text: string } }  // lines of the selection (or the cursor's) and its text
 
 type Props = {
   path: string  // a new path (or version) starts a new document
@@ -175,6 +176,10 @@ export default function CodeEditor({ path, version, text, line: startLine, issue
       text: () => v.state.doc.toString(),
       insert: (s) => v.dispatch(v.state.replaceSelection(s)),
       focus: () => v.focus(),
+      selection: () => {
+        const r = v.state.selection.main, doc = v.state.doc
+        return { from: doc.lineAt(r.from).number, to: doc.lineAt(r.to).number, text: v.state.sliceDoc(r.from, r.to) }
+      },
     }
     if (startLine) handle.current.goto(startLine)
     return () => { v.destroy(); view.current = null }

@@ -1,7 +1,8 @@
 // A change in the LaTeX: side by side or inline, every file one after another, the changed words marked, and text
 // that moved shown as one moved block with only its real change marked (rows come marked from the backend).
-import { ArrowDown, ArrowUp, ChevronDown, ChevronRight, ChevronsUpDown, FileText, Undo2 } from 'lucide-react'
-import { Fragment, useMemo, useRef, useState, type ReactNode } from 'react'
+import { ArrowDown, ArrowUp, ChevronDown, ChevronRight, ChevronsUpDown, FileText, MessageCircleQuestion, StickyNote,
+  Undo2 } from 'lucide-react'
+import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 
 import type { Changes, FileDiff, Move, Row } from '../../../types/history'
 import { Switch } from '../../ui'
@@ -10,6 +11,12 @@ import { Counts, fileName, plural, Segments } from './bits'
 export type Layout = 'split' | 'inline'
 /** A change block that can go back: its lines now (n from `line`) become the old ones. */
 export type PutBack = { path: string; line: number; expect: string[]; lines: string[] }
+/** What to ask about or note: a change block or selected text. line..end are lines now (new side); anchor is the
+ *  row a thread shows under ("path#n12" or "path#o12"). */
+export type Target = { path: string; line: number; end: number; diff: string; text?: string; anchor: string }
+/** Asks and notes on the rows: under(anchor) shows threads under a row, pins(path, n) the notes on a line. */
+export type Asking = { onAsk: (t: Target) => void; onNote: (t: Target) => void; under: (anchor: string) => ReactNode
+  pins: (path: string, n: number) => { n: number; done: boolean }[] }
 
 type Props = {
   changes: Changes
@@ -20,9 +27,10 @@ type Props = {
   onOpen?: (path: string, line: number) => void  // Open file
   onPutBack?: (p: PutBack) => void
   onMore?: () => void  // the unchanged lines between changes: ask for them
+  asking?: Asking
 }
 
-export function DiffView({ changes, layout, onLayout, sides, note, onOpen, onPutBack, onMore }: Props) {
+export function DiffView({ changes, layout, onLayout, sides, note, onOpen, onPutBack, onMore, asking }: Props) {
   const [moved, setMoved] = useState(true)
   const [closed, setClosed] = useState<Set<string>>(new Set())
   const box = useRef<HTMLDivElement>(null)
@@ -37,6 +45,31 @@ export function DiffView({ changes, layout, onLayout, sides, note, onOpen, onPut
     el?.scrollIntoView({ block: 'center', behavior: 'smooth' })
   }
   const toggle = (p: string) => setClosed((c) => { const n = new Set(c); if (n.has(p)) n.delete(p); else n.add(p); return n })
+  const [picked, setPicked] = useState<{ t: Target; x: number; y: number } | null>(null)
+  useEffect(() => {
+    if (!picked) return
+    const off = () => setPicked(null)
+    const el = box.current
+    el?.addEventListener('scroll', off)
+    return () => el?.removeEventListener('scroll', off)
+  }, [picked])
+  // selected text: Ask about it or note it
+  const select = () => {
+    const sel = window.getSelection()
+    const text = sel?.toString().trim() ?? ''
+    if (!asking || !sel || !text || !sel.rangeCount || !box.current?.contains(sel.anchorNode)) { setPicked(null); return }
+    const el = (n: Node | null) => (n instanceof Element ? n : n?.parentElement) ?? null
+    const a = el(sel.anchorNode), b = el(sel.focusNode)
+    const file = b?.closest<HTMLElement>('[data-file]')?.dataset.file
+    const anchor = b?.closest<HTMLElement>('[data-anchor]')?.dataset.anchor ?? a?.closest<HTMLElement>('[data-anchor]')?.dataset.anchor
+    if (!file || !anchor) { setPicked(null); return }
+    const num = (x: Element | null) => Number(x?.closest<HTMLElement>('[data-n]')?.dataset.n ?? 0)
+    const lines = [num(a), num(b)].filter(Boolean)
+    if (!lines.length) lines.push(Number(/#n(\d+)$/.exec(anchor)?.[1] ?? 1))
+    const r = sel.getRangeAt(0).getBoundingClientRect()
+    setPicked({ t: { path: file, line: Math.min(...lines), end: Math.max(...lines), diff: '', text: text.slice(0, 2000), anchor },
+    x: r.left + r.width / 2, y: r.bottom + 6 })
+  }
 
   if (!files.length) return <p className="px-6 py-10 text-center text-dim">No changes in the files.</p>
   return (
@@ -76,7 +109,7 @@ export function DiffView({ changes, layout, onLayout, sides, note, onOpen, onPut
             ))}
           </div>
         )}
-        <div ref={box} className="min-w-0 flex-1 overflow-auto select-text">
+        <div ref={box} className="min-w-0 flex-1 overflow-auto select-text" onMouseUp={() => setTimeout(select, 0)}>
           {sides && layout === 'split' && (
             <div className="sticky top-0 z-[3] grid grid-cols-2 border-b border-line bg-window text-sm text-dim">
               <div className="flex h-8 items-center gap-2 border-r border-line px-4">{sides[0]}</div>
@@ -105,7 +138,7 @@ export function DiffView({ changes, layout, onLayout, sides, note, onOpen, onPut
               {!closed.has(f.path) && (f.binary
                 ? <p className="px-4 py-3 text-sm text-dim">A binary file: no lines to show.</p>
                 : <FileRows file={f} layout={layout} moved={moved} moves={changes.moves} onMore={onMore}
-                    onGo={toLine} onPutBack={onPutBack} />)}
+                    onGo={toLine} onPutBack={onPutBack} asking={asking} />)}
             </section>
           ))}
           {changes.truncated && <p className="px-4 py-3 text-sm text-dim">This change is very large: only the start
@@ -113,6 +146,17 @@ export function DiffView({ changes, layout, onLayout, sides, note, onOpen, onPut
           <div className="h-16" />
         </div>
       </div>
+      {picked && asking && (
+        <div style={{ left: picked.x, top: picked.y }} onMouseDown={(e) => e.preventDefault()}
+          className="menu-in fixed z-30 flex -translate-x-1/2 gap-0.5 rounded-lg border border-line bg-raised p-1 shadow-md">
+          <button onClick={() => { asking.onAsk(picked.t); setPicked(null) }}
+            className="flex h-8 items-center gap-1.5 rounded-md px-2 text-sm font-semibold hover:bg-hover">
+            <MessageCircleQuestion size={14} /> Ask about the selected text</button>
+          <button onClick={() => { asking.onNote(picked.t); setPicked(null) }}
+            className="flex h-8 items-center gap-1.5 rounded-md px-2 text-sm font-semibold hover:bg-hover">
+            <StickyNote size={14} /> Note</button>
+        </div>
+      )}
     </div>
   )
 }
@@ -124,7 +168,7 @@ function movesOf(moves: Move[], path: string): string {
 }
 
 // -- one file -----------------------------------------------------------------------------------------------------
-type Piece = { kind: 'gap'; lines: number } | { kind: 'row'; left?: Row; right?: Row; both?: Row }
+type Piece = { kind: 'gap'; lines: number } | { kind: 'row'; left?: Row; right?: Row; both?: Row; blk?: Target }
   | { kind: 'moved-out'; move: Move; rows: Row[] } | { kind: 'moved-in'; move: Move }
   | { kind: 'back'; put: PutBack }
 
@@ -156,12 +200,18 @@ function pieces(f: FileDiff, layout: Layout, moved: boolean, moves: Move[], putB
         else now.push(rows[i])
         i++
       }
+      const from = out.length
       if (layout === 'split') {
         for (let k = 0; k < Math.max(old.length, now.length); k++) out.push({ kind: 'row', left: old[k], right: now[k] })
       } else {
         old.forEach((x) => out.push({ kind: 'row', left: x }))
         now.forEach((x) => out.push({ kind: 'row', right: x }))
       }
+      const ns = now.map((x) => x.n ?? 0).filter(Boolean)
+      const at = ns[0] ?? (ctx?.n ?? h.new - 1) + 1
+      const blk: Target = { path: f.path, line: at, end: ns[ns.length - 1] ?? at, anchor: anchorOf(f.path, out[out.length - 1]),
+        diff: [...old.map((x) => `-${x.t}`), ...now.map((x) => `+${x.t}`)].join('\n') }
+      for (let k = from; k < out.length; k++) (out[k] as Extract<Piece, { kind: 'row' }>).blk = blk
       if (putBack && !r.mv) {
         const line = now[0]?.n ?? ((ctx?.n ?? h.new - 1) + 1)
         out.push({ kind: 'back', put: { path: f.path, line, expect: now.map((x) => x.t), lines: old.map((x) => x.t) } })
@@ -171,14 +221,52 @@ function pieces(f: FileDiff, layout: Layout, moved: boolean, moves: Move[], putB
   return out
 }
 
-function FileRows({ file, layout, moved, moves, onMore, onGo, onPutBack }:
+/** The row a thread shows under: its line now, or its old line when it was removed. */
+function anchorOf(path: string, p: Piece | undefined): string {
+  if (!p || p.kind !== 'row') return `${path}#top`
+  const r = p.right ?? p.both
+  return r?.n != null ? `${path}#n${r.n}` : `${path}#o${p.left?.o ?? 0}`
+}
+
+function FileRows({ file, layout, moved, moves, onMore, onGo, onPutBack, asking }:
   { file: FileDiff; layout: Layout; moved: boolean; moves: Move[]; onMore?: () => void
-    onGo: (path: string, line: number) => void; onPutBack?: (p: PutBack) => void }) {
+    onGo: (path: string, line: number) => void; onPutBack?: (p: PutBack) => void; asking?: Asking }) {
   const list = useMemo(() => pieces(file, layout, moved, moves, !!onPutBack), [file, layout, moved, moves, onPutBack])
   const cols = layout === 'split' ? 'grid-cols-2' : 'grid-cols-1'
   return (
     <div className="font-mono text-[13px] leading-[19px]">
       {list.map((p, i) => {
+        if (p.kind !== 'row' || !asking) return <Fragment key={i}>{piece(p, i)}</Fragment>
+        const anchor = anchorOf(file.path, p)
+        const n = (p.right ?? p.both)?.n
+        const pins = n != null ? asking.pins(file.path, n) : []
+        const first = p.blk && list[i - 1]?.kind === 'row' ? (list[i - 1] as { blk?: Target }).blk !== p.blk : !!p.blk
+        return (
+          <Fragment key={i}>
+            <div data-anchor={anchor} className="group/row relative">
+              {piece(p, i)}
+              {pins.length > 0 && <span className="absolute top-0.5 left-0.5 flex gap-0.5">{pins.slice(0, 2).map((x) => (
+                <span key={x.n} className={`note-pin grid size-4 place-items-center rounded-full font-sans text-[10px]
+                  font-semibold ${x.done ? 'done' : ''}`}>{x.n}</span>))}</span>}
+              {first && p.blk && (
+                <span className="absolute top-0 right-2 z-[1] hidden gap-0.5 font-sans group-hover/row:flex">
+                  <button onClick={() => asking.onAsk(p.blk!)} title="Ask the agent about this change"
+                    className="flex h-[19px] items-center gap-1 rounded bg-raised px-1.5 text-xs font-semibold shadow-sm
+                      ring-1 ring-line hover:bg-hover"><MessageCircleQuestion size={12} /> Ask</button>
+                  <button onClick={() => asking.onNote(p.blk!)} title="Add a note on this line"
+                    className="flex h-[19px] items-center gap-1 rounded bg-raised px-1.5 text-xs font-semibold shadow-sm
+                      ring-1 ring-line hover:bg-hover"><StickyNote size={12} /> Note</button>
+                </span>
+              )}
+            </div>
+            {asking.under(anchor)}
+          </Fragment>
+        )
+      })}
+    </div>
+  )
+
+  function piece(p: Piece, i: number): ReactNode {
         if (p.kind === 'gap') {
           return (
             <button key={i} onClick={onMore} disabled={!onMore}
@@ -243,9 +331,7 @@ function FileRows({ file, layout, moved, moves, onMore, onGo, onPutBack }:
             {p.right ? <Line row={p.right} side="n" /> : <div className="bg-inset/40" />}
           </div>
         )
-      })}
-    </div>
-  )
+  }
 }
 
 function Line({ row, side, inline, moved }: { row: Row; side?: 'o' | 'n'; inline?: boolean; moved?: boolean }) {
