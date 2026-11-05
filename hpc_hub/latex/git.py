@@ -78,6 +78,16 @@ def commit_all(ssh: SshMaster, folder: str, message: str) -> str:
     return _git(ssh, folder, f"add -A -- . {skip} && {commit}")
 
 
+def commit_paths(ssh: SshMaster, folder: str, message: str, paths: list[str]) -> str:
+    """Commit only these files (paths from the repository's top), new and deleted ones too; the rest stays as it
+    is. For a change split into several commits."""
+    if not paths or any(p.startswith("/") or ".." in p.split("/") for p in paths):
+        raise GitError("Bad path")
+    specs = " ".join(shlex.quote(f":(top,literal){p}") for p in paths)
+    return _git(ssh, folder, f"add -A -- {specs} && {ENV} git -C {shlex.quote(folder)} commit -q "
+                             f"-m {shlex.quote(message)} -- {specs}")
+
+
 def pull(ssh: SshMaster, folder: str) -> str:
     return _git(ssh, folder, "pull --ff-only", timeout=300)
 
