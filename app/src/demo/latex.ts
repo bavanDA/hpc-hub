@@ -88,6 +88,13 @@ const BIB = `@article{doe2023,
   year = {2023}
 }
 
+@article{rivera2024,
+  author = {Alex Rivera and Jane Doe},
+  title = {Keeping the edges of rain bands in downscaled fields},
+  journal = {Made Up Letters on Weather},
+  year = {2024}
+}
+
 @inproceedings{lee2022,
   author = {Sam Lee},
   title = {Station data for everyone},

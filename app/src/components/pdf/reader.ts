@@ -45,10 +45,10 @@ export interface Narrator {
 export const SPEEDS = [0.75, 1, 1.25, 1.5, 1.75, 2]
 export const speedLabel = (r: number) => `${r}×`
 
-function stored(key: string, fallback: string) {
+export function stored(key: string, fallback: string) {
   try { return localStorage.getItem(key) ?? fallback } catch { return fallback }
 }
-function store(key: string, value: string) {
+export function store(key: string, value: string) {
   try { localStorage.setItem(key, value) } catch { /* private window */ }
 }
 

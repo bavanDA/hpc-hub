@@ -1,0 +1,84 @@
+/* The Reader's page: a column of text on a white, sepia, grey or black background. */
+.reader-surface {
+  --r-bg: #ffffff;
+  --r-text: #1d1d1f;
+  --r-dim: #8a8a8f;
+  --r-line: rgb(0 0 0 / 0.1);
+  --r-mark: rgb(229 165 10 / 0.35);
+  --r-mark-on: rgb(230 97 0 / 0.5);
+  background: var(--r-bg);
+  color: var(--r-text);
+}
+:root[data-theme="dark"] .reader-surface:not([data-bg]),
+.reader-surface[data-bg="black"] {
+  --r-bg: #1c1c1f; --r-text: #e4e4e7; --r-dim: #8e8e96; --r-line: rgb(255 255 255 / 0.12);
+  --r-mark: rgb(229 165 10 / 0.35); --r-mark-on: rgb(230 140 40 / 0.6);
+}
+.reader-surface[data-bg="white"] { --r-bg: #ffffff; --r-text: #1d1d1f; --r-dim: #8a8a8f; --r-line: rgb(0 0 0 / 0.1); }
+.reader-surface[data-bg="sepia"] { --r-bg: #f6eedc; --r-text: #3d2f20; --r-dim: #9a8466; --r-line: rgb(61 47 32 / 0.16); }
+.reader-surface[data-bg="grey"] { --r-bg: #e4e4e2; --r-text: #222224; --r-dim: #77777a; --r-line: rgb(0 0 0 / 0.12); }
+
+.reader-pad { padding: 34px 24px 30vh; transition: padding-right 0.2s ease; }
+.reader-col { margin: 0 auto; position: relative; font-kerning: normal; text-rendering: optimizeLegibility; }
+.reader-col p { margin: 0 0 0.9em; hyphens: auto; -webkit-hyphens: auto; overflow-wrap: break-word; }
+.reader-block { position: relative; }
+
+/* where a PDF page starts, in the left margin */
+.reader-page {
+  position: absolute; right: calc(100% + 2.6em); top: 0.45em; white-space: nowrap;
+  font: 500 12px/16px var(--font-sans); letter-spacing: 0.04em; text-transform: uppercase; color: var(--r-dim);
+}
+@media (max-width: 900px) { .reader-page { display: none; } }
+
+.reader-title { text-align: center; margin: 0.4em 0 1.6em; }
+.reader-title h1 { font-size: 1.55em; line-height: 1.25; font-weight: 600; margin: 0 0 0.5em; }
+.reader-title p { color: var(--r-dim); margin: 0; }
+.reader-h1, .reader-h2, .reader-h3, .reader-h4 { font-weight: 600; line-height: 1.3; margin: 1.5em 0 0.6em; }
+.reader-block:first-child > :is(.reader-h1, .reader-h2, .reader-h3) { margin-top: 0; }
+.reader-h1 { font-size: 1.25em; }
+.reader-h2 { font-size: 1.1em; }
+.reader-h3, .reader-h4 { font-size: 1em; }
+.reader-num { margin-right: 0.6em; font-variant-numeric: tabular-nums; }
+
+.reader-eq { display: flex; align-items: center; margin: 0.9em 0 1.1em; }
+.reader-eqb { flex: 1; min-width: 0; display: flex; justify-content: center; overflow-x: auto; overflow-y: hidden; }
+.reader-tex { max-width: 100%; }
+.reader-tex .katex-display { margin: 0; }
+.reader-tags { width: 3.2em; flex-shrink: 0; display: flex; flex-direction: column; justify-content: space-around;
+  align-self: stretch; text-align: right; font-variant-numeric: tabular-nums; }
+.reader-col .katex { font-size: 1.08em; }
+.reader-cut { display: block; max-width: 100%; background: currentColor; -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat; -webkit-mask-size: 100% 100%; mask-size: 100% 100%; }
+
+.reader-small, .reader-notes { font-size: 0.8em; color: var(--r-dim); }
+.reader-notes { border-top: 1px solid var(--r-line); padding-top: 0.5em; margin: -0.3em 0 1.1em; }
+.reader-notes p { margin: 0 0 0.3em; }
+.reader-mark { font-size: 0.7em; line-height: 0; }
+.reader-sc { font-variant: small-caps; }
+.reader-col code, .reader-code { font-family: var(--font-mono); font-size: 0.86em; }
+.reader-code { white-space: pre-wrap; margin: 0 0 1em; padding: 0.7em 0.9em; border-radius: 6px;
+  background: var(--r-line); }
+
+.reader-list { margin: 0 0 0.9em; padding-left: 1.4em; }
+.reader-list > li > p:last-child { margin-bottom: 0.35em; }
+ul.reader-list { list-style: disc; }
+ol.reader-list { list-style: decimal; }
+.reader-item { margin-right: 0.4em; }
+
+.reader-abstract { margin: 0 1.6em 1.6em; font-size: 0.92em; }
+.reader-abstract h3 { text-align: center; font-weight: 600; font-size: 1em; margin: 0 0 0.4em; }
+.reader-thm p { font-style: italic; }
+.reader-thm p strong { font-style: normal; }
+.reader-quote { margin: 0 0 0.9em; padding-left: 1em; border-left: 3px solid var(--r-line); }
+.reader-qed { text-align: right; }
+.reader-caption { font-size: 0.88em; color: var(--r-text); }
+
+.reader-refs { list-style: none; padding: 0; margin: 0; font-size: 0.86em; }
+.reader-refs li { display: flex; gap: 0.7em; margin: 0 0 0.6em; }
+.reader-ref-label { flex-shrink: 0; min-width: 2.2em; color: var(--r-dim); font-variant-numeric: tabular-nums; }
+
+.reader-note { font: 13px/18px var(--font-sans); color: var(--r-dim); text-align: center; margin-bottom: 2em !important; }
+
+mark.reader-hit { background: var(--r-mark); color: inherit; border-radius: 2px; }
+mark.reader-hit[data-on] { background: var(--r-mark-on); }
+.reader-col ::selection { background: rgb(53 132 228 / 0.3); }

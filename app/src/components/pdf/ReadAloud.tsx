@@ -1,8 +1,11 @@
 // The desktop PDF viewer with Read aloud: a player under the toolbar (voice, speed, play, 10 s back and forward,
 // stop, the clock), the spoken word marked on the page, a click on a word reads from there, and a right-click on
 // a word looks it up in a Dictionary panel beside the PDF. The voice runs on this computer, not on the cluster.
-import { BookOpen, Headphones, Loader2, Pause, Play, RotateCcw, RotateCw, Square, Volume2, X } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+// The Reader (reader/Reader.tsx) shows the same PDF as flowing text, over the pages.
+import {
+  BookOpen, BookOpenText, Headphones, Loader2, Pause, Play, RotateCcw, RotateCw, Square, Volume2, X,
+} from 'lucide-react'
+import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 
 import { ContextMenu } from '../files/ContextMenu'
 import { Spinner } from '../ui'
@@ -13,14 +16,23 @@ import {
 } from './reader'
 import { Tool } from './tool'
 
+const Reflow = lazy(() => import('../reader/Reader'))
 const NARROW = 760  // below this the dictionary lies over the PDF instead of beside it
 
 /** Reading mode (LaTeX, where a double-click opens the source): a double-click looks the word up instead. */
 const READING = 'pdf-reading-mode'
 const remembered = () => { try { return localStorage.getItem(READING) === '1' } catch { return false } }
 
-export function ReadablePdf({ source, extra, onSync, ...props }: PdfProps & { source?: Source }) {
+type ReadableProps = PdfProps & {
+  source?: Source
+  reflow?: boolean  // the Reader instead of the pages, set by the parent (the LaTeX tabs); left out, a toolbar button
+  latex?: { cluster: string; main: string }  // the Reader reads this LaTeX source
+}
+
+export function ReadablePdf({ source, extra, onSync, reflow, latex, ...props }: ReadableProps) {
   const reader = useReader(source)
+  const [ownReflow, setOwnReflow] = useState(false)
+  const inReader = reflow ?? ownReflow
   const [open, setOpen] = useState(false)
   const [reading, setReading] = useState(remembered)
   const read = (on: boolean) => {
@@ -45,15 +57,27 @@ export function ReadablePdf({ source, extra, onSync, ...props }: PdfProps & { so
   const readFrom = (w: WordPick) => { setOpen(true); reader.readFrom(w.spot) }
   const toggle = source && <Tool label="Read aloud" on={open} disabled={!props.data}
     onClick={() => open ? close() : setOpen(true)}><Headphones size={16} /></Tool>
+  const toReader = reflow === undefined && <Tool label="Reader view" disabled={!props.data}
+    onClick={() => setOwnReflow(true)}><BookOpenText size={16} /></Tool>
   const mode = onSync && <Tool label={reading ? 'Reading mode: double-click looks a word up' : 'Reading mode'}
     on={reading} disabled={!props.data} onClick={() => read(!reading)}><BookOpen size={16} /></Tool>
 
   return (
     <div ref={box} className="relative flex h-full min-w-0">
-      <div className="min-w-0 flex-1">
-        <Pdf {...props} reader={reader} extra={<>{mode}{toggle}{extra}</>} onWord={setMenu}
+      <div className="relative min-w-0 flex-1">
+        <Pdf {...props} reader={reader} extra={<>{mode}{toReader}{toggle}{extra}</>} onWord={setMenu}
           onSync={reading ? undefined : onSync} onLookUp={setWord}
-          bar={open && <Player reader={reader} onClose={close} />} />
+          focus={inReader && props.focus !== undefined ? false : props.focus}
+          bar={open && !inReader && <Player reader={reader} onClose={close} />} />
+        {inReader && (
+          <div className="absolute inset-0 z-10">
+            <Suspense fallback={<div className="grid h-full place-items-center bg-window"><Spinner size={24} /></div>}>
+              <Reflow data={props.data} latex={latex} memory={props.memory} narrator={reader} aloud={toggle}
+                bar={open && <Player reader={reader} onClose={close} />} focus={props.focus} onFocus={props.onFocus}
+                onPages={reflow === undefined ? () => setOwnReflow(false) : undefined} />
+            </Suspense>
+          </div>
+        )}
       </div>
       {word && <Dictionary key={`${word.text}:${word.x}:${word.y}`} pick={word} reader={reader} overlay={narrow}
         onRead={() => readFrom(word)} onClose={() => setWord(null)} />}

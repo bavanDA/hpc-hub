@@ -1,6 +1,6 @@
 // One LaTeX project, like Overleaf: files on the left, the editor, and the PDF with its logs on the right.
 // Saves go to the cluster; Recompile runs latexmk there; double-clicks jump between the PDF and the source.
-import { ArrowRight, Columns2, FileText, FolderOpen, PanelLeft, ScrollText, X } from 'lucide-react'
+import { ArrowRight, BookOpenText, Columns2, FileText, FolderOpen, PanelLeft, ScrollText, X } from 'lucide-react'
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 
 import { useEvent } from '../../hooks'
@@ -24,7 +24,7 @@ import { GitMenu } from './Git'
 import { counts, Logs } from './Logs'
 
 const CodeEditor = lazy(() => import('./CodeEditor'))
-type View = 'editor' | 'split' | 'pdf'
+type View = 'editor' | 'split' | 'pdf' | 'reader'
 type Doc = { path: string; text: string; version: number; line?: number }
 type PdfState = { data: Uint8Array | null; path?: string; none?: boolean; error?: string }
 
@@ -179,7 +179,7 @@ export function Project({ project, onClose }: { project: Opened; onClose: () => 
     call<Spot | null>('latex.sync_view', { cluster, main, path: d.path, line })
       .then((s) => {
         if (!s) { toast('This line is not in the PDF'); return }
-        if (view === 'editor') setView('split')
+        if (view === 'editor' || view === 'reader') setView('split')
         setLogsOpen(false)
         setTarget({ ...s, n: Date.now() })
       })
@@ -305,11 +305,12 @@ export function Project({ project, onClose }: { project: Opened; onClose: () => 
     </button>
   )
   const source = pdf.path ? { cluster, path: pdf.path } : undefined
-  const pdfPane = logsOpen
+  const latexSource = useMemo(() => ({ cluster, main }), [cluster, main])
+  const pdfPane = logsOpen && view !== 'reader'
     ? <Logs running={!!running} log={log} last={last} onGo={goIssue} onClose={() => setLogsOpen(false)}
         onStop={() => running && running !== 'starting' && call('latex.stop', { id: running })} />
     : <ReadablePdf data={pdf.data} source={source} memory={`latex:${cluster}:${main}`} onSync={fromPdf} target={target}
-        extra={logsButton} focus={focused} onFocus={setFocused}
+        extra={logsButton} focus={focused} onFocus={setFocused} reflow={view === 'reader'} latex={latexSource}
         loading={!pdf.none && !pdf.error} progress={progress}
         message={pdf.none ? <Empty title="No PDF yet" text="Press Recompile to build it on the cluster." />
           : pdf.error ? <Empty title="Could not read the PDF" text={pdf.error} /> : undefined} />
@@ -327,7 +328,8 @@ export function Project({ project, onClose }: { project: Opened; onClose: () => 
             <span className="ml-2">{saving ? 'Saving…' : dirty ? 'Not saved' : 'Saved'}</span></div>
         </div>
         <div role="radiogroup" aria-label="Show" className="flex gap-[3px] rounded-lg border border-line-strong p-[3px]">
-          {([['editor', 'Editor', FileText], ['split', 'Both', Columns2], ['pdf', 'PDF', ScrollText]] as const)
+          {([['editor', 'Editor', FileText], ['split', 'Both', Columns2], ['pdf', 'PDF', ScrollText],
+            ['reader', 'Reader', BookOpenText]] as const)
             .map(([v, label, I]) => (
               <button key={v} role="radio" aria-checked={view === v} onClick={() => setView(v)} title={label}
                 className={`flex h-7 items-center gap-1.5 rounded-md px-2.5 text-sm ${view === v
