@@ -2,7 +2,8 @@
 
 readaloud.start makes the narration on a thread and reports as `readaloud` events: progress text, then `part` (a
 few chunks from the page you are on, so reading starts within seconds), then `full` (the whole PDF, which the UI
-swaps in at the same moment: offset is where the part began in it). Audio goes to the UI in pieces (readaloud.audio).
+swaps in at the same moment: offset is where the part began in it). The player streams the audio from a loopback URL
+(pdf/readaloud/stream.py), so it starts at once; readaloud.audio still hands it over in pieces when that fails.
 """
 
 import base64
@@ -14,7 +15,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from ...files import remote_fs
-from ...pdf.readaloud import dictionary, narration
+from ...pdf.readaloud import dictionary, narration, stream
 from ..hub import hub
 from ..server import method
 
@@ -31,6 +32,7 @@ _lock = threading.Lock()
 _jobs: dict[str, "Job"] = {}
 _audio: dict[str, Path] = {}  # token -> an MP3 the UI may read
 _sounds: dict[str, str] = {}  # word -> the dictionary's recording of it
+_stream = stream.Server(lambda token: _audio.get(token))
 
 
 @dataclass
@@ -78,8 +80,16 @@ def _token(path: Path) -> str:
         return token
 
 
+def _url(token: str) -> str:
+    try:
+        return _stream.url(token)
+    except OSError:
+        return ""  # no loopback port: the UI reads the pieces instead
+
+
 def _pack(n: narration.Narration) -> dict:
-    return {"audio": _token(n.audio), "duration": n.duration, "words": n.words, "timings": n.timings}
+    token = _token(n.audio)
+    return {"audio": token, "url": _url(token), "duration": n.duration, "words": n.words, "timings": n.timings}
 
 
 def _send(job: Job, **changes) -> None:

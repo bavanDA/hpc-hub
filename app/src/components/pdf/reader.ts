@@ -13,7 +13,7 @@ export type Box = [number, number, number, number, number]
 export type Spot = { page: number; x: number; y: number }
 export type Voice = { id: string; label: string }
 type Narration = { audio: string; duration: number; words: number[][]; timings: [number, number, number][]
-  mime?: string }
+  mime?: string; url?: string }  // url: the MP3 streamed from the backend on 127.0.0.1, to play at once
 type Job = { id: string; state: 'starting' | 'part' | 'full' | 'error'; text: string; error: string
   offline: boolean; narration: Narration | null; offset: number; n: number }
 
@@ -52,6 +52,7 @@ function store(key: string, value: string) {
   try { localStorage.setItem(key, value) } catch { /* private window */ }
 }
 
+/** The whole MP3 through the RPC in pieces, as a blob: only when streaming it from url failed. */
 async function audioUrl(n: Narration): Promise<string> {
   const parts: Uint8Array<ArrayBuffer>[] = []
   let offset = 0, total = Infinity
@@ -103,6 +104,7 @@ export class Reader implements Narrator {
   private token = ''  // the recording playing now
   private queue = Promise.resolve()
   private stopEvents: (() => void) | null = null
+  private playing: Narration | null = null  // the narration the audio is from
 
   constructor() {
     const rate = Number(stored('readaloud.rate', '1'))
@@ -257,7 +259,7 @@ export class Reader implements Narrator {
       return
     }
     this.token = n.audio
-    const url = await audioUrl(n)
+    const url = n.url || await audioUrl(n)
     if (round !== this.round) { URL.revokeObjectURL(url); return }
     if (j.state === 'full' && this.audio) await this.swap(url, n, j.offset)
     else await this.load(url, n)
@@ -271,11 +273,30 @@ export class Reader implements Narrator {
     a.addEventListener('pause', () => { if (a === this.audio) this.set({ playing: false }) })
     a.addEventListener('ended', () => { if (a === this.audio) this.set({ playing: false }) })
     a.addEventListener('seeked', () => { if (a === this.audio) this.tick(true) })
-    a.addEventListener('loadedmetadata', () => { if (a === this.audio) this.set({ total: a.duration || 0 }) })
+    a.addEventListener('loadedmetadata', () => {
+      if (a === this.audio && Number.isFinite(a.duration) && a.duration > 0) this.set({ total: a.duration })
+    })
     a.addEventListener('error', () => {
-      if (a === this.audio) this.set({ playing: false, text: 'The recording could not be played' })
+      if (a !== this.audio) return
+      if (this.playing?.url && a.src === this.playing.url) void this.fallBack(a, this.playing)
+      else this.set({ playing: false, text: 'The recording could not be played' })
     })
     return a
+  }
+
+  /** Streaming failed: fetch the whole recording through the RPC and go on from the same moment. */
+  private async fallBack(a: HTMLAudioElement, n: Narration) {
+    const round = this.round, at = a.currentTime, wasPlaying = !a.paused || this.snap.playing
+    n.url = undefined
+    this.set({ text: 'Loading the recording…' })
+    try {
+      const url = await audioUrl(n)
+      if (round !== this.round || a !== this.audio) { URL.revokeObjectURL(url); return }
+      await this.load(url, n, at, wasPlaying || at === 0)
+      this.set({ text: '' })
+    } catch (e) {
+      if (round === this.round) this.set({ playing: false, text: (e as Error).message })
+    }
   }
 
   private use(n: Narration) {
@@ -288,36 +309,44 @@ export class Reader implements Narrator {
     this.times = n.timings
   }
 
-  private async load(url: string, n: Narration) {
+  private async load(url: string, n: Narration, at = 0, play = true) {
     this.drop()
     this.use(n)
     const a = this.player(url)
     this.audio = a
-    this.set({ phase: 'ready', text: '', total: n.duration, at: 0 })
+    this.playing = n
+    this.set({ phase: 'ready', text: '', total: n.duration, at })
     this.timer = window.setInterval(() => { if (!a.paused) this.tick() }, 100)
     const spot = this.pending
     this.pending = null
-    await new Promise((r) => { a.addEventListener('loadedmetadata', r, { once: true }); a.load() })
+    if (!await metadata(a) || a !== this.audio) return  // a failed stream falls back (player's error)
     if (spot) this.seekSpot(spot)
-    a.play().catch((e: Error) => this.set({ text: `Could not play: ${e.message}` }))
+    else if (at) a.currentTime = at
+    if (play) a.play().catch((e: Error) => this.set({ text: `Could not play: ${e.message}` }))
   }
 
   /** The whole narration takes over from the first part at the same moment (offset: where the part began). */
-  private async swap(url: string, n: Narration, offset: number) {
+  private async swap(url: string, n: Narration, offset: number): Promise<void> {
     const old = this.audio!
     const a = this.player(url)
-    await new Promise((r) => { a.addEventListener('loadedmetadata', r, { once: true }); a.load() })
+    if (!await metadata(a) && n.url) {  // the stream failed: the whole one in pieces instead
+      n.url = undefined
+      return this.swap(await audioUrl(n), n, offset)
+    }
     if (old !== this.audio) { URL.revokeObjectURL(url); return }
     const playing = !old.paused
     a.currentTime = offset + old.currentTime
     this.use(n)
     this.audio = a  // from here events come from the new one
+    this.playing = n
     clearInterval(this.timer)
     this.timer = window.setInterval(() => { if (!a.paused) this.tick() }, 100)
     this.set({ total: n.duration })
     if (playing) await a.play().catch(() => {})
     old.pause()
     URL.revokeObjectURL(old.src)
+    old.removeAttribute('src')
+    old.load()  // lets go of a stream
     this.tick(true)
   }
 
@@ -325,6 +354,7 @@ export class Reader implements Narrator {
     clearInterval(this.timer)
     const old = this.audio
     this.audio = null  // first, so its last events are ignored
+    this.playing = null
     if (old) { old.pause(); URL.revokeObjectURL(old.src); old.removeAttribute('src'); old.load() }
     this.words = new Map()
     this.byPage = new Map()
@@ -350,6 +380,15 @@ export class Reader implements Narrator {
     this.current = id
     this.wordListeners.forEach((f) => f(id))
   }
+}
+
+/** Loads a recording's start: true once it can play, false when it failed. */
+function metadata(a: HTMLAudioElement): Promise<boolean> {
+  return new Promise((done) => {
+    a.addEventListener('loadedmetadata', () => done(true), { once: true })
+    a.addEventListener('error', () => done(false), { once: true })
+    a.load()
+  })
 }
 
 /** One reader for as long as the component lives, following the PDF it reads. */
