@@ -113,6 +113,7 @@ export const answers = {
   'readaloud.voices': { voices: VOICES.map(([id, label]) => ({ id, label })), default: VOICES[0][0] },
   'readaloud.start': start,
   'readaloud.follow': null,
+  'readaloud.trace': null,
   'readaloud.stop': null,
   'readaloud.audio': ({ offset = 0, length = 4 << 20 }: { offset?: number; length?: number }) =>
     ({ data: base64(audio.subarray(offset, offset + length)), total: audio.length }),

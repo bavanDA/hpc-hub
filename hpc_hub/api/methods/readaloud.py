@@ -10,6 +10,7 @@ import base64
 import secrets
 import socket
 import threading
+import time
 import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
@@ -114,31 +115,59 @@ def _trouble(e: Exception) -> tuple[str, bool]:
     return str(e) or "Read aloud stopped", False
 
 
+def log(text: str) -> None:
+    """A line in ~/.cache/hpc-hub/readaloud.log: where Read aloud spends its time."""
+    try:
+        path = narration.cache_dir().parent / "readaloud.log"
+        with path.open("a") as f:
+            f.write(f"{time.strftime('%Y-%m-%d %H:%M:%S')} {text}\n")
+    except OSError:
+        pass
+
+
 def _work(job: Job, page: int) -> None:
+    t0 = time.monotonic()
+
+    def step(what: str) -> None:
+        log(f"{job.id} {what} at {time.monotonic() - t0:.1f} s")
     try:
         pdf = _read(job.cluster, job.path)
+        step(f"read the PDF ({len(pdf) // 1024} KB)")
         done = narration.cached(pdf, job.voice)
         if done:
             _send(job, state="full", text="", narration=_pack(done))
+            step("sent the saved recording")
             return
 
         def progress(text: str) -> None:
             _send(job, text=text)
         plan = narration.plan(pdf, job.voice, progress)
+        step(f"found the words ({len(plan.parts)} parts)")
         start = plan.first_on(page)
         end = min(start + FIRST_CHUNKS, len(plan.parts))
         narration.record(plan, list(range(start, end)), progress)
+        step(f"recorded parts {start + 1} to {end}")
         if job.stopped:
             return
         if start == 0 and end == len(plan.parts):
             _send(job, state="full", text="", narration=_pack(narration.full(plan)))
+            step("sent the whole recording")
             return
         _send(job, state="part", text="", narration=_pack(narration.assemble(plan, start, end)))
+        step("sent the first part")
         whole = narration.full(plan, progress, start)
         _send(job, state="full", text="", narration=_pack(whole), offset=narration.start_time(plan, start))
+        step("sent the whole recording")
     except Exception as e:  # noqa: BLE001 - every failure goes to the UI as plain words
+        step(f"stopped: {e}")
         error, offline = _trouble(e)
         _send(job, state="error" if job.narration is None else job.state, text="", error=error, offline=offline)
+
+
+@method("readaloud.trace")
+def trace(text: str) -> None:
+    """The player's side of the timings."""
+    log(f"player: {text[:300]}")
 
 
 @method("readaloud.voices")

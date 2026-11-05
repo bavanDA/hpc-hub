@@ -105,6 +105,7 @@ export class Reader implements Narrator {
   private queue = Promise.resolve()
   private stopEvents: (() => void) | null = null
   private playing: Narration | null = null  // the narration the audio is from
+  private falling: HTMLAudioElement | null = null  // the player whose stream failed, while the whole one loads
 
   constructor() {
     const rate = Number(stored('readaloud.rate', '1'))
@@ -234,6 +235,7 @@ export class Reader implements Narrator {
     this.stopEvents = on('readaloud', (d) => this.event(d as Job, round))
     try {
       if (!this.snap.voice) this.set({ voice: (await voices()).default })
+      trace(`start page ${page}`)
       const job = await call<Job>('readaloud.start', { ...source, voice: this.snap.voice, page })
       if (round !== this.round) { call('readaloud.stop', { id: job.id }).catch(() => {}); return }
       this.job = job.id
@@ -281,7 +283,7 @@ export class Reader implements Narrator {
       if (a === this.audio && Number.isFinite(a.duration) && a.duration > 0) this.set({ total: a.duration })
     })
     a.addEventListener('error', () => {
-      if (a !== this.audio) return
+      if (a !== this.audio || a === this.falling) return
       if (this.playing?.url && a.src === this.playing.url) void this.fallBack(a, this.playing)
       else this.set({ playing: false, text: 'The recording could not be played' })
     })
@@ -290,11 +292,15 @@ export class Reader implements Narrator {
 
   /** Streaming failed: fetch the whole recording through the RPC and go on from the same moment. */
   private async fallBack(a: HTMLAudioElement, n: Narration) {
+    if (this.falling === a) return
+    this.falling = a
     const round = this.round, at = a.currentTime, wasPlaying = !a.paused || this.snap.playing
     n.url = undefined
     this.set({ text: 'Loading the recording…' })
     try {
+      const t0 = performance.now()
       const url = await audioUrl(n)
+      trace(`whole recording through the RPC in ${Math.round(performance.now() - t0)} ms`)
       if (round !== this.round || a !== this.audio) { URL.revokeObjectURL(url); return }
       await this.load(url, n, at, wasPlaying || at === 0)
       this.set({ text: '' })
@@ -323,7 +329,11 @@ export class Reader implements Narrator {
     this.timer = window.setInterval(() => { if (!a.paused) this.tick() }, 100)
     const spot = this.pending
     this.pending = null
-    if (!await metadata(a) || a !== this.audio) return  // a failed stream falls back (player's error)
+    if (!await metadata(a)) {  // a stream that failed or stayed silent: the whole recording instead
+      if (a === this.audio && n.url) void this.fallBack(a, n)
+      return
+    }
+    if (a !== this.audio) return
     if (spot) this.seekSpot(spot)
     else if (at) a.currentTime = at
     if (play) a.play().catch((e: Error) => this.set({ text: `Could not play: ${e.message}` }))
@@ -387,12 +397,25 @@ export class Reader implements Narrator {
 }
 
 /** Loads a recording's start: true once it can play, false when it failed. */
-function metadata(a: HTMLAudioElement): Promise<boolean> {
+/** Whether the player got the recording's length; a stream that says nothing for 4 s counts as failed. */
+function metadata(a: HTMLAudioElement, wait = 4000): Promise<boolean> {
+  const t0 = performance.now()
   return new Promise((done) => {
-    a.addEventListener('loadedmetadata', () => done(true), { once: true })
-    a.addEventListener('error', () => done(false), { once: true })
+    const end = (ok: boolean, why: string) => {
+      clearTimeout(timer)
+      trace(`player ${why} after ${Math.round(performance.now() - t0)} ms (${a.src.slice(0, 22)})`)
+      done(ok)
+    }
+    const timer = window.setTimeout(() => end(false, 'silent'), wait)
+    a.addEventListener('loadedmetadata', () => end(true, 'ready'), { once: true })
+    a.addEventListener('error', () => end(false, `error ${a.error?.code ?? ''}`), { once: true })
     a.load()
   })
+}
+
+/** A line in ~/.cache/hpc-hub/readaloud.log, to see where Read aloud spends its time. */
+export function trace(text: string) {
+  call('readaloud.trace', { text }).catch(() => {})
 }
 
 /** One reader for as long as the component lives, following the PDF it reads. */
