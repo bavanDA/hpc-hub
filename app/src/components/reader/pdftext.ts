@@ -76,7 +76,10 @@ function lines(runs: Run[], page: number): Line[] {
     cur = null
   }
   for (const r of runs) {
-    const same = cur && Math.abs(r.y - cur.y) < 0.65 * Math.max(r.size, cur.size) && r.x >= cur.x1 - cur.size * 0.8
+    const most = cur ? Math.max(r.size, cur.size) : 0, dy = cur ? Math.abs(r.y - cur.y) : 0
+    // the next run on this line; raised or lowered ones (a root sign, a superscript) right after it too
+    const same = cur && (dy < 0.65 * most && r.x >= cur.x1 - cur.size * 0.8 ||
+      dy < 1.1 * most && r.x >= cur.x1 - cur.size * 0.3 && r.x <= cur.x1 + cur.size * 3)
     if (!same) {
       finish()
       cur = { page, x0: r.x, x1: r.x, y: r.y, top: r.y - r.size, bottom: r.y + r.size * 0.25, size: r.size, text: '',
@@ -179,7 +182,8 @@ export function fromPdf(t: PdfText): Doc {
       const rank = headSizes.indexOf(Math.round(l.size))
       const m = l.text.match(numbered)
       const centered = l.x0 > left + body * 1.5 && Math.abs((l.x0 - left) - (right - (l.tagX || l.x1))) < body * 6
-      const isMath = (l.math > 0.35 || !!l.tag) && (centered || l.x0 > left + body * 2) && !/[.:]\s*$/.test(l.text)
+      const isMath = (l.math > 0.35 || !!l.tag) && (centered || l.x0 > left + body * 2) && !/[.:]\s*$/.test(l.text) &&
+        l.x1 - l.x0 > body * 2.5
       if (isMath) {
         endPara()
         const x1 = l.tagX ? l.tagX - body * 0.5 : l.x1
@@ -197,15 +201,6 @@ export function fromPdf(t: PdfText): Doc {
         continue
       }
       endMath()
-      const middle = Math.abs((l.x0 + l.x1) / 2 - columns[l.page - 1].mid) < body * 2
-      if (byOpen && l.page === 1 && middle && !m && !/^abstract$/i.test(l.text) && l.text.length < 200) {
-        const title = blocks.findLast((b) => b.t === 'title') as Extract<Block, { t: 'title' }>
-        const near = prev && l.top - prev.bottom < l.size * 0.8
-        title.by.push({ t: 'text', s: title.by.length ? (near ? ' ' : ' · ') + l.text : l.text })
-        prev = l
-        continue
-      }
-      byOpen = false
       // the title: the biggest words at the top of the first page
       if (!titled && l.page === 1 && l.size >= body * 1.4 && rank === 0) {
         endPara()
@@ -217,6 +212,15 @@ export function fromPdf(t: PdfText): Doc {
         prev = l
         continue
       }
+      const middle = Math.abs((l.x0 + l.x1) / 2 - columns[l.page - 1].mid) < body * 2
+      if (byOpen && l.page === 1 && middle && !m && !/^abstract$/i.test(l.text) && l.text.length < 200) {
+        const title = blocks.findLast((b) => b.t === 'title') as Extract<Block, { t: 'title' }>
+        const near = prev && l.top - prev.bottom < l.size * 0.8
+        title.by.push({ t: 'text', s: title.by.length ? (near ? ' ' : ' · ') + l.text : l.text })
+        prev = l
+        continue
+      }
+      byOpen = false
       const big = rank >= 0 && l.text.length < 160 && l.size >= body * 1.12
       const boldHead = l.bold && m && l.text.length < 120 && !/[.,;]$/.test(l.text) && l.size >= body * 0.98
       const boldShort = l.bold && l.text.length < 40 && !/[.,;:]$/.test(l.text) && middle
@@ -225,7 +229,8 @@ export function fromPdf(t: PdfText): Doc {
         if (blocks.some((b) => b.t === 'title')) titled = true
         const last = blocks.at(-1)
         // a heading on two lines
-        if (last?.t === 'h' && prev && l.top - prev.bottom < l.size * 0.8 && Math.round(prev.size) === Math.round(l.size)) {
+        if (last?.t === 'h' && !m && prev && l.top - prev.bottom < l.size * 0.8 &&
+          Math.round(prev.size) === Math.round(l.size)) {
           (last.c[0] as { s: string }).s += ` ${l.text}`
         } else {
           const size = Math.round(l.size)
