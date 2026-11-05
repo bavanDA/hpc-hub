@@ -240,7 +240,8 @@ class Paper {
 
   katexMacros(): Record<string, string> {
     const out: Record<string, string> = { '\\bm': '\\boldsymbol{#1}', '\\mathbbm': '\\mathbb{#1}',
-      '\\bbR': '\\mathbb{R}', '\\one': '\\mathbf{1}' }
+      '\\bbR': '\\mathbb{R}', '\\one': '\\mathbf{1}', '\\textsc': '\\text{#1}', '\\emph': '\\textit{#1}',
+      '\\mathscr': '\\mathcal{#1}', '\\textsl': '\\textit{#1}', '\\xspace': '' }
     for (const [k, m] of Object.entries(this.macros)) out[`\\${k}`] = m.body
     return out
   }
