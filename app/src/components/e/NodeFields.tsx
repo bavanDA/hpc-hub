@@ -6,7 +6,7 @@
 // a tool window shows for it.
 import { useEffect, useState } from 'react'
 
-import { chosen, fitting, gpuName, isPreset, presets, useGpus, withGpu, type Gpu, type GpuFit } from '../clusters/gpus'
+import { chosen, fitting, gpuName, isPreset, presets, useGpus, withGpu, type Gpu, type GpuFit, type Preset } from '../clusters/gpus'
 import { queueText } from '../clusters/priority'
 import { suText } from '../clusters/su'
 import { QueuePickers } from '../clusters/queues'
@@ -37,6 +37,20 @@ const fits = (p: Profile, limits: Limits | null, g: Gpu | null) =>
   inRange(p.cpus, coresFor(p.mem_gb, limits?.mem_per_core_gb), limits?.cores) && inRange(p.mem_gb, 1, limits?.memory_gb)
   && inRange(minutes(p.time) ?? 0, 1, limits?.longest) && (!g || inRange(p.gpus ?? 1, 1, g.max_per_job))
   && (!g || limits?.gpu_caps?.[g.type] !== 0)
+
+/** Each size's own settings per cluster, so going to GPU and back leaves Small as you left it. */
+const kept = new Map<string, { tab: string; sizes: Record<string, Profile> }>()
+const keptFor = (cluster: string) => kept.get(cluster) ?? kept.set(cluster, { tab: '', sizes: {} }).get(cluster)!
+const remember = (cluster: string, tab: string, p: Profile) => {
+  const k = keptFor(cluster)
+  k.sizes[tab] = p
+  k.tab = tab
+}
+
+const sizeOf = (p: Profile, quick: Preset[], last?: string) =>
+  (last && (last === 'gpu') === !!p.gpus ? last : null)
+  ?? quick.find((x) => isPreset(p, x))?.id
+  ?? (p.gpus ? 'gpu' : p.cpus >= 8 ? 'medium' : 'small')
 
 const fitName = (f: GpuFit) =>
   (f.count === 1 ? gpuName(f.gpu) : `${f.count} × ${f.gpu.label}, ${f.count * f.gpu.memory_gb} GB`)
@@ -77,13 +91,16 @@ function GpuPart({ gpus, limits, value: p, onChange }:
   )
 }
 
-function QueueDialog({ limits, value: p, onChange, onClose, extra }:
-  { limits: Limits | null; value: Profile; onChange: (p: Profile) => void; onClose: () => void; extra: boolean }) {
+function QueueDialog({ limits, value: p, onChange, onClose, extra, only }: {
+  limits: Limits | null; value: Profile; onChange: (p: Profile) => void; onClose: () => void; extra: boolean
+  only?: string[]
+}) {
   const set = (change: Partial<Profile>) => onChange({ ...p, ...change })
   return (
     <EDialog title="Queue and priority" width={440} onClose={onClose}
       actions={<MainButton onClick={onClose}>Done</MainButton>}>
       <QueuePickers limits={limits} queue={p.partition} qos={p.qos ?? ''} onQueue={(partition) => set({ partition })}
+        only={only}
         onQos={(qos) => set({ qos })} account={p.account ?? ''} onAccount={(account) => set({ account })} />
       <div className="px-5 pt-3">
         {extra && <Field label="Extra options" value={p.extra_args ?? ''} placeholder="--constraint=intel"
@@ -101,23 +118,29 @@ export function NodeFields({ cluster, value: p, onChange, onValid, extra = true 
   const [open, setOpen] = useState(false)
   const { gpus } = useGpus(cluster)
   const limits = useLimits(cluster, p)
-  const set = (change: Partial<Profile>) => onChange({ ...p, ...change })
+  const quick = presets(gpus)
+  const [on, setOn] = useState(() => sizeOf(p, quick, keptFor(cluster).tab))
+  const change = (q: Profile) => { remember(cluster, on, q); onChange(q) }
+  const set = (c: Partial<Profile>) => change({ ...p, ...c })
   const g = chosen(p, gpus)
   const ok = fits(p, limits, g)
   useEffect(() => { onValid?.(ok) }, [ok, onValid])
   const perCore = limits?.mem_per_core_gb
   const fewest = coresFor(p.mem_gb, perCore)
-  const quick = presets(gpus)
   // a queue where memory sets the cores (picked just now): raise them to what the memory takes
   useEffect(() => { if (p.cpus < fewest) onChange({ ...p, cpus: fewest }) }, [p, fewest, onChange])
-  const on = quick.find((x) => isPreset(p, x))?.id ?? (p.gpus ? 'gpu' : '')  // GPU with cores raised still is GPU
   const queue = queueText(p.partition, p.qos)
   const su = limits?.billing ? suText(limits.billing, p, minutes(p.time) ?? 240, p.qos || limits.default_qos) : null
   // a CPU size leaves a GPU-only queue for the usual one
   const gpuQueue = (q: Profile) => gpus.some((x) => x.partitions.includes(q.partition))
     && !(limits?.default_partition && gpus.some((x) => x.partitions.includes(limits.default_partition)))
+  const gpuQueues = [...new Set(gpus.flatMap((x) => x.partitions))]
   const pickSize = (id: string) => {
-    const q = quick.find((x) => x.id === id)!.apply(p)
+    if (id === on) return
+    remember(cluster, on, p)
+    const q = keptFor(cluster).sizes[id] ?? quick.find((x) => x.id === id)!.apply(p)
+    remember(cluster, id, q)
+    setOn(id)
     onChange(!q.gpus && gpuQueue(q) ? { ...q, partition: limits?.default_partition ?? '' } : q)
   }
   return (
@@ -136,9 +159,10 @@ export function NodeFields({ cluster, value: p, onChange, onValid, extra = true 
           onChange={(m) => set({ time: slurmTime(Math.max(1, m)) })} />
         <Row label="Queue and priority" value={queue} opens onPress={() => setOpen(true)} />
       </List>
-      {!!p.gpus && gpus.length > 0 && <GpuPart gpus={gpus} limits={limits} value={p} onChange={onChange} />}
+      {!!p.gpus && gpus.length > 0 && <GpuPart gpus={gpus} limits={limits} value={p} onChange={change} />}
       {su && <List><Row label="Cost" sub={su.sub} value={su.value} /></List>}
-      {open && <QueueDialog limits={limits} value={p} onChange={onChange} extra={extra} onClose={() => setOpen(false)} />}
+      {open && <QueueDialog limits={limits} value={p} onChange={change} extra={extra}
+        only={p.gpus ? gpuQueues : undefined} onClose={() => setOpen(false)} />}
     </>
   )
 }

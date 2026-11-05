@@ -12,15 +12,17 @@ const choices = (list: string[] | undefined, current: string) =>
   list?.length ? [...(current && !list.includes(current) ? [current] : []), ...list] : []
 
 /** A Queue row and a Priority row, each opening the cluster's list; text fields while the lists aren't known. */
-export function QueuePickers({ limits, queue, qos, onQueue, onQos, autoFocus, account, onAccount }: {
+export function QueuePickers({ limits, queue, qos, onQueue, onQos, autoFocus, account, onAccount, only }: {
   limits: Limits | null; queue: string; qos: string; onQueue: (q: string) => void; onQos: (q: string) => void
   autoFocus?: boolean
   account?: string; onAccount?: (a: string) => void  // with these, a Group to bill row too
+  only?: string[]  // just these queues (a GPU size: the GPU queues)
 }) {
   const [pick, setPick] = useState<'' | 'queue' | 'priority' | 'group'>('')
   const groups = onAccount ? choices(limits?.accounts, account ?? '') : []
   const def = limits?.default_account ?? ''
-  const queues = choices(limits?.partitions, queue)
+  const listed = only?.length ? limits?.partitions?.filter((q) => only.includes(q)) : limits?.partitions
+  const queues = choices(listed, queue)
   const levels = choices(limits?.qos, qos)
   const shownQueue = queue || limits?.default_partition || ''
   const shownQos = qos || limits?.default_qos || ''
