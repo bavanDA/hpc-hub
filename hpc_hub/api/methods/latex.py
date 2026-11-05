@@ -14,7 +14,7 @@ from dataclasses import asdict, dataclass, field
 from ...core.config import LATEX_ENGINES
 from ...files import remote_fs
 from ...latex import build as latex
-from ...latex import git, synctex
+from ...latex import git, saved, synctex
 from ...projects import store
 from ...projects.store import Project
 from ..hub import hub
@@ -185,7 +185,9 @@ def read(cluster: str, path: str) -> dict:
 
 @method("latex.write")
 def write(cluster: str, path: str, text: str) -> None:
-    remote_fs.write_bytes(_ssh(cluster), path, text.encode())
+    ssh = _ssh(cluster)
+    remote_fs.write_bytes(ssh, path, text.encode())
+    saved.auto(ssh, path, "Saved")  # a saved version in the background, at most every 5 minutes
 
 
 @method("latex.new_file")
@@ -373,6 +375,11 @@ def _watch(b: Build) -> None:
     if pending:
         h.emit("latex-log", {"id": b.id, "text": "".join(pending)})
     log = b.text()
+    if code == 0 and not b.stopped:
+        try:
+            saved.auto(h.connected(b.cluster).ssh, b.main, "Compiled")
+        except Exception:  # noqa: BLE001 (not connected any more: no version, no error)
+            pass
     h.emit("latex-build", {"id": b.id, "cluster": b.cluster, "main": b.main, "ok": code == 0 and not b.stopped,
                            "code": code, "stopped": b.stopped, "seconds": round(time.monotonic() - b.started, 1),
                            "issues": issues(log), "log": log[-200_000:]})
