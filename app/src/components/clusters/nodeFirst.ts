@@ -14,11 +14,12 @@ export const nodeWords = () => ({
   keep: 'Not now',
 })
 
-type Asking = { cluster: Cluster; what: string; run: () => void }
+type Asking = { cluster: Cluster; what: string; run: () => void; detail?: string }
 
 /** guard(cluster, 'The PDF build', run): runs it now with a node (or when not connected: the call says why),
  *  else asks you to get one and runs it once the node is there. getting is the cluster whose node window to show
- *  (ComputeDialog, NodeSheet). */
+ *  (ComputeDialog, NodeSheet). detail: a line under the question (words.text); waiting: the what that waits for
+ *  its node. */
 export function useNodeFirst() {
   const { clusters, sessions } = useClusters()
   const [asking, setAsking] = useState<Asking | null>(null)
@@ -32,14 +33,14 @@ export function useNodeFirst() {
     }
   }, [waiting, sessions])
 
-  const guard = (id: string, what: string, run: () => void) => {
+  const guard = (id: string, what: string, run: () => void, detail?: string) => {
     const s = sessions[id], c = clusters?.find((x) => x.id === id)
     if (!c || !s?.connected || s.node) return run()
-    setAsking({ cluster: c, what, run })
+    setAsking({ cluster: c, what, run, detail })
   }
   return {
-    guard, getting,
-    words: asking && nodeWords(),
+    guard, getting, waiting: waiting?.what ?? null,
+    words: asking && (asking.detail ? { ...nodeWords(), text: asking.detail } : nodeWords()),
     getNode: () => { setGetting(asking?.cluster ?? null); setWaiting(asking) },
     runHere: () => setAsking(null),  // Not now: nothing runs on the login node
     close: () => setAsking(null),

@@ -10,5 +10,5 @@ export function useAskForNode() {
     {n.words && <ConfirmDialog {...n.words} onConfirm={n.getNode} onKeep={n.runHere} onClose={n.close} />}
     {n.getting && <ComputeDialog cluster={n.getting} onClose={n.closeNode} />}
   </>
-  return { guard: n.guard, dialog }
+  return { guard: n.guard, waiting: n.waiting, dialog }
 }
