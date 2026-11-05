@@ -26,7 +26,7 @@ export function versionLabel(v: string, commits: HCommit[], refs: Refs | null): 
   const c = commits.find((x) => x.hash === v || x.short === v)
   const tag = refs?.tags.find((t) => t.hash === c?.hash || t.name === v) ?? (c?.tags[0] ? { name: c.tags[0] } : null)
   if (tag) return { icon: <Tag size={13} />, name: tag.name, hint: c ? when(c.time) : '' }
-  return { icon: <GitCommitHorizontal size={13} />, name: c ? shortHash(c.hash) : v.slice(0, 12),
+  return { icon: <GitCommitHorizontal size={13} />, name: c ? shortHash(c.hash) : shortHash(v),
     hint: c?.subject ?? '' }
 }
 

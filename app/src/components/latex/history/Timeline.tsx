@@ -96,15 +96,23 @@ export function Timeline({ commits, saved, branch, lanes, before, after, backup,
   const lo = b && a ? Math.min(b.x, a.x) : 0, hi = b && a ? Math.max(b.x, a.x) : 0
   return (
     <div className="flex shrink-0 items-stretch gap-4 border-b border-line px-4 pt-3 pb-2">
-      <div className="w-[120px] shrink-0 leading-tight">
-        <div className="font-semibold">History</div>
-        <div className="text-xs text-dim">{plural(commits.length, 'commit')}</div>
-        {saved.length > 0 && <div className="text-xs text-dim">{plural(saved.length, 'saved version')}</div>}
-        {backup && <div className="mt-1 flex items-center gap-1 font-mono text-[11px] text-dim"><Cloud size={11} /> saved/{branch}</div>}
-        {lanes && <div className="mt-1 flex flex-col gap-3 pt-1 text-xs">
-          <span className="flex items-center gap-1 font-semibold"><GitBranch size={11} /> {branch}</span>
-          <span className="flex items-center gap-1 truncate"><GitBranch size={11} /> {lanes.b}</span></div>}
-      </div>
+      {lanes ? (
+        <div className="relative w-[150px] shrink-0 text-sm">
+          {[branch, lanes.b].map((name, i) => (
+            <span key={name} style={{ top: lanesY[i] - 10 }} title={name}
+              className={`absolute inset-x-0 flex items-center gap-1.5 truncate ${i ? '' : 'font-semibold'}`}>
+              <GitBranch size={13} className="shrink-0" /> <span className="truncate">{name}</span></span>
+          ))}
+        </div>
+      ) : (
+        <div className="w-[120px] shrink-0 leading-tight">
+          <div className="font-semibold">History</div>
+          <div className="text-xs text-dim">{plural(commits.length, 'commit')}</div>
+          {saved.length > 0 && <div className="text-xs text-dim">{plural(saved.length, 'saved version')}</div>}
+          {backup && <div className="mt-1 flex items-center gap-1 font-mono text-[11px] text-dim"><Cloud size={11} />
+            saved/{branch}</div>}
+        </div>
+      )}
       <div ref={track} onPointerMove={move} onPointerUp={() => setDrag(null)} onPointerCancel={() => setDrag(null)}
         className="relative mx-3 min-w-0 flex-1 select-none" style={{ height: lanes ? 96 : 64 }}>
         {lanesY.map((y, i) => <div key={i} className="absolute h-px bg-line-strong" style={{ top: y,

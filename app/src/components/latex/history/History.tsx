@@ -528,9 +528,9 @@ function CompareHead(p: DetailProps & { from: string; to: string; changes: Chang
       </div>
       <div className="mt-2 flex items-center gap-2 text-sm text-dim">
         <span className="flex -space-x-1">{authors.slice(0, 4).map((a) => <Avatar key={a} name={a} size={20} />)}</span>
-        <span>{between.length > 0 ? `${plural(between.length, 'commit')} by ${names}${to === '' && state.changes.length
-          ? ', plus your changes' : ''}` : to === '' ? 'Your changes not committed yet' : ''}</span>
-        {p.changes && <span>· {plural(p.changes.files.length, 'file')} <Counts added={p.changes.added}
+        {(between.length > 0 || to === '') && <span>{between.length > 0 ? `${plural(between.length, 'commit')} by ${names}${
+          to === '' && state.changes.length ? ', plus your changes' : ''}` : 'Your changes not committed yet'} ·</span>}
+        {p.changes && <span>{plural(p.changes.files.length, 'file')} <Counts added={p.changes.added}
           removed={p.changes.removed} /></span>}
       </div>
     </div>
