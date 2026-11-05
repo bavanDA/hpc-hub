@@ -8,7 +8,8 @@ import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirro
 import { bracketMatching, HighlightStyle, indentOnInput, StreamLanguage, syntaxHighlighting } from '@codemirror/language'
 import { stex } from '@codemirror/legacy-modes/mode/stex'
 import { highlightSelectionMatches, search, searchKeymap } from '@codemirror/search'
-import { EditorState, RangeSetBuilder, StateEffect, StateField, type Transaction } from '@codemirror/state'
+import { Compartment, EditorState, type Extension, RangeSetBuilder, StateEffect, StateField,
+  type Transaction } from '@codemirror/state'
 import { Decoration, type DecorationSet, drawSelection, EditorView, highlightActiveLine,
   highlightActiveLineGutter, keymap, lineNumbers } from '@codemirror/view'
 import { tags as t } from '@lezer/highlight'
@@ -32,6 +33,7 @@ type Props = {
   onBuild: () => void
   onToPdf: (line: number) => void
   handle: React.RefObject<EditorHandle | null>
+  extensions?: Extension[]  // more, changing while it is open (Who changed it, editing paused)
 }
 
 const style = HighlightStyle.define([
@@ -120,9 +122,14 @@ const theme = EditorView.theme({
   '&.cm-focused': { outline: 'none' },
 }, { dark: isDark() })
 
+const NONE: Extension[] = []
+
 export default function CodeEditor({ path, version, text, line: startLine, issues, words, onChange, onSave, onBuild, onToPdf,
-  handle }: Props) {
+  handle, extensions = NONE }: Props) {
   const host = useRef<HTMLDivElement>(null)
+  const more = useRef(new Compartment())
+  const moreNow = useRef(extensions)
+  moreNow.current = extensions
   const view = useRef<EditorView | null>(null)
   const latest = useRef({ onChange, onSave, onBuild, onToPdf, words, issues })
   latest.current = { onChange, onSave, onBuild, onToPdf, words, issues }
@@ -139,6 +146,7 @@ export default function CodeEditor({ path, version, text, line: startLine, issue
           lineNumbers(), highlightActiveLineGutter(), highlightActiveLine(), history(), drawSelection(),
           indentOnInput(), bracketMatching(), closeBrackets(), highlightSelectionMatches(), search({ top: true }),
           EditorView.lineWrapping, theme, issueLines, flashLine, syntaxHighlighting(style),
+          more.current.of(moreNow.current),
           ...(tex ? [StreamLanguage.define(stex), autocompletion({ override: [completions(() => latest.current.words)] })]
             : []),
           keymap.of([
@@ -175,6 +183,7 @@ export default function CodeEditor({ path, version, text, line: startLine, issue
   }, [path, version])
 
   useEffect(() => { view.current?.dispatch({ effects: setIssues.of(issues) }) }, [issues])
+  useEffect(() => { view.current?.dispatch({ effects: more.current.reconfigure(extensions) }) }, [extensions])
 
   return <div ref={host} className="h-full min-h-0 select-text" />
 }
