@@ -84,7 +84,9 @@ function keyStatus(): KeySetup {
 }
 
 const sessions: Session[] = [
-  { id: 'wulver', state: 'Connected', connected: true, node: 'n0042', job: '123456', owned: true },
+  typeof location !== 'undefined' && new URLSearchParams(location.search).has('nonode')  // ?nonode: no compute node yet
+    ? { id: 'wulver', state: 'Connected', connected: true }
+    : { id: 'wulver', state: 'Connected', connected: true, node: 'n0042', job: '123456', owned: true },
   { id: 'yale', state: 'Connected', connected: true },
   { id: 'sdsc', state: 'Disconnected', connected: false },
 ]

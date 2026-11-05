@@ -470,10 +470,17 @@ export const answers: Record<string, unknown> = {
     })
   },
   'latex.git_new_branch': ({ name }: { name: string }) => name,
-  'latex.git_commit': async ({ message }: { message: string }) => {
+  'latex.git_commit': async ({ message, only }: { message: string; only?: string[] }) => {
     await setup()
-    const files = await filesOf('')
     const parent = headHash()
+    const files = { ...(only ? await filesOf(parent) : {}), ...await filesOf('') }
+    if (only) {
+      const all = await filesOf(''), before = await filesOf(parent)
+      for (const p of new Set([...Object.keys(all), ...Object.keys(before)])) {
+        if (only.includes(p)) { if (p in all) files[p] = all[p]; else delete files[p] } else if (p in before) files[p] = before[p]
+        else delete files[p]
+      }
+    }
     const hash = Math.random().toString(16).slice(2, 9)
     const [subject, ...rest] = message.split('\n')
     const c = commitOf({ hash, ago: now(), author: 'jdoe', subject, body: rest.join('\n').trim() }, parent, files,
@@ -483,6 +490,11 @@ export const answers: Record<string, unknown> = {
     else otherLog.unshift(c.hash)
     ahead++
     return `[${branch} ${hash}] ${subject}`
+  },
+  'latex.git_commit_split': async ({ commits }: { commits: { message: string; files: string[] }[] }) => {
+    const commit = answers['latex.git_commit'] as (p: { message: string; only?: string[] }) => Promise<string>
+    for (const [i, c] of commits.entries()) await commit({ message: c.message, only: i < commits.length - 1 ? c.files : undefined })
+    return { commits: commits.length }
   },
   'latex.git_sync': async ({ push }: { push: boolean }) => {
     const st = await state()
