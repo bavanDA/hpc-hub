@@ -1,0 +1,27 @@
+/* Changes in the History tab: green for added, red for removed, in both themes (style E's ok and bad colors are
+   greys, which would hide what changed). */
+:root {
+  --diff-add: rgb(26 127 55 / 0.09);
+  --diff-add-mark: rgb(26 127 55 / 0.22);
+  --diff-add-ink: #1a7f37;
+  --diff-del: rgb(207 34 46 / 0.07);
+  --diff-del-mark: rgb(207 34 46 / 0.20);
+  --diff-del-ink: #c4232f;
+  --diff-bar: #2da44e;
+}
+:root[data-theme="dark"] {
+  --diff-add: rgb(46 160 67 / 0.15);
+  --diff-add-mark: rgb(46 160 67 / 0.40);
+  --diff-add-ink: #56d364;
+  --diff-del: rgb(248 81 73 / 0.13);
+  --diff-del-mark: rgb(248 81 73 / 0.36);
+  --diff-del-ink: #ff7b72;
+  --diff-bar: #3fb950;
+}
+.diff-add { background: var(--diff-add); }
+.diff-del { background: var(--diff-del); }
+.diff-add-mark { background: var(--diff-add-mark); border-radius: 3px; }
+.diff-del-mark { background: var(--diff-del-mark); border-radius: 3px; }
+.diff-add-ink { color: var(--diff-add-ink); }
+.diff-del-ink { color: var(--diff-del-ink); }
+.diff-bar { background: var(--diff-bar); }
