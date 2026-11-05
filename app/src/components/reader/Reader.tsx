@@ -134,7 +134,7 @@ export default function Reader({ data, latex, memory, narrator, aloud, bar, onPa
   }, [state, memory])
   const pageRef = useRef(page)
   pageRef.current = page
-  useEffect(() => { narrator?.watchPage(() => pageRef.current) }, [narrator])
+  useEffect(() => narrator?.watchPage(() => pageRef.current) || undefined, [narrator])
 
   const goTo = (i: number) => {
     setPanel('')

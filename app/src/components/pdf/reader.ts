@@ -35,7 +35,7 @@ export interface Narrator {
   current: number | null
   readonly ready: boolean
   onWord(fn: (id: number | null) => void): () => void
-  watchPage(fn: () => number): void
+  watchPage(fn: () => number): (() => void) | void  // the returned function hands it back
   readFrom(spot: Spot): void
   wordAt(page: number, x: number, y: number): number | null
   reset(): void
@@ -124,8 +124,12 @@ export class Reader implements Narrator {
     this.listeners.forEach((f) => f())
   }
   get ready() { return !!this.audio }
-  /** The viewer says how to find the page you are looking at. */
-  watchPage(fn: () => number) { this.pageNow = fn }
+  /** The viewer says how to find the page you are looking at; the Reader gives it back when it closes. */
+  watchPage(fn: () => number) {
+    const before = this.pageNow
+    this.pageNow = fn
+    return () => { if (this.pageNow === fn) this.pageNow = before }
+  }
 
   // -- what the PDF is --------------------------------------------------------------------------------------------
   setSource(s: Source | null) {
