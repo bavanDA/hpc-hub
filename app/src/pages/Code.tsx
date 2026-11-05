@@ -190,7 +190,7 @@ export function Code() {
   }
 
   // Taking the cluster's version throws your edits away, so it asks first
-  const useTheirs = (f: OpenFile) => setDialog(
+  const takeTheirs = (f: OpenFile) => setDialog(
     <AlertDialog title={`Throw away your edits to ${f.name}?`} keep="Keep editing" act={`Use ${name(f.cluster)}'s`}
       onClose={close} onAct={() => { close(); void reloadFile(f.key); dropBanner(f.key) }}>
       The file goes back to the version on {name(f.cluster)}.</AlertDialog>)
@@ -199,7 +199,7 @@ export function Code() {
     setDialog(
       <Dialog title={`${f.name} changed on ${name(f.cluster)}`} onClose={close} width={460} actions={<>
         <Button onClick={() => { close(); void compare(f, 'keep') }}>Compare</Button>
-        <Button onClick={() => useTheirs(f)}>Use {name(f.cluster)}'s</Button>
+        <Button onClick={() => takeTheirs(f)}>Use {name(f.cluster)}'s</Button>
         <Button onClick={() => { close(); void save(true) }}>Save mine</Button>
       </>}>
         <p className="text-dim">It changed while you were editing. Save mine writes over the cluster's version.</p>
@@ -359,7 +359,7 @@ export function Code() {
           </div>
         )}
         {file && banner && <BannerRow file={file} banner={banner} clusterName={name(file.cluster)}
-          onDismiss={() => dropBanner(file.key)} onReload={() => useTheirs(file)}
+          onDismiss={() => dropBanner(file.key)} onReload={() => takeTheirs(file)}
           onCompare={() => void compare(file, 'merge')}
           onUndo={async (before) => {
             const ok = await undoAgentChange(file.key, before)
