@@ -159,7 +159,7 @@ def test_notes_and_check_my_list(h, repo, tmp_path):
     assert stored.exists() and "hpc-hub" not in git(repo, "status", "--porcelain")
     api.note_set("wulver", str(repo), b["id"], done=True)
     got = api.notes_list("wulver", str(repo))
-    assert got["user"] == "jdoe" and [n["done"] for n in got["notes"]] == [False, True]
+    assert got["user"] == "jdoe" and got["root"] == str(repo) and [n["done"] for n in got["notes"]] == [False, True]
     assert got["notes"][1]["done_by"] == "jdoe"
     (tmp_path / "note-id").write_text(a["id"])
     e = end(h, api.agent_check("wulver", str(repo)))

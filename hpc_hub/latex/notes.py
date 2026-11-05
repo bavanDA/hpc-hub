@@ -21,12 +21,12 @@ MAX_NOTES = 2000
 CLASH = 75  # run.sh's exit code when the file changed since it was read
 
 
-def _where(ssh: SshMaster, folder: str) -> tuple[str, str]:
-    """(notes.json's path, git's user name)."""
+def _where(ssh: SshMaster, folder: str) -> tuple[str, str, str]:
+    """(notes.json's path, git's user name, the repository's top)."""
     p = parts(run(ssh, f"{g(folder)} rev-parse --absolute-git-dir; echo {SEP}; {g(folder)} config user.name; "
-                       "id -un; true"), 2)
+                       f"id -un; echo {SEP}; {g(folder)} rev-parse --show-toplevel; true"), 3)
     who = [x for x in p[1].splitlines() if x.strip()]
-    return posixpath.join(p[0].strip(), "hpc-hub", "notes.json"), (who[0] if who else "")
+    return posixpath.join(p[0].strip(), "hpc-hub", "notes.json"), (who[0] if who else ""), p[2].strip()
 
 
 def _read(ssh: SshMaster, path: str) -> tuple[list[dict], str]:
@@ -66,14 +66,14 @@ def _write(ssh: SshMaster, path: str, notes: list[dict], expect: str) -> bool:
 
 
 def load(ssh: SshMaster, folder: str) -> dict:
-    """{notes, user}: oldest first."""
-    path, user = _where(ssh, folder)
-    return {"notes": _read(ssh, path)[0], "user": user}
+    """{notes, user, root}: oldest first."""
+    path, user, root = _where(ssh, folder)
+    return {"notes": _read(ssh, path)[0], "user": user, "root": root}
 
 
 def _change(ssh: SshMaster, folder: str, fn) -> dict:
     """Read, fn(notes, user) changes them in place and answers the note it touched, write; again if it clashed."""
-    path, user = _where(ssh, folder)
+    path, user, _ = _where(ssh, folder)
     for _ in range(5):
         notes, expect = _read(ssh, path)
         out = fn(notes, user)

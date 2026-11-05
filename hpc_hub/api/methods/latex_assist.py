@@ -283,7 +283,7 @@ def agent_ask(cluster: str, folder: str, question: str, about: dict, choice: dic
 # -- Notes and Check my list ---------------------------------------------------------------------------------------
 @method("latex.notes")
 def notes_list(cluster: str, folder: str) -> dict:
-    """{notes: [{id, n, text, place, author, time, done, done_by, done_at}], user}. place: {path, line} (from the
+    """{notes: [{id, n, text, place, author, time, done, done_by, done_at}], user, root}. place: {path, line} (from the
     repository's top) | {page, x, y} (PDF points from the page's top) | {hash} | None."""
     return notes.load(hub().connected(cluster).ssh, folder)
 
