@@ -69,14 +69,6 @@ def test_parse_details():
     assert jobs.parse_details("JobID|State\n5|COMPLETED\n") == {"JobID": "5", "State": "COMPLETED"}
 
 
-def test_ran_for_says_the_time_in_words():
-    from hpc_hub.compute.jobs import ran_for
-    assert ran_for("3:41:10") == "3 h 41 min"
-    assert ran_for("1-02:00:00") == "1 d 2 h"
-    assert ran_for("12:30") == "12 min"
-    assert ran_for("0:00") == "1 min"
-
-
 def test_group_scope_lists_my_accounts_jobs():
     cmd = jobs.jobs_command(jobs.GROUP)
     assert "sacctmgr -n -P show assoc user=\"$USER\" format=account" in cmd

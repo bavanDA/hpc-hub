@@ -70,19 +70,6 @@ def test_stats_counter_reset_gives_no_rate():
     assert monitor.stats("h", a, b)["down"] is None
 
 
-def test_formatters():
-    assert monitor.size(512) == "512 B"
-    assert monitor.size(1536) == "1.5 KB"
-    assert monitor.size(250 * 1024**2) == "250 MB"
-    assert monitor.size(3 * 1024**5) == "3072 TB"
-    assert monitor.rate(None) == "..." and monitor.rate(2048) == "2.0 KB/s"
-    assert monitor.used_of(12.3 * 1024**3, 62 * 1024**3) == "12.3 / 62.0 GB"
-    assert monitor.used_of(900 * 1024**2, 62 * 1024**3) == "900 MB / 62.0 GB"
-    assert monitor.duration(3 * 3600 + 25 * 60) == "3h 25m"
-    assert monitor.duration(12 * 86400 + 5 * 3600 + 59) == "12d 5h"
-    assert [monitor.level(p) for p in (None, 79.9, 80, 89, 90, 100)] == ["", "", "warn", "warn", "high", "high"]
-
-
 class FakeSsh:
     """argv() runs a local sh instead of the cluster: it prints what the script would, then waits."""
 

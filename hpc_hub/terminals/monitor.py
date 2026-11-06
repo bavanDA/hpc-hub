@@ -215,34 +215,3 @@ def watch(ssh, node: str, fn: Callable[[dict], None]) -> Callable[[], None]:
             if sampler.remove(key) and _samplers.get(where) is sampler:
                 del _samplers[where]
     return unwatch
-
-
-# -- how the bar writes things -----------------------------------------------------------------------------
-
-def size(n: float) -> str:
-    for unit in ("B", "KB", "MB", "GB", "TB"):
-        if n < 1024 or unit == "TB":
-            return f"{n:.0f} {unit}" if unit == "B" or n >= 100 else f"{n:.1f} {unit}"
-        n /= 1024
-    return ""
-
-
-def used_of(used: float, total: float) -> str:
-    """12.3 / 62.0 GB, the unit written once when both have it."""
-    a, b = size(used), size(total)
-    return f"{a.rsplit(' ', 1)[0]} / {b}" if a.rsplit(" ", 1)[1] == b.rsplit(" ", 1)[1] else f"{a} / {b}"
-
-
-def rate(n: float | None) -> str:
-    return "..." if n is None else f"{size(n)}/s"
-
-
-def duration(seconds: int) -> str:
-    days, rest = divmod(seconds, 86400)
-    hours, rest = divmod(rest, 3600)
-    return f"{days}d {hours}h" if days else f"{hours}h {rest // 60}m"
-
-
-def level(percent: float | None) -> str:
-    """"" normal, "warn" from 80%, "high" from 90%."""
-    return "" if percent is None or percent < 80 else "warn" if percent < 90 else "high"
