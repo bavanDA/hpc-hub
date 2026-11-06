@@ -3,12 +3,11 @@ import { useRef, useState } from 'react'
 
 import { call } from '../../rpc'
 import { AlertDialog } from '../ui/AlertDialog'
-import { Button } from '../ui/Button'
-import { Dialog } from '../ui/Dialog'
 import { IconButton } from '../ui/IconButton'
 import { useToast } from '../useToast'
 import { MenuItem } from './MenuItem'
 import { Popover } from './Popover'
+import { RenameDialog } from './RenameDialog'
 import { tabKey } from './tabKey'
 import { close, update } from './tabs'
 import { getTab } from './tabStore'
@@ -16,7 +15,7 @@ import { getTab } from './tabStore'
 /** What the menu acts on: a listed session, or an open tab's. */
 export type Target = { cluster: string; name: string; kind: 'tmux' | 'screen'; node: string; title: string }
 
-const inputClass = 'h-10 w-full rounded-lg border border-line-strong bg-window px-3 outline-none '
+export const inputClass = 'h-10 w-full rounded-lg border border-line-strong bg-window px-3 outline-none '
   + 'focus:border-accent focus:ring-1 focus:ring-accent'
 
 export function SessionMenu({ target, onChanged }: { target: Target; onChanged: () => void }) {
@@ -64,22 +63,5 @@ export function SessionMenu({ target, onChanged }: { target: Target; onChanged: 
         </AlertDialog>
       )}
     </span>
-  )
-}
-
-function RenameDialog({ target, onClose, onRename }:
-  { target: Target; onClose: () => void; onRename: (label: string) => void }) {
-  const [label, setLabel] = useState(target.title)
-  const ok = label.trim() !== ''
-  const done = () => { if (ok) { onClose(); onRename(label.trim()) } }
-  return (
-    <Dialog title="Rename session" onClose={onClose} width={400} actions={<>
-      <Button onClick={onClose}>Cancel</Button>
-      <Button kind="primary" disabled={!ok} onClick={done}>Rename</Button>
-    </>}>
-      <p className="mb-3 text-sm text-dim">{target.name}</p>
-      <input autoFocus value={label} onChange={(e) => setLabel(e.target.value)} className={inputClass}
-        onKeyDown={(e) => e.key === 'Enter' && done()} />
-    </Dialog>
   )
 }

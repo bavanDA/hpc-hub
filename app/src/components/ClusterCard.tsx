@@ -1,5 +1,4 @@
-import { Bot, ChevronDown, Code, Cpu, Folder, MoreVertical, Plug, Power, Server, Settings, Smartphone,
-  SquareTerminal, Users, type LucideIcon } from 'lucide-react'
+import { Bot, ChevronDown, Code, Cpu, Folder, MoreVertical, Plug, Power, Server, Settings, Smartphone, SquareTerminal, Users, type LucideIcon } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
 import { useGo } from '../nav'
@@ -8,6 +7,7 @@ import { BUSY, DUO, type Cluster, type Session } from '../types/clusters'
 import { agentIcon } from './agents/AgentIcon'
 import { PairPhoneDialog } from './app/PairPhoneDialog'
 import { leftText, useTimeLeft } from './app/watch'
+import { ClusterAction } from './ClusterAction'
 import { ComputeDialog } from './clusters/ComputeDialog'
 import { shortName } from './clusters/loginCopy'
 import { LogView } from './clusters/LogView'
@@ -37,15 +37,6 @@ function status(s: Session, vpnOnly: boolean): [string, Tone] {
   if (s.state === 'Error') return ["Didn't connect", 'error']
   if (s.state === 'Disconnected') return ['Not connected', 'off']
   return [s.state === DUO ? 'Approve Duo' : s.state === WAITING ? 'Getting a node' : s.state, 'busy']
-}
-
-function Action({ icon: Icon, label, onClick }: { icon: LucideIcon; label: string; onClick: () => void }) {
-  return (
-    <button type="button" onClick={onClick}
-      className="flex h-10 items-center gap-2 rounded-lg bg-pill px-3.5 font-semibold hover:bg-selected
-        focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent">
-      <Icon size={16} className="text-dim" />{label}</button>
-  )
 }
 
 /** primary: this card's Connect is the page's main button (one per page); the others are plain. */
@@ -133,9 +124,9 @@ export function ClusterCard({ cluster: c, session: s, log, primary = false }:
                       className="font-semibold underline-offset-2 hover:underline disabled:opacity-50">Get one</button></>}
             </div>
             <div className="flex flex-wrap gap-2">
-              <Action icon={SquareTerminal} label="Terminal" onClick={() => go('terminals', { cluster: c.id, new: '1' })} />
-              <Action icon={Code} label="VS Code" onClick={() => tools.open(c.id, c.name, 'vscode')} />
-              <Action icon={Folder} label="Files" onClick={() => tools.open(c.id, c.name, 'files')} />
+              <ClusterAction icon={SquareTerminal} label="Terminal" onClick={() => go('terminals', { cluster: c.id, new: '1' })} />
+              <ClusterAction icon={Code} label="VS Code" onClick={() => tools.open(c.id, c.name, 'vscode')} />
+              <ClusterAction icon={Folder} label="Files" onClick={() => tools.open(c.id, c.name, 'files')} />
               <Menu groups={agents} label={`Agents on ${short}`} trigger={<><Bot size={16} className="text-dim" />Agents
                 <ChevronDown size={16} className="text-dim" /></>}
                 className="flex h-10 items-center gap-2 rounded-lg bg-pill px-3.5 font-semibold hover:bg-selected" />

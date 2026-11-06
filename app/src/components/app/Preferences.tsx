@@ -6,7 +6,6 @@ import { Row } from '../e/Row'
 import { Section } from '../e/Section'
 import { ToggleRow } from '../e/ToggleRow'
 import { Select } from '../jobs/Select'
-import { chooseAgent, useAgentChoice } from '../latex/history/agent/agentChoice'
 import { setMonitorBar } from '../terminals/monitorBarSetting'
 import { setSelectToCopy } from '../terminals/xterm'
 import { Spinner } from '../ui/Spinner'
@@ -15,6 +14,7 @@ import { AboutDialog } from './About'
 import { AppearanceGroup } from './Appearance'
 import { forgetProfiles, getProfiles } from './openLink'
 import { PairPhoneDialog } from './PairPhoneDialog'
+import { PaperAgent } from './PaperAgent'
 import { university, type SetupStatus } from './setup'
 import { experimentsOf, type Experiments, type Preferences, type Profiles } from './types'
 
@@ -95,21 +95,5 @@ export function PreferencesDialog({ onClose, onExperimental, onDisconnectAndQuit
       {inner === 'phone' && <PairPhoneDialog onClose={() => setInner('')} />}
       {inner === 'about' && <AboutDialog onClose={() => setInner('')} />}
     </EDialog>
-  )
-}
-
-/** The agent for a paper's Write message, Ask and Check my list; its model and effort are picked in the paper. */
-function PaperAgent() {
-  const toast = useToast()
-  const choice = useAgentChoice()
-  return (
-    <Section title="Papers" note="It writes commit messages, answers questions about changes and checks your notes. It runs on your compute node.">
-      <Row label={<span className="whitespace-nowrap">Agent for papers</span>}>
-        {choice ? <Select label="Agent for papers" value={choice.agent}
-          options={choice.agents.map((a): [string, string] => [a.id, a.name])}
-          onChange={(agent) => { chooseAgent({ agent }).catch((e: Error) => toast(`Could not save: ${e.message}`)) }} />
-          : <Spinner size={16} />}
-      </Row>
-    </Section>
   )
 }

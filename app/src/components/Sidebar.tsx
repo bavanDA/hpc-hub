@@ -1,19 +1,7 @@
-import { GROUPS, HOME, type Item, type Page } from './app/pages'
+import { GROUPS, HOME, type Page } from './app/pages'
 import { SidebarFooter } from './app/SidebarFooter'
 import type { Experiments } from './app/types'
-
-function Link({ item, page, onPick }: { item: Item; page: Page; onPick: (p: Page) => void }) {
-  const Icon = item.icon
-  const on = item.page === page
-  return (
-    <button onClick={() => onPick(item.page)} aria-current={on ? 'page' : undefined}
-      className={`flex h-9 items-center gap-3 rounded-md px-3 text-left transition-colors ${
-        on ? 'bg-selected font-semibold' : 'hover:bg-hover active:bg-pressed'}`}>
-      <Icon size={16} className={on ? '' : 'text-dim'} />
-      <span>{item.title}</span>
-    </button>
-  )
-}
+import { SidebarLink } from './SidebarLink'
 
 export function Sidebar({ page, onPick, experiments, onSettings, floating = false }: {
   page: Page; onPick: (p: Page) => void; experiments: Experiments; onSettings: () => void; floating?: boolean
@@ -24,12 +12,12 @@ export function Sidebar({ page, onPick, experiments, onSettings, floating = fals
       <div data-tauri-drag-region className="flex h-12 shrink-0 items-center px-[18px] text-md font-semibold">
         HPC Hub</div>
       <nav aria-label="Pages" className="flex min-h-0 flex-1 flex-col overflow-y-auto px-1.5 pb-3">
-        <Link item={HOME} page={page} onPick={onPick} />
+        <SidebarLink item={HOME} page={page} onPick={onPick} />
         {GROUPS.map(([group, items]) => (
           <div key={group} className="flex flex-col">
             <div className="px-3 pt-5 pb-1.5 text-xs font-semibold tracking-wide text-dim uppercase">{group}</div>
             {items.filter((i) => !i.experiment || experiments[i.experiment]).map((i) => (
-              <Link key={i.page} item={i} page={page} onPick={onPick} />
+              <SidebarLink key={i.page} item={i} page={page} onPick={onPick} />
             ))}
           </div>
         ))}

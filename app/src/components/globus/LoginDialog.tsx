@@ -11,18 +11,7 @@ import { List } from '../ui/List'
 import { Spinner } from '../ui/Spinner'
 import { Field } from './Field'
 import { looksLikeCode, pastedCode } from './format'
-
-function Step({ n, title, text }: { n: number; title: string; text: string }) {
-  return (
-    <div className="flex items-center gap-4 px-4 py-3">
-      <span className="w-5 shrink-0 text-center text-xl font-semibold text-dim">{n}</span>
-      <div className="min-w-0">
-        <div>{title}</div>
-        <div className="text-sm text-dim">{text}</div>
-      </div>
-    </div>
-  )
-}
+import { LoginStep } from './LoginStep'
 
 function second(login: Login): [string, string] {
   if (login.domain) return [`Sign in with your ${login.domain} account, then click Allow`,
@@ -82,9 +71,9 @@ export function LoginDialog({ start, onClose, onDone }:
       ) : (
         <div className="flex flex-col gap-4 pt-1">
           <List>
-            <Step n={1} title="Open the Globus page" text="With the button below, or copy the link into your browser" />
-            <Step n={2} title={second(login)[0]} text={second(login)[1]} />
-            <Step n={3} title="Copy the code Globus shows"
+            <LoginStep n={1} title="Open the Globus page" text="With the button below, or copy the link into your browser" />
+            <LoginStep n={2} title={second(login)[0]} text={second(login)[1]} />
+            <LoginStep n={3} title="Copy the code Globus shows"
               text="It fills in below when you come back here. Or paste it" />
           </List>
           <div className="flex items-center gap-2">

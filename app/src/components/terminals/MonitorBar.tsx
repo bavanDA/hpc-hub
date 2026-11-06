@@ -1,75 +1,9 @@
-import { ArrowDown, ArrowUp, Clock, Cpu, HardDrive, MemoryStick, Server, Users, type LucideIcon } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { ArrowDown, ArrowUp, Clock, Cpu, HardDrive, MemoryStick, Server, Users } from 'lucide-react'
 
-import { call, on } from '../../rpc'
-import type { MonitorStats } from '../../types/terminals'
 import { useEnabled } from './monitorBarSetting'
-
-// in the app's units: kB, "2 h 47 min"
-const UNITS = ['B', 'kB', 'MB', 'GB', 'TB']
-
-function size(n: number): string {
-  let i = 0
-  while (n >= 1000 && i < UNITS.length - 1) { n /= 1000; i++ }
-  return `${i === 0 || n >= 100 ? n.toFixed(0) : n.toFixed(1)} ${UNITS[i]}`
-}
-
-const rate = (n: number | null) => (n === null ? '...' : `${size(n)}/s`)
-
-function duration(seconds: number): string {
-  const days = Math.floor(seconds / 86400)
-  const hours = Math.floor((seconds % 86400) / 3600)
-  const minutes = Math.floor((seconds % 3600) / 60)
-  return days ? `${days} d ${hours} h` : hours ? `${hours} h ${minutes} min` : `${minutes} min`
-}
-
-type Level = '' | 'warn' | 'high'
-const level = (percent: number | null): Level => (percent === null || percent < 80 ? '' : percent < 90 ? 'warn' : 'high')
-
-function usedOf(used: number, total: number): string {
-  const [a, unitA] = size(used).split(' ')
-  const b = size(total)
-  return unitA === b.split(' ')[1] ? `${a} / ${b}` : `${size(used)} / ${b}`
-}
-
-/** The host's stats while active; the last ones stay while hidden. */
-function useStats(cluster: string, node: string, active: boolean): MonitorStats | null {
-  const [stats, setStats] = useState<MonitorStats | null>(null)
-  useEffect(() => {
-    if (!active) return
-    let id: number | null = null
-    let stopped = false
-    let early: MonitorStats | null = null  // the last stats can come before monitor.watch answers with the id
-    const off = on('monitor', (d) => {
-      const s = d as MonitorStats
-      if (id === null) early = s
-      else if (s.id === id) setStats(s)
-    })
-    call<number>('monitor.watch', { cluster, node }).then((w) => {
-      if (stopped) return void call('monitor.unwatch', { id: w }).catch(() => {})
-      id = w
-      if (early?.id === w) setStats(early)
-    }).catch(() => {})  // not connected: the bar waits with dots
-    return () => {
-      stopped = true
-      off()
-      if (id !== null) call('monitor.unwatch', { id }).catch(() => {})
-    }
-  }, [cluster, node, active])
-  return stats
-}
-
-// a level, not an error: bold and the text color, never red
-const COLORS: Record<Level, string> = { '': '', warn: 'text-text', high: 'font-semibold text-text' }
-
-function Item({ icon: Icon, text, tip, level = '' }: { icon: LucideIcon; text: string; tip: string; level?: Level }) {
-  return (
-    <span title={tip} className={`flex shrink-0 items-center gap-1 ${COLORS[level]}`}>
-      <Icon size={14} strokeWidth={2.25} className="shrink-0 opacity-80" />
-      {text}
-    </span>
-  )
-}
+import { duration, level, rate, size, usedOf } from './monitorFormat'
+import { MonitorItem } from './MonitorItem'
+import { useStats } from './useStats'
 
 export function MonitorBar({ cluster, node, shown }: { cluster: string; node: string; shown: boolean }) {
   const on = useEnabled()
@@ -81,20 +15,20 @@ export function MonitorBar({ cluster, node, shown }: { cluster: string; node: st
   return (
     <div className="flex h-6 shrink-0 items-center gap-3.5 overflow-hidden border-t border-line bg-view px-2.5
       font-mono text-xs whitespace-nowrap text-dim tabular-nums">
-      <Item icon={Server} text={host} tip={`${host}: the whole machine, all users. Not just this terminal.`} />
-      <Item icon={Cpu} text={st?.cpu == null ? '...' : `${Math.round(st.cpu)}%`} level={level(st?.cpu ?? null)}
+      <MonitorItem icon={Server} text={host} tip={`${host}: the whole machine, all users. Not just this terminal.`} />
+      <MonitorItem icon={Cpu} text={st?.cpu == null ? '...' : `${Math.round(st.cpu)}%`} level={level(st?.cpu ?? null)}
         tip={st?.cpu == null ? 'CPU: waiting for a second sample'
           : `CPU: ${st.cpu.toFixed(1)}% of all cores in use, by everyone on ${host}`} />
-      <Item icon={MemoryStick} text={st ? usedOf(st.mem_used, st.mem_total) : '...'} level={level(mem)}
+      <MonitorItem icon={MemoryStick} text={st ? usedOf(st.mem_used, st.mem_total) : '...'} level={level(mem)}
         tip={st ? `Memory: ${size(st.mem_used)} of ${size(st.mem_total)} in use${
           mem === null ? '' : ` (${Math.round(mem)}%)`}` : 'Memory'} />
-      <Item icon={ArrowUp} text={rate(st?.up ?? null)} tip={`Upload: ${rate(st?.up ?? null)}${nets}`} />
-      <Item icon={ArrowDown} text={rate(st?.down ?? null)} tip={`Download: ${rate(st?.down ?? null)}${nets}`} />
-      <Item icon={Clock} text={st ? duration(st.uptime) : '...'} tip={st ? `Up for ${duration(st.uptime)}` : 'Uptime'} />
-      <Item icon={Users} text={st ? String(st.users) : '...'}
+      <MonitorItem icon={ArrowUp} text={rate(st?.up ?? null)} tip={`Upload: ${rate(st?.up ?? null)}${nets}`} />
+      <MonitorItem icon={ArrowDown} text={rate(st?.down ?? null)} tip={`Download: ${rate(st?.down ?? null)}${nets}`} />
+      <MonitorItem icon={Clock} text={st ? duration(st.uptime) : '...'} tip={st ? `Up for ${duration(st.uptime)}` : 'Uptime'} />
+      <MonitorItem icon={Users} text={st ? String(st.users) : '...'}
         tip={st ? `${st.users} ${st.users === 1 ? 'person' : 'people'} signed in` : 'People signed in'} />
       {st?.disks.map((d) => (
-        <Item key={d.mount} icon={HardDrive} text={`${d.mount}: ${d.percent}%`} level={level(d.percent)}
+        <MonitorItem key={d.mount} icon={HardDrive} text={`${d.mount}: ${d.percent}%`} level={level(d.percent)}
           tip={`Disk ${d.mount}: ${size(d.used)} of ${size(d.size)} used`} />
       ))}
     </div>

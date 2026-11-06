@@ -2,7 +2,7 @@ import { ChevronRight } from 'lucide-react'
 
 import type { Cluster, Session } from '../../types'
 import type { Storage } from '../../types/usage'
-import { StatusDot } from '../clusters/ClusterPicker'
+import { SessionDot } from '../clusters/SessionDot'
 import { Skeleton } from '../ui/Skeleton'
 import { Bar } from './Bar'
 import { CARD } from './card'
@@ -16,7 +16,7 @@ export function StorageCard({ c, s, got, onOpen }: { c: Cluster; s?: Session; go
     <div className={`${CARD} px-[18px] pt-3 pb-2`}>
       <button onClick={() => onOpen(c.id, 'storage')} title={`Open storage on ${fullName(c)}`}
         className="-mx-2 flex items-center gap-2 rounded-md px-2 py-0.5 font-semibold hover:bg-hover">
-        <StatusDot session={s} />{fullName(c)}<ChevronRight size={14} className="text-dim" />
+        <SessionDot session={s} />{fullName(c)}<ChevronRight size={14} className="text-dim" />
       </button>
       {got.loading && !got.data && <div className="flex flex-col gap-3 py-3"><Skeleton className="h-4 w-full" />
         <Skeleton className="h-4 w-full" /></div>}

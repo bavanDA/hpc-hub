@@ -2,20 +2,12 @@ import { Minus, PanelLeft, Square, X } from 'lucide-react'
 import { useRef } from 'react'
 
 import { inTauri, isMac } from './app/platform'
+import { HeaderRound } from './HeaderRound'
 
 async function win(action: 'minimize' | 'toggleMaximize' | 'close' | 'startDragging') {
   if (!inTauri) return
   const { getCurrentWindow } = await import('@tauri-apps/api/window')
   await getCurrentWindow()[action]()
-}
-
-function Round({ onClick, children, label }: { onClick: () => void; children: React.ReactNode; label: string }) {
-  return (
-    <button onClick={onClick} aria-label={label}
-      className="grid size-7 place-items-center rounded-md text-dim hover:bg-hover hover:text-text">
-      {children}
-    </button>
-  )
 }
 
 /** Moving starts only once the mouse moves, so a double-click is never eaten by a drag (Linux). */
@@ -55,9 +47,9 @@ export function HeaderBar({ title, onSidebar, sidebar = false, chip }: {
       </div>
       {!isMac && (
         <div className="ml-1 flex gap-1 pr-1">
-          <Round label="Minimize" onClick={() => win('minimize')}><Minus size={14} strokeWidth={2.5} /></Round>
-          <Round label="Maximize" onClick={() => win('toggleMaximize')}><Square size={14} strokeWidth={2.5} /></Round>
-          <Round label="Close" onClick={() => win('close')}><X size={14} strokeWidth={2.5} /></Round>
+          <HeaderRound label="Minimize" onClick={() => win('minimize')}><Minus size={14} strokeWidth={2.5} /></HeaderRound>
+          <HeaderRound label="Maximize" onClick={() => win('toggleMaximize')}><Square size={14} strokeWidth={2.5} /></HeaderRound>
+          <HeaderRound label="Close" onClick={() => win('close')}><X size={14} strokeWidth={2.5} /></HeaderRound>
         </div>
       )}
     </header>

@@ -2,19 +2,9 @@ import { Check, ChevronDown, Layers } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
 import type { Session } from '../../types'
-import { statusKind } from '../ui/status'
 import { useActiveCluster } from './active'
 import { useAllClusters } from './allClusters'
-
-const DOT: Record<string, string> = {
-  success: 'bg-ok-dot', info: 'bg-dim dot-pulse', warning: 'bg-dim', danger: 'bg-bad-dot',
-  neutral: 'border-[1.5px] border-dim',
-}
-
-export function StatusDot({ session }: { session?: Session }) {
-  const kind = session?.connected ? 'success' : statusKind(session?.state ?? 'Disconnected')
-  return <span aria-hidden className={`inline-block size-2 shrink-0 rounded-full ${DOT[kind]}`} />
-}
+import { SessionDot } from './SessionDot'
 
 function stateText(s?: Session): string {
   if (s?.connected) return s.node ? `Connected · node ${s.node}` : 'Connected'
@@ -52,7 +42,7 @@ export function ClusterPicker() {
         aria-label={`Cluster: ${all ? 'All clusters' : cluster.name}`} title="Which cluster this page shows"
         className={`flex h-8 items-center gap-2 rounded-md px-2.5 text-sm font-semibold transition-colors ${
           open ? 'bg-selected' : 'bg-control hover:bg-hover'}`}>
-        {all ? <Layers size={14} className="shrink-0" /> : <StatusDot session={sessions[cluster.id]} />}
+        {all ? <Layers size={14} className="shrink-0" /> : <SessionDot session={sessions[cluster.id]} />}
         <span className="max-w-[220px] truncate">{all ? 'All clusters' : cluster.name}</span>
         <ChevronDown size={14} className="text-dim" />
       </button>
@@ -74,7 +64,7 @@ export function ClusterPicker() {
             <button key={c.id} role="option" aria-selected={!all && c.id === cluster.id}
               onClick={() => { if (offered) setAll(false); setCluster(c.id); setOpen(false) }}
               className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-left hover:bg-hover">
-              <StatusDot session={sessions[c.id]} />
+              <SessionDot session={sessions[c.id]} />
               <span className="min-w-0 flex-1">
                 <span className="block truncate font-semibold">{c.name}</span>
                 <span className="block truncate text-sm text-dim">{stateText(sessions[c.id])}</span>

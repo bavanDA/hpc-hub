@@ -5,34 +5,12 @@ import { IconToggleRow } from '../e/IconToggleRow'
 import { Section } from '../e/Section'
 import { Spinner } from '../ui/Spinner'
 import { Actions } from './Actions'
-import { CLASS } from './classes'
 import { plan as copy } from './copy'
 import type { Options } from './flow'
 import { count, gb } from './format'
+import { PlanItems } from './PlanItems'
 
 const Claude = agentIcon('claude')
-
-/** A plan's items grouped by folder: the folder once, a switch for each kind of file in it. */
-function Items({ items, busy, onToggle }:
-  { items: PlanItem[]; busy: boolean; onToggle: (i: PlanItem, keep: boolean) => void }) {
-  const folders = [...new Set(items.map((i) => i.folder))]
-  return folders.map((folder) => {
-    const mine = items.filter((i) => i.folder === folder)
-    return (
-      <div key={folder}>
-        <p className="px-5 pt-3 pb-1 font-mono text-sm break-all">{folder}</p>
-        {mine.map((i, n) => {
-          const why = n && mine[n - 1].why === i.why ? '' : i.why
-          const by = copy.by[i.by]
-          return <IconToggleRow key={i.kind} label={CLASS[i.kind]} checked={i.keep} disabled={busy}
-            onChange={(k) => onToggle(i, k)}
-            sub={[`${count(i.files)} ${i.files === 1 ? 'file' : 'files'}, ${gb(i.bytes)}`,
-              why && (by ? `${by}: ${why}` : why)].filter(Boolean).join(' · ')} />
-        })}
-      </div>
-    )
-  })
-}
 
 export function PlanView({ plan, options, busy, onToggle, onOptions, onNext, onBack }: {
   plan: Plan | null; options: Options; busy: boolean; onToggle: (i: PlanItem, keep: boolean) => void
@@ -44,11 +22,11 @@ export function PlanView({ plan, options, busy, onToggle, onOptions, onNext, onB
       {plan.agent_summary && <p className="flex items-start gap-3 px-5 text-md">
         <Claude size={18} className="mt-0.5 shrink-0" />{plan.agent_summary}</p>}
       <Section title={`${copy.keep} · ${count(plan.files)} files, ${plan.exact ? '' : 'about '}${gb(plan.bytes)}`}>
-        {plan.items.length ? <Items items={plan.items} busy={busy} onToggle={onToggle} />
+        {plan.items.length ? <PlanItems items={plan.items} busy={busy} onToggle={onToggle} />
           : <p className="border-b border-line px-5 py-3 text-dim">{copy.empty}</p>}
       </Section>
       <Section title={copy.leave}>
-        {plan.left_out.length ? <Items items={plan.left_out} busy={busy} onToggle={onToggle} />
+        {plan.left_out.length ? <PlanItems items={plan.left_out} busy={busy} onToggle={onToggle} />
           : <p className="border-b border-line px-5 py-3 text-dim">{copy.leftEmpty}</p>}
       </Section>
       <Section>

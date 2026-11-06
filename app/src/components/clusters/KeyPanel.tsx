@@ -1,5 +1,5 @@
 import { Check, Copy, ExternalLink, FolderOpen, Info, KeyRound } from 'lucide-react'
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useState } from 'react'
 
 import { call } from '../../rpc'
 import type { Cluster, KeyTest, MyKey } from '../../types/clusters'
@@ -8,6 +8,7 @@ import { openSystem } from '../app/openLink'
 import { inTauri } from '../app/platform'
 import { EButton } from '../e/EButton'
 import { Spinner } from '../ui/Spinner'
+import { KeyStep } from './KeyStep'
 import { Result } from './KeyTestResult'
 import { copy, fill, who } from './loginCopy'
 import { S } from './loginStrings'
@@ -100,7 +101,7 @@ export function KeyPanel(props: PanelProps) {
 
   return (
     <div className="flex flex-col">
-      <Step n={1} state={state(KEY)} title={state(KEY) === 'done' ? S.STEP_KEY_DONE : S.STEP_KEY} done={keyLine}
+      <KeyStep n={1} state={state(KEY)} title={state(KEY) === 'done' ? S.STEP_KEY_DONE : S.STEP_KEY} done={keyLine}
         change={S.CHANGE} onOpen={() => setOpen(KEY)}>
         {s.key === undefined ? <Spinner /> : (
           <>
@@ -112,8 +113,8 @@ export function KeyPanel(props: PanelProps) {
             </div>
           </>
         )}
-      </Step>
-      <Step n={2} state={state(ADD)} title={fill(S.STEP_ADD, { who: org })} done={S.PASTED} change={S.CHANGE}
+      </KeyStep>
+      <KeyStep n={2} state={state(ADD)} title={fill(S.STEP_ADD, { who: org })} done={S.PASTED} change={S.CHANGE}
         onOpen={() => setOpen(ADD)}>
         {s.key && <>
           <div className="flex h-10 items-center gap-2 rounded-lg border border-line-strong pr-1 pl-3">
@@ -130,8 +131,8 @@ export function KeyPanel(props: PanelProps) {
           {c.key_page_note && <p className="flex gap-2 text-sm text-dim">
             <Info size={14} className="mt-[3px] shrink-0" />{c.key_page_note}</p>}
         </>}
-      </Step>
-      <Step n={3} state={state(TEST)} title={S.STEP_TEST} done={fill(S.SIGNED_IN_AS, { user: user.trim() })}
+      </KeyStep>
+      <KeyStep n={3} state={state(TEST)} title={S.STEP_TEST} done={fill(S.SIGNED_IN_AS, { user: user.trim() })}
         change={S.CHANGE} onOpen={() => setOpen(TEST)} last>
         <div className="flex flex-col gap-1.5">
           <label htmlFor="key-user" className="text-sm text-dim">{c.username_label || 'Username'}</label>
@@ -152,36 +153,8 @@ export function KeyPanel(props: PanelProps) {
           <div><EButton onClick={() => call('clusters.connect', { cluster: c.id, vpn_only: true })
             .catch(() => {})}>{copy.connectVpn(c)}</EButton></div>
         )}
-      </Step>
+      </KeyStep>
       {s.error && <p className="pb-2 text-sm text-bad">{s.error}</p>}
-    </div>
-  )
-}
-
-/** One step: a number (a check once done), its title, and its content only while it is the open one. */
-function Step({ n, state, title, done, change, onOpen, last, children }: {
-  n: number; state: 'done' | 'open' | 'later'; title: string; done: string; change?: string; onOpen?: () => void
-  last?: boolean; children: ReactNode
-}) {
-  const mark = state === 'done' ? 'border-[1.5px] border-line-strong text-text'
-    : state === 'open' ? 'bg-accent text-on-accent' : 'border-[1.5px] border-line-strong text-dim'
-  return (
-    <div className="flex gap-4 py-3">
-      <div className="flex flex-col items-center">
-        <span className={`grid size-7 shrink-0 place-items-center rounded-full text-sm font-semibold ${mark}`}>
-          {state === 'done' ? <Check size={16} strokeWidth={2.5} /> : n}</span>
-        {!last && <span className="mt-1 -mb-3 w-px flex-1 bg-line" />}
-      </div>
-      <div className="min-w-0 flex-1 pt-0.5">
-        <div className="flex items-baseline gap-3">
-          <div className={`min-w-0 flex-1 ${state === 'open' ? 'font-semibold' : state === 'later' ? 'text-dim' : ''}`}>
-            {title}</div>
-          {state === 'done' && onOpen && change && <button type="button" onClick={onOpen}
-            className="-my-1 rounded-md px-2 py-1 font-semibold underline-offset-2 hover:underline">{change}</button>}
-        </div>
-        {state === 'done' && done && <div className="text-sm text-dim">{done}</div>}
-        {state === 'open' && <div className="mt-3 flex flex-col gap-3 pb-1">{children}</div>}
-      </div>
     </div>
   )
 }
