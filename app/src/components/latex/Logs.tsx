@@ -1,10 +1,9 @@
-// The build's log and issues, over the PDF like Overleaf's: errors and warnings that jump to their line,
-// and the raw log below.
 import { AlertTriangle, ChevronRight, CircleX, Info, Square, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
 import type { BuildDone, Issue } from '../../types/latex'
 import { Button, Spinner } from '../ui'
+import { counts } from './issues'
 
 const LOOK = {
   error: { icon: CircleX, bar: 'border-l-bad', text: 'text-bad', label: 'Error' },
@@ -12,10 +11,8 @@ const LOOK = {
   box: { icon: Info, bar: 'border-l-line', text: 'text-dim', label: 'Bad box' },
 }
 
-export function counts(issues: Issue[]) {
-  return { errors: issues.filter((i) => i.level === 'error').length,
-    warnings: issues.filter((i) => i.level !== 'error').length }
-}
+// The phone app imports counts from here
+export { counts } from './issues'
 
 export function Logs({ running, log, last, onGo, onStop, onClose }:
   { running: boolean; log: string; last: BuildDone | null; onGo: (i: Issue) => void; onStop: () => void;
