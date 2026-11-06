@@ -1,4 +1,3 @@
-// Copies between clusters, with progress. The X cancels one that runs and takes a finished one off the list.
 import { ArrowRightLeft, CircleCheck, CircleX, Globe, Laptop, X } from 'lucide-react'
 
 import type { Transfer } from '../../types/files'

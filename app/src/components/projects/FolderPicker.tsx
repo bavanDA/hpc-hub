@@ -1,5 +1,3 @@
-// Choose a folder on a cluster, like the desktop file chooser: places on the left, the path, the folders in it as
-// rows. Click one to pick it, double-click to go in. Style E.
 import { ArrowUp, Eye, EyeOff, Folder, FolderPlus, HardDrive, House, Pencil } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 

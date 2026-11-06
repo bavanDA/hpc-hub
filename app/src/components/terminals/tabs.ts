@@ -1,4 +1,3 @@
-// The open terminals. They live here, outside React, so they keep running while you look at another page.
 import { FitAddon } from '@xterm/addon-fit'
 import { WebLinksAddon } from '@xterm/addon-web-links'
 import { Terminal } from '@xterm/xterm'

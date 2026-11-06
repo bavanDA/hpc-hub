@@ -13,7 +13,7 @@ function seconds(t: string): number {
   return Number(d) * 86400 + h * 3600 + m * 60 + s
 }
 
-// what hpc_hub/compute/jobs.py duration_text and reason_text say
+// what jobs.list says in words
 function words(total: number): string {
   const d = Math.floor(total / 86400), h = Math.floor((total % 86400) / 3600), m = Math.floor((total % 3600) / 60)
   if (d) return `${d} day${d > 1 ? 's' : ''}${h ? ` ${h} h` : ''}`

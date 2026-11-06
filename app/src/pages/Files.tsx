@@ -1,5 +1,3 @@
-// Files on the clusters, like GNOME Files: a folder as a table, a preview beside it, copy and paste between
-// clusters with progress below. Spec: hpc_hub/files/ui/.
 import { FolderOpen, FolderX } from 'lucide-react'
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 
@@ -129,7 +127,7 @@ export function Files() {
       setDialog(<PdfDialog cluster={cluster} path={p} subtitle={`${here}: ${p}`} onClose={close} />)
     }
     else if (isText(e) && e.size < EDIT_LIMIT) edit(e)
-    else local.download(p, true)  // no preview here: download and open it, as the GTK app does
+    else local.download(p, true)  // no preview here: download and open it
   }
   const edit = (e: Entry) => goPage('code', { cluster, path: join(path, e.name) })  // the Code page edits text
   const rename = (e: Entry) => setDialog(

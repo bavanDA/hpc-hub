@@ -1,6 +1,3 @@
-// Copy or sync a project to another cluster, or to another folder on its own (another group's Project): where it
-// goes, how (Globus cluster to cluster, or through this laptop; on its own cluster the cluster copies it), what to
-// leave behind, and which Claude chats come along. Style E, like the phone's CopySheet.
 import { FolderOpen } from 'lucide-react'
 import { useEffect, useState, type ReactNode } from 'react'
 

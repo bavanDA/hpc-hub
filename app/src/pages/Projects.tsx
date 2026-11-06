@@ -1,5 +1,3 @@
-// Projects: your named folders on the clusters, as a table like Jobs. Open one in Code, Files, a terminal, VS Code,
-// an agent or LaTeX; copy it elsewhere.
 import { FileText, Folder, FolderOpen, Plus } from 'lucide-react'
 import { useState } from 'react'
 

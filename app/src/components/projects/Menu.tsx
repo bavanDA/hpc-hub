@@ -1,5 +1,3 @@
-// A button that opens a popover menu. The menu is fixed to the window, so a list card that clips its rows never cuts
-// it off. Style E: plain rows with grey icons, hairlines between the groups, red words for a destructive item.
 import type { LucideIcon } from 'lucide-react'
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 

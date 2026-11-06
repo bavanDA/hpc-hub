@@ -1,4 +1,3 @@
-// Which clusters are connected, and the tmux sessions on each (looked at again every 15 seconds).
 import { useCallback, useEffect, useState } from 'react'
 
 import { useEvent } from '../../hooks'

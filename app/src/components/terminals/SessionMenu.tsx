@@ -1,4 +1,3 @@
-// A session's ⋯ menu: rename, color, stop.
 import { MoreVertical } from 'lucide-react'
 import { useRef, useState } from 'react'
 

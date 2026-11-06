@@ -1,4 +1,3 @@
-// The Sessions panel: tmux sessions per connected cluster. Click one to open it on the right.
 import { PanelLeftClose, Plus, RefreshCw } from 'lucide-react'
 
 import { sessionKind, type TmuxSession } from '../../types/terminals'

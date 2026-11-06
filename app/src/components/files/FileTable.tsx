@@ -1,4 +1,3 @@
-// The folder as a table: Name, Size, Modified. Click a column title to sort, again to reverse; folders stay on top.
 import { ChevronDown, ChevronUp } from 'lucide-react'
 import { useEffect, useRef, type KeyboardEvent, type MouseEvent } from 'react'
 

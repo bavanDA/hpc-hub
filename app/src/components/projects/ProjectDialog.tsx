@@ -1,5 +1,3 @@
-// Add a folder that is already on a cluster, create a new project from a template, or edit one. Style E, like the
-// phone's ProjectSheet.
 import { FolderOpen } from 'lucide-react'
 import { useState } from 'react'
 

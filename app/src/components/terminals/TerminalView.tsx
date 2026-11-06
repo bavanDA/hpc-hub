@@ -1,5 +1,3 @@
-// One open terminal: its banners (links it printed, session ended) over xterm, sized to fit, and for a session
-// the monitoring bar under it.
 import { X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 

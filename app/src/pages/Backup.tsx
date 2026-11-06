@@ -1,7 +1,3 @@
-// Backup agent: scratch deletes old files on most clusters. This page finds what is about to go, picks what matters
-// (rules, then Claude for unclear folders, then you) and copies it to project on the cluster. It never deletes
-// anything (hpc_hub/backup, methods/backup.py). The flow and its words are shared with the phone (components/backup);
-// the look is style E rows, like the phone's Backup screen.
 import { BellRing, CircleAlert } from 'lucide-react'
 import { useState } from 'react'
 

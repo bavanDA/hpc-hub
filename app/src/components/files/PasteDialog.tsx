@@ -1,5 +1,3 @@
-// Before a copy to another cluster: what is inside the folder and how big, so big parts can stay behind,
-// and how to copy it (through this laptop, or Globus cluster to cluster). Style E: rows and one main button.
 import { useEffect, useState } from 'react'
 
 import { call } from '../../rpc'

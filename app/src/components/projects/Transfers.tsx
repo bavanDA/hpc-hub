@@ -1,5 +1,3 @@
-// The copies started from Projects, under the table: one line each with a bar, how far it is, and Stop (after Keep
-// copying / Stop copy) for a running one or Clear for a finished one.
 import { RefreshCw } from 'lucide-react'
 import { useState, useSyncExternalStore } from 'react'
 

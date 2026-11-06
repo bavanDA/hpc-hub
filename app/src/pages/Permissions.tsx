@@ -1,5 +1,3 @@
-// Permissions: per cluster, what Claude may run without asking, and its passcode lock. Style E rows, like the
-// phone's PermissionsSheet.
 import { CircleAlert, RefreshCw } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 

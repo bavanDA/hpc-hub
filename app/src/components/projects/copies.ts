@@ -1,4 +1,3 @@
-// Copies started from Projects, from their `transfer` events. Kept outside React so they survive page changes.
 import { on } from '../../rpc'
 import type { Transfer } from '../../types/projects'
 

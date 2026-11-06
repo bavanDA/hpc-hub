@@ -1,5 +1,3 @@
-// What the check found: the headline, files grouped by when they go, folder by folder, and what to know about the
-// numbers. groupsOf is shared with the phone; the rows are the desktop's, in style E like the phone's RiskView.
 import { GitBranch } from 'lucide-react'
 
 import type { Folder, Summary } from '../../types/backup'

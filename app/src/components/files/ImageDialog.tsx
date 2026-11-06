@@ -1,4 +1,3 @@
-// An image from a cluster, as big as the window allows.
 import { useEffect, useState } from 'react'
 
 import { call } from '../../rpc'

@@ -1,4 +1,3 @@
-// One side of the Globus page: a cluster's collection, browsed through Globus (no SSH or VPN needed).
 import {
   ArrowUp, Bookmark, ChevronDown, CircleAlert, File, Folder, FolderOpen, FolderPlus, FolderSearch, HardDrive, Home, KeyRound,
   RefreshCw, WifiOff,

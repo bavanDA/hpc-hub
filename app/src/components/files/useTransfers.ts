@@ -1,4 +1,3 @@
-// Copies between clusters: the list the backend keeps, kept fresh by its `transfer` events.
 import { useEffect, useRef, useState } from 'react'
 
 import { useEvent } from '../../hooks'

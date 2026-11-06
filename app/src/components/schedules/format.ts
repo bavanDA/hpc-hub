@@ -1,4 +1,3 @@
-// How a schedule reads in its row: when it runs next, when it ran last, and a short status.
 import { cores } from '../../types/clusters'
 import { gpuAmount } from '../clusters/gpus'
 import type { Compute, ScheduleStatus } from '../../types/schedules'

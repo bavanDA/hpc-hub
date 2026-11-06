@@ -1,6 +1,3 @@
-// The backup agent's flow for one cluster, shared by the desktop page and the phone screen (methods/backup.py):
-// start, checking, what is at risk, the plan, space and the trial run, copying, done. Where you are is kept per
-// cluster outside React, so leaving the page and coming back lands on the same step.
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { call } from '../../rpc'

@@ -1,5 +1,3 @@
-// "Run without asking": a row per group of commands, each opening a window to allow all of them or one by one.
-// "Your own" also takes new ones. Style E, like the phone's PermissionsSheet.
 import { useState } from 'react'
 
 import type { CommandGroup } from '../../types/permissions'

@@ -1,5 +1,3 @@
-// Agents: everything about the AI agents in one place. Running (all clusters), then per cluster (the header's
-// cluster picker): Backup, Scheduled and Skills (experimental), and Permissions. go('agents', { tab: 'permissions' }).
 import { lazy, Suspense } from 'react'
 
 import { Running } from '../components/agents/Running'

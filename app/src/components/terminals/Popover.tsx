@@ -1,4 +1,3 @@
-// A small menu that opens at a point and closes on any click outside or Escape. Style E: plain rows.
 import { SquareTerminal } from 'lucide-react'
 import { useEffect, useRef, type ReactNode } from 'react'
 

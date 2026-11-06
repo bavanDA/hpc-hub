@@ -1,4 +1,3 @@
-// xterm.js settings: colors that match the app, and copy and paste like a Linux terminal.
 import type { ITheme } from '@xterm/xterm'
 
 import { call } from '../../rpc'

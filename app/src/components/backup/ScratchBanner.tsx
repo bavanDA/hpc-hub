@@ -1,4 +1,3 @@
-// A line over Files while you are in scratch and its last check found files about to be deleted. Opens the plan.
 import { ArchiveRestore } from 'lucide-react'
 
 import type { Place } from '../../types/files'

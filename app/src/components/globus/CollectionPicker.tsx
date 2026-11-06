@@ -1,4 +1,3 @@
-// Pick the Globus collection that holds a cluster's files: a search, best match first.
 import { Search } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 

@@ -1,4 +1,3 @@
-// In a plain browser there is no PTY: a pretend shell, so the page looks alive for design work.
 import type { Tab } from './tabs'
 
 const ANSWERS: Record<string, string> = {

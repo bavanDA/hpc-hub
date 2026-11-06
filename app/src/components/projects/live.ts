@@ -1,5 +1,3 @@
-// What the table shows of each project on the connected clusters: how many terminals run in its folder (looked at
-// every 15 seconds, like Jobs) and its git branch and changes (every minute, it is slower).
 import { useEffect, useState } from 'react'
 
 import { call } from '../../rpc'

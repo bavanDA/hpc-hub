@@ -1,4 +1,3 @@
-// The panel beside the table: a look at the selected file (image or text), and its details.
 import { FileQuestion, FileType, ImageOff, Pencil, ExternalLink } from 'lucide-react'
 import { useEffect, useState } from 'react'
 

@@ -1,4 +1,3 @@
-// The newest answer a scheduled agent wrote (the end of it, when long). Style E, like the phone's LogSheet.
 import { useEffect, useState } from 'react'
 
 import { useGo } from '../../nav'

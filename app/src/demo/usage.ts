@@ -22,7 +22,7 @@ const WEEKS: Record<string, [number[], Record<string, number>]> = {
   xyz789: [[620, 580, 840, 600, 710, 920, 640, 780, 880, 610, 700, 640], { jdoe: 5100, asmith: 3800 }],
 }
 
-/** The pace the way hpc_hub/compute/usage.py pace() works it out (no period end is known in the demo). */
+/** The pace as usage.allocations works it out (no period end is known in the demo). */
 function allocation(a: Account): Allocation {
   const noWeeks = typeof location !== 'undefined' && new URLSearchParams(location.search).has('noweeks')
   const [weeks, people] = WEEKS[a.account] ?? [Array(12).fill(0), {}]

@@ -1,4 +1,3 @@
-// Small dialogs: ask for a name (new folder, rename), and confirm before something can't be undone.
 import { useState } from 'react'
 
 import { AlertDialog, Button, Dialog, FIELD } from '../ui'
@@ -16,7 +15,7 @@ export function NameDialog({ title, action, initial = '', onDone, onClose }:
       </>}>
       <input autoFocus value={name} onChange={(e) => setName(e.target.value)}
         onKeyDown={(e) => e.key === 'Enter' && go()}
-        onFocus={(e) => {  // like GTK: the name is picked, not the extension
+        onFocus={(e) => {  // the name is picked, not the extension
           const dot = initial.lastIndexOf('.')
           e.target.setSelectionRange(0, dot > 0 ? dot : initial.length)
         }}

@@ -1,4 +1,3 @@
-// One side's state: which cluster, which folder, what is in it, what is selected.
 import { useCallback, useRef, useState } from 'react'
 
 import { call } from '../../rpc'

@@ -1,5 +1,3 @@
-// Terminals: your sessions on the left (tmux, so they keep running), open terminals on the right. VS Code job
-// output and other commands open as tabs of their own. Fold the list away for more room.
 import { PanelLeftOpen, SquareTerminal } from 'lucide-react'
 import { useEffect, useState } from 'react'
 

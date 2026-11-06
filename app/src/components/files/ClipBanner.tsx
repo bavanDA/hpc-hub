@@ -1,4 +1,3 @@
-// After Copy: what is waiting to be pasted, in a grey band; Paste here is the main button then.
 import { ClipboardPaste, X } from 'lucide-react'
 
 import type { Clip } from '../../types/files'

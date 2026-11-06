@@ -1,5 +1,3 @@
-// The weekly scratch check: on or off, which day and time, how far ahead to warn. Desktop window in style E, like
-// the phone's RemindersSheet.
 import { useState } from 'react'
 
 import type { Reminders } from '../../types/backup'

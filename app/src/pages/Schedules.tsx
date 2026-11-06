@@ -1,5 +1,3 @@
-// Scheduled agents (experimental): an agent runs a task on its own, e.g. clean the code every night at 02:00.
-// Spec: hpc_hub/agents/ui/schedules_page.py.
 import { AlarmClock, CircleAlert, Plus, RefreshCw } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 

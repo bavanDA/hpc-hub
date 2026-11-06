@@ -1,4 +1,3 @@
-// Below the table: what you can do with the selected file or folder.
 import { Copy, Download, FileArchive, FolderOpen, Package, Pencil, Trash2, type LucideIcon } from 'lucide-react'
 
 import type { Entry } from '../../types/files'

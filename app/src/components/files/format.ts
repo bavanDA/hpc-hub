@@ -1,4 +1,3 @@
-// How files show: sizes, dates, kinds (by extension, like hpc_hub/files/remote_fs.ext) and sorting.
 import type { Entry, Sort } from '../../types/files'
 
 export const ARCHIVES = ['.zip', '.tar.gz', '.tgz', '.tar', '.tar.bz2', '.tar.xz']

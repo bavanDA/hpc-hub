@@ -1,5 +1,3 @@
-// New terminal: name, cluster, login or compute node, folder. It runs in tmux. Style E: fields, segmented picks,
-// one main button.
 import { useState } from 'react'
 
 import { shortName } from '../clusters/loginCopy'

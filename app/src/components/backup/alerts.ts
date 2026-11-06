@@ -1,6 +1,3 @@
-// "Files in scratch are about to be deleted", from each cluster's last check (backup.alerts works them out from the
-// cached summary and today's date, so nothing runs on the cluster). One store for the Files banner, the Usage line
-// and the notifications; the watcher refreshes it while a cluster is connected.
 import { useEffect, useSyncExternalStore } from 'react'
 
 import { call } from '../../rpc'

@@ -1,4 +1,3 @@
-// Recent transfers: where each is at, with a progress bar and Cancel while it runs.
 import { CircleCheck, CircleX, ExternalLink, Loader2, Pause, RefreshCw, X } from 'lucide-react'
 
 import type { Task } from '../../types/globus'

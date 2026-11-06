@@ -1,6 +1,3 @@
-// The projects as a table, like Jobs: name with its folder under it, cluster, group, last opened, how many terminals run
-// in it, its git branch and changes, then Open (the Open window) and ⋮ with the rest.
-// Narrow windows drop the less important columns (container queries).
 import { ChevronDown, ChevronUp, ClipboardCopy, Copy, EllipsisVertical, FileText, Folder, GitBranch, Pencil,
   Trash2 } from 'lucide-react'
 import type { Project } from '../../types/projects'

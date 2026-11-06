@@ -1,6 +1,3 @@
-// Skills (experimental): what Claude, ChatGPT and the other agents know on each cluster. Add HPC Hub's own skills,
-// any from a git repository, and remove the ones you added. Spec: hpc_hub/agents/ui/skills_page.py. Style E rows,
-// like the phone's Skills.
 import { CircleAlert, GitBranch, Plus, RefreshCw, Sparkles, Trash2 } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 

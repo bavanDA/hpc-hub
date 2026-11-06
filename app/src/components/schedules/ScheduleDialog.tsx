@@ -1,5 +1,3 @@
-// New or edit a scheduled agent: the job, agent, folder and name, the task, when it runs, how long, and its compute.
-// Style E, like the phone's ScheduleSheet; the desktop can also give it a node size of its own (NodeFields).
 import { useEffect, useState } from 'react'
 
 import { call } from '../../rpc'

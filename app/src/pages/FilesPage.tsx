@@ -1,5 +1,3 @@
-// Files: Browse (one cluster's folders, picked in the header) and Transfers (every copy: through this laptop, and
-// Globus for big ones). go('files', { tab: 'transfers' }); the old Globus page lives here now.
 import { lazy, Suspense } from 'react'
 
 import { Tabs, type TabItem } from '../components/app/Tabs'

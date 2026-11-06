@@ -1,4 +1,3 @@
-// A right-click menu at the pointer, in sections split by hairlines. Click outside or Escape closes it.
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 
 export type MenuItem = { label: string; onClick: () => void; danger?: boolean }

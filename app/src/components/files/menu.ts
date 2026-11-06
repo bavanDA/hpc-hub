@@ -1,4 +1,3 @@
-// The right-click menu, in GTK's sections: for a file or folder, or (entry null) for the folder you are in.
 import type { Entry } from '../../types/files'
 import type { MenuItem } from './ContextMenu'
 import { isArchive, isText } from './format'
@@ -12,7 +11,7 @@ export type MenuActions = {
   code?: () => void    // the folder (a file: its folder) in the Code page's tree
 }
 
-/** VS Code and Claude in the folder, as in hpc_hub/files/ui/menu.py. */
+/** VS Code and Claude in the folder. */
 function tools(a: MenuActions, labels: [string, string]): MenuItem[] {
   return [...(a.vscode ? [{ label: labels[0], onClick: a.vscode }] : []),
     ...(a.claude ? [{ label: labels[1], onClick: a.claude }] : [])]

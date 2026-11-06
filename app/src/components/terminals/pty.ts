@@ -1,6 +1,3 @@
-// The PTYs in the Tauri side (src-tauri/src/pty.rs): open, type, resize, close, and their output by id.
-// On Windows the backend runs terminals itself, on its SSH connection (argv [CHANNEL, cluster, command]
-// from terminals.command, see hpc_hub/api/methods/terminals.py); those get negative ids here.
 import { invoke } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
 

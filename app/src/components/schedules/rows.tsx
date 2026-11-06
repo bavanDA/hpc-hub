@@ -1,4 +1,3 @@
-// A schedule's own compute: every field filled in, from the node settings where it sets none.
 import type { Profile } from '../../types/clusters'
 import type { Compute } from '../../types/schedules'
 

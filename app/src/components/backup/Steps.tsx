@@ -1,5 +1,3 @@
-// The backup agent's first two steps on the desktop: start (what it does, Check my scratch) and the check while it
-// runs. Wording in copy.ts. Style E, like the phone's StartView and ScanView.
 import { useState } from 'react'
 
 import type { BackupPolicy, Scan } from '../../types/backup'

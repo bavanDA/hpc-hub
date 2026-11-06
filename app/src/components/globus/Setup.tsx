@@ -1,4 +1,3 @@
-// Before Globus works: your app's client id, then a sign-in. Plus the settings dialog behind the gear.
 import { ArrowLeftRight, LogIn, LogOut, RotateCw } from 'lucide-react'
 import { useState } from 'react'
 

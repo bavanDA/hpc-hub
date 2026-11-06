@@ -1,4 +1,3 @@
-// The table's words and order: a project's cluster, when it was last opened, sorting.
 import type { Project } from '../../types/projects'
 import { shortName } from '../clusters/loginCopy'
 

@@ -1,5 +1,3 @@
-// One scheduled agent as a style E row: what runs where and when, its state, the on switch and ⋮ with its actions.
-// Clicking the row edits it.
 import { EllipsisVertical, FileText, Pencil, Play, Trash2 } from 'lucide-react'
 
 import type { ScheduleStatus } from '../../types/schedules'
@@ -8,7 +6,7 @@ import { Menu } from '../projects/Menu'
 import { Spinner } from '../ui'
 import { computeText, localWhen, status } from './format'
 
-/** The backup agent's weekly check (methods/backup.py): shown by what it does, edited on the Backup agent page. */
+/** The backup agent's weekly check: shown by what it does, edited on the Backup agent page. */
 export const isBackupCheck = (st: ScheduleStatus) => st.runner === 'backup' || st.name === 'backup-check'
 
 export function ScheduleRow({ st, busy, onToggle, onRun, onLog, onEdit, onDelete }: {

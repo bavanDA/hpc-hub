@@ -1,5 +1,3 @@
-// "Add" on one of HPC Hub's own skills: switch on the agents that should get it (those without it are on).
-// Style E, like the phone's AddToSheet.
 import { useState } from 'react'
 
 import type { CatalogSkill, Target } from '../../types/skills'

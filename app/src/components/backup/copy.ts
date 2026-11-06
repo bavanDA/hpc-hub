@@ -1,5 +1,3 @@
-// Every sentence of the backup agent's screens, desktop and phone (pages/Backup.tsx, mobile screens/Backup.tsx).
-// Plain words, no "if", no long dashes, the cluster's name once per screen: the rest say "scratch" and "project".
 import type { FileClass, Purge } from '../../types/backup'
 import { shortName as short } from '../clusters/loginCopy'
 

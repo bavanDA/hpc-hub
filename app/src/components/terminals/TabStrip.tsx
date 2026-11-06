@@ -1,4 +1,3 @@
-// The open terminals as tabs, with the current session's menu at the end.
 import { X } from 'lucide-react'
 
 import { useToast } from '../toast'

@@ -1,5 +1,3 @@
-// The monitoring bar under a session's terminal, like MobaXterm's (hpc_hub/terminals/monitor.py): host, CPU,
-// memory, network, uptime, users and disks of the host the session runs on. It watches only while shown.
 import { ArrowDown, ArrowUp, Clock, Cpu, HardDrive, MemoryStick, Server, Users, type LucideIcon } from 'lucide-react'
 import { useEffect, useState, useSyncExternalStore } from 'react'
 
@@ -14,7 +12,7 @@ call<{ monitor_bar: boolean }>('preferences.get').then((p) => setMonitorBar(p.mo
 const useEnabled = () =>
   useSyncExternalStore((fn) => { subscribers.add(fn); return () => subscribers.delete(fn) }, () => enabled)
 
-// monitor.py's size, rate, duration, level and used_of, in the app's units: kB, "2 h 47 min"
+// in the app's units: kB, "2 h 47 min"
 const UNITS = ['B', 'kB', 'MB', 'GB', 'TB']
 
 function size(n: number): string {

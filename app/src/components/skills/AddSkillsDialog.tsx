@@ -1,5 +1,3 @@
-// Add skills from a git repository: it is cloned on the cluster, you switch on the skills and the agents to give
-// them to. Style E, like the phone's FromGitSheet.
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { call } from '../../rpc'

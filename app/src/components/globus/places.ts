@@ -1,5 +1,3 @@
-// Where a Transfers side can jump to: Home, the cluster's Project and Scratch (when it's connected), and your
-// projects on it. Paths come back the way Globus takes them: '' is home, ~/x is /~/x.
 import { useEffect, useState } from 'react'
 
 import { call } from '../../rpc'

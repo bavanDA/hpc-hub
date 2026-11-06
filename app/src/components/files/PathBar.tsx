@@ -1,5 +1,3 @@
-// Above the table: Up / Home / Refresh / New folder, the path you can type into, and the places. The cluster is
-// picked in the header (clusters/ClusterPicker.tsx).
 import { ArrowUp, FolderPlus, House, PanelRight, RefreshCw, Upload } from 'lucide-react'
 import { useState } from 'react'
 

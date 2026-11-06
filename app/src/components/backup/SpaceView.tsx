@@ -1,5 +1,3 @@
-// Space and the trial run on the desktop: how much of project the copy uses, warnings, the way out when it does not
-// fit, then Copy. spaceFacts is shared with the phone; the rows are style E like the phone's SpaceCard.
 import { CircleCheck } from 'lucide-react'
 import { useEffect, useRef } from 'react'
 

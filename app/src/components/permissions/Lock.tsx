@@ -1,5 +1,3 @@
-// Passcode lock: Claude takes no messages until you start one with the code from your authenticator app. Style E,
-// like the phone's LockSection: switches, numbers typed in place, Recent activity and setup in windows of their own.
 import { ShieldCheck } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 

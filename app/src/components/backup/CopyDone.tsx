@@ -1,5 +1,3 @@
-// The copy while it runs (progress, Stop with a question) and what it ended with: done, partly done, or files
-// that still do not match. Desktop, style E like the phone's CopyCard and DoneCard.
 import { BellRing, CircleAlert, CircleCheck, FileText } from 'lucide-react'
 import { useState } from 'react'
 

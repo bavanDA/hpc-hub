@@ -1,4 +1,3 @@
-// Globus sign-in: open the Globus page in a browser, sign in and Allow, paste back the code Globus shows.
 import { Copy, ExternalLink } from 'lucide-react'
 import { useEffect, useState } from 'react'
 

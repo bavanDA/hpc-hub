@@ -1,5 +1,3 @@
-// The plan on the desktop: what is kept and what is left out, folder by folder with a switch for each kind of file
-// and the reason in plain words, the two plan switches, then Check space. Style E, like the phone's PlanList.
 import type { Plan, PlanItem } from '../../types/backup'
 import { agentIcon } from '../agents/AgentIcon'
 import { EButton, IconToggleRow } from '../e/extra'

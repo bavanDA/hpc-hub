@@ -1,5 +1,3 @@
-// Upload and download with the system's file dialogs. Progress shows below with the copies (`transfer` events);
-// files.download to "HPC Hub" in Downloads, then open, is how files without a preview open.
 import { useCallback } from 'react'
 
 import { call } from '../../rpc'
@@ -9,7 +7,7 @@ import { useToast } from '../toast'
 
 type Mine = { kind: 'upload' | 'download'; path?: string; open?: boolean }
 
-const HERE = 'this computer'  // in the titles of files_local.py
+const HERE = 'this computer'
 const mine = new Map<string, Mine>()  // kept across visits to the page
 const early = new Map<string, Transfer>()  // finished before files.upload/download answered with its id
 

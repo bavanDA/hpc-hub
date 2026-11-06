@@ -1,4 +1,3 @@
-// An icon per kind of file, all one grey.
 import { File, FileArchive, FileCode, FileImage, FileSpreadsheet, FileText, FileType, Folder,
   type LucideIcon } from 'lucide-react'
 

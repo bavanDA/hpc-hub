@@ -1,4 +1,3 @@
-// Small pieces the Globus parts share: a text field, sizes, paths and the pasted sign-in code.
 import type { InputHTMLAttributes } from 'react'
 
 export const HELP = 'Register a free app at app.globus.org → Settings → Developers → Register an app. Choose the ' +

@@ -1,4 +1,3 @@
-// Globus: two clusters side by side, browsed through Globus, with transfers between them that run on Globus.
 import { ArrowLeft, ArrowRight, CircleAlert, Settings } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
