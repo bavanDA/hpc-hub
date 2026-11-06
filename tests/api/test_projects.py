@@ -8,6 +8,9 @@ import pytest
 from hpc_hub.agents.chats import Chat
 from hpc_hub.api import hub as hub_mod
 from hpc_hub.api.methods import projects as api
+from hpc_hub.api.methods import projects_browse as browse
+from hpc_hub.api.methods import projects_copy as copies
+from hpc_hub.api.methods import projects_git as git
 from hpc_hub.core import config
 from hpc_hub.core.config import ClusterConfig
 from hpc_hub.files import transfer
@@ -50,7 +53,7 @@ def hub(tmp_path, monkeypatch):
     monkeypatch.setenv("HOME", str(home))
     monkeypatch.setattr(store, "PROJECTS_FILE", tmp_path / "projects.toml")
     monkeypatch.setattr(config, "APP_FILE", tmp_path / "app.toml")
-    monkeypatch.setattr(api, "_places", {})
+    monkeypatch.setattr(browse, "_places", {})
     monkeypatch.setattr(api, "_homes", {})
     monkeypatch.setattr(api, "_synced", {})
     monkeypatch.setattr(api, "sync_soon", lambda cluster: None)  # tests call api.sync themselves
@@ -63,7 +66,7 @@ def _finished(h, tid, seconds=10):
     end = time.time() + seconds
     while time.time() < end:
         done = [d for n, d in h.events if n == "transfer" and d["id"] == tid and d["finished"]]
-        if done and tid not in api._running:
+        if done and tid not in copies._running:
             return done[-1]
         time.sleep(0.02)
     raise AssertionError(f"{tid} did not finish")
@@ -131,10 +134,10 @@ def test_status_reads_git_of_every_project_at_once(hub, tmp_path, monkeypatch):
     commands = []
     run = hub.sessions["wulver"].ssh.run
     monkeypatch.setattr(hub.sessions["wulver"].ssh, "run", lambda c, **k: commands.append(c) or run(c, **k))
-    got = api.status("wulver")
+    got = git.status("wulver")
     assert got == {str(repo): {"branch": "main", "changed": 2}, "~/paper": {"branch": "main", "changed": 0}}
     assert len([c for c in commands if "git" in c]) == 1  # one ssh command for all of them
-    assert api.status("sdsc") == {} and api.status("yale") == {}
+    assert git.status("sdsc") == {} and git.status("yale") == {}
 
 
 def test_browse_lists_folders_only(hub, tmp_path):
@@ -142,14 +145,14 @@ def test_browse_lists_folders_only(hub, tmp_path):
     for d in ("b", "a", ".hidden"):
         (home / d).mkdir()
     (home / "file.txt").write_text("x")
-    got = api.browse("wulver", "~")
+    got = browse.browse("wulver", "~")
     assert got["path"] == str(home) and got["folders"] == [".hidden", "a", "b"]
-    api.mkdir("wulver", str(home / "a" / "new"))
-    assert api.browse("wulver", str(home / "a" / ".."))["path"] == str(home)
-    assert api.browse("wulver", "~/a")["folders"] == ["new"]
+    browse.mkdir("wulver", str(home / "a" / "new"))
+    assert browse.browse("wulver", str(home / "a" / ".."))["path"] == str(home)
+    assert browse.browse("wulver", "~/a")["folders"] == ["new"]
     with pytest.raises(RuntimeError, match="Connect"):
-        api.browse("sdsc", "~")
-    assert api.places("wulver")["storage"][0] == {"label": "Home", "path": "~"}
+        browse.browse("sdsc", "~")
+    assert browse.places("wulver")["storage"][0] == {"label": "Home", "path": "~"}
 
 
 def _project(tmp_path):
@@ -166,28 +169,28 @@ def test_copy_plan_sizes_and_chats(hub, tmp_path, monkeypatch):
     src = _project(tmp_path)
     found = [Chat("c1", str(src), "Fix the run", "", "", 1, 300), Chat("c2", str(src / "code"), "", "Hi", "", 1, 9),
              Chat("c3", "/elsewhere", "Other", "", "", 1, 5)]
-    monkeypatch.setattr(api.chat_list, "list_chats", lambda ssh, agent, limit, full_size=False: found)
-    got = api.copy_plan("proj")
+    monkeypatch.setattr(copies.chat_list, "list_chats", lambda ssh, agent, limit, full_size=False: found)
+    got = copies.copy_plan("proj")
     assert [x["name"] for x in got["parts"]] == ["data", "code"] and got["parts"][0]["size"] >= 50000
     assert [c["id"] for c in got["chats"]] == ["c1", "c2"] and got["chats"][1]["name"] == "Hi"
     with pytest.raises(RuntimeError, match="Connect"):
         store.save([Project("s", "sdsc", "/x")], store.PROJECTS_FILE)
-        api.copy_plan("s")
+        copies.copy_plan("s")
 
 
 def test_copy_through_the_laptop_leaves_out_what_you_skip(hub, tmp_path):
     _project(tmp_path)
-    targets = api.copy_targets("proj")["targets"]
+    targets = copies.copy_targets("proj")["targets"]
     assert [t["id"] for t in targets] == ["wulver", "yale", "sdsc"] and targets[0]["same"]
     assert "Globus app id" in targets[1]["globus_missing"]
-    got = api.copy("proj", "yale", str(tmp_path / "there"), skip=["data"])
+    got = copies.copy("proj", "yale", str(tmp_path / "there"), skip=["data"])
     last = _finished(hub, got["id"])
     assert not last["error"] and last["status"].startswith("Done") and got["chats"] == ""
     assert (tmp_path / "there" / "proj" / "code" / "run.py").exists()
     assert not (tmp_path / "there" / "proj" / "data").exists()
     assert store.load(store.PROJECTS_FILE)[0].copy_to == "yale"
     with pytest.raises(RuntimeError, match="Globus needs"):
-        api.copy("proj", "yale", "~", how="globus")
+        copies.copy("proj", "yale", "~", how="globus")
 
 
 class FakeGlobus:
@@ -217,9 +220,9 @@ def test_globus_sync_is_polled_into_transfer_events(hub, tmp_path, monkeypatch):
     hub.sessions["wulver"].cfg.globus.collection_id = "a"
     hub.sessions["yale"].cfg.globus.collection_id = "b"
     client = FakeGlobus()
-    monkeypatch.setattr(api, "_globus_client", lambda: client)
-    monkeypatch.setattr(api, "GLOBUS_POLL", 0.01)
-    got = api.copy("proj", "yale", "/dest", how="globus", skip=["data"])
+    monkeypatch.setattr(copies, "_globus_client", lambda: client)
+    monkeypatch.setattr(copies, "GLOBUS_POLL", 0.01)
+    got = copies.copy("proj", "yale", "/dest", how="globus", skip=["data"])
     last = _finished(hub, got["id"])
     args, kw = client.submitted
     assert args[:4] == ("a", str(src), "b", "/dest/proj") and kw == {"sync_level": 2, "skip": ["data"]}
@@ -231,8 +234,8 @@ def test_cancel_stops_a_running_copy(hub, monkeypatch):
     def slow(p, report):
         p.cancelled.wait(5)
         raise RuntimeError("stopped")
-    tid = api._start("t", slow)
-    api.cancel_copy(tid)
+    tid = copies._start("t", slow)
+    copies.cancel_copy(tid)
     last = _finished(hub, tid)
     assert last["status"] == "Cancelled" and last["error"] == "Cancelled"
 
@@ -268,16 +271,16 @@ def test_a_cluster_that_is_not_connected_is_left_alone(hub):
 def test_copy_into_another_group_on_the_same_cluster(hub, tmp_path, monkeypatch):
     _project(tmp_path)
     with pytest.raises(RuntimeError, match="compute node"):  # never on the login node
-        api.copy("proj", "wulver", str(tmp_path / "groupB"))
+        copies.copy("proj", "wulver", str(tmp_path / "groupB"))
     hub.sessions["wulver"].allocation = SimpleNamespace(job_id="123")
     plain = transfer.rsync_command
     ran_on = []
     monkeypatch.setattr(transfer, "rsync_command",  # no Slurm here: run it as the node would
                         lambda src, dest, skip=None, job="": ran_on.append(job) or plain(src, dest, skip))
-    got = api.copy("proj", "wulver", str(tmp_path / "groupB"), skip=["data"])
+    got = copies.copy("proj", "wulver", str(tmp_path / "groupB"), skip=["data"])
     last = _finished(hub, got["id"])
     assert not last["error"] and last["status"].startswith("Done")
     assert (tmp_path / "groupB" / "proj" / "code" / "run.py").exists() and ran_on == ["123"]
     assert not (tmp_path / "groupB" / "proj" / "data").exists()
     with pytest.raises(ValueError, match="outside the project"):
-        api.copy("proj", "wulver", str(tmp_path / "home" / "proj" / "code"))
+        copies.copy("proj", "wulver", str(tmp_path / "home" / "proj" / "code"))
