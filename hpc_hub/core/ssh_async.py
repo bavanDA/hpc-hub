@@ -236,7 +236,6 @@ class AsyncSshMaster(SshMaster):
         self._port = 0
         self._listeners: list = []
 
-    # -- login -------------------------------------------------------------------------
     def start(self, timeout: float = 180, cancelled: Callable[[], bool] = lambda: False) -> None:
         if self.alive():
             return
@@ -335,7 +334,6 @@ class AsyncSshMaster(SshMaster):
             conn.close()
             await conn.wait_closed()
 
-    # -- commands ----------------------------------------------------------------------
     def argv(self, command: str | None = None, tty: bool = False) -> list[str]:
         """A local command line for command on this connection: the bridge, or for a terminal the marker
         terminals.open_channel takes (no local program can ride this connection with a PTY)."""
@@ -383,7 +381,6 @@ class AsyncSshMaster(SshMaster):
         self._listeners.append(listener)
         return listener.get_port()
 
-    # -- terminals ---------------------------------------------------------------------
     def open_channel(self, command: str, cols: int, rows: int, on_data: Callable[[bytes], None],
                      on_exit: Callable[[int], None]) -> Channel:
         """A PTY on the cluster running command (a login shell when empty). on_data and on_exit are called
@@ -411,7 +408,6 @@ class AsyncSshMaster(SshMaster):
         channel.task = asyncio.get_running_loop().create_task(pump())
         return channel
 
-    # -- the bridge (ssh_bridge.py) ---------------------------------------------------
     async def _serve_bridge(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
         try:
             header = json.loads(await asyncio.wait_for(reader.readline(), 10))
