@@ -2,7 +2,7 @@ import pytest
 
 from hpc_hub.api import hub as hub_mod
 from hpc_hub.api.hub import Hub
-from hpc_hub.api.methods import clusters
+from hpc_hub.api.methods import clusters, logins, slurm_limits
 from hpc_hub.compute.limits import Limits
 from hpc_hub.connect.state import State
 from hpc_hub.core import config, credentials
@@ -125,29 +125,29 @@ def test_update_saves_only_safe_settings(hub):
 
 
 def test_logins_go_in_but_passwords_never_come_out(hub, keyring):
-    assert clusters.login("sdsc") == {"ssh": {"username": "", "password": False},
+    assert logins.login("sdsc") == {"ssh": {"username": "", "password": False},
                                       "vpn": {"username": "", "password": False}, "remember": True}
-    clusters.set_login("sdsc", "ssh", " jdoe ", "secret")
+    logins.set_login("sdsc", "ssh", " jdoe ", "secret")
     assert keyring["sdsc", "ssh"] == Login("jdoe", "secret")
-    clusters.set_login("sdsc", "ssh", "jdoe2", "")  # empty keeps the saved password
+    logins.set_login("sdsc", "ssh", "jdoe2", "")  # empty keeps the saved password
     assert keyring["sdsc", "ssh"] == Login("jdoe2", "secret")
-    assert clusters.login("sdsc")["ssh"] == {"username": "jdoe2", "password": True}
+    assert logins.login("sdsc")["ssh"] == {"username": "jdoe2", "password": True}
     with pytest.raises(ValueError):
-        clusters.set_login("sdsc", "ftp", "jdoe", "x")
+        logins.set_login("sdsc", "ftp", "jdoe", "x")
     with pytest.raises(ValueError):
-        clusters.set_login("sdsc", "vpn", " ", "x")
-    clusters.forget_logins("sdsc")
+        logins.set_login("sdsc", "vpn", " ", "x")
+    logins.forget_logins("sdsc")
     assert not keyring
 
 
 def test_partitions_and_longest_time(hub):
-    assert clusters.partitions("wulver")["known"] is False
+    assert slurm_limits.partitions("wulver")["known"] is False
     hub.sessions["wulver"].limits = Limits(partitions={"general": 4320, "debug": 480}, default_partition="general",
                                            qos={"low": 1440}, allowed_qos=["low"], default_qos="low")
-    got = clusters.partitions("wulver", partition="debug")
+    got = slurm_limits.partitions("wulver", partition="debug")
     assert got["known"] and got["partitions"] == ["general", "debug"] and got["qos"] == ["low"]
     assert (got["longest"], got["why"]) == (480, "partition debug")
-    assert clusters.partitions("wulver")["longest"] == 1440
+    assert slurm_limits.partitions("wulver")["longest"] == 1440
 
 
 def test_log_tail(hub, monkeypatch, tmp_path):
@@ -158,7 +158,7 @@ def test_log_tail(hub, monkeypatch, tmp_path):
 
 
 def test_password_not_remembered_is_asked_once_and_kept_in_memory(monkeypatch):
-    from hpc_hub.api.methods import clusters as m
+    m = logins
     from hpc_hub.core import config, credentials
     cfg = config.default_clusters()[2]  # no VPN
     saved = {}
@@ -172,15 +172,15 @@ def test_password_not_remembered_is_asked_once_and_kept_in_memory(monkeypatch):
     monkeypatch.setattr(m, "hub", lambda: fake)
     m.set_login(cfg.id, "ssh", "jdoe", "typed-now", remember=False)
     assert saved[(cfg.id, "ssh")] == credentials.Login("jdoe", "") and not cfg.remember_password  # no password kept
-    assert m._logins(cfg)[0].password == "typed-now" and asked == []  # typed in settings: no need to ask
+    assert m.for_connect(cfg)[0].password == "typed-now" and asked == []  # typed in settings: no need to ask
     m.forget_logins(cfg.id)
     m.set_login(cfg.id, "ssh", "jdoe", None, remember=False)
-    assert m._logins(cfg)[0].password == "secret" and m._logins(cfg)[0].password == "secret"
+    assert m.for_connect(cfg)[0].password == "secret" and m.for_connect(cfg)[0].password == "secret"
     assert len(asked) == 1  # once per run
 
 
 def test_forget_can_keep_the_username(monkeypatch):
-    from hpc_hub.api.methods import clusters as m
+    m = logins
     from hpc_hub.core import config, credentials
     cfg = config.default_clusters()[0]
     saved = {(cfg.id, "ssh"): credentials.Login("jdoe", "pw"), (cfg.id, "vpn"): credentials.Login("jdoe", "vpw")}

@@ -4,7 +4,7 @@ import pytest
 
 from hpc_hub.api import hub as hub_mod
 from hpc_hub.api.hub import Hub
-from hpc_hub.api.methods import clusters
+from hpc_hub.api.methods import clusters, slurm_limits
 from hpc_hub.compute import gpus, limits, slurm
 from hpc_hub.core import config
 from hpc_hub.core.config import ComputeProfile
@@ -77,9 +77,9 @@ def hub(monkeypatch):
 
 
 def test_api_lists_gpus_and_checks_slices(hub):
-    assert clusters.gpus("wulver") == {"known": False, "gpus": gpus.as_json(gpus.from_docs("wulver"))}
+    assert slurm_limits.gpus("wulver") == {"known": False, "gpus": gpus.as_json(gpus.from_docs("wulver"))}
     hub.sessions["wulver"].limits = limits.parse(WULVER)
-    got = clusters.gpus("wulver")
+    got = slurm_limits.gpus("wulver")
     assert got["known"] and got["gpus"][0]["type"] == "a100_10g"
     base = hub.sessions["wulver"].cfg.profile
     with pytest.raises(ValueError, match="One GPU slice per job"):

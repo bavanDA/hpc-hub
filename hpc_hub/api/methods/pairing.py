@@ -5,7 +5,7 @@ import time
 from ...core import pairing, ssh_keys
 from ..hub import hub
 from ..server import method
-from .clusters import set_login
+from .logins import set_login
 
 
 def svg(matrix: list[list[bool]]) -> str:
