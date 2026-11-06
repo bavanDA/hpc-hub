@@ -42,11 +42,10 @@ def test_open_save_stat_by_home_path(tmp_path):
     assert s["path"] == "~/proj/train.py" and s["exists"] and s["sha"] == r["sha"]
 
 
-def test_new_file_find_and_grep(tmp_path):
+def test_new_file_and_find(tmp_path):
     made = code.new_file("wulver", "~/test_train.py", "def test_lr():\n    assert True\n")
     assert made["path"] == "~/test_train.py" and made["writable"]
     assert [f["name"] for f in code.find_files("wulver", "~", "test_")] == ["test_train.py"]
-    assert code.grep("wulver", "", "test_lr")[0]["line"] == 1
 
 
 def test_not_connected():

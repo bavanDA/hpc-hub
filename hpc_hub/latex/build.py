@@ -7,7 +7,6 @@ from dataclasses import dataclass
 
 from ..core import remote
 from ..core.config import LatexSettings
-from ..core.ssh import SshMaster
 
 ERROR_RE = re.compile(r"^(?:\./)?([^:\s][^:]*\.(?:tex|sty|cls|bib|bbl)):(\d+): (.+)$", re.M)
 
@@ -34,14 +33,6 @@ def build_script(main_tex: str, s: LatexSettings) -> str:
     if s.setup.strip():  # "module load ..." needs a login shell
         return f"bash -lc {shlex.quote(f'{s.setup.strip()} && {script}')}"
     return script
-
-
-def build(ssh: SshMaster, main_tex: str, s: LatexSettings, job_id: str | None = None):
-    """Build on the job's node (if set) or the login node, through shells kept open: no start-up cost."""
-    script = build_script(main_tex, s)
-    if job_id and s.on_node:
-        return ssh.run_on_node(job_id, script, timeout=900)
-    return ssh.run(script, timeout=900, fast=True)
 
 
 def pdf_path(main_tex: str) -> str:

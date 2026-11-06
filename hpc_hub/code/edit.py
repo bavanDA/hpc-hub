@@ -22,7 +22,6 @@ from ..files.remote_fs import FsError, q
 MB = 1024 * 1024
 LIMIT = 2 * MB if sys.platform == "android" else 8 * MB  # bigger files open read-only, showing their end
 MAX_FOUND = 5000
-MAX_HITS = 500
 SKIP_DIRS = (".git", "node_modules", "__pycache__", ".venv", "venv", ".mypy_cache", ".pytest_cache",
              ".ipynb_checkpoints", ".tox", "build", "dist")
 
@@ -183,28 +182,5 @@ def find_files(ssh: SshMaster, root: str, query: str = "", cap: int = MAX_FOUND)
     found = [{"path": p, "name": p.rsplit("/", 1)[-1]} for p in lines if p]
     return sorted(found, key=lambda f: (len(f["name"]), f["path"]))
 
-
-def grep_command(root: str, text: str, ignore_case: bool = True, cap: int = MAX_HITS) -> str:
-    i = "-i " if ignore_case else ""
-    skip = " ".join(f"--exclude-dir={q(d)}" for d in SKIP_DIRS)
-    rg = f"rg --line-number --no-heading --color never --fixed-strings --max-columns 300 {i}-- {q(text)} {q(root)}"
-    grep = f"grep -rnIF {i}{skip} -- {q(text)} {q(root)}"
-    return (f"{{ if command -v rg >/dev/null 2>&1; then timeout 30 {rg}; else timeout 30 {grep}; fi; }} 2>/dev/null"
-            f" | head -n {int(cap)}")
-
-
-HIT = re.compile(r"^(.*?):(\d+):(.*)$")
-
-
-def grep(ssh: SshMaster, root: str, text: str, ignore_case: bool = True, cap: int = MAX_HITS) -> list[dict]:
-    """Lines under root that contain text: [{path, line, text}], at most cap."""
-    if not text.strip():
-        return []
-    hits = []
-    for line in ssh.run(grep_command(root, text, ignore_case, cap), timeout=60).stdout.splitlines():
-        m = HIT.match(line)
-        if m:
-            hits.append({"path": m.group(1), "line": int(m.group(2)), "text": m.group(3)[:300]})
-    return hits
 
 

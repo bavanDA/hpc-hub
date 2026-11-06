@@ -20,7 +20,6 @@ KEEP_DAYS = 30
 BIG = "10M"  # new files bigger than this stay out of a version (data, not writing)
 SETTINGS = ("off", "cluster", "backup")
 SKIP = " ".join(shlex.quote(f":(top,exclude)*.{e}") for e in BUILD_FILES)
-CLEAN_SKIP = " ".join(f"-e {shlex.quote('*.' + e)}" for e in BUILD_FILES)  # git clean keeps build files
 IDENTITY = ('n=$(git config user.name || id -un); e=$(git config user.email || echo "$(id -un)@$(hostname)"); '
             'export GIT_AUTHOR_NAME="$n" GIT_AUTHOR_EMAIL="$e" GIT_COMMITTER_NAME="$n" GIT_COMMITTER_EMAIL="$e"')
 

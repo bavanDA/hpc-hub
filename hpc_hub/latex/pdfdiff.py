@@ -10,7 +10,7 @@ from ..core.config import LatexSettings
 from ..core.ssh import SshMaster
 from . import build as latex
 from . import saved
-from .git import ENV, GitError
+from .git import ENV
 from .history import SEP, g, parts, rev, run
 
 NO_LATEXDIFF = 7  # the script's exit code when latexdiff is missing
@@ -88,9 +88,3 @@ def explain(code: int, output: str, cluster: str, diff: bool) -> str:
         return f"The red and blue version did not compile. latexdiff sometimes trips on custom macros.{first}"
     return f"That version did not compile.{first}"
 
-
-def remove_cache(ssh: SshMaster, folder: str) -> None:
-    w = run(ssh, f"{g(folder)} rev-parse --absolute-git-dir").strip()
-    if not w:
-        raise GitError("Not a repository")
-    run(ssh, f"rm -rf {shlex.quote(posixpath.join(w, 'hpc-hub', 'pdf'))}")

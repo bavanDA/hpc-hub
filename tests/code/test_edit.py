@@ -144,21 +144,6 @@ def test_find_files_skips_noise(sh, tmp_path):
     assert edit.find_files(sh, str(tmp_path), "[*") == []  # glob characters are literal
 
 
-def test_grep(sh, tmp_path):
-    (tmp_path / "src").mkdir()
-    (tmp_path / "src/train.py").write_text("lr = 0.01\nepochs = 3\nLR_DECAY = 0.9\n")
-    (tmp_path / "src/blob.bin").write_bytes(b"\x00lr = 1")
-    hits = edit.grep(sh, str(tmp_path), "lr")
-    assert [(h["path"].rsplit("/", 1)[-1], h["line"]) for h in hits] == [("train.py", 1), ("train.py", 3)]
-    assert hits[0]["text"] == "lr = 0.01"
-    assert [h["line"] for h in edit.grep(sh, str(tmp_path), "lr", ignore_case=False)] == [1]
-    assert edit.grep(sh, str(tmp_path), "  ") == []
-
-
-def test_grep_without_rg_uses_grep():
-    cmd = edit.grep_command("/home/jdoe/proj", "a b", ignore_case=False)
-    assert "command -v rg" in cmd and "grep -rnIF --exclude-dir=.git" in cmd and "'a b'" in cmd
-
 
 def test_decode_rules():
     assert edit.decode(b"a\r\nb", 4, 10, True) == ("a\nb", "crlf", False, "")

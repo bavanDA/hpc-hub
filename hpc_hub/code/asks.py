@@ -196,11 +196,6 @@ def run_line(a: Ask) -> str:
     return f'bash "$HOME"/{ROOT}/{a.id}/run.sh'
 
 
-def set_state_command(ask_id: str, state: str) -> str:
-    out = f'"$HOME"/{ROOT}/{check_id(ask_id)}'
-    return f"[ -d {out} ] && printf %s {shlex.quote(state)} > {out}/state"
-
-
 def cancel_command(ask_id: str) -> str:
     """Run where the ask runs (its node): mark it cancelled and stop the agent. run.sh then puts back any file
     the agent touched and ends as cancelled."""

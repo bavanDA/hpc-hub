@@ -21,18 +21,6 @@ def test_build_script():
     assert latex.pdf_path("/p/main.tex") == "/p/main.pdf"
 
 
-def test_build_runs_on_node_or_login():
-    class Ssh:
-        def run(self, cmd, timeout=60, fast=None):
-            return ("login", fast)
-
-        def run_on_node(self, job, cmd, timeout=900):
-            return ("node", job)
-    assert latex.build(Ssh(), "/p/main.tex", LatexSettings(on_node=True), "42") == ("node", "42")
-    assert latex.build(Ssh(), "/p/main.tex", LatexSettings(on_node=False), "42") == ("login", True)
-    assert latex.build(Ssh(), "/p/main.tex", LatexSettings(on_node=True), None) == ("login", True)
-
-
 def test_parse_issues():
     issues = latex.parse_issues(LOG)
     assert [(i.file, i.line) for i in issues] == [("main.tex", 12), ("intro.tex", 3)]

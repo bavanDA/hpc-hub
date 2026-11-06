@@ -54,8 +54,3 @@ def find_files(cluster: str, root: str, query: str = "") -> list[dict]:
     ssh = _ssh(cluster)
     return edit.find_files(ssh, _path(ssh, root or "~"), query)
 
-
-@method("code.grep")
-def grep(cluster: str, root: str, text: str, ignore_case: bool = True) -> list[dict]:
-    ssh = _ssh(cluster)
-    return edit.grep(ssh, _path(ssh, root or "~"), text, ignore_case)

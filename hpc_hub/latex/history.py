@@ -469,7 +469,7 @@ def line_story(ssh: SshMaster, folder: str, path: str, line: int, at: str = "") 
     if prev and pair and pair[0]["k"] == "-":
         try:
             ob = blame(ssh, folder, prev["path"], prev["hash"], (pair[0]["o"], pair[0]["o"]))
-            oh, oline = ob["lines"][0]
+            oh, _ = ob["lines"][0]
             oc = ob["commits"][oh]
             older = {"rev": prev["hash"], "path": prev["path"], "line": pair[0]["o"], "hash": oh,
                      "subject": oc["summary"], "author": oc["author"], "time": oc["time"]}

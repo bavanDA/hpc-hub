@@ -18,7 +18,6 @@ from .history import SEP, g, parts, run
 
 MAX_TEXT = 4000
 MAX_NOTES = 2000
-CLASH = 75  # run.sh's exit code when the file changed since it was read
 
 
 def _where(ssh: SshMaster, folder: str) -> tuple[str, str, str]:
