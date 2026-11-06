@@ -44,3 +44,28 @@ def test_single_lock(tmp_path, monkeypatch):
     other = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, env={
         "XDG_RUNTIME_DIR": str(tmp_path), "PATH": "/usr/bin", "HOME": str(tmp_path)})
     assert other.stdout.strip() == "False"  # a second process can't take it while this one holds it
+
+
+
+def test_sessions_list_and_answers(monkeypatch):
+    from hpc_hub.api import hub as hub_mod
+    from hpc_hub.api.methods import app, sessions
+    from hpc_hub.connect.session import ClusterSession
+    from hpc_hub.core import config
+    h = Hub(lambda *a: None)
+    h.sessions = {c.id: ClusterSession(c, None, h) for c in config.default_clusters()[:1]}
+    monkeypatch.setattr(hub_mod, "_hub", h)
+    got = sessions.sessions()
+    assert [s["id"] for s in got] == ["wulver"] and got[0]["state"] == "Disconnected" and got[0]["node"] == ""
+    assert app.status() == {"blocked": False, "message": ""}
+    asked = []
+    monkeypatch.setattr(h, "answer", lambda qid, answer: asked.append((qid, answer)))
+    sessions.answer("abc123", "yes")
+    assert asked == [("abc123", "yes")]
+    h.blocked = True
+    assert app.status()["blocked"] and "Another HPC Hub" in app.status()["message"]
+    try:
+        sessions.sessions()
+        raise AssertionError("should refuse")
+    except RuntimeError as e:
+        assert "Another HPC Hub is open" in str(e)

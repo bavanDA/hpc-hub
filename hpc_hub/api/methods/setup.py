@@ -7,8 +7,8 @@ from ..server import method
 
 @method("setup.status")
 def status() -> dict:
-    app = config.load_app()
-    return {"first_run": config.first_run(app), "chosen": [c.id for c in hub().clusters],
+    app = config.load_app(config.APP_FILE)
+    return {"first_run": config.first_run(app, config.CONFIG_FILE), "chosen": [c.id for c in hub().clusters],
             "choices": [{"id": c.id, "name": c.name, "short": c.short_name, "org": c.who, "host": c.host,
                          "vpn": c.vpn.enabled, "second_factor": c.second_factor} for c in config.default_clusters()]}
 
@@ -21,7 +21,7 @@ def choose(ids: list[str]) -> dict:
     if not ids:
         raise ValueError("Pick at least one cluster")
     hub().use_clusters(ids)
-    app = config.load_app()
+    app = config.load_app(config.APP_FILE)
     app.clusters = ",".join(ids)
-    config.save_app(app)
+    config.save_app(app, config.APP_FILE)
     return status()

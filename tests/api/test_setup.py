@@ -46,3 +46,32 @@ def test_the_cluster_list_has_only_the_chosen_ones(monkeypatch):
     h.clusters = [c for c in config.default_clusters() if c.id == "wulver"]  # picked NJIT only on the first start
     monkeypatch.setattr(hub_mod, "_hub", h)
     assert [c["id"] for c in app.clusters()] == ["wulver"]
+
+
+@pytest.fixture
+def chosen(tmp_path, monkeypatch):
+    from hpc_hub.api import hub as hub_mod
+    monkeypatch.setattr(config, "APP_FILE", tmp_path / "app.toml")
+    monkeypatch.setattr(config, "CONFIG_FILE", tmp_path / "clusters.toml")
+    h = Hub.__new__(Hub)
+    h.clusters = config.default_clusters()
+    h.use_clusters = lambda ids: setattr(h, "clusters", [c for c in config.default_clusters() if c.id in ids])
+    monkeypatch.setattr(hub_mod, "_hub", h)
+    return h
+
+
+def test_first_start_offers_every_cluster(chosen):
+    from hpc_hub.api.methods import setup
+    got = setup.status()
+    assert got["first_run"] and got["chosen"] == ["wulver", "yale", "sdsc"]
+    yale = next(c for c in got["choices"] if c["id"] == "yale")
+    assert (yale["short"], yale["org"], yale["vpn"], yale["second_factor"]) == ("Yale", "Yale", True, "duo")
+
+
+def test_choose_keeps_known_clusters_once(chosen):
+    from hpc_hub.api.methods import setup
+    got = setup.choose(["sdsc", "nope", "sdsc", "wulver"])
+    assert got["chosen"] == ["wulver", "sdsc"] and not got["first_run"]
+    assert config.load_app(config.APP_FILE).clusters == "sdsc,wulver"
+    with pytest.raises(ValueError, match="at least one"):
+        setup.choose(["nope"])
