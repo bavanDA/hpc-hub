@@ -8,21 +8,23 @@ import { useToast } from '../../toast'
 import { Button, Spinner } from '../../ui'
 import { remember, remembered } from '../storage'
 import { AgentChip } from './agent/AgentChip'
-import { BranchBar, SwitchDialog, SwitchingCard } from './Branches'
-import { CommitList, type Sel } from './CommitList'
+import { BranchBar } from './branches/BranchBar'
+import { SwitchDialog } from './branches/SwitchDialog'
+import { SwitchingCard } from './branches/SwitchingCard'
 import { Detail } from './detail/Detail'
 import { lastLine, plural } from './format'
 import { git, type Where } from './git'
 import type { Go } from './go'
+import { CommitList, type Sel } from './list/CommitList'
 import { NotesPanel } from './notes/NotesPanel'
 import type { CardSpot } from './notes/SpotCard'
-import { SavedSettings } from './Pickers'
-import { PushView } from './Push'
-import { Timeline } from './Timeline'
+import { PushView } from './push/PushView'
+import { Timeline } from './timeline/Timeline'
 import { Center } from './ui/Center'
 import type { Assist } from './useAssist'
 import { useJob } from './useJob'
 import { useSeconds } from './useSeconds'
+import { SavedSettings } from './versions/SavedSettings'
 
 /** Asks from outside the tab: the Git menu's Push or Get the latest, the timeline, Open in History from a line. */
 export type HistoryAsk = { kind: 'push' | 'pull' | 'timeline' | 'commit' | 'now' | 'notes'; hash?: string; n: number }
@@ -357,7 +359,7 @@ export function History({ where, clusterName, main, pdf, active, ask, guard, onB
             aside={paused ? paused.changes : 0} onSelect={select} />
           <BranchBar where={where} state={state} busy={busy} start={start} onSwitch={askSwitch} onNewBranch={newBranch}
             onCompareBranch={compareBranch} onLatest={() => void startSync(false)} onPush={() => void startSync(true)}
-            extra={<AgentChip choice={assist.choice} clusterName={clusterName} installed={assist.installed}
+            agent={<AgentChip choice={assist.choice} clusterName={clusterName} installed={assist.installed}
               onOpen={assist.loadInstalled} onChoose={(c) => void assist.choose(c)} />} />
         </div>
         <div className={`relative flex min-w-0 flex-1 flex-col ${switching ? 'pointer-events-none opacity-60' : ''}`}>

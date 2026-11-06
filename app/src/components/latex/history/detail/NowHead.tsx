@@ -3,7 +3,8 @@ import { type ReactNode, useState } from 'react'
 
 import { Button, Spinner } from '../../../ui'
 import { shortHash, when } from '../format'
-import { DraftCard, WriteButton } from '../Write'
+import { DraftCard } from '../write/DraftCard'
+import { WriteButton } from '../write/WriteButton'
 import type { DetailProps } from './Detail'
 
 export function NowHead({ state, switcher, onCommit, onCommitSplit, assist, saved, commits }:

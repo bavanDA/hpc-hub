@@ -1,10 +1,12 @@
 import { Archive, ArrowDown, ArrowUp, ChevronRight, Cloud, Pencil, Tag } from 'lucide-react'
 import { Fragment, useState } from 'react'
 
-import type { GitState, HCommit, SavedVersion } from '../../../types/history'
-import { clock, fileName, group, plural, when } from './format'
-import { Avatar } from './ui/Avatar'
-import { Counts } from './ui/Counts'
+import type { GitState, HCommit, SavedVersion } from '../../../../types/history'
+import { clock, fileName, group, plural, when } from '../format'
+import { Avatar } from '../ui/Avatar'
+import { Counts } from '../ui/Counts'
+import { CommitChip } from './CommitChip'
+import { CommitItem } from './CommitItem'
 
 export type Sel = { kind: 'now' } | { kind: 'commit'; hash: string } | { kind: 'compare'; from: string; to: string }
   | { kind: 'saved'; hash: string } | { kind: 'sync' }
@@ -76,7 +78,7 @@ export function CommitList({ state, commits, saved, sel, query, pulled, aside, o
     <div className="min-h-0 flex-1 overflow-y-auto pb-4">
       {!q && (
         <>
-          <Item selected={now} dim={!inRange(-1)} badge={badge('')} onClick={(e) => pick('', e)} bar={range ? inRange(-1) : false}
+          <CommitItem selected={now} dim={!inRange(-1)} badge={badge('')} onClick={(e) => pick('', e)} bar={range ? inRange(-1) : false}
             icon={<span className="grid size-[22px] place-items-center rounded-full border border-dashed border-line-strong
               text-dim"><Pencil size={11} /></span>}
             title={<span className={now ? '' : 'italic text-dim'}>Not committed yet</span>}
@@ -95,14 +97,14 @@ export function CommitList({ state, commits, saved, sel, query, pulled, aside, o
         return (
           <Fragment key={c.hash}>
             {head && <div className="px-4 pt-3 pb-1 text-sm font-semibold text-dim">{head}</div>}
-            <Item selected={sel.kind === 'commit' && sel.hash === c.hash} dim={!inRange(i)} badge={badge(c.hash)}
+            <CommitItem selected={sel.kind === 'commit' && sel.hash === c.hash} dim={!inRange(i)} badge={badge(c.hash)}
               bar={range ? inRange(i) : false} onClick={(e) => pick(c.hash, e)}
               icon={<Avatar name={c.author} faint={!inRange(i)} />}
               title={<>{c.subject}{c.tags.map((t) => <span key={t} className="ml-1.5 inline-flex h-5 items-center gap-1 rounded
                 border border-line-strong px-1.5 align-[1px] text-xs font-normal text-dim"><Tag size={10} /> {t}</span>)}</>}
               meta={<>{c.author} · {when(c.time)} · {plural(c.files.length, 'file')}
-                {toPush && <Chip><ArrowUp size={10} /> to push</Chip>}
-                {pulled.has(c.hash) && <Chip><ArrowDown size={10} /> just pulled</Chip>}</>}
+                {toPush && <CommitChip><ArrowUp size={10} /> to push</CommitChip>}
+                {pulled.has(c.hash) && <CommitChip><ArrowDown size={10} /> just pulled</CommitChip>}</>}
               counts={<Counts added={c.added} removed={c.removed} />} />
             {fold(c.hash, saved.filter((v) => c.parents[0] && v.base === c.parents[0]), 'before this commit')}
           </Fragment>
@@ -111,31 +113,5 @@ export function CommitList({ state, commits, saved, sel, query, pulled, aside, o
       {!shown.length && <p className="px-4 py-6 text-center text-sm text-dim">
         {q ? 'No commit matches.' : 'No commits yet.'}</p>}
     </div>
-  )
-}
-
-function Chip({ children }: { children: React.ReactNode }) {
-  return <span className="ml-1.5 inline-flex h-[18px] items-center gap-0.5 rounded border border-line-strong px-1 text-[11px]">
-    {children}</span>
-}
-
-function Item({ selected, dim, bar, badge, icon, title, meta, counts, onClick }:
-  { selected: boolean; dim: boolean; bar: boolean; badge: string | null; icon: React.ReactNode; title: React.ReactNode
-    meta: React.ReactNode; counts: React.ReactNode; onClick: (e: React.MouseEvent) => void }) {
-  return (
-    <button onClick={onClick} title="Shift-click another to compare the two"
-      className={`relative flex w-full items-start gap-3 py-2 pr-3 pl-4 text-left ${selected ? 'bg-selected' : 'hover:bg-hover'}
-        ${dim ? 'opacity-45' : ''}`}>
-      {(selected || bar) && <span className={`absolute inset-y-0 left-0 ${bar ? 'w-[3px] bg-text/70' : 'w-[3px] bg-text'}`} />}
-      <span className="mt-0.5">{icon}</span>
-      <span className="min-w-0 flex-1">
-        <span className={`flex items-center gap-2 ${selected ? 'font-semibold' : ''}`}>
-          <span className="min-w-0 flex-1 truncate">{title}</span>
-          {badge && <span className="rounded bg-text px-1.5 text-[11px] font-semibold text-window">{badge}</span>}
-        </span>
-        <span className="mt-0.5 flex items-center gap-2 text-xs text-dim">
-          <span className="min-w-0 flex-1 truncate">{meta}</span>{counts}</span>
-      </span>
-    </button>
   )
 }

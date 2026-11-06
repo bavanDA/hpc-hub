@@ -17,7 +17,7 @@ import { notesGutter } from './notes/notesGutter'
 import { isLine } from './notes/places'
 import { type CardSpot, SpotCard } from './notes/SpotCard'
 import { useAssist } from './useAssist'
-import { RunningCards } from './Write'
+import { RunningCards } from './write/RunningCards'
 
 type Args = {
   where: Where

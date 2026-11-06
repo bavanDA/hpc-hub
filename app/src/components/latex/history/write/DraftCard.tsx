@@ -1,68 +1,16 @@
-import { ArrowUp, Check, CircleAlert, Loader2, RotateCcw, Sparkles, X } from 'lucide-react'
+import { ArrowUp, Check, CircleAlert, RotateCcw, X } from 'lucide-react'
 import { useState } from 'react'
 
-import type { Change, GitState, SavedVersion, Suggested, Written } from '../../../types/history'
-import { Button, Spinner } from '../../ui'
-import { AgentIcon } from './agent/AgentIcon'
-import { agentOf, shortLabel } from './agent/labels'
-import { clock, fileName, plural } from './format'
-import { Counts } from './ui/Counts'
-import { Seconds } from './ui/Seconds'
-import { Segments } from './ui/Segments'
-import type { Assist, Job } from './useAssist'
+import type { GitState, SavedVersion, Suggested, Written } from '../../../../types/history'
+import { Button, Spinner } from '../../../ui'
+import { AgentIcon } from '../agent/AgentIcon'
+import { agentOf, shortLabel } from '../agent/labels'
+import { clock, fileName, plural } from '../format'
+import { Counts } from '../ui/Counts'
+import { Segments } from '../ui/Segments'
+import type { Assist, Job } from '../useAssist'
+import { commitMessage, editedSince } from './draft'
 
-export function WriteButton({ assist }: { assist: Assist }) {
-  const job = assist.running('write')
-  const waiting = assist.waitingFor === 'write'
-  return (
-    <Button onClick={assist.write} disabled={!!job || waiting || !assist.choice}
-      title="The agent reads your changes and writes a message for you to check. It never commits.">
-      {job ? <><Spinner size={14} /> Writing, <Seconds from={job.started} /></>
-        : waiting ? <><Spinner size={14} /> Waiting for a node</> : <><Sparkles size={15} /> Write message</>}
-    </Button>
-  )
-}
-
-const WORDS = {
-  write: ['Writing your commit message', 'Keep working. It lands in History for you to check.'],
-  check: ['Checking your list', 'Keep working. The results land in Notes, for you to decide.'],
-  ask: ['Answering your question', 'Keep working. The answer shows under the lines it is about.'],
-}
-
-/** Bottom right while jobs run, wherever you are in the paper. */
-export function RunningCards({ assist, inHistory }: { assist: Assist; inHistory: boolean }) {
-  const shown = assist.jobs.filter((j) => ['starting', 'preparing', 'running'].includes(j.stage)
-    && (j.kind !== 'ask' || (!inHistory && j.ask?.scope !== 'card')))
-  if (!shown.length) return null
-  return (
-    <div className="pointer-events-none fixed right-4 bottom-4 z-40 flex w-[400px] flex-col gap-2">
-      {shown.map((j) => <RunningCard key={j.id} job={j} onCancel={() => assist.cancel(j.id)} />)}
-    </div>
-  )
-}
-
-function RunningCard({ job, onCancel }: { job: Job; onCancel: () => void }) {
-  const [title, hint] = WORDS[job.kind]
-  const a = job.about
-  const covers = a?.files !== undefined ? `${plural(a.files, 'file')}, ${plural(a.lines ?? 0, 'line')}`
-    : a?.notes !== undefined ? plural(a.notes, 'open note') : a?.title ?? ''
-  return (
-    <div role="status" className="menu-in pointer-events-auto rounded-xl border border-line bg-raised px-3.5 py-3
-      shadow-[var(--shadow-dialog)]">
-      <div className="flex items-center gap-2.5"><Loader2 size={15} className="animate-spin text-dim" />
-        <b className="flex-1">{title}</b><span className="text-sm text-dim"><Seconds from={job.started} /></span></div>
-      <div className="mt-1.5 ml-6 flex items-center gap-1.5 text-[12.5px] text-dim">
-        <AgentIcon agent={agentOf(job.label)} size={11} />
-        <span className="truncate">{[job.label, job.node && `node ${job.node}`, covers].filter(Boolean).join(' · ')}</span></div>
-      <div className="mt-2.5 ml-6 flex items-center gap-2">
-        <span className="flex-1 text-[12.5px] leading-[17px] text-dim">{job.stage === 'starting' || job.stage === 'preparing'
-          ? 'Reading your changes.' : hint}</span>
-        <Button size="sm" kind="ghost" onClick={onCancel}>Cancel</Button></div>
-    </div>
-  )
-}
-
-// -- the message, ready to check ---------------------------------------------------------------------------------
 type DraftProps = {
   assist: Assist
   draft: { job: Job; result: Written; n: number }
@@ -72,19 +20,6 @@ type DraftProps = {
   onCommit: (message: string, push: boolean) => Promise<boolean>
   onCommitSplit: (commits: { message: string; files: string[] }[], push: boolean) => Promise<boolean>
 }
-
-const message = (c: { subject: string; body: string }) => c.body.trim() ? `${c.subject.trim()}\n\n${c.body.trim()}`
-  : c.subject.trim()
-
-/** Files changed since the agent started: in the commit, not in its message. */
-function editedSince(before: Change[] | undefined, now: Change[]): string[] {
-  if (!before) return []
-  return now.filter((c) => {
-    const b = before.find((x) => x.path === c.path)
-    return !b || b.added !== c.added || b.removed !== c.removed
-  }).map((c) => c.path)
-}
-
 export function DraftCard({ assist, draft, state, saved, headTime, onCommit, onCommitSplit }: DraftProps) {
   const r = draft.result
   const split = r.commits.length > 1
@@ -100,8 +35,8 @@ export function DraftCard({ assist, draft, state, saved, headTime, onCommit, onC
   const go = async (push: boolean) => {
     if (busy || rows.some((c) => !c.subject.trim())) return
     setBusy(push ? 'push' : 'commit')
-    const ok = mode === 'one' ? await onCommit(message(one), push)
-      : await onCommitSplit(parts.map((c) => ({ message: message(c), files: c.files })), push)
+    const ok = mode === 'one' ? await onCommit(commitMessage(one), push)
+      : await onCommitSplit(parts.map((c) => ({ message: commitMessage(c), files: c.files })), push)
     setBusy('')
     if (ok) assist.clearDraft()
   }

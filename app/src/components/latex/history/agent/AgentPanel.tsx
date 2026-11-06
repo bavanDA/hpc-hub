@@ -3,6 +3,7 @@ import { X } from 'lucide-react'
 import type { AgentChoice } from '../../../../types/history'
 import { openSettings } from '../../../app/openSettings'
 import { Switch } from '../../../ui'
+
 import type { ChipProps } from './AgentChip'
 import { AgentIcon } from './AgentIcon'
 import { Levels } from './Levels'

@@ -1,8 +1,8 @@
 import { ChevronLeft, ChevronRight, Cloud, GitBranch, Tag, X } from 'lucide-react'
 import { useMemo, useRef, useState } from 'react'
 
-import type { HCommit, Lanes, SavedVersion } from '../../../types/history'
-import { plural, when } from './format'
+import type { HCommit, Lanes, SavedVersion } from '../../../../types/history'
+import { plural, when } from '../format'
 
 type Point = { v: string; x: number; lane: 0 | 1; kind: 'commit' | 'saved' | 'now'; c?: HCommit; tag?: string
   label?: string }

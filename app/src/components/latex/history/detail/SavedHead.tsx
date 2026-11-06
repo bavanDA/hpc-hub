@@ -6,6 +6,7 @@ import { useToast } from '../../../toast'
 import { Button } from '../../../ui'
 import { fileName, lastLine, plural, when } from '../format'
 import { git } from '../git'
+
 import type { DetailProps } from './Detail'
 
 export function SavedHead(p: DetailProps & { version: SavedVersion; changes: Changes | null; switcher: ReactNode

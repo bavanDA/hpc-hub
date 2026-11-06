@@ -3,9 +3,9 @@ import type { ReactNode } from 'react'
 
 import type { Changes } from '../../../../types/history'
 import { plural } from '../format'
-import { VersionPicker } from '../Pickers'
 import { Avatar } from '../ui/Avatar'
 import { Counts } from '../ui/Counts'
+import { VersionPicker } from '../versions/VersionPicker'
 import { AskButton } from './AskButton'
 import type { DetailProps } from './Detail'
 

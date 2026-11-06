@@ -6,6 +6,7 @@ import { Button } from '../../../ui'
 import { AskBox } from '../ask/AskBox'
 import { Thread } from '../ask/Thread'
 import type { Go } from '../go'
+
 import type { Assist } from '../useAssist'
 
 export type CardSpot = { id: string; mode: 'ask' | 'note'; title: string; about: About; place: NotePlace | null
