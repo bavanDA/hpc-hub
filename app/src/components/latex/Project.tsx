@@ -19,13 +19,13 @@ import { Spinner } from '../ui'
 import { basename, ext, IMAGE_EXT, rel, TEXT_EXT } from './bits'
 import { Split } from './ui/Split'
 import { BuildButton } from './BuildButton'
-import type { EditorHandle } from './CodeEditor'
+import type { EditorHandle } from './editor/CodeEditor'
 import { FileTree, type TreeActions } from './files/FileTree'
 import { GitMenu } from './git/GitMenu'
 import { useHistoryTab } from './history/useHistoryTab'
 import { counts, Logs } from './Logs'
 
-const CodeEditor = lazy(() => import('./CodeEditor'))
+const CodeEditor = lazy(() => import('./editor/CodeEditor'))
 type View = 'editor' | 'split' | 'pdf' | 'reader' | 'history'
 type Doc = { path: string; text: string; version: number; line?: number }
 type PdfState = { data: Uint8Array | null; path?: string; none?: boolean; error?: string }
