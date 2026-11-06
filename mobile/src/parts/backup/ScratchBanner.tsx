@@ -4,7 +4,7 @@ import { ArchiveRestore } from 'lucide-react'
 
 import { useScratchAlert } from '@shared/components/backup/alerts'
 import { banner } from '@shared/components/backup/copy'
-import { inScratch } from '@shared/components/backup/ScratchBanner'
+import { inScratch } from '@shared/components/backup/plan'
 import type { Place } from '@shared/types/files'
 import { Row } from '../../ui'
 import { phone } from './words'

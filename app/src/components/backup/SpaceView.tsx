@@ -6,23 +6,9 @@ import { EButton, IconToggleRow, Note } from '../e/extra'
 import { List, Row } from '../e/ui'
 import { Meter, Spinner } from '../ui'
 import { gb, gbOf, space as copy } from './copy'
+import { spaceFacts } from './plan'
 import { Actions } from './Steps'
 import type { Options } from './useBackup'
-
-/** The space facts and the trial run state, worked out once for both screens. */
-export function spaceFacts(plan: Plan, policy: BackupPolicy | null) {
-  const s = plan.space
-  const dest = policy?.destinations.find((d) => plan.dest.startsWith(d.path)) ?? policy?.destinations[0]
-  const home = policy?.destinations.find((d) => d.backed_up && d !== dest && /home/i.test(d.label))
-  const adds = Math.max(0, s.files_after - (dest?.files ?? s.files_after - plan.files))
-  return {
-    s, dest, adds,
-    offerHome: !!dest && !dest.backed_up && !!home,
-    tooManyFiles: s.file_limit > 0 && s.files_after > s.file_limit * 0.9,
-    blocked: !s.fits,
-    warn: s.fits && !!s.warn,
-  }
-}
 
 export function SpaceView({ plan, policy, options, tried, progress, busy, onLeaveOut, onOptions, onTry, onCopy,
   onBack }: {

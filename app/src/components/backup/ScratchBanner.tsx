@@ -3,11 +3,7 @@ import { ArchiveRestore } from 'lucide-react'
 import type { Place } from '../../types/files'
 import { useScratchAlert } from './alerts'
 import { banner } from './copy'
-
-/** True when path is in the cluster's scratch place (files.places labels it Scratch). */
-export function inScratch(path: string, places: Place[]): boolean {
-  return places.some((p) => /scratch/i.test(p.label) && (path === p.path || path.startsWith(`${p.path}/`)))
-}
+import { inScratch } from './plan'
 
 export function ScratchBanner({ cluster, path, places, onOpen }: {
   cluster: string; path: string; places: Place[]; onOpen: () => void

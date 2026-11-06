@@ -4,25 +4,7 @@ import type { Folder, Summary } from '../../types/backup'
 import { Note } from '../e/extra'
 import { Row, Section } from '../e/ui'
 import { CLASS, count, gb, risk, when } from './copy'
-
-type Group = { title: string; files: number; bytes: number; folders: Folder[] }
-
-/** The deadlines in the summary, put in the groups the screen shows, with the folders that have files in each. */
-export function groupsOf(s: Summary): Group[] {
-  const out: Group[] = []
-  let from = -Infinity
-  for (const [upTo, title] of risk.groups) {
-    const ds = s.deadlines.filter((d) => d.days > from && d.days <= upTo)
-    const folders = s.folders.filter((f) => f.at_risk_files > 0 && f.soonest_days != null
-      && f.soonest_days > from && f.soonest_days <= upTo)
-    if (ds.length || folders.length) {
-      out.push({ title, files: ds.reduce((n, d) => n + d.files, 0), bytes: ds.reduce((n, d) => n + d.bytes, 0),
-        folders: folders.sort((a, b) => (a.soonest_days ?? 0) - (b.soonest_days ?? 0)) })
-    }
-    from = upTo
-  }
-  return out
-}
+import { groupsOf } from './plan'
 
 function FolderLine({ f }: { f: Folder }) {
   return (

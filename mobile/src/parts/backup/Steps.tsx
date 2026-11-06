@@ -9,8 +9,7 @@ import {
   CLASS, count, done as doneCopy, gb, gbOf, helpFor, plan as planCopy, risk, scanning, space as spaceCopy, start,
   when,
 } from '@shared/components/backup/copy'
-import { groupsOf } from '@shared/components/backup/Risk'
-import { spaceFacts } from '@shared/components/backup/SpaceView'
+import { groupsOf, spaceFacts } from '@shared/components/backup/plan'
 import type { Options } from '@shared/components/backup/useBackup'
 import { Spinner } from '@shared/components/ui'
 import type { BackupPolicy, CopyResult, Plan, PlanItem, Progress, Scan, Summary } from '@shared/types/backup'
