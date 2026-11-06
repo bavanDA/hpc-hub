@@ -293,7 +293,6 @@ function probeOf(b: Block): string {
   return ''
 }
 
-// -- math cut from the page ----------------------------------------------------------------------------------------
 const cuts = new Map<string, Promise<string>>()
 
 /** A region of a page drawn on a transparent canvas, as a data URL (black ink: used as a mask, so it takes the text

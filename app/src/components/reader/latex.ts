@@ -2,7 +2,6 @@ import type { Block, Doc, Inline } from './model'
 
 export type Read = (path: string) => Promise<string>
 
-// -- scanning ------------------------------------------------------------------------------------------------------
 const LETTER = /[A-Za-z@]/
 
 export function stripComments(s: string): string {
@@ -111,7 +110,6 @@ function splitTop(s: string, token: string): string[] {
   return out
 }
 
-// -- what a document defines -------------------------------------------------------------------------------------
 type Theorem = { title: string; counter: string; within: string; numbered: boolean }
 type Macro = { args: number; def: string | null; body: string }
 
@@ -188,7 +186,6 @@ class Paper {
     return (this.counters[counter] = (this.counters[counter] ?? 0) + 1)
   }
 
-  // -- the preamble ----------------------------------------------------------------------------------------------
   define(pre: string) {
     const S = new Src(pre)
     while (!S.done) {
@@ -243,7 +240,6 @@ class Paper {
     return out
   }
 
-  // -- numbering -------------------------------------------------------------------------------------------------
   heading(cmd: string, star: boolean): { level: number; num: string } {
     const order = this.chapters ? ['chapter', 'section', 'subsection', 'subsubsection', 'paragraph']
       : ['section', 'subsection', 'subsubsection', 'paragraph']
@@ -276,7 +272,6 @@ class Paper {
     if (key) this.labels[key.trim()] = { num, kind }
   }
 
-  // -- blocks ----------------------------------------------------------------------------------------------------
   blocks(src: string): Block[] {
     const out: Block[] = []
     let para = ''
@@ -458,7 +453,6 @@ class Paper {
     return { t: 'refs', items: this.bib.map((b) => ({ key: b.key, label: b.label, c: trim(this.inline(b.text)) })) }
   }
 
-  // -- inline --------------------------------------------------------------------------------------------------
   inline(src: string): Inline[] {
     const out: Inline[] = []
     let text = ''
@@ -594,7 +588,6 @@ function defEnd(s: string, i: number): number {
   return S.i
 }
 
-// -- references ----------------------------------------------------------------------------------------------------
 function bibitems(body: string): { key: string; label: string; text: string }[] {
   const [, ...items] = splitTop(body, '\\bibitem')
   return items.map((raw, k) => {
@@ -651,7 +644,6 @@ export function fromBib(bibs: string[], cited: string[]): { key: string; label: 
   })
 }
 
-// -- the whole paper -------------------------------------------------------------------------------------------------
 const dir = (p: string) => p.slice(0, p.lastIndexOf('/') + 1)
 
 /** main.tex with its \input and \include files in place. */
