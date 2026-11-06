@@ -6,7 +6,8 @@ import { call } from '../../rpc'
 import type { GitInfo } from '../../types/latex'
 import { useToast } from '../toast'
 import { Button, Dialog, Spinner } from '../ui'
-import { MenuButton, Popover } from './bits'
+import { MenuButton } from './ui/MenuButton'
+import { Popover } from './ui/Popover'
 
 type Where = { cluster: string; folder: string }
 const lastLine = (s: string) => s.trim().split('\n').pop() ?? s

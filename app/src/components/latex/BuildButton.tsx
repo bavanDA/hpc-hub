@@ -6,7 +6,7 @@ import { call } from '../../rpc'
 import type { Settings } from '../../types/latex'
 import { useToast } from '../toast'
 import { Button, Spinner } from '../ui'
-import { Popover } from './bits'
+import { Popover } from './ui/Popover'
 
 const ENGINES: [Settings['engine'], string][] = [['pdf', 'pdfLaTeX'], ['xelatex', 'XeLaTeX'], ['lualatex', 'LuaLaTeX']]
 
