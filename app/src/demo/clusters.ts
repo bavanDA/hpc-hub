@@ -202,12 +202,6 @@ export const answers: Record<string, unknown> = {
       'Node n0311 (job 123777)']])
     return null
   },
-  'clusters.request_fast_node': ({ cluster }: { cluster: string }) => {
-    steps(cluster, [[0, { state: 'Requesting compute node', connected: false, detail: 'Job 123778 waiting in queue' },
-      'Requesting a fast node (debug)'], [1200, { state: 'Connected', connected: true, node: 'n0052', job: '123778',
-      owned: true }, 'Node n0052 (job 123778)']])
-    return null
-  },
   'clusters.release_node': ({ cluster }: { cluster: string }) => {
     const s = find(sessions, cluster)
     log(cluster, s.owned ? `Released job ${s.job}` : `Stopped using your job ${s.job}, it keeps running`)

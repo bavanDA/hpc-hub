@@ -264,7 +264,6 @@ export const answers: Record<string, unknown> = {
     const bytes = await pdf()
     return { data: base64(bytes.subarray(offset, offset + length)), total: bytes.length }
   },
-  'latex.settings': () => settings,
   'latex.save_settings': (s: Settings) => (settings = { setup: s.setup, engine: s.engine, on_node: s.on_node }),
   'latex.build': runBuild,
   'latex.stop': null,

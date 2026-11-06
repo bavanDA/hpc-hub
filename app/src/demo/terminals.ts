@@ -59,5 +59,5 @@ export const answers: Record<string, unknown> = {
   'terminals.command': command,
   'terminals.links': scan,
   'terminals.buffer': '',
-  'terminals.rename': null, 'terminals.set_color': null, 'terminals.stop': null, 'terminals.open_link': null,
+  'terminals.rename': null, 'terminals.stop': null,
 }

@@ -521,7 +521,6 @@ export const answers: Record<string, unknown> = {
   },
   'latex.git_sync_stop': () => { paused = null; return { stopped: true, kept: false } },
   'latex.git_saved': async () => { await setup(); return savedVersions },
-  'latex.git_save_version': () => ({ saved: '', why: 'same' }),
   'latex.git_saved_setting': ({ mode }: { mode: GitState['saved'] }) => (savedSetting = mode),
   'latex.git_restore': async ({ version }: { version: string }) => {
     const f = await filesOf(version)
