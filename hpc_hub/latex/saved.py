@@ -8,7 +8,7 @@ import time
 
 from ..core.ssh import SshMaster
 from .git import BUILD_FILES, ENV, GitError
-from .history import g, rev, run
+from .git_shell import g, rev, run
 
 GAP = 300  # seconds between two automatic versions
 KEEP_DAYS = 30

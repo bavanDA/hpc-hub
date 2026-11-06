@@ -8,7 +8,7 @@ from ..core.ssh import SshMaster
 from . import build as latex
 from . import saved
 from .git import ENV
-from .history import SEP, g, parts, rev, run
+from .git_shell import SEP, g, parts, rev, run
 
 NO_LATEXDIFF = 7  # the script's exit code when latexdiff is missing
 

@@ -7,7 +7,7 @@ from collections.abc import Callable
 from ..core.ssh import SshMaster
 from . import saved
 from .git import ENV, GitError
-from .history import SEP, g, parts, rev, run
+from .git_shell import SEP, g, parts, rev, run
 
 ASIDE = "refs/hpc-hub/aside/"
 HUNK_RE = re.compile(r"^@@ -\d+(?:,\d+)? \+(\d+)", re.M)

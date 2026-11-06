@@ -9,7 +9,7 @@ import time
 
 from ..core.ssh import SshMaster
 from ..files import remote_fs
-from .history import SEP, g, parts, run
+from .git_shell import SEP, g, parts, run
 
 MAX_TEXT = 4000
 MAX_NOTES = 2000

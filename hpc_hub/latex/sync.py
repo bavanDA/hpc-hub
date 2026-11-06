@@ -10,7 +10,7 @@ from ..core.ssh import SshMaster
 from ..files import remote_fs
 from . import saved
 from .git import ENV, GitError
-from .history import SEP, g, parts, run
+from .git_shell import SEP, g, parts, run
 
 ORIG, ASIDE = "refs/hpc-hub/sync/orig", "refs/hpc-hub/sync/aside"
 Step = Callable[[str], None]
