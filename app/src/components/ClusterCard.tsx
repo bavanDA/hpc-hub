@@ -16,8 +16,8 @@ import { ComputeDialog } from './clusters/ComputeDialog'
 import { LogView } from './clusters/LogView'
 import { shortName } from './clusters/loginCopy'
 import { SettingsDialog } from './clusters/SettingsDialog'
-import { EButton } from './e/extra'
-import { ConfirmDialog, StatusDot, type Tone } from './e/parts'
+import { EButton, StatusDot, type Tone } from './e/extra'
+import { ConfirmDialog } from './e/parts'
 import { Menu, type MenuItem } from './projects/Menu'
 import { useToast } from './toast'
 import { useTools } from './tools/useTools'
@@ -34,7 +34,7 @@ const AGENTS: [string, string, LucideIcon][] = [['agent:claude', 'Claude', agent
   ['ask', 'Ask all agents', Users]]
 
 function status(s: Session, vpnOnly: boolean): [string, Tone] {
-  if (s.state === 'Connected') return [vpnOnly ? 'VPN only' : 'Connected', 'on']
+  if (s.state === 'Connected') return [vpnOnly ? 'VPN only' : 'Connected', 'connected']
   if (s.state === 'Error') return ["Didn't connect", 'error']
   if (s.state === 'Disconnected') return ['Not connected', 'off']
   return [s.state === DUO ? 'Approve Duo' : s.state === WAITING ? 'Getting a node' : s.state, 'busy']
