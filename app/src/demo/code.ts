@@ -1,6 +1,6 @@
 // Demo data for the Code page: a few made-up files you can open, edit and save in the browser preview. One file
 // "changes on the cluster" after a while, to show the change banner and a save conflict.
-import type { FileState, FoundFile, GrepHit, OpenedFile, SaveResult } from '../types/code'
+import type { FileState, FoundFile, OpenedFile, SaveResult } from '../types/code'
 import type { FileData, Listing } from '../types/files'
 import { answers as files } from './files'
 
@@ -128,12 +128,5 @@ export const answers = {
       .map((path) => ({ path, name: path.slice(path.lastIndexOf('/') + 1) }))
       .filter((f) => f.name.toLowerCase().includes(q))
       .sort((a, b) => a.name.length - b.name.length || a.path.localeCompare(b.path))
-  },
-  'code.grep': ({ root, text }: { root: string; text: string }): GrepHit[] => {
-    const needle = text.toLowerCase()
-    if (!needle.trim()) return []
-    return Object.keys(FILES).filter((p) => p.startsWith(full(root || '~'))).flatMap((path) =>
-      (get(path)?.text ?? '').split('\n').flatMap((line, i) =>
-        line.toLowerCase().includes(needle) ? [{ path, line: i + 1, text: line.slice(0, 300) }] : []))
   },
 }
