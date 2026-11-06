@@ -1,8 +1,5 @@
-"""Each cluster's scratch purge rule, from its own docs (researched November 2026), and what the cluster says at run
-time where it says anything (Yale's getquota has a Purged column).
-
-None of the three says which date the timer uses. Where the docs don't say, days are counted from the oldest date
-on the file (atime, mtime or ctime): a warning that comes early is cheap, one that comes late loses data."""
+"""Each cluster's scratch purge rule, from its docs (November 2026) and what the cluster says at run time.
+Where the docs don't say which date counts, the oldest one does: an early warning is cheap."""
 
 import re
 from dataclasses import replace

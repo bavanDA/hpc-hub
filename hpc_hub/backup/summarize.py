@@ -1,11 +1,5 @@
-"""The scan's summary, run on the cluster over find's output (scan.py): per folder totals, what the timer deletes
-when, what kind of files they are, and the full file list the copy job filters later.
-
-Input on stdin: one record per file or link, NUL-ended, fields separated by \\037 (find -printf):
-atime mtime ctime btime size blocks links type target path. It only reads that stream; it never opens a file.
-
-Runs as `python3 -I` with classify.py pasted in front (scan.remote_source), so: standard library only, syntax old
-clusters' Python 3 reads, and the import below is dropped on the cluster."""
+"""The scan's summary, run on the cluster over find's NUL-ended records (atime mtime ctime btime size blocks
+links type target path, split by \\037); it never opens a file. classify.py is pasted in front."""
 
 import heapq
 import json

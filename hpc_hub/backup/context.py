@@ -1,12 +1,6 @@
-"""The agent's view of scratch, built on the cluster after the scan (agent.py): for the folders that matter, a short
-tree, the README's start, the first lines of the job and driver scripts, and git facts, all under DIR/context/.
-The agent then reads only that folder, never scratch itself.
-
-Reads open files with O_NOATIME, so reading never resets the purge timer; a file that can't be read that way
-(someone else's) is left out. git runs with --no-optional-locks, so it writes nothing in scratch. Standard library
-only, syntax old clusters' Python 3 reads.
-
-python3 -I context.py SCRATCH DIR"""
+"""The agent's view of scratch, built on the cluster in DIR/context/: short trees, README and script heads, git
+facts. Files open with O_NOATIME so the purge timer is not reset; git takes no locks.
+Standard library and old Python 3 only. python3 -I context.py SCRATCH DIR"""
 
 import fnmatch
 import json

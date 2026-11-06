@@ -1,11 +1,6 @@
-"""The copy job's file list, made on the cluster from the scan's files.list0 and the plan's rules (plan.py):
-copy.list0 (to project) and copy-home.list0 (code to home on Expanse), relative paths, NUL-ended, for rsync's
---files-from. Files changed in the last 30 minutes are left for later: a job is probably still writing them.
-
-It only reads the list and stats the chosen files (metadata). Standard library only, syntax old clusters' Python 3
-reads.
-
-python3 -I listfilter.py SCRATCH DIR NOW"""
+"""The copy job's file lists for rsync --files-from, made on the cluster from files.list0 and the plan's rules.
+Files changed in the last 30 minutes wait: a job is probably still writing them.
+Standard library and old Python 3 only. python3 -I listfilter.py SCRATCH DIR NOW"""
 
 import fnmatch
 import json

@@ -1,4 +1,4 @@
-"""What the backup agent passes around. Sizes are bytes, days are whole days, times are epoch seconds."""
+"""What the backup passes around. Sizes are bytes, days whole days, times epoch seconds."""
 
 from dataclasses import dataclass, field
 

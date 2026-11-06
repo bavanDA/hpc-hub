@@ -1,10 +1,5 @@
-"""The scan: one small Slurm job that walks scratch once (metadata only: find never opens a file), sums it up with
-summarize.py and, when asked, lets an agent look at the folders (agent.py). Everything it writes stays in
-~/.hpc-hub/backup/<id>/ in your home; nothing is written to, moved in or touched in scratch.
-
-The job is gentle on the shared filesystem: one walker, lowest CPU and disk priority, a time limit (a scan that
-runs out says it is partial), and on Lustre with millions of files a candidate list from lfs find instead of a
-full walk."""
+"""The scan job: one gentle walk of scratch's metadata, summed up by summarize.py into ~/.hpc-hub/backup/<id>/.
+Nothing in scratch is written, moved or opened."""
 
 import json
 import re

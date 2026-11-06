@@ -1,9 +1,5 @@
-"""The agent that refines what to keep: after the scan it reads a small picture of the folders (context.py builds
-it in ~/.hpc-hub/backup/<id>/context/, never scratch itself) and writes its choices to plan.agent.json.
-
-Its answer is only data: which folders and file patterns to keep and why. validate() keeps the parts that name
-folders the scan found and drops everything else; the copy job's commands come from copy.py's template, never
-from the agent. A README that says "run rm" changes nothing."""
+"""The agent that refines what to keep. Its answer is only data: validate() keeps what names folders the scan
+found, and the copy job's commands never come from it."""
 
 import json
 import re

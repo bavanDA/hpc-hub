@@ -1,6 +1,5 @@
-"""One cluster's projects shared by every HPC Hub you use (laptop, phone): ~/.hpc-hub/projects.json on that cluster.
-Each side merges it with its own list: the newer change of a project wins, a removed one stays removed, and
-"opened" keeps the latest of both."""
+"""One cluster's projects shared by every HPC Hub you use, in ~/.hpc-hub/projects.json there: the newer change
+wins, a removal stays, and opened keeps the latest."""
 
 import time
 from dataclasses import asdict

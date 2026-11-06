@@ -1,8 +1,4 @@
-"""The weekly scratch check and the alerts between checks.
-
-The check is a scheduled agent (agents/schedules.py) with runner "backup": the same sbatch --begin chain, so it
-shows on the Scheduled agents page, but each run is a scan (scan.body) instead of an agent's task. Files age at a
-known pace, so the app works out the alerts from the latest summary and today's date; no new scan is needed."""
+"""The weekly scratch check, a scheduled agent whose runs are scans, and the alerts worked out between them."""
 
 import json
 import shlex

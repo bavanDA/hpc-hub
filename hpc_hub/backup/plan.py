@@ -1,8 +1,4 @@
-"""The plan: what to copy from the scan, why, and what it does to the project folder's space.
-
-Choices come in layers, each beating the one before: the rules (classify.py), the agent (agent.validate), then
-yours. Before the trial run the numbers are estimates from the scan's totals; the trial run makes them exact.
-The copy job's filter (listfilter.py) applies the same rules file by file."""
+"""What to copy from a scan and its space. Choices come in layers: the rules, the agent, then yours."""
 
 import hashlib
 import json

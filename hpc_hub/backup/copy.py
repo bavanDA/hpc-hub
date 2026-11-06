@@ -1,12 +1,6 @@
-"""The trial run, the copy and its check: Slurm jobs from fixed templates (the agent never writes commands).
-
-rsync copies the plan's files from scratch into <project>/from-scratch/, keeping the folders as they are in
-scratch, so later runs only add what changed. What it may do is a short allow list (check_flags); nothing that
-deletes (no --delete*, no --remove-source-files), nothing that follows links (no -L). A newer file in project is
-never overwritten (--update); a file that does get replaced goes to .hpc-hub-replaced/<date>/ first.
-
-Before copying the job checks again that the plan is the one the trial run checked, that the copy fits in the
-destination's free space, and that the destination is a from-scratch folder outside scratch."""
+"""The trial run, the copy and its check, as Slurm jobs from fixed templates. rsync only gets flags from
+check_flags: nothing that deletes or follows links, a newer file in project is never overwritten, and a
+replaced one goes to .hpc-hub-replaced/<date>/ first."""
 
 import json
 import re

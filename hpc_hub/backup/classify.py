@@ -1,8 +1,5 @@
-"""Which kind of file a path in scratch is: results, code, writing, inputs, logs, regen (can be made again),
-checkpoint or unsure. Rules only; the agent refines them per folder (agent.py).
-
-This file also runs on the cluster, pasted in front of summarize.py and listfilter.py: standard library only, and
-syntax old clusters' Python 3 still reads (no new-style annotations at run time)."""
+"""Which kind of file a path in scratch is, by rules. Also runs on the cluster, pasted in front of
+summarize.py and listfilter.py: standard library and old Python 3 only."""
 
 import fnmatch
 import os
