@@ -28,9 +28,6 @@ class Entry:
         return self.kind == "d"
 
 
-ARCHIVES = (".zip", ".tar.gz", ".tgz", ".tar", ".tar.bz2", ".tar.xz")
-
-
 def ext(name: str) -> str:
     """Lower-case extension, keeping .tar.gz and friends whole."""
     low = name.lower()
@@ -189,11 +186,6 @@ def rename(ssh: SshMaster, src: str, dst: str) -> None:
     _run(ssh, f"test ! -e {q(dst)} && mv -- {q(src)} {q(dst)} || {{ echo 'Name already exists' >&2; exit 1; }}")
 
 
-def copy(ssh: SshMaster, src: str, dest_dir: str) -> None:
-    """Copy within one cluster (paste on the cluster it came from)."""
-    _run(ssh, f"cp -r -- {q(src)} {q(dest_dir)}/", timeout=3600)
-
-
 def remove(ssh: SshMaster, path: str) -> None:
     if len([part for part in path.split("/") if part not in ("", ".", "~")]) < 2:
         raise FsError("Refusing to delete that")
@@ -225,12 +217,6 @@ def make_zip(ssh: SshMaster, path: str) -> None:
 
 def extract(ssh: SshMaster, path: str) -> None:
     _run(ssh, unzip_command(path), timeout=3600)
-
-
-def download(ssh: SshMaster, remote_path: str, local_path: str) -> None:
-    res = subprocess.run(ssh.copy_argv(":" + remote_path, local_path), capture_output=True, text=True)
-    if res.returncode != 0:
-        raise FsError(res.stderr.strip() or "Download failed")
 
 
 def upload(ssh: SshMaster, local_path: str, remote_dir: str) -> None:

@@ -1,4 +1,4 @@
-"""Saving a file (files.write, latex.write, the GTK editors) keeps its mode and its link."""
+"""remote_fs.write_bytes keeps a file's mode and its link."""
 
 import os
 import stat

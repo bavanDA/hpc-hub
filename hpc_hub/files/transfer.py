@@ -25,10 +25,6 @@ class Progress:
     error: str = ""
     cancelled: threading.Event = field(default_factory=threading.Event)
 
-    @property
-    def fraction(self) -> float:
-        return min(1.0, self.done / self.total) if self.total else 0.0
-
 
 def total_size(ssh: SshMaster, path: str) -> int:
     res = ssh.run(f"du -sb -- {shlex.quote(path)} 2>/dev/null | cut -f1", timeout=300)
