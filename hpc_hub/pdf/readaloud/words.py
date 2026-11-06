@@ -12,9 +12,9 @@ WORKER = Path(__file__).with_name("words_worker.py")
 def extract(data: bytes, python: Path) -> list[Word]:
     """Every word of a PDF with its box, in reading order (PyMuPDF keeps two columns apart)."""
     try:
-        with tempfile.NamedTemporaryFile(suffix=".pdf") as f:
+        with tempfile.NamedTemporaryFile(suffix=".pdf", delete_on_close=False) as f:
             f.write(data)
-            f.flush()
+            f.close()  # Windows lets the worker open it only once it is closed
             res = subprocess.run([str(python), str(WORKER), f.name], capture_output=True, text=True, timeout=120,
                                  env=env.clean())
         if res.returncode == 0:

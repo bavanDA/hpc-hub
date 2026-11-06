@@ -1,6 +1,7 @@
 """edge-tts and PyMuPDF get their own Python environment, so the app's Python stays untouched."""
 
 import os
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -27,9 +28,23 @@ def folder() -> Path:
     return Path(base) / "hpc-hub" / "tts"
 
 
+def _program(name: str) -> Path:
+    if sys.platform == "win32":
+        return folder() / "Scripts" / f"{name}.exe"
+    return folder() / "bin" / name
+
+
 def python() -> Path | None:
-    py = folder() / "bin" / "python"
+    py = _program("python")
     return py if (folder() / _marker()).exists() and py.exists() else None
+
+
+def _system_python() -> list[str]:
+    """Windows has the py launcher, or python; elsewhere python3."""
+    for cmd in ((["py", "-3"], ["python"]) if sys.platform == "win32" else (["python3"],)):
+        if shutil.which(cmd[0]):
+            return cmd
+    raise RuntimeError("Read aloud needs Python 3 on this computer")
 
 
 def _marker() -> str:
@@ -38,11 +53,11 @@ def _marker() -> str:
 
 def install() -> Path:
     d = folder()
-    subprocess.run(["python3", "-m", "venv", str(d)], check=True, capture_output=True, timeout=300, env=clean())
-    res = subprocess.run([str(d / "bin" / "pip"), "install", "-q", *PACKAGES], capture_output=True, text=True,
-                         env=clean(),
-                         timeout=600)
+    subprocess.run([*_system_python(), "-m", "venv", str(d)], check=True, capture_output=True, timeout=300,
+                   env=clean())
+    res = subprocess.run([str(_program("pip")), "install", "-q", *PACKAGES], capture_output=True, text=True,
+                         env=clean(), timeout=600)
     if res.returncode != 0:
         raise RuntimeError(res.stderr.strip().splitlines()[-1] if res.stderr.strip() else "pip failed")
     (d / _marker()).touch()
-    return d / "bin" / "python"
+    return _program("python")
