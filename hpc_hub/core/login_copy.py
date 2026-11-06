@@ -5,9 +5,6 @@ import json
 import sys
 from pathlib import Path
 
-# connecting before there is a sign-in
-FIRST = "Finish signing in to {short} first."
-
 SIGN_IN = "Sign in to {name}"
 USERNAME_HINT = "e.g. ab123"
 PASSWORD = "Password"

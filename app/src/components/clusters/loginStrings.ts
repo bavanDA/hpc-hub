@@ -1,6 +1,5 @@
 // Made by `python -m hpc_hub.core.login_copy` from hpc_hub/core/login_copy.py. Don't edit by hand.
 export const S = {
-  "FIRST": "Finish signing in to {short} first.",
   "SIGN_IN": "Sign in to {name}",
   "USERNAME_HINT": "e.g. ab123",
   "PASSWORD": "Password",
