@@ -8,7 +8,7 @@ import pytest
 
 from hpc_hub.api import hub as hub_module
 from hpc_hub.api.methods import backup, backup_copy, backup_plan, backup_reminders
-from hpc_hub.compute.usage import Storage
+from hpc_hub.compute.usage.storage import Storage
 from hpc_hub.core import config
 from hpc_hub.files.remote_fs import Place
 from tests.backup.conftest import Cluster, make_tree, snapshot
@@ -34,7 +34,7 @@ def env(tmp_path, monkeypatch):
     monkeypatch.setattr(hub_module, "_hub", FakeHub(SimpleNamespace(ssh=c, cfg=cfg)))
     rows = [Storage("mygroup project", 10, 100, 2, {"jdoe": 2.0, "other": 8.0}),
             Storage("mygroup scratch", 1, 100, 1, files=19), Storage("Home", 1, 50, 1)]
-    monkeypatch.setattr(backup.usage, "storage", lambda ssh, account: (rows, ""))
+    monkeypatch.setattr(backup.quotas, "storage", lambda ssh, account: (rows, ""))
     places = [Place("Home", str(c.home)), Place("Project", str(c.project)), Place("Scratch", str(c.scratch))]
     monkeypatch.setattr(backup, "remote_fs", SimpleNamespace(places=lambda ssh: places, storage=lambda p: p))
     monkeypatch.setattr(backup_plan, "_plans", {})

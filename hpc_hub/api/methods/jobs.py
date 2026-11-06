@@ -6,8 +6,9 @@ from dataclasses import asdict
 from datetime import datetime
 
 from ...compute import gpus as gpu_names
-from ...compute import jobs, slurm, usage
+from ...compute import jobs, slurm
 from ...compute.jobs import JobInfo
+from ...compute.usage.accounts import account_usage
 from ...connect.session import ClusterSession
 from ...terminals import tmux
 from ..hub import hub
@@ -54,7 +55,7 @@ def _accounts(s: ClusterSession) -> list[dict]:
     if when and time.monotonic() - when < USAGE_SECONDS:
         return got
     try:
-        got = [asdict(a) for a in usage.account_usage(s.ssh)]
+        got = [asdict(a) for a in account_usage(s.ssh)]
         _usage[s.cfg.id] = (time.monotonic(), got)
     except Exception:  # noqa: BLE001 - totals are a nice to have
         pass

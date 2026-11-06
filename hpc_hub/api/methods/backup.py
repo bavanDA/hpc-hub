@@ -9,7 +9,7 @@ from ...agents import catalog
 from ...backup import agent as backup_agent
 from ...backup import policy, scan
 from ...backup.model import Destination
-from ...compute import usage
+from ...compute.usage import storage as quotas
 from ...files import remote_fs
 from ..hub import hub
 from ..server import method
@@ -47,14 +47,14 @@ def _fetch_json(cluster: str, scan_id: str, name: str) -> dict:
     return data if isinstance(data, dict) else {}
 
 
-def _row_for(rows: list[usage.Storage], kind: str) -> usage.Storage | None:
+def _row_for(rows: list[quotas.Storage], kind: str) -> quotas.Storage | None:
     for r in rows:
         if kind == "home" and r.label == "Home" or kind != "home" and kind in r.label.lower():
             return r
     return None
 
 
-def _destination(p: remote_fs.Place, r: usage.Storage | None) -> Destination:
+def _destination(p: remote_fs.Place, r: quotas.Storage | None) -> Destination:
     used, quota = (float(r.used), float(r.quota)) if r else (0.0, 0.0)
     return Destination(path=p.path, label=p.label, used_gb=used, quota_gb=quota,
                        free_gb=max(quota - used, 0.0) if quota else 0.0,
@@ -65,7 +65,7 @@ def _destination(p: remote_fs.Place, r: usage.Storage | None) -> Destination:
 def _policy(cluster: str) -> dict:
     """Scratch, the purge rule and where copies can go, with their space."""
     s = hub().connected(cluster)
-    rows, _ = usage.storage(s.ssh, s.cfg.profile.account)
+    rows, _ = quotas.storage(s.ssh, s.cfg.profile.account)
     found = remote_fs.storage(remote_fs.places(s.ssh))
     scratch_row = _row_for(rows, "scratch")
     purge = policy.resolve(s.cfg.id)

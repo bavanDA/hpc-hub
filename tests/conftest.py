@@ -21,7 +21,7 @@ POSIX = {
     "api/test_permissions_api.py", "api/test_projects.py", "api/test_schedules_api.py", "api/test_skills_api.py",
     "api/test_backup.py", "backup/test_flow.py",
     "connect/test_vpn_helper.py", "connect/test_vpn_android.py",
-    "compute/test_slurm.py", "compute/test_usage.py", "connect/test_askpass.py", "connect/test_session.py",
+    "compute/test_slurm.py", "connect/test_askpass.py", "connect/test_session.py",
     "connect/test_session_asyncssh.py", "core/test_paths.py", "core/test_remote.py",
     "files/test_remote_fs.py", "files/test_transfer.py", "latex/test_latex_git.py",
     "projects/test_projects.py", "terminals/test_tmux.py",
@@ -29,6 +29,9 @@ POSIX = {
 # single posix tests in files that otherwise run on Windows
 POSIX_TESTS = {
     "agents/test_agents.py::test_claude_start_reads_its_program_first",  # runs bash
+    *(f"compute/test_usage_{m}.py::test_script_is_valid_bash" for m in ("accounts", "load", "people", "storage")),
+    "compute/test_usage_weekly.py::test_weekly_script_is_valid_bash",
+    "compute/test_usage_weekly.py::test_only_billed_partitions_count_where_the_cluster_says_so",
     "core/test_ssh_keys.py::test_saved_key_matches_its_public_line",  # 0600 mode: the key is saved on the phone
     "core/test_ssh_keys.py::test_authorize_replaces_the_last_phone_key",  # sh: it runs on the cluster
     "core/test_vault_file.py::test_saved_encrypted_and_private",  # 0600 mode: the vault is Android only

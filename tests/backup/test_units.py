@@ -11,7 +11,7 @@ from hpc_hub.agents import catalog, schedules
 from hpc_hub.backup import agent, copy, plan, policy, remind, scan, summarize
 from hpc_hub.backup.classify import classify
 from hpc_hub.backup.model import Destination, Purge
-from hpc_hub.compute import usage
+from hpc_hub.compute.usage import storage
 from hpc_hub.core.config import AgentSettings, ComputeProfile
 
 FIX = Path(__file__).parent / "fixtures"
@@ -46,12 +46,12 @@ def test_the_timer_counts_from_the_oldest_date_when_not_known():
 
 
 def test_storage_rows_carry_files_backup_and_purged():
-    rows = usage.parse_getquota(fixture("getquota_bouchet.txt").splitlines())
+    rows = storage.parse_getquota(fixture("getquota_bouchet.txt").splitlines())
     scratch = next(r for r in rows if r.label.endswith("scratch"))
     project = next(r for r in rows if r.label.endswith("project"))
     assert (scratch.files, scratch.file_limit, scratch.backup, scratch.purged) == (670344, 10000000, "No", 30)
     assert (project.backup, project.purged, project.mine) == ("Yes", 0, 1371)
-    rows, _ = usage.parse_storage("@QUOTA\n" + fixture("quota_info_wulver.txt") + "@USERS\n")
+    rows, _ = storage.parse_storage("@QUOTA\n" + fixture("quota_info_wulver.txt") + "@USERS\n")
     assert [r.label for r in rows] == ["mygroup project", "mygroup scratch", "Home"] and rows[0].files == 0
 
 

@@ -62,11 +62,11 @@ def test_people_storage_load(fake):
 
 
 def test_allocations(fake, monkeypatch):
-    from hpc_hub.compute import usage
-    monkeypatch.setattr(usage, "_weekly_cache", {})
+    from hpc_hub.compute.usage import weekly
+    monkeypatch.setattr(weekly, "_weekly_cache", {})
     asked = []
-    monkeypatch.setattr(usage, "weekly", lambda ssh, cluster, accounts, fresh=False, paid="": asked.append(paid) or {
-        "mygroup": usage.Weekly([0.0] * 8 + [70.0] * 4, {"jdoe": 280.0})})
+    monkeypatch.setattr(weekly, "weekly", lambda ssh, cluster, accounts, fresh=False, paid="": asked.append(paid) or {
+        "mygroup": weekly.Weekly([0.0] * 8 + [70.0] * 4, {"jdoe": 280.0})})
     got = m.allocations("yale")
     assert got["me"] == "jdoe"
     g = got["groups"][0]
