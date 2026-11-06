@@ -1,11 +1,8 @@
-// B: every commit as a dot on a line, oldest on the left, with two handles, Before and After: drag one to any dot
-// to compare those two versions; Older and Newer move both one commit. Saved versions are small grey dots. With a
-// second branch (J1) it gets a lane of its own, splitting off where the branches part.
 import { ChevronLeft, ChevronRight, Cloud, GitBranch, Tag, X } from 'lucide-react'
 import { useMemo, useRef, useState } from 'react'
 
 import type { HCommit, Lanes, SavedVersion } from '../../../types/history'
-import { plural, when } from './bits'
+import { plural, when } from './format'
 
 type Point = { v: string; x: number; lane: 0 | 1; kind: 'commit' | 'saved' | 'now'; c?: HCommit; tag?: string
   label?: string }

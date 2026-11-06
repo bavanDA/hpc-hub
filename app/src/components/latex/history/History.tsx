@@ -1,9 +1,6 @@
-// The History tab: why each change happened, in the LaTeX and in the PDF. The commit list on the left (changes not
-// committed yet on top), the picked commit, two versions compared, a saved version or a push on the right, and the
-// branch bar under the list. Git runs over the connection to the cluster; only PDFs of other versions are builds.
-import { Check, Copy, GitCompareArrows, History as HistoryIcon, MoreHorizontal, Pencil, RotateCcw, Search, Undo2,
-  ArrowUp, ArrowLeftRight, ArrowRight, Circle, MessageCircleQuestion, StickyNote } from 'lucide-react'
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
+import { ArrowLeftRight, ArrowRight, ArrowUp, Check, Circle, Copy, GitCompareArrows, History as HistoryIcon,
+  MessageCircleQuestion, MoreHorizontal, Pencil, RotateCcw, Search, StickyNote, Undo2 } from 'lucide-react'
+import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react'
 
 import { call } from '../../../rpc'
 import type { About, Changes, GitJob, GitState, HCommit, Lanes, Pick, Refs, SavedSetting, SavedVersion, SwitchCheck,
@@ -11,18 +8,23 @@ import type { About, Changes, GitJob, GitState, HCommit, Lanes, Pick, Refs, Save
 import { useToast } from '../../toast'
 import { Button, Spinner } from '../../ui'
 import { AgentChip } from './Agent'
-import { AskBox, Thread, type Go } from './Ask'
-import { Avatar, Counts, fileName, fullDate, git, lastLine, plural, Segments, shortHash, useJob, useSeconds,
-  when, type Where } from './bits'
+import { AskBox, type Go, Thread } from './Ask'
 import { BranchBar, SwitchDialog, SwitchingCard } from './Branches'
 import { CommitList, type Sel } from './CommitList'
-import { DiffView, type Asking, type Layout, type PutBack } from './DiffView'
-import { isLine, NotesPanel, type Spot } from './Notes'
+import { type Asking, DiffView, type Layout, type PutBack } from './DiffView'
+import { fileName, fullDate, lastLine, plural, shortHash, when } from './format'
+import { git, type Where } from './git'
+import { type CardSpot, isLine, NotesPanel } from './Notes'
 import { PdfView } from './PdfView'
-import { PushView } from './Push'
 import { SavedSettings, VersionPicker } from './Pickers'
+import { PushView } from './Push'
 import { Timeline } from './Timeline'
+import { Avatar } from './ui/Avatar'
+import { Counts } from './ui/Counts'
+import { Segments } from './ui/Segments'
 import type { Assist } from './useAssist'
+import { useJob } from './useJob'
+import { useSeconds } from './useSeconds'
 import { DraftCard, WriteButton } from './Write'
 
 /** Asks from outside the tab: the Git menu's Push or Get the latest, the timeline, Open in History from a line. */
@@ -43,7 +45,7 @@ type Props = {
   onSave: () => Promise<boolean>
   assist: Assist  // the agent's help and the notes (useAssist)
   go: Go  // a cited line or page
-  onSpot: (s: Spot) => void  // the floating card: ask about a spot in the PDF, or note it
+  onSpot: (s: CardSpot) => void  // the floating card: ask about a spot in the PDF, or note it
 }
 
 type Run = { id: string; push: boolean; error: string }
@@ -412,7 +414,7 @@ type DetailProps = {
   onCommitSplit: (commits: { message: string; files: string[] }[], push: boolean) => Promise<boolean>
   assist: Assist
   go: Go
-  onSpot: (s: Spot) => void
+  onSpot: (s: CardSpot) => void
   onPin: (id: string) => void
 }
 

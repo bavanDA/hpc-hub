@@ -1,6 +1,3 @@
-// C: Who changed it. A column beside the editor with who last changed each line and how long ago (a darker bar is
-// newer); a click on a line opens a card with the commit's message, the line before and after, Show in PDF, Open in
-// History and Older change, to follow the line further back.
 import { type Extension, Prec, StateField } from '@codemirror/state'
 import { EditorView, gutter, GutterMarker } from '@codemirror/view'
 import { ArrowLeft, Copy, History as HistoryIcon, ScrollText, X } from 'lucide-react'
@@ -9,8 +6,10 @@ import { useEffect, useState } from 'react'
 import type { Blame, LineStory } from '../../../types/history'
 import { useToast } from '../../toast'
 import { Spinner } from '../../ui'
-import { Avatar, fullDate, git, initials, lastLine, plural, when, type Where } from './bits'
 import { Tex } from './DiffView'
+import { fullDate, initials, lastLine, plural, when } from './format'
+import { git, type Where } from './git'
+import { Avatar } from './ui/Avatar'
 
 type Cell = { first: boolean; who: string; age: string; fresh: number; uncommitted: boolean } | null
 

@@ -1,6 +1,3 @@
-// The agent for Write message, Ask and Check my list: a chip in the bar under the commit list ("Opus · High")
-// opening a small panel with the agent (picked in Settings), then its model and its effort, two separate choices.
-// Kept for next time, for every paper. The Ask box can pick another model and effort for a single question (PickMenu).
 import { Check, ChevronDown, ChevronUp, FlaskConical, MessageSquare, MousePointer2, Star, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 

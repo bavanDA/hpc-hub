@@ -1,13 +1,13 @@
-// P1, safe push: pull first, every time. The steps as they run; when your commit and a co-author's touch the same
-// spot it stops before anything is sent, shows the spot side by side, and you keep yours, theirs, both, or edit.
 import { ArrowUp, FileText, RefreshCw, ShieldCheck } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 
 import type { Pick, Spot, Step, SyncState } from '../../../types/history'
 import { Button } from '../../ui'
-import { Avatar, plural, Segments } from './bits'
 import { Steps } from './Branches'
 import { Tex } from './DiffView'
+import { plural } from './format'
+import { Avatar } from './ui/Avatar'
+import { Segments } from './ui/Segments'
 
 type Props = {
   push: boolean

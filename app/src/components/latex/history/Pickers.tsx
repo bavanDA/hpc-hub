@@ -1,11 +1,9 @@
-// D1's From and To pickers with quick picks (a tag, the last pull, my last commit, origin/main, a date), and S1's
-// saved-versions setting.
-import { ArrowDown, Calendar, Check, ChevronDown, GitBranch, GitCommitHorizontal, MousePointerClick, Pencil, Tag, User,
-  X } from 'lucide-react'
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { ArrowDown, Calendar, Check, ChevronDown, GitBranch, GitCommitHorizontal, MousePointerClick, Pencil, Tag,
+  User, X } from 'lucide-react'
+import { type ReactNode, useEffect, useRef, useState } from 'react'
 
 import type { HCommit, Refs, SavedSetting } from '../../../types/history'
-import { shortHash, when } from './bits'
+import { shortHash, when } from './format'
 
 function useOutside(open: boolean, close: () => void) {
   const box = useRef<HTMLDivElement>(null)

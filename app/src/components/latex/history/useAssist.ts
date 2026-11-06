@@ -1,15 +1,13 @@
-// The agent's help with a paper (Write message, Ask, Check my list) and its notes, for the whole project: jobs keep
-// running while you edit, and their answers land in History. Every job asks for a compute node first and starts by
-// itself once the node is there. The agent never commits and never checks a note off: you do.
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { useEvent } from '../../../hooks'
 import { call } from '../../../rpc'
-import type { About, AgentChoice, AgentEvent, AgentKind, AgentLevel, AgentPick, AgentStarted, Answer, Checked,
-  Note, NoteList, NotePlace, Written } from '../../../types/history'
+import type { About, AgentChoice, AgentEvent, AgentKind, AgentLevel, AgentPick, AgentStarted, Answer, Checked, Note,
+  NoteList, NotePlace, Written } from '../../../types/history'
 import { useToast } from '../../toast'
 import { chooseAgent, useAgentChoice } from './agentChoice'
-import { lastLine, plural, type Where } from './bits'
+import { lastLine, plural } from './format'
+import type { Where } from './git'
 
 /** Where an ask's thread shows: scope is the History selection (c:<hash>, r:<from>..<to>, now, card) and anchor a
  *  row of the diff (path#n12, path#o12) or "top" (under the header). */

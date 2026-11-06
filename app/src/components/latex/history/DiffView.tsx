@@ -1,12 +1,13 @@
-// A change in the LaTeX: side by side or inline, every file one after another, the changed words marked, and text
-// that moved shown as one moved block with only its real change marked (rows come marked from the backend).
 import { ArrowDown, ArrowUp, ChevronDown, ChevronRight, ChevronsUpDown, FileText, MessageCircleQuestion, StickyNote,
   Undo2 } from 'lucide-react'
-import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { Fragment, type ReactNode, useEffect, useMemo, useRef, useState } from 'react'
 
 import type { Changes, FileDiff, Move, Row } from '../../../types/history'
 import { Switch } from '../../ui'
-import { Counts, fileName, plural, Segments } from './bits'
+
+import { fileName, plural } from './format'
+import { Counts } from './ui/Counts'
+import { Segments } from './ui/Segments'
 
 export type Layout = 'split' | 'inline'
 /** A change block that can go back: its lines now (n from `line`) become the old ones. */

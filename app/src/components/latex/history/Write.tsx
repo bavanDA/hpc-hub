@@ -1,6 +1,3 @@
-// Write message: a plain button next to the commit message box. The agent writes in the background on your compute
-// node (a small card says so, with seconds and Cancel, while you keep editing) and the message lands in History for
-// you to check and edit, sometimes as a few separate commits. Nothing is committed until you press Commit.
 import { ArrowUp, Check, CircleAlert, Loader2, RotateCcw, Sparkles, X } from 'lucide-react'
 import { useState } from 'react'
 
@@ -8,8 +5,10 @@ import type { Change, GitState, SavedVersion, Suggested, Written } from '../../.
 import { Button, Spinner } from '../../ui'
 import { AgentIcon } from './Agent'
 import { Seconds } from './Ask'
-import { clock, Counts, fileName, plural, Segments } from './bits'
-import { shortLabel, type Assist, type Job } from './useAssist'
+import { clock, fileName, plural } from './format'
+import { Counts } from './ui/Counts'
+import { Segments } from './ui/Segments'
+import { type Assist, type Job, shortLabel } from './useAssist'
 
 const agentOf = (label: string) => label.startsWith('ChatGPT') ? 'codex' : label.startsWith('Cursor') ? 'cursor'
   : label.startsWith('Antigravity') ? 'agy' : 'claude'

@@ -1,15 +1,12 @@
-// Ask the agent about a change: the box (a question, and for this one question another model or effort if you like)
-// and the thread that shows the answer right under the lines it is about, with links to the lines and PDF pages it
-// cites. It runs in the background like Write message: you keep reading.
 import { ArrowUp, Copy, CornerDownRight, Loader2, StickyNote, X } from 'lucide-react'
-import { Fragment, useEffect, useState, type ReactNode } from 'react'
+import { Fragment, type ReactNode, useEffect, useState } from 'react'
 
 import type { AgentChoice, AgentLevel, Answer } from '../../../types/history'
 import { useToast } from '../../toast'
 import { Button } from '../../ui'
 import { AgentIcon, PickMenu } from './Agent'
-import { fileName, lastLine, when } from './bits'
-import { chipLabel, shortLabel, type Job } from './useAssist'
+import { fileName, lastLine, when } from './format'
+import { chipLabel, type Job, shortLabel } from './useAssist'
 
 /** [[path:line]], [[path:first-last]], [[page N]] (hpc_hub/latex/assist.py CITE_RE). */
 const CITE = /\[\[\s*(?:(?:page|p\.)\s*(\d+)|([^[\]\n:]+?):(\d+)(?:\s*[-–]\s*(\d+))?)\s*\]\]/gi

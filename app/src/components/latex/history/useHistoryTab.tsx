@@ -1,7 +1,5 @@
-// What a LaTeX project (Project.tsx) needs for its history: the History tab and its pane, the Who changed it button
-// and column for the editor with its card, asks from the Git menu (Push, Get the latest, the timeline), and the
-// agent's help: Ask and Note on a passage in the editor, note pins in its gutter, and jobs running in the
-// background wherever you are.
+import './history.css'
+
 import { EditorState, type Extension } from '@codemirror/state'
 import { EditorView } from '@codemirror/view'
 import { History as HistoryIcon, MessageCircleQuestion, StickyNote, UsersRound } from 'lucide-react'
@@ -10,9 +8,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { Blame } from '../../../types/history'
 import type { Go } from './Ask'
 import { blameColumn, cells, LineCard } from './Blame'
-import { fileName, git, type Where } from './bits'
+import { fileName } from './format'
+import { git, type Where } from './git'
 import { History, type HistoryAsk } from './History'
-import { isLine, notesGutter, SpotCard, type Spot } from './Notes'
+import { type CardSpot, isLine, notesGutter, SpotCard } from './Notes'
 import { useAssist } from './useAssist'
 import { RunningCards } from './Write'
 
@@ -51,7 +50,7 @@ export function useHistoryTab(a: Args) {
   const [blameOn, setBlameOn] = useState(() => remembered('latex.blame'))
   const [blame, setBlame] = useState<Blame | null>(null)
   const [card, setCard] = useState<{ path: string; line: number; x: number; y: number } | null>(null)
-  const [spot, setSpot] = useState<Spot | null>(null)
+  const [spot, setSpot] = useState<CardSpot | null>(null)
   useEffect(() => { if (a.active) setOpened(true) }, [a.active])
 
   const send = (kind: HistoryAsk['kind'], hash?: string) => {
@@ -98,7 +97,7 @@ export function useHistoryTab(a: Args) {
   }
 
   // Ask about a passage in the editor, or note it: the selection, or the line the cursor is on
-  const fromEditor = (mode: Spot['mode']) => {
+  const fromEditor = (mode: CardSpot['mode']) => {
     const s = a.selection()
     if (!s || !rel) return
     const lines = s.from === s.to ? `line ${s.from}` : `lines ${s.from} to ${s.to}`

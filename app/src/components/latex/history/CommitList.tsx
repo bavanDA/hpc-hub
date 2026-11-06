@@ -1,10 +1,10 @@
-// The History tab's list: changes not committed yet on top, then every commit newest first under date headings,
-// with saved versions as light rows folded under the commit they were made on. Shift-click picks a range to compare.
-import { ArrowDown, ArrowUp, Archive, ChevronRight, Cloud, Pencil, Tag } from 'lucide-react'
+import { Archive, ArrowDown, ArrowUp, ChevronRight, Cloud, Pencil, Tag } from 'lucide-react'
 import { Fragment, useState } from 'react'
 
 import type { GitState, HCommit, SavedVersion } from '../../../types/history'
-import { Avatar, clock, Counts, fileName, group, plural, when } from './bits'
+import { clock, fileName, group, plural, when } from './format'
+import { Avatar } from './ui/Avatar'
+import { Counts } from './ui/Counts'
 
 export type Sel = { kind: 'now' } | { kind: 'commit'; hash: string } | { kind: 'compare'; from: string; to: string }
   | { kind: 'saved'; hash: string } | { kind: 'sync' }

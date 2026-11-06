@@ -1,18 +1,16 @@
-// Notes: comments and to-dos in one list. A note tied to a place (a line, a spot in the PDF, a commit) gets a
-// numbered pin, shown in the editor's gutter and on the PDF. Check my list asks the agent which open notes your
-// changes already do; it only suggests: you press Check off or Keep open. Notes stay next to the paper in .git, so
-// they are never committed or pushed.
-import { RangeSetBuilder, StateField, type Extension } from '@codemirror/state'
+import { type Extension, RangeSetBuilder, StateField } from '@codemirror/state'
 import { EditorView, gutter, GutterMarker } from '@codemirror/view'
 import { Check, CircleHelp, ListChecks, MapPin, MessageCircleQuestion, Plus, Trash2, X } from 'lucide-react'
-import { useEffect, useState, type ReactNode } from 'react'
+import { type ReactNode, useEffect, useState } from 'react'
 
 import type { About, Note, NotePlace, Verdict } from '../../../types/history'
 import { Button, Spinner, Switch } from '../../ui'
 import { AgentIcon } from './Agent'
-import { AnswerText, AskBox, Seconds, Thread, type Go } from './Ask'
-import { Avatar, fileName, plural, Segments, shortHash, when } from './bits'
-import { shortLabel, type Assist } from './useAssist'
+import { AnswerText, AskBox, type Go, Seconds, Thread } from './Ask'
+import { fileName, plural, shortHash, when } from './format'
+import { Avatar } from './ui/Avatar'
+import { Segments } from './ui/Segments'
+import { type Assist, shortLabel } from './useAssist'
 
 export const isLine = (p: NotePlace | null): p is { path: string; line: number } => !!p && 'path' in p
 export const isPage = (p: NotePlace | null): p is { page: number; x: number; y: number } => !!p && 'page' in p
@@ -229,11 +227,11 @@ export function notesGutter(pins: GutterPin[], pick: (id: string) => void): Exte
 }
 
 // -- the card for a passage in the editor or a spot in the PDF -----------------------------------------------------
-export type Spot = { id: string; mode: 'ask' | 'note'; title: string; about: About; place: NotePlace | null
+export type CardSpot = { id: string; mode: 'ask' | 'note'; title: string; about: About; place: NotePlace | null
   here?: string }
 
 /** Floats over the editor or the PDF: ask about a passage or a spot (its answers show here), or add a note there. */
-export function SpotCard({ spot, assist, go, onClose }: { spot: Spot; assist: Assist; go: Go; onClose: () => void }) {
+export function SpotCard({ spot, assist, go, onClose }: { spot: CardSpot; assist: Assist; go: Go; onClose: () => void }) {
   const [text, setText] = useState('')
   const [asking, setAsking] = useState(true)
   const jobs = assist.jobs.filter((j) => j.ask?.scope === 'card' && j.ask.anchor === spot.id)

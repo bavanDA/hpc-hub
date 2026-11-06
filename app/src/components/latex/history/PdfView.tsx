@@ -1,7 +1,3 @@
-// A change in the PDF. Marks: the PDF you have now with the changed words tinted and a bar by each changed
-// paragraph, found with SyncTeX (source line -> page and height) and the page's word boxes; a hover card shows the
-// line before and after. Side by side and Red and blue need PDFs of other versions: built on demand on the cluster,
-// where Recompile builds, and kept for next time.
 import { ChevronDown, ChevronUp, Code2, Loader2, MessageCircleQuestion, Minus, Plus, ServerCog, StickyNote } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
@@ -11,9 +7,11 @@ import type { Changes, Note, PdfJob, Row, SyncSpot } from '../../../types/histor
 import { engine, open } from '../../pdf/engine'
 import { readFile } from '../../pdf/load'
 import { Button } from '../../ui'
-import { git, Segments, shortHash, type Where } from './bits'
 import { Tex } from './DiffView'
-import { isLine, isPage, type Spot } from './Notes'
+import { shortHash } from './format'
+import { git, type Where } from './git'
+import { type CardSpot, isLine, isPage } from './Notes'
+import { Segments } from './ui/Segments'
 
 export type PdfMode = 'marks' | 'side' | 'redblue'
 type Target = { page: number; y: number; words: string[]; path: string; line: number; before: Row | null; after: Row }
@@ -35,7 +33,7 @@ type Props = {
   onSource: (path: string, line: number) => void
   notes: Note[]  // their pins on the PDF
   onPin: (id: string) => void
-  onSpot: (s: Spot) => void  // ask about a spot, or note it
+  onSpot: (s: CardSpot) => void  // ask about a spot, or note it
 }
 
 export function PdfView({ where, main, root, clusterName, current, from, to, changes, guard, onSource, notes, onPin,
@@ -102,7 +100,7 @@ function usePins(where: Where, main: string, root: string, notes: Note[]): PinAt
 
 function Marks({ where, main, root, current, changes, zoom, onSource, notes, onPin, onSpot }:
   { where: Where; main: string; root: string; current: Uint8Array | null; changes: Changes | null; zoom: number
-    onSource: (path: string, line: number) => void; notes: Note[]; onPin: (id: string) => void; onSpot: (s: Spot) => void }) {
+    onSource: (path: string, line: number) => void; notes: Note[]; onPin: (id: string) => void; onSpot: (s: CardSpot) => void }) {
   const pins = usePins(where, main, root, notes)
   const [menu, setMenu] = useState<Click | null>(null)
   useEffect(() => {
@@ -112,7 +110,7 @@ function Marks({ where, main, root, current, changes, zoom, onSource, notes, onP
     window.addEventListener('keydown', off)
     return () => { window.removeEventListener('mousedown', off); window.removeEventListener('keydown', off) }
   }, [menu])
-  const spot = async (c: Click, mode: Spot['mode']) => {
+  const spot = async (c: Click, mode: CardSpot['mode']) => {
     setMenu(null)
     const place = { page: c.page, x: Math.round(c.x * 10) / 10, y: Math.round(c.y * 10) / 10 }
     const src = mode === 'ask' ? await call<{ path: string; line: number } | null>('latex.sync_edit', { cluster: where.cluster,

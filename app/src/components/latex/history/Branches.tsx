@@ -1,13 +1,11 @@
-// The bar under the commit list: the branch you are on with its menu (find, your branches, branches only on origin,
-// New branch from here, Compare with a branch, Get the latest), what is happening, and Push. Switching asks about
-// changes not committed yet first, then shows its steps while editing waits.
-import { Check, ChevronsUpDown, CircleCheck, Cloud, GitBranch, GitBranchPlus, GitCompareArrows, Loader2, RefreshCw,
-  Search, ArrowUp, CircleAlert } from 'lucide-react'
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { ArrowUp, Check, ChevronsUpDown, CircleAlert, CircleCheck, Cloud, GitBranch, GitBranchPlus, GitCompareArrows,
+  Loader2, RefreshCw, Search } from 'lucide-react'
+import { type ReactNode, useEffect, useRef, useState } from 'react'
 
 import type { GitState, Refs, Step, SwitchCheck } from '../../../types/history'
 import { Button, Dialog, FIELD, Spinner } from '../../ui'
-import { clock, git, plural, shortHash, when, type Where } from './bits'
+import { clock, plural, shortHash, when } from './format'
+import { git, type Where } from './git'
 
 export type Busy = { label: string } | null
 

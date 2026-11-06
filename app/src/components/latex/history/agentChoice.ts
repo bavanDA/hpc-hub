@@ -1,5 +1,3 @@
-// The agent for a paper's Write message, Ask and Check my list, one copy for the whole app: Settings picks the agent,
-// the paper its model and effort, and each shows what the other changed (hpc_hub/api/methods/latex_assist.py).
 import { useEffect, useSyncExternalStore } from 'react'
 
 import { call } from '../../../rpc'
