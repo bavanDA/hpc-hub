@@ -1,19 +1,17 @@
-// Read aloud for the PDF viewer, shared by the desktop and the phone: asks the backend for the narration of a PDF
-// on a cluster (readaloud.start, then `readaloud` events), plays it, and says which word is being spoken. The
-// viewer draws that word; the player and the dictionary are the screens' own.
 import type { PDFDocumentProxy } from 'pdfjs-dist'
-import { useEffect, useState, useSyncExternalStore } from 'react'
 
 import { call, on } from '../../rpc'
 import { fromBase64 } from './load'
+import { store, stored } from './storage'
+import { voices } from './voices'
+import { firstStartOn, indexWords, nearestWord, wordAtTime, type Timing } from './words'
 
 export type Source = { cluster: string; path: string }
 /** page (1-based), x0, y0, x1, y1 in PDF points from the page's top left */
 export type Box = [number, number, number, number, number]
 export type Spot = { page: number; x: number; y: number }
-export type Voice = { id: string; label: string }
-type Narration = { audio: string; duration: number; words: number[][]; timings: [number, number, number][]
-  mime?: string; url?: string }  // url: the MP3 streamed from the backend on 127.0.0.1, to play at once
+/** url: the MP3 streamed from the backend on 127.0.0.1, to play at once */
+type Narration = { audio: string; duration: number; words: number[][]; timings: Timing[]; mime?: string; url?: string }
 type Job = { id: string; state: 'starting' | 'part' | 'full' | 'error'; text: string; error: string
   offline: boolean; narration: Narration | null; offset: number; n: number }
 
@@ -28,8 +26,7 @@ export type Snapshot = {
   rate: number
 }
 
-/** What the viewer needs from a reader: this narration, or the phone's own voice (which reads the PDF's words
- *  itself, from the document the viewer hands it). */
+/** What the viewer needs from a reader: this narration, or the phone's own voice. */
 export interface Narrator {
   words: Map<number, Box>
   current: number | null
@@ -44,13 +41,6 @@ export interface Narrator {
 
 export const SPEEDS = [0.75, 1, 1.25, 1.5, 1.75, 2]
 export const speedLabel = (r: number) => `${r}×`
-
-export function stored(key: string, fallback: string) {
-  try { return localStorage.getItem(key) ?? fallback } catch { return fallback }
-}
-export function store(key: string, value: string) {
-  try { localStorage.setItem(key, value) } catch { /* private window */ }
-}
 
 /** The whole MP3 through the RPC in pieces, as a blob: only when streaming it from url failed. */
 async function audioUrl(n: Narration): Promise<string> {
@@ -75,26 +65,38 @@ export async function playOnce(base64: string, mime = 'audio/mpeg') {
   await a.play()
 }
 
-let voiceList: Promise<{ voices: Voice[]; default: string }> | null = null
-export const voices = () => (voiceList ??= call<{ voices: Voice[]; default: string }>('readaloud.voices')
-  .catch((e) => { voiceList = null; throw e }))
-
-export function useVoices(): Voice[] {
-  const [list, setList] = useState<Voice[]>([])
-  useEffect(() => { voices().then((v) => setList(v.voices)).catch(() => {}) }, [])
-  return list
+/** A line in ~/.cache/hpc-hub/readaloud.log, to see where Read aloud spends its time. */
+function trace(text: string) {
+  call('readaloud.trace', { text }).catch(() => {})
 }
 
+/** Whether the player got the recording's length; a stream that says nothing for 4 s counts as failed. */
+function metadata(a: HTMLAudioElement, wait = 4000): Promise<boolean> {
+  const t0 = performance.now()
+  return new Promise((done) => {
+    const end = (ok: boolean, why: string) => {
+      clearTimeout(timer)
+      trace(`player ${why} after ${Math.round(performance.now() - t0)} ms (${a.src.slice(0, 22)})`)
+      done(ok)
+    }
+    const timer = window.setTimeout(() => end(false, 'silent'), wait)
+    a.addEventListener('loadedmetadata', () => end(true, 'ready'), { once: true })
+    a.addEventListener('error', () => end(false, `error ${a.error?.code ?? ''}`), { once: true })
+    a.load()
+  })
+}
+
+/** Read aloud of a PDF on a cluster: readaloud.start, then `readaloud` events with the narration to play. */
 export class Reader implements Narrator {
   source: Source | null = null
   words = new Map<number, Box>()
   current: number | null = null
   private snap: Snapshot
-  private pageNow: () => number = () => 1  // the page in view: reading starts there
+  private pageNow: () => number = () => 1
   private listeners = new Set<() => void>()
   private wordListeners = new Set<(id: number | null) => void>()
   private byPage = new Map<number, number[]>()
-  private times: [number, number, number][] = []
+  private times: Timing[] = []
   private audio: HTMLAudioElement | null = null
   private job = ''
   private n = -1
@@ -113,7 +115,6 @@ export class Reader implements Narrator {
       voice: stored('readaloud.voice', ''), rate: SPEEDS.includes(rate) ? rate : 1 }
   }
 
-  // -- for React -----------------------------------------------------------------------------------------------
   subscribe = (fn: () => void) => { this.listeners.add(fn); return () => { this.listeners.delete(fn) } }
   getSnapshot = () => this.snap
   onWord(fn: (id: number | null) => void) {
@@ -125,14 +126,12 @@ export class Reader implements Narrator {
     this.listeners.forEach((f) => f())
   }
   get ready() { return !!this.audio }
-  /** The viewer says how to find the page you are looking at; the Reader gives it back when it closes. */
   watchPage(fn: () => number) {
     const before = this.pageNow
     this.pageNow = fn
     return () => { if (this.pageNow === fn) this.pageNow = before }
   }
 
-  // -- what the PDF is --------------------------------------------------------------------------------------------
   setSource(s: Source | null) {
     if (s?.cluster === this.source?.cluster && s?.path === this.source?.path) return
     this.source = s
@@ -165,11 +164,10 @@ export class Reader implements Narrator {
     this.set({ rate: r })
   }
 
-  // -- the player --------------------------------------------------------------------------------------------------
   async play(from?: Spot) {
     if (this.audio) {
       if (from) this.seekSpot(from)
-      else if (this.audio.currentTime === 0) this.audio.currentTime = this.firstOn(this.pageNow())
+      else if (this.audio.currentTime === 0) this.audio.currentTime = firstStartOn(this.times, this.words, this.pageNow())
       this.audio.play().catch((e: Error) => this.set({ text: `Could not play: ${e.message}` }))
       return
     }
@@ -198,34 +196,19 @@ export class Reader implements Narrator {
     this.set({ at: 0 })
   }
 
-  /** Read from a spot on a page (a clicked word), starting the narration if it isn't there yet. */
   readFrom(spot: Spot) { this.play(spot) }
 
-  /** Leave read aloud: quiet, and the narration let go. */
   close() { this.reset() }
 
   wordAt(page: number, x: number, y: number): number | null {
-    let best: number | null = null, dist = Infinity
-    for (const id of this.byPage.get(page) ?? []) {
-      const [, x0, y0, x1, y1] = this.words.get(id)!
-      const dx = x < x0 ? x0 - x : x > x1 ? x - x1 : 0, dy = y < y0 ? y0 - y : y > y1 ? y - y1 : 0
-      const d = dx + dy * 3
-      if (d < dist) { dist = d; best = id }
-    }
-    return dist < 30 ? best : null
+    return nearestWord(this.byPage.get(page) ?? [], this.words, x, y)
   }
 
-  // -- inside ------------------------------------------------------------------------------------------------------
   private seekSpot(s: Spot) {
     const id = this.wordAt(s.page, s.x, s.y)
     const t = id === null ? undefined : this.times.find((w) => w[0] === id)
-    if (this.audio) this.audio.currentTime = t ? t[1] : this.firstOn(s.page)
+    if (this.audio) this.audio.currentTime = t ? t[1] : firstStartOn(this.times, this.words, s.page)
     this.tick(true)
-  }
-
-  private firstOn(page: number) {
-    for (const [id, start] of this.times) if ((this.words.get(id)?.[0] ?? 0) >= page) return start
-    return 0
   }
 
   private async prepare(page: number) {
@@ -246,7 +229,8 @@ export class Reader implements Narrator {
     }
   }
 
-  private event(j: Job, round: number) {  // one at a time, in order: a part may still be loading when the whole comes
+  /** One at a time, in order: a part may still be loading when the whole comes. */
+  private event(j: Job, round: number) {
     this.queue = this.queue.then(() => this.handle(j, round)).catch((e: Error) => {
       if (round === this.round) this.set(this.audio ? { text: e.message } : { phase: 'error', text: e.message })
     })
@@ -260,7 +244,7 @@ export class Reader implements Narrator {
       return
     }
     const n = j.narration
-    if (!n || n.audio === this.token) {  // progress
+    if (!n || n.audio === this.token) {
       if (!this.audio && j.text) this.set({ text: j.text })
       return
     }
@@ -310,12 +294,9 @@ export class Reader implements Narrator {
   }
 
   private use(n: Narration) {
-    this.words = new Map(n.words.map((w) => [w[0], w.slice(1, 6) as Box]))
-    this.byPage = new Map()
-    for (const [id, page] of n.words) {
-      if (!this.byPage.has(page)) this.byPage.set(page, [])
-      this.byPage.get(page)!.push(id)
-    }
+    const { words, byPage } = indexWords(n.words)
+    this.words = words
+    this.byPage = byPage
     this.times = n.timings
   }
 
@@ -329,7 +310,7 @@ export class Reader implements Narrator {
     this.timer = window.setInterval(() => { if (!a.paused) this.tick() }, 100)
     const spot = this.pending
     this.pending = null
-    if (!await metadata(a)) {  // a stream that failed or stayed silent: the whole recording instead
+    if (!await metadata(a)) {
       if (a === this.audio && n.url) void this.fallBack(a, n)
       return
     }
@@ -343,7 +324,7 @@ export class Reader implements Narrator {
   private async swap(url: string, n: Narration, offset: number): Promise<void> {
     const old = this.audio!
     const a = this.player(url)
-    if (!await metadata(a) && n.url) {  // the stream failed: the whole one in pieces instead
+    if (!await metadata(a) && n.url) {
       n.url = undefined
       return this.swap(await audioUrl(n), n, offset)
     }
@@ -351,16 +332,13 @@ export class Reader implements Narrator {
     const playing = !old.paused
     a.currentTime = offset + old.currentTime
     this.use(n)
-    this.audio = a  // from here events come from the new one
+    this.audio = a
     this.playing = n
     clearInterval(this.timer)
     this.timer = window.setInterval(() => { if (!a.paused) this.tick() }, 100)
     this.set({ total: n.duration })
     if (playing) await a.play().catch(() => {})
-    old.pause()
-    URL.revokeObjectURL(old.src)
-    old.removeAttribute('src')
-    old.load()  // lets go of a stream
+    release(old)
     this.tick(true)
   }
 
@@ -369,7 +347,7 @@ export class Reader implements Narrator {
     const old = this.audio
     this.audio = null  // first, so its last events are ignored
     this.playing = null
-    if (old) { old.pause(); URL.revokeObjectURL(old.src); old.removeAttribute('src'); old.load() }
+    if (old) release(old)
     this.words = new Map()
     this.byPage = new Map()
     this.times = []
@@ -381,12 +359,7 @@ export class Reader implements Narrator {
     if (!a) return
     const t = a.currentTime
     if (force || Math.floor(t) !== Math.floor(this.snap.at)) this.set({ at: t })
-    let lo = 0, hi = this.times.length - 1, found = -1
-    while (lo <= hi) {  // the last word that started by now
-      const mid = (lo + hi) >> 1
-      if (this.times[mid][1] <= t) { found = mid; lo = mid + 1 } else hi = mid - 1
-    }
-    this.show(found >= 0 ? this.times[found][0] : null)
+    this.show(wordAtTime(this.times, t))
   }
 
   private show(id: number | null) {
@@ -396,55 +369,10 @@ export class Reader implements Narrator {
   }
 }
 
-/** Loads a recording's start: true once it can play, false when it failed. */
-/** Whether the player got the recording's length; a stream that says nothing for 4 s counts as failed. */
-function metadata(a: HTMLAudioElement, wait = 4000): Promise<boolean> {
-  const t0 = performance.now()
-  return new Promise((done) => {
-    const end = (ok: boolean, why: string) => {
-      clearTimeout(timer)
-      trace(`player ${why} after ${Math.round(performance.now() - t0)} ms (${a.src.slice(0, 22)})`)
-      done(ok)
-    }
-    const timer = window.setTimeout(() => end(false, 'silent'), wait)
-    a.addEventListener('loadedmetadata', () => end(true, 'ready'), { once: true })
-    a.addEventListener('error', () => end(false, `error ${a.error?.code ?? ''}`), { once: true })
-    a.load()
-  })
-}
-
-/** A line in ~/.cache/hpc-hub/readaloud.log, to see where Read aloud spends its time. */
-export function trace(text: string) {
-  call('readaloud.trace', { text }).catch(() => {})
-}
-
-/** One reader for as long as the component lives, following the PDF it reads. */
-export function useReader(source: Source | null | undefined): Reader {
-  const [r] = useState(() => new Reader())
-  useEffect(() => { r.setSource(source ?? null) }, [r, source?.cluster, source?.path])  // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => () => r.close(), [r])
-  return r
-}
-
-export function useReaderState(r: Reader): Snapshot {
-  return useSyncExternalStore(r.subscribe, r.getSnapshot)
-}
-
-export function clock(seconds: number) {
-  const s = Math.max(0, Math.floor(seconds)), h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60)
-  const ss = String(s % 60).padStart(2, '0')
-  return h ? `${h}:${String(m).padStart(2, '0')}:${ss}` : `${m}:${ss}`
-}
-
-// -- the dictionary ------------------------------------------------------------------------------------------------
-export type Sense = { definition: string; example: string; synonyms: string[] }
-export type Entry = { word: string; phonetic?: string; respelling?: string; source?: string
-  meanings?: { pos: string; senses: Sense[] }[]; error: string; offline: boolean }
-
-export const lookUp = (word: string) => call<Entry>('readaloud.lookup', { word })
-
-/** Say the word: the dictionary's recording, or the reader voice. */
-export async function hear(word: string, voice: string) {
-  const got = await call<{ data: string; mime?: string }>('readaloud.say', { word, voice })
-  await playOnce(got.data, got.mime)
+/** Stops a player and lets go of its stream. */
+function release(a: HTMLAudioElement) {
+  a.pause()
+  URL.revokeObjectURL(a.src)
+  a.removeAttribute('src')
+  a.load()
 }

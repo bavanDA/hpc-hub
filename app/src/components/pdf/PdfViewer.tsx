@@ -1,36 +1,28 @@
-// pdf.js's viewer in React: pages one after another, zoom, fit width, search, text selection, and SyncTeX
-// double-clicks. New bytes reload in place: zoom and scroll stay where they were.
 import 'pdfjs-dist/web/pdf_viewer.css'
 import './pdf.css'
 
-import { ChevronDown, ChevronUp, Minus, Moon, Plus, Search, Sun, X } from 'lucide-react'
+import { Minus, Moon, Plus, Search, Sun } from 'lucide-react'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 
 import { Spinner } from '../ui'
 import { engine, open } from './engine'
-import { FocusButton, FocusOverlay, useFocus, useFocusKeys, useNoJump } from './focus'
+import { FindBox, type Found } from './FindBox'
+import { useFocus, useFocusKeys, useNoJump } from './focus'
+import { FocusButton } from './FocusButton'
+import { FocusOverlay } from './FocusOverlay'
 import type { PdfProps, PdfTarget } from './index'
-import type { Spot } from './reader'
+import { jump } from './jump'
+import type { Live } from './live'
+import { spotAt } from './points'
+import { store, stored } from './storage'
 import { Tool } from './tool'
+import { useLatest } from './useLatest'
+import { useWordEvents } from './useWordEvents'
 
-type Engine = Awaited<ReturnType<typeof engine>>
-type Live = {
-  lib: Engine['lib']
-  viewer: InstanceType<Engine['viewer']['PDFViewer']>
-  bus: InstanceType<Engine['viewer']['EventBus']>
-  link: InstanceType<Engine['viewer']['PDFLinkService']>
-  doc: Awaited<ReturnType<Engine['lib']['getDocument']>['promise']> | null
-}
-type Found = { current: number; total: number; missing: boolean }
-
-// Zoom and scroll by memory name: survive reloads and leaving the page
-const places = new Map<string, { scale: string; top: number; left: number }>()
+const places = new Map<string, { scale: string; top: number; left: number }>()  // by memory name
+const FITS = ['page-width', 'page-fit', 'auto']
 const ZOOMS: [string, string][] = [['auto', 'Automatic'], ['page-width', 'Fit width'], ['page-fit', 'Fit page'],
   ['0.5', '50%'], ['0.75', '75%'], ['1', '100%'], ['1.25', '125%'], ['1.5', '150%'], ['2', '200%'], ['3', '300%']]
-
-function stored(key: string): boolean {
-  try { return localStorage.getItem(key) === '1' } catch { return false }
-}
 
 export default function PdfViewer({ data, memory, compact, zoom: start = 'page-width', loading, progress, message, onSync,
   target, extra, reader, onWord, onLookUp, bar, footer, focus, onFocus }: PdfProps) {
@@ -39,14 +31,10 @@ export default function PdfViewer({ data, memory, compact, zoom: start = 'page-w
   const live = useRef<Live | null>(null)
   const restoring = useRef(false)
   const pending = useRef<PdfTarget | null>(null)
-  const sync = useRef(onSync)
-  sync.current = onSync
-  const picked = useRef(onWord)
-  picked.current = onWord
-  const looked = useRef(onLookUp)
-  looked.current = onLookUp
-  const mem = useRef({ memory, start })
-  mem.current = { memory, start }
+  const sync = useLatest(onSync)
+  const picked = useLatest(onWord)
+  const looked = useLatest(onLookUp)
+  const mem = useLatest({ memory, start })
   const [ready, setReady] = useState(false)
   const [pages, setPages] = useState(0)
   const [page, setPage] = useState(1)
@@ -55,17 +43,19 @@ export default function PdfViewer({ data, memory, compact, zoom: start = 'page-w
   const [searching, setSearching] = useState(false)
   const [query, setQuery] = useState('')
   const [found, setFound] = useState<Found | null>(null)
-  const [dark, setDark] = useState(() => stored('pdf.dark'))
+  const [dark, setDark] = useState(() => stored('pdf.dark', '0') === '1')
   const [failed, setFailed] = useState('')
   const queryBox = useRef<HTMLInputElement>(null)
   const [focused, setFocused] = useFocus(focus, onFocus)
   const focusKey = useFocusKeys(focused, setFocused)
   useNoJump(scroller, inner, focused)
+  useWordEvents(ready, reader, { live, scroller, onWord: picked, onLookUp: looked, onSync: sync })
+
   const fit = useRef<string | null>(null)
-  useLayoutEffect(() => {  // the pane may widen (no files, no editor): keep the zoom, so the page stays put
+  useLayoutEffect(() => {  // the pane may widen in focus: keep the zoom, so the page stays put
     const v = live.current?.viewer
     if (!v?.pdfDocument) return
-    if (focused && ['page-width', 'page-fit', 'auto'].includes(v.currentScaleValue)) {
+    if (focused && FITS.includes(v.currentScaleValue)) {
       fit.current = v.currentScaleValue
       v.currentScaleValue = String(v.currentScale)
     } else if (!focused && fit.current) {
@@ -74,7 +64,6 @@ export default function PdfViewer({ data, memory, compact, zoom: start = 'page-w
     }
   }, [focused])
 
-  // -- the viewer, made once ---------------------------------------------------------------
   useEffect(() => {
     let dead = false
     engine().then(({ lib, viewer: V }) => {
@@ -92,7 +81,7 @@ export default function PdfViewer({ data, memory, compact, zoom: start = 'page-w
         viewer.currentScaleValue = at?.scale ?? mem.current.start
         if (at && scroller.current) { scroller.current.scrollTop = at.top; scroller.current.scrollLeft = at.left }
         restoring.current = false
-        if (pending.current) jump(me, pending.current)
+        if (pending.current) jump(viewer, pending.current)
         pending.current = null
       })
       bus.on('pagechanging', ({ pageNumber }: { pageNumber: number }) => {
@@ -113,15 +102,14 @@ export default function PdfViewer({ data, memory, compact, zoom: start = 'page-w
       live.current?.doc?.loadingTask.destroy()
       live.current = null
     }
-  }, [])
+  }, [mem])
 
-  // -- new bytes: load them, keeping where you were ----------------------------------------
-  useEffect(() => {
+  useEffect(() => {  // new bytes: load them, keeping zoom and scroll
     const me = live.current
     if (!ready || !me || !data) return
     let dead = false
     setFailed('')
-    reader?.reset()  // a new build: the old narration no longer fits
+    reader?.reset()
     restoring.current = true
     const task = open(me.lib, data)
     task.promise.then((doc) => {
@@ -137,8 +125,7 @@ export default function PdfViewer({ data, memory, compact, zoom: start = 'page-w
     return () => { dead = true }
   }, [ready, data])  // eslint-disable-line react-hooks/exhaustive-deps
 
-  // -- remember zoom and scroll; refit when the pane changes size --------------------------
-  useEffect(() => {
+  useEffect(() => {  // remember zoom and scroll; fit again when the pane changes size; ctrl+wheel; SyncTeX
     const el = scroller.current
     if (!el || !ready) return
     const save = () => {
@@ -152,9 +139,8 @@ export default function PdfViewer({ data, memory, compact, zoom: start = 'page-w
       cancelAnimationFrame(frame)
       frame = requestAnimationFrame(() => {
         const v = live.current?.viewer
-        if (v?.pdfDocument && ['page-width', 'page-fit', 'auto'].includes(v.currentScaleValue)) {
-          v.currentScaleValue = v.currentScaleValue  // fit again to the new size
-        }
+        const value = v?.currentScaleValue
+        if (v?.pdfDocument && value && FITS.includes(value)) v.currentScaleValue = value
       })
     })
     resized.observe(el)
@@ -165,17 +151,11 @@ export default function PdfViewer({ data, memory, compact, zoom: start = 'page-w
     }
     const dbl = (e: MouseEvent) => {
       const me = live.current
-      const el = (e.target as HTMLElement).closest('.page') as HTMLElement | null
-      if (!sync.current || !me || !el) return
-      const n = Number(el.dataset.pageNumber)
-      const view = me.viewer.getPageView(n - 1)
-      if (!view?.viewport) return
-      const r = el.getBoundingClientRect()
-      const [px, py] = view.viewport.convertToPdfPoint(e.clientX - r.left - el.clientLeft,
-        e.clientY - r.top - el.clientTop)
-      const box = view.viewport.viewBox
+      if (!sync.current || !me) return
+      const spot = spotAt(me.viewer, e.clientX, e.clientY, e.target)
+      if (!spot) return
       window.getSelection()?.removeAllRanges()
-      sync.current(n, px - box[0], box[3] - py)
+      sync.current(spot.page, spot.x, spot.y)
     }
     el.addEventListener('scroll', save, { passive: true })
     el.addEventListener('wheel', wheel, { passive: false })
@@ -187,111 +167,16 @@ export default function PdfViewer({ data, memory, compact, zoom: start = 'page-w
       resized.disconnect()
       cancelAnimationFrame(frame)
     }
-  }, [ready])
+  }, [ready, mem, sync])
 
-  // -- read aloud: the spoken word drawn and followed, a click reads from a word, right-click or hold looks it up
-  useEffect(() => {
-    const me = live.current, el = scroller.current
-    if (!ready || !me || !el) return
-    const spotOf = (x: number, y: number, target: EventTarget | null): Spot | null => {
-      const div = (target as HTMLElement | null)?.closest?.('.page') as HTMLElement | null
-      const view = div && me.viewer.getPageView(Number(div.dataset.pageNumber) - 1)
-      if (!div || !view?.viewport) return null
-      const r = div.getBoundingClientRect(), box = view.viewport.viewBox
-      const [px, py] = view.viewport.convertToPdfPoint(x - r.left - div.clientLeft, y - r.top - div.clientTop)
-      return { page: Number(div.dataset.pageNumber), x: px - box[0], y: box[3] - py }
-    }
-    const pick = (x: number, y: number, target: EventTarget | null, touch: boolean) => {
-      const text = textAt(x, y), spot = spotOf(x, y, target)
-      if (!text || !spot || !picked.current) return false
-      picked.current({ text, spot, x, y, touch })
-      return true
-    }
-
-    let mark: HTMLDivElement | null = null, scrolled = 0, wait = 0, hold = 0, held = 0, at = { x: 0, y: 0 }
-    const draw = (follow: boolean) => {
-      const id = reader?.current ?? null
-      const w = id === null ? undefined : reader?.words.get(id)
-      const view = w && me.viewer.getPageView(w[0] - 1)
-      if (!w || !view?.viewport || !view.div) { mark?.remove(); return }
-      const box = view.viewport.viewBox
-      const [ax, ay] = view.viewport.convertToViewportPoint(w[1] + box[0], box[3] - w[2])
-      const [bx, by] = view.viewport.convertToViewportPoint(w[3] + box[0], box[3] - w[4])
-      mark ??= Object.assign(document.createElement('div'), { className: 'pdf-word' })
-      if (mark.parentNode !== view.div) view.div.appendChild(mark)
-      Object.assign(mark.style, { left: `${Math.min(ax, bx) - 2}px`, top: `${Math.min(ay, by) - 1}px`,
-        width: `${Math.abs(bx - ax) + 4}px`, height: `${Math.abs(by - ay) + 2}px` })
-      if (!follow || Date.now() - scrolled < 4000) return  // you just scrolled yourself: leave the view alone
-      const m = mark.getBoundingClientRect(), c = el.getBoundingClientRect()
-      if (m.bottom > c.bottom - 40 || m.top < c.top + 40) {
-        el.scrollBy({ top: m.top - c.top - c.height / 3, behavior: 'smooth' })
-      }
-    }
-    const redraw = () => draw(false)
-    const off = reader?.onWord(() => draw(true))
-    reader?.watchPage(() => me.viewer.currentPageNumber || 1)
-    me.bus.on('pagerendered', redraw)
-    const mine = () => { scrolled = Date.now() }
-
-    const click = (e: MouseEvent) => {
-      if (e.detail !== 1 || !reader?.ready || Date.now() - held < 800) return
-      if ((e.target as HTMLElement).closest('a, .annotationLayer') || !window.getSelection()?.isCollapsed) return
-      const spot = spotOf(e.clientX, e.clientY, e.target)
-      if (!spot || reader.wordAt(spot.page, spot.x, spot.y) === null) return
-      clearTimeout(wait)
-      wait = window.setTimeout(() => reader.readFrom(spot), 380)  // a double click is SyncTeX instead
-    }
-    const dbl = (e: MouseEvent) => {
-      clearTimeout(wait)
-      if (sync.current || !looked.current) return  // SyncTeX has it (PdfViewer's other dblclick)
-      const text = textAt(e.clientX, e.clientY), spot = spotOf(e.clientX, e.clientY, e.target)
-      if (text && spot) looked.current({ text, spot, x: e.clientX, y: e.clientY, touch: false })
-    }
-    const menu = (e: MouseEvent) => {
-      if (Date.now() - held < 800) { e.preventDefault(); return }
-      if (picked.current && pick(e.clientX, e.clientY, e.target, false)) e.preventDefault()
-    }
-    const down = (e: PointerEvent) => {
-      if (e.pointerType === 'mouse' || !picked.current) return
-      at = { x: e.clientX, y: e.clientY }
-      const target = e.target
-      clearTimeout(hold)
-      hold = window.setTimeout(() => {
-        if (!pick(at.x, at.y, target, true)) return
-        held = Date.now()
-        window.getSelection()?.removeAllRanges()
-        // lifting the finger may still click, now on what the hold opened: that click is not meant
-        const swallow = (c: MouseEvent) => { c.stopPropagation(); c.preventDefault() }
-        window.addEventListener('click', swallow, { capture: true, once: true })
-        setTimeout(() => window.removeEventListener('click', swallow, { capture: true }), 1500)
-      }, 500)
-    }
-    const move = (e: PointerEvent) => { if (Math.hypot(e.clientX - at.x, e.clientY - at.y) > 10) clearTimeout(hold) }
-    const up = () => clearTimeout(hold)
-    const listen: [string, EventListener][] = [['click', click as EventListener], ['dblclick', dbl as EventListener],
-      ['contextmenu', menu as EventListener], ['pointerdown', down as EventListener],
-      ['pointermove', move as EventListener], ['pointerup', up], ['pointercancel', up], ['wheel', mine],
-      ['touchmove', mine], ['keydown', mine]]
-    for (const [name, fn] of listen) el.addEventListener(name, fn, { passive: name !== 'contextmenu' })
-    return () => {
-      off?.()
-      me.bus.off('pagerendered', redraw)
-      for (const [name, fn] of listen) el.removeEventListener(name, fn)
-      clearTimeout(wait)
-      clearTimeout(hold)
-      mark?.remove()
-    }
-  }, [ready, reader])
-
-  // -- SyncTeX: scroll to a spot and flash it ----------------------------------------------
-  useEffect(() => {
+  useEffect(() => {  // SyncTeX: scroll to a spot and flash it
     const me = live.current
     if (!target) return
     if (!me?.doc || restoring.current) { pending.current = target; return }
-    jump(me, target)
+    jump(me.viewer, target)
   }, [target])
 
-  // -- search --------------------------------------------------------------------------------
+  const has = !!data && !failed && !message
   const find = (type: '' | 'again', previous = false, q = query) => live.current?.bus.dispatch('find', {
     source: null, type, query: q, caseSensitive: false, entireWord: false, highlightAll: true,
     findPrevious: previous, matchDiacritics: false })
@@ -323,10 +208,9 @@ export default function PdfViewer({ data, memory, compact, zoom: start = 'page-w
   }
   const toggleDark = () => {
     setDark(!dark)
-    try { localStorage.setItem('pdf.dark', dark ? '0' : '1') } catch { /* private window */ }
+    store('pdf.dark', dark ? '0' : '1')
   }
 
-  const has = !!data && !failed && !message
   const preset = ZOOMS.some(([v]) => v === scale.value)
   return (
     <div className="flex h-full min-w-0 flex-col bg-view" onKeyDown={keys}>
@@ -365,24 +249,9 @@ export default function PdfViewer({ data, memory, compact, zoom: start = 'page-w
             has ? '' : 'invisible'}`}>
           <div ref={inner} className="pdfViewer" />
         </div>
-        {searching && (
-          <div className="absolute right-3 top-2 z-10 flex items-center gap-1 rounded-xl border border-line bg-window
-            p-1 shadow-lg">
-            <input ref={queryBox} value={query} placeholder="Find in PDF" aria-label="Find in PDF"
-              onChange={(e) => { setQuery(e.target.value); find('', false, e.target.value) }}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') { e.preventDefault(); find('again', e.shiftKey) }
-                if (e.key === 'Escape') { e.stopPropagation(); closeSearch() }
-              }}
-              className={`h-7 rounded-md bg-pill px-2 text-sm outline-none pointer-coarse:h-11 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus ${
-                compact ? 'w-28' : 'w-44'} ${found?.missing && query ? 'ring-2 ring-bad' : ''}`} />
-            <span className="min-w-[52px] text-center text-xs tabular-nums text-dim">
-              {query && found ? (found.total ? `${found.current} of ${found.total}` : 'None') : ''}</span>
-            <Tool label="Previous (Shift+Enter)" onClick={() => find('again', true)}><ChevronUp size={16} /></Tool>
-            <Tool label="Next (Enter)" onClick={() => find('again')}><ChevronDown size={16} /></Tool>
-            <Tool label="Close" onClick={closeSearch}><X size={16} /></Tool>
-          </div>
-        )}
+        {searching && <FindBox input={queryBox} query={query} found={found} compact={compact}
+          onQuery={(q) => { setQuery(q); find('', false, q) }} onStep={(back) => find('again', back)}
+          onClose={closeSearch} />}
         {focused && <FocusOverlay what="Just the PDF" page={page} pages={pages} onExit={() => setFocused(false)} />}
         {!has && (
           <div className="absolute inset-0 grid place-items-center p-6 text-center">
@@ -398,42 +267,4 @@ export default function PdfViewer({ data, memory, compact, zoom: start = 'page-w
       {!focused && footer}
     </div>
   )
-}
-
-/** The word of the PDF's text under a point, or ''. */
-function textAt(x: number, y: number): string {
-  const d = document as Document & { caretPositionFromPoint?: (x: number, y: number) =>
-    { offsetNode: Node; offset: number } | null }
-  let node: Node | null = null, offset = 0
-  if (d.caretRangeFromPoint) {
-    const r = d.caretRangeFromPoint(x, y)
-    if (r) { node = r.startContainer; offset = r.startOffset }
-  } else if (d.caretPositionFromPoint) {
-    const p = d.caretPositionFromPoint(x, y)
-    if (p) { node = p.offsetNode; offset = p.offset }
-  }
-  if (!node || node.nodeType !== Node.TEXT_NODE || !node.parentElement?.closest('.textLayer')) return ''
-  const t = node.textContent ?? '', ok = (ch: string) => /[\p{L}\p{N}'’-]/u.test(ch)
-  let a = offset, b = offset
-  while (a > 0 && ok(t[a - 1])) a--
-  while (b < t.length && ok(t[b])) b++
-  return t.slice(a, b).replace(/^['’-]+|['’-]+$/g, '')
-}
-
-/** Scroll so the spot sits near the top, and pulse a bar over that line. */
-function jump(me: Live, t: PdfTarget) {
-  const view = me.viewer.getPageView(t.page - 1)
-  if (!view?.viewport) return
-  const box = view.viewport.viewBox
-  me.viewer.scrollPageIntoView({ pageNumber: t.page, destArray: [null, { name: 'XYZ' }, box[0], box[3] - t.y + 72,
-    null], allowNegativeOffset: true, ignoreDestinationZoom: true })
-  const [, cy] = view.viewport.convertToViewportPoint(t.x + box[0], box[3] - t.y)
-  const s = view.viewport.scale
-  const mark = document.createElement('div')
-  mark.className = 'pdf-mark'
-  Object.assign(mark.style, { left: `${54 * s}px`, right: `${54 * s}px`, top: `${cy - 10 * s}px`,
-    height: `${13 * s}px` })
-  view.div.querySelectorAll('.pdf-mark').forEach((m: Element) => m.remove())
-  view.div.appendChild(mark)
-  setTimeout(() => mark.remove(), 2000)
 }

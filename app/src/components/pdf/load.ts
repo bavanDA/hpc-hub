@@ -1,4 +1,3 @@
-// A file's bytes from a cluster, a few MB at a time (latex.chunk), so big PDFs don't make one huge message.
 import { call } from '../../rpc'
 
 type Chunk = { data: string; total: number }
@@ -10,7 +9,7 @@ export function fromBase64(text: string): Uint8Array {
   return out
 }
 
-/** All of path; onProgress gets 0..1 as pieces arrive. */
+/** A file's bytes from a cluster, a few MB at a time; onProgress gets 0..1 as pieces arrive. */
 export async function readFile(cluster: string, path: string, onProgress?: (done: number) => void):
   Promise<Uint8Array> {
   const parts: Uint8Array[] = []

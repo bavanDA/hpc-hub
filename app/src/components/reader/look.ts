@@ -1,8 +1,3 @@
-// How the Reader looks: font, size, line spacing, page width, background and where math comes from. Remembered.
-import { useState } from 'react'
-
-import { store, stored } from '../pdf/reader'
-
 export const FONTS = [
   { id: 'literata', label: 'Literata', family: '"Literata", Georgia, serif' },
   { id: 'source', label: 'Source Serif', family: '"Source Serif 4", Georgia, serif' },
@@ -21,6 +16,7 @@ export const BACKGROUNDS = [
 ] as const
 export const SIZES = { min: 14, max: 32 }
 
+/** How the Reader looks. */
 export type Look = {
   font: (typeof FONTS)[number]['id']
   size: number
@@ -31,11 +27,11 @@ export type Look = {
 }
 
 export const START: Look = { font: 'literata', size: 20, spacing: 'normal', width: 'medium', bg: '', math: 'source' }
-const KEY = 'reader.look'
 
-function read(): Look {
+/** A remembered look, with anything missing or no longer valid back at its start value. */
+export function parseLook(json: string): Look {
   try {
-    const got = JSON.parse(stored(KEY, '{}')) as Partial<Look>
+    const got = JSON.parse(json) as Partial<Look>
     const ok = <K extends keyof Look>(k: K, valid: (v: unknown) => boolean) => valid(got[k]) ? got[k] as Look[K] : START[k]
     return {
       font: ok('font', (v) => FONTS.some((f) => f.id === v)),
@@ -46,14 +42,4 @@ function read(): Look {
       math: ok('math', (v) => v === 'source' || v === 'pdf'),
     }
   } catch { return START }
-}
-
-export function useLook(): [Look, (change: Partial<Look> | null) => void] {
-  const [look, setLook] = useState(read)
-  const change = (c: Partial<Look> | null) => setLook((old) => {
-    const next = c ? { ...old, ...c } : START
-    store(KEY, JSON.stringify(next))
-    return next
-  })
-  return [look, change]
 }

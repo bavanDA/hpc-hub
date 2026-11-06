@@ -1,6 +1,3 @@
-// A LaTeX paper's source as the Reader's blocks: sections with their numbers, paragraphs with inline math, display
-// math with equation numbers, lists, theorems, captions, footnotes, \ref and \cite resolved. Not a TeX engine: it
-// reads the common parts of papers and skips what it doesn't know, keeping the words.
 import type { Block, Doc, Inline } from './model'
 
 export type Read = (path: string) => Promise<string>
@@ -658,7 +655,7 @@ export function fromBib(bibs: string[], cited: string[]): { key: string; label: 
 const dir = (p: string) => p.slice(0, p.lastIndexOf('/') + 1)
 
 /** main.tex with its \input and \include files in place. */
-export async function gather(read: Read, main: string): Promise<string> {
+async function gather(read: Read, main: string): Promise<string> {
   const root = dir(main)
   const expand = async (text: string, depth: number): Promise<string> => {
     const clean = stripComments(text)

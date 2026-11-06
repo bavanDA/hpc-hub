@@ -1,9 +1,7 @@
-// A dictionary entry as it loads, shared by the desktop panel and the phone sheet: meanings a part of speech at a
-// time, numbered, with examples and similar words.
 import { useEffect, useState, type ReactNode } from 'react'
 
 import { Spinner } from '../ui'
-import { lookUp, type Entry } from './reader'
+import { lookUp, type Entry } from './dictionary'
 
 /** The word's entry: null while it loads. */
 export function useEntry(text: string) {

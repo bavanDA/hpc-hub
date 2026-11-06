@@ -1,10 +1,10 @@
-// A PDF from a cluster over the whole window. Escape or the X closes it.
 import { X } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 
 import { readFile } from './load'
 import { ReadablePdf } from './ReadAloud'
 
+/** A PDF from a cluster over the whole window. */
 export function PdfDialog({ cluster, path, subtitle, onClose }:
   { cluster: string; path: string; subtitle?: string; onClose: () => void }) {
   const [data, setData] = useState<Uint8Array | null>(null)

@@ -1,4 +1,3 @@
-// A small square button of the PDF toolbar.
 import type { ReactNode } from 'react'
 
 export function Tool({ label, onClick, children, on = false, disabled = false }:

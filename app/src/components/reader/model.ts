@@ -1,6 +1,3 @@
-// The paper as the Reader shows it: headings, paragraphs, display math, lists and boxes, from the LaTeX source
-// (latex.ts) or from the PDF's text (pdftext.ts). page is where a block sits in the PDF, when known.
-
 export type Inline =
   | { t: 'text'; s: string }
   | { t: 'em' | 'b' | 'code' | 'sc'; c: Inline[] }
@@ -38,4 +35,25 @@ export type Doc = {
 /** The words of some inline content, for search, page matching and the Contents. */
 export function plain(c: Inline[]): string {
   return c.map((x) => x.t === 'text' ? x.s : 'c' in x ? plain(x.c) : x.t === 'br' ? ' ' : '').join('')
+}
+
+export type Heading = { b: Extract<Block, { t: 'h' }>; i: number }
+
+/** The headings of the paper with where they are among its blocks, for the Contents. */
+export function headings(blocks: Block[]): Heading[] {
+  return blocks.flatMap((b, i) => b.t === 'h' ? [{ b, i }] : [])
+}
+
+/** What a \cite shows: its labels in brackets, ? for a key with none. */
+export function citeText(keys: string[], cites: Doc['cites']): string {
+  return `[${keys.map((key) => cites[key] ?? '?').join(', ')}]`
+}
+
+/** What a \ref shows: the number, (number) for an equation, or "Section 2" when named. */
+export function refText(key: string, style: 'ref' | 'eq' | 'named', labels: Doc['labels']): string {
+  const l = labels[key]
+  const num = l?.num ?? '??'
+  if (style === 'eq') return `(${num})`
+  if (style === 'named' && l) return `${l.kind} ${l.kind === 'Equation' ? `(${num})` : num}`
+  return num
 }

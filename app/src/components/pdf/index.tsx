@@ -1,4 +1,3 @@
-// The PDF viewer, loaded with pdf.js only when a PDF first shows (keeps the main bundle small).
 import { lazy, Suspense, type ReactNode } from 'react'
 
 import { Spinner } from '../ui'

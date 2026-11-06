@@ -1,10 +1,8 @@
-// pdf.js and its viewer, loaded once on first use. Everything it needs (worker, fonts, wasm) ships with the app.
 import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
 
 type Lib = typeof import('pdfjs-dist')
 type Viewer = typeof import('pdfjs-dist/web/pdf_viewer.mjs')
 
-// Standard fonts and image decoders by file name: bundled as files, fetched only when a PDF needs them
 const FILES = {
   ...import.meta.glob('/node_modules/pdfjs-dist/standard_fonts/*.{pfb,ttf}', { query: '?url', import: 'default',
     eager: true }),
@@ -12,9 +10,8 @@ const FILES = {
 } as Record<string, string>
 const byName = Object.fromEntries(Object.entries(FILES).map(([k, v]) => [k.split('/').pop()!, v]))
 
-/** Hands pdf.js the bundled files instead of fetching them from a folder. */
+/** Hands pdf.js the bundled fonts and decoders instead of fetching them from a folder. */
 class BundledData {
-  constructor(_: unknown) {}
   async fetch({ filename }: { kind: string; filename: string }): Promise<Uint8Array> {
     const url = byName[filename]
     if (!url) throw new Error(`No bundled ${filename}`)
@@ -36,8 +33,7 @@ export function engine() {
 }
 
 export function open(lib: Lib, data: Uint8Array) {
-  // A copy: pdf.js takes the buffer over, and the caller may load the same bytes again.
-  // Bundled fonts, not the system's: a PDF looks the same everywhere.
+  // a copy, as pdf.js takes the buffer over; bundled fonts, so a PDF looks the same everywhere
   return lib.getDocument({ data: data.slice(), BinaryDataFactory: BundledData, useWorkerFetch: false,
     useSystemFonts: false, isEvalSupported: false, enableXfa: false } as Parameters<Lib['getDocument']>[0])
 }

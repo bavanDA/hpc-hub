@@ -1,6 +1,3 @@
-// A PDF's text as the Reader's blocks (pdf.js, on this computer): lines from the text runs, then headings by size and
-// weight, paragraphs by gaps and indents, display math cut from the page as pictures. Also each page's words, to
-// find where the LaTeX source's blocks fall in the PDF.
 import type { PDFDocumentProxy } from 'pdfjs-dist'
 
 import type { Block, Box, Doc, Inline } from './model'
