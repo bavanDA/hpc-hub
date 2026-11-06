@@ -6,14 +6,14 @@ import { Select } from '../jobs/Select'
 import { chooseAgent, useAgentChoice } from '../latex/history/agent/agentChoice'
 import { setMonitorBar } from '../terminals/monitorBarSetting'
 import { setSelectToCopy } from '../terminals/xterm'
-import { useToast } from '../useToast'
 import { Spinner } from '../ui'
+import { useToast } from '../useToast'
 import { AboutDialog } from './About'
 import { AppearanceGroup } from './Appearance'
 import { forgetProfiles, getProfiles } from './openLink'
 import { PairPhoneDialog } from './PairPhoneDialog'
-import { experimentsOf, type Experiments, type Preferences, type Profiles } from './types'
 import { university, type SetupStatus } from './setup'
+import { experimentsOf, type Experiments, type Preferences, type Profiles } from './types'
 
 export function PreferencesDialog({ onClose, onExperimental, onDisconnectAndQuit }:
   { onClose: () => void; onExperimental: (e: Experiments) => void; onDisconnectAndQuit: () => void }) {

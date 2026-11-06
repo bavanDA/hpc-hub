@@ -1,14 +1,14 @@
 import { FileX } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 
-import { Picker } from './picker/Picker'
-import { Project } from './Project'
-import { useToast } from '../useToast'
-import { Button, Dialog, EmptyState, Spinner } from '../ui'
 import { useCall, useEvent } from '../../hooks'
 import { usePageParams } from '../../nav'
 import { call } from '../../rpc'
 import type { Choices, Opened, Picker as PickerData } from '../../types/latex'
+import { Button, Dialog, EmptyState, Spinner } from '../ui'
+import { useToast } from '../useToast'
+import { Picker } from './picker/Picker'
+import { Project } from './Project'
 
 // The open project stays open while you visit other pages
 const memory = { opened: null as Opened | null, asked: '' }

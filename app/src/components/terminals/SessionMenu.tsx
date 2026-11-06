@@ -2,12 +2,12 @@ import { MoreVertical } from 'lucide-react'
 import { useRef, useState } from 'react'
 
 import { call } from '../../rpc'
-import { useToast } from '../useToast'
 import { AlertDialog, Button, Dialog, IconButton } from '../ui'
+import { useToast } from '../useToast'
 import { MenuItem, Popover } from './Popover'
 import { tabKey } from './tabKey'
-import { getTab } from './tabStore'
 import { close, update } from './tabs'
+import { getTab } from './tabStore'
 
 /** What the menu acts on: a listed session, or an open tab's. */
 export type Target = { cluster: string; name: string; kind: 'tmux' | 'screen'; node: string; title: string }

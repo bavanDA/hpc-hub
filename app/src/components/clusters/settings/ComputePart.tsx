@@ -1,7 +1,7 @@
 import type { Cluster } from '../../../types/clusters'
-import { NodeFields } from '../node/NodeFields'
 import { List, ToggleRow } from '../../e/ui'
 import { ASK } from '../ComputeDialog'
+import { NodeFields } from '../node/NodeFields'
 import { parseQueues } from '../queueList'
 import { QueuePick } from './QueuePick'
 

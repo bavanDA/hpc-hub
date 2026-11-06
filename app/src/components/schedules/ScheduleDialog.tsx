@@ -4,14 +4,14 @@ import { call } from '../../rpc'
 import type { Limits, Profile } from '../../types/clusters'
 import type { Place, ProjectList } from '../../types/projects'
 import type { ScheduleOptions, ScheduleStatus } from '../../types/schedules'
+import { NodeFields } from '../clusters/node/NodeFields'
 import { minutes as minutesOf, slurmTime } from '../clusters/time'
 import { ChoiceRow, Chips, TextArea } from '../e/extra'
-import { NodeFields } from '../clusters/node/NodeFields'
 import { DurationRow, EDialog, Field, inRange, List, MainButton, Segments } from '../e/ui'
 import { FolderField } from '../tools/fields'
 import { Spinner } from '../ui'
-import { computeText } from './format'
 import { ownFrom, type OwnCompute } from './compute'
+import { computeText } from './format'
 
 const TIME = /^([01]\d|2[0-3]):[0-5]\d$/
 const slug = (name: string) => name.trim().replace(/[^A-Za-z0-9_-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40) ||

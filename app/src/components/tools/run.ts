@@ -4,10 +4,10 @@ import { call, on } from '../../rpc'
 import type { Session } from '../../types/clusters'
 import type { Link } from '../../types/terminals'
 import type { Opened, Started, Target, VsStarted } from '../../types/tools'
-import { openLink } from '../terminals/pty'
+import { openLink } from '../app/openLink'
 import { addBanner } from '../terminals/banners'
-import { getTab, select } from '../terminals/tabStore'
 import { openCommand, openTmux } from '../terminals/tabs'
+import { getTab, select } from '../terminals/tabStore'
 
 let notify: (text: string) => void = () => {}
 export const setNotify = (fn: (text: string) => void) => { notify = fn }

@@ -1,5 +1,5 @@
-import { changed, getTab } from './tabStore'
 import type { Tab } from './tabs'
+import { changed, getTab } from './tabStore'
 
 export function banner(tab: Tab, text: string, button?: string, action?: () => void) {
   tab.banners = [...tab.banners, { id: `${Date.now()}-${tab.banners.length}`, text, button, action }]

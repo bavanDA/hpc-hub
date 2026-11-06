@@ -2,7 +2,7 @@ import { FitAddon } from '@xterm/addon-fit'
 import { WebLinksAddon } from '@xterm/addon-web-links'
 import { Terminal } from '@xterm/xterm'
 
-import { openLink } from './pty'
+import { openLink } from '../app/openLink'
 import { tabNotify } from './tabNotify'
 import type { Tab } from './tabs'
 import { clipboardKeys, theme } from './xterm'

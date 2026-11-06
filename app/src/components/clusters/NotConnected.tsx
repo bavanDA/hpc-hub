@@ -4,8 +4,8 @@ import { useState } from 'react'
 import { useGo } from '../../nav'
 import { call } from '../../rpc'
 import { BUSY, type Cluster, type Session } from '../../types/clusters'
-import { useToast } from '../useToast'
 import { AlertDialog, Button, EmptyState, Spinner } from '../ui'
+import { useToast } from '../useToast'
 import { shortName } from './loginCopy'
 
 type Switch = { id: string; name: string }

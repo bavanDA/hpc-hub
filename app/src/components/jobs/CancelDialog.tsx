@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react'
 
 import { call } from '../../rpc'
 import type { Inside, Job } from '../../types/jobs'
-import { useToast } from '../useToast'
 import { AlertDialog, Spinner } from '../ui'
+import { useToast } from '../useToast'
 import { ranFor } from './format'
 
 export function CancelDialog({ cluster, job: j, appJob, onClose, onDone }: {

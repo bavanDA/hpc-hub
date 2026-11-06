@@ -3,11 +3,11 @@ import { useEffect, useRef, useState } from 'react'
 
 import '@xterm/xterm/css/xterm.css'
 
-import { useToast } from '../useToast'
 import { Button, IconButton } from '../ui'
+import { useToast } from '../useToast'
+import { dismiss } from './banners'
 import { MonitorBar } from './MonitorBar'
 import { MenuItem, Popover } from './Popover'
-import { dismiss } from './banners'
 import { start, type Tab } from './tabs'
 import { copy, paste } from './xterm'
 

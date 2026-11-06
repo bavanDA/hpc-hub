@@ -1,7 +1,7 @@
 import type { TmuxSession } from '../../types/terminals'
+import { openLink } from '../app/openLink'
 import { useToast } from '../useToast'
 import { SessionIcon } from './Popover'
-import { openLink } from './pty'
 import { SessionMenu } from './SessionMenu'
 import { sessionLines } from './sessionText'
 import { openSession } from './tabs'

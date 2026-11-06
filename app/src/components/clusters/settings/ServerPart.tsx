@@ -1,8 +1,8 @@
 import type { Cluster, SettingsInfo } from '../../../types/clusters'
 import { ChoiceRow } from '../../e/extra'
 import { Field, List, NumberRow, Section, Segments, ToggleRow } from '../../e/ui'
-import { copy } from '../loginCopy'
 import { CHROME_WINDOW } from '../chromeWindow'
+import { copy } from '../loginCopy'
 import { ownVpnLogin } from './changes'
 
 export type VpnLogin = { user: string; setUser: (u: string) => void; password: string

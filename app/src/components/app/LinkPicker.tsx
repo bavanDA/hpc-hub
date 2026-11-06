@@ -1,8 +1,8 @@
 import { Check, Copy, ExternalLink } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
-import { useToast } from '../useToast'
 import { Button, Dialog, List, Row } from '../ui'
+import { useToast } from '../useToast'
 import { copyText } from './clipboard'
 import { openIn, setAsk } from './openLink'
 import type { Profiles } from './types'

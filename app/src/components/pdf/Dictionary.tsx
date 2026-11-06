@@ -5,8 +5,8 @@ import { Spinner } from '../ui'
 import { hear } from './dictionary'
 import type { WordPick } from './index'
 import { Meanings } from './Meanings'
-import { useEntry } from './useEntry'
 import type { Reader } from './reader'
+import { useEntry } from './useEntry'
 
 export function Dictionary({ pick, reader, overlay, onRead, onClose }:
   { pick: WordPick; reader: Reader; overlay: boolean; onRead: () => void; onClose: () => void }) {

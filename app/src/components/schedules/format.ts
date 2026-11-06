@@ -1,6 +1,6 @@
 import { cores } from '../../types/clusters'
-import { gpuAmount } from '../clusters/gpus'
 import type { Compute, ScheduleStatus } from '../../types/schedules'
+import { gpuAmount } from '../clusters/gpus'
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 const two = (n: number) => String(n).padStart(2, '0')

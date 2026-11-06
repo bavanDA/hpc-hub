@@ -1,7 +1,7 @@
 import type { Cluster, VsCode } from '../../../types/clusters'
-import { NodeFields } from '../node/NodeFields'
 import { Field, Section, Segments, ToggleRow } from '../../e/ui'
 import { ASK_VS, ASK_VS_SUB } from '../../tools/vscodeWords'
+import { NodeFields } from '../node/NodeFields'
 
 const TARGETS = [['desktop', 'VS Code app'], ['browser', 'Browser']] as const
 

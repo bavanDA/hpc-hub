@@ -6,10 +6,10 @@ import { EButton, IconToggleRow, Note } from '../e/extra'
 import { List, Row } from '../e/ui'
 import { Meter, Spinner } from '../ui'
 import { space as copy } from './copy'
+import type { Options } from './flow'
 import { gb, gbOf } from './format'
 import { spaceFacts } from './plan'
 import { Actions } from './Steps'
-import type { Options } from './flow'
 
 export function SpaceView({ plan, policy, options, tried, progress, busy, onLeaveOut, onOptions, onTry, onCopy,
   onBack }: {

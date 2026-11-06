@@ -2,10 +2,7 @@ import { invoke } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
 
 import { call, on } from '../../rpc'
-
-export { openLink } from '../app/openLink'  // links from terminals open like every other link
-
-export const inTauri = '__TAURI_INTERNALS__' in window
+import { inTauri } from '../app/platform'
 
 const CHANNEL = 'hpc-hub-channel'
 

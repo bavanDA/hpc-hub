@@ -12,8 +12,8 @@ import { useBackupAlertWatch } from '@shared/components/backup/alerts'
 import { agentName, isRunning, useAsks } from '@shared/components/code/ask'
 import { useClusters } from '@shared/components/clusters/store'
 import { placeOf, usePhoneNav, type Place } from '../nav'
-import { keepAlive } from './native'
 import { ConfirmSheet } from '../ui'
+import { keepAlive } from './native'
 
 // -- your choices, kept on this phone ----------------------------------------------------------------------------
 export const KINDS: [NoticeKind, string][] = [['duo', 'Duo is waiting'], ['connected', 'A cluster connected'],

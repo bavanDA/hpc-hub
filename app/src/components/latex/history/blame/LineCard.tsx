@@ -2,8 +2,8 @@ import { ArrowLeft, Copy, History as HistoryIcon, ScrollText } from 'lucide-reac
 import { useEffect, useState } from 'react'
 
 import type { LineStory } from '../../../../types/history'
-import { useToast } from '../../../useToast'
 import { Spinner } from '../../../ui'
+import { useToast } from '../../../useToast'
 import { Tex } from '../diff/Tex'
 import { fullDate, lastLine, plural, when } from '../format'
 import { git, type Where } from '../git'

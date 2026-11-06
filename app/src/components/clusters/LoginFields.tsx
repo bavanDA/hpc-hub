@@ -6,8 +6,8 @@ import { Field, Row, Section, ToggleRow } from '../e/ui'
 import { Spinner } from '../ui'
 import { AuthenticatorHelp } from './AuthenticatorHelp'
 import { KeyPanel } from './KeyPanel'
-import { PasswordInstead } from './PasswordInstead'
 import { copy } from './loginCopy'
+import { PasswordInstead } from './PasswordInstead'
 import type { Login } from './useLogin'
 
 /** onPortal: set the login up through the cluster's web portal instead (the caller opens KeySetupDialog).

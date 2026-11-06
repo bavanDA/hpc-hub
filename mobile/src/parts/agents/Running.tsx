@@ -11,9 +11,9 @@ import { useTabs } from '@shared/components/terminals/useTabs'
 import { Spinner } from '@shared/components/ui'
 import { useGo } from '@shared/nav'
 import { AGENT_NAMES, type TmuxSession } from '@shared/types/terminals'
+import { EmptyState, List } from '../../ui'
 import { SessionActions, type Target } from '../terminal/SessionActions'
 import { SessionRow } from '../terminal/SessionRow'
-import { EmptyState, List } from '../../ui'
 
 export function Running() {
   const live = useLive()

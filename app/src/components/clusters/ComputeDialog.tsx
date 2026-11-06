@@ -2,10 +2,10 @@ import { useState } from 'react'
 
 import { call } from '../../rpc'
 import { summary, type Cluster, type Profile } from '../../types/clusters'
-import { NodeFields } from './node/NodeFields'
 import { EDialog, MainButton, ToggleRow } from '../e/ui'
 import { useToast } from '../useToast'
 import { shortName } from './loginCopy'
+import { NodeFields } from './node/NodeFields'
 import { putCluster } from './store'
 
 export const ASK = 'Ask before each request'
