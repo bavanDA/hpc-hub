@@ -22,6 +22,7 @@ export function useDoc(cluster: string, first: string) {
         text.current = t
         setDoc((d) => ({ path, text: t, version: (d?.version ?? 0) + 1, line }))
         setDirty(false)
+        setError('')
       })
       .catch((e: Error) => { setError(e.message); setDoc(null) })
   }, [cluster])
@@ -41,7 +42,7 @@ export function useDoc(cluster: string, first: string) {
     } finally { setSaving(false) }
   }, [cluster, dirty, toast, docRef])
 
-  useEffect(() => { read(first) }, [read, first])  // no error to clear yet
+  useEffect(() => { read(first) }, [read, first])
 
   const edit = (t: string) => { text.current = t; if (!dirty) setDirty(true) }
 
