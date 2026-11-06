@@ -1,8 +1,9 @@
 import { GitBranch } from 'lucide-react'
 
 import type { Folder, Summary } from '../../types/backup'
-import { Note } from '../e/extra'
-import { Row, Section } from '../e/ui'
+import { Note } from '../e/Note'
+import { Row } from '../e/Row'
+import { Section } from '../e/Section'
 import { CLASS } from './classes'
 import { risk } from './copy'
 import { count, gb, when } from './format'

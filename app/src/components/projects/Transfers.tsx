@@ -2,7 +2,8 @@ import { RefreshCw } from 'lucide-react'
 import { useState, useSyncExternalStore } from 'react'
 
 import { call } from '../../rpc'
-import { Confirm, EButton } from '../e/extra'
+import { Confirm } from '../e/Confirm'
+import { EButton } from '../e/EButton'
 import { getCopies, setCopies, subscribe } from './copies'
 import { size } from '../files/format'
 

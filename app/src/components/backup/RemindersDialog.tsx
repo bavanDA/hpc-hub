@@ -1,8 +1,11 @@
 import { useState } from 'react'
 
 import type { Reminders } from '../../types/backup'
-import { ChoiceRow } from '../e/extra'
-import { EDialog, List, MainButton, ToggleRow } from '../e/ui'
+import { ChoiceRow } from '../e/ChoiceRow'
+import { EDialog } from '../e/EDialog'
+import { List } from '../e/List'
+import { MainButton } from '../e/MainButton'
+import { ToggleRow } from '../e/ToggleRow'
 import { DAYS, reminders as copy } from './copy'
 
 export const HORIZONS = [3, 7, 14]

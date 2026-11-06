@@ -1,5 +1,5 @@
 import type { Limits, Profile } from '../../../types/clusters'
-import { inRange } from '../../e/ui'
+import { inRange } from '../../e/range'
 import { gpuName, isPreset, type Gpu, type GpuFit, type Preset } from '../gpus'
 import { minutes } from '../time'
 

@@ -2,8 +2,10 @@ import { FolderOpen } from 'lucide-react'
 
 import type { CopyTarget, CopyTargets, Place } from '../../types/projects'
 import { shortName } from '../clusters/loginCopy'
-import { ChoiceRow } from '../e/extra'
-import { Field, List, Segments } from '../e/ui'
+import { ChoiceRow } from '../e/ChoiceRow'
+import { Field } from '../e/Field'
+import { List } from '../e/List'
+import { Segments } from '../e/Segments'
 import { Spinner } from '../ui'
 import { inside } from './copyInto'
 

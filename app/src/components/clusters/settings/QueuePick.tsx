@@ -1,5 +1,5 @@
 import type { Cluster } from '../../../types/clusters'
-import { Segments } from '../../e/ui'
+import { Segments } from '../../e/Segments'
 import { PICKS, pickNote } from '../queuePick'
 import { parseQueues } from '../queueList'
 

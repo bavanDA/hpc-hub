@@ -1,7 +1,9 @@
 import { Folder, FolderOpen, House } from 'lucide-react'
 
 import type { Project } from '../../../types/projects'
-import { MainButton, Row, Section } from '../../e/ui'
+import { MainButton } from '../../e/MainButton'
+import { Row } from '../../e/Row'
+import { Section } from '../../e/Section'
 import { tilde } from './paths'
 
 /** The Code page with no folder open: this cluster's projects and the folders opened before. */

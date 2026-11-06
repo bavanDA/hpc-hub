@@ -2,8 +2,12 @@ import { ShieldCheck } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
 import type { LockConfig, LockStatus } from '../../types/permissions'
-import { EButton, ItemRow } from '../e/extra'
-import { NumberRow, Row, Section, ToggleRow } from '../e/ui'
+import { EButton } from '../e/EButton'
+import { ItemRow } from '../e/ItemRow'
+import { NumberRow } from '../e/NumberRow'
+import { Row } from '../e/Row'
+import { Section } from '../e/Section'
+import { ToggleRow } from '../e/ToggleRow'
 import { ActivityDialog } from './ActivityDialog'
 
 

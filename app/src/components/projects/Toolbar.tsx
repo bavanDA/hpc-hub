@@ -2,8 +2,9 @@ import { FolderOpen, Plus } from 'lucide-react'
 
 import type { ProjectCluster } from '../../types/projects'
 import { shortName } from '../clusters/loginCopy'
-import { EButton, SearchField } from '../e/extra'
-import { Segments } from '../e/ui'
+import { EButton } from '../e/EButton'
+import { SearchField } from '../e/SearchField'
+import { Segments } from '../e/Segments'
 import { Select } from '../jobs/Select'
 import { ALL, YOURS } from './filter'
 

@@ -2,7 +2,7 @@ import { ArrowUp, FolderPlus, House, PanelRight, RefreshCw, Upload } from 'lucid
 import { useState } from 'react'
 
 import type { Place } from '../../types/files'
-import { Segments } from '../e/ui'
+import { Segments } from '../e/Segments'
 import { IconButton, Spinner } from '../ui'
 
 type Props = {

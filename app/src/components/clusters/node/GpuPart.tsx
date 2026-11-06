@@ -1,7 +1,9 @@
 import { useState } from 'react'
 
 import type { Limits, Profile } from '../../../types/clusters'
-import { NumberRow, Row, Section } from '../../e/ui'
+import { NumberRow } from '../../e/NumberRow'
+import { Row } from '../../e/Row'
+import { Section } from '../../e/Section'
 import { chosen, fitting, withGpu, type Gpu } from '../gpus'
 import { fitName } from './fit'
 

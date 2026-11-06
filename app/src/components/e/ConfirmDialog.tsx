@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 
-import { EButton } from './extra'
-import { EDialog } from './ui'
+import { EButton } from './EButton'
+import { EDialog } from './EDialog'
 
 /** onKeep: the keep button does something too, which closing the window doesn't. */
 export function ConfirmDialog({ title, text, keep, confirm, danger = false, onConfirm, onKeep, onClose }: {
@@ -17,9 +17,4 @@ export function ConfirmDialog({ title, text, keep, confirm, danger = false, onCo
       {text && <div className="flex flex-col gap-2 px-5 pb-2 text-dim">{text}</div>}
     </EDialog>
   )
-}
-
-export function Note({ error = false, children }: { error?: boolean; children: ReactNode }) {
-  return <p role={error ? 'alert' : undefined} className={`px-5 pb-3 break-words ${error ? 'font-semibold text-bad'
-    : 'font-semibold'}`}>{children}</p>
 }

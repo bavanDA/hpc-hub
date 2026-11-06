@@ -1,7 +1,7 @@
 import { FileText } from 'lucide-react'
 import { useState } from 'react'
 
-import { Confirm } from '../components/e/extra'
+import { Confirm } from '../components/e/Confirm'
 import { expectCopies } from '../components/projects/copies'
 import { CopyDialog } from '../components/projects/CopyDialog'
 import { copyPath } from '../components/projects/copyPath'

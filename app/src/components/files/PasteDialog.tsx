@@ -2,7 +2,10 @@ import { useEffect, useState } from 'react'
 
 import { call } from '../../rpc'
 import type { Clip, CopyPlan } from '../../types/files'
-import { EDialog, MainButton, Section, Segments } from '../e/ui'
+import { EDialog } from '../e/EDialog'
+import { MainButton } from '../e/MainButton'
+import { Section } from '../e/Section'
+import { Segments } from '../e/Segments'
 import { Spinner } from '../ui'
 import { size } from './format'
 

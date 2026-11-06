@@ -1,5 +1,7 @@
 import type { Limits, Profile } from '../../../types/clusters'
-import { EDialog, Field, MainButton } from '../../e/ui'
+import { EDialog } from '../../e/EDialog'
+import { Field } from '../../e/Field'
+import { MainButton } from '../../e/MainButton'
 import { QueuePickers } from '../QueuePickers'
 
 export function QueueDialog({ limits, value: p, onChange, onClose, extra, only }: {

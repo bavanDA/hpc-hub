@@ -1,7 +1,11 @@
 import { useEffect, useState } from 'react'
 
 import type { Profile } from '../../../types/clusters'
-import { DurationRow, List, NumberRow, Row, Segments } from '../../e/ui'
+import { DurationRow } from '../../e/DurationRow'
+import { List } from '../../e/List'
+import { NumberRow } from '../../e/NumberRow'
+import { Row } from '../../e/Row'
+import { Segments } from '../../e/Segments'
 import { chosen, presets } from '../gpus'
 import { queueText } from '../priority'
 import { suText } from '../su'

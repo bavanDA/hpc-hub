@@ -1,7 +1,7 @@
 import { Smartphone } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
-import { EButton } from '../e/extra'
+import { EButton } from '../e/EButton'
 import { Spinner } from '../ui'
 import { copy } from './loginCopy'
 

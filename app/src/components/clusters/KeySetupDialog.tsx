@@ -3,8 +3,8 @@ import { useEffect, useRef, useState } from 'react'
 
 import { call } from '../../rpc'
 import type { Cluster, KeySetup } from '../../types/clusters'
-import { EButton } from '../e/extra'
-import { EDialog } from '../e/ui'
+import { EButton } from '../e/EButton'
+import { EDialog } from '../e/EDialog'
 import { Spinner } from '../ui'
 import { shortName } from './loginCopy'
 

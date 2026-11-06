@@ -1,6 +1,7 @@
 import { Folder, FolderOpen, Plus } from 'lucide-react'
 
-import { EButton, EmptyState } from '../e/extra'
+import { EButton } from '../e/EButton'
+import { EmptyState } from '../e/EmptyState'
 
 export function NoProjects({ onAdd, onCreate }: { onAdd: () => void; onCreate: () => void }) {
   return (

@@ -1,4 +1,4 @@
-import { Segments } from '../e/ui'
+import { Segments } from '../e/Segments'
 import { BIG, type How } from './copyPlan'
 import { CopyStep } from './CopyStep'
 import { NOTE } from './noteClass'

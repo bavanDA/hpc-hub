@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 
 import { useAllClusters, useOfferAllClusters } from '../components/clusters/allClusters'
 import { NotConnected } from '../components/clusters/NotConnected'
-import { Segments } from '../components/e/ui'
+import { Segments } from '../components/e/Segments'
 import { useActiveCluster } from '../components/clusters/active'
 import { Select } from '../components/jobs/Select'
 import { EmptyState, IconButton, Spinner } from '../components/ui'

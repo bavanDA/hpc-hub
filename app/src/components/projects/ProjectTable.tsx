@@ -1,7 +1,8 @@
 import { ChevronDown, ChevronUp, ClipboardCopy, Copy, EllipsisVertical, FileText, Folder, GitBranch, Pencil,
   Trash2 } from 'lucide-react'
 import type { Project } from '../../types/projects'
-import { EButton, StatusDot } from '../e/extra'
+import { EButton } from '../e/EButton'
+import { StatusDot } from '../e/StatusDot'
 import { clusterOf, openedText, type Sort, type SortKey } from './format'
 import type { Live } from './live'
 import { Menu } from './Menu'

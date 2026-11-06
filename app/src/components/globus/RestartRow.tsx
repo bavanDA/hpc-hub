@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { call } from '../../rpc'
 import type { GlobusCluster } from '../../types/globus'
 import { shortName } from '../clusters/loginCopy'
-import { Row } from '../e/ui'
+import { Row } from '../e/Row'
 import { useToast } from '../useToast'
 
 // Restarting picks up every folder you have on the cluster now

@@ -1,6 +1,6 @@
 import type { CopyPlan } from '../../types/projects'
-import { CheckRow } from '../e/extra'
-import { List } from '../e/ui'
+import { CheckRow } from '../e/CheckRow'
+import { List } from '../e/List'
 import { size } from '../files/format'
 import { CopyStep } from './CopyStep'
 import { NOTE } from './noteClass'

@@ -9,8 +9,11 @@ import { copy, shortName } from '../clusters/loginCopy'
 import { LoginFields } from '../clusters/LoginFields'
 import { NodeFields } from '../clusters/node/NodeFields'
 import { useLogin } from '../clusters/useLogin'
-import { EButton } from '../e/extra'
-import { List, MainButton, Section, ToggleRow } from '../e/ui'
+import { EButton } from '../e/EButton'
+import { List } from '../e/List'
+import { MainButton } from '../e/MainButton'
+import { Section } from '../e/Section'
+import { ToggleRow } from '../e/ToggleRow'
 import { Spinner } from '../ui'
 
 type Step = { cluster: Cluster; kind: 'login' | 'node' }

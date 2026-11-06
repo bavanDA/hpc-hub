@@ -1,5 +1,5 @@
 import type { LockConfig, LockStatus } from '../../types/permissions'
-import { inRange } from '../e/ui'
+import { inRange } from '../e/range'
 
 export const lockConfig = (s: LockStatus): LockConfig => ({ minutes: s.config.minutes ?? 10,
   tries: s.config.tries ?? 3, logout: s.config.logout ?? true, scancel: s.config.scancel ?? true })

@@ -1,8 +1,14 @@
 import { useState } from 'react'
 
 import type { CommandGroup } from '../../types/permissions'
-import { EButton } from '../e/extra'
-import { EDialog, Field, List, MainButton, Row, Section, ToggleRow } from '../e/ui'
+import { EButton } from '../e/EButton'
+import { EDialog } from '../e/EDialog'
+import { Field } from '../e/Field'
+import { List } from '../e/List'
+import { MainButton } from '../e/MainButton'
+import { Row } from '../e/Row'
+import { Section } from '../e/Section'
+import { ToggleRow } from '../e/ToggleRow'
 import { useToast } from '../useToast'
 
 /** The groups in plain words. */

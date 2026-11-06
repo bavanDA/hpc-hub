@@ -1,8 +1,11 @@
 import { Plus, Sparkles, Trash2 } from 'lucide-react'
 
 import type { CatalogSkill, Skill, SkillList } from '../../types/skills'
-import { EButton, IconBtn, ItemRow } from '../e/extra'
-import { Row, Section } from '../e/ui'
+import { EButton } from '../e/EButton'
+import { IconBtn } from '../e/IconBtn'
+import { ItemRow } from '../e/ItemRow'
+import { Row } from '../e/Row'
+import { Section } from '../e/Section'
 import { Spinner } from '../ui'
 
 export function SkillSections({ list, adding, label, onAdd, onRemove }: {

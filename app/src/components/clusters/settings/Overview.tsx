@@ -1,7 +1,9 @@
 import { Bot, Code, Cpu, KeyRound, ListOrdered, Server, ShieldCheck } from 'lucide-react'
 
 import { summary, type Cluster, type SettingsInfo } from '../../../types/clusters'
-import { List, Row, Section } from '../../e/ui'
+import { List } from '../../e/List'
+import { Row } from '../../e/Row'
+import { Section } from '../../e/Section'
 import { Spinner } from '../../ui'
 import { queueCount } from '../queueList'
 import type { Part } from './changes'

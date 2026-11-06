@@ -4,8 +4,10 @@ import { useCallback, useEffect, useState } from 'react'
 import { call } from '../../rpc'
 import type { Folder as FolderList, Place, Places, ProjectCluster } from '../../types/projects'
 import { shortName } from '../clusters/loginCopy'
-import { EButton, IconBtn, SearchField } from '../e/extra'
-import { EDialog } from '../e/ui'
+import { EButton } from '../e/EButton'
+import { EDialog } from '../e/EDialog'
+import { IconBtn } from '../e/IconBtn'
+import { SearchField } from '../e/SearchField'
 import { Spinner } from '../ui'
 
 const join = (a: string, b: string) => `${a.replace(/\/+$/, '')}/${b}`

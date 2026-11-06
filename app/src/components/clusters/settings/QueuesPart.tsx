@@ -1,5 +1,6 @@
 import type { Cluster } from '../../../types/clusters'
-import { List, NumberRow } from '../../e/ui'
+import { List } from '../../e/List'
+import { NumberRow } from '../../e/NumberRow'
 import { QueueRows } from '../QueueRows'
 import { QueuePick } from './QueuePick'
 

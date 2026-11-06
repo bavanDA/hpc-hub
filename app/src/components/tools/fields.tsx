@@ -2,7 +2,7 @@ import { FolderOpen } from 'lucide-react'
 import { useState } from 'react'
 
 import type { Place } from '../../types/projects'
-import { Field } from '../e/ui'
+import { Field } from '../e/Field'
 import { FolderPicker } from '../projects/FolderPicker'
 
 export function FolderField({ cluster, label = 'Folder', value, onChange, projects }: {

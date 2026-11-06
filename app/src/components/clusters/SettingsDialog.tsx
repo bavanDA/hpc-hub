@@ -2,8 +2,10 @@ import { useEffect, useState, type ReactNode } from 'react'
 
 import { call } from '../../rpc'
 import type { Cluster, SettingsInfo } from '../../types/clusters'
-import { ConfirmDialog, Note } from '../e/parts'
-import { EDialog, MainButton } from '../e/ui'
+import { ConfirmDialog } from '../e/ConfirmDialog'
+import { DialogNote } from '../e/DialogNote'
+import { EDialog } from '../e/EDialog'
+import { MainButton } from '../e/MainButton'
 import { useToast } from '../useToast'
 import { AuthenticatorHelp } from './AuthenticatorHelp'
 import { KeySetupDialog } from './KeySetupDialog'
@@ -110,8 +112,8 @@ export function SettingsDialog({ cluster, hint, onClose, start = '', advanced = 
         onBack={part ? back : undefined}
         actions={part && part !== entry ? <MainButton onClick={back}>Done</MainButton>
           : <MainButton disabled={busy || !saved || !info} onClick={save}>Save</MainButton>}>
-        {hint && (part === '' || part === 'login') && <Note>{hint}</Note>}
-        {(error || login.failed) && <Note error>{error || login.failed}</Note>}
+        {hint && (part === '' || part === 'login') && <DialogNote>{hint}</DialogNote>}
+        {(error || login.failed) && <DialogNote error>{error || login.failed}</DialogNote>}
         <div className="pb-3">{pages[part]}</div>
       </EDialog>
       {open === 'leave' && <ConfirmDialog title="Throw away your changes?" danger keep="Keep editing"

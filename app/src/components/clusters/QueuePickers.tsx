@@ -1,8 +1,10 @@
 import { useState } from 'react'
 
 import type { Limits } from '../../types/clusters'
-import { PickDialog } from '../e/extra'
-import { Field, List, Row } from '../e/ui'
+import { Field } from '../e/Field'
+import { List } from '../e/List'
+import { PickDialog } from '../e/PickDialog'
+import { Row } from '../e/Row'
 import { groupName, priorityName } from './priority'
 
 /** The cluster's list, with the current value kept when the cluster doesn't list it. */

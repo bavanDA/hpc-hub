@@ -5,8 +5,9 @@ import { useEffect, useRef, useState } from 'react'
 
 import type { Question } from '../../types/clusters'
 import { inTauri } from '../app/platform'
-import { EButton } from '../e/extra'
-import { EDialog, MainButton } from '../e/ui'
+import { EButton } from '../e/EButton'
+import { EDialog } from '../e/EDialog'
+import { MainButton } from '../e/MainButton'
 import { Spinner } from '../ui'
 
 function Waiting({ title, text }: { title: string; text: string }) {

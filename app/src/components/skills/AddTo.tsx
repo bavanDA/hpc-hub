@@ -1,7 +1,10 @@
 import { useState } from 'react'
 
 import type { CatalogSkill, Target } from '../../types/skills'
-import { EDialog, MainButton, Section, ToggleRow } from '../e/ui'
+import { EDialog } from '../e/EDialog'
+import { MainButton } from '../e/MainButton'
+import { Section } from '../e/Section'
+import { ToggleRow } from '../e/ToggleRow'
 
 export function AddToDialog({ skill, targets, onClose, onAdd }:
   { skill: CatalogSkill; targets: Target[]; onClose: () => void; onAdd: (targets: string[]) => void }) {

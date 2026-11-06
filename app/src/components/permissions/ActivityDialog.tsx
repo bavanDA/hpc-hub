@@ -1,5 +1,7 @@
 import type { LockStatus } from '../../types/permissions'
-import { EDialog, List, Row } from '../e/ui'
+import { EDialog } from '../e/EDialog'
+import { List } from '../e/List'
+import { Row } from '../e/Row'
 
 export function ActivityDialog({ status, onClose }: { status: LockStatus; onClose: () => void }) {
   return (

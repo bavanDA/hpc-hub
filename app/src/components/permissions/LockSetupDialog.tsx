@@ -2,7 +2,9 @@ import { useEffect, useRef, useState } from 'react'
 
 import { call } from '../../rpc'
 import type { LockSetup } from '../../types/permissions'
-import { EDialog, Field, MainButton } from '../e/ui'
+import { EDialog } from '../e/EDialog'
+import { Field } from '../e/Field'
+import { MainButton } from '../e/MainButton'
 import { Spinner } from '../ui'
 
 /** The secret stays in the backend until it is on the cluster; this only shows it to scan. */

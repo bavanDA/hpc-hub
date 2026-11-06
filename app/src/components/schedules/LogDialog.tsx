@@ -3,8 +3,8 @@ import { useEffect, useState } from 'react'
 import { useGo } from '../../nav'
 import { call } from '../../rpc'
 import type { ScheduleLog } from '../../types/schedules'
-import { EButton } from '../e/extra'
-import { EDialog } from '../e/ui'
+import { EButton } from '../e/EButton'
+import { EDialog } from '../e/EDialog'
 import { Spinner } from '../ui'
 
 export function LogDialog({ cluster, name, onClose }: { cluster: string; name: string; onClose: () => void }) {

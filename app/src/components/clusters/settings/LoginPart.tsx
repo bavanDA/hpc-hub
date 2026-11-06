@@ -1,5 +1,6 @@
 import type { Cluster } from '../../../types/clusters'
-import { Row, Section } from '../../e/ui'
+import { Row } from '../../e/Row'
+import { Section } from '../../e/Section'
 import { keyHeading } from '../keyHeading'
 import { copy } from '../loginCopy'
 import { LoginFields } from '../LoginFields'

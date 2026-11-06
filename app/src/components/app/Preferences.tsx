@@ -1,7 +1,10 @@
 import { useEffect, useState } from 'react'
 
 import { call } from '../../rpc'
-import { EDialog, Row, Section, ToggleRow } from '../e/ui'
+import { EDialog } from '../e/EDialog'
+import { Row } from '../e/Row'
+import { Section } from '../e/Section'
+import { ToggleRow } from '../e/ToggleRow'
 import { Select } from '../jobs/Select'
 import { chooseAgent, useAgentChoice } from '../latex/history/agent/agentChoice'
 import { setMonitorBar } from '../terminals/monitorBarSetting'

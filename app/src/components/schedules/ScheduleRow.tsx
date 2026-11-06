@@ -1,7 +1,9 @@
 import { EllipsisVertical, FileText, Pencil, Play, Trash2 } from 'lucide-react'
 
 import type { ScheduleStatus } from '../../types/schedules'
-import { ItemRow, StatusDot, Switch } from '../e/extra'
+import { ItemRow } from '../e/ItemRow'
+import { StatusDot } from '../e/StatusDot'
+import { Switch } from '../e/Switch'
 import { Menu } from '../projects/Menu'
 import { Spinner } from '../ui'
 import { computeText, isBackupCheck, localWhen, status } from './format'

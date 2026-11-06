@@ -1,4 +1,4 @@
-import { ConfirmDialog } from '../e/parts'
+import { ConfirmDialog } from '../e/ConfirmDialog'
 import { ComputeDialog } from './ComputeDialog'
 import { useNodeFirst } from './nodeFirst'
 

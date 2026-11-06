@@ -1,7 +1,9 @@
 import type { AgentId, AgentSettings, Cluster, SettingsInfo } from '../../../types/clusters'
 import { agentIcon } from '../../agents/AgentIcon'
-import { ChoiceRow } from '../../e/extra'
-import { Field, Section, ToggleRow } from '../../e/ui'
+import { ChoiceRow } from '../../e/ChoiceRow'
+import { Field } from '../../e/Field'
+import { Section } from '../../e/Section'
+import { ToggleRow } from '../../e/ToggleRow'
 
 export function AgentsPart({ d, agents, up }: {
   d: Cluster; agents: SettingsInfo['agents']; up: (change: Partial<Cluster>) => void
