@@ -1,11 +1,7 @@
-"""Globus transfers over the REST API (no SDK). Sign-in is OAuth2 + PKCE; tokens live in the keyring."""
+"""Globus over its REST API (no SDK): collections, folders and transfers. Tokens live in the keyring."""
 
-import base64
-import hashlib
 import json
 import re
-import secrets
-import shlex
 import time
 import urllib.error
 import urllib.parse
@@ -13,11 +9,9 @@ import urllib.request
 from dataclasses import dataclass
 
 from ..core import credentials
+from .signin import AUTH, REDIRECT
 
-AUTH = "https://auth.globus.org/v2/oauth2"
 TRANSFER = "https://transfer.api.globus.org/v0.10"
-REDIRECT = "https://auth.globus.org/v2/web/auth-code"
-TRANSFER_SCOPE = "urn:globus:auth:scope:transfer.api.globus.org:all"
 KEY = ("globus", "tokens")
 
 
@@ -149,35 +143,6 @@ def parse_ls(resp: dict) -> tuple[str, list[Item]]:
     return resp.get("path", ""), items
 
 
-def pkce() -> tuple[str, str]:
-    verifier = secrets.token_urlsafe(48)
-    challenge = base64.urlsafe_b64encode(hashlib.sha256(verifier.encode()).digest()).rstrip(b"=").decode()
-    return verifier, challenge
-
-
-def merge_scopes(scopes: list[str]) -> str:
-    """The transfer scope with every permission Globus asked for, so one Allow covers all collections.
-    Only what Globus named: a made-up one (a collection without data_access) fails with Unknown scope."""
-    deps = []
-    for s in scopes:
-        m = re.search(r"\[(.*)\]$", s)
-        deps += m.group(1).split() if m else []
-    deps = list(dict.fromkeys(deps))
-    return f"{TRANSFER_SCOPE}[{' '.join(deps)}]" if deps else TRANSFER_SCOPE
-
-
-def authorize_url(client_id: str, challenge: str, scope: str = TRANSFER_SCOPE, fresh: bool = True,
-                  domain: str = "") -> str:
-    """fresh: ask for the login again. Off when only adding permissions, so Globus just shows Allow.
-    domain: make Globus sign you in with an account from there (yale.edu)."""
-    return f"{AUTH}/authorize?" + urllib.parse.urlencode({
-        "client_id": client_id, "redirect_uri": REDIRECT, "scope": scope, "response_type": "code",
-        "code_challenge": challenge, "code_challenge_method": "S256", "access_type": "offline",
-        **({"prompt": "login"} if fresh else {}),
-        **({"session_required_single_domain": domain} if domain else {}),
-    })
-
-
 def session_domains(err: dict, text: str) -> list[str]:
     """Domains a collection wants you signed in from; also when buried in a GridFTP message."""
     found = (err.get("authorization_parameters") or {}).get("session_required_single_domain")
@@ -185,25 +150,6 @@ def session_domains(err: dict, text: str) -> list[str]:
         return list(found)
     m = re.search(r'"session_required_single_domain":\s*\[([^\]]*)\]', text)
     return re.findall(r'"([^"]+)"', m.group(1)) if m else []
-
-
-def pasted_code(text: str) -> str:
-    """The code Globus shows after sign-in, also when the whole page address was pasted."""
-    text = text.strip()
-    return code_from_url(text) or (text if re.fullmatch(r"[A-Za-z0-9_-]{8,200}", text) else "")
-
-
-def looks_like_code(text: str) -> bool:
-    """Clipboard text that is probably a Globus code (long enough not to be some other copied word)."""
-    code = pasted_code(text)
-    return bool(code) and (len(code) >= 20 or code != text.strip())
-
-
-def code_from_url(url: str) -> str:
-    parts = urllib.parse.urlsplit(url)
-    if not url.startswith(REDIRECT):
-        return ""
-    return urllib.parse.parse_qs(parts.query).get("code", [""])[0]
 
 
 def _http(method: str, url: str, token: str = "", body: dict | None = None, form: dict | None = None) -> dict:
@@ -241,40 +187,6 @@ def transfer_tokens(resp: dict) -> dict:
             return {"access_token": t["access_token"], "refresh_token": t.get("refresh_token", ""),
                     "expires_at": time.time() + int(t.get("expires_in", 0)) - 60}
     raise GlobusError("Globus did not return a transfer token")
-
-
-# Start Globus Connect Personal (unpacked in ~) on a login node, sharing home and the given folders. Running already
-# with other folders (you joined a group since), or RESTART=1: start it again with these.
-PERSONAL_START = r"""
-gcp=$(ls -d "$HOME"/globusconnectpersonal-*/ 2>/dev/null | sort -V | tail -1)
-[ -n "$gcp" ] || { echo "Globus Connect Personal is not installed in your home folder there" >&2; exit 2; }
-allow="rw~/"
-for p in "$@"; do allow="$allow,rw$p,rw$(readlink -f "$p")"; done
-if "$gcp/globusconnectpersonal" -status >/dev/null 2>&1; then
-  now=$(ps -u "$USER" -o args= | sed -n 's/.*globusconnectpersonal -start -restrict-paths \([^ ]*\).*/\1/p' | head -1)
-  [ "${RESTART:-}" != 1 ] && { [ -z "$now" ] || [ "$now" = "$allow" ]; } && exit 0
-  "$gcp/globusconnectpersonal" -stop >/dev/null 2>&1
-  for _ in $(seq 10); do "$gcp/globusconnectpersonal" -status >/dev/null 2>&1 || break; sleep 1; done
-fi
-(cd "$gcp" && exec setsid nohup ./globusconnectpersonal -start -restrict-paths "$allow") >/dev/null 2>&1 </dev/null &
-for _ in $(seq 20); do sleep 2; "$gcp/globusconnectpersonal" -status >/dev/null 2>&1 && exit 0; done
-echo "Globus Connect Personal started but did not connect to Globus" >&2; exit 1
-"""
-
-
-def personal_start(paths: list[str], restart: bool = False) -> str:
-    run = ["bash", "-c", shlex.quote(PERSONAL_START), "_", *map(shlex.quote, paths)]
-    return " ".join(["RESTART=1"] * restart + run)
-
-
-def denied(err: str) -> bool:
-    """A folder your own collection doesn't share (yet)."""
-    low = err.lower()
-    return "permission denied" in low or "permissiondenied" in low or "not allowed" in low
-
-
-def personal_offline(err: str) -> bool:
-    return "Globus Connect Personal" in err and "not currently connected" in err
 
 
 def check_collections(client: "Globus", clusters) -> dict[str, Collection | None]:

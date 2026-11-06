@@ -7,9 +7,10 @@ from hpc_hub.api.methods import globus as m
 from hpc_hub.core import config
 from hpc_hub.core.config import ClusterConfig
 from hpc_hub.globus import api as globus
+from hpc_hub.globus import signin
 
 CODE = "Ab3dE5fG7hJ9kL1mN3pQ5rS7tV9xZ1"
-SCOPE = globus.TRANSFER_SCOPE + "[*https://auth.globus.org/scopes/c2/data_access]"
+SCOPE = signin.TRANSFER_SCOPE + "[*https://auth.globus.org/scopes/c2/data_access]"
 
 
 class FakeGlobus:
@@ -125,7 +126,7 @@ def test_setup_and_sign_in(h, tmp_path):
         m.finish_login(login["id"], "two words")
     with pytest.raises(globus.GlobusError, match="expired"):
         m.finish_login("nope", CODE)
-    assert m.finish_login(login["id"], globus.REDIRECT + "?code=" + CODE)["signed_in"]  # the page address works
+    assert m.finish_login(login["id"], signin.REDIRECT + "?code=" + CODE)["signed_in"]  # the page address works
     assert login["id"] not in m._logins
     assert not m.logout()["signed_in"]
 

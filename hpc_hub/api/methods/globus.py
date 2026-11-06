@@ -9,6 +9,7 @@ import time
 from ...core import config
 from ...files import remote_fs
 from ...globus import api as globus
+from ...globus import personal, signin
 from ..hub import hub
 from ..server import method
 
@@ -78,7 +79,7 @@ def _status(signed_in: bool | None = None) -> dict:
     return {"client_id": cid, "signed_in": signed_in,
             "clusters": [{"id": c.id, "name": c.name, "collection_id": c.globus.collection_id,
                           "collection_name": c.globus.collection_name,
-                          "personal": signed_in and _kind(c.globus.collection_id) == "GCP_mapped_collection"}
+                          "personal": signed_in and _personal(c)}
                          for c in hub().clusters],
             "wants": [_want_json(k, w) for k, w in list(_wants.items())]}
 
@@ -102,17 +103,17 @@ def _start_login(scope: str, fresh: bool, domain: str = "", what: str = "") -> d
     now = time.time()
     for k in [k for k, (_v, t) in list(_logins.items()) if now - t > LOGIN_SECONDS]:
         _logins.pop(k, None)
-    verifier, challenge = globus.pkce()
+    verifier, challenge = signin.pkce()
     lid = secrets.token_hex(8)
     _logins[lid] = (verifier, now)
-    return {"id": lid, "url": globus.authorize_url(client().client_id, challenge, scope, fresh, domain),
+    return {"id": lid, "url": signin.authorize_url(client().client_id, challenge, scope, fresh, domain),
             "fresh": fresh, "domain": domain, "what": what}
 
 
 @method("globus.login_url")
 def login_url() -> dict:
     """A fresh sign-in page for the plain transfer permission."""
-    return _start_login(globus.TRANSFER_SCOPE, True)
+    return _start_login(signin.TRANSFER_SCOPE, True)
 
 
 @method("globus.consent_url")
@@ -123,7 +124,7 @@ def consent_url() -> dict:
     domain = next((w.domains[0] for _k, w in wants if isinstance(w, globus.SessionRequired)), "")
     kind = globus.SessionRequired if domain else globus.ConsentRequired
     names = [_cluster(k).name for k, w in wants if isinstance(w, kind)]
-    scope = globus.merge_scopes([s for _k, w in wants if isinstance(w, globus.ConsentRequired)
+    scope = signin.merge_scopes([s for _k, w in wants if isinstance(w, globus.ConsentRequired)
                                  for s in w.scopes])
     return _start_login(scope, not client().logged_in, domain, " and ".join(names))
 
@@ -133,7 +134,7 @@ def finish_login(login_id: str, code: str) -> dict:
     """code: what Globus showed, or the whole page address it was on."""
     if login_id not in _logins:
         raise globus.GlobusError("This sign-in expired. Open the Globus page again")
-    clean = globus.pasted_code(code)
+    clean = signin.pasted_code(code)
     if not clean:
         raise globus.GlobusError("That does not look like a Globus code")
     try:
@@ -223,9 +224,9 @@ def ls(cluster: str, path: str = "") -> dict:
         return {**base, "state": "domain" if isinstance(e, globus.SessionRequired) else "consent",
                 "want": _want_json(cluster, e)}
     except globus.GlobusError as e:
-        if globus.personal_offline(str(e)):
+        if personal.offline(str(e)):
             return {**base, "state": "offline"}
-        if globus.denied(str(e)) and _personal(c):
+        if personal.denied(str(e)) and _personal(c):
             return {**base, "state": "hidden"}
         raise
     return {**base, "state": "ok", "path": target,
@@ -277,6 +278,6 @@ def start_personal(cluster: str, restart: bool = False) -> None:
     stop it first even when it runs with those folders."""
     s = hub().connected(cluster)
     folders = [p.path for p in remote_fs.storage(remote_fs.places(s.ssh)) if p.label != "Home"]
-    res = s.ssh.run(globus.personal_start(folders, restart), timeout=90)
+    res = s.ssh.run(personal.start_command(folders, restart), timeout=90)
     if res.returncode != 0:
         raise RuntimeError(res.stderr.strip() or "Could not start it")

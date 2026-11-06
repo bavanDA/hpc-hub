@@ -1,43 +1,6 @@
-import base64
-import hashlib
-import urllib.parse
-
 import pytest
 
 from hpc_hub.globus import api as globus
-
-
-def test_pkce_and_url():
-    verifier, challenge = globus.pkce()
-    expect = base64.urlsafe_b64encode(hashlib.sha256(verifier.encode()).digest()).rstrip(b"=").decode()
-    assert challenge == expect
-    url = globus.authorize_url("cid", challenge)
-    q = urllib.parse.parse_qs(urllib.parse.urlsplit(url).query)
-    assert q["client_id"] == ["cid"] and q["code_challenge_method"] == ["S256"]
-    assert q["scope"] == [globus.TRANSFER_SCOPE] and q["access_type"] == ["offline"]
-    assert q["prompt"] == ["login"]
-    assert "prompt=" not in globus.authorize_url("cid", challenge, fresh=False)  # only Allow, no new login
-
-
-def test_pasted_code():
-    code = "Ab3dE5fG7hJ9kL1mN3pQ5rS7tV9xZ1"
-    assert globus.pasted_code(f"  {code}\n") == code
-    assert globus.pasted_code(globus.REDIRECT + "?code=" + code) == code
-    assert globus.pasted_code("https://evil.example/?code=x") == "" and globus.pasted_code("two words") == ""
-    assert globus.looks_like_code(code) and not globus.looks_like_code("hello")
-
-
-def test_code_from_url():
-    assert globus.code_from_url(globus.REDIRECT + "?code=abc&state=x") == "abc"
-    assert globus.code_from_url("https://evil.example/?code=abc") == ""
-
-
-def test_merge_scopes():
-    one = globus.TRANSFER_SCOPE + "[*https://auth.globus.org/scopes/c1/data_access]"
-    two = globus.TRANSFER_SCOPE + "[*https://auth.globus.org/scopes/c2/data_access]"
-    assert globus.merge_scopes([one, two, one]) == (globus.TRANSFER_SCOPE + "[*https://auth.globus.org/scopes/c1/"
-                                                    "data_access *https://auth.globus.org/scopes/c2/data_access]")
-    assert globus.merge_scopes([]) == globus.TRANSFER_SCOPE
 
 
 def test_session_domains():
@@ -47,8 +10,6 @@ def test_session_domains():
     assert globus.session_domains({"authorization_parameters": {"session_required_single_domain": ["a.edu"]}}, "") \
         == ["a.edu"]
     assert globus.session_domains({}, "Permission denied") == []
-    url = globus.authorize_url("cid", "ch", fresh=False, domain="uni.edu")
-    assert "session_required_single_domain=uni.edu" in url
 
 
 def test_transfer_tokens():
@@ -114,49 +75,6 @@ def test_check_collections_replaces_broken_ones():
     by_id["sdsc"].globus.collection_id = "server"
     by_id["yale"].globus.collection_id = "good"
     assert globus.check_collections(Fake(), clusters) == {"sdsc": good}  # wulver: none found, nothing saved
-
-
-def test_personal_start_and_offline():
-    cmd = globus.personal_start(["/project/my group/me"])
-    assert cmd.endswith("_ '/project/my group/me'")
-    assert globus.personal_offline("The Globus Connect Personal endpoint 'w (1)' is not currently connected to Globus")
-    assert not globus.personal_offline("Permission denied")
-    assert globus.denied("PermissionDenied: Permission denied to path /scratch/mygroup/jdoe")
-    assert not globus.denied("Directory not found")
-
-
-def test_personal_start_again_with_new_folders(tmp_path):
-    """Running with mygroup's folders only; asked for a new group's too: stopped, then started with all of them."""
-    import os
-    import subprocess
-    gcp = tmp_path / "globusconnectpersonal-3.2.0"
-    gcp.mkdir()
-    log, running = tmp_path / "log", tmp_path / "running"
-    running.write_text("rw~/,rw/a,rw/a")
-    (gcp / "globusconnectpersonal").write_text(f"""#!/bin/bash
-echo "$@" >> {log}
-case "$1" in
-  -status) [ -s {running} ] ;;
-  -stop) : > {running} ;;
-  -start) echo "$3" > {running} ;;
-esac
-""")
-    (gcp / "globusconnectpersonal").chmod(0o755)
-    fake_ps = tmp_path / "bin"
-    fake_ps.mkdir()
-    line = f"./globusconnectpersonal -start -restrict-paths $(cat {running})"
-    (fake_ps / "ps").write_text(f"#!/bin/bash\necho \"{line}\"\n")
-    (fake_ps / "ps").chmod(0o755)
-    env = {**os.environ, "HOME": str(tmp_path), "PATH": f"{fake_ps}:{os.environ['PATH']}"}
-    same = subprocess.run(["bash", "-c", globus.personal_start(["/a"])], env=env, capture_output=True, text=True)
-    assert same.returncode == 0 and "-stop" not in log.read_text()
-    new = subprocess.run(["bash", "-c", globus.personal_start(["/a", "/b"])], env=env, capture_output=True, text=True)
-    assert new.returncode == 0, new.stderr
-    assert "-stop" in log.read_text() and running.read_text().strip() == "rw~/,rw/a,rw/a,rw/b,rw/b"
-    log.write_text("")
-    again = subprocess.run(["bash", "-c", globus.personal_start(["/a", "/b"], restart=True)], env=env, text=True,
-                           capture_output=True, timeout=30)
-    assert again.returncode == 0 and "-stop" in log.read_text()  # the same folders, but asked to restart
 
 
 def test_task_info():
