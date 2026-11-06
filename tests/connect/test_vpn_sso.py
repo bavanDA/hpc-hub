@@ -62,6 +62,7 @@ def test_server_pin_format(monkeypatch):
 
 
 def test_password_only_goes_to_the_sign_in_site():
+    pytest.importorskip("gi")
     from hpc_hub.connect.sso import may_fill, site
     start = "https://vpn.uni.edu/+CSCOE+/saml/sp/login?tgname=x"
     assert site("vpn.uni.edu") == "uni.edu" and site("vpn.ox.ac.uk") == "ox.ac.uk"

@@ -202,7 +202,8 @@ def _rust_const(name: str, path: str = "app/src-tauri/src/sso.rs") -> str:
 
 
 def test_sign_in_window_uses_the_same_fill_script():
-    """sso.rs carries a copy of STEP_JS (the GTK app's), with the four values as %s like here."""
+    """sso.rs carries a copy of STEP_JS, with the four values as %s like here."""
+    pytest.importorskip("gi")
     from hpc_hub.connect.sso import STEP_JS
     assert _rust_const("STEP_JS").strip() == STEP_JS.strip()
 

@@ -1,15 +1,10 @@
-"""Shared fixtures, and what Windows (CI's windows-latest) leaves out, each with its reason in the report:
+"""Shared fixtures, and the tests some systems skip:
 
-- gtk: needs PyGObject, which Windows has not: the GTK app's screens, Poppler and the GTK sign-in window. Whole
-  files that import gi are not collected; single tests are skipped.
-- posix: tests whose fake cluster is the local bash, coreutils, tmux, fake ssh scripts, Unix sockets or
-  symlinks. What they check runs on the Linux cluster, and the Linux job runs them.
-
-macOS runs the posix ones too, except GNU_TOOLS: those need the cluster's GNU find, stat, du or date, which macOS
-has in other forms. Its temporary folders are short there, since Unix socket paths may not pass 104 characters.
+- posix: the stand-in cluster is the local bash, coreutils, tmux, fake ssh scripts, Unix sockets or symlinks, so
+  Windows skips them.
+- GNU_TOOLS: they need GNU find, stat, du or date, so macOS skips them.
 """
 
-import importlib.util
 import os
 import sys
 from pathlib import Path
@@ -19,15 +14,6 @@ import pytest
 HERE = Path(__file__).parent
 WINDOWS = sys.platform == "win32"
 MACOS = sys.platform == "darwin"
-HAVE_GTK = importlib.util.find_spec("gi") is not None
-
-GTK_FILES = {"files/test_file_menu.py", "latex/test_file_tree.py", "compute/test_status_kind.py"}
-GTK_TESTS = {
-    "api/test_sso.py::test_chrome_profile_picks_up_the_token",
-    "api/test_sso.py::test_chrome_profile_can_switch_to_the_app_window_or_cancel",
-    "api/test_sso.py::test_sign_in_window_uses_the_same_fill_script",
-    "connect/test_vpn_sso.py::test_password_only_goes_to_the_sign_in_site",
-}
 POSIX = {
     "agents/test_ask_all.py", "agents/test_chat_copy.py", "agents/test_chats.py", "agents/test_lock.py",
     "agents/test_permissions.py", "agents/test_schedules.py", "agents/test_skills.py",
@@ -86,24 +72,15 @@ def _name(path: Path) -> str:
 
 
 def pytest_configure(config):
-    if MACOS and not config.option.basetemp:  # /private/var/folders/... is too long for socket paths
+    if MACOS and not config.option.basetemp:  # Unix socket paths may not pass 104 characters
         config.option.basetemp = f"/tmp/hpc-hub-tests-{os.getuid()}"
-    config.addinivalue_line("markers", "gtk: needs PyGObject (GTK screens, Poppler, GNOME keyring)")
     config.addinivalue_line("markers", "posix: needs a POSIX system (bash, coreutils, Unix sockets)")
     config.addinivalue_line("markers", "keyring_backends: may call credentials' real backend functions "
                                        "(the test stands in for the vault modules itself)")
 
 
-def pytest_ignore_collect(collection_path, config):
-    if not HAVE_GTK and _name(Path(collection_path)) in GTK_FILES:
-        return True
-    return None
-
-
 def pytest_report_header(config):
     lines = []
-    if not HAVE_GTK:
-        lines.append(f"gtk: no PyGObject, not collected: {', '.join(sorted(GTK_FILES))}")
     if WINDOWS:
         lines.append(f"posix: skipped on Windows: {len(POSIX)} files, {len(POSIX_TESTS)} tests "
                      "(see tests/conftest.py)")
@@ -116,10 +93,6 @@ def pytest_collection_modifyitems(config, items):
     for item in items:
         name = _name(Path(str(item.fspath)))
         test = f"{name}::{getattr(item, 'originalname', item.name)}"
-        if name in GTK_FILES or test in GTK_TESTS:
-            item.add_marker(pytest.mark.gtk)
-            if not HAVE_GTK:
-                item.add_marker(pytest.mark.skip(reason="gtk: needs PyGObject"))
         if name in POSIX or test in POSIX_TESTS:
             item.add_marker(pytest.mark.posix)
             if WINDOWS:
