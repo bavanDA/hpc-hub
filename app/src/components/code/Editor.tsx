@@ -1,17 +1,15 @@
-// The Code page's editor, shared by the phone and the desktop (docs/design/code.md): CodeMirror 6 with the file's
-// language, wrapping, bracket help and undo. It opens in view mode, so scrolling on a phone never brings up the
-// keyboard; setEditable switches to typing. Load it lazily (React.lazy) so the app starts fast.
 import { closeBrackets, closeBracketsKeymap, completionKeymap } from '@codemirror/autocomplete'
 import { defaultKeymap, history, historyKeymap, indentWithTab, toggleComment } from '@codemirror/commands'
 import { bracketMatching, indentOnInput } from '@codemirror/language'
 import { diff } from '@codemirror/merge'
 import { highlightSelectionMatches, searchKeymap } from '@codemirror/search'
-import { Compartment, EditorState, type Extension, StateEffect, StateField, Transaction } from '@codemirror/state'
-import { Decoration, type DecorationSet, drawSelection, EditorView, highlightActiveLine, highlightActiveLineGutter,
+import { Compartment, EditorState, type Extension, Transaction } from '@codemirror/state'
+import { drawSelection, EditorView, highlightActiveLine, highlightActiveLineGutter,
   keymap, lineNumbers } from '@codemirror/view'
 import { useEffect, useRef } from 'react'
 
 import { isDark, onThemeChange } from '../../theme'
+import { flash, flashLine, selectionOf } from './editorState'
 import { detect, detectIndent, indentExtension, type Lang, loadLanguage } from './languages'
 import { searchExtension } from './search'
 import { slurm } from './slurm'
@@ -41,7 +39,7 @@ export type EditorHandle = {
   view: () => EditorView | null
 }
 
-export type EditorProps = {
+type EditorProps = {
   /** A new key starts a new document (another file, or the same file reopened); typing never comes back in. */
   docKey: string
   path: string
@@ -67,29 +65,7 @@ export type EditorProps = {
   className?: string
 }
 
-const flash = StateEffect.define<number>()
-const flashLine = StateField.define<DecorationSet>({
-  create: () => Decoration.none,
-  update(deco, tr) {
-    const e = tr.effects.find((x) => x.is(flash))
-    if (!e) return deco.map(tr.changes)
-    const n = e.value as number
-    if (n < 1 || n > tr.state.doc.lines) return Decoration.none
-    const at = tr.state.doc.line(n).from
-    return Decoration.set([Decoration.line({ class: 'cm-code-flash' }).range(at)])
-  },
-  provide: (f) => EditorView.decorations.from(f),
-})
-
-function selectionOf(state: EditorState): Selection {
-  const r = state.selection.main
-  const fromLine = state.doc.lineAt(r.from).number
-  // a selection ending at the very start of a line doesn't take that line
-  const end = r.to > r.from && state.doc.lineAt(r.to).from === r.to ? r.to - 1 : r.to
-  return { from: r.from, to: r.to, fromLine, toLine: state.doc.lineAt(end).number,
-    text: state.sliceDoc(r.from, r.to), empty: r.empty }
-}
-
+/** CodeMirror for a file on a cluster. It opens in view mode, so scrolling on a phone never brings up the keyboard. */
 export default function Editor({ docKey, path, text, editable: startEditable = false, readOnly = false, wrap = true,
   fontSize = 13, line: startLine, partitions, onChange, onSave, onFind, onSelection, onEditable, onLanguage, handle,
   className = '' }: EditorProps) {

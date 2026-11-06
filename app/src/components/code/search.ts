@@ -1,5 +1,3 @@
-// Find and replace for our own search bar (the phone's and the desktop's), on top of CodeMirror's search. CodeMirror
-// only highlights matches while its panel is open, so its panel is opened but kept hidden; the bar drives the query.
 import { closeSearchPanel, findNext, findPrevious, getSearchQuery, openSearchPanel, replaceAll as cmReplaceAll,
   replaceNext, search, SearchQuery, setSearchQuery } from '@codemirror/search'
 import type { Extension } from '@codemirror/state'
@@ -14,11 +12,11 @@ export type Find = {
 }
 
 /** Where the bar is: "3 of 12". total stops counting at LIMIT (shown as "1000+"). */
-export type FindCount = { index: number; total: number; capped: boolean; invalid: boolean }
+type FindCount = { index: number; total: number; capped: boolean; invalid: boolean }
 
 const LIMIT = 1000
 
-/** The editor part: CodeMirror's search state with an invisible panel. */
+/** CodeMirror's search with its panel hidden: it only highlights matches while a panel is open. */
 export function searchExtension(): Extension {
   return search({
     top: true,

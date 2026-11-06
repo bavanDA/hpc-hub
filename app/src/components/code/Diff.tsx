@@ -1,6 +1,3 @@
-// An agent's proposed change shown inline: removed lines red, added lines green, with Accept and Reject on every
-// change (big enough for a finger) and Accept all / Reject all through the handle. The text it ends up with is
-// what you keep: accepted changes stay, rejected ones go back to the original. A new file is just its text.
 import { acceptChunk, getChunks, rejectChunk, unifiedMergeView } from '@codemirror/merge'
 import { Compartment, EditorState, type Extension } from '@codemirror/state'
 import { EditorView, lineNumbers } from '@codemirror/view'
@@ -52,6 +49,7 @@ const look = (dark: boolean) => EditorView.theme({
 
 const NONE: Extension[] = []  // a fixed default: a new [] each render would rebuild the view and lose your choices
 
+/** An agent's proposed change inline, with Accept and Reject on every change. */
 export function Diff({ original, proposed, isNew = false, extensions = NONE, onChange, handle, className = '' }: Props) {
   const host = useRef<HTMLDivElement>(null)
   const viewRef = useRef<EditorView | null>(null)

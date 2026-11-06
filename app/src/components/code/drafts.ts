@@ -1,9 +1,6 @@
-// Unsaved edits kept in the browser's IndexedDB, so they survive the app being closed (Android kills apps in the
-// background). Each draft remembers the file's sha it started from: when the file changed on the cluster since, the
-// shell offers to compare instead of restoring over someone else's change. Storage can be missing (a private window):
-// then drafts simply don't exist and nothing breaks.
 import { isDirty, openFiles, subscribe, type OpenFile } from './store'
 
+/** Unsaved edits kept in IndexedDB, with the sha they started from. Without storage there are simply none. */
 export type Draft = { cluster: string; path: string; base_sha: string; text: string; at: number }
 
 const DB = 'hpc-hub-code'
@@ -50,7 +47,7 @@ export async function findDraft(cluster: string, path: string): Promise<Draft | 
   return (await run<Draft | undefined>('readonly', (s) => s.get(draftKey(cluster, path)))) ?? null
 }
 
-export async function saveDraft(f: Pick<OpenFile, 'cluster' | 'path' | 'sha' | 'text'>): Promise<void> {
+async function saveDraft(f: Pick<OpenFile, 'cluster' | 'path' | 'sha' | 'text'>): Promise<void> {
   const draft: Draft = { cluster: f.cluster, path: f.path, base_sha: f.sha, text: f.text, at: Date.now() }
   await run('readwrite', (s) => s.put(draft, draftKey(f.cluster, f.path)))
 }

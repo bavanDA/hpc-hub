@@ -1,67 +1,7 @@
-// An agent's answer as simple Markdown: headings, lists, code blocks, inline code, bold, italics and links. Built as
-// React elements from the text, never as HTML, so nothing in an answer can run or restyle the app.
 import type { ReactNode } from 'react'
 
 import { openLink } from '../app/openLink'
-
-type Block =
-  | { kind: 'heading'; level: number; text: string }
-  | { kind: 'code'; lang: string; text: string }
-  | { kind: 'list'; ordered: boolean; items: string[] }
-  | { kind: 'quote'; text: string }
-  | { kind: 'para'; text: string }
-
-function parse(md: string): Block[] {
-  const lines = md.replace(/\r\n?/g, '\n').split('\n')
-  const blocks: Block[] = []
-  let i = 0
-  while (i < lines.length) {
-    const line = lines[i]
-    const fence = line.match(/^\s*(```|~~~)\s*([\w+-]*)/)
-    if (fence) {
-      const body: string[] = []
-      i++
-      while (i < lines.length && !lines[i].trimStart().startsWith(fence[1])) body.push(lines[i++])
-      i++  // the closing fence (or the end)
-      blocks.push({ kind: 'code', lang: fence[2], text: body.join('\n') })
-      continue
-    }
-    const heading = line.match(/^(#{1,6})\s+(.*)$/)
-    if (heading) {
-      blocks.push({ kind: 'heading', level: heading[1].length, text: heading[2].trim() })
-      i++
-      continue
-    }
-    const item = (l: string) => l.match(/^\s*(?:[-*+]|(\d+)[.)])\s+(.*)$/)
-    if (item(line)) {
-      const ordered = Boolean(item(line)![1])
-      const items: string[] = []
-      while (i < lines.length && item(lines[i]) && Boolean(item(lines[i])![1]) === ordered) {
-        items.push(item(lines[i])![2])
-        i++
-        while (i < lines.length && /^\s{2,}\S/.test(lines[i]) && !item(lines[i])) items[items.length - 1] += ` ${lines[i++].trim()}`
-      }
-      blocks.push({ kind: 'list', ordered, items })
-      continue
-    }
-    if (/^\s*>/.test(line)) {
-      const body: string[] = []
-      while (i < lines.length && /^\s*>/.test(lines[i])) body.push(lines[i++].replace(/^\s*>\s?/, ''))
-      blocks.push({ kind: 'quote', text: body.join(' ') })
-      continue
-    }
-    if (!line.trim()) {
-      i++
-      continue
-    }
-    const body: string[] = []
-    while (i < lines.length && lines[i].trim() && !/^(#{1,6}\s|\s*(```|~~~)|\s*>|\s*([-*+]|\d+[.)])\s)/.test(lines[i])) {
-      body.push(lines[i++].trim())
-    }
-    blocks.push({ kind: 'para', text: body.join(' ') })
-  }
-  return blocks
-}
+import { parseMarkdown } from './markdown'
 
 const INLINE = /(`[^`]+`)|(\*\*[^*]+\*\*)|(\*[^*\s][^*]*\*|_[^_\s][^_]*_)|(\[[^\]]+\]\([^)\s]+\))/g
 
@@ -88,10 +28,11 @@ function inline(text: string): ReactNode[] {
   return out
 }
 
+/** An agent's answer as React elements, never as HTML, so nothing in it can run or restyle the app. */
 export function Markdown({ text, className = '' }: { text: string; className?: string }) {
   return (
     <div className={`flex flex-col gap-2 text-base leading-relaxed text-text ${className}`}>
-      {parse(text).map((b, i) => {
+      {parseMarkdown(text).map((b, i) => {
         switch (b.kind) {
           case 'heading':
             return <p key={i} className={`font-semibold ${b.level <= 2 ? 'text-lg' : 'text-md'}`}>{inline(b.text)}</p>

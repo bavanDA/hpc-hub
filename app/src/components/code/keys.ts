@@ -1,12 +1,10 @@
-// The phone's key row over the keyboard in the Code tab: Tab, dedent, arrows, undo and redo, then the symbols each
-// language needs most (phone keyboards hide them two screens deep). Each key is a command on the editor.
 import { cursorCharLeft, cursorCharRight, cursorLineDown, cursorLineUp, indentLess, indentMore, insertTab, redo,
   undo } from '@codemirror/commands'
 import type { EditorView } from '@codemirror/view'
 
 import type { LangId } from './languages'
 
-export type KeyAction = {
+type KeyAction = {
   id: string
   label: string   // what the key shows
   title: string   // for screen readers and long-press hints
@@ -22,7 +20,7 @@ const type = (text: string) => (view: EditorView) => {
 /** Tab indents a selection, else types an indent where the cursor is. */
 const tab = (view: EditorView) => (view.state.selection.ranges.some((r) => !r.empty) ? indentMore(view) : insertTab(view))
 
-export const BASE_KEYS: KeyAction[] = [
+const BASE_KEYS: KeyAction[] = [
   { id: 'tab', label: 'Tab', title: 'Indent', run: tab },
   { id: 'dedent', label: '⇤', title: 'Remove indent', run: indentLess },
   { id: 'left', label: '←', title: 'Left', run: cursorCharLeft },
@@ -51,12 +49,12 @@ const SAME: Partial<Record<LangId, LangId>> = { slurm: 'shell', makefile: 'shell
 const OTHER = ['(', ')', '[', ']', '{', '}', ':', '=', '"', "'", '#', '-', '/']
 
 /** The symbol keys for a language. */
-export function symbolKeys(id: LangId): KeyAction[] {
+function symbolKeys(id: LangId): KeyAction[] {
   const list = SYMBOLS[id] ?? SYMBOLS[SAME[id] ?? 'plain'] ?? OTHER
   return list.map((s) => ({ id: `sym:${s}`, label: s, title: `Type ${s}`, run: type(s) }))
 }
 
-/** The whole row for a language: editing keys first, then its symbols. */
+/** The phone's key row over the keyboard: editing keys first, then the symbols the language needs most. */
 export function keyRow(id: LangId): KeyAction[] {
   return [...BASE_KEYS, ...symbolKeys(id)]
 }

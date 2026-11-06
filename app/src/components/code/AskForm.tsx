@@ -1,13 +1,10 @@
-// What to ask an agent about some code, shared by the phone's Ask sheet and the desktop's Ask panel: which lines
-// (or the whole file), which agent, a shortcut or your own words, the error for "Fix this error", and where it runs.
-// It either starts a one-shot ask on the cluster (ask.ts) or sends the question to an agent already running there.
 import { ClipboardPaste } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
 import { call } from '../../rpc'
 import type { AskContext, AskKind } from '../../types/code'
-import { agentIcon } from '../agents/AgentIcon'
 import { useClusters } from '../clusters/store'
+import { AgentLogo } from './AgentLogo'
 import { AGENT_NAMES as AGENTS, sendToAgent, startAsk, type RunningAgent } from './ask'
 
 export type ErrorSource = { label: string; load: () => Promise<string> }  // e.g. "Errors of job 123456"
@@ -35,14 +32,9 @@ function remembered(): string {
 
 const CHIP = 'inline-flex min-h-[34px] items-center gap-1.5 rounded-full px-3 text-sm font-semibold transition-colors ' +
   'duration-90 pointer-coarse:min-h-11 pointer-coarse:px-4 pointer-coarse:text-base'
-/** The agent's logo in a chip; the black and white ones take the chip's text color, so they show when it's on. */
-function Logo({ agent }: { agent: string }) {
-  const Icon = agentIcon(agent)
-  return <Icon size={14} className="shrink-0" style={agent === 'claude' || agent === 'agy' ? undefined : { color: 'inherit' }} />
-}
-
 const chip = (on: boolean) => `${CHIP} ${on ? 'bg-text text-window' : 'bg-control text-text hover:bg-hover'}`
 
+/** What to ask an agent about some code: one-shot on the cluster, or sent to an agent already running there. */
 export function AskForm({ context, kind: firstKind = 'free', errorText = '', errorSources = [], running = [],
   fileKey, onStarted, onSent }: Props) {
   const { sessions } = useClusters()
@@ -180,7 +172,7 @@ export function AskForm({ context, kind: firstKind = 'free', errorText = '', err
                 <div className="flex flex-wrap gap-2">
                   {agents.map((a) => (
                     <button key={a} type="button" className={chip(agent === a)} onClick={() => setAgent(a)}>
-                      <Logo agent={a} />{AGENTS[a]}</button>
+                      <AgentLogo agent={a} />{AGENTS[a]}</button>
                   ))}
                 </div>
               )}

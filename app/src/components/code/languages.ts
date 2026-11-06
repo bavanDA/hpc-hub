@@ -1,5 +1,3 @@
-// Which language a file is (by extension, file name or the #! line) and its CodeMirror support, loaded only when a
-// file of that kind opens, so the editor starts small. Also how a file indents, so new lines match it.
 import { indentUnit, StreamLanguage, type StreamParser } from '@codemirror/language'
 import { EditorState, type Extension } from '@codemirror/state'
 

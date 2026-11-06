@@ -1,6 +1,3 @@
-// The Code editor's look: colors from the app's tokens, light and dark, and one highlight style for every language
-// (docs/design/code.md). The colors live in CSS variables set here once, so switching Appearance needs no rebuild of
-// the highlight style, only of the dark flag that CodeMirror uses for its own defaults.
 import { HighlightStyle, syntaxHighlighting } from '@codemirror/language'
 import type { Extension } from '@codemirror/state'
 import { EditorView } from '@codemirror/view'

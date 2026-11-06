@@ -1,13 +1,11 @@
-// Asks about code: each runs once on the cluster in tmux (code.ask_start), so it keeps going while the app is closed.
-// They live here, outside React, with their state polled every few seconds while any is still going. The badge on
-// the Ask button is runningCount(). Sending to an agent that is already running uses terminals.send instead.
 import { useSyncExternalStore } from 'react'
 
 import { call } from '../../rpc'
 import type { AskContext, AskKind, AskRequest, AskResult, AskState, AskStatus } from '../../types/code'
+import { messageFor } from './agentMessage'
 import { expectAgentChange } from './watch'
 
-export const POLL = 3000
+const POLL = 3000
 
 /** What the user calls each agent. */
 export const AGENT_NAMES: Record<string, string> = { claude: 'Claude', codex: 'ChatGPT', agy: 'Antigravity', cursor: 'Cursor' }
@@ -104,11 +102,6 @@ export function markSeen(id: string) {
   update(id, { seen: true })
 }
 
-/** Removes an ask from the list (the cluster keeps its folder). */
-export function dismissAsk(id: string) {
-  changed(state.asks.filter((a) => a.status.id !== id))
-}
-
 /** Picks up asks started earlier on a cluster (after the app restarted), newest first. */
 export async function loadAsks(cluster: string): Promise<void> {
   const rows = await call<AskStatus[]>('code.asks', { cluster })
@@ -120,26 +113,7 @@ export async function loadAsks(cluster: string): Promise<void> {
   changed([...fresh, ...others].sort((x, y) => y.status.started - x.status.started))
 }
 
-// -- sending to an agent that is already running in a terminal -----------------------------------------------------
-
 export type RunningAgent = { cluster: string; session: string; node: string; agent: string; label: string }
-
-const SHORT: Record<AskKind, string> = {
-  explain: 'Explain what this code does.',
-  fix: 'Fix this error.',
-  test: 'Write a test for this code.',
-  free: '',
-}
-
-/** The message a running agent gets: where the code is, then the question, then the error when there is one. */
-export function messageFor(ctx: AskContext, kind: AskKind, question: string, errorText = ''): string {
-  const where = ctx.from_line
-    ? `In ${ctx.path} lines ${ctx.from_line} to ${ctx.to_line ?? ctx.from_line}:`
-    : `In ${ctx.path}:`
-  const ask = [SHORT[kind], question.trim()].filter(Boolean).join(' ')
-  const error = errorText.trim() ? `\n\nThe error:\n${errorText.trim()}` : ''
-  return `${where} ${ask}${error}`
-}
 
 /** Pastes the message into the agent's terminal and remembers the file, so its next change can be undone. */
 export async function sendToAgent(target: RunningAgent, ctx: AskContext, kind: AskKind, question: string,

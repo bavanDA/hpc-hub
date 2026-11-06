@@ -1,16 +1,12 @@
-// Notices when open files change on the cluster (an agent, a job, another editor). Every 10 s while the Code page is
-// visible, and as soon as the app comes back: a file without unsaved edits reloads quietly and keeps its cursor; a
-// file with edits only raises a "changed" event, so nothing you typed is lost. After you send something to an agent,
-// the next change to that file is reported as the agent's, with the text from before so it can be undone.
 import { call } from '../../rpc'
 import type { FileState, SaveResult } from '../../types/code'
 import { getFile, isDirty, markSaved, openFiles, reloadFile } from './store'
 
-export const EVERY = 10_000
+const EVERY = 10_000
 
 export type WatchEvent =
   | { kind: 'reloaded'; key: string }                          // clean file, now the cluster's version
-  | { kind: 'changed'; key: string; sha: string }              // has your edits; the shell offers Compare / Use Yale's / Save mine
+  | { kind: 'changed'; key: string; sha: string }              // has your edits; the shell offers what to keep
   | { kind: 'deleted'; key: string }                           // gone from the cluster
   | { kind: 'agent-changed'; key: string; agent: string; before: string }  // after a send; offers Keep / Undo
 
@@ -44,7 +40,7 @@ export async function undoAgentChange(key: string, before: string): Promise<bool
 let busy = false
 
 /** Looks once at every open file. Safe to call any time; overlapping calls are skipped. */
-export async function checkNow(): Promise<void> {
+async function checkNow(): Promise<void> {
   if (busy) return
   busy = true
   try {
@@ -96,8 +92,8 @@ async function look(key: string, s: FileState) {
   emit({ kind: 'changed', key, sha: s.sha })
 }
 
-/** Starts watching: every EVERY ms while the page is visible, and right away when it becomes visible again.
- * Returns a function that stops it. */
+/** Watches the open files for changes on the cluster: a clean file reloads, one with edits raises "changed".
+ *  Every EVERY ms while the page is visible, and right away when it comes back. Returns a function that stops it. */
 export function startWatch(): () => void {
   let timer: number | null = null
   const tick = () => {

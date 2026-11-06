@@ -1,11 +1,9 @@
-// Help for Slurm job scripts: #SBATCH lines stand out (directive, option, value), and typing "#SBATCH --" offers
-// the common options, with the cluster's queues after --partition. The shell highlighting comes from languages.ts.
 import { autocompletion, type Completion, type CompletionContext, type CompletionResult } from '@codemirror/autocomplete'
 import type { Extension } from '@codemirror/state'
 import { Decoration, type DecorationSet, type EditorView, MatchDecorator, ViewPlugin, type ViewUpdate } from '@codemirror/view'
 
 /** The options people use most, with what they mean in plain words. */
-export const SBATCH_FLAGS: { flag: string; info: string; value?: string }[] = [
+const SBATCH_FLAGS: { flag: string; info: string; value?: string }[] = [
   { flag: 'job-name', info: 'Name shown in Jobs', value: 'myjob' },
   { flag: 'partition', info: 'Queue to run in' },
   { flag: 'time', info: 'Longest it may run (D-HH:MM:SS)', value: '01:00:00' },
@@ -71,14 +69,8 @@ function source(partitions: () => string[]) {
   }
 }
 
-/** The extension for a Slurm script. partitions is asked each time, so it can fill in after the file opens. */
+/** #SBATCH lines stand out, and "#SBATCH --" offers the common options, with the queues after --partition.
+ *  partitions is asked each time, so it can fill in after the file opens. */
 export function slurm(opts: { partitions?: () => string[] } = {}): Extension {
   return [marks, autocompletion({ override: [source(opts.partitions ?? (() => []))], icons: false })]
-}
-
-/** The #SBATCH lines, parsed: for "Submit job" and the status line. */
-export function sbatchOptions(text: string): Record<string, string> {
-  const out: Record<string, string> = {}
-  for (const m of text.matchAll(/^#SBATCH\s+--?([\w-]+)(?:[=\s]+(\S+))?/gm)) out[m[1]] = m[2] ?? ''
-  return out
 }

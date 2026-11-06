@@ -1,12 +1,9 @@
-// The open files of the Code page. They live here, outside React like terminals/tabs.ts, so they stay open while you
-// look at another page, and the phone and desktop shells share them. Saving only goes through when the file on the
-// cluster is still the one you opened (code.save checks the sha); otherwise you get a conflict to settle.
 import { useSyncExternalStore } from 'react'
 
 import { call } from '../../rpc'
 import type { OpenedFile, SaveResult } from '../../types/code'
 
-export const MAX_OPEN = 10  // more than this: the oldest file without edits closes
+const MAX_OPEN = 10
 
 export type Cursor = { line: number; col: number }  // 1-based line, 0-based column
 
@@ -31,13 +28,14 @@ export type OpenFile = {
   version: number         // goes up when the text changes from outside the editor (reload, accepted proposal)
 }
 
-export type SaveOutcome =
+type SaveOutcome =
   | { saved: true }
   | { saved: false; conflict: true; sha: string; mtime: number }
   | { saved: false; conflict: false; error: string }
 
 type State = { files: OpenFile[]; current: string | null }
 
+/** The open files, outside React so they stay open on other pages; the phone and the desktop share them. */
 let state: State = { files: [], current: null }
 const subscribers = new Set<() => void>()
 
@@ -54,7 +52,6 @@ export const fileKey = (cluster: string, path: string) => `${cluster}:${path}`
 export const isDirty = (f: OpenFile) => f.text !== f.saved
 export const getFile = (key: string) => state.files.find((f) => f.key === key)
 export const openFiles = () => state.files
-export const currentKey = () => state.current
 
 export function useCode(): State {
   return useSyncExternalStore((fn) => { subscribers.add(fn); return () => subscribers.delete(fn) }, () => state)
@@ -188,9 +185,4 @@ export async function saveFile(key: string, force = false): Promise<SaveOutcome>
 export function markSaved(key: string, text: string, sha: string, mtime: number) {
   const f = getFile(key)
   if (f) patch(key, { text, saved: text, sha, mtime, version: f.version + 1 })
-}
-
-/** For tests and "Close all": forgets every open file. */
-export function resetCode() {
-  changed({ files: [], current: null })
 }
