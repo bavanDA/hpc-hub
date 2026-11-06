@@ -1,33 +1,8 @@
-"""Remote shell helpers: bashrc aliases, command lookup, run-on-node command lines."""
+"""Command lines for the cluster's shell: command lookup, cd, run on a node."""
 
-import re
 import shlex
 
 from .ssh import SshMaster
-
-ALIAS_RE = re.compile(r"^alias ([\w.:+-]+)='(.*)'$")
-FUNC_RE = re.compile(r"^declare -f ([\w.:+-]+)$")
-
-
-def parse_aliases(text: str) -> dict[str, str]:
-    """Output of `alias; declare -F` -> {name: definition}."""
-    found = {}
-    for line in text.splitlines():
-        line = line.strip()
-        if m := ALIAS_RE.match(line):
-            found[m.group(1)] = m.group(2).replace("'\\''", "'")
-        elif m := FUNC_RE.match(line):
-            found.setdefault(m.group(1), "(function)")
-    return found
-
-
-def vscode_candidates(aliases: dict[str, str]) -> list[str]:
-    """Aliases/functions that look like they start VS Code, best first."""
-    def score(item):
-        name, body = item[0].lower(), item[1].lower()
-        return ("code" in name) * 2 + any(k in body for k in ("code", "tunnel", "serve-web"))
-    hits = [kv for kv in aliases.items() if score(kv) > 0 and not kv[0].startswith("_")]
-    return [name for name, _ in sorted(hits, key=score, reverse=True)]
 
 
 def command_type(ssh: SshMaster, name: str) -> str:

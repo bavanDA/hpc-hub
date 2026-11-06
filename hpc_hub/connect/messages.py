@@ -5,7 +5,6 @@ from ..core.config import ClusterConfig
 
 CANCELLED = "You cancelled the sign-in."
 STOPPED_WAITING = "You stopped waiting for a node."
-WHERE = "this cluster's Settings, under Advanced"
 
 
 def plain(err: str, cfg: ClusterConfig) -> str:

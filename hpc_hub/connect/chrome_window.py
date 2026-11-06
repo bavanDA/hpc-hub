@@ -28,8 +28,6 @@ from ..core.websocket import WebSocket
 from .vpn_sso import SsoStart
 
 CHOICE = CHROME_WINDOW  # vpn.browser for this window
-TITLE = "Chrome window (faster)"
-SUBTITLE = "A separate Chrome profile, signs in instantly"
 POLL = 0.5
 CLOSE_WAIT = 5.0
 START_WAIT = 20.0  # seconds for Chrome to write DevToolsActivePort

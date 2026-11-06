@@ -3,28 +3,6 @@ import subprocess
 
 from hpc_hub.core import remote
 
-ALIASES = """alias ll='ls -l'
-alias vscode='code tunnel --accept-server-license-terms --name bouchet'
-alias q='squeue --me'
-alias say='echo '\\''hi'\\'''
-declare -f module
-declare -f code_web
-declare -f _private
-"""
-
-
-def test_parse_aliases():
-    a = remote.parse_aliases(ALIASES)
-    assert a["vscode"].startswith("code tunnel")
-    assert a["say"] == "echo 'hi'"
-    assert a["module"] == "(function)"
-
-
-def test_vscode_candidates():
-    names = remote.vscode_candidates(remote.parse_aliases(ALIASES))
-    assert names[:2] == ["vscode", "code_web"]
-    assert "ll" not in names and "_private" not in names
-
 
 def test_cd_part():
     assert remote.cd_part("~") == 'cd "$HOME"'
