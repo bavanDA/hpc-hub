@@ -1,7 +1,7 @@
-"""Run by the edge-tts environment's Python (not the app's): speech for each chunk, with word timings.
+"""Run by the edge-tts Python, never imports hpc_hub.
 
 stdin: {"voice": ..., "rate": "+0%", "out": folder, "chunks": [text, ...]}
-stdout: one JSON line per finished chunk: {"i": n, "tokens": [[text, start, end], ...]}; audio in out/<n>.mp3
+stdout: one JSON line per chunk: {"i": n, "tokens": [[text, start, end], ...]}; audio in out/<n>.mp3
 """
 
 import asyncio

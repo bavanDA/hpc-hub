@@ -1,10 +1,4 @@
-"""Switching branches with changes not committed yet, and new branches.
-
-Before a switch, a dry run says whether your changes can come along: they can when they touch nothing that differs
-on the other branch, or when git merges them in cleanly (git merge-tree, no files touched). Then the switch: a safe
-copy of your changes (a saved version), the latest from origin, the files. Your changes come along (git checkout
---merge), or stay with the branch you leave (a commit on refs/hpc-hub/aside/<branch>, given back when you return).
-No compute node: git runs over the connection, which is fine for checking and editing."""
+"""Changes kept on a branch you leave live on refs/hpc-hub/aside/<branch> until you return."""
 
 import re
 import shlex

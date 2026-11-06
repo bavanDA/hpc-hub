@@ -1,5 +1,3 @@
-"""Words of a PDF and how they are cut into chunks for speech."""
-
 import re
 import unicodedata
 from dataclasses import dataclass

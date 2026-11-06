@@ -1,8 +1,5 @@
-"""Ask an agent about code (code/asks.py): start one, follow it, read its answer and proposed changes, cancel it.
-
-code.ask_start answers right away; getting a node and starting the agent happen on a thread. Until the ask's
-folder exists on the cluster its state lives here (starting, waiting_for_node, or failed with why); after that the
-cluster's ~/.hpc-hub/asks/<id>/ is the truth, so asks survive the app."""
+"""Until an ask's folder exists on the cluster its state lives here; after that the cluster is the
+truth, so asks survive the app."""
 
 import json
 import shlex
@@ -60,7 +57,6 @@ def _status(p: _Pending) -> dict:
 
 
 def _launch(p: _Pending, node: str) -> None:
-    """On a thread: a node, then run.sh in tmux there."""
     s = hub().connected(p.cluster)
     a, agent = p.ask, catalog.BY_ID[p.ask.agent]
     settings = getattr(s.cfg, agent.id)
@@ -135,7 +131,6 @@ def ask_status(cluster: str, id: str) -> dict:  # noqa: A002 - the contract's na
 
 @method("code.asks")
 def list_asks(cluster: str) -> list[dict]:
-    """Newest first: the ones still starting here, then the cluster's."""
     with _lock:
         mine = [_status(p) for p in _pending.values() if p.cluster == cluster]
     res = hub().connected(cluster).ssh.run(asks.list_command(), timeout=30)
@@ -181,7 +176,6 @@ def ask_cancel(cluster: str, id: str) -> dict:  # noqa: A002
 
 
 def _node_of(s, ask_id: str) -> str:
-    """The node the ask runs on, from its meta.json."""
     res = s.ssh.run(f'cat "$HOME"/{asks.ROOT}/{asks.check_id(ask_id)}/meta.json 2>/dev/null', timeout=20)
     try:
         return str(json.loads(res.stdout).get("node", ""))

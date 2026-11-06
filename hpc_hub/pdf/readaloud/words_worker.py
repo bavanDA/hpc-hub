@@ -1,8 +1,5 @@
-"""Run by the read-aloud environment's Python: every word of a PDF in reading order (PyMuPDF), as JSON.
-
-PyMuPDF groups text into blocks and lines, so two-column papers read column by column (as in ReadLoud).
-argv[1]: the PDF. stdout: [[page, text, x0, y0, x1, y1], ...] in PDF points from each page's top left.
-"""
+"""Run by the read-aloud Python, never imports hpc_hub. argv[1]: the PDF. stdout: [[page, text, x0, y0,
+x1, y1], ...] in PDF points from the page's top left."""
 
 import json
 import sys

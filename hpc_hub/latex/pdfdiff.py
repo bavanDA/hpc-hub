@@ -1,7 +1,4 @@
-"""PDFs of other versions, built on demand: the paper as it was at a commit (for Side by side), and latexdiff's
-red and blue between two versions. Each is built in a temporary worktree under the repository's .git (so your files
-are never touched), with the same latexmk build as Recompile, and kept in <git dir>/hpc-hub/pdf/ by the versions'
-trees: asking again is instant."""
+"""PDFs of other versions, built in a throwaway worktree under .git so your files are never touched."""
 
 import posixpath
 import shlex
@@ -73,7 +70,6 @@ def plan(ssh: SshMaster, folder: str, main: str, version: str, against: str | No
 
 
 def explain(code: int, output: str, cluster: str, diff: bool) -> str:
-    """A failed build in plain words."""
     if code == NO_LATEXDIFF:
         return (f"latexdiff is not on {cluster}. Add it to the build setup (for example module load texlive) "
                 "or ask your cluster's admins for it.")

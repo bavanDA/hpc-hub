@@ -1,9 +1,4 @@
-"""Notes on a paper: comments and to-dos in one list. A note has text, an optional place (a line of a file, a spot
-on a page of the PDF, or a commit), who wrote it (git's user name), when, and whether it is done.
-
-They live in <git dir>/hpc-hub/notes.json: next to the paper, never committed or pushed. Every change reads the
-file, changes it and writes it back under a lock, and only if nobody wrote it in between (another window, the
-phone); the write goes to a temporary file that is then moved over the old one."""
+"""Notes live in <git dir>/hpc-hub/notes.json: next to the paper, never committed or pushed."""
 
 import hashlib
 import json

@@ -1,10 +1,5 @@
-"""Read a PDF on a cluster aloud, and look its words up (pdf/readaloud).
-
-readaloud.start makes the narration on a thread and reports as `readaloud` events: progress text, then `part` (a
-few chunks from the page you are on, so reading starts within seconds), then `full` (the whole PDF, which the UI
-swaps in at the same moment: offset is where the part began in it). The player streams the audio from a loopback URL
-(pdf/readaloud/stream.py), so it starts at once; readaloud.audio still hands it over in pieces when that fails.
-"""
+"""readaloud.start reports as `readaloud` events: progress, then `part` (a few chunks from your page,
+so reading starts within seconds), then `full` (offset is where the part began in it)."""
 
 import base64
 import secrets
@@ -166,7 +161,6 @@ def _work(job: Job, page: int) -> None:
 
 @method("readaloud.trace")
 def trace(text: str) -> None:
-    """The player's side of the timings."""
     log(f"player: {text[:300]}")
 
 
@@ -206,7 +200,6 @@ def stop(id: str) -> None:
 
 @method("readaloud.audio")
 def audio(token: str, offset: int = 0, length: int = CHUNK) -> dict:
-    """Part of a narration's MP3 as base64, and its whole size."""
     path = _audio.get(token)
     if path is None:
         raise ValueError("That recording is gone, press Read aloud again")

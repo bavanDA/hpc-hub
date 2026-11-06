@@ -1,6 +1,3 @@
-"""The Code page: open, save and watch files on a cluster (code/edit.py), and search a folder. Types in
-app/src/types/code.ts."""
-
 from dataclasses import asdict
 
 from ...code import edit
@@ -34,7 +31,6 @@ def save(cluster: str, path: str, text: str, base_sha: str, eol: str = "lf", for
 
 @method("code.stat")
 def stat(cluster: str, paths: list[str]) -> list[dict]:
-    """What each open file looks like now, to notice changes from an agent or a job."""
     ssh = _ssh(cluster)
     full = {_path(ssh, p): p for p in paths}
     return [{**asdict(s), "path": full.get(s.path, s.path)} for s in edit.stat(ssh, list(full))]
@@ -42,7 +38,6 @@ def stat(cluster: str, paths: list[str]) -> list[dict]:
 
 @method("code.new_file")
 def new_file(cluster: str, path: str, text: str = "") -> dict:
-    """Makes the file (never over an existing one) and opens it."""
     ssh = _ssh(cluster)
     full = _path(ssh, path)
     edit.new_file(ssh, full, text)

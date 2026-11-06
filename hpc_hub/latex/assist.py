@@ -1,10 +1,4 @@
-"""The agent's help with a paper's history: Write message, Ask about a change and Check my list.
-
-Each is one headless call of the agent you picked (Claude Haiku with Low effort unless you change it) on your
-compute node, with everything it needs in the prompt: no tools and no files to read, so a small change takes
-seconds. Here: the choice (the agent is picked in Settings, its model and effort in the paper, any of each), the
-prompts (the diff trimmed to a sane size), the script that runs the agent, and reading its answer back. The agent
-never commits and never checks a note off: the app shows what it says and you decide."""
+"""The agent never commits and never checks a note off: the app shows what it says and you decide."""
 
 import base64
 import json
@@ -24,7 +18,6 @@ MARK = "@@hpchub-answer@@"  # what the agent printed starts after this line (a l
 ID_RE = re.compile(r"^[0-9a-f]{6,32}$")
 
 
-# -- the choice ----------------------------------------------------------------------------------------------------
 @dataclass(frozen=True)
 class Choice:
     agent: str = "claude"
@@ -93,7 +86,6 @@ def label(c: Choice) -> str:
     return f"{a.name}{' ' + name if name else ''}{', ' + effort if effort else ''}"
 
 
-# -- the diff, trimmed ---------------------------------------------------------------------------------------------
 def _file_head(f: dict) -> str:
     extra = {"A": " (new file)", "D": " (deleted)",
              "R": f" (renamed from {f.get('old_path', '')})"}.get(f["status"], "")
@@ -140,7 +132,6 @@ def numbered(text: str, line: int, end: int, around: int = CONTEXT_LINES) -> str
     return "\n".join(f"{n:5d}| {rows[n - 1]}" for n in range(a, b + 1))
 
 
-# -- Write message -------------------------------------------------------------------------------------------------
 def message_prompt(diff: str, files: list[dict], subjects: list[str], split: bool) -> str:
     """files: [{path, added, removed, new}] (git_state's changes)."""
     listed = "\n".join(f"- {f['path']} +{f.get('added', 0)} -{f.get('removed', 0)}{' (new)' if f.get('new') else ''}"
@@ -235,7 +226,6 @@ def parse_message(text: str, paths: list[str]) -> dict:
             "commits": []}
 
 
-# -- Ask about a change --------------------------------------------------------------------------------------------
 CITE_RE = re.compile(r"\[\[\s*(?:(?:page|p\.)\s*(\d+)|([^\[\]\n:]+?):(\d+)(?:\s*[-–]\s*(\d+))?)\s*\]\]", re.I)
 ASK_RULES = ("Answer in a few short sentences, plainly, for a researcher. When you point at a line, write it as "
              "[[path:line]] or [[path:first-last]], with the path exactly as given below; a page of the PDF as "
@@ -261,7 +251,6 @@ def parse_answer(text: str) -> dict:
     return {"text": t, "cites": cites}
 
 
-# -- Check my list -------------------------------------------------------------------------------------------------
 VERDICTS = ("done", "not_yet", "unsure")
 
 
@@ -311,7 +300,6 @@ def parse_check(text: str, notes: list[dict]) -> list[dict]:
     return out
 
 
-# -- running it on the node ----------------------------------------------------------------------------------------
 def check_id(job_id: str) -> str:
     if not ID_RE.match(job_id or ""):
         raise ValueError("That job id looks wrong")

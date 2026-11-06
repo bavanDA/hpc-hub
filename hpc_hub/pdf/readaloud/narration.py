@@ -1,5 +1,3 @@
-"""Make (or load from cache) the narration of a PDF: one MP3 plus a time span for every word."""
-
 import hashlib
 import json
 import os
@@ -84,7 +82,6 @@ def cache_dir() -> Path:
 
 @dataclass
 class Plan:
-    """What a PDF needs to be read aloud: its speech chunks and where each one's audio is kept."""
     key: str
     voice: str
     python: Path
@@ -92,7 +89,6 @@ class Plan:
     keys: list[str]
 
     def first_on(self, page: int) -> int:
-        """The chunk where reading from that page starts."""
         return next((i for i, c in enumerate(self.parts) if any(w.page >= page for w in c.words)), 0)
 
 

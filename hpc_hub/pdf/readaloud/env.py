@@ -1,5 +1,4 @@
-"""edge-tts and PyMuPDF live in their own small Python environment, made on first use; the app's Python stays
-untouched."""
+"""edge-tts and PyMuPDF get their own Python environment, so the app's Python stays untouched."""
 
 import os
 import subprocess
@@ -38,7 +37,6 @@ def _marker() -> str:
 
 
 def install() -> Path:
-    """Blocking (about half a minute the first time)."""
     d = folder()
     subprocess.run(["python3", "-m", "venv", str(d)], check=True, capture_output=True, timeout=300, env=clean())
     res = subprocess.run([str(d / "bin" / "pip"), "install", "-q", *PACKAGES], capture_output=True, text=True,

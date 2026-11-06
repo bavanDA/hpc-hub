@@ -1,8 +1,4 @@
-"""Read LaTeX's .synctex.gz to jump between the PDF and the source, like Overleaf.
-
-Positions in the file are TeX points * 65536 from the page's top left (1in margin included);
-dividing by 65781.76 gives PDF points.
-"""
+"""SyncTeX positions are TeX scaled points from the page's top left; / 65781.76 gives PDF points."""
 
 import gzip
 import posixpath

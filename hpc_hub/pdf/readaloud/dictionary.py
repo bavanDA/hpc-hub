@@ -1,9 +1,3 @@
-"""Look a word up: how to say it, what it means, examples (ported from ReadLoud's dictionary).
-
-dictionaryapi.dev first (phonetics, audio, examples); Wiktionary when it fails or has nothing.
-Answers are cached on disk, so a word you looked up before shows at once.
-"""
-
 import html
 import json
 import os
@@ -154,7 +148,6 @@ def _first(candidates: list[str], fetch) -> Entry | None:
 
 
 def lookup(raw: str) -> Entry:
-    """Blocking: run off the UI thread."""
     word = term(raw)
     f = _cache(word)
     if f.exists():

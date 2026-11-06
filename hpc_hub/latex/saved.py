@@ -1,10 +1,5 @@
-"""Saved versions: the paper as it was at a save or a compile, kept between commits.
-
-Each one is a real commit on a private ref, refs/hpc-hub/saved/<branch>: not a branch, never part of a normal push.
-It is made with a temporary index (git read-tree, add, write-tree, commit-tree), so your index and files are never
-touched. Its first parent is the saved version before it, its second the commit you were on. At most one every 5
-minutes, none when nothing changed; older than 30 days they are cleared. The setting lives in the repository's own
-config (hpc-hub.saved): off, cluster (the default) or backup (also pushed to origin as saved/<you>/<branch>)."""
+"""Saved versions are commits on refs/hpc-hub/saved/<branch>, made with a temporary index so your
+index and files are never touched, and never part of a normal push."""
 
 import posixpath
 import shlex
@@ -165,7 +160,6 @@ def put_back(ssh: SshMaster, path: str, line: int, expect: list[str], lines: lis
     remote_fs.write_bytes(ssh, path, "\n".join(rows).encode())
 
 
-# -- automatic versions on save and compile ---------------------------------------------------------------------------
 _last: dict[tuple[int, str], float] = {}
 _pruned: dict[tuple[int, str], float] = {}
 _lock = threading.Lock()

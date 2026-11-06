@@ -1,8 +1,3 @@
-"""Google-style phonetic respelling of a word: plain letters, hyphenated syllables, stress in caps.
-
-The IPA path is authoritative; the orthographic fallback only covers unambiguous spellings.
-"""
-
 import re
 import unicodedata
 from typing import NamedTuple
@@ -254,7 +249,6 @@ _SPELLING_SEGMENTS, _SPELLING_LONGEST = _segment_table(_SPELLING_VOWELS, _SPELLI
 
 
 def respell_from_ipa(ipa: str) -> str | None:
-    """Convert an IPA transcription into a Google-style respelling."""
     body = _clean_ipa(ipa)
     if not body:
         return None
@@ -265,7 +259,6 @@ def respell_from_ipa(ipa: str) -> str | None:
 
 
 def respell_from_spelling(word: str) -> str | None:
-    """Fallback respelling derived from English orthography when no IPA exists."""
     letters = _clean_spelling(word)
     if letters is None:
         return None
@@ -276,7 +269,6 @@ def respell_from_spelling(word: str) -> str | None:
 
 
 def respell(word: str, ipa: str | None) -> str | None:
-    """Preferred entry point: use IPA when available, else fall back to spelling."""
     if ipa:
         respelled = respell_from_ipa(ipa)
         if respelled:

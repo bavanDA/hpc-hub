@@ -1,14 +1,5 @@
-"""Ask an agent about a piece of code, once, on the cluster (docs/design/code.md, "AI-friendly part").
-
-Each ask runs one agent headless (agents/ask_all.headless) from a bash script in its own tmux session on the
-compute node, so it outlives the app and the phone's screen. Everything lives in ~/.hpc-hub/asks/<id>/:
-meta.json (what was asked), state, prompt.md, run.sh, log, answer.md, proposed/<path> (full new versions of the
-files the agent would change, paths relative to the repository root) and snapshot/<path> (those files as they
-were, the base of each proposal).
-
-The agent is told to propose, never to edit. If it edits the repository anyway, the script turns that edit into
-a proposal and puts the file back, so the folder on the cluster only changes when you accept and save.
-"""
+"""Each ask lives in ~/.hpc-hub/asks/<id>/ on the cluster and runs in its own tmux session, so it
+outlives the app. The agent only proposes; files it edits anyway are put back."""
 
 import base64
 import hashlib
@@ -205,7 +196,6 @@ def cancel_command(ask_id: str) -> str:
             f"else printf cancelled > {out}/state; fi; true")
 
 
-# -- reading back ---------------------------------------------------------------------------------------------------
 LIST_SEP = "\x1e"
 
 

@@ -1,5 +1,3 @@
-"""Git for a project folder on the cluster: remote, branch, history, commit, pull, push."""
-
 import shlex
 from dataclasses import dataclass, field
 

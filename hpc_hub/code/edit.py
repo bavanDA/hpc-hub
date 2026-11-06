@@ -1,13 +1,4 @@
-"""Open and save text files on a cluster without losing anything (docs/design/code.md):
-
-- open answers the text plus the file's sha256, so a save can check nobody changed it meanwhile (an agent, a job,
-  you in a terminal). Bytes that aren't UTF-8 open read-only, so saving can't damage them.
-- save is compare and swap: it writes only if the file still has the sha it was opened with, through links, keeping
-  the file's mode (remote_fs.REPLACE_SH) and its line endings.
-- stat tells which open files changed; find_files and grep search a folder.
-
-Each call is one command on the cluster. The cluster is Linux: GNU stat, sha256sum, find and grep (rg if there).
-"""
+"""Saving is compare and swap on the sha the file was opened with; bytes that are not UTF-8 open read-only."""
 
 import base64
 import hashlib

@@ -1,5 +1,4 @@
-"""The narration's MP3 over http://127.0.0.1, so the player starts after the first bytes and seeks with Range
-requests instead of waiting for the whole file to come through the RPC. Each file is reached by a random token."""
+"""Serving the MP3 over loopback lets the player start at once and seek with Range requests."""
 
 import re
 import threading
@@ -26,7 +25,6 @@ def span(header: str | None, size: int) -> tuple[int, int] | None:
 
 
 class Server:
-    """Serves files by token on a free port of 127.0.0.1, started on first use."""
 
     def __init__(self, find: Callable[[str], Path | None]):
         self.find = find

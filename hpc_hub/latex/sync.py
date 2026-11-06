@@ -1,11 +1,5 @@
-"""Safe push (and Get the latest): always pull first, so a push never overwrites a co-author.
-
-In order: your changes not committed yet are put aside (a commit on refs/hpc-hub/sync/aside, then the files go
-back to your last commit; new files stay where they are), the latest comes in from origin and your commits go on
-top of it, then the push, then your changes come back. When your commits and a co-author's touch the same spot it
-pauses before anything is sent: each spot is settled (mine, theirs, both, or edited), then it goes on. Stop puts
-everything back as it was: the commits you had (refs/hpc-hub/sync/orig) and your changes. Where it stands is kept in
-<git dir>/hpc-hub/sync.json, so closing the app in between loses nothing."""
+"""Safe push: always pull first. Where it stands is kept in <git dir>/hpc-hub/sync.json, so closing
+the app in between loses nothing."""
 
 import json
 import posixpath
@@ -52,7 +46,6 @@ def _clear(ssh: SshMaster, st: dict) -> None:
             timeout=30)
 
 
-# -- conflicts --------------------------------------------------------------------------------------------------------
 def blocks(text: str) -> list[dict]:
     """The spots git could not settle in a file, with conflictStyle diff3. The top side is what came in (theirs),
     the bottom side yours: in a rebase your commit is the one replayed, when your changes come back they are the
@@ -124,7 +117,6 @@ def status(ssh: SshMaster, folder: str) -> dict | None:
     return {**st, "spots": spots}
 
 
-# -- the steps --------------------------------------------------------------------------------------------------------
 def start(ssh: SshMaster, folder: str, push: bool, step: Step) -> dict:
     """Push (or with push False, Get the latest) safely. Returns the end ({done: True, ...}) or, paused on spots to
     settle, the status."""

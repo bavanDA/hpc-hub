@@ -1,5 +1,3 @@
-"""Give every PDF word a time span from the spoken tokens (they don't always match one to one)."""
-
 from .text import Word, match_key
 
 Token = tuple[str, float, float]  # text, start, end (seconds)

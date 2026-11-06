@@ -1,6 +1,4 @@
-"""A paper's history, read over SSH: commits with their counts, the changes of a commit or between any two versions
-(changed words marked, text that moved found), who last changed each line, and the branches and tags the pickers
-offer. Paths are relative to the repository's top folder."""
+"""Paths are from the repository's top folder."""
 
 import difflib
 import re
@@ -40,7 +38,6 @@ def parts(text: str, n: int) -> list[str]:
     return (text.split(SEP + "\n") + [""] * n)[:n]
 
 
-# -- commits ---------------------------------------------------------------------------------------------------
 def _path(p: str) -> str:
     """numstat's rename forms (a => b, dir/{a => b}/c) -> the new path."""
     p = re.sub(r"\{[^{}]* => ([^{}]*)\}", r"\1", p)
@@ -90,7 +87,6 @@ def commit(ssh: SshMaster, folder: str, ref: str) -> dict:
     return found[0]
 
 
-# -- the state of the working copy --------------------------------------------------------------------------------
 def _numstat(text: str) -> list[dict]:
     out = []
     for line in text.splitlines():
@@ -147,7 +143,6 @@ def state(ssh: SshMaster, folder: str) -> dict:
             "syncing": p[13].strip() == "yes", "remotes": p[14].split()}
 
 
-# -- changes, with words and moves -----------------------------------------------------------------------------------
 # A row: {"k": " " | "-" | "+", "o": old line or None, "n": new line or None, "t": text, "m": [[from, to], ...]
 # changed words}. Rows of text that moved carry "mv" (the move's id); "same": True when the line moved unchanged;
 # "src": True for a removed line shown inside the block it moved to.
@@ -391,7 +386,6 @@ def changes(ssh: SshMaster, folder: str, frm: str = "", to: str = "", context: i
             "added": sum(f["added"] for f in files), "removed": sum(f["removed"] for f in files)}
 
 
-# -- who changed each line -----------------------------------------------------------------------------------------
 def parse_blame(text: str) -> dict:
     commits: dict[str, dict] = {}
     lines: list[list] = []
@@ -481,13 +475,11 @@ def line_story(ssh: SshMaster, folder: str, path: str, line: int, at: str = "") 
 
 
 def file_at(ssh: SshMaster, folder: str, at: str, path: str) -> str:
-    """A file as it was in a version (path from the repository's top)."""
     if path.startswith("/") or ".." in path.split("/"):
         raise GitError("Bad path")
     return run(ssh, f"{g(folder)} show {shlex.quote(rev(at) + ':' + path)} | head -c 8000000")
 
 
-# -- branches and tags, for the pickers -------------------------------------------------------------------------------
 REF_FMT = "%(refname)%1f%(objectname)%1f%(committerdate:unix)%1f%(authorname)%1f%(upstream:short)%1f%(subject)"
 
 
@@ -534,7 +526,6 @@ def refs(ssh: SshMaster, folder: str) -> dict:
 
 
 def lanes(ssh: SshMaster, folder: str, a: str, b: str) -> dict:
-    """Two branches side by side: where they split, and the commits only on each."""
     G, qa, qb = g(folder), shlex.quote(rev(a)), shlex.quote(rev(b))
     base = run(ssh, f"{G} merge-base {qa} {qb} || true").strip()
     fmt = shlex.quote(FMT)
