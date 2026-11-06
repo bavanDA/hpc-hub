@@ -184,11 +184,6 @@ def full(p: Plan, progress: Callable[[str], None] = lambda text: None, after: in
     return Narration(d / "audio.mp3", n.duration, n.words, n.timings)
 
 
-def build(pdf: bytes, voice: str, progress: Callable[[str], None] = lambda text: None) -> Narration:
-    """Blocking: the whole narration at once (cached)."""
-    return cached(pdf, voice) or full(plan(pdf, voice, progress), progress)
-
-
 def _record(py: Path, voice: str, texts: list[str], keys: list[str], store: Path,
             progress: Callable[[str], None]) -> None:
     """Speech for the given chunks into store/<key>.mp3 + .json, through the edge-tts worker."""
