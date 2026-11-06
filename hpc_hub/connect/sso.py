@@ -8,6 +8,7 @@ import json
 import os
 import socket
 import sys
+from pathlib import Path
 from urllib.parse import urlparse
 
 import gi
@@ -16,11 +17,16 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("WebKit", "6.0")
 from gi.repository import GLib, Gtk, WebKit  # noqa: E402
 
-if __package__:
-    from ..core.paths import web_dir  # noqa: E402
-else:  # run as a script by openconnect (bin/hpc-hub-sso)
-    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-    from hpc_hub.core.paths import web_dir  # noqa: E402
+
+def web_dir() -> Path:
+    """Cookies of the sign-in pages, like core/paths.web_dir (Linux only here): this file runs alone, as source,
+    from the packaged app too, so it can't import hpc_hub."""
+    base = os.environ.get("XDG_DATA_HOME") or str(Path.home() / ".local" / "share")
+    path = Path(base) / "hpc-hub" / "web"
+    path.mkdir(mode=0o700, parents=True, exist_ok=True)
+    os.chmod(path, 0o700)
+    return path
+
 
 # One step per call: email page -> Next, password page -> Sign in. Returns what it did.
 STEP_JS = """
