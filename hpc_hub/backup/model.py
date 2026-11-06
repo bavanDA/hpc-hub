@@ -3,8 +3,6 @@
 from dataclasses import dataclass, field
 
 CLASSES = ("results", "code", "writing", "inputs", "logs", "regen", "checkpoint", "unsure")
-LABELS = {"results": "Results", "code": "Code", "writing": "Writing and notes", "inputs": "Inputs and settings",
-          "logs": "Logs", "regen": "Can be made again", "checkpoint": "Can be made again", "unsure": "Not sure"}
 KEEP_BY_DEFAULT = ("results", "code", "writing", "inputs", "logs")
 
 
@@ -31,44 +29,6 @@ class Destination:
     file_limit: int = 0
     shared_with: int = 0  # people in the group sharing it
     backed_up: bool = False
-
-
-@dataclass
-class Folder:
-    path: str  # relative to scratch, up to 3 levels deep
-    bytes: int = 0  # on disk
-    apparent_bytes: int = 0
-    files: int = 0
-    at_risk_files: int = 0
-    at_risk_bytes: int = 0
-    soonest_days: int | None = None
-    kind: str = "unsure"  # the class with the most at-risk bytes
-    by_class: dict = field(default_factory=dict)  # class -> {files, bytes, at_risk_files, at_risk_bytes}
-    git: bool = False
-    busy: bool = False  # a running job works here
-    links_out: int = 0
-    sparse: int = 0
-    hardlinks: int = 0
-    biggest: list = field(default_factory=list)  # [path, bytes, class, days_left]
-
-
-@dataclass
-class Summary:
-    id: str
-    scratch: str
-    started: int
-    purge: Purge
-    horizon_days: int
-    files: int = 0
-    bytes: int = 0
-    at_risk_files: int = 0
-    at_risk_bytes: int = 0
-    soonest_days: int | None = None
-    deadlines: list = field(default_factory=list)  # [{days, files, bytes}], at-risk files by days left
-    folders: list = field(default_factory=list)  # [Folder]
-    hardlinks: int = 0
-    partial: bool = False
-    scratch_fill_pct: int = 0
 
 
 @dataclass

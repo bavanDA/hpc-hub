@@ -5,7 +5,6 @@ Its answer is only data: which folders and file patterns to keep and why. valida
 folders the scan found and drops everything else; the copy job's commands come from copy.py's template, never
 from the agent. A README that says "run rm" changes nothing."""
 
-import fnmatch
 import json
 import re
 
@@ -40,10 +39,6 @@ checkpoint|unsure", "keep": true, "why": "one short plain sentence"}],
 Rules: only use folder paths from index.json. Do not run commands, do not change or delete any file. Write "why"
 for a researcher: short, plain words, no dashes.
 """
-
-
-def prompt() -> str:
-    return PROMPT
 
 
 def agent_command(agent: catalog.Agent, settings: AgentSettings) -> str:
@@ -92,7 +87,3 @@ def validate(raw: str, folders: list[str]) -> dict:
         out_patterns.append({"folder": p["folder"], "glob": glob, "keep": p["keep"], "except_newest": newest,
                              "why": clean(p.get("why"), MAX_WHY)})
     return {"folders": out_folders, "patterns": out_patterns, "summary": clean(data.get("summary"), MAX_SUMMARY)}
-
-
-def matches(glob: str, name: str) -> bool:
-    return fnmatch.fnmatchcase(name, glob)

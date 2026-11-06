@@ -43,22 +43,3 @@ def resolve(cluster_id: str, getquota: str = "") -> Purge:
     if base is None:
         return Purge(days=days, basis="oldest", from_cluster=bool(days))
     return replace(base, days=days, from_cluster=True) if days else replace(base)
-
-
-def stamp(atime: float, mtime: float, ctime: float, btime: float, basis: str) -> tuple[float, bool]:
-    """The date the timer counts from, and whether it's a guess (no birth time for "created")."""
-    if basis == "mtime":
-        return mtime, False
-    if basis == "atime":
-        return atime, False
-    if basis == "created":
-        return (btime, False) if btime > 0 else (min(mtime, ctime), True)
-    dates = [atime, mtime, ctime] + ([btime] if btime > 0 else [])
-    return min(dates), False
-
-
-def days_left(when: float, purge: Purge, now: float) -> int | None:
-    """Whole days until the timer deletes a file dated when; None without a timer. 0 or less: any day now."""
-    if purge.days <= 0:
-        return None
-    return purge.days - int((now - when) // 86400)

@@ -33,18 +33,16 @@ def test_policies_and_the_purged_column():
     assert policy.parse_purged("project GRP 1 2 3 4 Yes No\n") == 0
     yale = policy.resolve("yale", fixture("getquota_bouchet.txt").replace("30 days", "60 days"))
     assert (yale.days, yale.from_cluster) == (60, True)  # what the cluster says beats the docs
-    assert policy.resolve("elsewhere").days == 0 and policy.days_left(NOW, Purge(days=0), NOW) is None
+    assert policy.resolve("elsewhere").days == 0
 
 
 def test_the_timer_counts_from_the_oldest_date_when_not_known():
     a, m, c = NOW - 40 * DAY, NOW - 10 * DAY, NOW - 5 * DAY
-    assert policy.stamp(a, m, c, 0, "oldest") == (a, False)
-    assert policy.stamp(a, m, c, 0, "mtime") == (m, False)
-    assert policy.stamp(a, m, c, 0, "created") == (m, True)  # no birth time: a guess, said so
-    assert policy.stamp(a, m, c, NOW - 2 * DAY, "created") == (NOW - 2 * DAY, False)
-    assert policy.days_left(a, Purge(days=30), NOW) == -10
-    for args in ((a, m, c, 0, "oldest"), (a, m, c, 0, "created"), (a, m, c, NOW - DAY, "created")):
-        assert summarize.when(*args) == policy.stamp(*args)
+    assert summarize.when(a, m, c, 0, "oldest") == (a, False)
+    assert summarize.when(a, m, c, 0, "mtime") == (m, False)
+    assert summarize.when(a, m, c, 0, "atime") == (a, False)
+    assert summarize.when(a, m, c, 0, "created") == (m, True)  # no birth time: a guess, said so
+    assert summarize.when(a, m, c, NOW - 2 * DAY, "created") == (NOW - 2 * DAY, False)
 
 
 def test_storage_rows_carry_files_backup_and_purged():
@@ -123,7 +121,7 @@ def test_the_agent_answer_is_checked():
 def test_the_agent_gets_no_shell():
     line = agent.agent_command(catalog.CLAUDE, AgentSettings())
     assert "--disallowedTools Bash" in line and "--allowedTools Read,Write,Glob,Grep" in line
-    assert "—" not in agent.prompt() and "–" not in agent.prompt()
+    assert "—" not in agent.PROMPT and "–" not in agent.PROMPT
 
 
 # -- the plan -----------------------------------------------------------------------------------------------------

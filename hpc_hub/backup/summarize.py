@@ -21,7 +21,7 @@ PROGRESS_EVERY = 200000
 
 
 def when(atime, mtime, ctime, btime, basis):
-    """Same as policy.stamp: the date the timer counts from, and whether it's a guess."""
+    """The date the purge timer counts from, and whether it is a guess (no birth time for "created")."""
     if basis == "mtime":
         return mtime, False
     if basis == "atime":

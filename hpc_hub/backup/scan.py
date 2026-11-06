@@ -100,11 +100,11 @@ def body(scratch: str, purge: Purge, horizon: int, *, group: bool = False, expec
         f'echo $? > "$DIR/find.rc"; }} | {summarize} || {{ state failed; exit 1; }}',
     ]
     if agent_cmd:
-        from .agent import prompt
+        from .agent import PROMPT
         lines += [
             "state thinking",
             f'printf %s {shlex.quote(_b64(remote_source("context")))} | base64 -d > "$DIR/context.py"',
-            f'printf %s {shlex.quote(_b64(prompt()))} | base64 -d > "$DIR/prompt.md"',
+            f'printf %s {shlex.quote(_b64(PROMPT))} | base64 -d > "$DIR/prompt.md"',
             'python3 -I "$DIR/context.py" "$S" "$DIR" > "$DIR/context.log" 2>&1',
             'OUT="$DIR"',
             f'(cd "$DIR/context" && {agent_cmd}) > "$DIR/agent.log" 2>&1',
