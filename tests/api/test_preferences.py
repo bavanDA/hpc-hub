@@ -8,31 +8,57 @@ from hpc_hub.core import browser, config, features
 def app_file(tmp_path, monkeypatch):
     monkeypatch.setattr(config, "APP_FILE", tmp_path / "hpc-hub" / "app.toml")
     monkeypatch.setattr(browser, "preferred", "")
-    monkeypatch.setattr(features, "experimental", False)
+    for name in ("papers", "skills", "schedules"):
+        monkeypatch.setattr(features, name, False)
     monkeypatch.setattr(features, "select_to_copy", True)
     monkeypatch.setattr(features, "monitor_bar", True)
     return config.APP_FILE
 
 
+OFF = {"experimental_papers": False, "experimental_skills": False, "experimental_schedules": False}
+
+
 def test_defaults(app_file):
-    assert preferences.get() == {"browser_profile": "", "experimental": False, "select_to_copy": True,
+    assert preferences.get() == {"browser_profile": "", **OFF, "select_to_copy": True,
                                  "monitor_bar": True, "appearance": "system"}
 
 
 def test_set_saves_and_keeps_the_rest(app_file):
     config.save_app(config.AppSettings(globus_client_id="abc123"), app_file)
-    on = {"experimental": True, "select_to_copy": True, "monitor_bar": True, "appearance": "system"}
-    assert preferences.set_(experimental=True) == {"browser_profile": "", **on}
+    on = {**OFF, "experimental_papers": True, "select_to_copy": True, "monitor_bar": True, "appearance": "system"}
+    assert preferences.set_(experimental_papers=True) == {"browser_profile": "", **on}
     assert preferences.set_(browser_profile=" Uni ") == {"browser_profile": "Uni", **on}
     saved = config.load_app(app_file)
-    assert (saved.globus_client_id, saved.browser_profile, saved.experimental) == ("abc123", "Uni", True)
-    assert features.experimental and browser.preferred == "Uni"
+    assert (saved.globus_client_id, saved.browser_profile, saved.experimental_papers) == ("abc123", "Uni", True)
+    assert features.papers and not features.skills and browser.preferred == "Uni"
+
+
+def test_each_experiment_on_its_own(app_file):
+    got = preferences.set_(experimental_skills=True)
+    assert [got[k] for k in OFF] == [False, True, False]
+    got = preferences.set_(experimental_schedules=True, experimental_skills=False)
+    assert (got["experimental_skills"], got["experimental_schedules"]) == (False, True)
+    assert features.schedules and not features.skills and not features.papers
+    assert features.shown("schedules") and not features.shown("latex") and features.shown("clusters")
+
+
+def test_the_old_single_switch_turns_all_three_on(app_file):
+    app_file.parent.mkdir(parents=True)
+    app_file.write_text("[app]\nexperimental = true\nappearance = \"dark\"\n")
+    assert preferences.get() == {"browser_profile": "", **{k: True for k in OFF}, "select_to_copy": True,
+                                 "monitor_bar": True, "appearance": "dark"}
+    preferences.set_(experimental_skills=False)  # saved in the new keys; the old one is gone
+    text = app_file.read_text()
+    assert "experimental = " not in text and "experimental_skills = false" in text
+    assert "experimental_papers = true" in text
+    app_file.write_text("[app]\nexperimental = false\n")
+    assert preferences.get()["experimental_papers"] is False
 
 
 def test_back_to_the_system_browser(app_file):
     preferences.set_(browser_profile="Uni")
-    preferences.set_(browser_profile="", experimental=False)
-    assert preferences.get() == {"browser_profile": "", "experimental": False, "select_to_copy": True,
+    preferences.set_(browser_profile="", experimental_papers=False)
+    assert preferences.get() == {"browser_profile": "", **OFF, "select_to_copy": True,
                                  "monitor_bar": True, "appearance": "system"}
 
 

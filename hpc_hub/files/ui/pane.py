@@ -227,7 +227,7 @@ class FilePane(FileActionsMixin, Gtk.Box):
             self.actions["zip"].set_tooltip_text("Extract here" if is_archive else "Zip on the cluster")
             self.actions["zip"].set_icon_name(
                 "extract-archive-symbolic" if is_archive else "package-x-generic-symbolic")
-            self.actions["latex"].set_visible(remote_fs.ext(e.name) == ".tex" and features.experimental)
+            self.actions["latex"].set_visible(remote_fs.ext(e.name) == ".tex" and features.papers)
         else:
             self.actions["latex"].set_visible(False)
 

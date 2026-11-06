@@ -94,6 +94,10 @@ def test_list_hides_papers_while_experimental(hub, tmp_path):
     config.APP_FILE.write_text("[app]\nexperimental = true\n")
     got = api.list_projects()
     assert got["experimental"] and [p["name"] for p in got["projects"]] == ["thesis"]
+    config.APP_FILE.write_text("[app]\nexperimental_papers = false\nexperimental_skills = true\n")
+    assert not api.list_projects()["experimental"]
+    config.APP_FILE.write_text("[app]\nexperimental_papers = true\n")
+    assert api.list_projects()["experimental"]
 
 
 def test_create_update_remove(hub, tmp_path):

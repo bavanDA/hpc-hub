@@ -1,10 +1,11 @@
-// One agent choice for Write message, Ask and Check my list: a chip in the bar under the commit list ("Haiku · Low")
-// opening a small panel with three presets (Fast, Careful, Thorough), then the agent, its model and its effort.
-// Kept for next time, for every paper. The Ask box can pick another one for a single question (PickMenu).
+// The agent for Write message, Ask and Check my list: a chip in the bar under the commit list ("Opus · High")
+// opening a small panel with the agent (picked in Settings), then its model and its effort, two separate choices.
+// Kept for next time, for every paper. The Ask box can pick another model and effort for a single question (PickMenu).
 import { Check, ChevronDown, ChevronUp, FlaskConical, MessageSquare, MousePointer2, Star, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
-import type { AgentChoice, AgentPick, Preset } from '../../../types/history'
+import type { AgentChoice, AgentDesc, AgentLevel } from '../../../types/history'
+import { openSettings } from '../../app/openSettings'
 import { Switch } from '../../ui'
 import { chipLabel } from './useAssist'
 
@@ -16,16 +17,6 @@ export function AgentIcon({ agent, size = 12 }: { agent: string; size?: number }
     <span className="grid size-[18px] shrink-0 place-items-center rounded-[5px] border border-line-strong text-dim">
       <I size={size} /></span>
   )
-}
-
-const PRESETS: [Preset, string, string][] = [
-  ['fast', 'Fast', 'about 5 s'], ['careful', 'Careful', 'about 20 s'], ['thorough', 'Thorough', 'a minute or so']]
-
-/** "Haiku, Low" for a preset. */
-function presetWords(c: AgentChoice, p: Preset): string {
-  const v = c.presets[p], a = c.agents.find((x) => x.id === v.agent)
-  return [a?.models.find(([m]) => m === v.model)?.[1], a?.efforts.find(([e]) => e === v.effort)?.[1]]
-    .filter(Boolean).join(', ')
 }
 
 function useOutside(open: boolean, close: () => void) {
@@ -41,32 +32,7 @@ function useOutside(open: boolean, close: () => void) {
   return box
 }
 
-type ChipProps = {
-  choice: AgentChoice | null
-  clusterName: string
-  installed: string[] | null
-  onOpen: () => void  // look up which agents the cluster has
-  onChoose: (p: Partial<AgentPick> & { split?: boolean }) => void
-}
-
-/** The chip in the bar under the commit list, and its panel. */
-export function AgentChip({ choice, clusterName, installed, onOpen, onChoose }: ChipProps) {
-  const [open, setOpen] = useState(false)
-  const box = useOutside(open, () => setOpen(false))
-  if (!choice) return null
-  return (
-    <div ref={box} className="relative shrink-0">
-      <button onClick={() => { if (!open) onOpen(); setOpen(!open) }} title="The agent for Write message, Ask and Check my list"
-        className={`flex h-8 items-center gap-1.5 rounded-md px-1.5 text-sm font-semibold ${open ? 'bg-selected' : 'hover:bg-hover'}`}>
-        <AgentIcon agent={choice.agent} /> <span className="max-w-[120px] truncate">{chipLabel(choice, choice.agents)}</span>
-        {open ? <ChevronDown size={13} className="text-dim" /> : <ChevronUp size={13} className="text-dim" />}</button>
-      {open && <AgentPanel choice={choice} clusterName={clusterName} installed={installed} onChoose={onChoose}
-        onClose={() => setOpen(false)} />}
-    </div>
-  )
-}
-
-const SELECT = 'h-8 max-w-[200px] cursor-pointer appearance-none rounded-md bg-pill pr-7 pl-2.5 text-sm font-semibold '
+const SELECT = 'h-8 max-w-[220px] cursor-pointer appearance-none rounded-md bg-pill pr-7 pl-2.5 text-sm font-semibold '
   + 'outline-none hover:bg-pressed focus:ring-2 focus:ring-focus'
 
 function Select({ label, value, options, onChange }:
@@ -81,82 +47,135 @@ function Select({ label, value, options, onChange }:
   )
 }
 
-function AgentPanel({ choice, clusterName, installed, onChoose, onClose }:
-  { choice: AgentChoice; clusterName: string; installed: string[] | null
-    onChoose: ChipProps['onChoose']; onClose: () => void }) {
-  const agent = choice.agents.find((a) => a.id === choice.agent)
-  const pickAgent = (id: string) => {
-    const a = choice.agents.find((x) => x.id === id)
-    if (!a) return
-    const has = (list: [string, string][], v: string) => list.some(([x]) => x === v)
-    onChoose({ agent: id, model: has(a.models, choice.model) ? choice.model : a.models.find(([v]) => v)?.[0] ?? '',
-      effort: has(a.efforts, choice.effort) ? choice.effort : has(a.efforts, 'low') ? 'low' : '' })
-  }
-  const row = 'flex min-h-11 items-center gap-3 border-t border-line first:border-t-0'
+/** One of a few side by side; a dropdown when there are too many to fit (Cursor's models). */
+function Choices({ label, value, options, onChange }:
+  { label: string; value: string; options: [string, string][]; onChange: (v: string) => void }) {
+  if (options.length > 6) return <Select label={label} value={value} options={options} onChange={onChange} />
   return (
-    <div className="menu-in absolute bottom-full left-0 z-30 mb-2 w-[440px] rounded-xl border border-line bg-raised px-[18px]
-      pt-4 pb-3.5 shadow-[var(--shadow-dialog)]">
-      <div className="flex items-center"><b className="flex-1 text-[15px]">Agent</b>
-        <button onClick={onClose} aria-label="Close" className="grid size-7 place-items-center rounded-md text-dim hover:bg-hover">
-          <X size={15} /></button></div>
-      <p className="mt-0.5 mb-3 text-[13px] leading-[18px] text-dim">One choice for Write message, Ask and Check my list.
-        Kept for next time.</p>
-      <div className="flex gap-2" role="radiogroup" aria-label="Presets">
-        {PRESETS.map(([p, name, time]) => {
-          const on = choice.preset === p
-          return (
-            <button key={p} role="radio" aria-checked={on} onClick={() => onChoose(choice.presets[p])}
-              className={`flex-1 rounded-[10px] px-2.5 py-2 text-left ${on ? 'ring-[1.5px] ring-accent'
-                : 'ring-1 ring-line-strong ring-inset hover:bg-hover'}`}>
-              <span className="flex items-center gap-1.5 text-[13.5px] font-semibold">{name}
-                <span className="flex-1" />{on && <Check size={14} />}</span>
-              <span className="mt-0.5 block text-xs leading-4 text-dim">{presetWords(choice, p)}<br />{time}</span>
-            </button>
-          )
-        })}
-      </div>
-      <div className="mt-3">
-        <div className={row}><span className="flex-1">Agent</span>
-          <Select label="Agent" value={choice.agent} onChange={pickAgent}
-            options={choice.agents.map((a) => [a.id, installed && !installed.includes(a.id) ? `${a.name} (not found on ${clusterName})`
-              : a.name])} /></div>
-        {agent && agent.models.length > 0 && <div className={row}><span className="flex-1">Model</span>
-          <Select label="Model" value={choice.model} options={agent.models} onChange={(model) => onChoose({ model })} /></div>}
-        {agent && agent.efforts.length > 0 && <div className={row}><span className="flex-1">Effort</span>
-          <Select label="Effort" value={choice.effort} options={agent.efforts} onChange={(effort) => onChoose({ effort })} /></div>}
-        <div className={row}><span className="flex-1">Suggest several commits</span>
-          <Switch on={choice.split} onChange={(split) => onChoose({ split })} label="Suggest several commits" /></div>
-      </div>
-      <p className="mt-2 text-xs leading-4 text-dim">Runs on your compute node on {clusterName}. Model and Effort show only
-        what the agent offers: Cursor has models, ChatGPT and Antigravity have effort.</p>
+    <div role="radiogroup" aria-label={label} className="flex gap-[3px] rounded-lg border border-line-strong p-[3px]">
+      {options.map(([v, text]) => {
+        const on = v === value
+        return (
+          <button key={v} type="button" role="radio" aria-checked={on} onClick={() => onChange(v)}
+            className={`h-7 flex-auto rounded-md px-2 text-[13px] whitespace-nowrap ${on
+              ? 'bg-accent font-semibold text-on-accent' : 'font-medium text-dim hover:bg-hover active:bg-pressed'}`}>
+            {text}</button>
+        )
+      })}
     </div>
   )
 }
 
-/** For one question only: your usual choice or a preset. */
-export function PickMenu({ choice, value, onPick }:
-  { choice: AgentChoice; value: AgentPick | null; onPick: (p: AgentPick | null) => void }) {
+/** Model and Effort, each its own choice from what the agent offers; words when it has no such setting. */
+function Levels({ agent, value, onChange }:
+  { agent: AgentDesc | undefined; value: AgentLevel; onChange: (p: Partial<AgentLevel>) => void }) {
+  const block = 'border-t border-line py-2.5'
+  const none = (text: string) => <p className="text-sm text-dim">{text}</p>
+  return (
+    <>
+      <div className={block}>
+        <div className="mb-1.5 text-sm">Model</div>
+        {agent && agent.models.length > 0
+          ? <Choices label="Model" value={value.model} options={agent.models} onChange={(model) => onChange({ model })} />
+          : none('Its default model')}
+      </div>
+      <div className={block}>
+        <div className="mb-1.5 text-sm">Effort</div>
+        {agent && agent.efforts.length > 0
+          ? <Choices label="Effort" value={value.effort} options={agent.efforts} onChange={(effort) => onChange({ effort })} />
+          : none('Its default effort')}
+      </div>
+    </>
+  )
+}
+
+type ChipProps = {
+  choice: AgentChoice | null
+  clusterName: string
+  installed: string[] | null
+  onOpen: () => void  // look up which agents the cluster has
+  onChoose: (p: Partial<AgentLevel> & { split?: boolean }) => void
+}
+
+/** The chip in the bar under the commit list, and its panel. */
+export function AgentChip({ choice, clusterName, installed, onOpen, onChoose }: ChipProps) {
   const [open, setOpen] = useState(false)
   const box = useOutside(open, () => setOpen(false))
-  const now = value ?? choice
-  const item = (key: string, label: string, hint: string, on: boolean, pick: AgentPick | null) => (
-    <button key={key} onClick={() => { onPick(pick); setOpen(false) }}
-      className="flex h-9 w-full items-center gap-2 rounded-md px-2.5 text-left text-sm hover:bg-hover">
-      <span className="w-4">{on && <Check size={14} />}</span><span className="font-semibold">{label}</span>
-      <span className="text-dim">{hint}</span></button>
-  )
+  if (!choice) return null
   return (
     <div ref={box} className="relative shrink-0">
-      <button onClick={() => setOpen(!open)} title="The agent for this question"
+      <button onClick={() => { if (!open) onOpen(); setOpen(!open) }} title="The model and effort for Write message, Ask and Check my list"
+        className={`flex h-8 items-center gap-1.5 rounded-md px-1.5 text-sm font-semibold ${open ? 'bg-selected' : 'hover:bg-hover'}`}>
+        <AgentIcon agent={choice.agent} /> <span className="max-w-[140px] truncate">{chipLabel(choice, choice.agents)}</span>
+        {open ? <ChevronDown size={13} className="text-dim" /> : <ChevronUp size={13} className="text-dim" />}</button>
+      {open && <AgentPanel choice={choice} clusterName={clusterName} installed={installed} onChoose={onChoose}
+        onClose={() => setOpen(false)} />}
+    </div>
+  )
+}
+
+function AgentPanel({ choice, clusterName, installed, onChoose, onClose }:
+  { choice: AgentChoice; clusterName: string; installed: string[] | null
+    onChoose: ChipProps['onChoose']; onClose: () => void }) {
+  const agent = choice.agents.find((a) => a.id === choice.agent)
+  const missing = !!installed && !installed.includes(choice.agent)
+  return (
+    <div className="menu-in absolute bottom-full left-0 z-30 mb-2 w-[460px] rounded-xl border border-line bg-raised px-[18px]
+      pt-4 pb-3.5 shadow-[var(--shadow-dialog)]">
+      <div className="flex items-center"><b className="flex-1 text-[15px]">Agent</b>
+        <button onClick={onClose} aria-label="Close" className="grid size-7 place-items-center rounded-md text-dim hover:bg-hover">
+          <X size={15} /></button></div>
+      <p className="mt-0.5 mb-3 text-[13px] leading-[18px] text-dim">Writes commit messages, answers questions about
+        changes and checks your notes. Kept for every paper.</p>
+      <div className="flex min-h-11 items-center gap-3 border-t border-line">
+        <AgentIcon agent={choice.agent} />
+        <span className="min-w-0 flex-1">
+          <span className="block font-semibold">{agent?.name ?? choice.agent}</span>
+          {missing && <span className="block text-xs text-dim">Not found on {clusterName}</span>}
+        </span>
+        <button onClick={() => { onClose(); openSettings() }}
+          className="h-8 rounded-md px-2 text-sm text-dim underline underline-offset-2 hover:bg-hover hover:text-text">
+          Change in Settings</button>
+      </div>
+      <Levels agent={agent} value={choice} onChange={onChoose} />
+      <div className="flex min-h-11 items-center gap-3 border-t border-line"><span className="flex-1">Suggest several commits</span>
+        <Switch on={choice.split} onChange={(split) => onChoose({ split })} label="Suggest several commits" /></div>
+      <p className="mt-1 text-xs leading-4 text-dim">Runs on your compute node on {clusterName}.</p>
+    </div>
+  )
+}
+
+/** For one question only: another model and effort of your agent, or your usual ones. */
+export function PickMenu({ choice, value, onPick }:
+  { choice: AgentChoice; value: AgentLevel | null; onPick: (p: AgentLevel | null) => void }) {
+  const [open, setOpen] = useState(false)
+  const box = useOutside(open, () => setOpen(false))
+  const now = { ...choice, ...value }
+  const agent = choice.agents.find((a) => a.id === choice.agent)
+  const pick = (p: Partial<AgentLevel>) => {
+    const next = { model: now.model, effort: now.effort, ...p }
+    onPick(next.model === choice.model && next.effort === choice.effort ? null : next)
+  }
+  return (
+    <div ref={box} className="relative shrink-0">
+      <button onClick={() => setOpen(!open)} title="The model and effort for this question"
         className="flex h-9 items-center gap-1.5 rounded-lg bg-pill px-2.5 text-sm font-semibold hover:bg-pressed">
-        <AgentIcon agent={now.agent} /> {chipLabel(now, choice.agents)} <ChevronDown size={14} className="text-dim" /></button>
+        <AgentIcon agent={choice.agent} /> {chipLabel(now, choice.agents)} <ChevronDown size={14} className="text-dim" /></button>
       {open && (
-        <div className="menu-in absolute right-0 bottom-full z-30 mb-1.5 w-[300px] rounded-xl border border-line bg-raised p-1.5
-          shadow-[var(--shadow-dialog)]">
-          {item('usual', 'Your usual', chipLabel(choice, choice.agents), !value, null)}
-          {PRESETS.map(([p, name]) => item(p, name, presetWords(choice, p),
-            !!value && value.agent === choice.presets[p].agent && value.model === choice.presets[p].model
-              && value.effort === choice.presets[p].effort, choice.presets[p]))}
+        <div className="menu-in absolute right-0 bottom-full z-30 mb-1.5 w-[420px] rounded-xl border border-line bg-raised
+          px-4 pt-3 pb-1.5 font-sans shadow-[var(--shadow-dialog)]">
+          <div className="flex items-center gap-2 pb-2.5">
+            <span className="min-w-0 flex-1">
+              <b className="block text-sm">For this question</b>
+              <span className="block text-xs text-dim">{agent?.name ?? choice.agent}. Your usual is
+                {` ${chipLabel(choice, choice.agents)}`}.</span>
+            </span>
+            {value
+              ? <button onClick={() => { onPick(null); setOpen(false) }}
+                  className="h-8 rounded-md bg-pill px-2.5 text-sm font-semibold hover:bg-pressed">Back to your usual</button>
+              : <span className="flex items-center gap-1.5 text-sm text-dim"><Check size={14} /> Your usual</span>}
+          </div>
+          <Levels agent={agent} value={now} onChange={pick} />
         </div>
       )}
     </div>

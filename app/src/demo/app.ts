@@ -11,9 +11,11 @@ function demoAppearance(): Preferences['appearance'] {
   return THEMES.some((t) => t.id === a) ? a as Preferences['appearance'] : 'system'
 }
 
-// ?experimental shows the experimental parts (design work)
+// ?experimental shows the experimental parts (design work); ?experimental=papers,skills only those
+const asked = typeof location !== 'undefined' ? new URLSearchParams(location.search).get('experimental') : null
+const trying = (name: string) => asked !== null && (asked === '' || asked.split(',').includes(name))
 const prefs: Preferences = { browser_profile: 'Uni',
-  experimental: typeof location !== 'undefined' && new URLSearchParams(location.search).has('experimental'),
+  experimental_papers: trying('papers'), experimental_skills: trying('skills'), experimental_schedules: trying('schedules'),
   select_to_copy: true, monitor_bar: true,
   appearance: demoAppearance() }
 

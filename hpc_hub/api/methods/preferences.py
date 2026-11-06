@@ -1,5 +1,5 @@
-"""Preferences: light or dark, the default browser for links, terminal settings and the experimental pages, kept in
-app.toml."""
+"""Preferences: light or dark, the default browser for links, terminal settings and the experimental pages (Papers,
+Skills and Scheduled agents, each its own switch), kept in app.toml."""
 
 import threading
 
@@ -10,7 +10,7 @@ _lock = threading.Lock()  # one load, change, save at a time
 
 
 def _json(app: config.AppSettings) -> dict:
-    return {"browser_profile": app.browser_profile, "experimental": app.experimental,
+    return {"browser_profile": app.browser_profile, **{k: getattr(app, k) for k in config.EXPERIMENTS},
             "select_to_copy": app.select_to_copy, "monitor_bar": app.monitor_bar, "appearance": app.appearance}
 
 
@@ -20,7 +20,8 @@ def get() -> dict:
 
 
 @method("preferences.set")
-def set_(browser_profile: str | None = None, experimental: bool | None = None,
+def set_(browser_profile: str | None = None, experimental_papers: bool | None = None,
+         experimental_skills: bool | None = None, experimental_schedules: bool | None = None,
          select_to_copy: bool | None = None, monitor_bar: bool | None = None,
          appearance: str | None = None) -> dict:
     """Change what is given and save; returns all preferences."""
@@ -28,8 +29,11 @@ def set_(browser_profile: str | None = None, experimental: bool | None = None,
         app = config.load_app(config.APP_FILE)
         if browser_profile is not None:
             app.browser_profile = browser.preferred = browser_profile.strip()
-        if experimental is not None:
-            app.experimental = features.experimental = bool(experimental)
+        for key, on in (("experimental_papers", experimental_papers), ("experimental_skills", experimental_skills),
+                        ("experimental_schedules", experimental_schedules)):
+            if on is not None:
+                setattr(app, key, bool(on))
+        features.load(app)
         if select_to_copy is not None:
             app.select_to_copy = features.select_to_copy = bool(select_to_copy)
         if monitor_bar is not None:

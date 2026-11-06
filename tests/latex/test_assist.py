@@ -23,13 +23,28 @@ CHANGES = {"files": [
 
 
 # -- the choice ----------------------------------------------------------------------------------------------------
-def test_presets_and_labels():
-    fast = assist.check(*assist.PRESETS["fast"])
-    assert fast == assist.Choice("claude", "haiku", "low")
-    assert assist.preset(fast) == "fast" and assist.label(fast) == "Claude Haiku, Low"
-    assert assist.preset(assist.Choice("claude", "sonnet", "medium")) == "careful"
-    assert assist.preset(assist.Choice("claude", "opus", "high")) == "thorough"
-    assert assist.preset(assist.Choice("claude", "opus", "low")) == ""
+def test_default_and_labels():
+    assert assist.DEFAULT == assist.Choice("claude", "haiku", "low") == assist.check("claude", "haiku", "low")
+    assert assist.label(assist.DEFAULT) == "Claude Haiku, Low"
+    assert not hasattr(assist, "PRESETS") and not hasattr(assist, "preset")
+    # model and effort are two choices: any of each
+    for model in ("opus", "sonnet", "haiku", ""):
+        for effort in ("", "low", "medium", "high", "xhigh", "max"):
+            assert assist.check("claude", model, effort) == assist.Choice("claude", model, effort)
+    assert assist.label(assist.Choice("claude", "opus", "xhigh")) == "Claude Opus, Extra high"
+    assert assist.label(assist.Choice("claude", "haiku", "max")) == "Claude Haiku, Max"
+
+
+def test_switch_agent_brings_its_own_model_and_effort():
+    opus = assist.Choice("claude", "opus", "high")
+    assert assist.switch(opus, "claude") == opus
+    assert assist.switch(opus, "codex") == assist.Choice("codex", "", "high")  # no model setting; High carries over
+    assert assist.switch(opus, "cursor") == assist.Choice("cursor", "", "")  # no Opus there, no effort setting
+    assert assist.switch(assist.Choice("cursor", "auto", ""), "claude") == assist.DEFAULT
+    assert assist.switch(assist.Choice("codex", "", "max"), "agy") == assist.Choice("agy", "", "max")
+    assert assist.switch(assist.Choice("agy", "", "max"), "codex") == assist.Choice("codex", "", "low")  # no Max
+    with pytest.raises(ValueError, match="No agent"):
+        assist.switch(opus, "eliza")
 
 
 def test_check_keeps_only_what_the_agent_offers():

@@ -47,28 +47,35 @@ def _saved_choice() -> tuple[assist.Choice, bool]:
     try:
         return assist.check(app.paper_agent, app.paper_model, app.paper_effort), app.paper_split
     except ValueError:
-        return assist.Choice(*assist.PRESETS["fast"]), app.paper_split
+        return assist.DEFAULT, app.paper_split
 
 
 def _choice_json(c: assist.Choice, split: bool) -> dict:
-    return {"agent": c.agent, "model": c.model, "effort": c.effort, "split": split, "preset": assist.preset(c),
-            "label": assist.label(c), "agents": assist.describe(),
-            "presets": {k: {"agent": a, "model": m, "effort": e} for k, (a, m, e) in assist.PRESETS.items()}}
+    return {"agent": c.agent, "model": c.model, "effort": c.effort, "split": split, "label": assist.label(c),
+            "agents": assist.describe()}
 
 
 @method("latex.agent_choice")
 def agent_choice() -> dict:
-    """Your agent for Write message, Ask and Check my list: {agent, model, effort, split, preset (fast, careful,
-    thorough or ""), label, agents: [{id, name, models, efforts}], presets}."""
+    """Your agent for Write message, Ask and Check my list: {agent, model, effort, split, label, agents: [{id, name,
+    models, efforts}]}. The agent is picked in Settings, its model and effort in the paper, any of each."""
     return _choice_json(*_saved_choice())
 
 
 @method("latex.agent_choose")
-def agent_choose(agent: str, model: str = "", effort: str = "", split: bool | None = None) -> dict:
-    """Keep a new choice (for every paper, in app.toml). Answers it as latex.agent_choice."""
-    c = assist.check(agent, model, effort)
+def agent_choose(agent: str | None = None, model: str | None = None, effort: str | None = None,
+                 split: bool | None = None) -> dict:
+    """Keep a new choice (for every paper, in app.toml); what is not given stays. Another agent alone (Settings)
+    brings its own model and effort (assist.switch). Answers it as latex.agent_choice."""
     with _choice_lock:
         app = config.load_app(config.APP_FILE)
+        try:
+            c = assist.check(app.paper_agent, app.paper_model, app.paper_effort)
+        except ValueError:
+            c = assist.DEFAULT
+        if agent is not None:
+            c = assist.switch(c, agent)
+        c = assist.check(c.agent, c.model if model is None else model, c.effort if effort is None else effort)
         app.paper_agent, app.paper_model, app.paper_effort = c.agent, c.model, c.effort
         if split is not None:
             app.paper_split = bool(split)
@@ -77,10 +84,11 @@ def agent_choose(agent: str, model: str = "", effort: str = "", split: bool | No
 
 
 def _choice(override: dict | None) -> assist.Choice:
+    """Your choice, or for one question another model and effort of the same agent."""
+    c = _saved_choice()[0]
     if override:
-        return assist.check(str(override.get("agent", "")), str(override.get("model", "")),
-                            str(override.get("effort", "")))
-    return _saved_choice()[0]
+        return assist.check(c.agent, str(override.get("model", c.model)), str(override.get("effort", c.effort)))
+    return c
 
 
 # -- jobs ----------------------------------------------------------------------------------------------------------
@@ -266,8 +274,8 @@ def _material(ssh, folder: str, about: dict) -> tuple[str, str]:
 @method("latex.agent_ask")
 def agent_ask(cluster: str, folder: str, question: str, about: dict, choice: dict | None = None) -> dict:
     """Ask about a change. about: {kind: commit, hash} | {kind: range, frm, to} | {kind: now} | {kind: lines, path,
-    line, end, at, text, diff} | {kind: pdf, page, path?, line?, text}. choice changes the agent for this question
-    only. The result: {text, cites: [{ref, path, line, end, page}], question}."""
+    line, end, at, text, diff} | {kind: pdf, page, path?, line?, text}. choice: {model, effort} of your agent for
+    this question only. The result: {text, cites: [{ref, path, line, end, page}], question}."""
     q = (question or "").strip()
     if not q:
         raise ValueError("Write a question first")

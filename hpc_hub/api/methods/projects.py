@@ -120,8 +120,9 @@ def _app() -> config.AppSettings:
     return config.load_app(config.APP_FILE)
 
 
-def _experimental() -> bool:
-    return features.experimental or _app().experimental
+def _papers() -> bool:
+    """The Papers page is on (Settings, Experimental)."""
+    return features.papers or _app().experimental_papers
 
 
 def _json(p: Project) -> dict:
@@ -135,8 +136,9 @@ def _json(p: Project) -> dict:
 
 @method("projects.list")
 def list_projects() -> dict:
-    """Your projects, most recently opened first. LaTeX papers live on the LaTeX page while experimental is on."""
-    exp = _experimental()
+    """Your projects, most recently opened first. LaTeX papers live on the Papers page while that is on
+    (experimental: the Papers page is on)."""
+    exp = _papers()
     for s in hub().sessions.values():
         if s.connected and time.time() - _synced.get(s.cfg.id, 0) > SYNC_EVERY:
             _synced[s.cfg.id] = time.time()

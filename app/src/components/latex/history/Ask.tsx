@@ -1,10 +1,10 @@
-// Ask the agent about a change: the box (a question, and for this one question another agent if you like) and the
-// thread that shows the answer right under the lines it is about, with links to the lines and PDF pages it cites.
-// It runs in the background like Write message: you keep reading.
+// Ask the agent about a change: the box (a question, and for this one question another model or effort if you like)
+// and the thread that shows the answer right under the lines it is about, with links to the lines and PDF pages it
+// cites. It runs in the background like Write message: you keep reading.
 import { ArrowUp, Copy, CornerDownRight, Loader2, StickyNote, X } from 'lucide-react'
 import { Fragment, useEffect, useState, type ReactNode } from 'react'
 
-import type { AgentChoice, AgentPick, Answer } from '../../../types/history'
+import type { AgentChoice, AgentLevel, Answer } from '../../../types/history'
 import { useToast } from '../../toast'
 import { Button } from '../../ui'
 import { AgentIcon, PickMenu } from './Agent'
@@ -38,14 +38,14 @@ type BoxProps = {
   title: ReactNode  // Ask about the selected text "…"
   choice: AgentChoice | null
   initial?: string
-  onAsk: (question: string, pick: AgentPick | null) => void
+  onAsk: (question: string, pick: AgentLevel | null) => void
   onClose: () => void
   className?: string
 }
 
 export function AskBox({ title, choice, initial = '', onAsk, onClose, className = 'mx-12 my-2' }: BoxProps) {
   const [q, setQ] = useState(initial)
-  const [pick, setPick] = useState<AgentPick | null>(null)
+  const [pick, setPick] = useState<AgentLevel | null>(null)
   const go = () => { if (q.trim()) onAsk(q.trim(), pick) }
   return (
     <div className={`${className} rounded-xl border-2 border-text bg-window px-3.5 pt-2.5 pb-2 font-sans text-base select-none`}>
@@ -64,7 +64,7 @@ export function AskBox({ title, choice, initial = '', onAsk, onClose, className 
         <Button kind="primary" disabled={!q.trim()} onClick={go}><ArrowUp size={15} /> Ask</Button>
       </div>
       <p className="mt-1.5 text-xs text-dim">Answers appear here while you keep reading.{pick && choice
-        ? ` This ask uses ${chipLabel(pick, choice.agents)}; your usual choice stays ${chipLabel(choice, choice.agents)}.` : ''}</p>
+        ? ` This question uses ${chipLabel({ ...choice, ...pick }, choice.agents)}; your usual stays ${chipLabel(choice, choice.agents)}.` : ''}</p>
     </div>
   )
 }

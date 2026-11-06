@@ -2,9 +2,9 @@
 
 Each is one headless call of the agent you picked (Claude Haiku with Low effort unless you change it) on your
 compute node, with everything it needs in the prompt: no tools and no files to read, so a small change takes
-seconds. Here: the choice and its presets, the prompts (the diff trimmed to a sane size), the script that runs the
-agent, and reading its answer back. The agent never commits and never checks a note off: the app shows what it
-says and you decide."""
+seconds. Here: the choice (the agent is picked in Settings, its model and effort in the paper, any of each), the
+prompts (the diff trimmed to a sane size), the script that runs the agent, and reading its answer back. The agent
+never commits and never checks a note off: the app shows what it says and you decide."""
 
 import base64
 import json
@@ -14,8 +14,6 @@ from dataclasses import dataclass
 
 from ..agents.catalog import AGENTS, AGY, BY_ID, CLAUDE, CODEX, CURSOR, Agent
 
-PRESETS = {"fast": ("claude", "haiku", "low"), "careful": ("claude", "sonnet", "medium"),
-           "thorough": ("claude", "opus", "high")}
 DIFF_LIMIT = 24_000  # characters of diff in one prompt
 FILE_LIMIT = 8_000  # of one file's part of it
 CONTEXT_LINES = 12  # around the lines a question is about
@@ -66,9 +64,25 @@ def check(agent: str, model: str = "", effort: str = "") -> Choice:
     return Choice(a.id, out["model"], out["effort"])
 
 
-def preset(c: Choice) -> str:
-    """fast, careful or thorough when the choice is one of them, else ""."""
-    return next((k for k, v in PRESETS.items() if v == (c.agent, c.model, c.effort)), "")
+DEFAULT = Choice("claude", "haiku", "low")
+
+
+def switch(c: Choice, agent: str) -> Choice:
+    """Another agent (picked in Settings): the model and effort carry over when it has them; Claude starts at Haiku,
+    Low again, the others at their default model and Low effort where they have effort."""
+    a = BY_ID.get(agent)
+    if not a:
+        raise ValueError(f"No agent {agent}")
+    if a.id == c.agent:
+        return c
+    start = DEFAULT if a is CLAUDE else Choice(a.id, "", "low")
+    out = {}
+    for key in ("model", "effort"):
+        o = _option(a, key)
+        have = {v for v, _ in o.choices} if o else set()
+        now, first = getattr(c, key), getattr(start, key)
+        out[key] = now if now and now in have else first if first in have else ""
+    return Choice(a.id, out["model"], out["effort"])
 
 
 def label(c: Choice) -> str:

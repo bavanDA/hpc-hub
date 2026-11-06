@@ -1,9 +1,11 @@
-// The app's Settings (hpc_hub/ui/preferences.py): light or dark, the browser for links, terminals, experimental pages.
+// The app's Settings (hpc_hub/ui/preferences.py): light or dark, the browser for links, terminals, the experimental
+// parts (each its own switch) and, while Papers is on, the agent for papers.
 import { useEffect, useState } from 'react'
 
 import { call } from '../../rpc'
 import { EDialog, Row, Section, ToggleRow } from '../e/ui'
 import { Select } from '../jobs/Select'
+import { chooseAgent, useAgentChoice } from '../latex/history/agentChoice'
 import { setMonitorBar } from '../terminals/MonitorBar'
 import { setSelectToCopy } from '../terminals/xterm'
 import { useToast } from '../toast'
@@ -12,11 +14,11 @@ import { AboutDialog } from './About'
 import { AppearanceGroup } from './Appearance'
 import { forgetProfiles, getProfiles } from './openLink'
 import { PairPhoneDialog } from './PairPhoneDialog'
-import type { Preferences, Profiles } from './types'
+import { experimentsOf, type Experiments, type Preferences, type Profiles } from './types'
 import { university, type SetupStatus } from './Welcome'
 
 export function PreferencesDialog({ onClose, onExperimental, onDisconnectAndQuit }:
-  { onClose: () => void; onExperimental: (on: boolean) => void; onDisconnectAndQuit: () => void }) {
+  { onClose: () => void; onExperimental: (e: Experiments) => void; onDisconnectAndQuit: () => void }) {
   const [inner, setInner] = useState<'' | 'phone' | 'about'>('')
   const toast = useToast()
   const [prefs, setPrefs] = useState<Preferences | null>(null)
@@ -33,7 +35,7 @@ export function PreferencesDialog({ onClose, onExperimental, onDisconnectAndQuit
     call<Preferences>('preferences.set', changes).then((p) => {
       setPrefs(p)
       forgetProfiles()
-      if (changes.experimental !== undefined) onExperimental(p.experimental)
+      if (Object.keys(changes).some((k) => k.startsWith('experimental_'))) onExperimental(experimentsOf(p))
       setSelectToCopy(p.select_to_copy)
       setMonitorBar(p.monitor_bar)
     }).catch((e: Error) => toast(`Could not save: ${e.message}`))
@@ -73,10 +75,15 @@ export function PreferencesDialog({ onClose, onExperimental, onDisconnectAndQuit
             sub="CPU, memory and network of the host, under each terminal."
             checked={prefs.monitor_bar} onChange={(on) => save({ monitor_bar: on })} />
         </Section>
-        <Section title="Experimental">
-          <ToggleRow label="Experimental features" sub="Papers, and the Scheduled and Skills tabs of Agents. They may change or break."
-            checked={prefs.experimental} onChange={(on) => save({ experimental: on })} />
+        <Section title="Experimental" note="They may change or break.">
+          <ToggleRow label="Papers" sub="Write LaTeX papers with their history, notes and the agent's help."
+            checked={prefs.experimental_papers} onChange={(on) => save({ experimental_papers: on })} />
+          <ToggleRow label="Skills" sub="The Skills tab of Agents: what each agent knows on a cluster."
+            checked={prefs.experimental_skills} onChange={(on) => save({ experimental_skills: on })} />
+          <ToggleRow label="Scheduled agents" sub="The Scheduled tab of Agents: an agent runs a task on its own at set times."
+            checked={prefs.experimental_schedules} onChange={(on) => save({ experimental_schedules: on })} />
         </Section>
+        {prefs.experimental_papers && <PaperAgent />}
         <Section title="HPC Hub">
           <Row label="Set up the phone app" opens onPress={() => setInner('phone')} />
           <Row label="About HPC Hub" opens onPress={() => setInner('about')} />
@@ -87,5 +94,21 @@ export function PreferencesDialog({ onClose, onExperimental, onDisconnectAndQuit
       {inner === 'phone' && <PairPhoneDialog onClose={() => setInner('')} />}
       {inner === 'about' && <AboutDialog onClose={() => setInner('')} />}
     </EDialog>
+  )
+}
+
+/** The agent for a paper's Write message, Ask and Check my list; its model and effort are picked in the paper. */
+function PaperAgent() {
+  const toast = useToast()
+  const choice = useAgentChoice()
+  return (
+    <Section title="Papers" note="It writes commit messages, answers questions about changes and checks your notes. It runs on your compute node.">
+      <Row label={<span className="whitespace-nowrap">Agent for papers</span>}>
+        {choice ? <Select label="Agent for papers" value={choice.agent}
+          options={choice.agents.map((a): [string, string] => [a.id, a.name])}
+          onChange={(agent) => { chooseAgent({ agent }).catch((e: Error) => toast(`Could not save: ${e.message}`)) }} />
+          : <Spinner size={16} />}
+      </Row>
+    </Section>
   )
 }

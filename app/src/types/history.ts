@@ -109,9 +109,10 @@ export type SyncSpot = { line: number; page: number; x: number; y: number } | nu
 // -- the agent's help and notes (hpc_hub/api/methods/latex_assist.py) ----------------------------------------------
 export type AgentDesc = { id: string; name: string; models: [string, string][]; efforts: [string, string][] }
 export type AgentPick = { agent: string; model: string; effort: string }
-export type Preset = 'fast' | 'careful' | 'thorough'
-export type AgentChoice = AgentPick & { split: boolean; preset: Preset | ''; label: string; agents: AgentDesc[]
-  presets: Record<Preset, AgentPick> }
+/** The agent is picked in Settings; the paper picks its model and effort, any of each. */
+export type AgentChoice = AgentPick & { split: boolean; label: string; agents: AgentDesc[] }
+/** For one question: another model and effort of the same agent. */
+export type AgentLevel = { model: string; effort: string }
 export type AgentStarted = { id: string; node: string; label: string; agent: string }
 export type AgentKind = 'write' | 'ask' | 'check'
 export type AgentEvent = { id: string; cluster: string; folder: string; kind: AgentKind; node: string; label: string

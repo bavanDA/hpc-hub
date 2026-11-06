@@ -9,10 +9,15 @@ from ..core.config import AppSettings
 from ..terminals.ui import monitor_bar
 from . import appearance
 
+EXPERIMENTS = (("experimental_papers", "Papers", "Write LaTeX papers with their history, notes and the agent's help."),
+               ("experimental_skills", "Skills", "The Skills tab of Agents: what each agent knows on a cluster."),
+               ("experimental_schedules", "Scheduled agents", "The Scheduled tab of Agents: an agent runs a task "
+                                                              "on its own at set times."))
+
 
 class PreferencesDialog(Adw.PreferencesDialog):
     def __init__(self, app: AppSettings, save: Callable[[], None],
-                 on_experimental: Callable[[bool], None] = lambda on: None):
+                 on_experimental: Callable[[], None] = lambda: None):
         super().__init__(title="Settings", search_enabled=False)
         self.app, self.save, self.on_experimental = app, save, on_experimental
         self.found = browser.profiles() if browser.chrome() else []
@@ -45,20 +50,21 @@ class PreferencesDialog(Adw.PreferencesDialog):
         terms.add(self.monitor)
         page.add(terms)
 
-        trial = Adw.PreferencesGroup(title="Experimental")
-        self.experimental = Adw.SwitchRow(title="Experimental features", active=app.experimental,
-                                          subtitle="Papers, and Scheduled and Skills under Agents. They may change "
-                                                   "or break.")
-        self.experimental.connect("notify::active", lambda *_: self._experimental())
-        trial.add(self.experimental)
+        trial = Adw.PreferencesGroup(title="Experimental", description="They may change or break.")
+        self.trials = {}
+        for key, title, sub in EXPERIMENTS:
+            row = Adw.SwitchRow(title=title, subtitle=sub, active=getattr(app, key))
+            row.connect("notify::active", lambda r, _p, key=key: self._experimental(key, r.get_active()))
+            trial.add(row)
+            self.trials[key] = row
         page.add(trial)
         self.add(page)
 
-    def _experimental(self) -> None:
-        on = self.experimental.get_active()
-        self.app.experimental = features.experimental = on
+    def _experimental(self, key: str, on: bool) -> None:
+        setattr(self.app, key, on)
+        features.load(self.app)
         self.save()
-        self.on_experimental(on)
+        self.on_experimental()
 
     def _select(self) -> None:
         self.app.select_to_copy = features.select_to_copy = self.select.get_active()

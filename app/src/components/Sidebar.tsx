@@ -3,13 +3,15 @@ import {
 } from 'lucide-react'
 
 import { SidebarFooter } from './app/SidebarFooter'
+import type { Experiments } from './app/types'
 
 /** The pages in the sidebar. The rest are older names that now open a tab of one of them (App.tsx MOVED). */
 export type Page = 'clusters' | 'projects' | 'terminals' | 'code' | 'agents' | 'backup' | 'latex' | 'jobs' | 'usage' |
   'files' |
   'permissions' | 'skills' | 'schedules' | 'globus'
 
-type Item = { page: Page; title: string; icon: LucideIcon; experimental?: boolean }
+/** experiment: shown only while that experimental part is on in Settings. */
+type Item = { page: Page; title: string; icon: LucideIcon; experiment?: keyof Experiments }
 
 export const HOME: Item = { page: 'clusters', title: 'Clusters', icon: Server }
 
@@ -19,7 +21,7 @@ export const GROUPS: [string, Item[]][] = [
     { page: 'terminals', title: 'Terminals', icon: SquareTerminal },
     { page: 'code', title: 'Code', icon: FileCode2 },
     { page: 'agents', title: 'Agents', icon: Bot },
-    { page: 'latex', title: 'Papers', icon: FileText, experimental: true },
+    { page: 'latex', title: 'Papers', icon: FileText, experiment: 'papers' },
   ]],
   ['Cluster', [
     { page: 'jobs', title: 'Jobs', icon: ListChecks },
@@ -43,8 +45,8 @@ function Link({ item, page, onPick }: { item: Item; page: Page; onPick: (p: Page
   )
 }
 
-export function Sidebar({ page, onPick, experimental, onSettings, floating = false }: {
-  page: Page; onPick: (p: Page) => void; experimental: boolean; onSettings: () => void; floating?: boolean
+export function Sidebar({ page, onPick, experiments, onSettings, floating = false }: {
+  page: Page; onPick: (p: Page) => void; experiments: Experiments; onSettings: () => void; floating?: boolean
 }) {
   return (
     <aside className={`flex w-[220px] shrink-0 flex-col border-r border-line bg-window ${
@@ -56,7 +58,7 @@ export function Sidebar({ page, onPick, experimental, onSettings, floating = fal
         {GROUPS.map(([group, items]) => (
           <div key={group} className="flex flex-col">
             <div className="px-3 pt-5 pb-1.5 text-xs font-semibold tracking-wide text-dim uppercase">{group}</div>
-            {items.filter((i) => experimental || !i.experimental).map((i) => (
+            {items.filter((i) => !i.experiment || experiments[i.experiment]).map((i) => (
               <Link key={i.page} item={i} page={page} onPick={onPick} />
             ))}
           </div>

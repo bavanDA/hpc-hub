@@ -1,7 +1,7 @@
 // Demo answers for the agent's help in the demo paper's History (hpc_hub/api/methods/latex_assist.py): the agent
 // choice, Write message, Ask and Check my list as background jobs with `latex-agent` events and canned answers, and a
 // few notes by jdoe, asmith and mygroup (made up). Nothing runs anywhere.
-import type { About, AgentChoice, AgentKind, AgentPick, Changes, GitState, HCommit, Note, NotePlace,
+import type { About, AgentChoice, AgentKind, AgentLevel, AgentPick, Changes, GitState, HCommit, Note, NotePlace,
   Verdict } from '../types/history'
 import { demoEmit } from './events'
 import { demoCall } from './index'
@@ -17,11 +17,12 @@ const AGENTS: AgentChoice['agents'] = [
     efforts: EFFORT },
   { id: 'codex', name: 'ChatGPT', models: [], efforts: EFFORT.slice(0, 5) },
   { id: 'agy', name: 'Antigravity', models: [], efforts: EFFORT },
-  { id: 'cursor', name: 'Cursor', models: [['', 'Default'], ['auto', 'Auto'], ['composer-2.5', 'Composer 2.5']], efforts: [] },
+  { id: 'cursor', name: 'Cursor', models: [['', 'Default'], ['auto', 'Auto'], ['composer-2.5', 'Composer 2.5'],
+    ['claude-opus-5-thinking-high', 'Claude Opus 5'], ['claude-sonnet-5-thinking-high', 'Claude Sonnet 5'],
+    ['gpt-5.6-sol-high', 'GPT-5.6 Sol'], ['gemini-3.7-flash-high', 'Gemini 3.7 Flash']], efforts: [] },
 ]
-const PRESETS: AgentChoice['presets'] = { fast: { agent: 'claude', model: 'haiku', effort: 'low' },
-  careful: { agent: 'claude', model: 'sonnet', effort: 'medium' }, thorough: { agent: 'claude', model: 'opus', effort: 'high' } }
-let pick: AgentPick & { split: boolean } = { ...PRESETS.fast, split: true }
+const DEFAULT: AgentPick = { agent: 'claude', model: 'haiku', effort: 'low' }
+let pick: AgentPick & { split: boolean } = { ...DEFAULT, split: true }
 
 function label(p: AgentPick): string {
   const a = AGENTS.find((x) => x.id === p.agent)!
@@ -29,9 +30,19 @@ function label(p: AgentPick): string {
   return `${a.name}${m ? ` ${m}` : ''}${e ? `, ${e}` : ''}`
 }
 function choice(): AgentChoice {
-  const preset = (Object.keys(PRESETS) as (keyof typeof PRESETS)[]).find((k) => PRESETS[k].agent === pick.agent
-    && PRESETS[k].model === pick.model && PRESETS[k].effort === pick.effort) ?? ''
-  return { ...pick, preset, label: label(pick), agents: AGENTS, presets: PRESETS }
+  return { ...pick, label: label(pick), agents: AGENTS }
+}
+
+/** Another agent (Settings): what it has carries over, else Claude's Haiku, Low or the others' Default and Low
+ *  (assist.switch). */
+function switched(id: string): AgentPick {
+  const a = AGENTS.find((x) => x.id === id)
+  if (!a) throw new Error(`No agent ${id}`)
+  if (a.id === pick.agent) return pick
+  const start = a.id === 'claude' ? DEFAULT : { agent: a.id, model: '', effort: 'low' }
+  const keep = (list: [string, string][], now: string, first: string) => now && list.some(([v]) => v === now) ? now
+    : list.some(([v]) => v === first) ? first : ''
+  return { agent: a.id, model: keep(a.models, pick.model, start.model), effort: keep(a.efforts, pick.effort, start.effort) }
 }
 
 // -- notes ---------------------------------------------------------------------------------------------------------
@@ -72,7 +83,7 @@ function job(kind: AgentKind, p: AgentPick, about: Record<string, unknown>, ms: 
   })()
   return { id, node, label: lbl, agent: p.agent }
 }
-const pickOf = (c?: AgentPick | null): AgentPick => c ?? pick
+const pickOf = (c?: AgentLevel | null): AgentPick => ({ ...pick, ...c })
 
 // -- the canned answers ----------------------------------------------------------------------------------------------
 async function written() {
@@ -137,19 +148,20 @@ function verdicts(): { checked: number; results: Verdict[] } {
 
 export const answers: Record<string, unknown> = {
   'latex.agent_choice': () => choice(),
-  'latex.agent_choose': (p: AgentPick & { split?: boolean }) => {
-    pick = { agent: p.agent, model: p.model ?? '', effort: p.effort ?? '', split: p.split ?? pick.split }
+  'latex.agent_choose': (p: Partial<AgentPick> & { split?: boolean }) => {
+    const now = p.agent ? switched(p.agent) : pick
+    pick = { agent: now.agent, model: p.model ?? now.model, effort: p.effort ?? now.effort, split: p.split ?? pick.split }
     return choice()
   },
-  'latex.agent_write': async ({ choice: c }: { choice?: AgentPick }) => {
+  'latex.agent_write': async ({ choice: c }: { choice?: AgentLevel }) => {
     const st = await demoCall<GitState>('latex.git_state', {})
     if (!st.changes.length) throw new Error('Nothing changed since your last commit')
     return job('write', pickOf(c), { files: st.changes.length, lines: st.changes.reduce((s, x) => s + x.added + x.removed, 0) },
       4200, written)
   },
-  'latex.agent_ask': ({ question, about, choice: c }: { question: string; about: About; choice?: AgentPick }) =>
+  'latex.agent_ask': ({ question, about, choice: c }: { question: string; about: About; choice?: AgentLevel }) =>
     job('ask', pickOf(c), { title: about.kind }, c?.model === 'sonnet' ? 6500 : 3800, () => answered(question, about)),
-  'latex.agent_check': ({ choice: c }: { choice?: AgentPick }) => {
+  'latex.agent_check': ({ choice: c }: { choice?: AgentLevel }) => {
     if (!notes.some((x) => !x.done)) throw new Error('No open notes to check')
     return job('check', pickOf(c), { notes: notes.filter((x) => !x.done).length }, 5200, async () => verdicts())
   },

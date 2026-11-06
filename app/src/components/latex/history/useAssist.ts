@@ -5,9 +5,10 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { useEvent } from '../../../hooks'
 import { call } from '../../../rpc'
-import type { About, AgentChoice, AgentEvent, AgentKind, AgentPick, AgentStarted, Answer, Checked, Note,
-  NoteList, NotePlace, Written } from '../../../types/history'
+import type { About, AgentChoice, AgentEvent, AgentKind, AgentLevel, AgentPick, AgentStarted, Answer, Checked,
+  Note, NoteList, NotePlace, Written } from '../../../types/history'
 import { useToast } from '../../toast'
+import { chooseAgent, useAgentChoice } from './agentChoice'
 import { lastLine, plural, type Where } from './bits'
 
 /** Where an ask's thread shows: scope is the History selection (c:<hash>, r:<from>..<to>, now, card) and anchor a
@@ -42,7 +43,7 @@ export const FEATURE: Record<AgentKind, string> = { write: 'Write message', ask:
 export function useAssist(a: Args) {
   const toast = useToast()
   const { where } = a
-  const [choice, setChoice] = useState<AgentChoice | null>(null)
+  const choice = useAgentChoice()
   const [installed, setInstalled] = useState<string[] | null>(null)
   const [jobs, setJobsState] = useState<Job[]>([])
   const jobsNow = useRef<Job[]>([])
@@ -55,18 +56,13 @@ export function useAssist(a: Args) {
   const latest = useRef(a)
   latest.current = a
 
-  useEffect(() => { call<AgentChoice>('latex.agent_choice').then(setChoice).catch(() => {}) }, [])
   const loadInstalled = useCallback(() => {
     if (installed === null) call<string[]>('tools.installed', { cluster: where.cluster }).then(setInstalled).catch(() => {})
   }, [installed, where.cluster])
 
-  const choose = async (p: Partial<AgentPick> & { split?: boolean }) => {
-    if (!choice) return
-    const next = { agent: p.agent ?? choice.agent, model: p.model ?? choice.model, effort: p.effort ?? choice.effort,
-      split: p.split ?? choice.split }
-    try { setChoice(await call<AgentChoice>('latex.agent_choose', next)) } catch (e) {
-      toast(lastLine((e as Error).message), { kind: 'error' })
-    }
+  /** The model, the effort or the split; the agent is picked in Settings. */
+  const choose = async (p: Partial<AgentLevel> & { split?: boolean }) => {
+    try { await chooseAgent(p) } catch (e) { toast(lastLine((e as Error).message), { kind: 'error' }) }
   }
 
   // -- notes ------------------------------------------------------------------------------------------------------
@@ -132,8 +128,8 @@ export function useAssist(a: Args) {
     if (e.done) ended(n)
   })
 
-  const start = (kind: AgentKind, params: Record<string, unknown>, extra: Partial<Job> = {}, pick?: AgentPick) => {
-    const agent = choice?.agents.find((x) => x.id === (pick ?? choice)?.agent)?.name ?? 'The agent'
+  const start = (kind: AgentKind, params: Record<string, unknown>, extra: Partial<Job> = {}, pick?: AgentLevel) => {
+    const agent = choice?.agents.find((x) => x.id === choice.agent)?.name ?? 'The agent'
     const detail = `${FEATURE[kind]} runs ${agent} on a compute node on ${a.clusterName}. Once the node is ready, it `
       + 'starts by itself.'
     setQueued(kind)
@@ -156,7 +152,7 @@ export function useAssist(a: Args) {
     if (!choice) return
     start('write', { split: choice.split })
   }
-  const ask = (meta: AskMeta, pick?: AgentPick) => start('ask', { question: meta.question, about: meta.about },
+  const ask = (meta: AskMeta, pick?: AgentLevel) => start('ask', { question: meta.question, about: meta.about },
     { ask: meta }, pick)
   const check = () => start('check', {})
   const cancel = (id: string) => {
@@ -177,7 +173,8 @@ export function useAssist(a: Args) {
 
 export type Assist = ReturnType<typeof useAssist>
 
-/** 'Haiku · Low' for the chip, 'Claude' when there is nothing to pick. */
+/** 'Opus · High' for the chip, the agent's name in place of a model it has no setting for ('ChatGPT · Medium'), and
+ *  no effort when it has none ('Auto'). */
 export function chipLabel(c: AgentPick, agents: AgentChoice['agents']): string {
   const a = agents.find((x) => x.id === c.agent)
   const model = a?.models.find(([v]) => v === c.model)?.[1]

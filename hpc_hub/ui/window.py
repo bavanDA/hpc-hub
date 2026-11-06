@@ -109,15 +109,16 @@ class MainWindow(Adw.ApplicationWindow):
         narrow.add_setter(self.split, "collapsed", True)
         self.add_breakpoint(narrow)
         self.set_size_request(360, 400)
-        self.set_experimental(features.experimental)
+        self.set_experimental()
         self._page_changed()
 
-    def set_experimental(self, on: bool) -> None:
-        """Show or hide the experimental pages (LaTeX, Skills, Scheduled agents) and the buttons that lead there."""
+    def set_experimental(self) -> None:
+        """Show or hide the experimental pages (LaTeX, Skills, Scheduled agents), each by its own switch in
+        features, and the buttons that lead there."""
         for name in features.EXPERIMENTAL_PAGES:
             if name in self.rows:
-                self.rows[name].set_visible(on)
-        if not on and self.stack.get_visible_child_name() in features.EXPERIMENTAL_PAGES:
+                self.rows[name].set_visible(features.shown(name))
+        if not features.shown(self.stack.get_visible_child_name() or ""):
             self.stack.set_visible_child_name("clusters")
         if hasattr(self, "projects"):
             self.projects.reload()

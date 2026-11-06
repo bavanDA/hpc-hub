@@ -70,13 +70,38 @@ def end(h, job):
 
 def test_choice_is_kept_for_every_paper(h):
     c = api.agent_choice()
-    assert (c["agent"], c["model"], c["effort"], c["preset"], c["label"]) == ("claude", "haiku", "low", "fast",
-                                                                             "Claude Haiku, Low")
-    c = api.agent_choose("claude", "sonnet", "medium", split=False)
-    assert c["preset"] == "careful" and not c["split"]
-    assert config.load_app(config.APP_FILE).paper_model == "sonnet"
+    assert (c["agent"], c["model"], c["effort"], c["label"]) == ("claude", "haiku", "low", "Claude Haiku, Low")
+    assert "preset" not in c and "presets" not in c
+    assert [a["name"] for a in c["agents"]] == ["Claude", "ChatGPT", "Antigravity", "Cursor"]
+    c = api.agent_choose(model="opus")  # in the paper: the model alone, the effort stays
+    assert (c["agent"], c["model"], c["effort"]) == ("claude", "opus", "low")
+    c = api.agent_choose(effort="xhigh", split=False)
+    assert (c["model"], c["effort"], c["split"], c["label"]) == ("opus", "xhigh", False, "Claude Opus, Extra high")
+    saved = config.load_app(config.APP_FILE)
+    assert (saved.paper_model, saved.paper_effort) == ("opus", "xhigh")
     with pytest.raises(ValueError):
-        api.agent_choose("claude", "gpt", "")
+        api.agent_choose(model="gpt")
+    assert api.agent_choice()["model"] == "opus"
+
+
+def test_settings_picks_the_agent(h):
+    api.agent_choose(model="opus", effort="high")
+    c = api.agent_choose("codex")  # Settings sends the agent alone
+    assert (c["agent"], c["model"], c["effort"], c["label"]) == ("codex", "", "high", "ChatGPT, High")
+    c = api.agent_choose("cursor")
+    assert (c["agent"], c["model"], c["effort"]) == ("cursor", "", "")
+    c = api.agent_choose(model="auto")
+    assert c["label"] == "Cursor Auto"
+    c = api.agent_choose("claude")
+    assert (c["agent"], c["model"], c["effort"]) == ("claude", "haiku", "low")
+    assert config.load_app(config.APP_FILE).paper_agent == "claude"
+
+
+def test_a_broken_saved_choice_falls_back_to_haiku_low(h):
+    config.APP_FILE.write_text('[app]\npaper_agent = "eliza"\npaper_model = "gpt"\n')
+    c = api.agent_choice()
+    assert (c["agent"], c["model"], c["effort"]) == ("claude", "haiku", "low")
+    assert api.agent_choose(effort="max")["label"] == "Claude Haiku, Max"
 
 
 def test_write_message_in_the_background(h, repo, tmp_path):
@@ -108,12 +133,27 @@ def test_split_commits_only_when_asked(h, repo):
 
 def test_ask_about_a_commit_with_a_one_time_choice(h, repo, tmp_path):
     job = api.agent_ask("wulver", str(repo), "Why?", {"kind": "commit", "hash": "HEAD"},
-                        choice={"agent": "claude", "model": "sonnet", "effort": "medium"})
-    assert job["label"] == "Claude Sonnet, Medium"
+                        choice={"model": "opus", "effort": "max"})
+    assert job["label"] == "Claude Opus, Max" and job["agent"] == "claude"
     e = end(h, job)
     assert e["ok"] and e["result"]["cites"][0]["path"] == "main.tex" and e["result"]["question"] == "Why?"
     assert "First draft" in (tmp_path / "last-prompt").read_text()
+    assert "--model opus --effort max" in (tmp_path / "last-args").read_text()
     assert api.agent_choice()["model"] == "haiku"  # your usual choice stays
+
+
+def test_a_one_time_choice_keeps_your_agent(h, repo, tmp_path):
+    codex = tmp_path / "bin" / "codex"  # a stand-in too: never a real agent
+    codex.write_text("#!/bin/bash\necho \"$*\" > \"$HOME/last-args\"\necho 'Because of [[main.tex:3]].'\n")
+    codex.chmod(codex.stat().st_mode | stat.S_IEXEC)
+    api.agent_choose("codex")
+    with pytest.raises(ValueError, match="no reasoning effort max"):  # ChatGPT's efforts stop at Extra high
+        api.agent_ask("wulver", str(repo), "Why?", {"kind": "commit", "hash": "HEAD"}, choice={"effort": "max"})
+    job = api.agent_ask("wulver", str(repo), "Why?", {"kind": "commit", "hash": "HEAD"},
+                        choice={"agent": "claude", "model": "opus", "effort": "medium"})
+    assert job["agent"] == "codex" and job["label"] == "ChatGPT, Medium"  # same agent; no model setting there
+    assert end(h, job)["ok"]
+    assert "model_reasoning_effort=medium" in (tmp_path / "last-args").read_text()
 
 
 def test_ask_about_lines(h, repo, tmp_path):

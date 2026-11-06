@@ -85,7 +85,7 @@ class ProjectsPage(Gtk.Box):
     def reload(self) -> None:
         self.list.remove_all()
         # papers are in the LaTeX tab while it is on
-        items = [p for p in self.store.recent() if not (p.is_latex and features.experimental)]
+        items = [p for p in self.store.recent() if not (p.is_latex and features.papers)]
         self.stack.set_visible_child_name("list" if items else "empty")
         q = self.search.get_text().lower().split()
         for p in items:
@@ -103,7 +103,7 @@ class ProjectsPage(Gtk.Box):
         if not s:
             return row
         box = Gtk.Box(spacing=4, valign=Gtk.Align.CENTER)
-        extra = (("latex", "LaTeX", "x-office-document-symbolic"),) if features.experimental else ()
+        extra = (("latex", "LaTeX", "x-office-document-symbolic"),) if features.papers else ()
         box.append(open_menu(lambda key: self._open(p, s, key), extra))
         more = Gtk.MenuButton(icon_name="view-more-symbolic", css_classes=["flat"], tooltip_text="More")
         menu = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2, margin_top=4, margin_bottom=4,

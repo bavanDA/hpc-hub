@@ -23,7 +23,7 @@ def build(entry: Entry | None, can_paste: bool, text_ext: tuple[str, ...]) -> Gi
         first.append("Open", "file.open")
         if not entry.is_dir and remote_fs.ext(entry.name) in text_ext:
             first.append("Edit", "file.edit")
-        if entry.name.lower().endswith(".tex") and features.experimental:
+        if entry.name.lower().endswith(".tex") and features.papers:
             first.append("Open in LaTeX", "file.latex")
         tools.append("Open in VS Code" if entry.is_dir else "Open its folder in VS Code", "file.vscode")
         tools.append("Claude here" if entry.is_dir else "Claude in its folder", "file.claude")

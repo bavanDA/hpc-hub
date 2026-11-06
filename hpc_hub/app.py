@@ -58,7 +58,7 @@ class HpcHubApp(LoginPromptsMixin, QuitMixin, Adw.Application):
         self.clusters = config.chosen(config.load(), self.app_settings)
         self.projects = ProjectStore()
         browser.preferred = self.app_settings.browser_profile
-        features.experimental = self.app_settings.experimental
+        features.load(self.app_settings)
         features.select_to_copy = self.app_settings.select_to_copy
         features.monitor_bar = self.app_settings.monitor_bar
         appearance.apply(self.app_settings.appearance)
@@ -73,7 +73,7 @@ class HpcHubApp(LoginPromptsMixin, QuitMixin, Adw.Application):
             ("disconnect-quit", lambda *_: self._disconnect_and_quit(), []),
             ("preferences", lambda *_: PreferencesDialog(
                 self.app_settings, lambda: config.save_app(self.app_settings),
-                lambda on: self.window.set_experimental(on)).present(self.window),
+                self.window.set_experimental).present(self.window),
              ["<primary>comma"]),
             ("pair-phone", lambda *_: PhonePairDialog(list(self.sessions.values())).present(self.window), []),
         ):

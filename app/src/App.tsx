@@ -7,7 +7,7 @@ import { Onboarding } from './components/app/Onboarding'
 import { AppKeys } from './components/app/AppKeys'
 import { Welcome, type SetupStatus } from './components/app/Welcome'
 import { useSessionNotifications } from './components/app/notify'
-import type { Preferences } from './components/app/types'
+import { experimentsOf, NO_EXPERIMENTS, type Experiments, type Preferences } from './components/app/types'
 import { useWatch } from './components/app/watch'
 import { setActiveCluster } from './components/clusters/active'
 import { ClusterPicker } from './components/clusters/ClusterPicker'
@@ -33,7 +33,9 @@ const Terminals = lazy(() => import('./pages/Terminals').then((m) => ({ default:
 const Usage = lazy(() => import('./pages/Usage').then((m) => ({ default: m.Usage })))
 
 const ITEMS = [HOME, ...GROUPS.flatMap(([, items]) => items)]
-const EXPERIMENTAL = new Set(ITEMS.filter((i) => i.experimental).map((i) => i.page))
+/** The experimental pages and the switch in Settings that shows each. */
+const EXPERIMENTAL = new Map(ITEMS.flatMap((i) => i.experiment ? [[i.page, i.experiment] as const] : []))
+const off = (p: Page, e: Experiments) => { const k = EXPERIMENTAL.get(p); return !!k && !e[k] }
 const TITLES = Object.fromEntries(ITEMS.map((i) => [i.page, i.title])) as Record<Page, string>
 
 /** Pages that became a tab of another one: go('permissions') still works. */
@@ -83,7 +85,7 @@ export default function App() {
   const [sidebarWanted, setSidebar] = useState(true)
   const [floating, setFloating] = useState(false)  // narrow window: the sidebar shown over the page
   const sidebar = narrow ? floating : sidebarWanted
-  const [experimental, setExperimental] = useState(false)
+  const [experiments, setExperiments] = useState<Experiments>(NO_EXPERIMENTS)
   const [prefsRead, setPrefsRead] = useState(false)  // until then an experimental page waits: it may be off
   const [settings, setSettings] = useState(false)
   const go = useCallback((p: Page, with_: Record<string, string> = {}) => leave(() => {
@@ -97,17 +99,17 @@ export default function App() {
   const [onboard, setOnboard] = useState<string[] | null>(null)  // the clusters just chosen, to set up
   useEffect(() => {
     call<Preferences>('preferences.get').then((p) => {
-      setExperimental(p.experimental)
+      setExperiments(experimentsOf(p))
       setAppearance(p.appearance)
-      if (!p.experimental && EXPERIMENTAL.has(start as Page)) setPage('clusters')  // ?page=latex while it's off
+      if (off(start as Page, experimentsOf(p))) setPage('clusters')  // ?page=latex while it's off
     }).catch(() => {}).finally(() => setPrefsRead(true))
     call<{ blocked: boolean; message: string }>('app.status').then((s) => setBlocked(s.blocked ? s.message : ''))
       .catch(() => {})
     call<SetupStatus>('setup.status').then(setSetup).catch(() => {})
   }, [])
-  const showExperimental = (on: boolean) => {
-    setExperimental(on)
-    if (!on && EXPERIMENTAL.has(page)) go('clusters')
+  const showExperimental = (e: Experiments) => {
+    setExperiments(e)
+    if (off(page, e)) go('clusters')
   }
   useSessionNotifications()
   useWatch()
@@ -136,7 +138,7 @@ export default function App() {
     <NavContext.Provider value={{ go, params }}>
     <ToastProvider>
       <div className="flex h-full">
-        {sidebar && <Sidebar page={page} onPick={(p) => go(p)} experimental={experimental} floating={narrow}
+        {sidebar && <Sidebar page={page} onPick={(p) => go(p)} experiments={experiments} floating={narrow}
           onSettings={() => { setFloating(false); setSettings(true) }} />}
         {narrow && floating && <div className="fixed inset-0 z-30 bg-scrim" onClick={() => setFloating(false)} />}
         <main className="flex min-w-0 flex-1 flex-col">
@@ -144,8 +146,8 @@ export default function App() {
             chip={picksCluster(page, params.tab) ? <ClusterPicker /> : undefined} />
           <div className="min-h-0 flex-1 overflow-auto">
             <Suspense fallback={<div className="grid h-full place-items-center"><Spinner size={24} /></div>}>
-              {page === 'agents' ? <Agents experimental={experimental} />
-                : EXPERIMENTAL.has(page) && !experimental
+              {page === 'agents' ? <Agents experiments={experiments} />
+                : off(page, experiments)
                   ? (prefsRead ? <p className="p-8 text-dim">{TITLES[page]} is experimental.</p> : null)
                   : Current ? <Current /> : <p className="p-8 text-dim">{TITLES[page]} is experimental.</p>}
             </Suspense>
