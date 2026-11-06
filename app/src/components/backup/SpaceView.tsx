@@ -9,11 +9,11 @@ import { Note } from '../e/Note'
 import { Row } from '../e/Row'
 import { Meter } from '../ui/Meter'
 import { Spinner } from '../ui/Spinner'
+import { Actions } from './Actions'
 import { space as copy } from './copy'
 import type { Options } from './flow'
 import { gb, gbOf } from './format'
 import { spaceFacts } from './plan'
-import { Actions } from './Steps'
 
 export function SpaceView({ plan, policy, options, tried, progress, busy, onLeaveOut, onOptions, onTry, onCopy,
   onBack }: {

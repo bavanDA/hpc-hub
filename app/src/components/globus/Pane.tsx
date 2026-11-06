@@ -1,69 +1,20 @@
-import {
-  ArrowUp, Bookmark, ChevronDown, CircleAlert, File, Folder, FolderOpen, FolderPlus, FolderSearch, HardDrive, Home, KeyRound,
-  RefreshCw, WifiOff,
-  type LucideIcon,
-} from 'lucide-react'
+import { ArrowUp, Bookmark, ChevronDown, CircleAlert, FolderOpen, FolderPlus, FolderSearch, HardDrive, Home, KeyRound, RefreshCw, WifiOff } from 'lucide-react'
 import { useEffect, useState, type ReactNode } from 'react'
 
 import { call } from '../../rpc'
-import type { GlobusCluster, Item } from '../../types/globus'
+import type { GlobusCluster } from '../../types/globus'
 import { shortName } from '../clusters/loginCopy'
-import { join, parent, size } from '../files/format'
+import { join, parent } from '../files/format'
 import { Menu } from '../projects/Menu'
-import { Button } from '../ui/Button'
-import { Dialog } from '../ui/Dialog'
 import { IconButton } from '../ui/IconButton'
 import { Spinner } from '../ui/Spinner'
 import { useToast } from '../useToast'
 import { Field } from './Field'
-import { shortDate } from './format'
+import { ItemRow } from './ItemRow'
+import { NewFolder } from './NewFolder'
+import { PaneEmpty } from './PaneEmpty'
 import { usePlaces } from './places'
 import type { Pane as PaneState } from './usePane'
-
-function Empty({ icon: Icon, title, text, button, onClick }:
-  { icon: LucideIcon; title: string; text?: string; button?: string; onClick?: () => void }) {
-  return (
-    <div className="flex min-h-full flex-col items-center justify-center gap-2 p-6 text-center">
-      <Icon size={40} strokeWidth={1.25} className="text-dim" />
-      <h3 className="text-lg font-semibold leading-snug">{title}</h3>
-      {text && <p className="max-w-xs text-sm text-dim">{text}</p>}
-      {button && <Button kind="primary" onClick={onClick}>{button}</Button>}
-    </div>
-  )
-}
-
-function NewFolder({ onClose, onCreate }: { onClose: () => void; onCreate: (name: string) => void }) {
-  const [name, setName] = useState('')
-  const ok = !!name.trim() && !name.includes('/')
-  const create = () => ok && onCreate(name.trim())
-  return (
-    <Dialog title="New folder" onClose={onClose} width={380}
-      actions={<><Button onClick={onClose}>Cancel</Button>
-        <Button kind="primary" disabled={!ok} onClick={create}>Create</Button></>}>
-      <Field autoFocus className="w-full" placeholder="Folder name" value={name}
-        onChange={(e) => setName(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && create()} />
-    </Dialog>
-  )
-}
-
-function ItemRow({ it, selected, onSelect, onOpen }:
-  { it: Item; selected: boolean; onSelect: () => void; onOpen: () => void }) {
-  const Icon = it.is_dir ? Folder : File
-  return (
-    <div onClick={onSelect} onDoubleClick={onOpen}
-      className={`grid min-h-10 grid-cols-[1fr_64px_96px] items-center gap-2 border-b border-line px-3 py-1.5
-        @max-[400px]:grid-cols-[1fr_64px] ${
-        selected ? 'bg-selected' : 'hover:bg-hover'}`}>
-      <span className="flex min-w-0 items-center gap-2">
-        <Icon size={16} className={`shrink-0 ${'text-dim'}`} />
-        <span className="min-w-0 [overflow-wrap:anywhere]">{it.name}</span>
-      </span>
-      <span className="text-right text-sm tabular-nums text-dim">{it.is_dir ? '' : size(it.size)}</span>
-      {/* a narrow side drops the date first, so names stay whole */}
-      <span className="truncate text-sm tabular-nums text-dim @max-[400px]:hidden">{shortDate(it.modified)}</span>
-    </div>
-  )
-}
 
 export function Pane({ pane, clusters, onChoose, onConsent, onStart }: {
   pane: PaneState; clusters: GlobusCluster[]; onChoose: (c: GlobusCluster) => void; onConsent: () => void
@@ -85,25 +36,25 @@ export function Pane({ pane, clusters, onChoose, onConsent, onStart }: {
 
   let body: ReactNode
   if (!cfg) body = null
-  else if (pane.error) body = <Empty icon={CircleAlert} title="Could not open folder" text={pane.error}
+  else if (pane.error) body = <PaneEmpty icon={CircleAlert} title="Could not open folder" text={pane.error}
     button="Try again" onClick={pane.reload} />
   else if (!l) body = <div className="grid h-full place-items-center"><Spinner size={20} /></div>
-  else if (l.state === 'none') body = <Empty icon={FolderSearch} title={`No collection for ${cfg.name}`}
+  else if (l.state === 'none') body = <PaneEmpty icon={FolderSearch} title={`No collection for ${cfg.name}`}
     text="Pick the Globus collection that holds its files." button="Choose collection" onClick={() => onChoose(cfg)} />
-  else if (l.state === 'domain') body = <Empty icon={KeyRound}
+  else if (l.state === 'domain') body = <PaneEmpty icon={KeyRound}
     title={`${cfg.name} wants your ${l.want?.domains[0]} account`}
     text={`${l.collection} only lets in ${l.want?.domains.join(' or ')} accounts. Sign in with it once.`}
     button="Sign in" onClick={onConsent} />
-  else if (l.state === 'consent') body = <Empty icon={KeyRound} title="Globus needs your permission"
+  else if (l.state === 'consent') body = <PaneEmpty icon={KeyRound} title="Globus needs your permission"
     text={`Allow HPC Hub to use ${l.collection}.`} button="Allow" onClick={onConsent} />
-  else if (l.state === 'offline') body = <Empty icon={WifiOff} title={`Globus Connect is not running on ${cfg.name}`}
+  else if (l.state === 'offline') body = <PaneEmpty icon={WifiOff} title={`Globus Connect is not running on ${cfg.name}`}
     text={`Your ${l.collection} collection only works while it runs there. Start it on the login node? It shares ` +
       'your home, project and scratch folders, only with your own Globus account.'}
     button="Start it" onClick={() => onStart(cfg).then(pane.reload)} />
-  else if (l.state === 'hidden') body = <Empty icon={FolderSearch} title="Globus can't open this folder yet"
+  else if (l.state === 'hidden') body = <PaneEmpty icon={FolderSearch} title="Globus can't open this folder yet"
     text={`Let it use all your Project and Scratch folders on ${cfg.name}, only with your own Globus account.`}
     button="Allow" onClick={() => onStart(cfg).then(pane.reload)} />
-  else if (!l.items.length) body = <Empty icon={FolderOpen} title="Empty folder" />
+  else if (!l.items.length) body = <PaneEmpty icon={FolderOpen} title="Empty folder" />
   else body = (
     <div className="flex flex-col">
       <div className="sticky top-0 grid grid-cols-[1fr_64px_96px] gap-2 border-b border-line bg-window px-3 py-2

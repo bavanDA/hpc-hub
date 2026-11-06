@@ -9,10 +9,11 @@ import { List } from '../e/List'
 import { Row } from '../e/Row'
 import { Section } from '../e/Section'
 import { Spinner } from '../ui/Spinner'
+import { Actions } from './Actions'
+import { Bar } from './Bar'
 import { copying, done as copy } from './copy'
 import { count, gb } from './format'
 import { helpFor } from './help'
-import { Actions, Bar } from './Steps'
 
 export function CopyView({ plan, progress, job, onStop }: {
   plan: Plan | null; progress: Progress | null; job: string; onStop: () => void

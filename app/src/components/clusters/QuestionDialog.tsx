@@ -9,7 +9,8 @@ import { List } from '../e/List'
 import { MainButton } from '../e/MainButton'
 import { Row } from '../e/Row'
 import { AuthenticatorHelp } from './AuthenticatorHelp'
-import { ChromeWindowLogin, WebLogin } from './SignIn'
+import { ChromeWindowLogin } from './ChromeWindowLogin'
+import { WebLogin } from './WebLogin'
 
 const digits = (text: string) => text.replace(/\s/g, '')
 

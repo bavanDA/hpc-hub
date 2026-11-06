@@ -4,11 +4,11 @@ import { EButton } from '../e/EButton'
 import { IconToggleRow } from '../e/IconToggleRow'
 import { Section } from '../e/Section'
 import { Spinner } from '../ui/Spinner'
+import { Actions } from './Actions'
 import { CLASS } from './classes'
 import { plan as copy } from './copy'
 import type { Options } from './flow'
 import { count, gb } from './format'
-import { Actions } from './Steps'
 
 const Claude = agentIcon('claude')
 

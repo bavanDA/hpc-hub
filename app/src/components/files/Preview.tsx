@@ -1,14 +1,16 @@
-import { FileQuestion, FileType, ImageOff, Pencil, ExternalLink } from 'lucide-react'
+import { ImageOff, Pencil, ExternalLink } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
 import { call } from '../../rpc'
 import type { Entry, FileData } from '../../types/files'
-import { Pdf } from '../pdf'
-import { readFile } from '../pdf/load'
 import { Button } from '../ui/Button'
 import { Spinner } from '../ui/Spinner'
 import { FileIcon } from './FileIcon'
 import { isText, join, kind, MEDIA_LIMIT, size, when } from './format'
+import { Content } from './preview/Content'
+import { Note } from './preview/Note'
+import { PdfPreview } from './preview/PdfPreview'
+import { Placeholder } from './preview/Placeholder'
 
 type Shown = { key: string; data?: FileData; error?: string }
 const PDF_PREVIEW_LIMIT = 40 * 1024 * 1024
@@ -53,62 +55,5 @@ export function Preview({ cluster, dir, entry, onOpen, onEdit }:
         </Button>}
       </div>
     </aside>
-  )
-}
-
-function Content({ data }: { data: FileData }) {
-  if (data.kind === 'image') {
-    return (
-      <div className="grid h-full place-items-center p-4"
-        style={{ backgroundImage: 'repeating-conic-gradient(var(--color-pill) 0 25%, transparent 0 50%)',
-          backgroundSize: '16px 16px' }}>
-        <img src={`data:${data.mime};base64,${data.data}`} alt="" className="max-h-full max-w-full object-contain" />
-      </div>
-    )
-  }
-  if (data.kind === 'binary') return <Note icon={FileQuestion} title="Binary file" text="Nothing to show as text." />
-  return (
-    <pre className="h-full overflow-auto whitespace-pre-wrap bg-view p-3 font-mono text-xs leading-[18px]
-      select-text [overflow-wrap:anywhere]">
-      {data.text}{data.cut && <span className="text-dim">{'\n'}… first 512 kB only</span>}
-    </pre>
-  )
-}
-
-function PdfPreview({ cluster, path, stamp }: { cluster: string; path: string; stamp: string }) {
-  const [got, setGot] = useState<{ stamp: string; data?: Uint8Array; error?: string } | null>(null)
-  const [progress, setProgress] = useState(0)
-  useEffect(() => {
-    let live = true  // you may pick another file before this one arrives
-    setProgress(0)
-    readFile(cluster, path, (p) => live && setProgress(p))
-      .then((data) => live && setGot({ stamp, data }))
-      .catch((e: Error) => live && setGot({ stamp, error: e.message }))
-    return () => { live = false }
-  }, [cluster, path, stamp])
-  const now = got?.stamp === stamp ? got : null
-  return <Pdf compact data={now?.data ?? null} memory={`preview:${stamp}`} loading={!now} progress={progress}
-    message={now?.error ? <Note icon={ImageOff} title="No preview" text={now.error} /> : undefined} />
-}
-
-function Placeholder({ entry, onOpen }: { entry: Entry; onOpen: () => void }) {
-  const k = kind(entry)
-  if (k === 'pdf') {
-    return <Note icon={FileType} title="Big PDF" text="Too big to preview here. Open it to read it."
-      action={<Button kind="primary" onClick={onOpen}>Open</Button>} />
-  }
-  if (k === 'image') return <Note icon={ImageOff} title="Too big to preview" text="Open it to see it." />
-  return <Note icon={FileQuestion} title="No preview" text="No preview for this type of file." />
-}
-
-function Note({ icon: Icon, title, text, action }:
-  { icon: typeof FileType; title: string; text: string; action?: React.ReactNode }) {
-  return (
-    <div className="flex h-full flex-col items-center justify-center gap-2 p-6 text-center">
-      <Icon size={40} strokeWidth={1.25} className="text-dim" />
-      <div className="font-semibold">{title}</div>
-      <p className="text-sm text-dim">{text}</p>
-      {action}
-    </div>
   )
 }
