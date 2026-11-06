@@ -1,5 +1,5 @@
-"""Copy a Claude chat to another cluster to continue it there: the conversation, its subagents and saved tool
-output, and its edit history. Paths under the chat's old folder are changed to point to the new one."""
+"""Copy a Claude chat to another cluster: the conversation, its subagents and tool output, its edit
+history. Paths under the chat's old folder are changed to the new one."""
 
 import posixpath
 import re

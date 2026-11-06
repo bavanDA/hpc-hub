@@ -1,4 +1,4 @@
-"""Job list for the Jobs tab: my jobs, history or all, details, and cancel."""
+"""Listing, inspecting and cancelling Slurm jobs."""
 
 import re
 import shlex

@@ -1,5 +1,3 @@
-"""The Jobs page: your jobs, history or all jobs, a job's details, submit a script, and cancel."""
-
 import time
 from dataclasses import asdict
 

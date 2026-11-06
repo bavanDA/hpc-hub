@@ -1,10 +1,6 @@
-"""The GPUs a cluster offers, read from Slurm (sinfo's gres column, fetched with the limits at login), with names
-people know: "A100, 10 GB slice" for Wulver's MIG gres a100_10g. Before the first login the docs' list stands in.
-
-Sources: hpc.njit.edu/MIG/job-submission-and-su-charges (a100_10g/20g/40g, one MIG slice per job, partition gpu);
-docs.ycrc.yale.edu/clusters/bouchet (types by partition, --gpus=type:count); SDSC Expanse user guide (V100 32 GB,
-untyped --gpus=N on gpu, gpu-shared, gpu-debug).
-"""
+"""The GPUs a cluster offers (sinfo's gres column), with names people know: "A100, 10 GB slice" for
+a100_10g. DOCS stands in before the first login. Sources: hpc.njit.edu/MIG/job-submission-and-su-charges,
+docs.ycrc.yale.edu/clusters/bouchet, the SDSC Expanse user guide (V100 32 GB, untyped --gpus=N)."""
 
 import re
 from dataclasses import asdict, dataclass, field

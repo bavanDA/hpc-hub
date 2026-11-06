@@ -1,4 +1,4 @@
-"""Coding agents you can run on a compute node: Claude, ChatGPT (Codex), Antigravity, Cursor."""
+"""Coding agents that run on a compute node, and the command lines that start them."""
 
 import shlex
 from dataclasses import dataclass

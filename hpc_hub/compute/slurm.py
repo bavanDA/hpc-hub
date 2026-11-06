@@ -1,4 +1,4 @@
-"""Slurm helpers: request a compute node, find it, release it."""
+"""Slurm jobs the app starts: an interactive node (salloc) or a batch script (sbatch)."""
 
 import re
 import shlex
@@ -78,7 +78,6 @@ def salloc_command(p: ComputeProfile, job_name: str = MAIN_JOB) -> str:
     return " ".join(shlex.quote(a) for a in args)
 
 
-# -- batch jobs (VS Code) -------------------------------------------------------------
 
 BATCH_DIR = ".hpc-hub"  # under $HOME on the cluster
 
@@ -122,7 +121,6 @@ def submit_file(ssh: SshMaster, path: str) -> str:
 
 
 def find_job(ssh: SshMaster, names: list[str]) -> Job | None:
-    """Your newest pending or running job with one of these names."""
     res = ssh.run(f'squeue -h -u "$USER" -t PENDING,RUNNING -n {shlex.quote(",".join(names))} '
                   f"-o {shlex.quote(JOBS_FORMAT)}")
     jobs = [Job(*parts) for line in res.stdout.splitlines()

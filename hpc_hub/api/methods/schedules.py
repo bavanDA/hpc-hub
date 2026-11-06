@@ -1,6 +1,3 @@
-"""The Scheduled agents page: agents that run a task on their own, e.g. every night at 02:00. Each schedule is a
-batch job that waits for its time on the cluster (see agents/schedules.py)."""
-
 import re
 from dataclasses import asdict
 

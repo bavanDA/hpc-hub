@@ -1,10 +1,6 @@
-"""Persistent terminals on a cluster: tmux (and screen) sessions you can leave and come back to.
-
-Agent sessions run tmux on the compute node itself, reached with ssh from the login node: Slurm puts
-them in your job, so they last as long as the job and nothing stays behind on the login node.
-Labels and colors live in the tmux session itself (@hpchub_label, @hpchub_color), so they
-survive app restarts and show up from any laptop.
-"""
+"""tmux and screen sessions on a cluster. Agent sessions run tmux on the job's node, reached with ssh from
+the login node, so they end with the job. Labels and colors live in the session (@hpchub_label,
+@hpchub_color)."""
 
 import base64
 import re

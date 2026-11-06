@@ -1,5 +1,3 @@
-"""The Skills page: what each agent knows on a cluster, HPC Hub's own skills, skills from a git repository."""
-
 from pathlib import Path
 
 from ...agents import skills

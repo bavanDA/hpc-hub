@@ -1,5 +1,3 @@
-"""The monitoring bar under a terminal: CPU, memory, network, uptime, users and disks of the host it runs on."""
-
 import itertools
 import threading
 from collections.abc import Callable

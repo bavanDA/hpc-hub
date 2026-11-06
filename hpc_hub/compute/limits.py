@@ -1,6 +1,4 @@
-"""What a job may ask for: the partition's and the QoS's time limits, the biggest node, the memory each core comes
-with, the QoS's caps on cores, memory and GPUs, and what an hour costs in SUs (billing weights, the QoS's usage
-factor). Read from Slurm and kept on disk so the settings know them before you connect."""
+"""What a job may ask for and what it costs, read from Slurm and kept on disk for before you connect."""
 
 import json
 import re
@@ -225,7 +223,6 @@ def _file(cluster_id: str):
 
 
 def fetch(ssh, cluster_id: str) -> Limits:
-    """Blocking: ask Slurm, remember the answer."""
     limits = parse(ssh.run(FETCH, timeout=30).stdout)
     if limits.partitions:
         _file(cluster_id).write_text(json.dumps(asdict(limits)))

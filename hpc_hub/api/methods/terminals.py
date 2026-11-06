@@ -1,10 +1,8 @@
-"""Terminals: tmux sessions on each cluster, and the local ssh command line that attaches one in a PTY
-(run by the Tauri side, see app/src-tauri/src/pty.rs).
+"""tmux sessions, and the ssh argv that attaches one in a PTY (app/src-tauri/src/pty.rs).
 
-Where no local ssh can ride the login (Windows: asyncssh, core/ssh_async.py) that command line is
-[CHANNEL, cluster, command] instead, and the backend runs the terminal itself: terminals.open_channel opens a PTY
-channel on the connection, its output comes as "term-data" events {id, data in base64}, its end as "term-exit"
-{id, code}, and terminals.write / resize / close drive it."""
+Where no local ssh rides the login (Windows, asyncssh) the argv is [CHANNEL, cluster, command] and the
+backend runs the terminal: terminals.open_channel opens a PTY channel, its output comes as "term-data"
+events {id, data in base64}, its end as "term-exit" {id, code}."""
 
 import base64
 import itertools
@@ -100,7 +98,7 @@ def links_in(text: str, node: str = "") -> list[dict]:
     return out
 
 
-# -- terminals the backend runs (Windows) ----------------------------------------------------
+# terminals the backend runs itself (Windows)
 _channels: dict[int, object | None] = {}  # id -> its Channel; None while it opens
 _lock = threading.Lock()
 _ids = itertools.count(1)

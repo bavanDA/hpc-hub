@@ -1,8 +1,4 @@
-"""Agent skills on a cluster: list them, add HPC Hub's own or any from a git repository, remove yours.
-
-Each agent reads its own folder (TARGETS). Folders the tools manage themselves (Claude's synced/,
-Codex's .system/) are shown but never removed. HPC Hub ships a few skills in skill_catalog/.
-"""
+"""Agent skills on a cluster. Folders the agents manage themselves (MANAGED) are listed but never removed."""
 
 import re
 import shlex
@@ -71,7 +67,6 @@ def repo_folder(url: str) -> str:
 
 
 def browse(ssh: SshMaster, url: str) -> list[Skill]:
-    """Clone (or update) the repository on the cluster and list the skills in it."""
     if not re.match(r"^(https://|git@)[\w.@:/~-]+$", url.strip()):
         raise ValueError("Use an https:// or git@ address of a git repository")
     d = repo_folder(url)
@@ -111,7 +106,6 @@ def front_matter(text: str) -> dict[str, str]:
 
 
 def catalog(folder: Path = CATALOG) -> list[Skill]:
-    """The skills that come with HPC Hub (local folders)."""
     out = []
     for f in sorted(folder.glob("*/SKILL.md")):
         meta = front_matter(f.read_text(encoding="utf-8", errors="replace"))
@@ -120,7 +114,6 @@ def catalog(folder: Path = CATALOG) -> list[Skill]:
 
 
 def install_local(ssh: SshMaster, picked: list[Skill], targets: list[str]) -> None:
-    """Copy local skill folders (the catalog) to each agent's folder on the cluster."""
     for t in targets:
         dest = f"{ssh.run('echo $HOME').stdout.strip()}/{TARGETS[t][1]}"
         names = " ".join(shlex.quote(f"{dest}/{Path(sk.path).name}") for sk in picked)

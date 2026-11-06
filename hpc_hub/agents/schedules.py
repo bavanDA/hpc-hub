@@ -1,9 +1,7 @@
-"""Scheduled agents: an agent runs a task on its own, e.g. every night at 02:00, with your laptop off.
+"""Agents that run a task on their own, e.g. every night at 02:00.
 
-Wulver has scrontab turned off, so each schedule is a batch job that waits (sbatch --begin) and, when it
-starts, first queues its next run. Everything lives on the cluster in ~/.hpc-hub/schedules/<name>/:
-schedule.json (what the app shows), task.md, run.sbatch, enabled (a flag file) and logs/.
-"""
+Wulver has scrontab off, so each schedule is a batch job that waits (sbatch --begin) and first queues its
+next run. Files: ~/.hpc-hub/schedules/<name>/{schedule.json, task.md, run.sbatch, enabled, logs/}."""
 
 import json
 import re
@@ -170,7 +168,6 @@ def save_command(s: Schedule, settings: AgentSettings, profile: ComputeProfile) 
 
 
 def run_now_command(name: str) -> str:
-    """One extra run right now that does not queue another."""
     return f"cd {folder_of(name)} && sbatch --parsable --export=ALL,HPCHUB_ONCE=1 run.sbatch"
 
 

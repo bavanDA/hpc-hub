@@ -1,5 +1,5 @@
-"""Which commands Claude may run on a cluster without asking: the Bash allow list in ~/.claude/settings.json,
-plus HPC Hub's guard hook (rm goes to trash, some commands always ask) and the trash command."""
+"""What Claude may run without asking: the Bash allow list in ~/.claude/settings.json, the guard hook (rm
+goes to trash, some commands always ask) and the trash command."""
 
 import base64
 import json

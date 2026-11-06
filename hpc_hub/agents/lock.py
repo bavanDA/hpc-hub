@@ -1,5 +1,5 @@
-"""Passcode lock for Claude on a cluster: installs remote-lock (github.com/bavanDA/remote-lock, copy in
-guard_files) so Claude takes no messages until you start one with the code from your authenticator app."""
+"""remote-lock (github.com/bavanDA/remote-lock, copy in guard_files): Claude takes no messages until you
+start a session with the code from your authenticator app."""
 
 import json
 import subprocess

@@ -1,4 +1,4 @@
-"""Spot useful links in terminal output (VS Code tunnels, device logins, local web servers)."""
+"""Useful links in terminal output: VS Code tunnels, device sign-ins, remote control, local web servers."""
 
 import re
 from dataclasses import dataclass

@@ -1,8 +1,5 @@
-"""Ask all: one prompt to several agents at once, each writes its answer to a shared folder.
-
-With "discuss" on there is a second round: every agent reads the others' answers and writes a reply.
-Everything runs from one bash script in one tmux session on the compute node, so it survives the app.
-"""
+"""One prompt to several agents, each writing its answer to a shared folder; with discuss, a second round
+where each reads the others' answers. One bash script in one tmux session on the node outlives the app."""
 
 import base64
 import shlex
@@ -104,6 +101,5 @@ def script(ask: Ask) -> str:
 
 
 def command(ask: Ask) -> str:
-    """One shell line that writes the script next to the answers and runs it."""
     return (f"mkdir -p {shell_path(ask.out)} && printf %s {_b64(script(ask))} | base64 -d > "
             f"{shell_path(ask.out)}/run.sh && bash {shell_path(ask.out)}/run.sh")

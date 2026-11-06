@@ -1,11 +1,7 @@
-"""The monitoring bar under a terminal, like MobaXterm's: CPU, memory, network, uptime, users and disks of the host
-the terminal runs on (the login node, or the compute node its tmux runs on).
+"""CPU, memory, network, uptime, users and disks of the host a terminal runs on.
 
-Light on purpose, because HPC admins dislike tools that poll login nodes: one shell loop per host, over the
-connection that is already open, reads a few /proc files with shell builtins every INTERVAL seconds (no new
-process but sleep) and runs who and df (local disks only) once a minute. It runs only while someone watches, and
-ends by itself after MAX_SAMPLES so nothing stays behind.
-"""
+HPC admins dislike tools that poll login nodes: one shell loop per host over the open connection reads /proc
+with builtins every INTERVAL seconds, runs who and df once a minute, and ends after MAX_SAMPLES."""
 
 import subprocess
 import threading
