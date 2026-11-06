@@ -28,3 +28,6 @@ export function computeText(c: Compute, cluster = ''): string {
   return [c.cpus ? cores(c.cpus) : '', c.mem_gb ? `${c.mem_gb} GB` : '',
     c.gpus ? gpuAmount(c.gpus, c.gpu_type, cluster) : ''].filter(Boolean).join(' · ')
 }
+
+// the backup agent's weekly check is edited on the Backup page, not here
+export const isBackupCheck = (st: ScheduleStatus) => st.runner === 'backup' || st.name === 'backup-check'

@@ -1,20 +1,20 @@
 import { AlarmClock, CircleAlert, Plus, RefreshCw } from 'lucide-react'
-import { useCallback, useEffect, useState } from 'react'
+import { useState } from 'react'
 
 import { useActiveCluster } from '../components/clusters/active'
 import { NotConnected } from '../components/clusters/NotConnected'
 import { LogDialog } from '../components/schedules/LogDialog'
 import { ScheduleDialog } from '../components/schedules/ScheduleDialog'
-import { isBackupCheck, ScheduleRow } from '../components/schedules/ScheduleRow'
+import { isBackupCheck } from '../components/schedules/format'
+import { ScheduleRow } from '../components/schedules/ScheduleRow'
+import { useSchedules } from '../components/schedules/useSchedules'
 import { useToast } from '../components/toast'
 import { Confirm, EButton, EmptyState, EPage, IconBtn } from '../components/e/extra'
 import { List } from '../components/e/ui'
 import { Spinner } from '../components/ui'
-import { useEvent } from '../hooks'
 import { useGo } from '../nav'
 import { call } from '../rpc'
-import type { Session } from '../types'
-import type { ScheduleOptions, ScheduleStatus } from '../types/schedules'
+import type { ScheduleStatus } from '../types/schedules'
 
 type Open = { kind: 'edit'; st: ScheduleStatus | null } | { kind: 'log' | 'delete'; st: ScheduleStatus }
 
@@ -23,26 +23,9 @@ export function Schedules() {
   const { cluster: active, session, connected } = useActiveCluster()
   const cluster = active?.id ?? ''
   const goPage = useGo()
-  const [list, setList] = useState<ScheduleStatus[] | null>(null)
-  const [options, setOptions] = useState<ScheduleOptions | null>(null)
-  const [error, setError] = useState('')
-  const [loading, setLoading] = useState(false)
+  const { list, setList, options, error, loading, load } = useSchedules(cluster, connected)
   const [busy, setBusy] = useState('')  // the schedule being switched, run or deleted
   const [open, setOpen] = useState<Open | null>(null)
-
-  useEffect(() => { setList(null); setOptions(null); setError('') }, [cluster])  // another cluster picked
-
-  const load = useCallback(() => {
-    if (!cluster || !connected) return
-    setLoading(true)
-    call<ScheduleStatus[]>('schedules.list', { cluster })
-      .then((l) => { setList(l); setError('') })
-      .catch((e: Error) => { setList(null); setError(e.message) })
-      .finally(() => setLoading(false))
-    call<ScheduleOptions>('schedules.options', { cluster }).then(setOptions).catch(() => {})
-  }, [cluster, connected])
-  useEffect(load, [load])
-  useEvent<Session>('session', (s) => { if (s.id === cluster && s.state === 'Connected' && !list) load() })
 
   const name = active?.name ?? cluster
   const act = <T,>(st: ScheduleStatus, method: string, params: Record<string, unknown>, done: (r: T) => string) => {

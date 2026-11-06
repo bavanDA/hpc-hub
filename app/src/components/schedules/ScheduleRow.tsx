@@ -4,10 +4,7 @@ import type { ScheduleStatus } from '../../types/schedules'
 import { ItemRow, StatusDot, Switch } from '../e/extra'
 import { Menu } from '../projects/Menu'
 import { Spinner } from '../ui'
-import { computeText, localWhen, status } from './format'
-
-/** The backup agent's weekly check: shown by what it does, edited on the Backup agent page. */
-export const isBackupCheck = (st: ScheduleStatus) => st.runner === 'backup' || st.name === 'backup-check'
+import { computeText, isBackupCheck, localWhen, status } from './format'
 
 export function ScheduleRow({ st, busy, onToggle, onRun, onLog, onEdit, onDelete }: {
   st: ScheduleStatus; busy: boolean; onToggle: (on: boolean) => void; onRun: () => void; onLog: () => void
