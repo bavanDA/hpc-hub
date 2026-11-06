@@ -1,5 +1,6 @@
 // What a page shows for a cluster that isn't connected: say so, and connect right here instead of sending you to
 // the Clusters page. The same switch question as the cluster card when another cluster holds the only VPN.
+// compact: one quiet line and a small button, for a card among others (Usage, All clusters).
 import { Unplug } from 'lucide-react'
 import { useState } from 'react'
 
@@ -12,7 +13,8 @@ import { shortName } from './loginCopy'
 
 type Switch = { id: string; name: string }
 
-export function NotConnected({ cluster, session, what }: { cluster: Cluster; session?: Session; what: string }) {
+export function NotConnected({ cluster, session, what, compact }:
+  { cluster: Cluster; session?: Session; what: string; compact?: boolean }) {
   const toast = useToast()
   const go = useGo()
   const [swap, setSwap] = useState<Switch | null>(null)
@@ -31,7 +33,17 @@ export function NotConnected({ cluster, session, what }: { cluster: Cluster; ses
   }
 
   let body
-  if (busy) {
+  if (compact) {
+    const name = shortName(cluster)
+    body = (
+      <div className="flex min-h-[52px] flex-wrap items-center gap-3 rounded-xl border border-line px-[18px] py-2.5">
+        <span className="min-w-0 flex-1 text-dim">
+          {busy ? `Connecting to ${name}…` : dropped ? `${name} dropped. Reconnect to see it.` : `Connect to see ${name}`}
+        </span>
+        {busy ? <Spinner size={14} /> : <Button size="sm" onClick={() => connect()}>{dropped ? 'Reconnect' : 'Connect'}</Button>}
+      </div>
+    )
+  } else if (busy) {
     body = <EmptyState icon={Unplug} title={`Connecting to ${shortName(cluster)}`} text={session?.detail || session?.state}
       action={<Button onClick={() => call('clusters.cancel', { cluster: cluster.id }).catch(() => {})}>
         <Spinner size={14} />Stop signing in</Button>} />

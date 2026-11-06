@@ -81,3 +81,76 @@ def test_yale_getusage():
     text = (f"@USER jdoe\n@ACCOUNT pi_abc\n{json.dumps({'fy': 'FY27', 'bill_rate': 0.0049, 'rows': rows}, indent=2)}\n"
             "@ACCOUNT broken\nnot json\n")
     assert usage.parse_usage(text) == [usage.AccountUsage("pi_abc", 0, 160, 110, "FY27", 0.0049)]
+
+
+# What WEEKLY prints on a cluster: QoS factors, then the awk sums per group, start day and QoS (D) and per group,
+# person and QoS (U), sacct's exit code and the cluster's date.
+WEEKLY = ("@QOS\nlow|0.000000\nstandard|1.000000\n@JOBS\n"
+          "D|mygroup|2026-11-05|standard|100.00\nD|mygroup|2026-10-30|standard|70.00\n"
+          "D|mygroup|2026-10-29|standard|30.00\nD|mygroup|2026-10-29|low|500.00\n"
+          "D|mygroup|2026-08-01|standard|8.00\nD|abc123|2026-10-01|standard|12.50\nD|mygroup|Unknown|standard|9\n"
+          "U|mygroup|jdoe|standard|150.00\nU|mygroup|jdoe|low|500.00\nU|mygroup|asmith|standard|58.00\n"
+          "U|abc123|cwong|standard|12.50\nU|mygroup|bkim|low|40.00\njunk\n"
+          "@RC 0\n@TODAY\n2026-11-05\n")
+
+
+def test_weekly_sums_per_week_with_the_qos_factor():
+    got = usage.parse_weekly(WEEKLY)
+    mine = got["mygroup"]
+    # today and 6 days ago fall in the last week, 7 days ago in the one before; low is free; a job that began
+    # before the 12 weeks counts in the first one; one that never started counts nowhere
+    assert mine.weeks == [8.0] + [0.0] * 9 + [30.0, 170.0]
+    assert mine.people == {"jdoe": 150.0, "asmith": 58.0}  # bkim ran only free jobs
+    assert got["abc123"].weeks[6] == 12.5 and sum(got["abc123"].weeks) == 12.5  # 35 days ago: week 7 of 12
+
+
+def test_weekly_says_unknown_when_sacct_fails():
+    assert usage.parse_weekly(WEEKLY.replace("@RC 0", "@RC 1")) is None
+    assert usage.parse_weekly("@QOS\n@JOBS\n") is None  # cut off: no date, no exit code
+    assert usage.parse_weekly("@QOS\n@JOBS\n@RC 0\n@TODAY\n2026-11-05\n") == {}  # nothing ran: real zeros
+
+
+def test_pace_and_run_out_date():
+    from datetime import date
+    today = date(2026, 11, 5)
+    w = usage.Weekly([0.0] * 8 + [700.0] * 4)  # 2,800 SUs in 4 weeks: 100 a day
+    a = usage.pace(usage.AccountUsage("mygroup", 300000, 184520, 21340), w, today)
+    assert (a.per_day, a.days_left, a.runs_out, a.near) == (100.0, 1154.8, "2030-01-02", False)
+    a = usage.pace(usage.AccountUsage("abc123", 50000, 47500, 0), w, today)
+    assert (a.days_left, a.runs_out, a.near) == (25.0, "2026-11-30", True)  # end not known: within 30 days
+    a = usage.pace(usage.AccountUsage("abc123", 50000, 40000, 0), w, today, end="2026-12-31")
+    assert (a.runs_out, a.near) == ("2027-02-13", False)  # lasts past the end
+    a = usage.pace(usage.AccountUsage("abc123", 50000, 48000, 0), w, today, end="2026-12-31")
+    assert (a.runs_out, a.near) == ("2026-11-25", True)  # runs out before the end
+    a = usage.pace(usage.AccountUsage("idle", 1000, 10, 0), usage.Weekly([0.0] * 12), today)
+    assert (a.per_day, a.days_left, a.runs_out, a.near) == (0.0, None, "", False)  # nothing used lately
+    a = usage.pace(usage.AccountUsage("pi_doe", 0, 48210, 9120, "FY27", 0.012), w, today)
+    assert (a.per_day, a.days_left, a.near) == (100.0, None, False)  # no limit: billed, never runs out
+    a = usage.pace(usage.AccountUsage("full", 100, 120, 0), None, today)
+    assert (a.weeks, a.per_day, a.near) == (None, None, True)  # weeks not known, but used up
+
+
+def test_allocations_ask_sacct_once_and_keep_it(monkeypatch):
+    import subprocess
+    calls = []
+
+    class Ssh:
+        def run(self, command, timeout=60, fast=None):
+            calls.append(command)
+            out = WEEKLY if "@RC" in command else "mygroup|18000000|11071200|76824000\nabc123|3000000|2766000|0\n"
+            return subprocess.CompletedProcess(command, 0, out, "")
+
+    monkeypatch.setattr(usage, "_weekly_cache", {})
+    got = usage.allocations(Ssh(), "wulver")
+    assert [(a.account, a.quota, a.used, a.weeks is not None) for a in got] == [
+        ("mygroup", 300000, 184520, True), ("abc123", 50000, 46100, True)]
+    assert "abc123,mygroup" in calls[1] and len(calls) == 2
+    usage.allocations(Ssh(), "wulver")
+    assert len(calls) == 3  # the 12 weeks came from the cache
+    usage.allocations(Ssh(), "wulver", fresh=True)
+    assert len(calls) == 5
+
+
+def test_weekly_script_is_valid_bash():
+    import subprocess
+    assert subprocess.run(["bash", "-n", "-c", usage.WEEKLY]).returncode == 0

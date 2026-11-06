@@ -59,3 +59,16 @@ def test_people_storage_load(fake):
                                                      "backup": "", "purged": 0}
     part = m.load("wulver")[0]
     assert (part["name"], part["cpus_used"], part["running"], part["pending"]) == ("general", 11682, 211, 102)
+
+
+def test_allocations(fake, monkeypatch):
+    from hpc_hub.compute import usage
+    monkeypatch.setattr(usage, "_weekly_cache", {})
+    monkeypatch.setattr(usage, "weekly", lambda ssh, cluster, accounts, fresh=False: {
+        "mygroup": usage.Weekly([0.0] * 8 + [70.0] * 4, {"jdoe": 280.0})})
+    got = m.allocations("yale")
+    assert got["me"] == "jdoe"
+    g = got["groups"][0]
+    assert (g["account"], g["used"], g["rate"], g["per_day"], g["days_left"], g["people"]) == (
+        "mygroup", 40, 0.01, 10.0, None, {"jdoe": 280.0})
+    assert g["weeks"][-1] == 70.0 and len(g["weeks"]) == 12

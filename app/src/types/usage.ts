@@ -35,3 +35,15 @@ export type Partition = {
   running: number
   pending: number
 }
+
+/** usage.allocations: a group you can bill with its last 12 weeks and where this pace leads. */
+export type Allocation = Account & {
+  weeks: number[] | null // SUs per week, oldest first, the last ending today; null = the cluster could not tell
+  people: Record<string, number> // user -> SUs over those 12 weeks
+  per_day: number | null // SUs a day over the last 4 weeks
+  days_left: number | null // at that pace; null = no limit, nothing used lately, or not known
+  runs_out: string // ISO day it runs out at that pace, '' = see days_left
+  end: string // ISO day the allocation period ends as the cluster says, '' = not said
+  near: boolean // runs out before the end (or within 30 days when the end is not known), or used up
+}
+export type Allocations = { groups: Allocation[]; me: string }

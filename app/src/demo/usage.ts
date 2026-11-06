@@ -1,5 +1,6 @@
-// Demo data for the Usage page: made-up accounts, people, quotas and partitions on Wulver and Yale.
-import type { Account, Partition, People, Person, Storage } from '../types/usage'
+// Demo data for the Usage page: made-up accounts, people, quotas and partitions on Wulver, Yale and SDSC.
+import type { Account, Allocation, Allocations, Partition, People, Person, Storage } from '../types/usage'
+import { demoConnected } from './clusters'
 
 const ACCOUNTS: Record<string, Account[]> = {
   wulver: [
@@ -7,6 +8,36 @@ const ACCOUNTS: Record<string, Account[]> = {
     { account: 'abc123', quota: 50000, used: 46100, mine: 0, period: '', rate: 0 },
   ],
   yale: [{ account: 'pi_doe', quota: 0, used: 48210, mine: 9120, period: 'FY27', rate: 0.012 }],
+  sdsc: [{ account: 'xyz789', quota: 100000, used: 62300, mine: 14100, period: '', rate: 0 }],
+}
+
+// SUs per week over the last 12 weeks (oldest first) and who used them, as usage.allocations sums them from sacct
+const WEEKS: Record<string, [number[], Record<string, number>]> = {
+  mygroup: [[5400, 5900, 6200, 6800, 6500, 7100, 4900, 6100, 7600, 6600, 6200, 6300],
+    { asmith: 31200, jdoe: 22100, bkim: 12900, cwong: 5400, dpatel: 1000 }],
+  abc123: [[1100, 1250, 1300, 1150, 1400, 1200, 1350, 1500, 1250, 1450, 1500, 1460],
+    { cwong: 10300, asmith: 6300 }],
+  pi_doe: [[1700, 1850, 1900, 1800, 1950, 1700, 1760, 1830, 2100, 1950, 1680, 1900],
+    { mlee: 9800, tross: 8200, jdoe: 4100 }],
+  xyz789: [[620, 580, 840, 600, 710, 920, 640, 780, 880, 610, 700, 640], { jdoe: 5100, asmith: 3800 }],
+}
+
+/** The pace the way hpc_hub/compute/usage.py pace() works it out (no period end is known in the demo). */
+function allocation(a: Account): Allocation {
+  const noWeeks = typeof location !== 'undefined' && new URLSearchParams(location.search).has('noweeks')
+  const [weeks, people] = WEEKS[a.account] ?? [Array(12).fill(0), {}]
+  const out: Allocation = { ...a, weeks: noWeeks ? null : weeks, people: noWeeks ? {} : people, per_day: null,
+    days_left: null, runs_out: '', end: '', near: !!a.quota && a.used >= a.quota }
+  if (noWeeks) return out
+  out.per_day = Math.round((weeks.slice(-4).reduce((s, v) => s + v, 0) / 28) * 10) / 10
+  if (a.quota && out.per_day > 0) {
+    out.days_left = Math.round((Math.max(a.quota - a.used, 0) / out.per_day) * 10) / 10
+    const d = new Date()
+    d.setDate(d.getDate() + Math.floor(out.days_left))
+    out.runs_out = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    out.near = a.used >= a.quota || out.days_left <= 30
+  }
+  return out
 }
 
 // SU charged and core hours over the last 30 days; other periods scale from it
@@ -38,6 +69,9 @@ const STORAGE: Record<string, Storage> = {
     { label: 'mygroup project', used: 2210, quota: 5120, mine: 640, people: {} },
     { label: 'mygroup scratch', used: 4800, quota: 10240, mine: 1210, people: {}, purged: 30 },
   ] },
+  sdsc: { raw: '', rows: [
+    { label: 'xyz789 projects + scratch', used: 820, quota: 1024, mine: 210, people: {} },
+  ] },
 }
 
 const p = (name: string, nodes: number, used: number, total: number, gu: number, gt: number, running: number,
@@ -50,15 +84,19 @@ const LOAD: Record<string, Partition[]> = {
   yale: [p('day', 180, 9104, 11520, 0, 0, 1830, 2409), p('week', 40, 2290, 2560, 0, 0, 212, 64),
     p('gpu', 36, 1102, 1728, 98, 144, 101, 37), p('devel', 4, 31, 256, 0, 0, 12, 0),
     p('scavenge', 260, 0, 0, 0, 0, 0, 0, false)],
+  sdsc: [p('compute', 728, 70210, 93184, 0, 0, 1406, 0), p('shared', 32, 2890, 4096, 0, 0, 640, 0),
+    p('gpu', 52, 1420, 2080, 166, 208, 61, 0), p('debug', 8, 64, 1024, 0, 0, 4, 0)],
 }
 
 const connected = (cluster: unknown) => {
-  if (!LOAD[String(cluster)]) throw new Error('Connect to SDSC Expanse first')
+  if (!LOAD[String(cluster)] || !demoConnected(String(cluster))) throw new Error('Connect to this cluster first')
   return String(cluster)
 }
 
 export const answers: Record<string, unknown> = {
   'usage.accounts': ({ cluster }: Record<string, unknown>) => ACCOUNTS[connected(cluster)],
+  'usage.allocations': ({ cluster }: Record<string, unknown>): Allocations =>
+    ({ groups: ACCOUNTS[connected(cluster)].map(allocation), me: 'jdoe' }),
   'usage.people': (params: Record<string, unknown>) => (connected(params.cluster), people(params)),
   'usage.storage': ({ cluster }: Record<string, unknown>) => STORAGE[connected(cluster)],
   'usage.load': ({ cluster }: Record<string, unknown>) => LOAD[connected(cluster)],

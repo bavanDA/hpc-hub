@@ -121,6 +121,8 @@ const DEMO_GPUS: Record<string, Gpu[]> = {
 
 /** A cluster's settings as saved here, for the other demo answers (tools.setup reads the VS Code job from it). */
 export const demoCluster = (id: string) => clusters.find((c) => c.id === id)
+/** Whether a cluster is connected in the demo right now (the usage answers follow it). */
+export const demoConnected = (id: string) => !!sessions.find((s) => s.id === id)?.connected
 
 function find<T extends { id: string }>(list: T[], id: string) {
   return list.find((x) => x.id === id)!
