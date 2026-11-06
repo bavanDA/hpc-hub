@@ -33,6 +33,13 @@ class NeedsWebLogin(VpnError):
     """Server wants the embedded-browser SAML flow, which openconnect's CLI can't do."""
 
 
+def end_stale_sign_ins() -> None:
+    """A sign-in left waiting by an app that quit keeps openconnect's browser port, so the next one fails with
+    "Address already in use": end ours (the ones whose browser is hpc-hub-sso) before starting."""
+    subprocess.run(["pkill", "-u", str(os.getuid()), "-f", "openconnect --authenticate .*hpc-hub-sso"],
+                   capture_output=True)
+
+
 def run_interactive(
     argv: list[str],
     answer: Callable[[str], str | None],
@@ -222,6 +229,7 @@ class Vpn:
         v = self.cfg.vpn
         argv = [self.openconnect, "--authenticate", "--protocol", v.protocol, "--user", username]
         if self.external_browser:
+            end_stale_sign_ins()
             argv += ["--external-browser", self.external_browser]
         argv += self.extra_args
         if v.useragent:
