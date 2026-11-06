@@ -41,7 +41,7 @@ const stop = [
 ]
 import.meta.hot?.dispose(() => stop.forEach((fn) => fn()))
 
-export function refreshSessions() {
+function refreshSessions() {
   call<Session[]>('sessions.list')
     .then((all) => set({ sessions: Object.fromEntries(all.map((s) => [s.id, s])), ready: true }))
     .catch(() => set({ ready: true }))

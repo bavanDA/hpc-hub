@@ -8,7 +8,7 @@ import type { Cluster } from '../../types/clusters'
 import { load, useClusters } from './store'
 
 /** What the window says: one short line, the same for every kind of work. */
-export const nodeWords = () => ({
+const nodeWords = () => ({
   title: 'You need a compute node to do this',
   confirm: 'Get a compute node',
   keep: 'Not now',

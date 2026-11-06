@@ -8,7 +8,7 @@ const subs = new Set<() => void>()
 const emit = () => subs.forEach((fn) => fn())
 const sub = (fn: () => void) => { subs.add(fn); return () => { subs.delete(fn) } }
 
-export function setAllClusters(on: boolean) {
+function setAllClusters(on: boolean) {
   if (on === all) return
   all = on
   emit()

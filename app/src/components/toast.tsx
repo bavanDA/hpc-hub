@@ -6,7 +6,7 @@
 import { CircleAlert, X } from 'lucide-react'
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react'
 
-export type ToastOptions = { kind?: 'info' | 'error'; action?: { label: string; run: () => void } }
+type ToastOptions = { kind?: 'info' | 'error'; action?: { label: string; run: () => void } }
 type Toast = { id: number; text: string } & ToastOptions
 
 type Show = (text: string, options?: ToastOptions) => () => void

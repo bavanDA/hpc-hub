@@ -13,7 +13,7 @@ export type Profile = {
   extra_args?: string
 }
 
-export type Vpn = {
+type Vpn = {
   enabled: boolean
   gateway: string
   same_login_as_ssh?: boolean
@@ -175,7 +175,7 @@ export type KeyTest = {
 }
 
 /** "4 h", "30 min", "1 d 12 h" for Slurm's "04:00:00", "00:30:00", "1-12:00:00". */
-export function shortTime(t: string) {
+function shortTime(t: string) {
   const [d, hms] = t.includes('-') ? t.split('-') : ['0', t]
   const [h = 0, m = 0] = hms.split(':').map((x) => Number(x) || 0)
   const parts = [Number(d) ? `${Number(d)} d` : '', h ? `${h} h` : '', m ? `${m} min` : '']

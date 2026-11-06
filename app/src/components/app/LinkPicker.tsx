@@ -38,7 +38,7 @@ export function LinkPicker() {
       actions={<>
         <Button onClick={close}>Cancel</Button>
         <Button onClick={copy}><Copy size={16} />Copy link</Button>
-        <Button kind="suggested" onClick={() => go()} autoFocus><ExternalLink size={16} />Open</Button>
+        <Button kind="primary" onClick={() => go()} autoFocus><ExternalLink size={16} />Open</Button>
       </>}>
       <p className="mb-4 break-all text-center text-sm text-dim" title={shown.url}>{short(shown.url)}</p>
       <List>

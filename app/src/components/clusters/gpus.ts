@@ -30,20 +30,6 @@ export function gpuName(g: Gpu) {
   return g.slice || !g.memory_gb ? g.label : `${g.label}, ${g.memory_gb} GB`
 }
 
-/** The line under its name: how many one job can have ("Up to 8 per job"); '' for a slice, whose name says it. */
-export function gpuHint(g: Gpu) {
-  return g.slice || g.max_per_job <= 1 ? '' : `Up to ${g.max_per_job} per job`
-}
-
-/** Each GPU's line, only where it differs from the usual one ("Up to 8 per job" when the rest allow 4). */
-export function gpuHints(gpus: Gpu[]): string[] {
-  const all = gpus.map(gpuHint)
-  const count = new Map<string, number>()
-  all.filter(Boolean).forEach((h) => count.set(h, (count.get(h) ?? 0) + 1))
-  const usual = [...count].sort((a, b) => b[1] - a[1])[0]?.[0]
-  return all.map((h) => (h === usual ? '' : h))
-}
-
 // Names people know for Slurm's GPU types, as in hpc_hub/compute/gpus.py, for rows that have no GPU list at hand.
 const NAMES: Record<string, string> = {
   a100: 'A100', a100_10g: 'A100, 10 GB slice', a100_20g: 'A100, 20 GB slice', a100_40g: 'A100, 40 GB slice',

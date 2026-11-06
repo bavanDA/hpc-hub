@@ -8,7 +8,7 @@ import claude from '../../assets/agents/claude.svg?raw'
 import cursor from '../../assets/agents/cursor.svg?raw'
 import openai from '../../assets/agents/openai.svg?raw'
 
-export const PLAIN_ICONS = import.meta.env.HPC_HUB_PLAIN_ICONS === '1'
+const PLAIN_ICONS = import.meta.env.HPC_HUB_PLAIN_ICONS === '1'
 
 const paths = (svg: string) => [...svg.matchAll(/ d="([^"]+)"/g)].map((m) => m[1])
 

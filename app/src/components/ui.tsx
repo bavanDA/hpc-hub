@@ -1,27 +1,16 @@
-// Shared building blocks, so every page looks the same. The tokens (colors, type scale, shadows, motion) are in
-// index.css; this file is the only place that turns them into buttons, pills, dialogs and empty states.
 import { Loader2, X, type LucideIcon } from 'lucide-react'
 import { useEffect, type ReactNode } from 'react'
 
-/** A plain block on the page (style E has no boxes): it only groups and clips what is inside. */
-export function Card({ children, className = '' }: { children: ReactNode; className?: string }) {
-  return <section className={`bg-card ${className}`}>{children}</section>
-}
+type Kind = 'primary' | 'secondary' | 'ghost' | 'danger' | 'danger-solid'
+// suggested and flat: older names for primary and ghost
+type ButtonKind = Kind | 'suggested' | 'flat'
+type ButtonSize = 'sm' | 'md' | 'lg'
 
-// -- buttons ---------------------------------------------------------------------------------------------------
-
-/** Style E. primary: the one main action of a view, solid (black on light, white on dark). secondary: outlined, for
- * everything else that matters. ghost: quiet (toolbars). danger: outlined with red words, a risky choice in a list.
- * danger-solid: the confirm button of a destructive question. The old names still work: suggested = primary, pill = secondary, flat = ghost, destructive = danger. */
-export type ButtonKind = 'primary' | 'secondary' | 'ghost' | 'danger' | 'danger-solid'
-  | 'suggested' | 'pill' | 'flat' | 'destructive'
-export type ButtonSize = 'sm' | 'md' | 'lg'
-
-const KIND: Record<ButtonKind, ButtonKind> = {
+const KIND: Record<ButtonKind, Kind> = {
   primary: 'primary', secondary: 'secondary', ghost: 'ghost', danger: 'danger', 'danger-solid': 'danger-solid',
-  suggested: 'primary', pill: 'secondary', flat: 'ghost', destructive: 'danger',
+  suggested: 'primary', flat: 'ghost',
 }
-const LOOK: Record<string, string> = {
+const LOOK: Record<Kind, string> = {
   primary: 'bg-accent text-on-accent hover:bg-accent-hover active:bg-accent-pressed disabled:opacity-40',
   secondary: 'border border-line-strong text-text hover:bg-hover active:bg-pressed disabled:opacity-45',
   ghost: 'text-text hover:bg-hover active:bg-pressed disabled:opacity-45',
@@ -34,11 +23,11 @@ const SIZE: Record<ButtonSize, string> = {
   lg: 'h-11 gap-2 rounded-lg px-5 text-base',
 }
 
-/** pill: the big call to action of the first-start steps only. `round` is the old name for it. */
-export function Button({ kind = 'secondary', size = 'md', pill = false, round = false, className = '', ...props }:
-  { kind?: ButtonKind; size?: ButtonSize; pill?: boolean; round?: boolean }
+/** pill: the big call to action of the first start. */
+export function Button({ kind = 'secondary', size = 'md', pill = false, className = '', ...props }:
+  { kind?: ButtonKind; size?: ButtonSize; pill?: boolean }
   & React.ButtonHTMLAttributes<HTMLButtonElement>) {
-  const shape = pill || round ? 'h-11 gap-2 rounded-lg px-6 text-md' : SIZE[size]
+  const shape = pill ? 'h-11 gap-2 rounded-lg px-6 text-md' : SIZE[size]
   return (
     <button {...props}
       className={`inline-flex shrink-0 items-center justify-center whitespace-nowrap font-semibold transition-colors
@@ -46,8 +35,7 @@ export function Button({ kind = 'secondary', size = 'md', pill = false, round = 
   )
 }
 
-/** A grey button with only an icon: for well-known glyphs (settings, refresh, close, more, search), always with a
- * label for the tooltip and screen readers. size is the icon's; small makes the button 28px instead of 36px. */
+/** size is the icon's; small makes the button 28px instead of 36px. */
 export function IconButton({ icon: Icon, label, onClick, size = 16, small = false, disabled, className = '' }:
   { icon: LucideIcon; label: string; onClick?: () => void; size?: number; small?: boolean; disabled?: boolean
     className?: string }) {
@@ -60,19 +48,15 @@ export function IconButton({ icon: Icon, label, onClick, size = 16, small = fals
   )
 }
 
-// -- status ----------------------------------------------------------------------------------------------------
+type Status = 'success' | 'info' | 'warning' | 'danger' | 'neutral'
+// ok, warn, bad and dim: older names
+type PillKind = Status | 'ok' | 'warn' | 'bad' | 'dim'
 
-/** success: connected, running. info: in progress (connecting, transferring). warning: waiting (pending, Duo).
- * danger: failed. neutral: off or over (disconnected, completed, cancelled). ok, warn, bad and dim are the old names. */
-export type PillKind = 'success' | 'info' | 'warning' | 'danger' | 'neutral' | 'ok' | 'warn' | 'bad' | 'dim'
-
-const PILL_KIND: Record<PillKind, 'success' | 'info' | 'warning' | 'danger' | 'neutral'> = {
+const PILL_KIND: Record<PillKind, Status> = {
   success: 'success', info: 'info', warning: 'warning', danger: 'danger', neutral: 'neutral',
   ok: 'success', warn: 'warning', bad: 'danger', dim: 'neutral',
 }
-// Style E: no box, a small dot and the word. Solid when on, breathing while busy, grey while waiting, hollow when
-// off, red on an error.
-const PILL: Record<string, { box: string; dot: string }> = {
+const PILL: Record<Status, { box: string; dot: string }> = {
   success: { box: 'text-text', dot: 'bg-text' },
   info: { box: 'text-text', dot: 'bg-dim animate-pulse' },
   warning: { box: 'text-text', dot: 'bg-dim' },
@@ -80,8 +64,8 @@ const PILL: Record<string, { box: string; dot: string }> = {
   neutral: { box: 'text-dim', dot: 'border-[1.5px] border-dim' },
 }
 
-/** Which kind a state is, for sessions ("Connected", "Approve Duo on your phone") and Slurm jobs ("RUNNING"). */
-export function statusKind(state: string): 'success' | 'info' | 'warning' | 'danger' | 'neutral' {
+/** For session states ("Connected", "Approve Duo on your phone") and Slurm job states ("RUNNING"). */
+export function statusKind(state: string): Status {
   const s = state.toLowerCase()
   if (/^(connected|running|done|ready|succeeded|active)\b/.test(s)) return 'success'
   if (/duo|pending|waiting|queued|held|suspended|requeued/.test(s)) return 'warning'
@@ -103,23 +87,18 @@ export function Pill({ kind = 'neutral', dot = true, children, title }:
   )
 }
 
-/** A session or job state: its dot picked from the state, then the word. */
 export function StatusPill({ state, children }: { state: string; children?: ReactNode }) {
   return <Pill kind={statusKind(state)}>{children ?? state}</Pill>
 }
-
-// -- feedback ----------------------------------------------------------------------------------------------------
 
 export function Spinner({ size = 16 }: { size?: number }) {
   return <Loader2 size={size} className="animate-spin text-dim" />
 }
 
-/** A grey placeholder in the shape of what is loading. It shows after 300ms, so a quick load never flashes. */
 export function Skeleton({ className = '' }: { className?: string }) {
   return <span aria-hidden className={`skeleton block ${className}`} />
 }
 
-/** Placeholder rows for a list or table that is loading. */
 export function SkeletonRows({ rows = 5, height = 40 }: { rows?: number; height?: number }) {
   return (
     <div role="status" aria-label="Loading" className="flex flex-col">
@@ -134,7 +113,6 @@ export function SkeletonRows({ rows = 5, height = 40 }: { rows?: number; height?
   )
 }
 
-/** How full something is (time used, SUs, disk): black (white on dark), red when full. */
 export function Meter({ value, label, className = '' }: { value: number; label?: string; className?: string }) {
   const v = Math.max(0, Math.min(1, Number.isFinite(value) ? value : 0))
   const color = v >= 1 ? 'bg-bad-dot' : 'bg-text'
@@ -146,7 +124,6 @@ export function Meter({ value, label, className = '' }: { value: number; label?:
   )
 }
 
-/** A whole page with nothing to show (empty, not connected, error): a grey icon, a title, one sentence, one action. */
 export function EmptyState({ icon: Icon, title, text, action, secondary }:
   { icon: LucideIcon; title: string; text?: ReactNode; action?: ReactNode; secondary?: ReactNode }) {
   return (
@@ -160,23 +137,7 @@ export function EmptyState({ icon: Icon, title, text, action, secondary }:
   )
 }
 
-/** The top of a narrow page (lists, settings): its title, an optional line under it, actions on the right. */
-/** title: left out where the header bar already names the page. */
-export function PageHead({ title, subtitle, actions }: { title?: string; subtitle?: ReactNode; actions?: ReactNode }) {
-  return (
-    <div className="mb-6 flex flex-wrap items-end gap-4">
-      <div className="min-w-0 flex-1">
-        {title && <h1 className="text-xl font-semibold">{title}</h1>}
-        {subtitle && <p className="mt-0.5 text-sm text-dim">{subtitle}</p>}
-      </div>
-      {actions && <div className="flex shrink-0 items-center gap-2">{actions}</div>}
-    </div>
-  )
-}
-
-// -- controls ----------------------------------------------------------------------------------------------------
-
-/** An on/off switch, black (white on dark) when on. stop: don't let the click reach a clickable row around it. */
+/** stop: keeps the click from reaching a clickable row around it. */
 export function Switch({ on, onChange, label, stop = false, disabled }:
   { on: boolean; onChange: (on: boolean) => void; label?: string; stop?: boolean; disabled?: boolean }) {
   return (
@@ -190,13 +151,10 @@ export function Switch({ on, onChange, label, stop = false, disabled }:
   )
 }
 
-/** Shared look of text inputs and selects: outlined, the line turns black (white on dark) on focus. */
 export const FIELD = 'h-9 rounded-lg border border-line-strong bg-window px-3 text-base text-text outline-none '
   + 'placeholder:text-faint focus:border-accent focus:ring-1 focus:ring-accent disabled:opacity-45'
 
-// -- dialogs -----------------------------------------------------------------------------------------------------
-
-// Open dialogs, newest last: Escape closes only the top one
+// newest last: Escape closes only the top one
 const open: symbol[] = []
 
 export function useEscape(onClose: () => void) {
@@ -212,11 +170,10 @@ export function useEscape(onClose: () => void) {
   }, [onClose])
 }
 
-/** A dialog over the window, style E: title on the left, X on the right. Escape or the X closes it. Actions go in
- * the footer: the other choices first, the one solid main button last. */
 export function Dialog({ title, onClose, children, actions, width = 480, height, bare = false }:
   { title: string; onClose: () => void; children: ReactNode; actions?: ReactNode; width?: number; height?: number
-    bare?: boolean }) {
+    bare?: boolean  // the children lay out and scroll the body themselves
+  }) {
   useEscape(onClose)
   return (
     <div className="dialog-scrim fixed inset-0 z-40 grid place-items-center bg-scrim p-4" onMouseDown={onClose}>
@@ -227,7 +184,6 @@ export function Dialog({ title, onClose, children, actions, width = 480, height,
           <h2 className="min-w-0 flex-1 truncate text-lg font-semibold">{title}</h2>
           <IconButton icon={X} label="Close" size={18} onClick={onClose} />
         </div>
-        {/* bare: the children lay out and scroll the body themselves (a dialog with side navigation) */}
         <div className={bare ? 'flex min-h-0 flex-1 border-t border-line' : 'overflow-auto px-5 pb-4'}>{children}</div>
         {actions && <div className="flex items-center justify-end gap-2 px-5 pt-3 pb-5">
           {actions}</div>}
@@ -236,8 +192,6 @@ export function Dialog({ title, onClose, children, actions, width = 480, height,
   )
 }
 
-/** A short question with two answers: the safe answer (outlined) has focus, the risky one is on the right, solid
- * red when it destroys something. Esc or a click outside is the safe answer. */
 export function AlertDialog({ title, children, keep, act, danger = true, disabled, onAct, onClose }: {
   title: string; children?: ReactNode; keep: string; act: string; danger?: boolean; disabled?: boolean
   onAct: () => void; onClose: () => void
@@ -258,14 +212,10 @@ export function AlertDialog({ title, children, keep, act, danger = true, disable
   )
 }
 
-// -- lists -------------------------------------------------------------------------------------------------------
-
-/** Rows on the plain background with a hairline above, between and under them (style E). */
 export function List({ children }: { children: ReactNode }) {
   return <section className="divide-y divide-line overflow-hidden border-y border-line">{children}</section>
 }
 
-/** A row of a boxed list: 48px, or taller with a subtitle. */
 export function Row({ title, subtitle, prefix, suffix, onClick }:
   { title: ReactNode; subtitle?: ReactNode; prefix?: ReactNode; suffix?: ReactNode; onClick?: () => void }) {
   return (
@@ -281,7 +231,6 @@ export function Row({ title, subtitle, prefix, suffix, onClick }:
   )
 }
 
-/** A hairline tile around a grey icon (cluster cards, welcome). */
 export function IconTile({ icon: Icon, size = 40, tone = 'neutral' }:
   { icon: LucideIcon; size?: 40 | 56; tone?: 'neutral' | 'accent' | 'success' }) {
   const look = tone !== 'neutral' ? 'text-text' : 'text-dim'

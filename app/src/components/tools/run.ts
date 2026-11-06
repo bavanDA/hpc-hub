@@ -37,7 +37,7 @@ export async function whenConnected(cluster: string, name: string): Promise<void
 }
 
 // -- agents and Ask all --------------------------------------------------------------------------
-export type AgentRun = {
+type AgentRun = {
   agent: string; name: string; folder: string; chat_id: string; label: string; task: string
   options: Record<string, string>; new_node: boolean; remote_control: boolean; profile: Record<string, unknown> | null
 }
@@ -50,7 +50,7 @@ export function startAgent(cluster: string, run: AgentRun, go: Go) {
     .catch(failed)
 }
 
-export type AskRun = { folder: string; out: string; prompt: string; agents: string[]; discuss: boolean
+type AskRun = { folder: string; out: string; prompt: string; agents: string[]; discuss: boolean
   profile: Record<string, unknown> | null; remember: boolean }
 
 export function startAsk(cluster: string, run: AskRun, go: Go) {
@@ -76,7 +76,7 @@ function opened(o: Opened) {
 }
 
 /** Open a folder on a tunnel in the VS Code app (if it is here) or the browser. */
-export function openTunnel(tunnel: string, folder: string, target: Target) {
+function openTunnel(tunnel: string, folder: string, target: Target) {
   call<Opened>('tools.vscode_open', { tunnel, folder, target }).then(opened).catch(failed)
 }
 
@@ -109,7 +109,7 @@ function onLink(cluster: string, job: string, key: string, openLinks: boolean, o
   }
 }
 
-export type VsRun = { folder: string; target: Target; job: string; replace_job: boolean
+type VsRun = { folder: string; target: Target; job: string; replace_job: boolean
   profile: Record<string, unknown> | null; remember: boolean; remember_folder: boolean; ask?: boolean }
 
 export function startVscode(cluster: string, run: VsRun, openLinks: boolean, _go?: Go) {
