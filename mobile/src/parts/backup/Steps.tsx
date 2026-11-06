@@ -5,12 +5,14 @@ import { BellRing, CircleAlert, CircleCheck, FileText, GitBranch } from 'lucide-
 import type { ReactNode } from 'react'
 
 import { agentIcon } from '@shared/components/agents/AgentIcon'
+import { CLASS } from '@shared/components/backup/classes'
 import {
-  CLASS, count, done as doneCopy, gb, gbOf, helpFor, plan as planCopy, risk, scanning, space as spaceCopy, start,
-  when,
+  done as doneCopy, plan as planCopy, risk, scanning, space as spaceCopy, start,
 } from '@shared/components/backup/copy'
+import { count, gb, gbOf, when } from '@shared/components/backup/format'
+import { helpFor } from '@shared/components/backup/help'
 import { groupsOf, spaceFacts } from '@shared/components/backup/plan'
-import type { Options } from '@shared/components/backup/useBackup'
+import type { Options } from '@shared/components/backup/flow'
 import { Spinner } from '@shared/components/ui'
 import type { BackupPolicy, CopyResult, Plan, PlanItem, Progress, Scan, Summary } from '@shared/types/backup'
 import { Button, List, Row, Section, ToggleRow } from '../../ui'

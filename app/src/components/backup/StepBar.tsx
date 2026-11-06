@@ -1,4 +1,4 @@
-import type { Step } from './useBackup'
+import type { Step } from './flow'
 
 const STEPS: [Step[], string][] = [[['start', 'scanning'], 'Check'], [['risk'], 'At risk'], [['plan'], 'Plan'],
   [['space'], 'Space'], [['copy', 'done'], 'Copy']]

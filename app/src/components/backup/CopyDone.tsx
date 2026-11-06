@@ -5,7 +5,9 @@ import type { CopyResult, Plan, Progress } from '../../types/backup'
 import { Confirm, EButton, ItemRow } from '../e/extra'
 import { List, Row, Section } from '../e/ui'
 import { Spinner } from '../ui'
-import { copying, count, done as copy, gb, helpFor } from './copy'
+import { copying, done as copy } from './copy'
+import { count, gb } from './format'
+import { helpFor } from './help'
 import { Actions, Bar } from './Steps'
 
 export function CopyView({ plan, progress, job, onStop }: {

@@ -3,7 +3,9 @@ import { GitBranch } from 'lucide-react'
 import type { Folder, Summary } from '../../types/backup'
 import { Note } from '../e/extra'
 import { Row, Section } from '../e/ui'
-import { CLASS, count, gb, risk, when } from './copy'
+import { CLASS } from './classes'
+import { risk } from './copy'
+import { count, gb, when } from './format'
 import { groupsOf } from './plan'
 
 function FolderLine({ f }: { f: Folder }) {

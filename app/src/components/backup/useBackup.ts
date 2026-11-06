@@ -5,23 +5,15 @@ import type {
   BackupPolicy, Choice, CopyResult, Plan, PlanItem, Progress, Reminders, Scan, Summary,
 } from '../../types/backup'
 import { notify } from '../app/notify'
-import { REMAKE, notices } from './copy'
+import { notices } from './copy'
+import { leaveOutBiggest, planParams, scanRunning, watchedId, type Options } from './flow'
+import { keptFor, useKept } from './useKept'
 
-export type Step = 'start' | 'scanning' | 'risk' | 'plan' | 'space' | 'copy' | 'done'
-type Kept = { step: Step; scan: string; copy: string; job: string; tried: string }
-
-const kept = new Map<string, Kept>()
 const POLL_MS = 1500
 
-const RUNNING = new Set(['starting', 'waiting_for_node', 'scanning', 'thinking'])
-const scanRunning = (s?: Scan | null) => !!s && RUNNING.has(s.state)
-
-export type Options = { horizon: number; whole: boolean; everything: boolean; codeToHome: boolean }
-
-/** at: 'plan' opens the last finished check's plan (from a notice or the Files banner). */
 export function useBackup(cluster: string, at = '') {
-  const mine = kept.get(cluster) ?? { step: 'start' as Step, scan: '', copy: '', job: '', tried: '' }
-  const [step, setStepState] = useState<Step>(mine.step)
+  const ref = useRef(keptFor(cluster))
+  const { step, save, setStep } = useKept(cluster, ref)
   const [policy, setPolicy] = useState<BackupPolicy | null>(null)
   const [scan, setScan] = useState<Scan | null>(null)
   const [summary, setSummary] = useState<Summary | null>(null)
@@ -33,18 +25,6 @@ export function useBackup(cluster: string, at = '') {
     codeToHome: false })
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
-  const [, bump] = useState(0)  // a change kept outside React (tried, the copy) shows right away
-  const ref = useRef(mine)
-  ref.current = kept.get(cluster) ?? mine
-
-  const save = useCallback((change: Partial<Kept>) => {
-    const next = { ...(kept.get(cluster) ?? mine), ...change }
-    kept.set(cluster, next)
-    ref.current = next
-    if (change.step) setStepState(change.step)
-    bump((n) => n + 1)
-  }, [cluster])  // eslint-disable-line react-hooks/exhaustive-deps -- mine is the first value only
-  const setStep = useCallback((s: Step) => save({ step: s }), [save])
   const fail = (e: unknown) => setError(e instanceof Error ? e.message : String(e))
 
   // the cluster's rules and the last check, once per cluster
@@ -99,10 +79,7 @@ export function useBackup(cluster: string, at = '') {
     if (!ref.current.scan) return null
     setBusy(true)
     try {
-      const p = await call<Plan>('backup.plan', {
-        cluster, id: ref.current.scan, horizon_days: o.horizon, scope: o.everything ? 'everything' : 'at_risk',
-        whole_folders: o.whole, code_to_home: o.codeToHome, changes,
-      })
+      const p = await call<Plan>('backup.plan', planParams(cluster, ref.current.scan, o, changes))
       setPlan(p)
       setError('')
       return p
@@ -120,8 +97,7 @@ export function useBackup(cluster: string, at = '') {
   }, [step, plan, summary, loadPlan])
 
   // the trial run and the copy both report through backup.progress
-  const watching = step === 'copy' ? ref.current.copy : step === 'space' && ref.current.tried === 'running'
-    ? ref.current.scan : ''
+  const watching = watchedId(step, ref.current)
   useEffect(() => {
     const id = watching
     if (!cluster || !id) return
@@ -179,18 +155,9 @@ export function useBackup(cluster: string, at = '') {
       save({ tried: '' })
       await loadPlan([], o)
     },
-    /** Leaves out kept files that can be made again, biggest first, until the copy fits. */
     async leaveOutBiggest() {
       if (!plan) return
-      const s = plan.space
-      let over = (s.after_gb - s.quota_gb) * 1024 ** 3
-      const changes: Choice[] = []
-      for (const i of [...plan.items].filter((x) => REMAKE.includes(x.kind) || x.kind === 'unsure')
-        .sort((a, b) => b.bytes - a.bytes)) {
-        if (over <= 0 && changes.length) break
-        changes.push({ path: i.folder, class: i.kind, keep: false })
-        over -= i.bytes
-      }
+      const changes = leaveOutBiggest(plan)
       save({ tried: '' })
       if (changes.length) await loadPlan(changes)
     },

@@ -1,6 +1,7 @@
 // The phone's backup words where they differ from @shared/components/backup/copy: what the user gets, not how the
 // app does it, one progress line, times as "3 h 48 min", and a plan item's reason only when it adds something.
-import { CLASS, count, gb, when } from '@shared/components/backup/copy'
+import { CLASS } from '@shared/components/backup/classes'
+import { count, gb, when } from '@shared/components/backup/format'
 import { human } from '@shared/components/clusters/time'
 import type { PlanItem, Progress, Scan } from '@shared/types/backup'
 

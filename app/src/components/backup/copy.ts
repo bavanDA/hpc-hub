@@ -1,51 +1,5 @@
-import type { FileClass, Purge } from '../../types/backup'
-import { shortName as short } from '../clusters/loginCopy'
-
-const GB = 1024 ** 3
-
-/** "38.2 GB", "260 GB", "1.62 TB" */
-export function gb(bytes: number): string {
-  const g = bytes / GB
-  if (g >= 1000) return `${(g / 1024).toFixed(2)} TB`
-  if (g >= 100) return `${Math.round(g)} GB`
-  if (g >= 0.1) return `${g.toFixed(1)} GB`
-  return `${Math.max(1, Math.round(bytes / 1024 ** 2))} MB`
-}
-
-/** The same for numbers already in GB (space checks). */
-export function gbOf(g: number): string {
-  return g >= 1000 ? `${(g / 1024).toFixed(2)} TB` : `${g >= 100 ? Math.round(g) : g.toFixed(1)} GB`
-}
-
-export function count(n: number): string {
-  return n.toLocaleString('en-US')
-}
-
-/** "Wulver (NJIT)" -> "Wulver", "Yale Bouchet" -> "Yale" */
-export function shortName(name: string): string {
-  return short({ name })
-}
-
-export const CLASS: Record<FileClass, string> = {
-  results: 'Results', code: 'Code', writing: 'Writing and notes', inputs: 'Inputs and settings', logs: 'Logs',
-  regen: 'Can be made again', checkpoint: 'Can be made again', unsure: 'Not sure',
-}
-
-/** Kinds of files that can be made again: the first to leave out when project is short of space. */
-export const REMAKE: FileClass[] = ['regen', 'checkpoint']
-
-function day(days: number): string {
-  const d = new Date(Date.now() + days * 86_400_000)
-  return d.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })
-}
-
-/** "in 5 days, on Friday, Nov 6", "tomorrow", "any day now" */
-export function when(days: number | null): string {
-  if (days == null) return ''
-  if (days <= 0) return 'any day now'
-  if (days === 1) return 'tomorrow'
-  return `in ${days} days, on ${day(days)}`
-}
+import type { Purge } from '../../types/backup'
+import { count, gb, when } from './format'
 
 export const start = {
   title: 'Backup agent',
@@ -191,7 +145,3 @@ export const banner = {
 }
 
 export const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
-
-/** Who to write to when copies don't match. Only help desks the clusters publish. */
-export const HELP: Record<string, string> = { wulver: 'hpc@njit.edu' }
-export const helpFor = (cluster: string) => HELP[cluster] ?? 'your cluster\'s help desk'

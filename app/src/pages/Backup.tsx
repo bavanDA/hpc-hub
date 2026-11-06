@@ -1,7 +1,7 @@
 import { CircleAlert } from 'lucide-react'
 
 import { BackupFlow } from '../components/backup/BackupFlow'
-import { shortName } from '../components/backup/copy'
+import { shortName } from '../components/backup/format'
 import { useActiveCluster } from '../components/clusters/active'
 import { NotConnected } from '../components/clusters/NotConnected'
 import { EmptyState } from '../components/e/extra'

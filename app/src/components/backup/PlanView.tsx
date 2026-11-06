@@ -3,9 +3,11 @@ import { agentIcon } from '../agents/AgentIcon'
 import { EButton, IconToggleRow } from '../e/extra'
 import { Section } from '../e/ui'
 import { Spinner } from '../ui'
-import { CLASS, count, gb, plan as copy } from './copy'
+import { CLASS } from './classes'
+import { plan as copy } from './copy'
+import { count, gb } from './format'
 import { Actions } from './Steps'
-import type { Options } from './useBackup'
+import type { Options } from './flow'
 
 const Claude = agentIcon('claude')
 

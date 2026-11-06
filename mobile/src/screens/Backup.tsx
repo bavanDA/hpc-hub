@@ -5,9 +5,9 @@ import { BellRing, WifiOff } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
 import {
-  copying, DAYS, done as doneCopy, gb, plan as planCopy, reminders as remindCopy, risk, scanning, shortName,
-  space as spaceCopy, start,
+  copying, DAYS, done as doneCopy, plan as planCopy, reminders as remindCopy, risk, scanning, space as spaceCopy, start,
 } from '@shared/components/backup/copy'
+import { gb, shortName } from '@shared/components/backup/format'
 import { HORIZONS } from '@shared/components/backup/RemindersDialog'
 import { useBackup } from '@shared/components/backup/useBackup'
 import { useGo, usePageParams } from '@shared/nav'

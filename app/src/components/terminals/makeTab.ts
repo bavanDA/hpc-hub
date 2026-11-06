@@ -7,7 +7,9 @@ import { tabNotify } from './tabNotify'
 import type { Tab } from './tabs'
 import { clipboardKeys, theme } from './xterm'
 
-export function makeTab(key: string, fields: Pick<Tab, 'cluster' | 'session' | 'kind' | 'node' | 'title' | 'color'>): Tab {
+type Fields = Pick<Tab, 'cluster' | 'session' | 'kind' | 'node' | 'title' | 'color'>
+
+export function makeTab(key: string, fields: Fields): Tab {
   const term = new Terminal({
     fontFamily: '"Adwaita Mono", "Source Code Pro", "DejaVu Sans Mono", Menlo, Consolas, monospace',
     fontSize: 14, scrollback: 20000, cursorBlink: true, theme: theme(),

@@ -5,10 +5,11 @@ import type { BackupPolicy, Plan, Progress } from '../../types/backup'
 import { EButton, IconToggleRow, Note } from '../e/extra'
 import { List, Row } from '../e/ui'
 import { Meter, Spinner } from '../ui'
-import { gb, gbOf, space as copy } from './copy'
+import { space as copy } from './copy'
+import { gb, gbOf } from './format'
 import { spaceFacts } from './plan'
 import { Actions } from './Steps'
-import type { Options } from './useBackup'
+import type { Options } from './flow'
 
 export function SpaceView({ plan, policy, options, tried, progress, busy, onLeaveOut, onOptions, onTry, onCopy,
   onBack }: {

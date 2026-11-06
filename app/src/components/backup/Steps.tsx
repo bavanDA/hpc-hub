@@ -5,7 +5,8 @@ import { agentIcon } from '../agents/AgentIcon'
 import { EButton, IconToggleRow } from '../e/extra'
 import { List, Row } from '../e/ui'
 import { Spinner } from '../ui'
-import { count, scanning, start } from './copy'
+import { scanning, start } from './copy'
+import { count } from './format'
 
 /** How far a check or a copy is: black (white on dark) on grey, never red. */
 export function Bar({ value, label }: { value: number; label: string }) {
