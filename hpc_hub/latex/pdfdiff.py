@@ -33,11 +33,6 @@ def tree_of(ssh: SshMaster, folder: str, version: str) -> tuple[str, str]:
     return out[0], out[1]
 
 
-def _wrap(script: str, s: LatexSettings) -> str:
-    """Like Recompile: "module load ..." first needs a login shell."""
-    return f"bash -lc {shlex.quote(f'{s.setup.strip()} && {script}')}" if s.setup.strip() else script
-
-
 def plan(ssh: SshMaster, folder: str, main: str, version: str, against: str | None, s: LatexSettings) -> dict:
     """What to build: {pdf (where it is kept), cached, script}. against None: version's own PDF; otherwise
     latexdiff from `against` to `version` ("" = the files now)."""
@@ -74,7 +69,7 @@ def plan(ssh: SshMaster, folder: str, main: str, version: str, against: str | No
             f"cp {shlex.quote(posixpath.join(work, base + '.pdf'))} {shlex.quote(pdf)} && "
             f"{{ cp {shlex.quote(posixpath.join(work, base + '.synctex.gz'))} "
             f"{shlex.quote(pdf[:-4] + '.synctex.gz')} 2>/dev/null; true; }}")
-    return {"pdf": pdf, "cached": False, "script": _wrap(body, s)}
+    return {"pdf": pdf, "cached": False, "script": latex.with_setup(body, s.setup)}
 
 
 def explain(code: int, output: str, cluster: str, diff: bool) -> str:
