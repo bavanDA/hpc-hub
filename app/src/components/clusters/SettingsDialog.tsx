@@ -3,11 +3,11 @@
 // first; under Advanced the server and VPN, queues, the VS Code job and the agents.
 // Saved with cluster_settings.save, which checks every field; logins with clusters.set_login. Passwords go in
 // and never come back out.
-import { Bot, Code, Cpu, Globe, KeyRound, ListOrdered, Server, ShieldCheck } from 'lucide-react'
+import { Bot, Code, Cpu, KeyRound, ListOrdered, Server, ShieldCheck } from 'lucide-react'
 import { useEffect, useState, type ReactNode } from 'react'
 
 import { call } from '../../rpc'
-import { secondStep, summary, type AgentId, type AgentSettings, type Cluster, type Logins, type SettingsInfo,
+import { summary, type AgentId, type AgentSettings, type Cluster, type SettingsInfo,
   type VsCode } from '../../types/clusters'
 import { agentIcon } from '../agents/AgentIcon'
 import { NodeFields } from '../e/NodeFields'
@@ -18,8 +18,10 @@ import { ASK_VS, ASK_VS_SUB } from '../tools/VsCodeDialog'
 import { Spinner } from '../ui'
 import { AuthenticatorHelp } from './AuthenticatorHelp'
 import { ASK } from './ComputeDialog'
-import { KeyPanel, keyHeading, PasswordInstead } from './KeyPanel'
+import { keyHeading } from './KeyPanel'
 import { KeySetupDialog } from './KeySetupDialog'
+import { LoginFields } from './LoginFields'
+import { useLogin } from './useLogin'
 import { copy, shortName } from './loginCopy'
 import { PICKS, pickNote } from './queuePick'
 import { parseQueues, queueCount, QueueRows } from './QueueRows'
@@ -57,15 +59,13 @@ export function SettingsDialog({ cluster, hint, onClose, start = '', advanced = 
   const [entry] = useState<Part>(part)  // opened straight at a section (the card's Compute node): it saves
   const [d, setD] = useState<Cluster>(cluster)
   const [info, setInfo] = useState<SettingsInfo | null>(null)
-  const [saved, setSaved] = useState<Logins | null>(null)
-  const [user, setUser] = useState('')
-  const [password, setPassword] = useState('')
-  const [vpnUser, setVpnUser] = useState('')
+  const login = useLogin(cluster.id)
+  const { saved, user, remember } = login
+  const [vpnTyped, setVpnUser] = useState<string | null>(null)  // null: the saved one
+  const vpnUser = vpnTyped ?? saved?.vpn.username ?? ''
   const [vpnPassword, setVpnPassword] = useState('')
-  const [remember, setRemember] = useState(true)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
-  const [usePassword, setUsePassword] = useState(false)  // a key cluster that takes a password too
   // no login yet on a cluster with a portal: set it up there, like the GTK app does on Connect
   const [open, setOpen] = useState<null | 'key' | 'code' | 'forget' | 'leave'>(hint && cluster.portal ? 'key' : null)
   const [choosing, setChoosing] = useState<Choosing | null>(null)
@@ -74,9 +74,6 @@ export function SettingsDialog({ cluster, hint, onClose, start = '', advanced = 
   useEffect(() => {
     call<SettingsInfo>('cluster_settings.get', { cluster: cluster.id })
       .then((got) => { setInfo(got); setD(got.cluster); setBase(got.cluster) }).catch((e: Error) => setError(e.message))
-    call<Logins>('clusters.login', { cluster: cluster.id })
-      .then((l) => { setSaved(l); setUser(l.ssh.username); setVpnUser(l.vpn.username); setRemember(l.remember ?? true) })
-      .catch((e: Error) => setError(e.message))
   }, [cluster.id])
 
   const up = (change: Partial<Cluster>) => setD((x) => ({ ...x, ...change }))
@@ -85,9 +82,8 @@ export function SettingsDialog({ cluster, hint, onClose, start = '', advanced = 
   const upAgent = (id: AgentId, change: Partial<AgentSettings>) =>
     setD((x) => ({ ...x, [id]: { ...x[id]!, ...change } }))
 
-  const changed = (!!base && JSON.stringify(d) !== JSON.stringify(base)) || !!password || !!vpnPassword
-    || (!!saved && (user !== saved.ssh.username || vpnUser !== saved.vpn.username
-      || remember !== (saved.remember ?? true)))
+  const changed = (!!base && JSON.stringify(d) !== JSON.stringify(base)) || login.changed || !!vpnPassword
+    || (!!saved && vpnUser !== saved.vpn.username)
   const close = () => (changed ? setOpen('leave') : onClose())
 
   const v = d.vpn
@@ -120,9 +116,7 @@ export function SettingsDialog({ cluster, hint, onClose, start = '', advanced = 
     setError('')
     try {
       putCluster(await call<Cluster>('cluster_settings.save', { cluster: d.id, changes: changes() }))
-      if (user.trim()) {
-        await call('clusters.set_login', { cluster: d.id, kind: 'ssh', username: user, password, remember })
-      }
+      if (user.trim()) await login.save()
       if (ownVpnLogin && vpnUser.trim()) {
         await call('clusters.set_login', { cluster: d.id, kind: 'vpn', username: vpnUser, password: vpnPassword,
           remember })
@@ -139,12 +133,12 @@ export function SettingsDialog({ cluster, hint, onClose, start = '', advanced = 
     try {
       const keep = !d.key_page  // a key cluster has no password: forgetting means the username
       await call('clusters.forget_logins', { cluster: d.id, keep_username: keep })
-      if (keep) setSaved((s) => s && { ssh: { ...s.ssh, password: false }, vpn: { ...s.vpn, password: false } })
+      if (keep) login.setSaved((s) => s && { ...s, ssh: { ...s.ssh, password: false }, vpn: { ...s.vpn, password: false } })
       else {
-        setSaved({ ssh: { username: '', password: false }, vpn: { username: '', password: false } })
-        setUser(''); setVpnUser('')
+        login.setSaved((s) => ({ ...s, ssh: { username: '', password: false }, vpn: { username: '', password: false } }))
+        login.setUser(''); setVpnUser('')
       }
-      setPassword(''); setVpnPassword('')
+      login.setPassword(''); setVpnPassword('')
       toast(keep ? 'Saved password removed' : `${label} forgotten`)
     } catch (e) {
       toast((e as Error).message)
@@ -161,39 +155,16 @@ export function SettingsDialog({ cluster, hint, onClose, start = '', advanced = 
   const choose = (title: string, value: string, options: [string, string][], onPick: (v: string) => void) =>
     setChoosing({ title, value, options: options.map(([value, label]) => ({ value, label })), onPick })
 
-  const keyCluster = !!d.key_page && !usePassword
-  const instead = d.key_page && d.password_too
-    ? <div className="px-5 pt-4"><PasswordInstead on={usePassword} onChange={setUsePassword} /></div> : null
+  const keyCluster = !!d.key_page && !login.usePassword
   // a key cluster has no password to forget: its username goes
   const forgetRow = (d.key_page ? !!saved?.ssh.username : !!saved?.ssh.password) && (
     <Section><Row label={d.key_page ? `Forget ${label}` : copy.forget} danger onPress={() => setOpen('forget')} />
     </Section>)
 
-  const login = keyCluster ? <>
-    <p className="px-5 pb-1 text-dim">{keyHeading(d).text}</p>
-    <div className="px-5"><KeyPanel cluster={d} user={user} onUser={setUser}
-      signedIn={!!session && (session.connected ?? session.state === 'Connected')} /></div>
-    {instead}
-    {forgetRow}
-  </> : <>
-    <div className="px-5">
-      <Field label={label} value={user} autoFocus placeholder={copy.usernameHint}
-        onChange={(e) => setUser(e.target.value)} />
-      <Field label={copy.password} type="password" value={password} onChange={(e) => setPassword(e.target.value)}
-        placeholder={!remember ? 'Asked when you connect' : saved?.ssh.password ? copy.saved : undefined} />
-    </div>
-    <Section note={remember ? copy.passwordNote(d) : undefined}>
-      <ToggleRow label={copy.remember} sub={remember ? undefined : copy.rememberOff} checked={remember}
-        onChange={setRemember} />
-    </Section>
-    {secondStep(d) && (d.code_setup ? <Section note={secondStep(d)}>
-      <Row icon={ShieldCheck} label={copy.codeSetup} opens onPress={() => setOpen('code')} />
-    </Section> : <p className="px-5 pt-3 text-sm text-dim">{secondStep(d)}</p>)}
-    {d.portal && <Section note={copy.portalNote}>
-      <Row icon={Globe} label={copy.portal(d)} opens onPress={() => setOpen('key')} />
-    </Section>}
-    {instead}
-    {forgetRow}
+  const loginPage = <>
+    {keyCluster && <p className="px-5 pb-1 text-dim">{keyHeading(d).text}</p>}
+    <LoginFields cluster={d} login={login} onPortal={() => setOpen('key')}
+      signedIn={!!session && (session.connected ?? session.state === 'Connected')}>{forgetRow}</LoginFields>
   </>
 
   const server = <>
@@ -346,7 +317,7 @@ export function SettingsDialog({ cluster, hint, onClose, start = '', advanced = 
     </Section>
   </>
 
-  const pages: Record<Part, ReactNode> = { '': list, login, compute, server, queues, vscode, agents }
+  const pages: Record<Part, ReactNode> = { '': list, login: loginPage, compute, server, queues, vscode, agents }
   const back = () => setPart('')
   return (
     <>
@@ -355,7 +326,7 @@ export function SettingsDialog({ cluster, hint, onClose, start = '', advanced = 
         actions={part && part !== entry ? <MainButton onClick={back}>Done</MainButton>
           : <MainButton disabled={busy || !saved || !info} onClick={save}>Save</MainButton>}>
         {hint && (part === '' || part === 'login') && <Note>{hint}</Note>}
-        {error && <Note error>{error}</Note>}
+        {(error || login.failed) && <Note error>{error || login.failed}</Note>}
         <div className="pb-3">{pages[part]}</div>
       </EDialog>
       {open === 'leave' && <ConfirmDialog title="Throw away your changes?" danger keep="Keep editing"
