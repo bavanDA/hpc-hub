@@ -81,7 +81,7 @@ def shown_qos(j: JobInfo) -> str:
 
 
 def priority_name(qos: str) -> str:
-    """low, standard, high_mygroup -> "Low", "Standard", "High (mygroup)" (like queues.tsx priorityName)."""
+    """low, standard, high_mygroup -> "Low", "Standard", "High (mygroup)", as clusters/priority.ts does."""
     if qos.startswith("high_"):
         return f"High ({qos[5:]})"
     return qos[:1].upper() + qos[1:].replace("_", " ")

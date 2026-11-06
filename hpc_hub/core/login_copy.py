@@ -20,7 +20,7 @@ FORGET = "Forget password"
 KEEP = "Keep it"
 CONTINUE = "Continue"
 
-# the second step, decided by the cluster's admins (ClusterConfig.second_step)
+# the second step, decided by the cluster's admins
 SECOND_DUO = ""  # Duo needs no words: the push explains itself
 SECOND_CODE = "You'll need a code from your authenticator app."
 CODE_SETUP = "Set up your authenticator app"

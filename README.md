@@ -74,7 +74,9 @@ doesn't sign you out on the VPN server (it ends by itself).
 - Fedora, RHEL: `sudo dnf install ./HPC-Hub_*_linux_x86_64.rpm`
 - Any other: `chmod +x HPC-Hub_*.AppImage` and run it.
 
-The VPN needs `openconnect` from your distribution.
+The VPN needs `openconnect` from your distribution. A VPN that signs in on the university's web page (Yale's)
+also needs PyGObject with GTK 4 and WebKitGTK 6: `python3-gi gir1.2-webkit-6.0` on Ubuntu and Debian,
+`python3-gobject webkitgtk6.0` on Fedora.
 
 ### Android
 
