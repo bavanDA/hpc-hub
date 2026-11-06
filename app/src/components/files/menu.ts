@@ -2,7 +2,7 @@ import type { Entry } from '../../types/files'
 import type { MenuItem } from './ContextMenu'
 import { isArchive, isText } from './format'
 
-export type MenuActions = {
+type MenuActions = {
   open: () => void; edit: () => void; copyPath: () => void; download: () => void; rename: () => void
   zip: () => void; copy: () => void; delete: () => void; newFolder: () => void; upload: () => void
   paste: () => void

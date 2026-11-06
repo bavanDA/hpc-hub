@@ -7,7 +7,7 @@ const two = (n: number) => String(n).padStart(2, '0')
 const stamp = (d: Date) => `${MONTHS[d.getMonth()]} ${d.getDate()} ${two(d.getHours())}:${two(d.getMinutes())}`
 
 /** 2026-10-20T02:00:00 (cluster time, as Slurm says it) -> Oct 20 02:00 */
-export function slurmWhen(text: string): string {
+function slurmWhen(text: string): string {
   const m = /^(\d{4})-(\d\d)-(\d\d)T(\d\d):(\d\d)/.exec(text)
   return m ? `${MONTHS[parseInt(m[2], 10) - 1]} ${parseInt(m[3], 10)} ${m[4]}:${m[5]}` : text
 }

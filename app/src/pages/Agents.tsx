@@ -11,7 +11,7 @@ const Schedules = lazy(() => import('./Schedules').then((m) => ({ default: m.Sch
 const Skills = lazy(() => import('./Skills').then((m) => ({ default: m.Skills })))
 const Backup = lazy(() => import('./Backup').then((m) => ({ default: m.Backup })))
 
-export type AgentTab = 'running' | 'backup' | 'scheduled' | 'skills' | 'permissions'
+type AgentTab = 'running' | 'backup' | 'scheduled' | 'skills' | 'permissions'
 /** The experimental tabs, each shown while its own switch in Settings is on. */
 const EXPERIMENTAL: Partial<Record<AgentTab, keyof Experiments>> = { scheduled: 'schedules', skills: 'skills' }
 const shown = (t: AgentTab, e: Experiments) => { const k = EXPERIMENTAL[t]; return !k || e[k] }
@@ -21,7 +21,7 @@ const ALL: TabItem<AgentTab>[] = [
 ]
 
 /** The tab to show: the one asked for, unless it's experimental and its switch is off. */
-export function agentTab(asked: string | undefined, experiments: Experiments): AgentTab {
+function agentTab(asked: string | undefined, experiments: Experiments): AgentTab {
   const t = ALL.find((x) => x.id === asked)?.id ?? 'running'
   return shown(t, experiments) ? t : 'running'
 }

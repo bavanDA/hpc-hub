@@ -1,31 +1,17 @@
 import { lazy, Suspense } from 'react'
 
 import { Tabs, type TabItem } from '../components/app/Tabs'
-import { Transfers } from '../components/files/Transfers'
-import { useTransfers } from '../components/files/useTransfers'
+import { LaptopCopies } from '../components/files/LaptopCopies'
 import { Spinner } from '../components/ui'
 import { useGo, usePageParams } from '../nav'
 import { Files } from './Files'
 
 const Globus = lazy(() => import('./Globus').then((m) => ({ default: m.Globus })))
 
-export type FilesTab = 'browse' | 'transfers'
+type FilesTab = 'browse' | 'transfers'
 const TABS: TabItem<FilesTab>[] = [{ id: 'browse', title: 'Browse' }, { id: 'transfers', title: 'Transfers' }]
 
-export const filesTab = (asked: string | undefined): FilesTab => (asked === 'transfers' ? 'transfers' : 'browse')
-
-/** Copies that went through this laptop; Globus copies are in Globus's own list below. */
-function LaptopCopies() {
-  const transfers = useTransfers(() => {})
-  const items = transfers.items.filter((t) => t.how !== 'globus')
-  if (!items.length) return null
-  return (
-    <section className="px-4 pt-4">
-      <h2 className="mb-1.5 text-xs font-semibold tracking-wide text-dim uppercase">Through this laptop</h2>
-      <Transfers items={items} onX={transfers.x} />
-    </section>
-  )
-}
+const filesTab = (asked: string | undefined): FilesTab => (asked === 'transfers' ? 'transfers' : 'browse')
 
 export function FilesPage() {
   const go = useGo()

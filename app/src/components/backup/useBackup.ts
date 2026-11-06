@@ -14,9 +14,7 @@ const kept = new Map<string, Kept>()
 const POLL_MS = 1500
 
 const RUNNING = new Set(['starting', 'waiting_for_node', 'scanning', 'thinking'])
-export const scanRunning = (s?: Scan | null) => !!s && RUNNING.has(s.state)
-const COPYING = new Set(['filtering', 'copying', 'verifying', 'resubmitted'])
-export const copyRunning = (p?: Progress | null) => !!p && COPYING.has(p.state)
+const scanRunning = (s?: Scan | null) => !!s && RUNNING.has(s.state)
 
 export type Options = { horizon: number; whole: boolean; everything: boolean; codeToHome: boolean }
 

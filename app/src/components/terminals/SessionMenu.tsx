@@ -10,7 +10,7 @@ import { close, getTab, tabKey, update } from './tabs'
 /** What the menu acts on: a listed session, or an open tab's. */
 export type Target = { cluster: string; name: string; kind: 'tmux' | 'screen'; node: string; title: string }
 
-export const inputClass = 'h-10 w-full rounded-lg border border-line-strong bg-window px-3 outline-none '
+const inputClass = 'h-10 w-full rounded-lg border border-line-strong bg-window px-3 outline-none '
   + 'focus:border-accent focus:ring-1 focus:ring-accent'
 
 export function SessionMenu({ target, onChanged }: { target: Target; onChanged: () => void }) {
