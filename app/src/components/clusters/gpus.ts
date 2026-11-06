@@ -1,9 +1,6 @@
 // The GPUs a cluster offers (clusters.gpus, read from Slurm at login), shared by the desktop's compute dialog and
 // the phone's node screen: the names people know, slices (part of one GPU, one per job) first, and what choosing one
 // does to the request (the queue that has it).
-import { useEffect, useState } from 'react'
-
-import { call } from '../../rpc'
 import type { Profile } from '../../types/clusters'
 
 export type Gpu = {
@@ -13,16 +10,6 @@ export type Gpu = {
   slice: boolean
   partitions: string[]
   max_per_job: number
-}
-
-export function useGpus(cluster: string) {
-  const [gpus, setGpus] = useState<Gpu[]>([])
-  const [known, setKnown] = useState(false)
-  useEffect(() => {
-    call<{ known: boolean; gpus: Gpu[] }>('clusters.gpus', { cluster })
-      .then((r) => { setGpus(r.gpus); setKnown(r.known) }).catch(() => setGpus([]))
-  }, [cluster])
-  return { gpus, known }
 }
 
 /** The name with its memory: "A100, 10 GB slice", "H100, 80 GB". */

@@ -6,11 +6,12 @@
 // a tool window shows for it.
 import { useEffect, useState } from 'react'
 
-import { chosen, fitting, gpuName, isPreset, presets, useGpus, withGpu, type Gpu, type GpuFit, type Preset } from '../clusters/gpus'
+import { chosen, fitting, gpuName, isPreset, presets, withGpu, type Gpu, type GpuFit, type Preset } from '../clusters/gpus'
 import { queueText } from '../clusters/priority'
 import { suText } from '../clusters/su'
 import { QueuePickers } from '../clusters/QueuePickers'
 import { human, minutes, slurmTime } from '../clusters/time'
+import { useGpus } from '../clusters/useGpus'
 import { call } from '../../rpc'
 import { gpuText, type Limits, type Profile } from '../../types/clusters'
 import { DurationRow, EDialog, Field, inRange, List, MainButton, NumberRow, Row, Section, Segments } from './ui'
