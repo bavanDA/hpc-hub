@@ -1,4 +1,3 @@
-// Tabs at the top of a page (Agents, Files): one row, the current one underlined. Arrow keys move between them.
 import type { LucideIcon } from 'lucide-react'
 import { useRef } from 'react'
 

@@ -241,7 +241,7 @@ export const answers: Record<string, unknown> = {
       billing: { weights: { cpu: 1, mem: 0.25, gpu: 0, 'gpu:a100': 16, 'gpu:a100_40g': 8, 'gpu:a100_20g': 4,
         'gpu:a100_10g': 2, 'gpu:l40': 8 }, max: 'gres', factor: ['low', 'debug'].includes(qos || 'low') ? 0 : 1 } }
   },
-  // what Slurm's gres column says on each cluster (hpc_hub/compute/gpus.py)
+  // Slurm's gres column on each cluster
   'clusters.gpus': ({ cluster }: { cluster: string }) => ({ known: cluster !== 'sdsc', gpus: DEMO_GPUS[cluster] ?? [] }),
   'question.answer': () => null,
   'cluster_settings.get': ({ cluster }: { cluster: string }): SettingsInfo => ({

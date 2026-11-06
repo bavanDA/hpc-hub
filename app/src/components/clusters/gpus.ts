@@ -1,6 +1,3 @@
-// The GPUs a cluster offers (clusters.gpus, read from Slurm at login), shared by the desktop's compute dialog and
-// the phone's node screen: the names people know, slices (part of one GPU, one per job) first, and what choosing one
-// does to the request (the queue that has it).
 import type { Profile } from '../../types/clusters'
 
 export type Gpu = {
@@ -17,7 +14,7 @@ export function gpuName(g: Gpu) {
   return g.slice || !g.memory_gb ? g.label : `${g.label}, ${g.memory_gb} GB`
 }
 
-// Names people know for Slurm's GPU types, as in hpc_hub/compute/gpus.py, for rows that have no GPU list at hand.
+// for rows without a GPU list at hand; keep in step with hpc_hub/compute/gpus.py
 const NAMES: Record<string, string> = {
   a100: 'A100', a100_10g: 'A100, 10 GB slice', a100_20g: 'A100, 20 GB slice', a100_40g: 'A100, 40 GB slice',
   a100_80gb: 'A100', v100: 'V100', h100: 'H100', h200: 'H200', b200: 'B200', l40: 'L40', l40s: 'L40S', a40: 'A40',

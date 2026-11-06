@@ -1,6 +1,3 @@
-// Sign-in with an SSH key you paste on the cluster's key page (Yale), as three steps with only the current one
-// open: a key (yours, or one HPC Hub makes), send it to the cluster, try it (methods/keys.py). Used by the
-// first-start sign-in step and the cluster's settings. The words are in loginStrings.ts, shared with GTK.
 import { AlertCircle, Check, CheckCircle2, Clock, Copy, ExternalLink, FolderOpen, Info, KeyRound } from 'lucide-react'
 import { useEffect, useState, type ReactNode } from 'react'
 

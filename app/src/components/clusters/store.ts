@@ -1,5 +1,3 @@
-// Live state of every cluster, kept outside the page so it survives switching pages: clusters, sessions
-// (sessions.list, then "session" events) and each card's log (clusters.log, then "log" events).
 import { useSyncExternalStore } from 'react'
 
 import { call, on } from '../../rpc'

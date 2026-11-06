@@ -1,5 +1,3 @@
-// The queue and its priority (Slurm's QoS), both picked from the cluster's own lists (clusters.partitions); typed
-// only before the first connect.
 import { useState } from 'react'
 
 import type { Limits } from '../../types/clusters'

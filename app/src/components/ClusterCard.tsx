@@ -1,7 +1,3 @@
-// One card per cluster, like the GTK app's (cluster_card.py). The status says where you are; the main button is
-// the next thing to do (Connect, Stop signing in); once connected, the node line and the things you open (Terminal,
-// VS Code, Files, Agents) sit in one row. The gear opens the settings; ⋮ has the rest (the node's size, Release
-// node, Disconnect). With Ask every time (ask_node) the node window opens by itself once connected.
 import { Bot, ChevronDown, Code, Cpu, Folder, MoreVertical, Plug, Power, Server, Settings, Smartphone,
   SquareTerminal, Users, type LucideIcon } from 'lucide-react'
 import { useEffect, useState } from 'react'

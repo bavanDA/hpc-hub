@@ -1,6 +1,3 @@
-// Log in through the cluster's web portal (key_setup.py): you sign in in a window HPC Hub opens (the "web-login"
-// or "chrome-window" question, shown by Questions.tsx), then the backend adds this computer's SSH key through the
-// portal and saves your username (methods/keysetup.py). Your own browser is never touched.
 import { CircleCheck, CircleX, Globe } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 

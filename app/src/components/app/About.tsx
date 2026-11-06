@@ -1,4 +1,3 @@
-// About HPC Hub: name, version, one line (hpc_hub/app.py _about).
 import { Server } from 'lucide-react'
 import { useEffect, useState } from 'react'
 

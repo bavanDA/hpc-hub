@@ -1,6 +1,3 @@
-// Agents › Running: every agent session on your connected clusters (Claude, ChatGPT, Antigravity, Cursor, Ask all).
-// Click one to see it in Terminals, ⋮ to rename or stop it. Start agent opens the same window as a cluster card or
-// project. Style E rows, like the phone's Running.
 import { Bot, ChevronDown, MessagesSquare, RefreshCw, SquareTerminal, type LucideIcon } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 

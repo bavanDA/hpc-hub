@@ -1,8 +1,3 @@
-// Short messages at the bottom of the window: const toast = useToast(); toast('Saved'). Style E: a neutral strip,
-// black on light and white on dark, its button underlined words in the same color.
-// An error stays until you close it, and a toast can carry one button:
-// toast('Could not connect', { kind: 'error', action: { label: 'Retry', run: retry } })
-// It answers a function that takes the toast away early (a "Looking for…" once the answer is in).
 import { CircleAlert, X } from 'lucide-react'
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react'
 

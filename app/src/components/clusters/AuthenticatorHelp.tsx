@@ -1,4 +1,3 @@
-// How to set up Google Authenticator for a cluster that asks for a 6-digit code (authenticator_help.py), in style E.
 import { Copy, ExternalLink } from 'lucide-react'
 
 import type { Cluster } from '../../types/clusters'

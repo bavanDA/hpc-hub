@@ -36,7 +36,7 @@ const AGENTS: AgentInfo[] = [
 function setup({ cluster }: { cluster: string }): ToolSetup {
   const wulver = cluster === 'wulver'
   const c = demoCluster(cluster)
-  const v = c?.vscode  // the VS Code job as saved in the cluster's settings, like hpc_hub/api/methods/tools.py
+  const v = c?.vscode
   return { id: cluster, name: c?.name ?? cluster, connected: true, node: wulver ? 'n0042' : '',
     job: wulver ? '123456' : '', profile,
     vscode: { workdir: v?.workdir ?? '~', open_in: v?.open_in ?? 'desktop', open_links: v?.open_links ?? true,

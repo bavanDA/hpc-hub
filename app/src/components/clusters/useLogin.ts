@@ -1,5 +1,3 @@
-// The cluster's sign-in as you type it in LoginFields: loaded with clusters.login, saved with clusters.set_login.
-// Passwords go in and never come back out.
 import { useEffect, useState } from 'react'
 
 import { call } from '../../rpc'

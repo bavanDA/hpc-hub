@@ -1,4 +1,3 @@
-// Shapes of what hpc_hub/api/methods/skills.py sends.
 export type Skill = {
   path: string  // its folder on the cluster ("" for HPC Hub's own)
   folder: string

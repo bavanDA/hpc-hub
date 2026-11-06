@@ -1,4 +1,3 @@
-// Small helpers for the tool dialogs: dates, paths, the answers folder, what a profile sends.
 import type { Profile } from '../../types/clusters'
 
 /** Today 14:03, Yesterday 09:10, Mar 04 16:20, Mar 04 2024 */

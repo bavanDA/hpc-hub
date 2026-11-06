@@ -1,4 +1,3 @@
-// Shapes of what the usage.* methods send (see hpc_hub/api/methods/usage.py and hpc_hub/compute/usage.py).
 export type Account = {
   account: string
   quota: number // SU the account may use, 0 = no limit

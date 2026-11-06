@@ -1,6 +1,3 @@
-// What every Open menu item does (keys as in hpc_hub/ui/widgets.py open_menu): vscode:<target> or vscode, files,
-// ask, agent:<id>. const tools = useTools(); tools.open('wulver', 'Wulver', 'agent:claude', '~/thesis'); and render
-// {tools.dialog} somewhere that stays on screen.
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
 
 import { useGo } from '../../nav'

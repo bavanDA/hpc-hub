@@ -1,6 +1,3 @@
-// The bottom of the sidebar: each cluster you're connected to (or connecting), its node and the time left, so
-// "where am I and for how long" shows on every page but Clusters, whose cards say it. Click one to see its card.
-// Then Settings.
 import { Settings } from 'lucide-react'
 import { useEffect, useState } from 'react'
 

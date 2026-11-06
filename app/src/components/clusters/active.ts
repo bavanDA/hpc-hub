@@ -1,5 +1,3 @@
-// The cluster you're working on: one choice shared by every page that works on one cluster at a time (Jobs, Usage,
-// Files, the Agents tabs). Pick it in the header's cluster picker, or open a page with go(page, { cluster }).
 import { useEffect, useSyncExternalStore } from 'react'
 
 import type { Cluster, Session } from '../../types'

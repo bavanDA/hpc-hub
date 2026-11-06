@@ -1,5 +1,3 @@
-// One question a login asks (prompts.py), in style E: a password, a 6-digit code, a yes or no, or the VPN's web
-// sign-in (SignIn.tsx).
 import { ShieldCheck } from 'lucide-react'
 import { useState } from 'react'
 

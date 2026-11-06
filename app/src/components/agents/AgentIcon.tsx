@@ -1,5 +1,3 @@
-// Each agent's own logo (assets/agents, see its README), drawn like a lucide icon so menus and sheets take it as
-// one. Built with HPC_HUB_PLAIN_ICONS=1 every agent gets the plain robot instead.
 import { Bot, type LucideIcon, type LucideProps } from 'lucide-react'
 import { forwardRef } from 'react'
 

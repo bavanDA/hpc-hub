@@ -1,4 +1,3 @@
-// What hpc_hub/api/methods/tools.py sends (see hpc_hub/agents/catalog.py, chats.py and core/config.py).
 import type { Profile } from './clusters'
 import type { Command } from './terminals'
 

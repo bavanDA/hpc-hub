@@ -1,4 +1,3 @@
-// The clipboard. In the app it goes through Tauri (WebKit asks before every read); in a browser the web API.
 import { inTauri } from './platform'
 
 export async function copyText(text: string): Promise<void> {

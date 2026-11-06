@@ -1,5 +1,3 @@
-// What a node costs in SUs, worked out as you type from Slurm's billing weights (clusters.partitions billing),
-// shared by the desktop's node window and the phone's. Checked against Wulver's own billing of real jobs.
 import type { Billing, Profile } from '../../types/clusters'
 
 /** SUs an hour for this size, before the priority's factor. Slurm drops the fraction (16 cores and 63 GB: 16). */

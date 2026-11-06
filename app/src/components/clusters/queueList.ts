@@ -1,4 +1,3 @@
-// ClusterConfig.queues: "general:low,debug:debug", queue and priority, tried in order
 export type Queue = { queue: string; billing: string }
 
 export const parseQueues = (text: string): Queue[] => text.split(',').map((s) => s.trim()).filter(Boolean)

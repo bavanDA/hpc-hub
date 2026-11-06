@@ -1,5 +1,3 @@
-// Quitting (hpc_hub/ui/quit.py). Closing keeps everything running (VPN, logins, nodes): the next start picks it
-// all up. Only a login still in progress makes it ask. The menu can also disconnect everything first.
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
 
 import { call } from '../../rpc'

@@ -1,6 +1,3 @@
-// Set up the phone app (Connect phone on a cluster card): your logins as a QR code the phone scans (pairing.make), like the GTK app's
-// connect/ui/phone_pair.py. A cluster that takes keys gets a new key for the phone first, over the connection here.
-// Shown only on a click and hidden after SHOWN seconds, since anyone who sees the code sees what's in it.
 import { Smartphone } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
@@ -10,7 +7,7 @@ import { shortName } from '../clusters/loginCopy'
 import { useClusters } from '../clusters/store'
 import { Button, Dialog, IconTile, List, Row, Spinner, Switch } from '../ui'
 
-const SHOWN = 60
+const SHOWN = 60  // seconds: anyone who sees the code sees the logins in it
 
 type Made = { svg: string; clusters: string[]; skipped: { name: string; reason: string }[] }
 type Pick = { cluster: Cluster; username: string; password: boolean; ready: boolean; note: string }

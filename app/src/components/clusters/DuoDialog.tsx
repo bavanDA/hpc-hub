@@ -1,5 +1,3 @@
-// Big 'approve Duo on your phone' screen while a login waits for Duo (duo.py). It can't be closed, only cancelled.
-// A push expires after about a minute, so after LATE seconds it says so and offers a new one (a fresh login).
 import { Smartphone } from 'lucide-react'
 import { useEffect, useState } from 'react'
 

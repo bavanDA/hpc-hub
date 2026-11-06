@@ -1,4 +1,3 @@
-// useCall: data from the backend, with loading and error. useEvent: react to what the backend pushes.
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { call, on } from './rpc'

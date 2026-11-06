@@ -1,5 +1,3 @@
-// The app's Settings (hpc_hub/ui/preferences.py): light or dark, the browser for links, terminals, the experimental
-// parts (each its own switch) and, while Papers is on, the agent for papers.
 import { useEffect, useState } from 'react'
 
 import { call } from '../../rpc'

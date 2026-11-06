@@ -1,15 +1,9 @@
-// The phone's style E pieces (mobile/src/ui.tsx) at desktop size, for the windows moved to it: rows on a plain
-// background with hairlines, label left and value right, numbers typed in place, one solid main button. Everything
-// sits inside an EDialog, which carries the style-e colors (index.css).
 import { ArrowLeft, Check, ChevronRight, Eye, EyeOff, X, type LucideIcon } from 'lucide-react'
 import { useState, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode } from 'react'
 
 import { human } from '../clusters/time'
 import { useEscape } from '../ui'
 
-/** A window over the app in style E: title on the left, X on the right, rows, the main button at the bottom.
- *  onBack: a part of a bigger window (a settings section), with an arrow back before the title. icon: a logo before
- *  the title (an agent's). */
 export function EDialog({ title, icon: Icon, onClose, onBack, children, actions, width = 520 }: {
   title: string; icon?: LucideIcon; onClose: () => void; onBack?: () => void; children: ReactNode; actions?: ReactNode
   width?: number
@@ -36,7 +30,6 @@ export function EDialog({ title, icon: Icon, onClose, onBack, children, actions,
   )
 }
 
-/** The window's main action: full width, solid (black on light, white on dark). */
 export function MainButton({ icon: Icon, className = '', children, ...props }:
   ButtonHTMLAttributes<HTMLButtonElement> & { icon?: LucideIcon }) {
   return (
@@ -47,12 +40,10 @@ export function MainButton({ icon: Icon, className = '', children, ...props }:
   )
 }
 
-/** A list of rows: a hairline on top, each row draws the one under it. */
 export function List({ children }: { children: ReactNode }) {
   return <div className="border-t border-line">{children}</div>
 }
 
-/** A titled group of rows; icon: a logo before the title (an agent's). */
 export function Section({ title, icon: Icon, note, children }:
   { title?: string; icon?: LucideIcon; note?: ReactNode; children: ReactNode }) {
   return (
@@ -67,8 +58,6 @@ export function Section({ title, icon: Icon, note, children }:
 
 const ROW = 'flex min-h-12 w-full items-center gap-3 border-b border-line px-5 py-2 text-left'
 
-/** One row: label on the left, value on the right. A chevron only when it opens another window (opens). An icon
- *  is grey; danger makes the row red (Forget, Remove). */
 export function Row({ label, sub, value, icon: Icon, opens = false, onPress, danger = false, children }: {
   label: ReactNode; sub?: ReactNode; value?: ReactNode; icon?: LucideIcon; opens?: boolean; onPress?: () => void
   danger?: boolean; children?: ReactNode
@@ -91,11 +80,9 @@ export function Row({ label, sub, value, icon: Icon, opens = false, onPress, dan
     : <div className={ROW}>{body}</div>
 }
 
-/** A check on the chosen row of a list, room for one on the others. */
 export const Tick = ({ on }: { on: boolean }) =>
   on ? <Check size={18} aria-label="Chosen" className="shrink-0" /> : <span className="w-[18px]" />
 
-/** A number and its unit, the unit smaller and grey: 8 GB. */
 export function Amount({ n, unit }: { n: ReactNode; unit?: string }) {
   return <>{n}{unit && <small className="ml-1 text-sm font-normal text-dim">{unit}</small>}</>
 }
@@ -119,8 +106,7 @@ function NumberBox({ label, value, unit, bad, onChange, autoFocus, inline = fals
   )
 }
 
-/** A number row (cores, GB, GPUs). Click it and it opens in place as a big input with its limit; any whole number
- *  from min to max can be typed. Out of range, the limit turns red and stays under the row. */
+/** Opens in place as a big input; out of range, the limit turns red and stays under the row. */
 export function NumberRow({ label, value, unit, showUnit = true, min = 1, max, note, onChange }: {
   label: string; value: number; unit: string; showUnit?: boolean; min?: number; max?: number | null
   note?: string  // the line under it while the number is fine
@@ -154,7 +140,7 @@ function Duration({ total }: { total: number }) {
   return <>{parts.map(([n, unit], i) => <span key={unit}>{i > 0 && ' '}<Amount n={n} unit={unit} /></span>)}</>
 }
 
-/** A length of time typed as days, hours and minutes, in place like NumberRow. max: the longest allowed (minutes). */
+/** max: the longest allowed, in minutes. */
 export function DurationRow({ label, minutes: total, max, onChange }:
   { label: string; minutes: number; max?: number | null; onChange: (m: number) => void }) {
   const [draft, setDraft] = useState<[string, string, string] | null>(null)
@@ -189,7 +175,6 @@ export function DurationRow({ label, minutes: total, max, onChange }:
   )
 }
 
-/** A switch as a row of a list, black (or white on dark) when on. */
 export function ToggleRow({ label, sub, checked, onChange }:
   { label: string; sub?: ReactNode; checked: boolean; onChange: (on: boolean) => void }) {
   return (
@@ -208,8 +193,7 @@ export function ToggleRow({ label, sub, checked, onChange }:
   )
 }
 
-/** One choice of a few, side by side. value '' when none of them is the current one. fit: each as wide as its
- *  words (a filter in a toolbar), not sharing the whole width. */
+/** value '' when none is current. fit: each as wide as its words instead of sharing the width. */
 export function Segments<T extends string>({ value, options, onChange, label, fit = false }: {
   value: T | ''; options: readonly (readonly [T, string])[]; onChange: (v: T) => void; label?: string; fit?: boolean
 }) {
@@ -230,7 +214,6 @@ export function Segments<T extends string>({ value, options, onChange, label, fi
 const BOX = 'h-10 w-full rounded-lg border border-line-strong bg-window px-3 outline-none placeholder:text-faint '
   + 'focus:border-accent focus:ring-1 focus:ring-accent'
 
-/** A text field with its label above. A password gets an eye to show what was typed. */
 export function Field({ label, type, ...props }: { label: ReactNode } & InputHTMLAttributes<HTMLInputElement>) {
   const [shown, setShown] = useState(false)
   const secret = type === 'password'

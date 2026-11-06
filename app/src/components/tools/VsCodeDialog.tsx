@@ -1,6 +1,3 @@
-// VS Code: a batch job of its own runs a tunnel on a compute node; the folder opens in the VS Code app or the
-// browser (Tools.vscode in hpc_hub/ui/tools.py). A running VS Code job is used unless you switch it off. Style E,
-// like the phone's VsCodeSheet. With Ask every time off, useTools starts it without this window.
 import { FolderOpen } from 'lucide-react'
 import { useState } from 'react'
 

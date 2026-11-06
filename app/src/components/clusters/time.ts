@@ -1,4 +1,3 @@
-// Slurm times as minutes and back, like hpc_hub/compute/limits.py (minutes, slurm_time, human).
 const SLURM_TIME = /^(?:(\d+)-)?(\d+)(?::(\d+))?(?::(\d+))?$/
 
 /** '3-00:00:00' -> 4320, '8:00:00' -> 480, '30' -> 30. null: not a time. */

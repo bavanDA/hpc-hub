@@ -1,6 +1,3 @@
-// Questions a login asks while it runs (password, 6-digit code, where to sign in), shown as dialogs.
-// The backend waits on a worker thread until question.answer arrives (see hpc_hub/api/hub.py).
-// Also what a login shows on any page: the Duo screen, and a toast when a connection fails.
 import { invoke } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
 import { useEffect, useRef, useState } from 'react'
@@ -26,7 +23,6 @@ const DEMO_NAMES: Record<string, string> = { wulver: 'Wulver (NJIT)', yale: 'Yal
 function demoQuestions(): Question[] {
   const kind = demo?.get('question') as Question['kind'] | undefined
   const cluster = demo?.get('cluster') ?? 'wulver'
-  // the same words as vpn_helper.py's one-time question
   const confirm = kind === 'confirm' ? { title: 'Let HPC Hub start the VPN',
     prompt: 'Your computer asks for your permission once. After that, Connect starts the VPN by itself.' } : {}
   return kind ? [{ id: 'demo', kind, cluster, name: DEMO_NAMES[cluster] ?? cluster, default: '',

@@ -1,5 +1,3 @@
-// More style E pieces at desktop size, next to ./ui: buttons, list rows with buttons of their own, a confirm window,
-// a pick-one window, text areas, chips, search, notes and empty states. The phone's twins are in mobile/src/ui.tsx.
 import { Check, CircleAlert, Search, X, type LucideIcon } from 'lucide-react'
 import { useState, type ButtonHTMLAttributes, type ReactNode, type TextareaHTMLAttributes } from 'react'
 
@@ -14,7 +12,6 @@ const LOOK: Record<Kind, string> = {
   quiet: 'hover:bg-hover active:bg-pressed',
 }
 
-/** A button: one primary per window or page (the main action), the rest plain. */
 export function EButton({ kind = 'plain', small = false, icon: Icon, className = '', children, ...props }:
   ButtonHTMLAttributes<HTMLButtonElement> & { kind?: Kind; small?: boolean; icon?: LucideIcon }) {
   return (
@@ -26,7 +23,6 @@ export function EButton({ kind = 'plain', small = false, icon: Icon, className =
   )
 }
 
-/** A grey icon button for a row or a toolbar. */
 export function IconBtn({ icon: Icon, label, onClick, disabled }:
   { icon: LucideIcon; label: string; onClick: () => void; disabled?: boolean }) {
   return (
@@ -36,8 +32,7 @@ export function IconBtn({ icon: Icon, label, onClick, disabled }:
   )
 }
 
-/** A row of a page list: an icon (grey, or an AI product's own logo), the name and a line under it. onPress makes
- *  the name part a button; trailing holds the row's own buttons and switches, outside it. */
+/** onPress makes the name part a button; trailing holds the row's own buttons, outside it. */
 export function ItemRow({ icon: Icon, label, sub, title, onPress, trailing }: {
   icon?: LucideIcon; label: ReactNode; sub?: ReactNode; title?: string; onPress?: () => void; trailing?: ReactNode
 }) {
@@ -62,7 +57,6 @@ export function ItemRow({ icon: Icon, label, sub, title, onPress, trailing }: {
   )
 }
 
-/** A switch as a row, with an icon (an AI product's logo) before the label. */
 export function IconToggleRow({ icon: Icon, label, sub, checked, onChange, disabled }: {
   icon?: LucideIcon; label: string; sub?: ReactNode; checked: boolean; onChange: (on: boolean) => void
   disabled?: boolean
@@ -80,7 +74,6 @@ export function IconToggleRow({ icon: Icon, label, sub, checked, onChange, disab
   )
 }
 
-/** A row you tick (what to take along): a square check, the name, a value on the right. */
 export function CheckRow({ label, value, checked, onChange }:
   { label: ReactNode; value?: ReactNode; checked: boolean; onChange: (on: boolean) => void }) {
   return (
@@ -96,7 +89,6 @@ export function CheckRow({ label, value, checked, onChange }:
   )
 }
 
-/** The switch alone, for a row that has more than a label (a list of schedules). */
 export function Switch({ checked, onChange, label, disabled }:
   { checked: boolean; onChange: (on: boolean) => void; label?: string; disabled?: boolean }) {
   return (
@@ -111,8 +103,6 @@ export function Switch({ checked, onChange, label, disabled }:
   )
 }
 
-/** Are you sure: what happens, then two buttons that say what they do. keep is the safe one ("Keep it"), never a
- *  bare Cancel; a destructive act is solid red. */
 export function Confirm({ title, children, keep, act, danger = true, disabled, onAct, onClose }: {
   title: string; children?: ReactNode; keep: string; act: string; danger?: boolean; disabled?: boolean
   onAct: () => void; onClose: () => void
@@ -135,7 +125,6 @@ export function Confirm({ title, children, keep, act, danger = true, disabled, o
 
 export type Choice<T extends string> = { value: T; label: string; hint?: string }
 
-/** Pick one of many: a window of rows, a check on the current one. Picking closes it. */
 export function PickDialog<T extends string>({ title, options, value, onPick, onClose }:
   { title: string; options: Choice<T>[]; value?: T; onPick: (v: T) => void; onClose: () => void }) {
   return (
@@ -150,7 +139,6 @@ export function PickDialog<T extends string>({ title, options, value, onPick, on
   )
 }
 
-/** A row with the current choice on the right; clicking it opens a PickDialog. */
 export function ChoiceRow<T extends string>({ label, sub, value, options, onChange }:
   { label: string; sub?: ReactNode; value: T; options: Choice<T>[]; onChange: (v: T) => void }) {
   const [open, setOpen] = useState(false)
@@ -176,7 +164,6 @@ export function TextArea({ label, ...props }: { label: string } & TextareaHTMLAt
   )
 }
 
-/** A grey well to type in, with a clear button. */
 export function SearchField({ value, onChange, placeholder = 'Search', autoFocus }:
   { value: string; onChange: (v: string) => void; placeholder?: string; autoFocus?: boolean }) {
   return (
@@ -191,7 +178,6 @@ export function SearchField({ value, onChange, placeholder = 'Search', autoFocus
   )
 }
 
-/** Several on or off side by side (days of the week): outlined, solid when on. */
 export function Chips<T extends string>({ options, value, onChange, label }:
   { options: readonly (readonly [T, string])[]; value: T[]; onChange: (v: T[]) => void; label?: string }) {
   return (
@@ -217,7 +203,6 @@ export function StatusDot({ tone }: { tone: Tone }) {
   return <span aria-hidden className={`inline-block size-2 shrink-0 rounded-full ${look}`} />
 }
 
-/** Something to know: grey, red when it stops you. */
 export function Note({ bad = false, children, action }: { bad?: boolean; children: ReactNode; action?: ReactNode }) {
   return (
     <div className={`flex items-start gap-2 px-5 pt-3 ${bad ? 'text-bad' : 'text-dim'}`}>
@@ -227,7 +212,6 @@ export function Note({ bad = false, children, action }: { bad?: boolean; childre
   )
 }
 
-/** Nothing here yet: a grey icon, what is missing, and what to do about it. */
 export function EmptyState({ icon: Icon, title, text, action }:
   { icon: LucideIcon; title: string; text?: ReactNode; action?: ReactNode }) {
   return (
@@ -240,7 +224,6 @@ export function EmptyState({ icon: Icon, title, text, action }:
   )
 }
 
-/** A page in style E: one column of rows, a bar on top with a note on the left and the page's buttons on the right. */
 export function EPage({ note, actions, width = 760, children }:
   { note?: ReactNode; actions?: ReactNode; width?: number; children: ReactNode }) {
   return (

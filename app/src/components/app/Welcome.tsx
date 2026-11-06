@@ -1,5 +1,3 @@
-// The first start: which clusters do you use? Only those show up in the app (Settings changes it later).
-// Then Onboarding.tsx asks each one's sign-in and compute node.
 import { Check, Server } from 'lucide-react'
 import { useState } from 'react'
 

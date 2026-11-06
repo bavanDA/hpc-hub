@@ -1,5 +1,3 @@
-// Ask for a compute node before real work runs on the login node (nodeFirst.ts): const node = useAskForNode();
-// node.guard(cluster, 'The PDF build', build), and render {node.dialog}.
 import { ConfirmDialog } from '../e/parts'
 import { ComputeDialog } from './ComputeDialog'
 import { useNodeFirst } from './nodeFirst'

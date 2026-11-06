@@ -1,5 +1,3 @@
-// "All clusters" in the header's cluster picker, for a page that can show every cluster at once (Usage). The page
-// offers it while it is open; the choice is kept for the next visit and starts on All.
 import { useEffect, useSyncExternalStore } from 'react'
 
 let all = true

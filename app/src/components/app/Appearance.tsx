@@ -1,5 +1,3 @@
-// Settings, Appearance: System, Light, Dark, or a named theme from a code editor's colors, picked from little
-// previews (theme.ts applies it, app.toml remembers it).
 import type { Appearance } from '../../theme'
 import { ThemePicker } from './ThemePicker'
 

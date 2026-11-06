@@ -1,4 +1,3 @@
-// The question every link asks when there are Chrome profiles: which browser opens it (see openLink.ts).
 import { Check, Copy, ExternalLink } from 'lucide-react'
 import { useEffect, useState } from 'react'
 

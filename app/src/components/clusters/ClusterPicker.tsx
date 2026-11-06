@@ -1,6 +1,3 @@
-// The header's cluster chip: which cluster this page works on, with each cluster's state. One choice for every page
-// (active.ts), so picking SDSC on Jobs still means SDSC on Usage and Files. Usage also offers All clusters
-// (allClusters.ts).
 import { Check, ChevronDown, Layers } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 

@@ -1,6 +1,3 @@
-// What the ☰ menu used to hold, now that it is gone: Ctrl+, opens Settings and Ctrl+Q quits (Cmd on macOS), the
-// window's close button asks while a login is under way (useQuit), and Settings, which also holds the phone app,
-// About and "Disconnect all and quit". openSettings() opens it from anywhere.
 import { useEffect } from 'react'
 
 import { onOpenSettings } from './openSettings'

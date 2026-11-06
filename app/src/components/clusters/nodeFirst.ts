@@ -1,13 +1,9 @@
-// Work that runs on the cluster (a LaTeX build, a script, Read aloud) asks for a compute node first, every time, and
-// never falls back to the shared login node, which stays for signing in, asking for a node and editing files. The
-// window is each app's own (AskForNode.tsx here and in mobile/src/parts); what it asks and when is here, so both say
-// the same.
+// Real work never falls back to the shared login node: it asks for a compute node first.
 import { useEffect, useState } from 'react'
 
 import type { Cluster } from '../../types/clusters'
 import { load, useClusters } from './store'
 
-/** What the window says: one short line, the same for every kind of work. */
 const nodeWords = () => ({
   title: 'You need a compute node to do this',
   confirm: 'Get a compute node',
@@ -16,10 +12,8 @@ const nodeWords = () => ({
 
 type Asking = { cluster: Cluster; what: string; run: () => void; detail?: string }
 
-/** guard(cluster, 'The PDF build', run): runs it now with a node (or when not connected: the call says why),
- *  else asks you to get one and runs it once the node is there. getting is the cluster whose node window to show
- *  (ComputeDialog, NodeSheet). detail: a line under the question (words.text); waiting: the what that waits for
- *  its node. */
+/** guard(cluster, 'The PDF build', run) runs it now when there is a node (or no connection, so the call says why),
+ *  else asks for a node and runs it once the node is there. */
 export function useNodeFirst() {
   const { clusters, sessions } = useClusters()
   const [asking, setAsking] = useState<Asking | null>(null)

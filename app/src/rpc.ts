@@ -1,4 +1,3 @@
-// Talks to the Python backend: call() returns a promise for the answer, on() listens to its events.
 import { invoke } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
 

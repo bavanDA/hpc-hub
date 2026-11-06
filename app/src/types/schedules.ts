@@ -1,4 +1,3 @@
-// Shapes of what hpc_hub/api/methods/schedules.py sends.
 import type { Profile } from './clusters'
 
 /** Resources a schedule asks for instead of the cluster's node settings; empty = those settings. */

@@ -1,6 +1,3 @@
-// Opening links, like the GTK app's open_uri: with Chrome profiles around, every link asks which one opens it
-// (your default from Preferences picked); otherwise it goes straight to the system browser.
-// From anywhere: openLink('https://example.com'). <LinkPicker /> in App shows the question.
 import { call } from '../../rpc'
 import { inTauri } from './platform'
 import type { Profiles } from './types'

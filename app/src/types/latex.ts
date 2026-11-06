@@ -1,4 +1,3 @@
-// Shapes of what hpc_hub/api/methods/latex.py sends.
 export type LatexCluster = { id: string; name: string; connected: boolean }
 
 export type LatexProject = {

@@ -1,5 +1,3 @@
-// What the sign-in screens say. The words are in loginStrings.ts, made from hpc_hub/core/login_copy.py so the
-// GTK app and this one say the same thing. The full cluster name only in the title; after that the org or nothing.
 import type { Cluster } from '../../types/clusters'
 import { S } from './loginStrings'
 
@@ -14,7 +12,7 @@ export function rememberShort(clusters: Pick<Cluster, 'name' | 'short'>[]) {
   for (const c of clusters) if (c.short) SHORT.set(c.name, c.short)
 }
 
-/** "Wulver", "Yale", "SDSC" for "Wulver (NJIT)", "Yale Bouchet", "SDSC Expanse" (config.py short_name). */
+/** "Wulver" for "Wulver (NJIT)", "Yale" for "Yale Bouchet". */
 export const shortName = (c: { name: string; short?: string }) =>
   c.short || SHORT.get(c.name) || c.name.split(' (')[0]
 /** "Yale": the org, else the short name. */

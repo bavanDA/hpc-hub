@@ -1,5 +1,4 @@
-// Starting VS Code, an agent or Ask all, and what follows: the terminal tab, its banners, the VS Code tunnel.
-// Kept outside React so a VS Code job keeps opening its folder while you look at another page.
+// Outside React, so a VS Code job keeps opening its folder while another page is shown.
 import type { Go } from '../../nav'
 import { call, on } from '../../rpc'
 import type { Session } from '../../types/clusters'
@@ -16,7 +15,7 @@ import.meta.hot?.dispose(stop)
 
 const failed = (e: Error) => notify(e.message)
 
-/** Run once the cluster is connected: connects it first when it is not (like the GTK Projects page). */
+/** Run once the cluster is connected: connects it first when it is not */
 export async function whenConnected(cluster: string, name: string): Promise<void> {
   const all = await call<Session[]>('sessions.list')
   if (all.find((s) => s.id === cluster)?.connected) return

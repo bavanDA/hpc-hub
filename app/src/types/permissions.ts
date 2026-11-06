@@ -1,4 +1,3 @@
-// Shapes of what hpc_hub/api/methods/permissions.py sends.
 export type CommandGroup = { title: string; note: string; commands: string[] }
 
 export type LockConfig = { minutes: number; tries: number; logout: boolean; scancel: boolean }

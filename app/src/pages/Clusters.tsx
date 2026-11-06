@@ -1,4 +1,3 @@
-// Clusters: one card each, to connect, get a compute node and open things on it.
 import { useEffect } from 'react'
 
 import { ClusterCard } from '../components/ClusterCard'

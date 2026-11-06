@@ -1,4 +1,3 @@
-// Shapes of what hpc_hub/api/methods/globus.py sends.
 export type GlobusCluster = { id: string; name: string; collection_id: string; collection_name: string
   personal?: boolean }  // your own Globus Connect runs there (Wulver): it can be restarted
 

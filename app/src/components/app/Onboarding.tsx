@@ -1,6 +1,3 @@
-// After the first start's cluster picker: for each cluster you chose, its sign-in, then its compute node. Style E:
-// a title, rows, one main button. A sign-in can wait ("Do this later": asked on the first Connect); all of it changes
-// later in the cluster's Settings.
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 
 import { call } from '../../rpc'

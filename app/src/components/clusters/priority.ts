@@ -1,5 +1,3 @@
-// Slurm's QoS in plain words: a priority (Wulver's low, standard, debug, high_<group>). Shared with the phone.
-
 /** "Low", "Standard", "High (mygroup)" for low, standard, high_mygroup; "Default" for none. */
 export function priorityName(qos?: string): string {
   const q = (qos ?? '').trim()

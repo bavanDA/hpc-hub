@@ -1,4 +1,3 @@
-// Shapes of what hpc_hub/api/methods/latex_history.py sends. Paths are from the repository's top.
 export type FileStat = { path: string; added: number; removed: number; binary?: boolean }
 
 export type HCommit = {
@@ -106,7 +105,6 @@ export type PdfJob = { id: string; cluster: string; folder: string; ok: boolean;
 
 export type SyncSpot = { line: number; page: number; x: number; y: number } | null
 
-// -- the agent's help and notes (hpc_hub/api/methods/latex_assist.py) ----------------------------------------------
 export type AgentDesc = { id: string; name: string; models: [string, string][]; efforts: [string, string][] }
 export type AgentPick = { agent: string; model: string; effort: string }
 /** The agent is picked in Settings; the paper picks its model and effort, any of each. */

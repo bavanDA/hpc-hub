@@ -1,5 +1,3 @@
-// The one sign-in form, for the first start's sign-in step (Onboarding.tsx) and the cluster's Settings: a username
-// and password, or an SSH key (KeyPanel) where the cluster takes keys. Its state is useLogin's.
 import { Globe, ShieldCheck } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
 

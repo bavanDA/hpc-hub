@@ -1,8 +1,3 @@
-// Light, dark or a named theme (Settings, Appearance): data-theme on <html>, that the colors in index.css follow. A
-// named theme sets its light or dark base there and data-tint on top, for its own surfaces and accent.
-// public/theme.js sets it before the first paint from the last choice; this keeps it right after that, also when
-// the computer switches between light and dark while Appearance is System.
-
 export type Appearance = 'system' | 'light' | 'dark' | 'charcoal' | 'daylight' | 'frost' | 'dusk' | 'sand'
 
 /** Every choice with its line in Settings and the colors of its preview: window, sidebar, line, text, button. */

@@ -1,4 +1,3 @@
-// The card's Log expander: timestamped lines, kept scrolled to the newest unless you scrolled up.
 import { ChevronDown, ChevronRight } from 'lucide-react'
 import { useLayoutEffect, useRef, useState } from 'react'
 

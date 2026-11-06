@@ -1,4 +1,3 @@
-// Shapes the projects.* methods send (see hpc_hub/api/methods/projects.py).
 export type Project = {
   id: string  // cluster:path
   name: string

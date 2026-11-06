@@ -1,4 +1,4 @@
-// This computer's SSH key (methods/keys.py). ?nokey starts without one, to show "Create key". ?keytest=not_yet|
+// ?nokey starts without an SSH key, to show "Create key". ?keytest=not_yet|
 // no_vpn|unreachable|host_key picks what "Try it" finds (else it works); ?keywait=ms holds the answer back, to show
 // the test running.
 import { fill } from '../components/clusters/loginCopy'

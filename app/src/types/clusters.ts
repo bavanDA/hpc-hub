@@ -1,4 +1,3 @@
-// Shapes the Clusters page gets from the backend (see hpc_hub/core/config.py and hpc_hub/api/methods/clusters.py).
 import { S } from '../components/clusters/loginStrings'
 
 export type Profile = {
@@ -38,7 +37,7 @@ export type VsCode = {
 
 export type AgentId = 'claude' | 'codex' | 'agy' | 'cursor'
 
-/** One agent's saved choices (config.py AgentSettings); "" = the agent's default. */
+/** "" = the agent's default. */
 export type AgentSettings = {
   command: string
   workdir: string
@@ -60,7 +59,7 @@ export type Cluster = {
   second_factor?: 'duo' | 'code'
   portal?: string
   org?: string  // who runs it: "NJIT"
-  short?: string  // "Yale" for "Yale Bouchet" (config.py short); loginCopy shortName falls back to the name
+  short?: string  // "Yale" for "Yale Bouchet"
   key_page?: string  // a page where you paste your public SSH key (Yale)
   key_page_note?: string
   key_help?: string  // a guide to SSH keys for it ("" = GitHub's)
@@ -114,13 +113,13 @@ export type Session = {
 /** Saved usernames; password only says whether one is saved, it never comes back. */
 export type Logins = Record<'ssh' | 'vpn', { username: string; password: boolean }> & { remember?: boolean }
 
-/** What Slurm allows (clusters.partitions); longest in minutes, null = no limit. */
 /** Slurm's billing weights: SUs an hour per core, per GB and per GPU ("gpu:a100"; "gpu" for any), how they add up
  *  ('gres': the bigger of cores and memory, plus the GPUs; 'all': the biggest; '': all added), and the priority's
  *  factor (0: free). */
 export type Billing = { weights: Record<string, number>; max: '' | 'all' | 'gres'; factor: number
   free?: 'partition' }  // the cluster bills no job on this partition (Yale's public ones)
 
+/** longest: minutes, null = no limit. */
 export type Limits = {
   known: boolean
   partitions: string[]
@@ -138,9 +137,7 @@ export type Limits = {
   billing?: Billing | null  // what an hour costs in SUs; null where Slurm sets no weights
 }
 
-/** A question a login asks (hpc_hub/api/hub.py). chrome-window: signing in in our Chrome window (answer
- * "in-app" or null). web-login: the app's sign-in window (app/src-tauri/src/sso.rs), answered with JSON
- * {token, error}. Never your own Chrome profile. */
+/** chrome-window: answered "in-app" or null. web-login: the app's sign-in window, answered with JSON {token, error}. */
 export type Question = {
   id: string
   kind: 'ask' | 'code' | 'chrome-window' | 'web-login' | 'confirm'
@@ -161,7 +158,6 @@ export const BUSY: State[] = ['Connecting VPN', 'Signing in', 'Approve Duo on yo
   'Disconnecting']
 export const DUO: State = 'Approve Duo on your phone'
 
-/** The cluster's second step, decided by its admins, said under its name (login_copy.py SECOND_*). */
 export function secondStep(c: Pick<Cluster, 'second_factor'>) {
   return c.second_factor === 'code' ? S.SECOND_CODE : S.SECOND_DUO
 }
@@ -193,7 +189,7 @@ export function gpuText(p: Profile) {
 /** "1 core", "4 cores". */
 export const cores = (n: number | string) => `${n} core${Number(n) === 1 ? '' : 's'}`
 
-/** "4 cores · 16 GB · 4 h · A100": the size, without the queue (hpc_hub/core/config.py summary). */
+/** "4 cores · 16 GB · 4 h · A100" */
 export function summary(p: Profile) {
   return [cores(p.cpus), `${p.mem_gb} GB`, shortTime(p.time), gpuText(p)].filter(Boolean).join(' · ')
 }

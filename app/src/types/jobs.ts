@@ -1,4 +1,3 @@
-// Shapes of what the jobs.* methods send (see hpc_hub/api/methods/jobs.py and hpc_hub/compute/jobs.py).
 import type { Account } from './usage'
 
 export type Scope = 'mine' | 'group' | 'history' | 'all'

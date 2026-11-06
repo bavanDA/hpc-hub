@@ -1,4 +1,3 @@
-// Shapes of what hpc_hub/api/methods/files.py sends.
 export type Entry = {
   name: string
   kind: string  // d folder, f file, l broken link...

@@ -1,5 +1,3 @@
-// Settings, Appearance on the desktop and the phone: every theme as a little window in its own colors (sidebar, two
-// rows, its button), its name under it. System shows light and dark side by side. A click switches right away.
 import { Check } from 'lucide-react'
 
 import { setAppearance, THEMES, type Appearance } from '../../theme'

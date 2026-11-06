@@ -1,5 +1,3 @@
-// Ask all: one prompt to every agent you pick; answers land in one folder (hpc_hub/agents/ui/ask_all.py). Style E,
-// like the phone's AskAllSheet.
 import { useEffect, useState } from 'react'
 
 import { useGo } from '../../nav'

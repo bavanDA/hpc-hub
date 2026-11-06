@@ -1,5 +1,3 @@
-// Claude, ChatGPT, Antigravity or Cursor: pick a past chat to resume, or start a new one in a folder
-// (hpc_hub/agents/ui/agent_dialog.py). Style E, like the phone's AgentSheet; a new node's size is right in the window.
 import { useEffect, useState } from 'react'
 
 import { useGo } from '../../nav'

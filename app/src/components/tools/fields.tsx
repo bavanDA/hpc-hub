@@ -1,4 +1,3 @@
-// What the tool windows share: a folder on the cluster, typed or chosen with the folder window. Style E.
 import { FolderOpen } from 'lucide-react'
 import { useState } from 'react'
 

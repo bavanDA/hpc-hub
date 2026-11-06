@@ -1,9 +1,3 @@
-// A compute node's size in style E, the desktop twin of the phone's NodeFields (mobile/src/parts/NodeSheet.tsx):
-// Small CPU, Medium CPU or GPU, then Cores, Memory, Time and the queue as rows. Numbers are typed in place up to what
-// the queue and priority allow. With a GPU, the GPU memory you need and how many are typed too, and the GPU that
-// gives that much is picked and shown. Where each core comes with a set amount of memory (Wulver's GPU queue), more memory takes more cores.
-// Queue opens its own window. Cost says what it takes in SUs, from Slurm's billing weights. NodeRow is the one row
-// a tool window shows for it.
 import { useEffect, useState } from 'react'
 
 import { chosen, fitting, gpuName, isPreset, presets, withGpu, type Gpu, type GpuFit, type Preset } from '../clusters/gpus'

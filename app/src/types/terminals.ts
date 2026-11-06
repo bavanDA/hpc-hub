@@ -1,5 +1,3 @@
-// What hpc_hub/api/methods/terminals.py sends (see hpc_hub/terminals/tmux.py and links.py).
-
 /** A tmux (or screen) session on a cluster. */
 export type TmuxSession = {
   name: string
@@ -33,7 +31,7 @@ export type NewTerminal = { name: string; node: boolean; folder: string; color: 
 /** One disk of the host, from df: / and /tmp, local ones only. */
 export type MonitorDisk = { mount: string; used: number; size: number; percent: number }
 
-/** What the monitoring bar shows, from `monitor` events (hpc_hub/terminals/monitor.py). Sizes in bytes. */
+/** From `monitor` events. Sizes in bytes. */
 export type MonitorStats = {
   id: number  // from monitor.watch
   host: string

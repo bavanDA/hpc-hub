@@ -1,6 +1,3 @@
-// Web sign-in, the VPN's or a portal's (prompts.py, browser_login.py, web_login.py): signing in in our own Chrome
-// window, and the app's own sign-in window (app/src-tauri/src/sso.rs, opened here). Never
-// your own Chrome profile.
 import { invoke } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
 import { Globe } from 'lucide-react'

@@ -1,5 +1,3 @@
-// "Open thesis": where to open a folder, as rows (the phone's ProjectActions sheet at desktop size). Code, Files and
-// Terminal go to their page; VS Code, an agent or Ask all goes on to its own window, with an arrow back to this one.
 import { Code, FileCode2, FolderOpen, SquareTerminal, Users, type LucideIcon } from 'lucide-react'
 import { useEffect, useState } from 'react'
 

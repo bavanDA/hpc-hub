@@ -1,6 +1,3 @@
-// Desktop notifications while the window is in the background (hpc_hub/app.py _notify): Duo is waiting, or a
-// cluster just connected. watch.ts adds node time, jobs that end and finished copies. The phone shows them its
-// own way (mobile/src/parts/watchPhone.ts, through setNotifier).
 import { useEffect, useRef } from 'react'
 
 import { useEvent } from '../../hooks'

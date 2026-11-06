@@ -1,4 +1,3 @@
-// Moving between pages from anywhere: const go = useGo(); go('files', { cluster: 'wulver', path: '/home/jdoe' })
 import { createContext, useContext } from 'react'
 
 import type { Page } from './components/Sidebar'

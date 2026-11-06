@@ -1,4 +1,3 @@
-// Open the Settings window from anywhere (a paper's "Change in Settings"); AppKeys owns the window.
 const listeners = new Set<() => void>()
 
 export const openSettings = () => listeners.forEach((fn) => fn())

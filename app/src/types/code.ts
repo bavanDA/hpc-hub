@@ -1,6 +1,3 @@
-// The Code page's backend contract (docs/design/code.md): open and save files on a cluster safely, notice when an
-// agent changes them, and ask an agent about a piece of code. hpc_hub/api/methods/code.py and code_ask.py answer these.
-
 /** code.open(cluster, path): the text and what's needed to save it back without losing anything. */
 export type OpenedFile = {
   path: string            // the path you asked for

@@ -1,6 +1,3 @@
-// Keeps an eye on your work while the app runs: time left on each cluster's compute node (for the sidebar footer),
-// and a desktop notification when a node has 15 minutes left, one of your jobs ends, or a copy is done.
-// One look at your jobs per connected cluster every minute (jobs.list, the same call as the Jobs page).
 import { useEffect, useRef, useSyncExternalStore } from 'react'
 
 import { useEvent } from '../../hooks'

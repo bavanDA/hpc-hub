@@ -1,4 +1,3 @@
-// HPC words people meet in the app, each with a one-line explanation on hover (a dotted underline marks them).
 import type { ReactNode } from 'react'
 
 export const GLOSSARY = {

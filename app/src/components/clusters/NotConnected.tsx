@@ -1,6 +1,3 @@
-// What a page shows for a cluster that isn't connected: say so, and connect right here instead of sending you to
-// the Clusters page. The same switch question as the cluster card when another cluster holds the only VPN.
-// compact: one quiet line and a small button, for a card among others (Usage, All clusters).
 import { Unplug } from 'lucide-react'
 import { useState } from 'react'
 

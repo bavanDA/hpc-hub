@@ -1,5 +1,3 @@
-// The app draws its own header bar (like GTK's): title, buttons, and the window controls. Drag it to move the
-// window, double-click it to maximize. On macOS the system's traffic lights sit at the left instead of our buttons.
 import { Minus, PanelLeft, Square, X } from 'lucide-react'
 import { useRef } from 'react'
 

@@ -1,6 +1,4 @@
-// Shapes of what hpc_hub/api/methods/backup.py sends (hpc_hub/backup/model.py). Sizes are bytes unless the name
-// says GB, days are whole days, times are seconds since 1970.
-
+// Sizes are bytes unless the name says GB, days are whole days, times are seconds since 1970.
 export type FileClass = 'results' | 'code' | 'writing' | 'inputs' | 'logs' | 'regen' | 'checkpoint' | 'unsure'
 
 export type Purge = {
