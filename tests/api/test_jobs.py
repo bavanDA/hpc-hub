@@ -92,18 +92,6 @@ def test_details(session):
         m.details("wulver", "7; rm -rf ~")
 
 
-def test_details_read_like_words():
-    assert m.state_text("PENDING", "Priority") == "Waiting: higher-priority jobs go first"
-    assert m.state_text("CANCELLED by 4242") == "Cancelled" and m.state_text("TIMEOUT") == "Ran out of time"
-    assert m.mem_text("64G") == "64 GB" and m.mem_text("500M") == "500 MB" and m.mem_text("1536G") == "1.5 TB"
-    assert m.date_text("2026-10-04T09:31:05") == "Oct 4, 09:31"
-    rows = m.detail_groups({"JobState": "PENDING", "Reason": "Resources", "TimeLimit": "3-00:00:00",
-                            "Partition": "general", "QOS": "low", "Account": "mygroup"})
-    status, res = ({r["label"]: r["value"] for r in g["rows"]} for g in rows[:2])
-    assert status == {"State": "Waiting: not enough free nodes yet", "Run time": "3 days asked"}
-    assert res == {"Queue": "general", "Priority": "Low", "Charged to": "mygroup"}
-
-
 def test_cancel_frees_the_app_node(session, monkeypatch):
     monkeypatch.setattr(jobs, "wait_gone", lambda ssh, job_id: True)
     session.allocation = Allocation("7", "n1")
@@ -119,11 +107,3 @@ def test_submit_answers_the_job_id(session, monkeypatch):
     assert m.submit("wulver", "~/run.sbatch") == {"job_id": "4242"}
     with pytest.raises(ValueError, match="invalid partition"):
         m.submit("wulver", "~/bad.sbatch")
-
-
-def test_exit_codes_in_words():
-    from hpc_hub.api.methods.jobs import exit_text
-    assert exit_text("0:0") == "0, finished without errors"
-    assert exit_text("1:0") == "1, the program reported an error"
-    assert exit_text("0:9") == "Stopped by signal 9"
-    assert exit_text("") == ""

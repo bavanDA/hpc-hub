@@ -1,12 +1,9 @@
 """The Jobs page: your jobs, history or all jobs, a job's details, submit a script, and cancel."""
 
-import re
 import time
 from dataclasses import asdict
-from datetime import datetime
 
-from ...compute import gpus as gpu_names
-from ...compute import jobs, slurm
+from ...compute import job_text, jobs, slurm
 from ...compute.jobs import JobInfo
 from ...compute.usage.accounts import account_usage
 from ...connect.session import ClusterSession
@@ -20,18 +17,6 @@ USAGE_SECONDS = 300  # account totals change slowly
 _usage: dict[str, tuple[float, list[dict]]] = {}  # cluster -> (when, accounts)
 
 
-def exit_text(code: str) -> str:
-    """Slurm's "1:0" (exit code:signal) in words."""
-    if not code:
-        return ""
-    main, _, signal = code.partition(":")
-    if signal not in ("", "0"):
-        return f"Stopped by signal {signal}"
-    if main == "0":
-        return "0, finished without errors"
-    return f"{main}, the program reported an error"
-
-
 def su_text(j: JobInfo) -> str:
     """SU = core hours charged. Free QoS (usage factor 0) costs nothing."""
     if j.factor == 0:
@@ -42,11 +27,12 @@ def su_text(j: JobInfo) -> str:
 
 
 def job_json(j: JobInfo, me: str) -> dict:
+    ran, limit, pending = jobs.seconds(j.elapsed), jobs.seconds(j.limit), j.state == "PENDING"
     return {**asdict(j), "from_app": j.from_app, "su_spent": round(j.su_spent, 2), "su_max": round(j.su_max, 2),
-            "su": su_text(j), "seconds": jobs.seconds(j.elapsed), "limit_seconds": jobs.seconds(j.limit),
-            "elapsed_text": jobs.duration_text(jobs.seconds(j.elapsed)) if j.state != "PENDING" else "",
-            "limit_text": jobs.duration_text(jobs.seconds(j.limit)) if jobs.seconds(j.limit) else "no limit",
-            "reason": jobs.reason_text(j.where) if j.state == "PENDING" else "", "qos_shown": jobs.shown_qos(j),
+            "su": su_text(j), "seconds": ran, "limit_seconds": limit,
+            "elapsed_text": "" if pending else job_text.duration_text(ran),
+            "limit_text": job_text.duration_text(limit) if limit else "no limit",
+            "reason": job_text.reason_text(j.where) if pending else "", "qos_shown": job_text.shown_qos(j),
             "cancellable": bool(me) and j.user == me and j.state in CANCELLABLE}
 
 
@@ -86,97 +72,11 @@ def list_jobs(cluster: str, scope: str = jobs.MINE, account: str = "") -> dict:
             "app_job": s.allocation.job_id if s.allocation else ""}
 
 
-# Slurm's job states in words; a waiting job says why instead
-STATES = {"RUNNING": "Running", "COMPLETED": "Finished", "COMPLETING": "Finishing", "FAILED": "Failed",
-          "CANCELLED": "Cancelled", "TIMEOUT": "Ran out of time", "OUT_OF_MEMORY": "Ran out of memory",
-          "NODE_FAIL": "The node failed", "PREEMPTED": "Stopped for a higher-priority job", "SUSPENDED": "Paused",
-          "REQUEUED": "Back in the queue", "BOOT_FAIL": "The node didn't start", "DEADLINE": "Missed its deadline"}
-
-
-def state_text(state: str, reason: str = "") -> str:
-    """"Running", "Ran out of time", "Waiting: higher-priority jobs go first"."""
-    if state == "PENDING":
-        return jobs.reason_text(f"({reason})") if reason else "Waiting to start"
-    word = state.split()[0] if state else ""
-    return STATES.get(word, word.capitalize())
-
-
-def date_text(v: str) -> str:
-    """"Oct 24, 09:31" for Slurm's "2026-10-24T09:31:05"."""
-    try:
-        t = datetime.strptime(v[:16], "%Y-%m-%dT%H:%M")
-    except ValueError:
-        return v.replace("T", " ")[:16]
-    return f"{t:%b} {t.day}, {t:%H:%M}"
-
-
-def mem_text(v: str) -> str:
-    """"64 GB" for Slurm's "64G", "500 MB" for "500M", "1.5 TB" for "1536G"."""
-    m = re.fullmatch(r"([\d.]+)([KMGT]?)\w*", v.strip())
-    if not m:
-        return v
-    mb = float(m.group(1)) * {"K": 1 / 1024, "M": 1, "G": 1024, "T": 1024 ** 2, "": 1}[m.group(2)]
-    for unit, size in (("TB", 1024 ** 2), ("GB", 1024)):
-        if mb >= size:
-            return f"{mb / size:.1f}".removesuffix(".0") + f" {unit}"
-    return f"{mb:.0f} MB"
-
-
-def detail_groups(d: dict[str, str], cluster_id: str = "") -> list[dict]:
-    """The few fields people look at, grouped like the GTK dialog, in words; empty ones left out."""
-    def get(*keys: str) -> str:
-        for k in keys:
-            v = d.get(k, "")
-            if v and v not in ("(null)", "None", "N/A", "Unknown"):
-                return v
-        return ""
-
-    def when(*keys: str) -> str:
-        v = get(*keys)
-        return date_text(v) if v else ""
-
-    tres = get("AllocTRES", "ReqTRES")
-    mem = re.search(r"mem=([^,]+)", tres)
-    state, reason = get("JobState", "State"), get("Reason")
-    active = state in ("RUNNING", "PENDING")
-    ran, limit = jobs.seconds(get("RunTime", "Elapsed")), jobs.seconds(get("TimeLimit", "Timelimit"))
-    if state == "PENDING":
-        run_time = f"{jobs.duration_text(limit)} asked" if limit else ""
-    else:
-        run_time = " of ".join([jobs.duration_text(ran)] + ([jobs.duration_text(limit)] if limit else []))
-    queue, qos = get("Partition"), get("QOS")
-    groups = [
-        ("Status", [
-            ("State", state_text(state, reason)),
-            ("Run time", run_time),
-            ("Started", when("StartTime", "Start")),
-            ("Ends" if active else "Ended", when("EndTime", "End")),
-            ("Submitted", when("SubmitTime", "Submit")),
-            ("Exit code", "" if active else exit_text(get("ExitCode"))),
-        ]),
-        ("Resources", [
-            ("Node", get("NodeList")),
-            ("Cores", get("NumCPUs", "AllocCPUS")),
-            ("Memory", mem_text(mem.group(1) if mem else get("ReqMem"))),
-            ("GPU", gpu_names.amount(tres, cluster_id)),
-            ("Queue", queue),
-            ("Priority", "" if qos in ("", "normal", queue) else jobs.priority_name(qos)),
-            ("Charged to", get("Account")),
-        ]),
-        ("Files", [
-            ("Work folder", get("WorkDir")),
-            ("Output", get("StdOut")),
-            ("Errors", get("StdErr") if get("StdErr") != get("StdOut") else ""),
-        ]),
-    ]
-    return [{"title": title, "rows": [{"label": k, "value": v} for k, v in rows if v]} for title, rows in groups]
-
-
 @method("jobs.details")
 def details(cluster: str, job_id: str) -> dict:
     """scontrol (or sacct for finished jobs): grouped fields, and the whole text for "All fields"."""
     text = jobs.job_details(hub().connected(cluster).ssh, job_id)
-    return {"groups": detail_groups(jobs.parse_details(text), cluster), "text": text}
+    return {"groups": job_text.detail_groups(jobs.parse_details(text), cluster), "text": text}
 
 
 @method("jobs.inside")

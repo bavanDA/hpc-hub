@@ -7,7 +7,7 @@ import re
 import shlex
 
 from ..compute import slurm
-from ..compute.jobs import duration_text
+from ..compute.job_text import duration_text
 from ..core.config import ComputeProfile
 from .model import Progress, Result
 from .plan import FROM_SCRATCH
