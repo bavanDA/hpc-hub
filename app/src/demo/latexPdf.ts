@@ -1,7 +1,6 @@
-// For the browser demo only: typesets a small LaTeX paper into a real PDF (Times, justified, a plot), and keeps
-// where each source line landed, so Recompile and SyncTeX work without a cluster. Loaded only by demo/latex.ts.
-export type Placed = { file: string; line: number; page: number; x: number; y: number }
-export type Typeset = { pdf: Uint8Array; placed: Placed[]; log: string; ok: boolean;
+// Typesets the demo paper into a real PDF in the browser, keeping where each line landed for SyncTeX.
+type Placed = { file: string; line: number; page: number; x: number; y: number }
+type Typeset = { pdf: Uint8Array; placed: Placed[]; log: string; ok: boolean;
   issues: { file: string; line: number; message: string; level: 'error' | 'warning' | 'box' }[] }
 
 const W = 612, H = 792, LEFT = 126, WIDTH = 360, TOP = 96, BOTTOM = 700

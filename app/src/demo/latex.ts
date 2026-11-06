@@ -145,7 +145,7 @@ type Built = Awaited<ReturnType<typeof build>>
 let built: Promise<Built> | null = null
 let mtime = now - 3600
 async function build() {
-  const { typeset } = await import('../components/latex/demoPdf')
+  const { typeset } = await import('./latexPdf')
   return typeset(files, 'main.tex')
 }
 let pdfBytes: Promise<Uint8Array> | null = null

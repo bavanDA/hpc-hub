@@ -552,7 +552,7 @@ export const answers: Record<string, unknown> = {
       const started = performance.now()
       await wait(1800)
       const files = await filesOf(version)
-      const { typeset } = await import('../components/latex/demoPdf')
+      const { typeset } = await import('./latexPdf')
       const out = against != null ? null : typeset({ ...files, 'refs.bib': files['refs.bib'] ?? '' }, 'main.tex')
       if (out?.ok) pdfs.set(path, out.pdf)
       demoEmit('latex-git-pdf', { id, cluster: 'wulver', folder: FOLDER, ok: !!out?.ok, path: out?.ok ? path : '',
