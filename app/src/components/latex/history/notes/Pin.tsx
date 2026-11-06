@@ -1,4 +1,3 @@
-/** The numbered pin. */
 export function Pin({ n, done = false, size = 18 }: { n: number; done?: boolean; size?: number }) {
   return (
     <span style={{ width: size, height: size, fontSize: size * 0.6 }}

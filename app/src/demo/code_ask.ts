@@ -1,5 +1,4 @@
-// Demo answers for asking an agent about code (code_ask.py), sending text into a session, submitting a job script
-// and the phone's QR code. An ask "runs" for a few seconds, then answers about the file it was asked about.
+// An ask "runs" for a few seconds, then answers about the file it was asked about.
 import type { AskResult, AskStatus } from '../types/code'
 import { current } from './code'
 

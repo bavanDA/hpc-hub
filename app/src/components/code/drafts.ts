@@ -42,7 +42,6 @@ async function run<T>(mode: IDBTransactionMode, fn: (s: IDBObjectStore) => IDBRe
   })
 }
 
-/** The draft kept for a file, or null. */
 export async function findDraft(cluster: string, path: string): Promise<Draft | null> {
   return (await run<Draft | undefined>('readonly', (s) => s.get(draftKey(cluster, path)))) ?? null
 }

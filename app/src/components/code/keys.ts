@@ -48,7 +48,6 @@ const SAME: Partial<Record<LangId, LangId>> = { slurm: 'shell', makefile: 'shell
   cuda: 'c', bibtex: 'latex', toml: 'yaml', ipynb: 'json' }
 const OTHER = ['(', ')', '[', ']', '{', '}', ':', '=', '"', "'", '#', '-', '/']
 
-/** The symbol keys for a language. */
 function symbolKeys(id: LangId): KeyAction[] {
   const list = SYMBOLS[id] ?? SYMBOLS[SAME[id] ?? 'plain'] ?? OTHER
   return list.map((s) => ({ id: `sym:${s}`, label: s, title: `Type ${s}`, run: type(s) }))

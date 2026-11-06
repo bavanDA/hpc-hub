@@ -58,7 +58,6 @@ const style = HighlightStyle.define([
   { tag: t.invalid, color: 'var(--color-bad)' },
 ])
 
-/** Token colors for every language. */
 export const highlight: Extension = syntaxHighlighting(style)
 
 /** Sizes, surfaces and selection. dark only tells CodeMirror which built-in defaults to use. */

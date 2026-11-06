@@ -35,7 +35,6 @@ export async function whenConnected(cluster: string, name: string): Promise<void
   })
 }
 
-// -- agents and Ask all --------------------------------------------------------------------------
 type AgentRun = {
   agent: string; name: string; folder: string; chat_id: string; label: string; task: string
   options: Record<string, string>; new_node: boolean; remote_control: boolean; profile: Record<string, unknown> | null
@@ -65,7 +64,6 @@ export function startAsk(cluster: string, run: AskRun, go: Go) {
     .catch(failed)
 }
 
-// -- VS Code ---------------------------------------------------------------------------------------
 function opened(o: Opened) {
   if (o.app) notify('Opening in VS Code. First time, sign in with GitHub in VS Code.')
   else {

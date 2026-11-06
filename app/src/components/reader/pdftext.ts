@@ -15,7 +15,6 @@ const TAG = /^\(\s*(?:[A-Z]\.)?\d+(?:\.\d+)*[a-z]?\s*\)$/
 
 export type PdfText = { pages: Line[][]; heights: number[]; body: number; count: number }
 
-/** Every line of every page. */
 export async function readText(pdf: PDFDocumentProxy, dead: () => boolean = () => false): Promise<PdfText> {
   const pages: Line[][] = [], heights: number[] = []
   for (let n = 1; n <= pdf.numPages && !dead(); n++) {

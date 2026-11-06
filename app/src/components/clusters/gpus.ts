@@ -14,7 +14,7 @@ export function gpuName(g: Gpu) {
   return g.slice || !g.memory_gb ? g.label : `${g.label}, ${g.memory_gb} GB`
 }
 
-// for rows without a GPU list at hand; keep in step with hpc_hub/compute/gpus.py
+// for rows without a GPU list at hand; the backend has the same names
 const NAMES: Record<string, string> = {
   a100: 'A100', a100_10g: 'A100, 10 GB slice', a100_20g: 'A100, 20 GB slice', a100_40g: 'A100, 40 GB slice',
   a100_80gb: 'A100', v100: 'V100', h100: 'H100', h200: 'H200', b200: 'B200', l40: 'L40', l40s: 'L40S', a40: 'A40',

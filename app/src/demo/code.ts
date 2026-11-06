@@ -1,5 +1,4 @@
-// Demo data for the Code page: a few made-up files you can open, edit and save in the browser preview. One file
-// "changes on the cluster" after a while, to show the change banner and a save conflict.
+// One file "changes on the cluster" after a while, to show the change banner and a save conflict.
 import type { FileState, FoundFile, OpenedFile, SaveResult } from '../types/code'
 import type { FileData, Listing } from '../types/files'
 import { answers as files } from './files'

@@ -5,10 +5,7 @@ import { call } from '../../rpc'
 import type { BuildDone } from '../../types/latex'
 import { useToast } from '../toast'
 
-/**
- * Recompile: latexmk on the cluster, its log as it comes, and the result. `guard` asks for a compute node first
- * when the build should run on one.
- */
+/** `guard` asks for a compute node first when the build should run on one. */
 export function useBuild({ cluster, main, save, guard, onDone }: { cluster: string; main: string
   save: () => Promise<boolean>; guard: (run: () => void) => void; onDone: (d: BuildDone) => void }) {
   const toast = useToast()

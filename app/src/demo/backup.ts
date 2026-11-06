@@ -1,5 +1,4 @@
-// Demo answers for the backup agent. A scan "runs" for a few seconds, the trial run takes two, the copy
-// about ten; your choices move items between kept and left out and change the plan's numbers and hash.
+// The scan, trial run and copy take a few seconds each, so the progress screens show.
 import type { BackupAlert, BackupPolicy, Choice, Plan, PlanItem, Progress, Reminders, Scan } from '../types/backup'
 import { plan as basePlan, result, summary } from './backup_data'
 

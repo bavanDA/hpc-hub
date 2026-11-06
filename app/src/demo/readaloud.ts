@@ -1,5 +1,4 @@
-// Demo answers for Read aloud and the dictionary: a quiet recording with made-up timings over the demo PDF's own
-// words (found with pdf.js), and a few dictionary entries, so it all works without a network.
+// Read aloud and the dictionary without a network: silence with made-up timings over the demo PDF's words.
 import { demoEmit } from './events'
 import { demoCall } from './index'
 

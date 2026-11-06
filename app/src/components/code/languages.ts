@@ -110,7 +110,6 @@ export function detectIndent(text: string, id: LangId): Indent {
   return { tabs: false, size: best ? best[0] : DEFAULT_SIZE[id] ?? 4 }
 }
 
-/** Editor settings for an indentation. */
 export function indentExtension(indent: Indent): Extension {
   return [indentUnit.of(indent.tabs ? '\t' : ' '.repeat(indent.size)), EditorState.tabSize.of(indent.size)]
 }

@@ -1,6 +1,4 @@
-// ?nokey starts without an SSH key, to show "Create key". ?keytest=not_yet|
-// no_vpn|unreachable|host_key picks what "Try it" finds (else it works); ?keywait=ms holds the answer back, to show
-// the test running.
+// ?nokey: no SSH key yet. ?keytest=not_yet|no_vpn|unreachable|host_key: what "Try it" finds. ?keywait=ms: a slow test.
 import { fill } from '../components/clusters/loginCopy'
 import { S } from '../components/clusters/loginStrings'
 import type { KeyTest, MyKey } from '../types/clusters'

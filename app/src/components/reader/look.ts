@@ -16,7 +16,6 @@ export const BACKGROUNDS = [
 ] as const
 export const SIZES = { min: 14, max: 32 }
 
-/** How the Reader looks. */
 export type Look = {
   font: (typeof FONTS)[number]['id']
   size: number

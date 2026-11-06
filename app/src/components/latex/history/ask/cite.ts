@@ -1,4 +1,4 @@
-// Same syntax as CITE_RE in hpc_hub/latex/assist.py: [[path:line]], [[path:first-last]], [[page N]]
+// The backend asks for the same syntax: [[path:line]], [[path:first-last]], [[page N]]
 const CITE = /\[\[\s*(?:(?:page|p\.)\s*(\d+)|([^[\]\n:]+?):(\d+)(?:\s*[-–]\s*(\d+))?)\s*\]\]/gi
 
 export type Cite = { page: number } | { path: string; line: number; end: number }

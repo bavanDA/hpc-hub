@@ -126,7 +126,6 @@ export function closeOthers(key: string) {
   changed({ files: state.files.filter((f) => f.key === key || isDirty(f)), current: key })
 }
 
-/** The editor reports typing here. */
 export function setText(key: string, text: string) {
   const f = getFile(key)
   if (f && f.text !== text) patch(key, { text })

@@ -23,8 +23,6 @@ export type FileState = { path: string; exists: boolean; sha: string; mtime: num
 /** code.find_files(cluster, root, query): files under root whose name matches, for "Go to file". */
 export type FoundFile = { path: string; name: string }
 
-// -- asking an agent about code ------------------------------------------------------------------------------------
-
 export type AskKind = 'explain' | 'fix' | 'test' | 'free'
 
 /** What the ask is about: a whole file, or some lines of it (1-based, inclusive). */
