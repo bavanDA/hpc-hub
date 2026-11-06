@@ -9,7 +9,7 @@ import type { Cluster, KeyTest, MyKey } from '../../types/clusters'
 import { copyText } from '../app/clipboard'
 import { openSystem } from '../app/openLink'
 import { inTauri } from '../app/platform'
-import { Button } from '../e/parts'
+import { EButton } from '../e/extra'
 import { Spinner } from '../ui'
 import { copy, fill, keyHelp, who } from './loginCopy'
 import { S } from './loginStrings'
@@ -122,9 +122,9 @@ export function KeyPanel(props: PanelProps) {
           <>
             {s.key && <p className="text-sm text-dim">{keyLine}</p>}
             <div className="flex flex-wrap items-center gap-2">
-              {!s.key && <Button icon={s.busy ? undefined : KeyRound} onClick={s.make}
-                disabled={s.busy}>{s.busy && <Spinner />}{S.CREATE_KEY}</Button>}
-              <Button icon={FolderOpen} onClick={() => { s.pick(); setOpen(null) }}>{S.USE_MINE}</Button>
+              {!s.key && <EButton icon={s.busy ? undefined : KeyRound} onClick={s.make}
+                disabled={s.busy}>{s.busy && <Spinner />}{S.CREATE_KEY}</EButton>}
+              <EButton icon={FolderOpen} onClick={() => { s.pick(); setOpen(null) }}>{S.USE_MINE}</EButton>
             </div>
           </>
         )}
@@ -135,13 +135,13 @@ export function KeyPanel(props: PanelProps) {
           <div className="flex h-10 items-center gap-2 rounded-lg border border-line-strong pr-1 pl-3">
             <code className="min-w-0 flex-1 truncate font-mono text-xs text-dim" title={s.key.public}>
               {s.key.public}</code>
-            <Button kind="quiet" icon={s.copied ? Check : Copy} onClick={s.copyKey} className="h-8 px-2.5 text-sm">
-              {s.copied ? S.COPIED : S.COPY_KEY}</Button>
+            <EButton kind="quiet" icon={s.copied ? Check : Copy} onClick={s.copyKey} className="h-8 px-2.5 text-sm">
+              {s.copied ? S.COPIED : S.COPY_KEY}</EButton>
           </div>
           <p>{fill(S.PASTE_IT, { who: org })}</p>
           <div className="flex flex-wrap items-center gap-2">
-            <Button onClick={s.openPage}>{S.OPEN_PAGE}<ExternalLink size={16} /></Button>
-            <Button onClick={toTest}>{S.PASTED_IT}</Button>
+            <EButton onClick={s.openPage}>{S.OPEN_PAGE}<ExternalLink size={16} /></EButton>
+            <EButton onClick={toTest}>{S.PASTED_IT}</EButton>
           </div>
           {c.key_page_note && <p className="flex gap-2 text-sm text-dim">
             <Info size={14} className="mt-[3px] shrink-0" />{c.key_page_note}</p>}
@@ -158,15 +158,15 @@ export function KeyPanel(props: PanelProps) {
               onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); if (user.trim()) s.check() } }}
               className="h-10 min-w-0 flex-1 rounded-lg border border-line-strong bg-window px-3 outline-none
                 placeholder:text-faint focus:border-accent focus:ring-1 focus:ring-accent" />
-            <Button onClick={s.check} disabled={!user.trim() || s.busy}>
-              {s.busy && <Spinner />}{s.test && !works ? S.TRY_AGAIN : S.TRY}</Button>
+            <EButton onClick={s.check} disabled={!user.trim() || s.busy}>
+              {s.busy && <Spinner />}{s.test && !works ? S.TRY_AGAIN : S.TRY}</EButton>
           </div>
         </div>
         {s.busy && c.second_factor !== 'code' && <p className="text-sm text-dim">{S.DUO_NOW}</p>}
         {s.test && !works && <Result test={s.test} text={said(s.test, org)} />}
         {s.test?.reason === 'no_vpn' && c.vpn.enabled && (
-          <div><Button onClick={() => call('clusters.connect', { cluster: c.id, vpn_only: true })
-            .catch(() => {})}>{copy.connectVpn(c)}</Button></div>
+          <div><EButton onClick={() => call('clusters.connect', { cluster: c.id, vpn_only: true })
+            .catch(() => {})}>{copy.connectVpn(c)}</EButton></div>
         )}
       </Step>
       {s.error && <p className="pb-2 text-sm text-bad">{s.error}</p>}

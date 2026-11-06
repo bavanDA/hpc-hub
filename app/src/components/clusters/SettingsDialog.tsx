@@ -11,7 +11,8 @@ import { summary, type AgentId, type AgentSettings, type Cluster, type SettingsI
   type VsCode } from '../../types/clusters'
 import { agentIcon } from '../agents/AgentIcon'
 import { NodeFields } from '../e/NodeFields'
-import { ConfirmDialog, Note, PickerDialog, type PickerOption } from '../e/parts'
+import { type Choice, PickDialog } from '../e/extra'
+import { ConfirmDialog, Note } from '../e/parts'
 import { EDialog, Field, List, MainButton, NumberRow, Row, Section, Segments, ToggleRow } from '../e/ui'
 import { useToast } from '../toast'
 import { ASK_VS, ASK_VS_SUB } from '../tools/VsCodeDialog'
@@ -48,7 +49,7 @@ const VPN_KEYS = ['enabled', 'gateway', 'protocol', 'useragent', 'authgroup', 's
 const pick = <T extends object, K extends keyof T>(o: T, keys: readonly K[]) =>
   Object.fromEntries(keys.filter((k) => o[k] !== undefined).map((k) => [k, o[k]]))
 
-type Choosing = { title: string; value: string; options: PickerOption<string>[]; onPick: (v: string) => void }
+type Choosing = { title: string; value: string; options: Choice<string>[]; onPick: (v: string) => void }
 
 /** start: '' for the list, or a section ('login', 'compute', 'server', 'queues', 'vscode', 'agents'). */
 export function SettingsDialog({ cluster, hint, onClose, start = '', advanced = false }:
@@ -338,7 +339,7 @@ export function SettingsDialog({ cluster, hint, onClose, start = '', advanced = 
         onClose={() => setOpen(null)}
         text={d.key_page ? "You'll type it next time you connect. Your key stays on this computer."
           : copy.forgetBody(label)} />}
-      {choosing && <PickerDialog title={choosing.title} value={choosing.value} options={choosing.options}
+      {choosing && <PickDialog title={choosing.title} value={choosing.value} options={choosing.options}
         onPick={choosing.onPick} onClose={() => setChoosing(null)} />}
     </>
   )

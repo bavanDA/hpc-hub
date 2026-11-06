@@ -16,7 +16,8 @@ import { ComputeDialog } from './clusters/ComputeDialog'
 import { LogView } from './clusters/LogView'
 import { shortName } from './clusters/loginCopy'
 import { SettingsDialog } from './clusters/SettingsDialog'
-import { Button, ConfirmDialog, StatusDot, type Tone } from './e/parts'
+import { EButton } from './e/extra'
+import { ConfirmDialog, StatusDot, type Tone } from './e/parts'
 import { Menu, type MenuItem } from './projects/Menu'
 import { useToast } from './toast'
 import { useTools } from './tools/useTools'
@@ -146,11 +147,11 @@ export function ClusterCard({ cluster: c, session: s, log, primary = false }:
         {(idle || busy || vpnOnly) && (
           <div className="flex items-center justify-end">
             {busy
-              ? <Button disabled={s.state === 'Disconnecting'} onClick={() => run('clusters.cancel')}>{stop}</Button>
+              ? <EButton disabled={s.state === 'Disconnecting'} onClick={() => run('clusters.cancel')}>{stop}</EButton>
               : vpnOnly
-                ? <Button onClick={() => run('clusters.disconnect')}>Disconnect</Button>
-                : <Button kind={primary ? 'primary' : 'plain'} className="min-w-[120px]" onClick={() => connect()}>
-                    {s.state === 'Error' ? 'Try again' : 'Connect'}</Button>}
+                ? <EButton onClick={() => run('clusters.disconnect')}>Disconnect</EButton>
+                : <EButton kind={primary ? 'primary' : 'plain'} className="min-w-[120px]" onClick={() => connect()}>
+                    {s.state === 'Error' ? 'Try again' : 'Connect'}</EButton>}
           </div>
         )}
       </div>

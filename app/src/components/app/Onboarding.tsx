@@ -12,7 +12,7 @@ import { LoginFields } from '../clusters/LoginFields'
 import { useLogin } from '../clusters/useLogin'
 import { copy, shortName } from '../clusters/loginCopy'
 import { NodeFields } from '../e/NodeFields'
-import { Button } from '../e/parts'
+import { EButton } from '../e/extra'
 import { List, MainButton, Section, ToggleRow } from '../e/ui'
 import { Spinner } from '../ui'
 
@@ -78,7 +78,7 @@ function Footer({ onSkip, children }: { onSkip?: () => void; children: ReactNode
   return (
     <div className="flex flex-col items-center gap-1 px-5 pt-2">
       {children}
-      {onSkip && <Button kind="quiet" className="text-dim" onClick={onSkip}>{copy.skip}</Button>}
+      {onSkip && <EButton kind="quiet" className="text-dim" onClick={onSkip}>{copy.skip}</EButton>}
     </div>
   )
 }

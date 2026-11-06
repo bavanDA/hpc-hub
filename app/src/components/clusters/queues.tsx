@@ -3,7 +3,7 @@
 import { useState } from 'react'
 
 import type { Limits } from '../../types/clusters'
-import { PickerDialog } from '../e/parts'
+import { PickDialog } from '../e/extra'
 import { Field, List, Row } from '../e/ui'
 import { groupName, priorityName } from './priority'
 
@@ -46,13 +46,13 @@ export function QueuePickers({ limits, queue, qos, onQueue, onQos, autoFocus, ac
         {!levels.length && <Field label="Priority" value={qos} placeholder="Default"
           onChange={(e) => onQos(e.target.value.trim())} />}
       </div>}
-      {pick === 'queue' && <PickerDialog title="Queue" value={shownQueue}
+      {pick === 'queue' && <PickDialog title="Queue" value={shownQueue}
         options={queues.map((q) => ({ value: q, label: q }))} onPick={onQueue} onClose={() => setPick('')} />}
-      {pick === 'group' && onAccount && <PickerDialog title="Group to bill" value={account || def}
+      {pick === 'group' && onAccount && <PickDialog title="Group to bill" value={account || def}
         options={groups.map((a) => ({ value: a, label: groupName(a, def) }))}
         onPick={onAccount}
         onClose={() => setPick('')} />}
-      {pick === 'priority' && <PickerDialog title="Priority" value={shownQos}
+      {pick === 'priority' && <PickDialog title="Priority" value={shownQos}
         options={levels.map((q) => ({ value: q, label: priorityName(q) }))} onPick={onQos}
         onClose={() => setPick('')} />}
     </>

@@ -3,7 +3,7 @@ import { Copy, ExternalLink } from 'lucide-react'
 
 import type { Cluster } from '../../types/clusters'
 import { openSystem } from '../app/openLink'
-import { Button } from '../e/parts'
+import { EButton } from '../e/extra'
 import { EDialog, MainButton, Row, Section } from '../e/ui'
 import { useToast } from '../toast'
 import { shortName } from './loginCopy'
@@ -40,7 +40,7 @@ export function AuthenticatorHelp({ cluster: c, onClose }: { cluster: Cluster; o
   }
   return (
     <EDialog title={`Codes for ${c.name}`} width={560} onClose={onClose} actions={url && <>
-      <Button icon={Copy} onClick={copy}>Copy link</Button>
+      <EButton icon={Copy} onClick={copy}>Copy link</EButton>
       <MainButton className="flex-1" onClick={() => openSystem(url)}>Open {site}<ExternalLink size={16} /></MainButton>
     </>}>
       <p className="px-5 pb-1 text-dim">{short} asks for a 6-digit code from your phone at every sign-in. You set

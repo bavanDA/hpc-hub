@@ -4,7 +4,7 @@ import { ShieldCheck } from 'lucide-react'
 import { useState } from 'react'
 
 import type { Cluster, Question } from '../../types/clusters'
-import { Button } from '../e/parts'
+import { EButton } from '../e/extra'
 import { EDialog, Field, List, MainButton, Row } from '../e/ui'
 import { AuthenticatorHelp } from './AuthenticatorHelp'
 import { ChromeWindowLogin, WebLogin } from './SignIn'
@@ -22,7 +22,7 @@ export function QuestionDialog({ q, cluster, onAnswer }:
   if (q.kind === 'confirm') {
     return (
       <EDialog title={q.title ?? q.name} width={440} onClose={cancel} actions={<>
-        <Button onClick={cancel}>Not now</Button>
+        <EButton onClick={cancel}>Not now</EButton>
         <MainButton className="flex-1" autoFocus onClick={() => onAnswer('yes')}>Set up</MainButton>
       </>}>
         <p className="px-5 pb-2 text-dim">{q.prompt}</p>
@@ -38,7 +38,7 @@ export function QuestionDialog({ q, cluster, onAnswer }:
     return (
       <>
         <EDialog title={`Code for ${cluster?.name ?? q.name}`} width={440} onClose={cancel} actions={<>
-          <Button onClick={cancel}>Stop signing in</Button>
+          <EButton onClick={cancel}>Stop signing in</EButton>
           <MainButton className="flex-1" disabled={!digits(text)} onClick={() => onAnswer(digits(text))}>Send
           </MainButton>
         </>}>
@@ -59,7 +59,7 @@ export function QuestionDialog({ q, cluster, onAnswer }:
 
   return (
     <EDialog title={`${q.name} is asking`} width={440} onClose={cancel} actions={<>
-      <Button onClick={cancel}>Stop signing in</Button>
+      <EButton onClick={cancel}>Stop signing in</EButton>
       <MainButton className="flex-1" onClick={() => onAnswer(text)}>Send</MainButton>
     </>}>
       {q.prompt?.trim() && <p className="px-5 pb-1 whitespace-pre-wrap text-dim">{q.prompt.trim()}</p>}

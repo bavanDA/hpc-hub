@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from 'react'
 
 import { call } from '../../rpc'
 import type { Cluster, KeySetup } from '../../types/clusters'
-import { Button } from '../e/parts'
+import { EButton } from '../e/extra'
 import { EDialog } from '../e/ui'
 import { Spinner } from '../ui'
 import { shortName } from './loginCopy'
@@ -45,7 +45,7 @@ export function KeySetupDialog({ cluster: c, onClose, onDone }:
   const Icon = s.state === 'done' ? CircleCheck : s.state === 'failed' ? CircleX : Globe
   return (
     <EDialog title={`Sign in to ${c.name}`} onClose={onClose} width={480}
-      actions={<Button className="flex-1" onClick={onClose}>{s.state === 'done' ? 'Close' : 'Stop signing in'}</Button>}>
+      actions={<EButton className="flex-1" onClick={onClose}>{s.state === 'done' ? 'Close' : 'Stop signing in'}</EButton>}>
       <div className="flex flex-col items-center gap-3 px-5 py-2 text-center">
         <Icon size={40} strokeWidth={1.25} className={s.state === 'failed' ? 'text-bad' : s.state === 'done' ? ''
           : 'text-dim'} />

@@ -7,7 +7,7 @@ import { Globe } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
 import type { Question } from '../../types/clusters'
-import { Button } from '../e/parts'
+import { EButton } from '../e/extra'
 import { EDialog, MainButton } from '../e/ui'
 import { Spinner } from '../ui'
 
@@ -31,8 +31,8 @@ export function ChromeWindowLogin({ q, onAnswer }: { q: Question; onAnswer: (a: 
   const cancel = () => onAnswer(null)
   return (
     <EDialog title={q.title ?? `${q.name} VPN sign-in`} onClose={cancel} width={460} actions={<>
-      <Button onClick={cancel}>Stop signing in</Button>
-      <Button className="flex-1" onClick={() => onAnswer('in-app')}>Sign in in the app instead</Button>
+      <EButton onClick={cancel}>Stop signing in</EButton>
+      <EButton className="flex-1" onClick={() => onAnswer('in-app')}>Sign in in the app instead</EButton>
     </>}>
       <Waiting title="Sign in in the Chrome window"
         text="Sign in and approve Duo in the Chrome window that opened. It closes by itself once you are signed in." />
@@ -68,7 +68,7 @@ export function WebLogin({ q, onAnswer }: { q: Question; onAnswer: (a: string | 
   }
   return (
     <EDialog title={q.title ?? `${q.name} VPN sign-in`} onClose={cancel} width={460} actions={<>
-      <Button className={error ? 'flex-1' : ''} onClick={cancel}>Stop signing in</Button>
+      <EButton className={error ? 'flex-1' : ''} onClick={cancel}>Stop signing in</EButton>
       {!error && <MainButton className="flex-1" onClick={() => inTauri && invoke('sso_show', { id: q.id })}>
         Show sign-in window</MainButton>}
     </>}>

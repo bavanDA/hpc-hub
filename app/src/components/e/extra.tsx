@@ -18,8 +18,9 @@ const LOOK: Record<Kind, string> = {
 export function EButton({ kind = 'plain', small = false, icon: Icon, className = '', children, ...props }:
   ButtonHTMLAttributes<HTMLButtonElement> & { kind?: Kind; small?: boolean; icon?: LucideIcon }) {
   return (
-    <button {...props} className={`flex shrink-0 items-center justify-center gap-2 rounded-lg font-semibold
-      whitespace-nowrap disabled:opacity-40 ${small ? 'h-8 px-3 text-sm' : 'h-10 px-4'} ${LOOK[kind]} ${className}`}>
+    <button type="button" {...props} className={`flex shrink-0 items-center justify-center gap-2 rounded-lg
+      text-center leading-tight font-semibold whitespace-nowrap disabled:opacity-40 ${small ? 'h-8 px-3 text-sm'
+      : 'h-10 px-4'} ${LOOK[kind]} ${className}`}>
       {Icon && <Icon size={small ? 14 : 16} className="shrink-0" />}{children}
     </button>
   )

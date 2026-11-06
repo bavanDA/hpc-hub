@@ -3,7 +3,7 @@
 import { Smartphone } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
-import { Button } from '../e/parts'
+import { EButton } from '../e/extra'
 import { Spinner } from '../ui'
 import { copy } from './loginCopy'
 
@@ -32,8 +32,8 @@ export function DuoDialog({ name, onCancel, onRetry }: { name: string; onCancel:
         {!late && <div className="mt-2"><Spinner size={32} /></div>}
         <p className="text-sm text-dim tabular-nums">Waiting {Math.floor(s / 60)}:{String(s % 60).padStart(2, '0')}</p>
         <div className="mt-3 flex w-full gap-2">
-          <Button className="flex-1" onClick={onCancel}>Stop signing in</Button>
-          {late && <Button kind="primary" className="flex-1" onClick={onRetry}>{copy.newPush}</Button>}
+          <EButton className="flex-1" onClick={onCancel}>Stop signing in</EButton>
+          {late && <EButton kind="primary" className="flex-1" onClick={onRetry}>{copy.newPush}</EButton>}
         </div>
       </div>
     </div>
