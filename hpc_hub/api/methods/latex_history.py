@@ -201,12 +201,6 @@ def git_saved(cluster: str, folder: str, branch: str = "") -> list[dict]:
     return saved.versions(_ssh(cluster), folder, branch)
 
 
-@method("latex.git_save_version")
-def git_save_version(cluster: str, folder: str, kind: str = "Saved") -> dict:
-    """Keep a version now (unless off or nothing changed): {saved: hash or "", why}."""
-    return saved.save(_ssh(cluster), folder, kind[:60] or "Saved", force=True)
-
-
 @method("latex.git_saved_setting")
 def git_saved_setting(cluster: str, folder: str, mode: str) -> str:
     """off, cluster (the default) or backup (also pushed to origin as saved/<you>/<branch>)."""
