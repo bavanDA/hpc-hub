@@ -5,7 +5,9 @@ import { call } from '../../rpc'
 import { useToast } from '../useToast'
 import { AlertDialog, Button, Dialog, IconButton } from '../ui'
 import { MenuItem, Popover } from './Popover'
-import { close, getTab, tabKey, update } from './tabs'
+import { tabKey } from './tabKey'
+import { getTab } from './tabStore'
+import { close, update } from './tabs'
 
 /** What the menu acts on: a listed session, or an open tab's. */
 export type Target = { cluster: string; name: string; kind: 'tmux' | 'screen'; node: string; title: string }

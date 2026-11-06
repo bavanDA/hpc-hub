@@ -3,7 +3,8 @@ import { X } from 'lucide-react'
 import { useToast } from '../useToast'
 import { SessionIcon } from './Popover'
 import { SessionMenu } from './SessionMenu'
-import { close, select, type Tab } from './tabs'
+import { select } from './tabStore'
+import { close, type Tab } from './tabs'
 
 export function TabStrip({ tabs, current, onChanged }:
   { tabs: Tab[]; current: string | null; onChanged: () => void }) {

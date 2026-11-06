@@ -7,7 +7,8 @@ import { useToast } from '../useToast'
 import { Button, IconButton } from '../ui'
 import { MonitorBar } from './MonitorBar'
 import { MenuItem, Popover } from './Popover'
-import { dismiss, start, type Tab } from './tabs'
+import { dismiss } from './banners'
+import { start, type Tab } from './tabs'
 import { copy, paste } from './xterm'
 
 export function TerminalView({ tab, shown }: { tab: Tab; shown: boolean }) {

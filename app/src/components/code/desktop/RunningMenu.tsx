@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 
 import type { TmuxSession } from '../../../types/terminals'
 import { SessionIcon } from '../../terminals/Popover'
-import { tabKey } from '../../terminals/tabs'
+import { tabKey } from '../../terminals/tabKey'
 import { IconButton } from '../../ui'
 import { about } from './about'
 import type { FolderSessions } from './folderSessions'

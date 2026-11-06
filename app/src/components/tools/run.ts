@@ -5,7 +5,9 @@ import type { Session } from '../../types/clusters'
 import type { Link } from '../../types/terminals'
 import type { Opened, Started, Target, VsStarted } from '../../types/tools'
 import { openLink } from '../terminals/pty'
-import { addBanner, getTab, openCommand, openTmux, select } from '../terminals/tabs'
+import { addBanner } from '../terminals/banners'
+import { getTab, select } from '../terminals/tabStore'
+import { openCommand, openTmux } from '../terminals/tabs'
 
 let notify: (text: string) => void = () => {}
 export const setNotify = (fn: (text: string) => void) => { notify = fn }

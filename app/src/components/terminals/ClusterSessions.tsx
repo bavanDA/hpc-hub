@@ -3,7 +3,8 @@ import type { Listed, Live } from './data'
 import { ListNote } from './ListNote'
 import { SessionRow } from './SessionRow'
 import { withOpened } from './sessionText'
-import { tabKey, type Tab } from './tabs'
+import { tabKey } from './tabKey'
+import type { Tab } from './tabs'
 
 export function ClusterSessions({ cluster, listed, tabs, current, onRefresh }:
   { cluster: Live; listed?: Listed; tabs: Tab[]; current: string | null; onRefresh: () => void }) {

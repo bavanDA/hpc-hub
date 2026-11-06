@@ -2,7 +2,8 @@
 // going back; on the session list, the open ones that aren't sessions (a command's output) get their own rows.
 import { Check, SquareTerminal } from 'lucide-react'
 
-import { select, type Tab } from '@shared/components/terminals/tabs'
+import { select } from '@shared/components/terminals/tabStore'
+import type { Tab } from '@shared/components/terminals/tabs'
 import { List, Row, Section, Sheet } from '../../ui'
 
 /** Open tabs that are no tmux session, so the session list doesn't show them. */
