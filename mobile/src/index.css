@@ -3,7 +3,8 @@
 @source '../../app/src/components/terminals';
 @source '../../app/src/components/clusters';
 @source '../../app/src/components/app/ThemePicker.tsx';
-@source '../../app/src/components/ui.tsx';
+@source '../../app/src/components/app/ThemeWindow.tsx';
+@source '../../app/src/components/ui';
 @source '../../app/src/components/toast.tsx';
 @source '../../app/src/components/Term.tsx';
 @source '../../app/src/components/permissions';
