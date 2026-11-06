@@ -3,11 +3,10 @@ import { ChoiceRow } from '../../e/extra'
 import { Field, List, NumberRow, Section, Segments, ToggleRow } from '../../e/ui'
 import { copy } from '../loginCopy'
 import { CHROME_WINDOW } from '../SignIn'
+import { ownVpnLogin } from './changes'
 
 export type VpnLogin = { user: string; setUser: (u: string) => void; password: string
   setPassword: (p: string) => void; saved: boolean }
-
-export const ownVpnLogin = (v: Cluster['vpn']) => v.enabled && !(v.same_login_as_ssh ?? true)
 
 export function ServerPart({ d, info, up, vpnLogin }: {
   d: Cluster; info: SettingsInfo | null; up: (change: Partial<Cluster>) => void; vpnLogin: VpnLogin

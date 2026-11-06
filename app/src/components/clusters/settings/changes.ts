@@ -13,6 +13,8 @@ export function firstPart(start: string, advanced: boolean): Part {
   return start as Part
 }
 
+export const ownVpnLogin = (v: Cluster['vpn']) => v.enabled && !(v.same_login_as_ssh ?? true)
+
 const PROFILE_KEYS = ['cpus', 'mem_gb', 'time', 'partition', 'account', 'qos', 'gpus', 'gpu_type', 'extra_args'] as const
 const VPN_KEYS = ['enabled', 'gateway', 'protocol', 'useragent', 'authgroup', 'same_login_as_ssh', 'split_tunnel',
   'domains', 'routes', 'browser'] as const
