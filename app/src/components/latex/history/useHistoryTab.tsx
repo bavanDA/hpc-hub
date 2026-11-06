@@ -55,7 +55,7 @@ export function useHistoryTab(a: Args) {
   const [blame, setBlame] = useState<Blame | null>(null)
   const [card, setCard] = useState<{ path: string; line: number; x: number; y: number } | null>(null)
   const [spot, setSpot] = useState<CardSpot | null>(null)
-  useEffect(() => { if (a.active) setOpened(true) }, [a.active])
+  if (a.active && !opened) setOpened(true)
 
   const send = (kind: HistoryAsk['kind'], hash?: string) => {
     setAsk({ kind, hash, n: Date.now() })
@@ -84,7 +84,7 @@ export function useHistoryTab(a: Args) {
   const pins = useMemo(() => (notes ?? []).filter((n) => isLine(n.place) && n.place.path === rel && !n.done)
     .map((n) => ({ id: n.id, n: n.n, done: n.done, text: n.text, line: (n.place as { line: number }).line })), [notes, rel])
   const showNow = useRef(a.show)
-  showNow.current = a.show
+  useEffect(() => { showNow.current = a.show })
   const openNote = useCallback((id: string) => {
     setAsk({ kind: 'notes', hash: id, n: Date.now() })
     setOpened(true)

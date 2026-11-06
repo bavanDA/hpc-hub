@@ -1,5 +1,5 @@
 import { Circle, History as HistoryIcon, Pencil } from 'lucide-react'
-import { type ReactNode, useCallback, useEffect, useState } from 'react'
+import { type ReactNode, useEffect, useState } from 'react'
 
 import type { About, Changes, GitState, HCommit, Refs, SavedVersion } from '../../../../types/history'
 import { useToast } from '../../../toast'
@@ -63,13 +63,14 @@ export function Detail(p: DetailProps) {
   const version = sel.kind === 'saved' ? saved.find((v) => v.hash === sel.hash) ?? null : null
   const [from, to] = sel.kind === 'commit' ? [commit?.parents[0] ?? '', sel.hash]
     : sel.kind === 'compare' ? [sel.from, sel.to] : sel.kind === 'saved' ? [sel.hash, ''] : ['', '']
-  const load = useCallback(() => {
-    setFailed('')
-    const frm = sel.kind === 'commit' ? '' : from
-    git<Changes>('changes', where, { frm, to, context: more ? 100000 : 3 }).then(setChanges)
+  const [reloads, setReloads] = useState(0)
+  const frm = sel.kind === 'commit' ? '' : from
+  const context = more ? 100000 : 3
+  useEffect(() => {
+    git<Changes>('changes', where, { frm, to, context }).then(setChanges)
       .catch((e: Error) => setFailed(lastLine(e.message)))
-  }, [where, sel.kind, from, to, more])
-  useEffect(load, [load])
+  }, [where, frm, to, context, reloads])
+  const load = () => { setFailed(''); setReloads((n) => n + 1) }
   const abs = (path: string) => `${state.root}/${path}`
   const putBack = async (b: PutBack) => {
     try {

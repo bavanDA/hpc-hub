@@ -53,7 +53,7 @@ export function useAssist(a: Args) {
   const [checked, setChecked] = useState<{ job: Job; result: Checked } | null>(null)
   const early = useRef(new Map<string, AgentEvent>())  // events that came before the call answered
   const latest = useRef(a)
-  latest.current = a
+  useEffect(() => { latest.current = a })
 
   const loadInstalled = useCallback(() => {
     if (installed === null) call<string[]>('tools.installed', { cluster: where.cluster }).then(setInstalled).catch(() => {})
