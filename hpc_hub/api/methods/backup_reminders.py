@@ -6,13 +6,14 @@ from ...agents import schedules
 from ...backup import remind
 from ..hub import hub
 from ..server import method
-from .backup import _run, _scratch_policy, _ssh, latest_summaries
+from .backup import _run, _scratch_policy, latest_summaries
 
 HORIZON_DAYS = 14
 
 
 def _reminder(cluster: str) -> schedules.Status | None:
-    return next((st for st in schedules.list_schedules(_ssh(cluster)) if st.schedule.name == remind.NAME), None)
+    found = schedules.list_schedules(hub().connected(cluster).ssh)
+    return next((st for st in found if st.schedule.name == remind.NAME), None)
 
 
 @method("backup.reminders")

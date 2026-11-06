@@ -18,9 +18,6 @@ _summaries: dict[str, dict] = {}  # cluster -> the newest summary fetched, for a
 _lock = threading.Lock()
 
 
-def _ssh(cluster: str):
-    return hub().connected(cluster).ssh
-
 
 def _run(ssh, command: str, timeout: int = 120) -> str:
     res = ssh.run(command, timeout=timeout)
@@ -35,7 +32,7 @@ def _job_id(out: str) -> str:
 
 
 def _fetch(cluster: str, scan_id: str, name: str) -> str:
-    return _ssh(cluster).run(scan.fetch_command(scan.check_id(scan_id), name), timeout=120).stdout
+    return hub().connected(cluster).ssh.run(scan.fetch_command(scan.check_id(scan_id), name), timeout=120).stdout
 
 
 def _fetch_json(cluster: str, scan_id: str, name: str) -> dict:
@@ -116,7 +113,7 @@ def start_scan(cluster: str, horizon_days: int = 14, group: bool = False, agent:
 
 @method("backup.scans")
 def scans(cluster: str, limit: int = 10) -> list[dict]:
-    return scan.parse_list(_run(_ssh(cluster), scan.list_command(int(limit))))
+    return scan.parse_list(_run(hub().connected(cluster).ssh, scan.list_command(int(limit))))
 
 
 def _summary(cluster: str, scan_id: str) -> dict:

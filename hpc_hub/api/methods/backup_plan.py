@@ -7,8 +7,9 @@ import threading
 from ...backup import agent as backup_agent
 from ...backup import plan, scan
 from ...backup.model import Destination
+from ..hub import hub
 from ..server import method
-from .backup import _fetch, _fetch_json, _run, _ssh, _summary
+from .backup import _fetch, _fetch_json, _run, _summary
 
 CHOICES = f'"$HOME"/{scan.ROOT}/choices.json'
 
@@ -17,7 +18,7 @@ _lock = threading.Lock()
 
 
 def _choices(cluster: str) -> list:
-    text = _ssh(cluster).run(f"cat {CHOICES} 2>/dev/null", timeout=60).stdout
+    text = hub().connected(cluster).ssh.run(f"cat {CHOICES} 2>/dev/null", timeout=60).stdout
     try:
         data = json.loads(text) if text.strip() else []
     except ValueError:
@@ -27,7 +28,7 @@ def _choices(cluster: str) -> list:
 
 def _save_choices(cluster: str, choices: list) -> None:
     body = shlex.quote(json.dumps(choices))
-    _run(_ssh(cluster), f'mkdir -p "$HOME"/{scan.ROOT} && printf %s {body} > {CHOICES}')
+    _run(hub().connected(cluster).ssh, f'mkdir -p "$HOME"/{scan.ROOT} && printf %s {body} > {CHOICES}')
 
 
 def _merge_choices(saved: list, changes: list) -> list:

@@ -109,5 +109,7 @@ def test_cancel_and_not_connected(env):
     assert backup.scans("wulver")[0]["state"] == "cancelled"
     with pytest.raises(RuntimeError, match="Connect"):
         backup.get_policy("yale")
+    with pytest.raises(RuntimeError, match="Connect"):
+        backup_copy.dry_run("yale", sid)
     with pytest.raises(ValueError):
         backup.summary("wulver", "../../x")

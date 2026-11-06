@@ -6,7 +6,7 @@ from dataclasses import asdict
 from ...backup import copy, plan, scan
 from ..hub import hub
 from ..server import method
-from .backup import _cached_summary, _fetch, _fetch_json, _job_id, _run, _ssh
+from .backup import _cached_summary, _fetch, _fetch_json, _job_id, _run
 from .backup_plan import made_plan
 
 
@@ -23,14 +23,16 @@ def _job(kind: str, cluster: str, scan_id: str, p: plan.Plan) -> str:
 @method("backup.dry_run")
 def dry_run(cluster: str, id: str) -> dict:
     """The exact files and bytes, and what would be replaced. Nothing is copied."""
+    ssh = hub().connected(cluster).ssh
     p = made_plan(cluster, id)
-    out = _run(_ssh(cluster), copy.start_command(id, "dry", _job("dry", cluster, id, p), plan.rules_json(p)))
+    out = _run(ssh, copy.start_command(id, "dry", _job("dry", cluster, id, p), plan.rules_json(p)))
     return {"job_id": _job_id(out)}
 
 
 @method("backup.start")
 def start(cluster: str, id: str, confirm: str) -> dict:
     """Copy the plan the trial run checked. confirm: that plan's hash, as the app showed it."""
+    hub().connected(cluster)
     p = made_plan(cluster, id)
     if confirm != p.hash:
         raise RuntimeError("The plan changed. Try it first again.")
@@ -38,13 +40,14 @@ def start(cluster: str, id: str, confirm: str) -> dict:
         raise RuntimeError(p.space.warn or "This does not fit in project.")
     if _fetch_json(cluster, id, "dry.json").get("hash") != p.hash:
         raise RuntimeError("Try it first.")
-    out = _run(_ssh(cluster), copy.start_command(id, "copy", _job("copy", cluster, id, p)))
+    out = _run(hub().connected(cluster).ssh, copy.start_command(id, "copy", _job("copy", cluster, id, p)))
     return {"copy_id": id, "job_id": _job_id(out)}
 
 
 @method("backup.progress")
 def progress(cluster: str, copy_id: str) -> dict:
-    return asdict(copy.parse_progress(_run(_ssh(cluster), copy.progress_command(scan.check_id(copy_id)))))
+    ssh = hub().connected(cluster).ssh
+    return asdict(copy.parse_progress(_run(ssh, copy.progress_command(scan.check_id(copy_id)))))
 
 
 @method("backup.result")
@@ -55,5 +58,6 @@ def result(cluster: str, copy_id: str) -> dict:
 @method("backup.cancel")
 def cancel(cluster: str, id: str) -> dict:
     """Stop the scan, trial run or copy. Files already copied stay in project."""
-    _ssh(cluster).run(copy.cancel_command(scan.check_id(id)) + "; " + scan.cancel_command(id), timeout=60)
+    ssh = hub().connected(cluster).ssh
+    ssh.run(copy.cancel_command(scan.check_id(id)) + "; " + scan.cancel_command(id), timeout=60)
     return {}
