@@ -1,27 +1,19 @@
-// Pick a paper, like Overleaf's project list: your LaTeX projects, papers found on the clusters, or a .tex path.
-// Each paper's Open offers its folder in Code, Files, a terminal, VS Code or an agent.
 import { FileText, FolderSearch, Plus, Search, X } from 'lucide-react'
 import { useState } from 'react'
 
-import { call } from '../../rpc'
-import type { LatexCluster, Paper, Picker as PickerData } from '../../types/latex'
-import { shortName } from '../clusters/loginCopy'
-import { Select } from '../jobs/Select'
-import { useToast } from '../toast'
-import { OpenDialog } from '../tools/OpenDialog'
-import { Button, Dialog, FIELD, Spinner } from '../ui'
-import { ago, basename, short } from './bits'
+import { call } from '../../../rpc'
+import type { Paper, Picker as PickerData } from '../../../types/latex'
+import { shortName } from '../../clusters/loginCopy'
+import { useToast } from '../../toast'
+import { OpenDialog } from '../../tools/OpenDialog'
+import { Button, FIELD, Spinner } from '../../ui'
+import { ago, basename, short } from '../bits'
+import { ClusterSelect } from './ClusterSelect'
+import { NewPaper } from './NewPaper'
+import { OpenButton } from './OpenButton'
+import { matchPapers, matchProjects, mergeFound, openPath } from './papers'
 
 type Folder = { name: string; cluster: string; clusterName: string; folder: string }
-
-/** A paper row's Open: a window with where to open its folder. */
-function OpenButton({ onClick }: { onClick: () => void }) {
-  return (
-    <button type="button" onClick={(e) => { e.stopPropagation(); onClick() }}
-      className="flex h-8 shrink-0 items-center rounded-lg border border-line-strong px-3 text-sm font-semibold
-        hover:bg-hover">Open</button>
-  )
-}
 
 export function Picker({ data, onOpen, onReload }:
   { data: PickerData; onOpen: (cluster: string, path: string) => void; onReload: () => void }) {
@@ -36,9 +28,8 @@ export function Picker({ data, onOpen, onReload }:
   const [path, setPath] = useState('')
   const [openIn, setOpenIn] = useState<Folder | null>(null)
 
-  const f = filter.trim().toLowerCase()
-  const projects = data.projects.filter((p) => !f || `${p.name} ${p.path}`.toLowerCase().includes(f))
-  const found = papers.filter((p) => !f || `${p.title} ${p.folder}`.toLowerCase().includes(f))
+  const projects = matchProjects(data.projects, filter)
+  const found = matchPapers(papers, filter)
   const connected = (id: string) => data.clusters.find((c) => c.id === id)?.connected
   const open = (c: string, p: string) => {
     if (!connected(c)) { toast(`Connect to ${data.clusters.find((x) => x.id === c)?.name ?? c} first`); return }
@@ -52,9 +43,7 @@ export function Picker({ data, onOpen, onReload }:
       .then((list) => [c.id, list] as const)
       .catch((e: Error) => { toast(`${c.name}: search failed: ${e.message}`); return null })))
     const fresh = results.filter((r) => r !== null)
-    const ids = new Set(fresh.map(([id]) => id))
-    setPapers([...papers.filter((p) => !ids.has(p.cluster)), ...fresh.flatMap(([, l]) => l)]
-      .sort((a, b) => b.mtime - a.mtime))
+    setPapers(mergeFound(papers, fresh))
     setAt({ ...at, ...Object.fromEntries(fresh.map(([id]) => [id, Date.now() / 1000])) })
     setSearching(false)
   }
@@ -78,7 +67,7 @@ export function Picker({ data, onOpen, onReload }:
 
         <div className="divide-y divide-line border-y border-line">
           {projects.map((p) => (
-            <div key={p.id} onClick={() => open(p.cluster, p.main_tex ? `${p.path}/${p.main_tex}` : p.path)}
+            <div key={p.id} onClick={() => open(p.cluster, openPath(p))}
               className="group flex min-h-[60px] items-center gap-3 px-4 py-2 hover:bg-hover">
               <FileText size={20} className="shrink-0 text-dim" />
               <div className="min-w-0 flex-1">
@@ -97,7 +86,7 @@ export function Picker({ data, onOpen, onReload }:
             </div>
           ))}
           {!projects.length && <p className="px-4 py-6 text-center text-base text-dim">
-            {f ? 'No project matches.' : 'No papers yet. Pick one found below, or make a new project.'}</p>}
+            {filter.trim() ? 'No project matches.' : 'No papers yet. Pick one found below, or make a new project.'}</p>}
         </div>
 
         <div className="mt-4 flex items-end gap-3">
@@ -141,54 +130,8 @@ export function Picker({ data, onOpen, onReload }:
         </div>
       </div>
       {openIn && <OpenDialog {...openIn} onClose={() => setOpenIn(null)} />}
-      {creating && <NewProject clusters={data.clusters} start={cluster} onClose={() => setCreating(false)}
+      {creating && <NewPaper clusters={data.clusters} start={cluster} onClose={() => setCreating(false)}
         onMade={(c, p) => { setCreating(false); onOpen(c, p) }} />}
     </div>
-  )
-}
-
-function ClusterSelect({ clusters, value, onChange }:
-  { clusters: LatexCluster[]; value: string; onChange: (id: string) => void }) {
-  return (
-    <Select label="Cluster" value={value} onChange={onChange}
-      options={clusters.map((c) => [c.id, `${c.name}${c.connected ? '' : ' (not connected)'}`] as const)} />
-  )
-}
-
-function NewProject({ clusters, start, onClose, onMade }: { clusters: LatexCluster[]; start: string;
-  onClose: () => void; onMade: (cluster: string, path: string) => void }) {
-  const toast = useToast()
-  const [name, setName] = useState('')
-  const [cluster, setCluster] = useState(start)
-  const [parent, setParent] = useState('~/papers')
-  const [git, setGit] = useState(true)
-  const [busy, setBusy] = useState(false)
-  const go = () => {
-    if (!name.trim() || busy) return
-    setBusy(true)
-    call<{ path: string; main_tex: string }>('projects.create', { cluster, parent, name, template: 'LaTeX paper', git })
-      .then((p) => onMade(cluster, p.main_tex ? `${p.path}/${p.main_tex}` : p.path))
-      .catch((e: Error) => { toast(e.message); setBusy(false) })
-  }
-  const field = `${FIELD} w-full`
-  return (
-    <Dialog title="New paper" onClose={onClose} width={440}
-      actions={<><Button onClick={onClose}>Cancel</Button>
-        <Button kind="primary" disabled={!name.trim() || busy} onClick={go}>{busy && <Spinner size={14} />} Create</Button></>}>
-      <div className="flex flex-col gap-3 text-base">
-        <label className="flex flex-col gap-1"><span className="text-sm text-dim">Name</span>
-          <input autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder="my-paper"
-            onKeyDown={(e) => e.key === 'Enter' && go()} className={field} /></label>
-        <label className="flex flex-col gap-1"><span className="text-sm text-dim">Cluster</span>
-          <ClusterSelect clusters={clusters} value={cluster} onChange={setCluster} /></label>
-        <label className="flex flex-col gap-1"><span className="text-sm text-dim">In the folder</span>
-          <input value={parent} onChange={(e) => setParent(e.target.value)} className={`${field} font-mono text-sm`} />
-        </label>
-        <label className="flex items-center gap-2">
-          <input type="checkbox" checked={git} onChange={(e) => setGit(e.target.checked)} className="accent-accent" />
-          Start a git repository</label>
-        <p className="text-sm text-dim">Makes main.tex and a .gitignore for LaTeX build files.</p>
-      </div>
-    </Dialog>
   )
 }

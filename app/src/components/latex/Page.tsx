@@ -2,7 +2,7 @@
 import { FileX } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 
-import { Picker } from './Picker'
+import { Picker } from './picker/Picker'
 import { Project } from './Project'
 import { useToast } from '../toast'
 import { Button, Dialog, EmptyState, Spinner } from '../ui'
