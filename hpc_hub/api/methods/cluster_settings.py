@@ -23,8 +23,7 @@ NAME = re.compile(r"[A-Za-z0-9_.-]+")
 GROUP = re.compile(r"[A-Za-z0-9 _.-]*")
 NUMBERS = {"cpus": (1, 512), "mem_gb": (1, 4096), "gpus": (0, 16)}
 TOP = {"host", "port", "second_factor", "duo_answer", "request_node_on_connect", "ask_node", "reuse_running_job",
-       "queues",
-       "queue_wait", "queue_pick", "vpn", "profile", "vscode", *BY_ID}
+       "queues", "queue_wait", "queue_pick", "vpn", "profile", "vscode", *BY_ID}
 VPN = {"enabled", "gateway", "protocol", "useragent", "authgroup", "same_login_as_ssh", "split_tunnel", "domains",
        "routes", "browser"}
 VSCODE = {"setup", "command", "workdir", "open_links", "open_in", "ask", "compute"}
@@ -105,9 +104,7 @@ def _vpn(v, changes, windows: list[str]) -> None:
         elif k == "gateway":
             v.gateway = _match(x, "VPN gateway", GATEWAY)
         elif k == "protocol":
-            if x not in VPN_PROTOCOLS:
-                raise ValueError(f"No VPN protocol {x}")
-            v.protocol = x
+            v.protocol = _choice(x, VPN_PROTOCOLS, f"No VPN protocol {x}")
         elif k == "useragent":
             v.useragent = _text(x, "User agent", 200)
         elif k == "authgroup":
@@ -136,54 +133,65 @@ def _agent(a, agent_id: str, changes) -> None:
             setattr(a, k, x)
 
 
+def _vscode(v, changes) -> None:
+    _known(changes, VSCODE, "VS Code")
+    for k, x in changes.items():
+        if k == "compute":
+            v.compute = _profile(v.compute, x, "VS Code job")
+        elif k == "open_links":
+            v.open_links = _bool(x, "Open automatically")
+        elif k == "ask":
+            v.ask = _bool(x, "Ask every time")
+        elif k == "open_in":
+            if x not in TARGETS:
+                raise ValueError(f"VS Code can't open in {x}")
+            v.open_in = x
+        else:
+            setattr(v, k, _text(x, f"VS Code {k}", 1000))
+    v.workdir = v.workdir or "~"
+
+
+def _choice(x, choices, error: str):
+    if x not in choices:
+        raise ValueError(error)
+    return x
+
+
+def _field(c, k: str, x, windows: list[str]) -> None:
+    """Check one top-level change and set it on c."""
+    if k == "host":
+        c.host = _match(_text(x, "Login host").rpartition("@")[2], "Login host", HOST)  # user@ is the login's
+    elif k == "port":
+        c.port = _int(x, "SSH port", 1, 65535)
+    elif k == "second_factor":
+        c.second_factor = _choice(x, FACTORS, f"No second step {x}")
+    elif k == "duo_answer":
+        c.duo_answer = _match(x, "Duo answer", NAME, 20) or "push"
+    elif k in ("request_node_on_connect", "ask_node", "reuse_running_job"):
+        setattr(c, k, _bool(x, k))
+    elif k == "queues":
+        c.queues = _queues(x)
+    elif k == "queue_wait":
+        c.queue_wait = _int(x, "Queue wait (seconds)", 0, 3600)
+    elif k == "queue_pick":
+        c.queue_pick = _choice(x, QUEUE_PICKS, f"Pick the queue by {' or '.join(QUEUE_PICKS)}")
+    elif k == "vpn":
+        _vpn(c.vpn, x, windows)
+    elif k == "profile":
+        c.profile = _profile(c.profile, x, "Compute node")
+    elif k == "vscode":
+        _vscode(c.vscode, x)
+    else:
+        _agent(getattr(c, k), k, x)
+
+
 def apply(cfg, changes: dict, windows: list[str]):
     """A checked copy of cfg with the changes; ValueError (and cfg untouched) at the first problem. windows: the
     sign-in windows besides the app's own (our Chrome window, where there is Chrome)."""
     _known(changes, TOP, "")
     c = copy.deepcopy(cfg)
     for k, x in changes.items():
-        if k == "host":
-            c.host = _match(_text(x, "Login host").rpartition("@")[2], "Login host", HOST)  # user@ is the login's
-        elif k == "port":
-            c.port = _int(x, "SSH port", 1, 65535)
-        elif k == "second_factor":
-            if x not in FACTORS:
-                raise ValueError(f"No second step {x}")
-            c.second_factor = x
-        elif k == "duo_answer":
-            c.duo_answer = _match(x, "Duo answer", NAME, 20) or "push"
-        elif k in ("request_node_on_connect", "ask_node", "reuse_running_job"):
-            setattr(c, k, _bool(x, k))
-        elif k == "queues":
-            c.queues = _queues(x)
-        elif k == "queue_wait":
-            c.queue_wait = _int(x, "Queue wait (seconds)", 0, 3600)
-        elif k == "queue_pick":
-            if x not in QUEUE_PICKS:
-                raise ValueError(f"Pick the queue by {' or '.join(QUEUE_PICKS)}")
-            c.queue_pick = x
-        elif k == "vpn":
-            _vpn(c.vpn, x, windows)
-        elif k == "profile":
-            c.profile = _profile(c.profile, x, "Compute node")
-        elif k == "vscode":
-            _known(x, VSCODE, "VS Code")
-            for vk, vx in x.items():
-                if vk == "compute":
-                    c.vscode.compute = _profile(c.vscode.compute, vx, "VS Code job")
-                elif vk == "open_links":
-                    c.vscode.open_links = _bool(vx, "Open automatically")
-                elif vk == "ask":
-                    c.vscode.ask = _bool(vx, "Ask every time")
-                elif vk == "open_in":
-                    if vx not in TARGETS:
-                        raise ValueError(f"VS Code can't open in {vx}")
-                    c.vscode.open_in = vx
-                else:
-                    setattr(c.vscode, vk, _text(vx, f"VS Code {vk}", 1000))
-            c.vscode.workdir = c.vscode.workdir or "~"
-        else:
-            _agent(getattr(c, k), k, x)
+        _field(c, k, x, windows)
     if not c.vscode.command:
         raise ValueError("VS Code command is empty")
     if c.vpn.enabled and not c.vpn.gateway:
