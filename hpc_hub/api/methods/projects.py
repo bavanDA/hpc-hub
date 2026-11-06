@@ -11,7 +11,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 from ...agents import chat_copy
 from ...agents import chats as chat_list
-from ...core import config, features
+from ...core import config
 from ...files import remote_fs, transfer
 from ...globus import api as globus
 from ...projects import store
@@ -122,7 +122,7 @@ def _app() -> config.AppSettings:
 
 def _papers() -> bool:
     """The Papers page is on (Settings, Experimental)."""
-    return features.papers or _app().experimental_papers
+    return _app().experimental_papers
 
 
 def _json(p: Project) -> dict:

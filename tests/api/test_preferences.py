@@ -1,17 +1,12 @@
 import pytest
 
 from hpc_hub.api.methods import preferences
-from hpc_hub.core import browser, config, features
+from hpc_hub.core import config
 
 
 @pytest.fixture
 def app_file(tmp_path, monkeypatch):
     monkeypatch.setattr(config, "APP_FILE", tmp_path / "hpc-hub" / "app.toml")
-    monkeypatch.setattr(browser, "preferred", "")
-    for name in ("papers", "skills", "schedules"):
-        monkeypatch.setattr(features, name, False)
-    monkeypatch.setattr(features, "select_to_copy", True)
-    monkeypatch.setattr(features, "monitor_bar", True)
     return config.APP_FILE
 
 
@@ -30,7 +25,6 @@ def test_set_saves_and_keeps_the_rest(app_file):
     assert preferences.set_(browser_profile=" Uni ") == {"browser_profile": "Uni", **on}
     saved = config.load_app(app_file)
     assert (saved.globus_client_id, saved.browser_profile, saved.experimental_papers) == ("abc123", "Uni", True)
-    assert features.papers and not features.skills and browser.preferred == "Uni"
 
 
 def test_each_experiment_on_its_own(app_file):
@@ -38,8 +32,6 @@ def test_each_experiment_on_its_own(app_file):
     assert [got[k] for k in OFF] == [False, True, False]
     got = preferences.set_(experimental_schedules=True, experimental_skills=False)
     assert (got["experimental_skills"], got["experimental_schedules"]) == (False, True)
-    assert features.schedules and not features.skills and not features.papers
-    assert features.shown("schedules") and not features.shown("latex") and features.shown("clusters")
 
 
 def test_the_old_single_switch_turns_all_three_on(app_file):
@@ -64,12 +56,12 @@ def test_back_to_the_system_browser(app_file):
 
 def test_select_to_copy(app_file):
     assert preferences.set_(select_to_copy=False)["select_to_copy"] is False
-    assert not config.load_app(app_file).select_to_copy and not features.select_to_copy
+    assert not config.load_app(app_file).select_to_copy
 
 
 def test_monitor_bar(app_file):
     assert preferences.set_(monitor_bar=False)["monitor_bar"] is False
-    assert not config.load_app(app_file).monitor_bar and not features.monitor_bar
+    assert not config.load_app(app_file).monitor_bar
     assert preferences.get()["select_to_copy"] is True
 
 

@@ -11,7 +11,6 @@ from pathlib import Path
 CHROME_BINS = ["google-chrome", "google-chrome-stable", "chromium-browser", "chromium"]  # Linux, on PATH
 MAC_APPS = ["Google Chrome.app/Contents/MacOS/Google Chrome", "Chromium.app/Contents/MacOS/Chromium"]
 WINDOWS_EXE = r"Google\Chrome\Application\chrome.exe"
-preferred = ""  # Chrome profile name for every link the app opens; "" = system browser (set by the app)
 
 
 @dataclass

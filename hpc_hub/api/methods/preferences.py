@@ -3,7 +3,7 @@ Skills and Scheduled agents, each its own switch), kept in app.toml."""
 
 import threading
 
-from ...core import browser, config, features
+from ...core import config
 from ..server import method
 
 _lock = threading.Lock()  # one load, change, save at a time
@@ -28,16 +28,15 @@ def set_(browser_profile: str | None = None, experimental_papers: bool | None = 
     with _lock:
         app = config.load_app(config.APP_FILE)
         if browser_profile is not None:
-            app.browser_profile = browser.preferred = browser_profile.strip()
+            app.browser_profile = browser_profile.strip()
         for key, on in (("experimental_papers", experimental_papers), ("experimental_skills", experimental_skills),
                         ("experimental_schedules", experimental_schedules)):
             if on is not None:
                 setattr(app, key, bool(on))
-        features.load(app)
         if select_to_copy is not None:
-            app.select_to_copy = features.select_to_copy = bool(select_to_copy)
+            app.select_to_copy = bool(select_to_copy)
         if monitor_bar is not None:
-            app.monitor_bar = features.monitor_bar = bool(monitor_bar)
+            app.monitor_bar = bool(monitor_bar)
         if appearance is not None:
             if appearance not in config.APPEARANCES:
                 raise ValueError(f"Appearance is one of {', '.join(config.APPEARANCES)}")
