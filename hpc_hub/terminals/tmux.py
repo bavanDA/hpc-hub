@@ -28,7 +28,6 @@ LIST = ("hostname; command -v tmux >/dev/null && echo TMUX_OK; "
         "xargs -r -n1 scontrol show hostnames 2>/dev/null | sort -u); do "
         f'echo "{NODE_MARK}$n"; {NODE_SSH} "$n" {shlex.quote(_LS)} </dev/null; done')
 SCREEN_RE = re.compile(r"^\s+(\d+)\.(\S+)\s+\((?:\d.*?\)\s+\()?(Attached|Detached)\)", re.M)
-COLORS = ["#3584e4", "#2ec27e", "#e5a50a", "#ff7800", "#e01b24", "#9141ac", "#986a44", "#77767b"]
 AGENT_COLORS = {"claude": "#d97757", "codex": "#10a37f", "agy": "#4285f4", "cursor": "#8b8b8b",
                 "ask": "#9141ac", "vscode": "#3584e4"}
 
@@ -163,10 +162,6 @@ def set_label(s: Session, label: str) -> str:
     if s.kind == "screen":
         return f"screen -S {shlex.quote(s.name)} -X sessionname {shlex.quote(re.sub(r'[^\w.-]+', '-', label))}"
     return on(s.node, f"tmux set-option -t {_opt(s.name)} @hpchub_label {shlex.quote(label)}")
-
-
-def set_color(s: Session, color: str) -> str:
-    return on(s.node, f"tmux set-option -t {_opt(s.name)} @hpchub_color {shlex.quote(color)}")
 
 
 def kill(s: Session) -> str:

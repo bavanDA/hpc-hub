@@ -11,7 +11,6 @@ import itertools
 import shlex
 import threading
 import time
-import webbrowser
 from dataclasses import asdict
 
 from ...core import remote
@@ -69,13 +68,6 @@ def rename(cluster: str, session: str, label: str, node: str = "", kind: str = "
     tmux.run(hub().connected(cluster).ssh, tmux.set_label(_target(session, node, kind), label.strip()))
 
 
-@method("terminals.set_color")
-def set_color(cluster: str, session: str, color: str, node: str = "") -> None:
-    if color not in tmux.COLORS:
-        raise ValueError(f"Unknown color {color}")
-    tmux.run(hub().connected(cluster).ssh, tmux.set_color(_target(session, node), color))
-
-
 @method("terminals.stop")
 def stop(cluster: str, session: str, node: str = "", kind: str = "tmux") -> None:
     """Ends the session and everything running in it."""
@@ -106,14 +98,6 @@ def links_in(text: str, node: str = "") -> list[dict]:
             item["tunnel"] = links.tunnel_name(link.url)
         out.append(item)
     return out
-
-
-@method("terminals.open_link")
-def open_link(url: str) -> None:
-    """Open a link from a terminal in your browser."""
-    if not url.startswith(("https://", "http://127.0.0.1:", "http://localhost:")):
-        raise ValueError("Only web links open from here")
-    webbrowser.open(url)
 
 
 # -- terminals the backend runs (Windows) ----------------------------------------------------

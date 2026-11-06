@@ -58,9 +58,8 @@ def test_real_tmux(tmp_path, monkeypatch):
     s = tmux.parse(sh(tmux.LIST)).sessions
     assert [(x.name, x.label, x.color, x.path) for x in s] == [("hpchub-term-1", "My shell", "#e01b24",
                                                                  str(tmp_path))]
-    sh(tmux.set_label(s[0], "renamed") + " && " + tmux.set_color(s[0], "#2ec27e"))
-    s = tmux.parse(sh(tmux.LIST)).sessions
-    assert (s[0].label, s[0].color) == ("renamed", "#2ec27e")
+    sh(tmux.set_label(s[0], "renamed"))
+    assert tmux.parse(sh(tmux.LIST)).sessions[0].label == "renamed"
     sh(tmux.kill(s[0]))
     subprocess.run(["tmux", "kill-server"], capture_output=True)
     assert tmux.parse(sh(tmux.LIST)).sessions == []

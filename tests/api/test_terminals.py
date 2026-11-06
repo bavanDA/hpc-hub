@@ -85,19 +85,15 @@ def test_new_terminal_needs_a_node_for_the_node(monkeypatch):
         terminals.command("wulver", new={"node": True})
 
 
-def test_rename_color_stop_run_tmux(ssh):
-    terminals.rename("wulver", "build", " New name ")
-    terminals.set_color("wulver", "build", tmux.COLORS[1], node="n0042")
+def test_rename_and_stop_run_tmux(ssh):
+    terminals.rename("wulver", "build", " New name ", node="n0042")
     terminals.stop("wulver", "1234.work", kind="screen")
-    rename, color, stop = ssh.ran
-    assert "@hpchub_label 'New name'" in rename and "=build:" in rename
-    assert color.startswith("ssh") and "n0042" in color and tmux.COLORS[1] in color
+    rename, stop = ssh.ran
+    assert rename.startswith("ssh") and "n0042" in rename and "@hpchub_label" in rename and "=build:" in rename
     assert stop == "screen -S 1234.work -X quit"
     with pytest.raises(ValueError):
-        terminals.set_color("wulver", "build", "red; rm -rf ~")
-    with pytest.raises(ValueError):
         terminals.rename("wulver", "build", "  ")
-    assert len(ssh.ran) == 3
+    assert len(ssh.ran) == 2
 
 
 def test_tmux_buffer(ssh):
@@ -112,15 +108,6 @@ def test_links_in_output():
     assert tunnel["kind"] == "tunnel" and tunnel["tunnel"] == "abc123"
     assert device["kind"] == "device-login" and device["code"] == "ABCD-1234"
     assert terminals.links_in("see https://example.com") == []
-
-
-def test_open_link_only_web(monkeypatch):
-    opened = []
-    monkeypatch.setattr(terminals.webbrowser, "open", opened.append)
-    terminals.open_link("https://vscode.dev/tunnel/abc123")
-    with pytest.raises(ValueError):
-        terminals.open_link("file:///etc/passwd")
-    assert opened == ["https://vscode.dev/tunnel/abc123"]
 
 
 def test_send_types_into_a_session_on_its_node(ssh):
