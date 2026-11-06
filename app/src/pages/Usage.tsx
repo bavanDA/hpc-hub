@@ -1,5 +1,3 @@
-// Usage: on All clusters, a card per group you can bill everywhere, storage and the queues (Overview). On one
-// cluster, the same overview plus the fuller views: SU per person in a group, storage quotas and how busy it is.
 import { CircleAlert, RefreshCw } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
@@ -10,10 +8,12 @@ import { useClusters } from '../components/jobs/clusters'
 import { Select } from '../components/jobs/Select'
 import { EmptyState, IconButton, Spinner } from '../components/ui'
 import { LoadTab } from '../components/usage/LoadTab'
-import { Overview, type View } from '../components/usage/Overview'
+import { Overview } from '../components/usage/Overview'
 import { StorageTab } from '../components/usage/StorageTab'
 import { SuTab } from '../components/usage/SuTab'
+import { busiest } from '../components/usage/summary'
 import { useRemote } from '../components/usage/useRemote'
+import type { View } from '../components/usage/view'
 import { useGo, usePageParams } from '../nav'
 import type { Account, Partition, People, Storage } from '../types/usage'
 
@@ -36,8 +36,7 @@ export function Usage() {
 
   const accounts = useRemote<Account[]>('usage.accounts', id && single ? { cluster: id } : null, tick)
   const list = accounts.data ?? []
-  const busiest = list.reduce<Account | null>((a, b) => (!a || b.used > a.used ? b : a), null)
-  const account = list.find((a) => a.account === pick) ?? busiest
+  const account = list.find((a) => a.account === pick) ?? busiest(list)
   const name = account?.account ?? ''
   const ready = id && single && accounts.data
   const people = useRemote<People>('usage.people',
@@ -48,7 +47,6 @@ export function Usage() {
   if (clustersError) return <EmptyState icon={CircleAlert} title="Could not load clusters" text={clustersError} />
   if (!clusters || !cluster) return <div className="grid h-full place-items-center"><Spinner size={24} /></div>
 
-  /** From a card, a storage card or the queue line: that cluster's fuller view. */
   const open = (to: string, view: View, group?: string) => {
     setAll(false)
     setCluster(to)
@@ -80,7 +78,7 @@ export function Usage() {
         onPerson={(user) => go('jobs', { cluster: cluster.id, user })} />}
       {tab === 'storage' && <StorageTab storage={storage.data} error={storage.error}
         onBackup={() => go('backup', { cluster: cluster.id })} />}
-      {tab === 'load' && <LoadTab name={cluster.name} parts={load.data} error={load.error} />}
+      {tab === 'load' && <LoadTab parts={load.data} error={load.error} />}
     </div>
   )
 

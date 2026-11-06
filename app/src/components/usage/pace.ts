@@ -1,4 +1,3 @@
-// What an allocation card says: the big number, the line about the pace, the tag and the footer.
 import type { Allocation } from '../../types/usage'
 import { n } from './format'
 

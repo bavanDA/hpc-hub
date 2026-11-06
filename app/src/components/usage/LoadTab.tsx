@@ -1,9 +1,9 @@
-// Load: how busy each partition is, CPUs and GPUs in use, jobs running and waiting.
 import type { Partition } from '../../types/usage'
 import { n, pct } from './format'
-import { Bar, Section } from './parts'
+import { Bar } from './Bar'
+import { Section } from './Section'
 
-export function LoadTab({ parts, error }: { name?: string; parts: Partition[] | null; error: string }) {
+export function LoadTab({ parts, error }: { parts: Partition[] | null; error: string }) {
   const busy = (parts ?? []).reduce((s, p) => s + p.cpus_used, 0)
   const total = (parts ?? []).reduce((s, p) => s + p.cpus_total, 0)
   const gpus = (parts ?? []).some((p) => p.gpus_total)
@@ -32,7 +32,7 @@ export function LoadTab({ parts, error }: { name?: string; parts: Partition[] | 
                   </td>
                   <td className="w-full px-2">
                     <div className="flex items-center gap-3">
-                      <Bar share value={p.cpus_total ? p.cpus_used / p.cpus_total : 0} className="w-full max-w-60" />
+                      <Bar value={p.cpus_total ? p.cpus_used / p.cpus_total : 0} className="w-full max-w-60" />
                       <span className="whitespace-nowrap">{n(p.cpus_used)} of {n(p.cpus_total)}
                         <span className="text-dim"> · {pct(p.cpus_used, p.cpus_total)}</span></span>
                     </div>

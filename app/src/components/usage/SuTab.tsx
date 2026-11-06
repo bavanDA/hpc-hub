@@ -1,33 +1,12 @@
-// SU: the account's total against its limit (or its cost where SU are billed), and who used it.
 import { ChevronDown } from 'lucide-react'
 import { useState } from 'react'
 
 import type { Account, People } from '../../types/usage'
-import { Term } from '../Term'
 import { List, Row, Spinner } from '../ui'
 import { n, pct } from './format'
-import { Bar, Section } from './parts'
-
-function Summary({ a }: { a: Account | null }) {
-  if (!a) return <p className="border-y border-line px-4 py-3 text-dim">No Slurm account found.</p>
-  const cost = a.rate ? ` About $${n(a.used * a.rate)} at $${a.rate} per SU.` : ''
-  const span = a.period ? ` in ${a.period}` : ''
-  return (
-    <div className="flex flex-col gap-3 border-y border-line px-4 py-3">
-      <div className="flex min-h-8 items-center gap-3">
-        <span className="flex-1">{a.quota > 0 ? <Term name="su">Hours left (SU)</Term>
-          : <><Term name="su">Hours used (SU)</Term>{span}</>}</span>
-        <span className="text-xl font-semibold tabular-nums">{n(a.quota > 0 ? Math.max(0, a.quota - a.used) : a.used)}</span>
-      </div>
-      {a.quota > 0 && <Bar value={a.used / a.quota} mine={a.mine / a.quota} className="w-full" />}
-      <p className="text-sm text-dim">
-        {a.quota > 0
-          ? `${a.account} used ${n(a.used)} of ${n(a.quota)} (${pct(a.used, a.quota)})${span}. You used ${n(a.mine)} of it.`
-          : `${a.account} has no SU limit${span}. You used ${n(a.mine)}.${cost}`}
-      </p>
-    </div>
-  )
-}
+import { Bar } from './Bar'
+import { Section } from './Section'
+import { SuSummary } from './SuSummary'
 
 export function SuTab({ account, people, error, loading, period, onPerson }: {
   account: Account | null; people: People | null; error: string; loading: boolean; period: string
@@ -44,7 +23,7 @@ export function SuTab({ account, people, error, loading, period, onPerson }: {
 
   return (
     <>
-      <Section><Summary a={account} /></Section>
+      <Section><SuSummary a={account} /></Section>
       {account && (
         <Section title="Who used it" note={<span className="inline-flex items-center gap-2">
           {loading && people && <Spinner size={14} />}{note}</span>}>
@@ -58,7 +37,7 @@ export function SuTab({ account, people, error, loading, period, onPerson }: {
                   suffix={<>
                     <span className="w-36 text-right text-base tabular-nums">
                       {n(p.charged)} SU · <span className="text-dim">{pct(p.charged, total)}</span></span>
-                    <Bar value={total ? p.charged / total : 0} share />
+                    <Bar value={total ? p.charged / total : 0} />
                   </>} />
               ))}
               {!active.length && <Row title="Nobody used this account in this period" />}
