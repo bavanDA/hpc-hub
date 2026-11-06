@@ -1,12 +1,9 @@
-"""VS Code, the agents (Claude, ChatGPT, Antigravity, Cursor) and Ask all on a compute node (hpc_hub/ui/tools.py).
-
-Starting one answers the local command line (argv) for a terminal tab, like terminals.command; the UI runs it in a
-PTY. Getting a node can take a while: the call waits for it, and says what it is doing in `tools-progress` events."""
+"""The agents and Ask all on a compute node. Starting one answers the argv of a terminal tab, like
+terminals.command. Getting a node can take a while: the call waits for it and reports in `tools-progress` events."""
 
 import posixpath
 import re
 import shlex
-import shutil
 import subprocess
 import time
 from concurrent.futures import Future
@@ -19,20 +16,16 @@ from ...compute.limits import slurm_time
 from ...compute.slurm import Allocation
 from ...core import remote
 from ...files import remote_fs
-from ...terminals import links, tmux
+from ...terminals import tmux
 from ..hub import hub
 from ..server import method
 from .clusters import _profile
 
-VSCODE_JOB = "hpc-hub-vscode"
-VSCODE_JOBS = [VSCODE_JOB, "vscode", "vs-code", "vscode_slurm.sh"]  # also your own scripts' jobs
-TARGETS = ("desktop", "browser")
 CHAT_ID = re.compile(r"^[A-Za-z0-9_-]{1,80}$")
-TUNNEL = re.compile(r"^[A-Za-z0-9._-]{1,80}$")
 PROJECT_CHATS = 400  # a project's chats may be older than the newest few
 
 
-def _progress(cluster: str, text: str) -> None:
+def progress(cluster: str, text: str) -> None:
     hub().emit("tools-progress", {"cluster": cluster, "text": text})
 
 
@@ -60,7 +53,7 @@ def _agent_json(cfg, a: catalog.Agent) -> dict:
 
 @method("tools.setup")
 def setup(cluster: str) -> dict:
-    """What the dialogs start from: the node you have, your saved choices for VS Code and every agent."""
+    """The node you have and your saved choices for VS Code and every agent."""
     s = hub().session(cluster)
     cfg, a = s.cfg, s.allocation
     v = cfg.vscode
@@ -160,8 +153,8 @@ def _set_options(a: catalog.Agent, c, options: dict) -> None:
 def agent_start(cluster: str, agent: str, folder: str = "", chat_id: str = "", label: str = "", task: str = "",
                 options: dict | None = None, new_node: bool | None = None, remote_control: bool | None = None,
                 profile: dict | None = None) -> dict:
-    """Start (or resume chat_id) the agent in folder on a compute node and answer the tab's command line.
-    Saves the choices first, like the GTK dialog. profile: resources when a node gets requested."""
+    """Start (or resume chat_id) the agent in folder on a compute node; saves the choices first.
+    profile: resources when a node gets requested."""
     s = hub().connected(cluster)
     a = _agent(agent)
     c = getattr(s.cfg, a.id)
@@ -180,19 +173,19 @@ def agent_start(cluster: str, agent: str, folder: str = "", chat_id: str = "", l
         c.workdir = folder
     hub().save_clusters()
 
-    _progress(cluster, f"Checking {a.name} on {s.cfg.name}…")
+    progress(cluster, f"Checking {a.name} on {s.cfg.name}…")
     if not remote.command_type(s.ssh, c.command or a.id):
         raise RuntimeError(f"{a.name} not found: '{c.command}' is not on PATH or in ~/.bashrc on {s.cfg.name}")
     if c.new_node:
-        _progress(cluster, f"Requesting a new node for {a.name} ({(picked or s.cfg.profile).summary()})…")
+        progress(cluster, f"Requesting a new node for {a.name} ({(picked or s.cfg.profile).summary()})…")
     elif not s.allocation:
-        _progress(cluster, f"Requesting a compute node for {a.name}…")
+        progress(cluster, f"Requesting a compute node for {a.name}…")
     node = _node(s, picked, f"hpc-hub-{a.id}" if c.new_node else "")
     if a.remote_setting:  # remote control comes from the agent's settings, not a flag: set it first
         try:
             permissions.set_remote(s.ssh, a.remote_setting, c.remote)
         except OSError as e:
-            _progress(cluster, f"Could not set remote control: {e}")
+            progress(cluster, f"Could not set remote control: {e}")
     tag = chat_id[:8] if chat_id else time.strftime("%H%M%S")  # one tmux session per chat
     title = f"{a.name} · {label.strip() or posixpath.basename(folder.rstrip('/')) or folder}"
     line = catalog.command(a, c, chat_id, task)
@@ -219,98 +212,10 @@ def ask_start(cluster: str, folder: str, out: str, prompt: str, agents: list[str
         s.cfg.profile = picked
         hub().save_clusters()
     if not s.allocation:
-        _progress(cluster, f"Requesting a compute node for Ask all ({(picked or s.cfg.profile).summary()})…")
+        progress(cluster, f"Requesting a compute node for Ask all ({(picked or s.cfg.profile).summary()})…")
     node = _node(s, picked)
     ask = ask_all.Ask(folder, out, prompt, [(a, getattr(s.cfg, a.id)) for a in picked_agents], bool(discuss))
     title = f"Ask all · {prompt.strip().splitlines()[0][:40]}"
     tab = _tab(s, node, f"hpchub-ask-{node.job_id}-{time.strftime('%H%M%S')}", ask_all.command(ask), folder, title,
                tmux.AGENT_COLORS["ask"])
     return {**tab, "out": out}
-
-
-# -- VS Code ----------------------------------------------------------------------------------------
-@method("tools.vscode_find")
-def vscode_find(cluster: str) -> dict:
-    """Your VS Code job if one is pending or running, and its tunnel once it printed one."""
-    s = hub().connected(cluster)
-    job = slurm.find_job(s.ssh, VSCODE_JOBS)
-    if not job:
-        return {"job": None, "tunnel": ""}
-    found = {"id": job.job_id, "node": job.node, "name": job.name, "resources": slurm.resources(s.ssh, job.job_id)}
-    return {"job": found, "tunnel": links.tunnel_name(slurm.tunnel_link(s.ssh, job.job_id))}
-
-
-def _follow(s, job_id: str) -> dict:
-    return {"argv": s.ssh.argv(slurm.follow_log(job_id), tty=True), "job": job_id,
-            "title": f"VS Code · {s.cfg.name} · job {job_id}", "color": tmux.AGENT_COLORS["vscode"]}
-
-
-@method("tools.vscode_start")
-def vscode_start(cluster: str, folder: str = "", target: str = "", job: str = "", replace_job: bool = False,
-                 profile: dict | None = None, remember: bool = False, remember_folder: bool = False,
-                 ask: bool | None = None) -> dict:
-    """Open folder in VS Code through the VS Code job's tunnel. job: the running one to use (with its tunnel
-    known: {"open": ...} from vscode_open), or to stop first (replace_job). With none, submits one; then
-    {"follow": ...} is the command line that shows its log, where the tunnel link appears. ask: saves Ask every
-    time."""
-    s = hub().connected(cluster)
-    v = s.cfg.vscode
-    target = target or v.open_in
-    if target not in TARGETS:
-        raise ValueError(f"Open in {target}?")
-    picked = _profile(v.compute, profile) if profile else v.compute
-    where = remote_fs.expand(s.ssh, folder.strip() or v.workdir)
-    if ask is not None and ask != v.ask:
-        v.ask = ask
-        hub().save_clusters()
-    if remember:
-        v.open_in = target
-        if not job or replace_job:
-            v.compute = picked
-        if remember_folder:
-            v.workdir = folder.strip() or v.workdir
-        hub().save_clusters()
-    if job and not replace_job:
-        if not job.isdigit():
-            raise ValueError("That job id looks wrong")
-        tunnel = links.tunnel_name(slurm.tunnel_link(s.ssh, job))
-        if tunnel:
-            return {"open": vscode_open(tunnel, where, target), "folder": where, "target": target}
-        return {"follow": _follow(s, job), "folder": where, "target": target}
-    if job:
-        _progress(cluster, f"Stopping VS Code job {job}…")
-        slurm.cancel(s.ssh, job)
-    body = "\n".join(x for x in (remote.cd_part(v.workdir), v.setup, v.command) if x.strip())
-    job_id = slurm.submit(s.ssh, s.fit(picked), VSCODE_JOB, body)
-    s._log(f"Submitted VS Code job {job_id}")
-    return {"follow": _follow(s, job_id), "folder": where, "target": target, "submitted": job_id}
-
-
-@method("tools.vscode_open")
-def vscode_open(tunnel: str, folder: str = "", target: str = "desktop") -> dict:
-    """Open the folder on that tunnel: in the VS Code app (when it is installed here) or in the browser.
-    {"app": true}, or {"app": false, "url": ..., "missing": true if you wanted the app}."""
-    if not TUNNEL.match(tunnel):
-        raise ValueError("That tunnel name looks wrong")
-    desktop, browser = links.tunnel_urls(tunnel, folder)
-    if target == "desktop" and shutil.which("code"):
-        subprocess.Popen(["code", "--folder-uri", desktop], stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
-                         stderr=subprocess.DEVNULL, start_new_session=True)
-        return {"app": True, "url": desktop, "missing": False}
-    return {"app": False, "url": browser, "missing": target == "desktop"}
-
-
-@method("tools.forward")
-def forward(cluster: str, url: str, job: str = "", node: str = "") -> str:
-    """A web server the VS Code job printed (code serve-web): forward its port here, answer the local link."""
-    s = hub().connected(cluster)
-    link = links.classify(url, node=node)
-    if link.kind != links.LOCAL_WEB:
-        raise ValueError("Not a link on the node")
-    if not node and job.isdigit():
-        node = slurm.node_of(s.ssh, job)
-    host = node if link.host in links.LOCAL_HOSTS else link.host
-    if not host:
-        raise RuntimeError("No node for that link")
-    return links.local_url(link, s.ssh.forward(host, link.port))
-
