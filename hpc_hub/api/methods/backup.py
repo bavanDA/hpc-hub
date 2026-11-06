@@ -18,7 +18,6 @@ _summaries: dict[str, dict] = {}  # cluster -> the newest summary fetched, for a
 _lock = threading.Lock()
 
 
-
 def _run(ssh, command: str, timeout: int = 120) -> str:
     res = ssh.run(command, timeout=timeout)
     if res.returncode != 0:

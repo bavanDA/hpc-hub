@@ -14,7 +14,6 @@ MEDIA = {".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".gif
          ".webp": "image/webp", ".svg": "image/svg+xml", ".bmp": "image/bmp", ".pdf": "application/pdf"}
 
 
-
 def _name(name: str) -> str:
     name = name.strip()
     if not name or "/" in name or name in (".", ".."):

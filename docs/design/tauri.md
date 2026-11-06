@@ -36,7 +36,7 @@ Each feature touches only its own files, so several can be built at once:
   `hub().emit(name, data)`. Reuse the logic modules (`hpc_hub/compute/jobs.py`...); don't copy them.
 - **Tests:** `tests/api/test_<feature>.py`, with fakes, never real clusters.
 - **Screen:** `app/src/pages/<Page>.tsx`, parts in `app/src/components/<feature>/`, types in
-  `app/src/types/<feature>.ts`. Use the shared pieces in `components/ui.tsx` (Card, List, Row, Button, Pill,
+  `app/src/types/<feature>.ts`. Use the shared pieces in `components/ui/` (List, Row, Button, Pill,
   EmptyState, Dialog), `useToast()`, and `useCall` / `useEvent` from `hooks.ts`.
 - **Demo data:** `app/src/demo/<feature>.ts` exporting `answers` (method -> result, or a function of params).
   `npm run dev` then shows the page in a plain browser with that data; screenshot it with headless Chrome.

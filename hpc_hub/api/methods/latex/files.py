@@ -17,7 +17,6 @@ TREE = ("find . -maxdepth 6 \\( -name '.?*' -o -name _minted\\* \\) -prune -o -m
         + " -printf 'f %P\\n' \\) | sort -k2 | head -3000")
 
 
-
 def inside(folder: str, path: str) -> str:
     """path, if it is in the project folder (never the folder itself)."""
     folder, path = posixpath.normpath(folder), posixpath.normpath(path)
