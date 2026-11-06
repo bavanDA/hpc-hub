@@ -66,7 +66,7 @@ def test_sign_in_not_log_in():
 
 def test_queue_not_partition_or_qos():
     found = _hits(r"\b(partition|partitions|QOS|QoS|salloc|sbatch)\b")
-    found.pop("components/Term.tsx", None)  # the glossary tooltips name Slurm's word on purpose
+    found.pop("components/glossary.ts", None)  # the glossary tooltips name Slurm's word on purpose
     assert not found
 
 
