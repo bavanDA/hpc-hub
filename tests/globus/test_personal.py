@@ -2,6 +2,7 @@ import os
 import subprocess
 
 from hpc_hub.globus import personal
+from tests.helpers import on_linux_cluster
 
 
 def test_personal_start_and_offline():
@@ -13,6 +14,7 @@ def test_personal_start_and_offline():
     assert not personal.denied("Directory not found")
 
 
+@on_linux_cluster
 def test_personal_start_again_with_new_folders(tmp_path):
     """Running with mygroup's folders only; asked for a new group's too: stopped, then started with all of them."""
     gcp = tmp_path / "globusconnectpersonal-3.2.0"

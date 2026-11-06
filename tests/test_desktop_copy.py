@@ -6,7 +6,8 @@ import re
 from pathlib import Path
 
 SRC = Path(__file__).resolve().parents[1] / "app" / "src"
-FILES = [p for p in SRC.rglob("*.ts*") if "demo" not in p.parts and p.name != "loginStrings.ts"]
+FILES = [p for p in SRC.rglob("*.ts*")
+         if "demo" not in p.parts and p.name != "loginStrings.ts" and ".test." not in p.name]
 
 STRING = re.compile(r"'((?:[^'\\\n]|\\.)*)'|\"((?:[^\"\\\n]|\\.)*)\"|`((?:[^`\\]|\\.)*)`")
 JSX_TEXT = re.compile(r">([^<>{}\n]*[A-Za-z][^<>{}\n]*)<")
@@ -36,7 +37,7 @@ def _hits(rule: str, flags=0) -> dict[str, list[str]]:
     for p in FILES:
         bad = [w for w in _words(p) if re.search(rule, w, flags) and "className" not in w and not _classes(w)]
         if bad:
-            out[str(p.relative_to(SRC))] = bad
+            out[p.relative_to(SRC).as_posix()] = bad
     return out
 
 
@@ -47,7 +48,7 @@ def test_no_bare_cancel_next_to_a_destructive_button():
         for i, line in enumerate(lines):
             if ">Cancel</Button>" in line and any(re.search(r'kind="(destructive|danger|danger-solid)"', x)
                                                     for x in lines[max(0, i - 3):i + 4]):
-                bad.append(f"{p.relative_to(SRC)}:{i + 1}")
+                bad.append(f"{p.relative_to(SRC).as_posix()}:{i + 1}")
     assert not bad, "use AlertDialog with its own keep label (Keep it, Keep running)"
 
 

@@ -10,6 +10,7 @@ import pytest
 
 from hpc_hub.agents.catalog import AGY, CLAUDE, CODEX, CURSOR
 from hpc_hub.latex import assist
+from tests.helpers import on_linux_cluster
 
 CHANGES = {"files": [
     {"path": "sections/sketch.tex", "old_path": "sections/sketch.tex", "status": "M", "binary": False,
@@ -193,6 +194,7 @@ def _run(env, job_id, prompt, choice=assist.Choice("claude", "haiku", "low")):
                           timeout=60)
 
 
+@on_linux_cluster
 def test_run_script_answers_after_the_mark_and_cleans_up(tmp_path):
     env = _fake(tmp_path, 'echo "args: $*"; echo "prompt: $(cat)"\n')
     res = _run(env, "abc123", "Write a message")
@@ -203,6 +205,7 @@ def test_run_script_answers_after_the_mark_and_cleans_up(tmp_path):
     assert not (tmp_path / assist.RUN_ROOT / "abc123").exists()
 
 
+@on_linux_cluster
 def test_run_script_falls_back_for_an_older_agent(tmp_path):
     env = _fake(tmp_path, 'for a in "$@"; do [ "$a" = --tools ] && { echo "error: unknown option \'--tools\'" >&2; '
                           'exit 1; }; done; echo "plain $*"\n')
@@ -210,6 +213,7 @@ def test_run_script_falls_back_for_an_older_agent(tmp_path):
     assert res.returncode == 0 and assist.answer(res.stdout).strip() == "plain -p --model haiku"
 
 
+@on_linux_cluster
 def test_run_script_failure_and_cancel(tmp_path):
     env = _fake(tmp_path, 'echo "Not logged in" >&2; exit 3\n')
     res = _run(env, "abc125", "x")
