@@ -60,10 +60,10 @@ def test_vscode_replaces_the_running_job(env):
 
 def test_vscode_open_in_the_app(monkeypatch):
     started = []
-    monkeypatch.setattr(vscode.shutil, "which", lambda name: "/usr/bin/code")
+    monkeypatch.setattr(vscode.shutil, "which", lambda name: r"C:\VS Code\bin\code.cmd")
     monkeypatch.setattr(vscode.subprocess, "Popen", lambda argv, **kw: started.append(argv))
     assert vscode.vscode_open("abc123", "/home/jdoe", "desktop")["app"]
-    assert started == [["code", "--folder-uri", "vscode-remote://tunnel+abc123/home/jdoe"]]
+    assert started == [[r"C:\VS Code\bin\code.cmd", "--folder-uri", "vscode-remote://tunnel+abc123/home/jdoe"]]
     assert vscode.vscode_open("abc123", "/home/jdoe", "browser")["url"] == "https://vscode.dev/tunnel/abc123/home/jdoe"
     with pytest.raises(ValueError):
         vscode.vscode_open("abc; rm", "/")

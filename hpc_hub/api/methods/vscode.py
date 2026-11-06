@@ -81,8 +81,9 @@ def vscode_open(tunnel: str, folder: str = "", target: str = "desktop") -> dict:
     if not TUNNEL.match(tunnel):
         raise ValueError("That tunnel name looks wrong")
     desktop, browser = links.tunnel_urls(tunnel, folder)
-    if target == "desktop" and shutil.which("code"):
-        subprocess.Popen(["code", "--folder-uri", desktop], stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+    code = shutil.which("code") if target == "desktop" else None
+    if code:  # the full path: Windows starts code.cmd only by its path
+        subprocess.Popen([code, "--folder-uri", desktop], stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
                          stderr=subprocess.DEVNULL, start_new_session=True)
         return {"app": True, "url": desktop, "missing": False}
     return {"app": False, "url": browser, "missing": target == "desktop"}
