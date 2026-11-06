@@ -258,6 +258,8 @@ class AsyncSshMaster(SshMaster):
             raise self._error(e.reason or str(e) or "SSH login failed")
         except TimeoutError:
             raise self._error("SSH login timed out")
+        except FileNotFoundError as e:
+            raise self._error(f"Can't open {e.filename}: the file isn't there")
         except OSError as e:
             raise self._error(f"connect to host {self.cfg.host} port {self.cfg.port}: {e.strerror or e}")
 
@@ -270,6 +272,9 @@ class AsyncSshMaster(SshMaster):
         KNOWN_HOSTS.touch(exist_ok=True)
         self._lost = False
         keys = {"client_keys": [self.cfg.ssh_key]} if self.cfg.ssh_key else {}  # the key you picked
+        if keys and not Path(self.cfg.ssh_key).is_file():  # moved or deleted since: sign in as if none was picked
+            self.log(f"ssh: The key you picked, {self.cfg.ssh_key}, isn't there any more. Using your usual keys.")
+            keys = {}
         local = tunnels.local_port(self.cfg.host, self.cfg.port)
         via = {"tunnel": _LocalPort(local)} if local else {}
         conn, _ = await asyncssh.create_connection(

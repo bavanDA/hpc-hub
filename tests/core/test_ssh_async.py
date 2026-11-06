@@ -86,6 +86,18 @@ def test_refused_answer_is_permission_denied(sshd):
         login(sshd, lambda prompt: None)  # the session refusing (asked twice, or cancelled)
 
 
+def test_a_picked_key_that_is_gone_does_not_stop_the_login(sshd, tmp_path):
+    cfg = ClusterConfig(id="t", name="Test", host="127.0.0.1", port=sshd.port, ssh_key=str(tmp_path / "id_ed25519"))
+    lines: list[str] = []
+    m = ssh_async.AsyncSshMaster(cfg, "u", {}, lines.append, ask=answers([]))
+    m.start(timeout=30)
+    try:
+        assert m.alive()
+        assert any("isn't there any more" in line for line in lines)
+    finally:
+        m.stop()
+
+
 def test_changed_host_key_is_refused(sshd):
     other = asyncssh.generate_private_key("ssh-ed25519").export_public_key().decode().split()
     ssh_async.KNOWN_HOSTS.parent.mkdir(parents=True)
