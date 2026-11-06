@@ -2,7 +2,7 @@ import subprocess
 
 from hpc_hub.core.config import LatexSettings
 from hpc_hub.latex import build as latex
-from hpc_hub.latex import git
+from hpc_hub.latex import git, pdfdiff
 from tests.helpers import LocalShell
 
 LOG = """./main.tex:12: Undefined control sequence.
@@ -56,3 +56,15 @@ def test_info_on_a_repository_without_commits(tmp_path):
     (tmp_path / "main.tex").write_text("x")
     i = git.info(LocalShell(), str(tmp_path))
     assert i.root == str(tmp_path) and i.history == [] and any("main.tex" in c for c in i.changes)
+
+
+def test_a_failed_version_pdf_is_explained():
+    assert "latexdiff is not on Wulver" in pdfdiff.explain(pdfdiff.NO_LATEXDIFF, "", "Wulver", True)
+    assert pdfdiff.explain(1, LOG, "Wulver", False) == (
+        "That version did not compile. First error: main.tex line 12, Undefined control sequence.")
+    assert pdfdiff.explain(1, "", "Wulver", True).startswith("The red and blue version did not compile.")
+
+
+def test_setup_runs_in_a_login_shell_only_when_there_is_one():
+    assert latex.with_setup("make", "  ") == "make"
+    assert latex.with_setup("make", "module load texlive") == "bash -lc 'module load texlive && make'"
