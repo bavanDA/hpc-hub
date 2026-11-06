@@ -3,7 +3,7 @@
 import { Check, ScanQrCode } from 'lucide-react'
 import { useState } from 'react'
 
-import type { SetupStatus } from '@shared/components/app/Welcome'
+import type { SetupStatus } from '@shared/components/app/setup'
 import { copy } from '@shared/components/clusters/loginCopy'
 import { useClusters } from '@shared/components/clusters/store'
 import { call } from '@shared/rpc'

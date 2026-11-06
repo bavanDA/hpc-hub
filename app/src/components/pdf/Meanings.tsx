@@ -1,19 +1,7 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import type { ReactNode } from 'react'
 
 import { Spinner } from '../ui'
-import { lookUp, type Entry } from './dictionary'
-
-/** The word's entry: null while it loads. */
-export function useEntry(text: string) {
-  const [entry, setEntry] = useState<Entry | null>(null)
-  useEffect(() => {
-    let live = true
-    lookUp(text).then((e) => live && setEntry(e))
-      .catch((e: Error) => live && setEntry({ word: text, error: e.message, offline: false }))
-    return () => { live = false }
-  }, [text])
-  return entry
-}
+import type { Entry } from './dictionary'
 
 /** Meanings of an entry, a part of speech at a time, with examples; loading and not found too. */
 export function Meanings({ entry, pad = 'px-5' }: { entry: Entry | null; pad?: string }): ReactNode {

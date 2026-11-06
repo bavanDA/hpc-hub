@@ -4,26 +4,14 @@ import { useState } from 'react'
 import { useGo } from '../../nav'
 import type { Target, ToolSetup, VsFound } from '../../types/tools'
 import { shortName } from '../clusters/loginCopy'
-import { human, minutes } from '../clusters/time'
 import { NodeFields } from '../e/NodeFields'
 import { EDialog, Field, MainButton, Section, Segments, ToggleRow } from '../e/ui'
-import { memText } from '../jobs/format'
 import { FolderPicker } from '../projects/FolderPicker'
 import { sendable } from './format'
 import { startVscode } from './run'
+import { ASK_VS, ASK_VS_SUB, inWords } from './vscodeWords'
 
 const TARGETS = [['desktop', 'VS Code app'], ['browser', 'Browser']] as const
-export const ASK_VS = 'Ask every time'
-export const ASK_VS_SUB = 'Shows this window before VS Code starts.'
-
-/** "2 cores · 8G · 1:12:40 of 8:00:00" (squeue) in words: "2 cores · 8 GB · 1 h 13 min of 8 h". */
-export function inWords(resources: string): string {
-  const m = /^(\d+) cores · (\S+) · (\S+) of (\S+)$/.exec(resources)
-  if (!m) return resources
-  const time = (t: string) => { const n = minutes(t); return n === null ? t : human(n) }
-  return `${m[1]} ${m[1] === '1' ? 'core' : 'cores'} · ${memText(m[2])} · ${time(m[3])} of ${time(m[4])}`
-}
-
 export function VsCodeDialog({ setup, found, folder: start = '', target: wanted, onClose, onBack }:
   { setup: ToolSetup; found: VsFound; folder?: string; target?: Target; onClose: () => void; onBack?: () => void }) {
   const go = useGo()

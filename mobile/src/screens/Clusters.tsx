@@ -3,7 +3,7 @@
 import { Server } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
-import type { SetupStatus } from '@shared/components/app/Welcome'
+import type { SetupStatus } from '@shared/components/app/setup'
 import { load, useClusters } from '@shared/components/clusters/store'
 import { Spinner } from '@shared/components/ui'
 import { call } from '@shared/rpc'

@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react'
 
 import type { SetupStatus } from '@shared/components/app/Welcome'
 import { useClusters } from '@shared/components/clusters/store'
-import { setMonitorBar } from '@shared/components/terminals/MonitorBar'
+import { setMonitorBar } from '@shared/components/terminals/monitorBarSetting'
 import { call } from '@shared/rpc'
 import { ThemePicker } from '@shared/components/app/ThemePicker'
 import type { Appearance } from '@shared/theme'

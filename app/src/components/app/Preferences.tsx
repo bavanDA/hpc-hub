@@ -4,7 +4,7 @@ import { call } from '../../rpc'
 import { EDialog, Row, Section, ToggleRow } from '../e/ui'
 import { Select } from '../jobs/Select'
 import { chooseAgent, useAgentChoice } from '../latex/history/agent/agentChoice'
-import { setMonitorBar } from '../terminals/MonitorBar'
+import { setMonitorBar } from '../terminals/monitorBarSetting'
 import { setSelectToCopy } from '../terminals/xterm'
 import { useToast } from '../toast'
 import { Spinner } from '../ui'
@@ -13,7 +13,7 @@ import { AppearanceGroup } from './Appearance'
 import { forgetProfiles, getProfiles } from './openLink'
 import { PairPhoneDialog } from './PairPhoneDialog'
 import { experimentsOf, type Experiments, type Preferences, type Profiles } from './types'
-import { university, type SetupStatus } from './Welcome'
+import { university, type SetupStatus } from './setup'
 
 export function PreferencesDialog({ onClose, onExperimental, onDisconnectAndQuit }:
   { onClose: () => void; onExperimental: (e: Experiments) => void; onDisconnectAndQuit: () => void }) {

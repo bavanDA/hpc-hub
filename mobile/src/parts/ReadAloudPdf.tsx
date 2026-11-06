@@ -7,7 +7,8 @@ import { Check, Headphones, Loader2, Pause, Play, SkipBack, SkipForward, Square,
 import { useEffect, useState } from 'react'
 
 import { Pdf, type PdfProps, type WordPick } from '@shared/components/pdf'
-import { Meanings, useEntry } from '@shared/components/pdf/Meanings'
+import { Meanings } from '@shared/components/pdf/Meanings'
+import { useEntry } from '@shared/components/pdf/useEntry'
 import { speedLabel, SPEEDS } from '@shared/components/pdf/reader'
 import { Tool } from '@shared/components/pdf/tool'
 import { useAskForNode } from './AskForNode'

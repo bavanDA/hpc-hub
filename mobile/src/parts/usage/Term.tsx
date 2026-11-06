@@ -1,7 +1,7 @@
 // An HPC word on the phone: dotted underline, and a tap on its row shows what it means (no hover on a phone).
 import { useState, type ReactNode } from 'react'
 
-import { GLOSSARY, type TermName } from '@shared/components/Term'
+import { GLOSSARY, type TermName } from '@shared/components/glossary'
 import { BottomSheet, Row } from '../../ui'
 
 export function TermRow({ name, label, value, sub }:

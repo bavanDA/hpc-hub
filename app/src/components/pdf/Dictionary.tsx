@@ -4,7 +4,8 @@ import { useEffect, useState } from 'react'
 import { Spinner } from '../ui'
 import { hear } from './dictionary'
 import type { WordPick } from './index'
-import { Meanings, useEntry } from './Meanings'
+import { Meanings } from './Meanings'
+import { useEntry } from './useEntry'
 import type { Reader } from './reader'
 
 export function Dictionary({ pick, reader, overlay, onRead, onClose }:
