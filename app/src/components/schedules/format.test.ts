@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 
 import type { ScheduleStatus } from '../../types/schedules'
 import { ownFrom } from './compute'
-import { computeText, localWhen, status } from './format'
+import { computeText, isBackupCheck, localWhen, status } from './format'
 
 vi.mock('../../rpc', () => ({ call: vi.fn() }))  // gpus.ts asks the backend, which needs a window
 
@@ -37,4 +37,10 @@ describe('ownFrom', () => {
     expect(ownFrom(p, { cpus: 2, qos: 'low' })).toEqual(
       { cpus: 2, mem_gb: 32, gpus: 0, gpu_type: '', partition: 'general', account: 'mygroup', qos: 'low' })
   })
+})
+
+describe('isBackupCheck', () => {
+  it('knows the backup runner', () => expect(isBackupCheck(st({ name: 'nightly', runner: 'backup' }))).toBe(true))
+  it('knows the backup-check name', () => expect(isBackupCheck(st({ name: 'backup-check' }))).toBe(true))
+  it('leaves agent schedules alone', () => expect(isBackupCheck(st({ name: 'nightly', runner: 'agent' }))).toBe(false))
 })
