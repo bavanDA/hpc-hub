@@ -1,4 +1,3 @@
-// The LaTeX page itself (loaded on first visit, see pages/Latex.tsx): the picker, or the open project.
 import { FileX } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 
