@@ -10,7 +10,8 @@
     "lint": "oxlint",
     "preview": "vite preview",
     "tauri": "tauri",
-    "tauri:release": "tauri build --config ../packaging/tauri.release.json"
+    "tauri:release": "tauri build --config ../packaging/tauri.release.json",
+    "test": "vitest run"
   },
   "dependencies": {
     "@codemirror/autocomplete": "6.20.4",
@@ -56,6 +57,7 @@
     "oxlint": "^1.88.0",
     "tailwindcss": "^4.3.3",
     "typescript": "~6.0.3",
-    "vite": "^8.3.4"
+    "vite": "^8.3.4",
+    "vitest": "4.1.12"
   }
 }
