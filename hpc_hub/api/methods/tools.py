@@ -9,7 +9,7 @@ import time
 from concurrent.futures import Future
 from dataclasses import asdict, replace
 
-from ...agents import ask_all, catalog, permissions
+from ...agents import ask_all, catalog, chat_cache, permissions
 from ...agents import chats as chat_store
 from ...compute import slurm
 from ...compute.limits import slurm_time
@@ -81,7 +81,7 @@ def chats(cluster: str, agent: str, folder: str = "") -> dict:
         top = folder.strip().rstrip("/") or "/"
         roots = {remote_fs.expand(s.ssh, top), _real(s, top)} - {""}
         found = [c for c in found if any(c.cwd == r or c.cwd.startswith(r.rstrip("/") + "/") for r in roots)]
-    chat_store.remember(_chats_key(cluster, agent, folder), found, {"home": home})
+    chat_cache.remember(_chats_key(cluster, agent, folder), found, {"home": home})
     return {"home": home, "chats": [{**asdict(c), "name": c.name} for c in found]}
 
 
@@ -92,7 +92,7 @@ def _chats_key(cluster: str, agent: str, folder: str) -> str:
 @method("tools.chats_cached")
 def chats_cached(cluster: str, agent: str, folder: str = "") -> dict | None:
     """The list tools.chats gave last time, at once (no cluster needed); None the first time."""
-    kept = chat_store.recall(_chats_key(cluster, agent, folder))
+    kept = chat_cache.recall(_chats_key(cluster, agent, folder))
     if not kept:
         return None
     found, extra = kept
@@ -109,7 +109,6 @@ def installed(cluster: str) -> list[str]:
     return [a.id for a in catalog.AGENTS if (getattr(s.cfg, a.id).command or a.id) in found]
 
 
-# -- compute nodes --------------------------------------------------------------------------------
 def _with_node(s, a: Allocation | None) -> Allocation | None:
     """Fill in the job's node (tmux runs there)."""
     if a and not a.node:
@@ -139,7 +138,6 @@ def _tab(s, a: Allocation, name: str, cmd: str, folder: str, title: str, color: 
     return {"argv": s.ssh.argv(line, tty=True), "name": name, "node": a.node, "title": title, "color": color}
 
 
-# -- agents -----------------------------------------------------------------------------------------
 def _set_options(a: catalog.Agent, c, options: dict) -> None:
     for o in a.options:
         if o.key in options:
@@ -193,7 +191,6 @@ def agent_start(cluster: str, agent: str, folder: str = "", chat_id: str = "", l
                 tmux.AGENT_COLORS.get(a.id, ""))
 
 
-# -- Ask all ----------------------------------------------------------------------------------------
 @method("tools.ask_start")
 def ask_start(cluster: str, folder: str, out: str, prompt: str, agents: list[str], discuss: bool = False,
               profile: dict | None = None, remember: bool = False) -> dict:
