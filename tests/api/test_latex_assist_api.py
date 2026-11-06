@@ -9,7 +9,9 @@ from types import SimpleNamespace
 import pytest
 
 from hpc_hub.api import hub as hub_module
-from hpc_hub.api.methods import latex_assist as api
+from hpc_hub.api.methods.latex import agent, ask, write
+from hpc_hub.api.methods.latex import git as git_api
+from hpc_hub.api.methods.latex import notes as notes_api
 from hpc_hub.core import config
 from hpc_hub.core.config import AgentSettings
 from hpc_hub.latex import notes
@@ -28,7 +30,7 @@ def h(monkeypatch, tmp_path):
         s.cfg.claude = AgentSettings()
         s.allocation = SimpleNamespace(job_id="123", node="n0007")
     monkeypatch.setattr(hub_module, "_hub", fake)
-    monkeypatch.setattr(api.tmux, "on", lambda node, line, tty=False: line)  # the node is this machine
+    monkeypatch.setattr(agent.tmux, "on", lambda node, line, tty=False: line)  # the node is this machine
     monkeypatch.setattr(config, "APP_FILE", tmp_path / "app.toml")
     bin_ = tmp_path / "bin"
     bin_.mkdir()
@@ -69,43 +71,43 @@ def end(h, job):
 
 
 def test_choice_is_kept_for_every_paper(h):
-    c = api.agent_choice()
+    c = agent.agent_choice()
     assert (c["agent"], c["model"], c["effort"], c["label"]) == ("claude", "haiku", "low", "Claude Haiku, Low")
     assert "preset" not in c and "presets" not in c
     assert [a["name"] for a in c["agents"]] == ["Claude", "ChatGPT", "Antigravity", "Cursor"]
-    c = api.agent_choose(model="opus")  # in the paper: the model alone, the effort stays
+    c = agent.agent_choose(model="opus")  # in the paper: the model alone, the effort stays
     assert (c["agent"], c["model"], c["effort"]) == ("claude", "opus", "low")
-    c = api.agent_choose(effort="xhigh", split=False)
+    c = agent.agent_choose(effort="xhigh", split=False)
     assert (c["model"], c["effort"], c["split"], c["label"]) == ("opus", "xhigh", False, "Claude Opus, Extra high")
     saved = config.load_app(config.APP_FILE)
     assert (saved.paper_model, saved.paper_effort) == ("opus", "xhigh")
     with pytest.raises(ValueError):
-        api.agent_choose(model="gpt")
-    assert api.agent_choice()["model"] == "opus"
+        agent.agent_choose(model="gpt")
+    assert agent.agent_choice()["model"] == "opus"
 
 
 def test_settings_picks_the_agent(h):
-    api.agent_choose(model="opus", effort="high")
-    c = api.agent_choose("codex")  # Settings sends the agent alone
+    agent.agent_choose(model="opus", effort="high")
+    c = agent.agent_choose("codex")  # Settings sends the agent alone
     assert (c["agent"], c["model"], c["effort"], c["label"]) == ("codex", "", "high", "ChatGPT, High")
-    c = api.agent_choose("cursor")
+    c = agent.agent_choose("cursor")
     assert (c["agent"], c["model"], c["effort"]) == ("cursor", "", "")
-    c = api.agent_choose(model="auto")
+    c = agent.agent_choose(model="auto")
     assert c["label"] == "Cursor Auto"
-    c = api.agent_choose("claude")
+    c = agent.agent_choose("claude")
     assert (c["agent"], c["model"], c["effort"]) == ("claude", "haiku", "low")
     assert config.load_app(config.APP_FILE).paper_agent == "claude"
 
 
 def test_a_broken_saved_choice_falls_back_to_haiku_low(h):
     config.APP_FILE.write_text('[app]\npaper_agent = "eliza"\npaper_model = "gpt"\n')
-    c = api.agent_choice()
+    c = agent.agent_choice()
     assert (c["agent"], c["model"], c["effort"]) == ("claude", "haiku", "low")
-    assert api.agent_choose(effort="max")["label"] == "Claude Haiku, Max"
+    assert agent.agent_choose(effort="max")["label"] == "Claude Haiku, Max"
 
 
 def test_write_message_in_the_background(h, repo, tmp_path):
-    job = api.agent_write("wulver", str(repo))
+    job = write.agent_write("wulver", str(repo))
     assert job["node"] == "n0007" and job["label"] == "Claude Haiku, Low"
     e = end(h, job)
     assert e["ok"], e
@@ -122,7 +124,7 @@ def test_write_message_in_the_background(h, repo, tmp_path):
 
 
 def test_split_commits_only_when_asked(h, repo):
-    api.git_commit_split("wulver", str(repo), [
+    git_api.git_commit_split("wulver", str(repo), [
         {"message": "Add Koutis and Williams", "files": ["refs.bib"]},
         {"message": "Say how Section 14 avoids the cost", "files": ["main.tex"]}])
     last, first = (git(repo, "show", "--format=%s", "--name-only", r).split() for r in ("HEAD", "HEAD~1"))
@@ -132,24 +134,24 @@ def test_split_commits_only_when_asked(h, repo):
 
 
 def test_ask_about_a_commit_with_a_one_time_choice(h, repo, tmp_path):
-    job = api.agent_ask("wulver", str(repo), "Why?", {"kind": "commit", "hash": "HEAD"},
+    job = ask.agent_ask("wulver", str(repo), "Why?", {"kind": "commit", "hash": "HEAD"},
                         choice={"model": "opus", "effort": "max"})
     assert job["label"] == "Claude Opus, Max" and job["agent"] == "claude"
     e = end(h, job)
     assert e["ok"] and e["result"]["cites"][0]["path"] == "main.tex" and e["result"]["question"] == "Why?"
     assert "First draft" in (tmp_path / "last-prompt").read_text()
     assert "--model opus --effort max" in (tmp_path / "last-args").read_text()
-    assert api.agent_choice()["model"] == "haiku"  # your usual choice stays
+    assert agent.agent_choice()["model"] == "haiku"  # your usual choice stays
 
 
 def test_a_one_time_choice_keeps_your_agent(h, repo, tmp_path):
     codex = tmp_path / "bin" / "codex"  # a stand-in too: never a real agent
     codex.write_text("#!/bin/bash\necho \"$*\" > \"$HOME/last-args\"\necho 'Because of [[main.tex:3]].'\n")
     codex.chmod(codex.stat().st_mode | stat.S_IEXEC)
-    api.agent_choose("codex")
+    agent.agent_choose("codex")
     with pytest.raises(ValueError, match="no reasoning effort max"):  # ChatGPT's efforts stop at Extra high
-        api.agent_ask("wulver", str(repo), "Why?", {"kind": "commit", "hash": "HEAD"}, choice={"effort": "max"})
-    job = api.agent_ask("wulver", str(repo), "Why?", {"kind": "commit", "hash": "HEAD"},
+        ask.agent_ask("wulver", str(repo), "Why?", {"kind": "commit", "hash": "HEAD"}, choice={"effort": "max"})
+    job = ask.agent_ask("wulver", str(repo), "Why?", {"kind": "commit", "hash": "HEAD"},
                         choice={"agent": "claude", "model": "opus", "effort": "medium"})
     assert job["agent"] == "codex" and job["label"] == "ChatGPT, Medium"  # same agent; no model setting there
     assert end(h, job)["ok"]
@@ -157,7 +159,7 @@ def test_a_one_time_choice_keeps_your_agent(h, repo, tmp_path):
 
 
 def test_ask_about_lines(h, repo, tmp_path):
-    e = end(h, api.agent_ask("wulver", str(repo), "Does this read worse?",
+    e = end(h, ask.agent_ask("wulver", str(repo), "Does this read worse?",
                              {"kind": "lines", "path": "main.tex", "line": 3, "end": 3, "text": "Section 14"}))
     assert e["ok"]
     p = (tmp_path / "last-prompt").read_text()
@@ -167,18 +169,18 @@ def test_ask_about_lines(h, repo, tmp_path):
 def test_no_node_no_job(h, repo):
     h.sessions["wulver"].allocation = None
     with pytest.raises(RuntimeError, match="compute node"):
-        api.agent_write("wulver", str(repo))
+        write.agent_write("wulver", str(repo))
 
 
 def test_a_missing_agent_says_so(h, repo, tmp_path):
     (tmp_path / "bin" / "claude").unlink()
-    e = end(h, api.agent_write("wulver", str(repo)))
+    e = end(h, write.agent_write("wulver", str(repo)))
     assert not e["ok"] and "isn't installed on Wulver" in e["error"]
 
 
 def test_cancel(h, repo, tmp_path):
     (tmp_path / "slow").write_text("")
-    job = api.agent_write("wulver", str(repo))
+    job = write.agent_write("wulver", str(repo))
     wait(h, "latex-agent", lambda e: e["id"] == job["id"] and e.get("stage") == "running")
     pid = tmp_path / ".hpc-hub" / "paper-agent" / job["id"] / "pid"
     wait_for = threading.Event()
@@ -186,45 +188,45 @@ def test_cancel(h, repo, tmp_path):
         if pid.exists() and pid.read_text().strip():
             break
         wait_for.wait(0.05)
-    assert api.agent_cancel(job["id"])
+    assert agent.agent_cancel(job["id"])
     e = end(h, job)
     assert not e["ok"] and e["cancelled"] and "result" not in e
 
 
 def test_notes_and_check_my_list(h, repo, tmp_path):
-    a = api.note_add("wulver", str(repo), "Say where Section 14 comes in", {"path": "main.tex", "line": 3})
-    b = api.note_add("wulver", str(repo), "Send the reply to mygroup")
+    a = notes_api.note_add("wulver", str(repo), "Say where Section 14 comes in", {"path": "main.tex", "line": 3})
+    b = notes_api.note_add("wulver", str(repo), "Send the reply to mygroup")
     assert (a["author"], a["n"], b["n"], b["place"]) == ("jdoe", 1, 2, None)
     stored = repo / ".git" / "hpc-hub" / "notes.json"
     assert stored.exists() and "hpc-hub" not in git(repo, "status", "--porcelain")
-    api.note_set("wulver", str(repo), b["id"], done=True)
-    got = api.notes_list("wulver", str(repo))
+    notes_api.note_set("wulver", str(repo), b["id"], done=True)
+    got = notes_api.notes_list("wulver", str(repo))
     assert got["user"] == "jdoe" and got["root"] == str(repo) and [n["done"] for n in got["notes"]] == [False, True]
     assert got["notes"][1]["done_by"] == "jdoe"
     (tmp_path / "note-id").write_text(a["id"])
-    e = end(h, api.agent_check("wulver", str(repo)))
+    e = end(h, notes_api.agent_check("wulver", str(repo)))
     assert e["ok"] and e["result"]["checked"] == 1
     assert e["result"]["results"] == [{"id": a["id"], "verdict": "done", "reason": "main.tex says it.",
                                        "path": "main.tex", "line": 3}]
-    assert not api.notes_list("wulver", str(repo))["notes"][0]["done"]  # the agent never checks anything off
-    api.note_delete("wulver", str(repo), a["id"])
-    assert [n["id"] for n in api.notes_list("wulver", str(repo))["notes"]] == [b["id"]]
+    assert not notes_api.notes_list("wulver", str(repo))["notes"][0]["done"]  # the agent never checks anything off
+    notes_api.note_delete("wulver", str(repo), a["id"])
+    assert [n["id"] for n in notes_api.notes_list("wulver", str(repo))["notes"]] == [b["id"]]
 
 
 def test_notes_write_only_over_what_was_read(h, repo):
     ssh = h.sessions["wulver"].ssh
-    api.note_add("wulver", str(repo), "one")
+    notes_api.note_add("wulver", str(repo), "one")
     path = str(repo / ".git" / "hpc-hub" / "notes.json")
     read, digest = notes._read(ssh, path)
-    api.note_add("wulver", str(repo), "two")  # someone else wrote in between
+    notes_api.note_add("wulver", str(repo), "two")  # someone else wrote in between
     assert not notes._write(ssh, path, read + [{"id": "x", "text": "lost"}], digest)
-    assert [n["text"] for n in api.notes_list("wulver", str(repo))["notes"]] == ["one", "two"]
+    assert [n["text"] for n in notes_api.notes_list("wulver", str(repo))["notes"]] == ["one", "two"]
 
 
 def test_bad_places_and_text(h, repo):
     with pytest.raises(ValueError):
-        api.note_add("wulver", str(repo), "x", {"path": "../etc/passwd", "line": 1})
+        notes_api.note_add("wulver", str(repo), "x", {"path": "../etc/passwd", "line": 1})
     with pytest.raises(ValueError):
-        api.note_add("wulver", str(repo), "   ")
-    n = api.note_add("wulver", str(repo), "Pin", {"page": 21, "x": 300.5, "y": 410})
+        notes_api.note_add("wulver", str(repo), "   ")
+    n = notes_api.note_add("wulver", str(repo), "Pin", {"page": 21, "x": 300.5, "y": 410})
     assert n["place"] == {"page": 21, "x": 300.5, "y": 410.0}
