@@ -1,7 +1,7 @@
 import time
 from dataclasses import asdict
 
-from ...compute import job_text, jobs, slurm
+from ...compute import job_text, jobs, sbatch, slurm
 from ...compute.jobs import JobInfo
 from ...compute.usage.accounts import account_usage
 from ...connect.session import ClusterSession
@@ -92,7 +92,7 @@ def inside(cluster: str, job_id: str) -> dict:
 def submit(cluster: str, path: str) -> dict:
     """sbatch the job script at path (on the cluster), from its folder. Answers {job_id}."""
     try:
-        return {"job_id": slurm.submit_file(hub().connected(cluster).ssh, path)}
+        return {"job_id": sbatch.submit_file(hub().connected(cluster).ssh, path)}
     except slurm.SlurmError as e:
         raise ValueError(str(e)) from e
 

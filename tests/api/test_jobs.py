@@ -101,8 +101,8 @@ def test_cancel_frees_the_app_node(session, monkeypatch):
 
 
 def test_submit_answers_the_job_id(session, monkeypatch):
-    from hpc_hub.compute import slurm
-    monkeypatch.setattr(slurm, "submit_file", lambda ssh, path: "4242" if path == "~/run.sbatch" else
+    from hpc_hub.compute import sbatch, slurm
+    monkeypatch.setattr(sbatch, "submit_file", lambda ssh, path: "4242" if path == "~/run.sbatch" else
                         (_ for _ in ()).throw(slurm.SlurmError("sbatch: error: invalid partition")))
     assert m.submit("wulver", "~/run.sbatch") == {"job_id": "4242"}
     with pytest.raises(ValueError, match="invalid partition"):

@@ -2,7 +2,7 @@ import subprocess
 
 import pytest
 
-from hpc_hub.compute import slurm
+from hpc_hub.compute import salloc, sbatch, slurm
 from hpc_hub.core.config import ComputeProfile
 
 
@@ -38,7 +38,7 @@ class Ssh:
 
 def test_granted_after_waiting_gives_the_first_node():
     ssh, pending, log = Ssh(["salloc: Pending job allocation 77", "", "salloc: Granted job allocation 77"]), [], []
-    a = slurm.allocate(ssh, ComputeProfile(), log.append, on_pending=pending.append)
+    a = salloc.allocate(ssh, ComputeProfile(), log.append, on_pending=pending.append)
     assert (a.job_id, a.node, a.owned) == ("77", "n0042", True)
     assert pending == ["77"] and log == ["slurm: salloc: Pending job allocation 77",
                                          "slurm: salloc: Granted job allocation 77"]
@@ -48,23 +48,23 @@ def test_granted_after_waiting_gives_the_first_node():
 def test_refused_says_why_and_cancels_what_it_got():
     ssh = Ssh(["salloc: Pending job allocation 78", "salloc: error: Job submit/allocate failed"], code=1)
     with pytest.raises(slurm.SlurmError, match="allocate failed"):
-        slurm.allocate(ssh, ComputeProfile(), lambda line: None)
+        salloc.allocate(ssh, ComputeProfile(), lambda line: None)
     assert "scancel 78" in ssh.ran
 
 
 def test_cancelled_while_waiting():
     ssh = Ssh(["salloc: Pending job allocation 79"], code=0)
     with pytest.raises(slurm.SlurmError, match="Cancelled"):
-        slurm.allocate(ssh, ComputeProfile(), lambda line: None, cancelled=lambda: True)
+        salloc.allocate(ssh, ComputeProfile(), lambda line: None, cancelled=lambda: True)
     assert "scancel 79" in ssh.ran
 
 
 def test_bad_profile_never_reaches_slurm():
     ssh = Ssh([])
     with pytest.raises(slurm.SlurmError, match="Cores"):
-        slurm.allocate(ssh, ComputeProfile(cpus=0), lambda line: None)
+        salloc.allocate(ssh, ComputeProfile(cpus=0), lambda line: None)
     with pytest.raises(slurm.SlurmError, match="Memory"):
-        slurm.submit(ssh, ComputeProfile(mem_gb=0), "x", "true")
+        sbatch.submit(ssh, ComputeProfile(mem_gb=0), "x", "true")
     assert ssh.ran == []
 
 
@@ -76,17 +76,17 @@ def test_no_node_after_ten_tries(monkeypatch):
 
 def test_submit_reads_the_job_id_or_the_error():
     ssh = Ssh([], answers={"sbatch --parsable": "4242;cluster\n"})
-    assert slurm.submit(ssh, ComputeProfile(), "hpc-hub-vscode", "code tunnel") == "4242"
+    assert sbatch.submit(ssh, ComputeProfile(), "hpc-hub-vscode", "code tunnel") == "4242"
     assert ssh.ran[0].startswith('mkdir -p "$HOME/.hpc-hub" && cd "$HOME/.hpc-hub" && printf %s ')
     with pytest.raises(slurm.SlurmError, match="sbatch failed"):
-        slurm.submit(Ssh([]), ComputeProfile(), "x", "true")
+        sbatch.submit(Ssh([]), ComputeProfile(), "x", "true")
 
 
 def test_queue_wait_estimate():
-    assert slurm.wait_seconds(Ssh([], answers={"--test-only": "3600\n"}), ComputeProfile()) == 3600
-    assert slurm.wait_seconds(Ssh([], answers={"--test-only": "-20\n"}), ComputeProfile()) == 0  # started already
-    assert slurm.wait_seconds(Ssh([]), ComputeProfile()) is None
-    assert [slurm.human_wait(s) for s in (30, 600, 7200, 200000)] == ["now", "10 min", "2 h", "2.3 days"]
+    assert sbatch.wait_seconds(Ssh([], answers={"--test-only": "3600\n"}), ComputeProfile()) == 3600
+    assert sbatch.wait_seconds(Ssh([], answers={"--test-only": "-20\n"}), ComputeProfile()) == 0  # started already
+    assert sbatch.wait_seconds(Ssh([]), ComputeProfile()) is None
+    assert [sbatch.human_wait(s) for s in (30, 600, 7200, 200000)] == ["now", "10 min", "2 h", "2.3 days"]
 
 
 def test_running_jobs_and_their_resources():

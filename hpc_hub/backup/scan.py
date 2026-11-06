@@ -9,7 +9,7 @@ import time
 from dataclasses import replace
 from pathlib import Path
 
-from ..compute import limits, slurm
+from ..compute import limits, slurm_args
 from ..core.config import ComputeProfile
 from .model import Purge
 
@@ -72,7 +72,7 @@ def script(scan_id: str, scratch: str, purge: Purge, horizon: int, profile: Comp
            expected: int = 0, agent_cmd: str = "") -> str:
     """The batch script. agent_cmd: the agent once, headless, run in context/ (agent.py builds both)."""
     head = ["#!/bin/bash -l", f"#SBATCH --job-name={JOB_PREFIX}{scan_id}", "#SBATCH --output=slurm.out",
-            *[f"#SBATCH {a}" for a in slurm.resource_args(profile)], "", f"ID={shlex.quote(check_id(scan_id))}",
+            *[f"#SBATCH {a}" for a in slurm_args.resource_args(profile)], "", f"ID={shlex.quote(check_id(scan_id))}",
             f"DIR={folder(scan_id)}"]
     return "\n".join(head + body(scratch, purge, horizon, group=group, expected=expected, agent_cmd=agent_cmd))
 

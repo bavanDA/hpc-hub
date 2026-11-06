@@ -4,7 +4,7 @@ import subprocess
 import threading
 from dataclasses import replace
 
-from ..compute import limits, slurm
+from ..compute import limits, salloc, sbatch, slurm
 from ..compute.slurm import Allocation, SlurmError
 from ..core.config import ComputeProfile
 from ..core.ssh import SshError
@@ -44,7 +44,7 @@ class NodesMixin:
         try:
             for rank, (part, qos) in enumerate(order):
                 p, _ = self._cut_time(replace(profile, partition=part, qos=qos))
-                wait = slurm.wait_seconds(self.ssh, p)
+                wait = sbatch.wait_seconds(self.ssh, p)
                 if wait is not None:
                     found.append((wait, rank, p))
         except (SshError, OSError, subprocess.SubprocessError):
@@ -53,7 +53,7 @@ class NodesMixin:
             return profile
         soon = [f for f in found if f[0] <= self.cfg.queue_wait] if self.cfg.queue_pick != "fastest" else []
         wait, _, best = min(soon, key=lambda f: f[1]) if soon else min(found, key=lambda f: (f[0], f[1]))
-        seen = ", ".join(f"{p.partition}/{p.qos} {slurm.human_wait(w)}" for w, _, p in found)
+        seen = ", ".join(f"{p.partition}/{p.qos} {sbatch.human_wait(w)}" for w, _, p in found)
         self._log(f"Queues: {seen}. Using {best.partition}/{best.qos} ({self.cfg.queue_pick})")
         return best
 
@@ -117,7 +117,7 @@ class NodesMixin:
         """Separate allocation (e.g. Claude on a new node). Kept when you disconnect."""
         def run():
             try:
-                a = slurm.allocate(self.ssh, self.fit(profile or self.cfg.profile), self._log, job_name=job_name)
+                a = salloc.allocate(self.ssh, self.fit(profile or self.cfg.profile), self._log, job_name=job_name)
                 a.owned = False
                 self._log(f"Extra node {a.node} (job {a.job_id}) for {job_name}")
                 on_done(a, "")
@@ -179,7 +179,7 @@ class NodesMixin:
             return
         self._set(State.ALLOCATING, profile.summary())
         try:
-            self.allocation = slurm.allocate(
+            self.allocation = salloc.allocate(
                 self.ssh, self.fit(profile), self._log,
                 on_pending=lambda job: self._set(State.ALLOCATING, f"Job {job} waiting in queue"),
                 cancelled=self._cancel.is_set,

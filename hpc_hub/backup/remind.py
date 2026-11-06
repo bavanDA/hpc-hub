@@ -4,7 +4,7 @@ import json
 import shlex
 
 from ..agents import schedules
-from ..compute import slurm
+from ..compute import slurm_args
 from ..core.config import ComputeProfile
 from . import scan
 from .model import Purge
@@ -43,7 +43,7 @@ def scheduled_script(s: schedules.Schedule, profile: ComputeProfile) -> str:
         "#!/bin/bash -l",
         f"#SBATCH --job-name={s.job_name}",
         "#SBATCH --output=logs/slurm-%j.out",
-        *[f"#SBATCH {a}" for a in slurm.resource_args(profile)],
+        *[f"#SBATCH {a}" for a in slurm_args.resource_args(profile)],
         "",
         f"SDIR={schedules.folder_of(s.name)}",
         f"DAYS={shlex.quote(days)}",

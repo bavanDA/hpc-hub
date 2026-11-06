@@ -4,7 +4,7 @@ import re
 import shutil
 import subprocess
 
-from ...compute import slurm
+from ...compute import job_log, sbatch, slurm
 from ...core import remote
 from ...files import remote_fs
 from ...terminals import links, tmux
@@ -27,11 +27,11 @@ def vscode_find(cluster: str) -> dict:
     if not job:
         return {"job": None, "tunnel": ""}
     found = {"id": job.job_id, "node": job.node, "name": job.name, "resources": slurm.resources(s.ssh, job.job_id)}
-    return {"job": found, "tunnel": links.tunnel_name(slurm.tunnel_link(s.ssh, job.job_id))}
+    return {"job": found, "tunnel": links.tunnel_name(job_log.tunnel_link(s.ssh, job.job_id))}
 
 
 def _follow(s, job_id: str) -> dict:
-    return {"argv": s.ssh.argv(slurm.follow_log(job_id), tty=True), "job": job_id,
+    return {"argv": s.ssh.argv(job_log.follow_log(job_id), tty=True), "job": job_id,
             "title": f"VS Code · {s.cfg.name} · job {job_id}", "color": tmux.AGENT_COLORS["vscode"]}
 
 
@@ -62,7 +62,7 @@ def vscode_start(cluster: str, folder: str = "", target: str = "", job: str = ""
     if job and not replace_job:
         if not job.isdigit():
             raise ValueError("That job id looks wrong")
-        tunnel = links.tunnel_name(slurm.tunnel_link(s.ssh, job))
+        tunnel = links.tunnel_name(job_log.tunnel_link(s.ssh, job))
         if tunnel:
             return {"open": vscode_open(tunnel, where, target), "folder": where, "target": target}
         return {"follow": _follow(s, job), "folder": where, "target": target}
@@ -70,7 +70,7 @@ def vscode_start(cluster: str, folder: str = "", target: str = "", job: str = ""
         progress(cluster, f"Stopping VS Code job {job}…")
         slurm.cancel(s.ssh, job)
     body = "\n".join(x for x in (remote.cd_part(v.workdir), v.setup, v.command) if x.strip())
-    job_id = slurm.submit(s.ssh, s.fit(picked), VSCODE_JOB, body)
+    job_id = sbatch.submit(s.ssh, s.fit(picked), VSCODE_JOB, body)
     s._log(f"Submitted VS Code job {job_id}")
     return {"follow": _follow(s, job_id), "folder": where, "target": target, "submitted": job_id}
 

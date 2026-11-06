@@ -7,7 +7,7 @@ import shlex
 from dataclasses import asdict, fields, replace
 
 from ...agents.catalog import AGENTS, BY_ID
-from ...compute import slurm
+from ...compute import slurm_args
 from ...connect import chrome_window
 from ...connect.vpn import split_errors
 from ...core.config import QUEUE_PICKS, VPN_PROTOCOLS, ComputeProfile
@@ -74,7 +74,7 @@ def _profile(p: ComputeProfile, changes, label: str) -> ComputeProfile:
     for k, v in changes.items():
         clean[k] = _int(v, f"{label}: {k}", *NUMBERS[k]) if k in NUMBERS else _text(v, f"{label}: {k}")
     p = replace(p, **clean)
-    errors = slurm.validate(p)
+    errors = slurm_args.validate(p)
     if not errors and any(not a.startswith("-") for a in shlex.split(p.extra_args)):
         # salloc would run a word that is not an option as a command
         errors.append("Extra arguments must all be options, like --constraint=gpu")

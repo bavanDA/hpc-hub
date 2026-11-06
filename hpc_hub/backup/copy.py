@@ -6,7 +6,7 @@ import json
 import re
 import shlex
 
-from ..compute import slurm
+from ..compute import slurm_args
 from ..compute.job_text import duration_text
 from ..core.config import ComputeProfile
 from .model import Progress, Result
@@ -78,7 +78,7 @@ def script(mode: str, scan_id: str, scratch: str, dest: str, home_dest: str, pla
     head = ["#!/bin/bash -l", f"#SBATCH --job-name={JOB_PREFIX}{mode}-{scan_id}", f"#SBATCH --output={mode}.out"]
     if mode == "copy":
         head.append("#SBATCH --signal=B:USR1@300")  # five minutes before the time limit: go on in a new job
-    head += [f"#SBATCH {a}" for a in slurm.resource_args(job_profile(profile, cluster_id, minutes))]
+    head += [f"#SBATCH {a}" for a in slurm_args.resource_args(job_profile(profile, cluster_id, minutes))]
     lines = head + [
         "",
         "set -u",

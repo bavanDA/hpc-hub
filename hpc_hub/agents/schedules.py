@@ -8,7 +8,7 @@ import re
 import shlex
 from dataclasses import asdict, dataclass, field, fields, replace
 
-from ..compute import limits, slurm
+from ..compute import limits, slurm_args
 from ..core.config import AgentSettings, ComputeProfile
 from ..core.ssh import SshMaster
 from .ask_all import headless, shell_path
@@ -119,7 +119,7 @@ def script(s: Schedule, agent: Agent, settings: AgentSettings, profile: ComputeP
         f'{headless(agent, settings, chr(34) + "$DIR/task.md" + chr(34))} > "$OUT/$(date +%F-%H%M).md" 2>&1',
     ])
     lines = ["#!/bin/bash -l", f"#SBATCH --job-name={s.job_name}", '#SBATCH --output=logs/slurm-%j.out']
-    lines += [f"#SBATCH {a}" for a in slurm.resource_args(replace(profile, time=limits.slurm_time(s.minutes)))]
+    lines += [f"#SBATCH {a}" for a in slurm_args.resource_args(replace(profile, time=limits.slurm_time(s.minutes)))]
     return "\n".join(lines + ["", body, ""])
 
 
@@ -138,7 +138,7 @@ def profile_for(s: Schedule, base: ComputeProfile) -> ComputeProfile:
             changes[k] = c[k]
     changes.update({k: str(c[k]).strip() for k in COMPUTE_TEXT if k in c})
     p = replace(base, **changes)
-    errors = slurm.validate(p)
+    errors = slurm_args.validate(p)
     if errors:
         raise ValueError(". ".join(errors))
     return p

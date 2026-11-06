@@ -5,7 +5,7 @@ import pytest
 from hpc_hub.api import hub as hub_mod
 from hpc_hub.api.hub import Hub
 from hpc_hub.api.methods import clusters, slurm_limits
-from hpc_hub.compute import gpus, limits, slurm
+from hpc_hub.compute import gpus, limits, slurm_args
 from hpc_hub.core import config
 from hpc_hub.core.config import ComputeProfile
 
@@ -48,9 +48,9 @@ def test_the_docs_stand_in_before_the_first_login():
 
 def test_the_request_names_the_type():
     p = ComputeProfile(gpus=1, gpu_type="a100_10g", partition="gpu")
-    assert "--gres=gpu:a100_10g:1" in slurm.resource_args(p)
-    assert "--gres=gpu:2" in slurm.resource_args(ComputeProfile(gpus=2))
-    assert "GPU type has invalid characters" in slurm.validate(ComputeProfile(gpus=1, gpu_type="a100;rm"))
+    assert "--gres=gpu:a100_10g:1" in slurm_args.resource_args(p)
+    assert "--gres=gpu:2" in slurm_args.resource_args(ComputeProfile(gpus=2))
+    assert "GPU type has invalid characters" in slurm_args.validate(ComputeProfile(gpus=1, gpu_type="a100;rm"))
     assert p.summary() == "2 cores · 16 GB · 4 h · A100, 10 GB slice"  # the size, not the queue
     assert "2 × H100" in ComputeProfile(gpus=2, gpu_type="h100").summary()
 

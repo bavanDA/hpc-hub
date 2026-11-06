@@ -3,7 +3,7 @@
 from dataclasses import asdict, fields, replace
 
 from ...compute import gpus as gpu_list
-from ...compute import slurm
+from ...compute import slurm_args
 from ...connect.state import State
 from ...core.config import ComputeProfile
 from ...core.paths import log_dir
@@ -73,7 +73,7 @@ def _profile(base: ComputeProfile, changes: dict) -> ComputeProfile:
         p = replace(p, gpu_type="")
     elif p.gpu_type and gpu_list.describe(p.gpu_type)[2] and p.gpus > 1:
         raise ValueError("One GPU slice per job. Pick a bigger slice or a whole GPU")
-    errors = slurm.validate(p)
+    errors = slurm_args.validate(p)
     if errors:
         raise ValueError(". ".join(errors))
     return p
