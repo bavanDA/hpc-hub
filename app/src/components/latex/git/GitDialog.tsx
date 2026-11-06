@@ -1,63 +1,17 @@
-// Git for a LaTeX project: the Pull and Push menu, and the dialog with changes, commit, remotes and history.
-import { ArrowDown, ArrowUp, ChevronRight, Copy, GitBranch, GitCommitHorizontal, History } from 'lucide-react'
+import { ArrowDown, ArrowUp, ChevronRight, Copy } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 
-import { call } from '../../rpc'
-import type { GitInfo } from '../../types/latex'
-import { useToast } from '../toast'
-import { Button, Dialog, Spinner } from '../ui'
-import { MenuButton } from './ui/MenuButton'
-import { Popover } from './ui/Popover'
+import { call } from '../../../rpc'
+import type { GitInfo } from '../../../types/latex'
+import { useToast } from '../../toast'
+import { Button, Dialog, Spinner } from '../../ui'
+import { CommitDialog } from './CommitDialog'
+import { Prop } from './Prop'
+import { lastLine, type Where } from './where'
 
-type Where = { cluster: string; folder: string }
-const lastLine = (s: string) => s.trim().split('\n').pop() ?? s
+const DONE = { commit: 'Committed', pull: 'Pulled', push: 'Pushed' }
 
-/** History's safe ways: Push and Get the latest always pull first, in the History tab. */
-export type SafeGit = { push: () => void; pull: () => void; timeline: () => void }
-
-/** The Git button: Pull, Push, and the dialog. before() saves the open file first. With safe, Pull and Push go
- * through the History tab (pull first, settle any spot, then push). */
-export function GitMenu({ where, before, onPulled, safe }: { where: Where; before: () => Promise<boolean>;
-  onPulled: () => void; safe?: SafeGit }) {
-  const toast = useToast()
-  const [busy, setBusy] = useState('')
-  const [dialog, setDialog] = useState(false)
-  const run = async (what: 'pull' | 'push') => {
-    if (busy || !(await before())) return
-    setBusy(what)
-    try {
-      await call(`latex.git_${what}`, where)
-      toast(what === 'pull' ? 'Pulled' : 'Pushed')
-      if (what === 'pull') onPulled()
-    } catch (e) {
-      toast(`Git: ${lastLine((e as Error).message)}`)
-    } finally { setBusy('') }
-  }
-  return (
-    <>
-      <Popover width={300} button={(open, toggle) => (
-        <button onClick={toggle} title="Pull, push, commit and history"
-          className={`flex h-8 items-center gap-1.5 rounded-md px-2.5 text-sm font-semibold ${open ? 'bg-selected' : 'hover:bg-hover'}`}>
-          {busy ? <Spinner size={14} /> : <GitBranch size={16} />} Git</button>
-      )}>
-        {(close) => <>
-          <MenuButton icon={<ArrowDown size={16} />} label={safe ? 'Get the latest' : 'Pull'} hint="from the remote"
-            disabled={!!busy} onClick={() => { close(); if (safe) safe.pull(); else run('pull') }} />
-          <MenuButton icon={<ArrowUp size={16} />} label="Push" hint={safe ? 'pulls first' : 'to the remote'}
-            disabled={!!busy} onClick={() => { close(); if (safe) safe.push(); else run('push') }} />
-          {safe && <MenuButton icon={<History size={16} />} label="Timeline" hint="compare any two"
-            onClick={() => { close(); safe.timeline() }} />}
-          <div className="my-1 border-t border-line" />
-          <MenuButton icon={<GitCommitHorizontal size={16} />} label="Commit, history and remote…"
-            onClick={() => { close(); setDialog(true) }} />
-        </>}
-      </Popover>
-      {dialog && <GitDialog where={where} before={before} onClose={() => setDialog(false)} onPulled={onPulled} />}
-    </>
-  )
-}
-
-function GitDialog({ where, before, onClose, onPulled }:
+export function GitDialog({ where, before, onClose, onPulled }:
   { where: Where; before: () => Promise<boolean>; onClose: () => void; onPulled: () => void }) {
   const toast = useToast()
   const [info, setInfo] = useState<GitInfo | null>(null)
@@ -76,7 +30,7 @@ function GitDialog({ where, before, onClose, onPulled }:
     setBusy(what)
     try {
       await call(`latex.git_${what}`, what === 'commit' ? { ...where, message } : where)
-      toast(what === 'commit' ? 'Committed' : what === 'pull' ? 'Pulled' : 'Pushed')
+      toast(DONE[what])
       if (what === 'commit') setMessage('')
       if (what === 'pull') onPulled()
       load()
@@ -156,36 +110,5 @@ function GitDialog({ where, before, onClose, onPulled }:
       </Dialog>
       {shown && <CommitDialog where={where} commit={shown} onClose={() => setShown(null)} />}
     </>
-  )
-}
-
-function Prop({ label, value, action }: { label: string; value: string; action?: React.ReactNode }) {
-  return (
-    <div className="flex min-h-[48px] items-center gap-3 px-4 py-1.5">
-      <div className="min-w-0 flex-1">
-        <div className="text-xs text-dim">{label}</div>
-        <div className="truncate select-text font-mono text-sm">{value}</div>
-      </div>
-      {action}
-    </div>
-  )
-}
-
-function CommitDialog({ where, commit, onClose }:
-  { where: Where; commit: { hash: string; subject: string }; onClose: () => void }) {
-  const [text, setText] = useState<string | null>(null)
-  useEffect(() => {
-    call<string>('latex.git_show', { ...where, commit: commit.hash }).then(setText)
-      .catch((e: Error) => setText(e.message))
-  }, [where, commit.hash])
-  return (
-    <Dialog title={`${commit.hash} · ${commit.subject}`} onClose={onClose} width={860}>
-      {text === null ? <div className="grid h-60 place-items-center"><Spinner size={24} /></div>
-        : <pre className="max-h-[70vh] overflow-auto rounded-lg bg-view p-3 font-mono text-xs leading-[18px]
-            select-text">{text.split('\n').map((l, i) => (
-            <div key={i} className={l.startsWith('+') && !l.startsWith('+++') ? 'bg-ok-bg text-ok'
-              : l.startsWith('-') && !l.startsWith('---') ? 'bg-bad-bg text-bad'
-              : l.startsWith('@@') ? 'text-accent-text' : ''}>{l || ' '}</div>))}</pre>}
-    </Dialog>
   )
 }

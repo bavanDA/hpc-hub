@@ -21,7 +21,7 @@ import { Split } from './ui/Split'
 import { BuildButton } from './BuildButton'
 import type { EditorHandle } from './CodeEditor'
 import { FileTree, type TreeActions } from './FileTree'
-import { GitMenu } from './Git'
+import { GitMenu } from './git/GitMenu'
 import { useHistoryTab } from './history/useHistoryTab'
 import { counts, Logs } from './Logs'
 
