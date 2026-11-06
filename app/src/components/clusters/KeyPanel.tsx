@@ -1,4 +1,4 @@
-import { AlertCircle, Check, CheckCircle2, Clock, Copy, ExternalLink, FolderOpen, Info, KeyRound } from 'lucide-react'
+import { Check, Copy, ExternalLink, FolderOpen, Info, KeyRound } from 'lucide-react'
 import { useEffect, useState, type ReactNode } from 'react'
 
 import { call } from '../../rpc'
@@ -185,5 +185,3 @@ function Step({ n, state, title, done, change, onOpen, last, children }: {
     </div>
   )
 }
-
-export const TONE = { ok: ['', CheckCircle2], wait: ['text-dim', Clock], error: ['font-semibold text-bad', AlertCircle] } as const

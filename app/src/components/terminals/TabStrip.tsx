@@ -1,7 +1,7 @@
 import { X } from 'lucide-react'
 
 import { useToast } from '../useToast'
-import { SessionIcon } from './Popover'
+import { SessionIcon } from './SessionIcon'
 import { SessionMenu } from './SessionMenu'
 import { close, type Tab } from './tabs'
 import { select } from './tabStore'

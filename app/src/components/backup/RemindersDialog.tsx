@@ -7,8 +7,7 @@ import { List } from '../e/List'
 import { MainButton } from '../e/MainButton'
 import { ToggleRow } from '../e/ToggleRow'
 import { DAYS, reminders as copy } from './copy'
-
-export const HORIZONS = [3, 7, 14]
+import { HORIZONS } from './horizons'
 
 export function RemindersDialog({ value, onSave, onClose }: {
   value: Reminders | null; onSave: (r: Reminders) => void; onClose: () => void

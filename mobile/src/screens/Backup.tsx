@@ -8,7 +8,7 @@ import {
   copying, DAYS, done as doneCopy, plan as planCopy, reminders as remindCopy, risk, scanning, space as spaceCopy, start,
 } from '@shared/components/backup/copy'
 import { gb, shortName } from '@shared/components/backup/format'
-import { HORIZONS } from '@shared/components/backup/RemindersDialog'
+import { HORIZONS } from '@shared/components/backup/horizons'
 import { useBackup } from '@shared/components/backup/useBackup'
 import { useGo, usePageParams } from '@shared/nav'
 import type { Reminders } from '@shared/types/backup'

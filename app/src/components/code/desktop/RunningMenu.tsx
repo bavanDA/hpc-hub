@@ -2,7 +2,7 @@ import { ChevronDown } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
 import type { TmuxSession } from '../../../types/terminals'
-import { SessionIcon } from '../../terminals/Popover'
+import { SessionIcon } from '../../terminals/SessionIcon'
 import { tabKey } from '../../terminals/tabKey'
 import { IconButton } from '../../ui/IconButton'
 import { about } from './about'
