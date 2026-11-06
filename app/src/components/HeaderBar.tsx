@@ -1,31 +1,13 @@
 import { Minus, PanelLeft, Square, X } from 'lucide-react'
-import { useRef } from 'react'
 
 import { inTauri, isMac } from './app/platform'
 import { HeaderRound } from './HeaderRound'
+import { useDrag } from './useDrag'
 
-async function win(action: 'minimize' | 'toggleMaximize' | 'close' | 'startDragging') {
+export async function win(action: 'minimize' | 'toggleMaximize' | 'close' | 'startDragging') {
   if (!inTauri) return
   const { getCurrentWindow } = await import('@tauri-apps/api/window')
   await getCurrentWindow()[action]()
-}
-
-/** Moving starts only once the mouse moves, so a double-click is never eaten by a drag (Linux). */
-function useDrag() {
-  const armed = useRef(false)
-  const bare = (e: React.MouseEvent) => e.target === e.currentTarget || (e.target as HTMLElement).dataset.drag !== undefined
-  return {
-    onMouseDown: (e: React.MouseEvent) => {
-      if (e.button !== 0 || !bare(e)) return
-      if (e.detail === 2) { armed.current = false; win('toggleMaximize') } else armed.current = true
-    },
-    onMouseMove: (e: React.MouseEvent) => {
-      if (!armed.current) return
-      armed.current = false
-      if (e.buttons === 1) win('startDragging')
-    },
-    onMouseUp: () => { armed.current = false },
-  }
 }
 
 /** chip: the cluster picker, on pages that show one cluster at a time. No onSidebar: no sidebar button (Welcome). */

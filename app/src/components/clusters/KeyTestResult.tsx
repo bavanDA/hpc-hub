@@ -2,7 +2,7 @@ import type { KeyTest } from '../../types/clusters'
 import { TONE } from './keyTone'
 
 /** What the key test said, plain text with its icon; red when it failed. */
-export function Result({ test, text }: { test: KeyTest; text: string }) {
+export function KeyTestResult({ test, text }: { test: KeyTest; text: string }) {
   const [look, Icon] = TONE[test.kind ?? (test.ok ? 'ok' : 'error')]
   return (
     <div role="status" className={`flex gap-2.5 ${look}`}>

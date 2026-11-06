@@ -1,86 +1,17 @@
 import { Check, Copy, ExternalLink, FolderOpen, Info, KeyRound } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 
 import { call } from '../../rpc'
-import type { Cluster, KeyTest, MyKey } from '../../types/clusters'
-import { copyText } from '../app/clipboard'
-import { openSystem } from '../app/openLink'
-import { inTauri } from '../app/platform'
+import type { KeyTest } from '../../types/clusters'
 import { EButton } from '../e/EButton'
 import { Spinner } from '../ui/Spinner'
 import { KeyStep } from './KeyStep'
-import { Result } from './KeyTestResult'
+import { KeyTestResult } from './KeyTestResult'
 import { copy, fill, who } from './loginCopy'
 import { S } from './loginStrings'
+import { useKeySignIn, type PanelProps } from './useKeySignIn'
 
 const KEY = 0, ADD = 1, TEST = 2
-
-/** A private key file from the system's file dialog, starting in ~/.ssh. */
-async function pickKeyFile(): Promise<string | null> {
-  if (!inTauri) return '/home/jdoe/.ssh/lab_ed25519'  // design preview
-  const { open } = await import('@tauri-apps/plugin-dialog')
-  const { homeDir, join } = await import('@tauri-apps/api/path')
-  const start = await homeDir().then((h) => join(h, '.ssh')).catch(() => undefined)
-  const got = await open({ title: S.PICK_KEY, defaultPath: start, multiple: false, directory: false })
-  return typeof got === 'string' ? got : null
-}
-
-/** signedIn: the cluster is connected now, so the key works and the test step starts done. */
-export type PanelProps = { cluster: Cluster; user: string; onUser: (u: string) => void; onTested?: (ok: boolean) => void
-  signedIn?: boolean }
-
-/** The key's state and what you can do with it. */
-function useKeySignIn({ cluster: c, user, onTested }: PanelProps) {
-  const [key, setKey] = useState<MyKey | null | undefined>(undefined)
-  const [how, setHow] = useState<'found' | 'made' | 'picked'>('found')
-  const [added, setAdded] = useState(false)
-  const [copied, setCopied] = useState(false)
-  const [busy, setBusy] = useState(false)
-  const [test, setTest] = useState<KeyTest | null>(null)
-  const [error, setError] = useState('')
-  useEffect(() => {
-    call<MyKey | null>('keys.mine', { cluster: c.id }).then((k) => {
-      setKey(k)
-      if (k && user.trim()) setAdded(true)  // a key and a username from before: set up already, start at the test
-    }).catch(() => setKey(null))
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
-
-  const run = async (what: () => Promise<void>) => {
-    setError('')
-    try { await what() } catch (e) { setError((e as Error).message) }
-  }
-  return {
-    key, how, added, copied, busy, test, error,
-    setAdded, clearTest: () => { setTest(null); onTested?.(false) },
-    make: () => run(async () => {
-      setBusy(true)
-      try { setKey(await call<MyKey>('keys.create')); setHow('made') } finally { setBusy(false) }
-    }),
-    pick: () => run(async () => {
-      const path = await pickKeyFile()
-      if (!path) return
-      setKey(await call<MyKey>('keys.use', { cluster: c.id, path }))
-      setHow('picked')
-      setTest(null)
-      onTested?.(false)
-    }),
-    copyKey: () => run(async () => {
-      await copyText(key!.public)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-    }),
-    openPage: () => openSystem(c.key_page!),
-    check: () => run(async () => {
-      setBusy(true)
-      setTest(null)
-      try {
-        const got = await call<KeyTest>('keys.test', { cluster: c.id, username: user })
-        setTest(got)
-        onTested?.(got.ok)
-      } finally { setBusy(false) }
-    }),
-  }
-}
 
 const said = (t: KeyTest, org: string) =>
   fill((S.TEST as Record<string, string>)[t.reason ?? ''] ?? t.text, { who: org, last: t.last ?? '' }).trim()
@@ -148,7 +79,7 @@ export function KeyPanel(props: PanelProps) {
           </div>
         </div>
         {s.busy && c.second_factor !== 'code' && <p className="text-sm text-dim">{S.DUO_NOW}</p>}
-        {s.test && !works && <Result test={s.test} text={said(s.test, org)} />}
+        {s.test && !works && <KeyTestResult test={s.test} text={said(s.test, org)} />}
         {s.test?.reason === 'no_vpn' && c.vpn.enabled && (
           <div><EButton onClick={() => call('clusters.connect', { cluster: c.id, vpn_only: true })
             .catch(() => {})}>{copy.connectVpn(c)}</EButton></div>
