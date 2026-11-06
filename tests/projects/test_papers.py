@@ -1,6 +1,9 @@
 import subprocess
 
 from hpc_hub.projects import papers
+from tests.helpers import on_linux_cluster
+
+pytestmark = on_linux_cluster
 
 
 class LocalSsh:

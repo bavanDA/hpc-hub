@@ -11,6 +11,9 @@ from hpc_hub.api.methods.latex import branches, files, history, sync, version_pd
 from hpc_hub.api.methods.latex import saved as saved_api
 from hpc_hub.latex import saved
 from tests.api.test_latex_api import FakeHub
+from tests.helpers import on_linux_cluster
+
+pytestmark = on_linux_cluster
 
 ENV = {**os.environ, "GIT_AUTHOR_NAME": "jdoe", "GIT_AUTHOR_EMAIL": "jdoe@example.edu", "GIT_COMMITTER_NAME": "jdoe",
        "GIT_COMMITTER_EMAIL": "jdoe@example.edu"}

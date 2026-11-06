@@ -7,7 +7,9 @@ import pytest
 from hpc_hub.api import hub as hub_module
 from hpc_hub.api.methods import files_copy as copies
 from hpc_hub.globus.api import TaskInfo
-from tests.helpers import LocalShell
+from tests.helpers import LocalShell, on_linux_cluster
+
+pytestmark = on_linux_cluster
 
 
 class FakeHub:
