@@ -5,14 +5,10 @@ from ...hub import hub
 from ...server import method
 
 
-def _ssh(cluster: str):
-    return hub().connected(cluster).ssh
-
-
 @method("latex.git_info")
 def git_info(cluster: str, folder: str) -> dict:
     """root "" when the folder is not in a repository."""
-    i = git.info(_ssh(cluster), folder)
+    i = git.info(hub().connected(cluster).ssh, folder)
     return {"root": i.root, "branch": i.branch, "remotes": [{"name": n, "url": u} for n, u in i.remotes.items()],
             "changes": [{"status": c[:2].strip(), "path": c[3:]} for c in i.changes],
             "history": [asdict(c) for c in i.history]}
@@ -22,7 +18,7 @@ def git_info(cluster: str, folder: str) -> dict:
 def git_commit(cluster: str, folder: str, message: str) -> str:
     if not message.strip():
         raise ValueError("Write a message first")
-    return git.commit_all(_ssh(cluster), folder, message.strip())
+    return git.commit_all(hub().connected(cluster).ssh, folder, message.strip())
 
 
 @method("latex.git_commit_split")
@@ -30,7 +26,7 @@ def git_commit_split(cluster: str, folder: str, commits: list[dict]) -> dict:
     """[{message, files}] in order; the last one takes everything left, so nothing stays behind."""
     if len(commits) < 2:
         raise ValueError("Give at least two commits")
-    ssh = _ssh(cluster)
+    ssh = hub().connected(cluster).ssh
     for done, c in enumerate(commits):
         message = str(c.get("message", "")).strip()
         if not message:
@@ -47,14 +43,14 @@ def git_commit_split(cluster: str, folder: str, commits: list[dict]) -> dict:
 
 @method("latex.git_pull")
 def git_pull(cluster: str, folder: str) -> str:
-    return git.pull(_ssh(cluster), folder)
+    return git.pull(hub().connected(cluster).ssh, folder)
 
 
 @method("latex.git_push")
 def git_push(cluster: str, folder: str) -> str:
-    return git.push(_ssh(cluster), folder)
+    return git.push(hub().connected(cluster).ssh, folder)
 
 
 @method("latex.git_show")
 def git_show(cluster: str, folder: str, commit: str) -> str:
-    return git.show(_ssh(cluster), folder, commit)
+    return git.show(hub().connected(cluster).ssh, folder, commit)

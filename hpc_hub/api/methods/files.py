@@ -14,9 +14,6 @@ MEDIA = {".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".gif
          ".webp": "image/webp", ".svg": "image/svg+xml", ".bmp": "image/bmp", ".pdf": "application/pdf"}
 
 
-def _ssh(cluster: str):
-    return hub().connected(cluster).ssh
-
 
 def _name(name: str) -> str:
     name = name.strip()
@@ -28,7 +25,7 @@ def _name(name: str) -> str:
 @method("files.list")
 def list_dir(cluster: str, path: str = "") -> dict:
     """"" is home; path comes back absolute."""
-    ssh = _ssh(cluster)
+    ssh = hub().connected(cluster).ssh
     target = remote_fs.expand(ssh, path.strip() or "~")
     if len(target) > 1:
         target = target.rstrip("/")
@@ -37,13 +34,13 @@ def list_dir(cluster: str, path: str = "") -> dict:
 
 @method("files.places")
 def places(cluster: str) -> list[dict]:
-    return [asdict(p) for p in remote_fs.storage(remote_fs.places(_ssh(cluster)))]
+    return [asdict(p) for p in remote_fs.storage(remote_fs.places(hub().connected(cluster).ssh))]
 
 
 @method("files.real_path")
 def real_path(cluster: str, path: str) -> str:
     """With links followed (Wulver's /scratch is /mmfs1/scratch), as tmux reports a terminal's folder."""
-    ssh = _ssh(cluster)
+    ssh = hub().connected(cluster).ssh
     got = ssh.run(f"readlink -m -- {remote_fs.q(remote_fs.expand(ssh, path))}", timeout=30).stdout.strip()
     return got.rstrip("/") or path
 
@@ -51,7 +48,7 @@ def real_path(cluster: str, path: str) -> str:
 @method("files.read")
 def read(cluster: str, path: str, limit: int = 0) -> dict:
     """Images and PDFs whole as base64, anything else as UTF-8 text cut at limit."""
-    ssh = _ssh(cluster)
+    ssh = hub().connected(cluster).ssh
     mime = MEDIA.get(remote_fs.ext(path), "")
     if mime:
         data = remote_fs.read_bytes(ssh, path, min(limit or MEDIA_LIMIT, remote_fs.MAX_READ))
@@ -70,27 +67,27 @@ def read(cluster: str, path: str, limit: int = 0) -> dict:
 @method("files.mkdir")
 def mkdir(cluster: str, path: str, name: str) -> str:
     target = posixpath.join(path, _name(name))
-    remote_fs.mkdir(_ssh(cluster), target)
+    remote_fs.mkdir(hub().connected(cluster).ssh, target)
     return target
 
 
 @method("files.rename")
 def rename(cluster: str, path: str, name: str) -> str:
     target = posixpath.join(posixpath.dirname(path.rstrip("/")), _name(name))
-    remote_fs.rename(_ssh(cluster), path, target)
+    remote_fs.rename(hub().connected(cluster).ssh, path, target)
     return target
 
 
 @method("files.delete")
 def delete(cluster: str, path: str) -> None:
-    remote_fs.remove(_ssh(cluster), path)
+    remote_fs.remove(hub().connected(cluster).ssh, path)
 
 
 @method("files.zip")
 def make_zip(cluster: str, path: str) -> None:
-    remote_fs.make_zip(_ssh(cluster), path)
+    remote_fs.make_zip(hub().connected(cluster).ssh, path)
 
 
 @method("files.extract")
 def extract(cluster: str, path: str) -> None:
-    remote_fs.extract(_ssh(cluster), path)
+    remote_fs.extract(hub().connected(cluster).ssh, path)

@@ -4,29 +4,25 @@ from ...server import method
 from .agent import start, uncommitted
 
 
-def _ssh(cluster: str):
-    return hub().connected(cluster).ssh
-
-
 @method("latex.notes")
 def notes_list(cluster: str, folder: str) -> dict:
-    return notes.load(_ssh(cluster), folder)
+    return notes.load(hub().connected(cluster).ssh, folder)
 
 
 @method("latex.note_add")
 def note_add(cluster: str, folder: str, text: str, place: dict | None = None) -> dict:
-    return notes.add(_ssh(cluster), folder, text, place)
+    return notes.add(hub().connected(cluster).ssh, folder, text, place)
 
 
 @method("latex.note_set")
 def note_set(cluster: str, folder: str, id: str, text: str | None = None,  # noqa: A002
              done: bool | None = None) -> dict:
-    return notes.update(_ssh(cluster), folder, id, text, done)
+    return notes.update(hub().connected(cluster).ssh, folder, id, text, done)
 
 
 @method("latex.note_delete")
 def note_delete(cluster: str, folder: str, id: str) -> None:  # noqa: A002
-    notes.remove(_ssh(cluster), folder, id)
+    notes.remove(hub().connected(cluster).ssh, folder, id)
 
 
 @method("latex.agent_check")

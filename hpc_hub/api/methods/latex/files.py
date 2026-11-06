@@ -17,9 +17,6 @@ TREE = ("find . -maxdepth 6 \\( -name '.?*' -o -name _minted\\* \\) -prune -o -m
         + " -printf 'f %P\\n' \\) | sort -k2 | head -3000")
 
 
-def _ssh(cluster: str):
-    return hub().connected(cluster).ssh
-
 
 def inside(folder: str, path: str) -> str:
     """path, if it is in the project folder (never the folder itself)."""
@@ -45,7 +42,7 @@ def stat(ssh, path: str) -> tuple[int, str] | None:
 
 @method("latex.tree")
 def tree(cluster: str, folder: str) -> list[dict]:
-    res = _ssh(cluster).run(f"cd {shlex.quote(folder)} && {TREE}", timeout=60)
+    res = hub().connected(cluster).ssh.run(f"cd {shlex.quote(folder)} && {TREE}", timeout=60)
     if res.returncode != 0:
         raise remote_fs.FsError(res.stderr.strip() or f"Could not list {folder}")
     return [{"kind": line[0], "path": line[2:]} for line in res.stdout.splitlines()
@@ -54,7 +51,7 @@ def tree(cluster: str, folder: str) -> list[dict]:
 
 @method("latex.read")
 def read(cluster: str, path: str) -> dict:
-    data = remote_fs.read_bytes(_ssh(cluster), path, EDIT_LIMIT)
+    data = remote_fs.read_bytes(hub().connected(cluster).ssh, path, EDIT_LIMIT)
     if b"\0" in data[:8192]:
         raise ValueError("This is not a text file")
     return {"text": data.decode("utf-8", "replace")}
@@ -62,7 +59,7 @@ def read(cluster: str, path: str) -> dict:
 
 @method("latex.write")
 def write(cluster: str, path: str, text: str) -> None:
-    ssh = _ssh(cluster)
+    ssh = hub().connected(cluster).ssh
     remote_fs.write_bytes(ssh, path, text.encode())
     saved.auto(ssh, path, "Saved")
 
@@ -71,7 +68,7 @@ def write(cluster: str, path: str, text: str) -> None:
 def new_file(cluster: str, folder: str, into: str, name: str) -> str:
     target = inside(folder, posixpath.join(into or folder, _name(name)))
     q = shlex.quote(target)
-    if _ssh(cluster).run(f"test ! -e {q} && : > {q}", timeout=30).returncode != 0:
+    if hub().connected(cluster).ssh.run(f"test ! -e {q} && : > {q}", timeout=30).returncode != 0:
         raise FileExistsError(f"{name} is there already")
     return target
 
@@ -79,7 +76,7 @@ def new_file(cluster: str, folder: str, into: str, name: str) -> str:
 @method("latex.mkdir")
 def mkdir(cluster: str, folder: str, into: str, name: str) -> str:
     target = inside(folder, posixpath.join(into or folder, _name(name)))
-    remote_fs.mkdir(_ssh(cluster), target)
+    remote_fs.mkdir(hub().connected(cluster).ssh, target)
     return target
 
 
@@ -94,7 +91,7 @@ def move(cluster: str, folder: str, path: str, into: str) -> str:
         raise ValueError("A folder can't go inside itself")
     dst = posixpath.join(into, posixpath.basename(src))
     if dst != src:
-        remote_fs.rename(_ssh(cluster), src, dst)
+        remote_fs.rename(hub().connected(cluster).ssh, src, dst)
     return dst
 
 
@@ -102,20 +99,20 @@ def move(cluster: str, folder: str, path: str, into: str) -> str:
 def rename(cluster: str, folder: str, path: str, name: str) -> str:
     src = inside(folder, path)
     dst = inside(folder, posixpath.join(posixpath.dirname(src), _name(name)))
-    remote_fs.rename(_ssh(cluster), src, dst)
+    remote_fs.rename(hub().connected(cluster).ssh, src, dst)
     return dst
 
 
 @method("latex.delete")
 def delete(cluster: str, folder: str, path: str) -> None:
-    remote_fs.remove(_ssh(cluster), inside(folder, path))
+    remote_fs.remove(hub().connected(cluster).ssh, inside(folder, path))
 
 
 @method("latex.pdf")
 def pdf(cluster: str, main: str) -> dict | None:
     """None before the first build."""
     path = latexmk.pdf_path(main)
-    st = stat(_ssh(cluster), path)
+    st = stat(hub().connected(cluster).ssh, path)
     return {"path": path, "size": st[0], "mtime": int(st[1])} if st else None
 
 
@@ -125,7 +122,7 @@ def chunk(cluster: str, path: str, offset: int = 0, length: int = CHUNK) -> dict
     offset, length = max(0, int(offset)), max(1, min(int(length), CHUNK))
     q = shlex.quote(path)
     # head stops once it has enough, and tail may then die of SIGPIPE (141): that's fine, not a read error
-    res = _ssh(cluster).run(f"set -o pipefail; stat -L -c %s -- {q} && "
+    res = hub().connected(cluster).ssh.run(f"set -o pipefail; stat -L -c %s -- {q} && "
                             f"{{ tail -c +{offset + 1} -- {q} || [ $? -eq 141 ]; }} "
                             f"| head -c {length} | base64 -w0", timeout=300, fast=True)
     if res.returncode != 0:
