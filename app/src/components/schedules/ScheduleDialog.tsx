@@ -11,7 +11,7 @@ import { DurationRow, EDialog, Field, inRange, List, MainButton, Segments } from
 import { FolderField } from '../tools/fields'
 import { Spinner } from '../ui'
 import { computeText } from './format'
-import { ownFrom, type OwnCompute } from './rows'
+import { ownFrom, type OwnCompute } from './compute'
 
 const TIME = /^([01]\d|2[0-3]):[0-5]\d$/
 const slug = (name: string) => name.trim().replace(/[^A-Za-z0-9_-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40) ||
