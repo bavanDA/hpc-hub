@@ -46,7 +46,7 @@ export function ServerPart({ d, info, up, vpnLogin }: {
       </div>
       <div className="pt-4"><List>
         <ChoiceRow label="Protocol" value={protocol} onChange={(p) => upVpn({ protocol: p })}
-          options={(info?.protocols ?? [protocol]).map((p) => ({ value: p, label: p }))} />
+          options={[...new Set([...(info?.protocols ?? []), protocol])].map((p) => ({ value: p, label: p }))} />
         <ToggleRow label="Split tunnel" sub="Only the domains and networks below go through this VPN."
           checked={v.split_tunnel ?? true} onChange={(split_tunnel) => upVpn({ split_tunnel })} />
       </List></div>
