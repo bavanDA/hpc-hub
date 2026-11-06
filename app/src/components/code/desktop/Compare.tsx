@@ -1,11 +1,10 @@
-// Two versions of a file side by side as a diff you can pick from: the cluster's against yours (a change on the
-// cluster, a save conflict) or a kept draft against the file. Accept and Reject per change, then use the result.
 import { useRef, useState } from 'react'
 
 import { Button, Dialog } from '../../ui'
 import { Diff, type DiffHandle } from '../Diff'
 import { languageFor, useLanguages } from './lang'
 
+/** Two versions of a file as a diff to pick from: the cluster's against yours, or a kept draft. */
 export function CompareDialog({ title, path, base, mine, note, useLabel, onUse, onClose }: {
   title: string
   path: string

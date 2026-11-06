@@ -1,5 +1,3 @@
-// The Ask panel on the right of the Code page: ask an agent about the selection or the file (AskForm), follow the
-// answer and pick its changes (Result), and find earlier asks on this cluster.
 import { ArrowLeft, Sparkles, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
@@ -20,6 +18,7 @@ const LOG = /\.(out|err|log)$/i
 const SHOWN: Record<string, string> = { starting: 'Starting', waiting_for_node: 'Waiting', running: 'Running',
   done: 'Answer ready', failed: "Didn't finish", cancelled: 'Stopped' }
 
+/** Ask an agent about the open file, follow the answer, and find earlier asks on this cluster. */
 export function AskPanel({ context, kind, logText, askId, onAsk, onOpenFile, onClose }: {
   context: AskContext | null   // the open file, with the selected lines
   kind: AskKind                // the shortcut you came from

@@ -1,5 +1,3 @@
-// The Code page's file tree: folders open in place (files.list, loaded the first time you open them), files open in
-// the editor. The root is the open project or folder; head (its name and the switcher) sits on top.
 import { ChevronDown, ChevronRight, FileCode2, FileText, Folder, FolderOpen, RefreshCw } from 'lucide-react'
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
 
@@ -17,6 +15,7 @@ const byName = (a: Entry, b: Entry) =>
 const opens = (e: Entry) => isText(e) || /\.(out|err|log|slurm|sbatch|cfg|ini|c|h|cc|cpp|hpp|cu|f|f90|f95|jl|r|m|R)$/i
   .test(e.name) || !e.name.includes('.')
 
+/** The open folder's files: folders open in place, loaded the first time. */
 export function Tree({ cluster, root, head, current, onOpen, onOther }: {
   cluster: string
   root: string                              // the open folder

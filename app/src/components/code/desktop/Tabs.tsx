@@ -1,4 +1,3 @@
-// The open files as tabs: a dot for unsaved edits, middle click or the x to close.
 import { X } from 'lucide-react'
 
 import { isDirty, type OpenFile } from '../store'

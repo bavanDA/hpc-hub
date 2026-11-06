@@ -1,11 +1,10 @@
-// What the Code page shows with no folder open, like VS Code's start page: this cluster's projects and the folders
-// opened before, one click to open; any other folder from the folder chooser.
 import { Folder, FolderOpen, House } from 'lucide-react'
 
 import type { Project } from '../../../types/projects'
 import { MainButton, Row, Section } from '../../e/ui'
-import { tilde } from './workspace'
+import { tilde } from './paths'
 
+/** The Code page with no folder open: this cluster's projects and the folders opened before. */
 export function Start({ home, projects, recent, onOpen, onBrowse }: {
   home: string; projects: Project[]; recent: string[]; onOpen: (path: string) => void; onBrowse: () => void
 }) {

@@ -1,4 +1,3 @@
-// Go to file (Ctrl+P): type part of a name, pick from the files under the tree's folder.
 import { FileCode2 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
@@ -6,6 +5,7 @@ import { call } from '../../../rpc'
 import type { FoundFile } from '../../../types/code'
 import { Dialog, FIELD, Spinner } from '../../ui'
 
+/** Ctrl+P: type part of a name, pick from the files under the folder. */
 export function GoToFile({ cluster, root, onOpen, onClose }:
   { cluster: string; root: string; onOpen: (path: string) => void; onClose: () => void }) {
   const [query, setQuery] = useState('')

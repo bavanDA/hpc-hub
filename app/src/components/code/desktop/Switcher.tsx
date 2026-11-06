@@ -1,11 +1,12 @@
-// The open folder's name over the tree; click it to switch to a project or a folder opened before, open another
-// folder, or close this one. Style E: plain rows, a check on the open one.
-import { Check, ChevronDown, Folder, FolderOpen, House, X } from 'lucide-react'
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { ChevronDown, Folder, FolderOpen, House, X } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
 
 import type { Project } from '../../../types/projects'
-import { tilde } from './workspace'
+import { MenuGroup as Group } from './MenuGroup'
+import { MenuItem as Item } from './MenuItem'
+import { tilde } from './paths'
 
+/** The open folder's name over the tree; a click switches to a project or a recent folder, or closes it. */
 export function Switcher({ name, open, home, projects, recent, onOpen, onBrowse, onClose }: {
   name: string                     // what the button says
   open: string                     // the open folder, '' for none
@@ -60,29 +61,5 @@ export function Switcher({ name, open, home, projects, recent, onOpen, onBrowse,
         </div>
       )}
     </div>
-  )
-}
-
-function Group({ title, line = false, children }: { title?: string; line?: boolean; children: ReactNode }) {
-  return (
-    <div className={line ? 'mt-1 border-t border-line pt-1' : ''}>
-      {title && <p className="px-3 pt-1.5 pb-1 text-xs font-semibold tracking-wide text-dim uppercase">{title}</p>}
-      {children}
-    </div>
-  )
-}
-
-function Item({ icon: Icon, label, sub, on = false, onClick }:
-  { icon: typeof Folder; label: string; sub?: string; on?: boolean; onClick: () => void }) {
-  return (
-    <button type="button" role="menuitem" onClick={onClick} title={sub}
-      className="flex min-h-9 w-full items-center gap-3 px-3 py-1 text-left hover:bg-hover active:bg-pressed">
-      <Icon size={16} className="shrink-0 text-dim" />
-      <span className="min-w-0 flex-1">
-        <span className={`block truncate ${on ? 'font-semibold' : ''}`}>{label}</span>
-        {sub && <span className="block truncate font-mono text-xs text-dim">{sub}</span>}
-      </span>
-      {on && <Check size={16} aria-label="Open" className="shrink-0" />}
-    </button>
   )
 }

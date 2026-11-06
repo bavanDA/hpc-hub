@@ -1,8 +1,3 @@
-// Code: a light editor for files on the clusters, made to work with the agents (docs/design/code.md). One project or
-// folder open per cluster, like VS Code: its tree on the left, open files as tabs, the editor, the terminals running
-// in it in a panel under the editor (Ctrl+`), and an Ask panel on the right. Files change on the cluster while you
-// look (an agent, a job): clean files reload by themselves, files with your edits ask first. Saving checks the file
-// is still the one you opened. Unsaved edits are kept in the browser, so a crash doesn't lose them.
 import { Clock, FileCode2, FolderSearch, Play, RefreshCw, Save, Search, Sparkles, Send, SquareTerminal }
   from 'lucide-react'
 import { lazy, Suspense, useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
@@ -14,6 +9,7 @@ import { shortName } from '../components/clusters/loginCopy'
 import { NotConnected } from '../components/clusters/NotConnected'
 import { runningCount, unseenCount, useAsks } from '../components/code/ask'
 import { AskPanel } from '../components/code/desktop/AskPanel'
+import { BannerRow, type Banner } from '../components/code/desktop/Banner'
 import { CompareDialog } from '../components/code/desktop/Compare'
 import { FindBar } from '../components/code/desktop/FindBar'
 import { GoToFile } from '../components/code/desktop/GoToFile'
@@ -21,11 +17,15 @@ import { StatusLine, type Look } from '../components/code/desktop/StatusLine'
 import { Tabs } from '../components/code/desktop/Tabs'
 import { Start } from '../components/code/desktop/Start'
 import { Switcher } from '../components/code/desktop/Switcher'
-import { closeFolderTerminals, isToggle, TOGGLE_KEY, useFolderSessions } from '../components/code/desktop/panel'
+import { useFolderSessions } from '../components/code/desktop/folderSessions'
+import { closeFolderTerminals, isToggle, TOGGLE_KEY } from '../components/code/desktop/panel'
 import { TerminalPanel } from '../components/code/desktop/TerminalPanel'
+import { time } from '../components/code/desktop/time'
 import { Tree } from '../components/code/desktop/Tree'
-import { folderName, inside, openFolder, rememberFolder, usePlaces } from '../components/code/desktop/workspace'
-import { discardDraft, findDraft, keepDrafts, type Draft } from '../components/code/drafts'
+import { folderName, inside } from '../components/code/desktop/paths'
+import { usePlaces } from '../components/code/desktop/usePlaces'
+import { openFolder, rememberFolder } from '../components/code/desktop/workspace'
+import { discardDraft, findDraft, keepDrafts } from '../components/code/drafts'
 import type { EditorHandle } from '../components/code/Editor'
 import { detectIndent, type Lang } from '../components/code/languages'
 import { closeFile, getFile, isDirty, openFile, reloadFile, replaceText, saveFile, selectFile, setCursor, setText,
@@ -42,19 +42,13 @@ const Editor = lazy(() => import('../components/code/Editor'))
 
 const LOG = /\.(out|err|log)$/i
 const FOLLOW_EVERY = 3000
-let panelShown = false                     // the terminal panel, kept while you visit other pages
+let panelShown = false  // the terminal panel, kept while you visit other pages
 const HEIGHT = 'code.terminal.height'
 const readOnlyKeys = new Set<string>()      // opened to look, not to edit (a job's output)
 
-type Banner =
-  | { kind: 'changed' }
-  | { kind: 'agent'; agent: string; before: string }
-  | { kind: 'deleted' }
-  | { kind: 'draft'; draft: Draft; stale: boolean }
-
-const time = (ms: number) => new Date(ms).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
 const mod = isMac ? '⌘' : 'Ctrl+'
 
+/** A light editor for files on the clusters: tree, tabs, editor, terminals and the Ask panel. */
 export function Code() {
   const toast = useToast()
   const go = useGo()
@@ -160,7 +154,6 @@ export function Code() {
 
   const dropBanner = (key: string) => setBanners((b) => { const { [key]: _, ...rest } = b; return rest })
 
-  // -- saving -------------------------------------------------------------------------------------------------
   async function save(force = false): Promise<boolean> {
     const f = current ? getFile(current) : null
     if (!f || (!isDirty(f) && !force)) return true
@@ -278,7 +271,6 @@ export function Code() {
     return () => window.removeEventListener('keydown', key)
   })
 
-  // -- what the editor reports ------------------------------------------------------------------------------
   const onSelection = () => {
     const h = handle.current
     const v = h?.view()
@@ -430,45 +422,6 @@ export function Code() {
       )}
       {goTo && cluster && <GoToFile cluster={cluster} root={root || '~'} onOpen={openPath} onClose={() => setGoTo(false)} />}
       {dialog}
-    </div>
-  )
-}
-
-function BannerRow({ file, banner, clusterName, onDismiss, onReload, onCompare, onUndo, onSaveAgain, onRestore,
-  onCompareDraft, onDiscardDraft }: {
-  file: OpenFile; banner: Banner; clusterName: string; onDismiss: () => void; onReload: () => void
-  onCompare: () => void; onUndo: (before: string) => void; onSaveAgain: () => void
-  onRestore: (d: Draft) => void; onCompareDraft: (d: Draft) => void; onDiscardDraft: (d: Draft) => void
-}) {
-  let text: string
-  let actions: ReactNode
-  if (banner.kind === 'changed') {
-    text = `${file.name} changed on ${clusterName} while you were editing it.`
-    actions = <><Button size="sm" onClick={onCompare}>Compare</Button>
-      <Button size="sm" onClick={onReload}>Use {clusterName}'s</Button>
-      <Button size="sm" onClick={onSaveAgain}>Save mine</Button></>
-  } else if (banner.kind === 'agent') {
-    text = `${banner.agent} changed ${file.name}.`
-    actions = <><Button size="sm" kind="ghost" onClick={() => onUndo(banner.before)}>Undo</Button>
-      <Button size="sm" onClick={onDismiss}>Keep</Button></>
-  } else if (banner.kind === 'deleted') {
-    text = `${file.name} is gone from ${clusterName}.`
-    actions = <><Button size="sm" kind="ghost" onClick={onDismiss}>Hide</Button>
-      <Button size="sm" onClick={onSaveAgain}>Save it again</Button></>
-  } else {
-    const d = banner.draft
-    text = banner.stale ? `You have edits from ${time(d.at)}, made on an older version of ${file.name}.`
-      : `You have unsaved edits from ${time(d.at)}.`
-    actions = banner.stale
-      ? <><Button size="sm" kind="ghost" onClick={() => onDiscardDraft(d)}>Discard</Button>
-          <Button size="sm" onClick={() => onCompareDraft(d)}>Compare</Button></>
-      : <><Button size="sm" kind="ghost" onClick={() => onDiscardDraft(d)}>Discard</Button>
-          <Button size="sm" kind="primary" onClick={() => onRestore(d)}>Restore</Button></>
-  }
-  return (
-    <div role="status" className="flex shrink-0 items-center gap-2 border-b border-line bg-soft px-4 py-1.5">
-      <p className="min-w-0 flex-1 text-sm">{text}</p>
-      {actions}
     </div>
   )
 }

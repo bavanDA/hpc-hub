@@ -1,4 +1,3 @@
-// Find and replace in the open file, above the editor (Ctrl+F). The matches light up in the editor as you type.
 import type { EditorView } from '@codemirror/view'
 import { CaseSensitive, ChevronDown, ChevronUp, Regex, Replace, WholeWord, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
@@ -6,6 +5,7 @@ import { useEffect, useRef, useState } from 'react'
 import { IconButton } from '../../ui'
 import { closeFind, countFind, countText, findNextMatch, findPreviousMatch, replaceEvery, replaceOne, setFind } from '../search'
 
+/** Find and replace in the open file, above the editor. */
 export function FindBar({ view, editable, start, onClose }: {
   view: () => EditorView | null
   editable: boolean

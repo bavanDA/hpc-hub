@@ -1,5 +1,3 @@
-// The editor's language for a path, as a stable array, for diffs (Diff wants extensions that don't change). The first
-// call starts loading it and answers []; once loaded, the same array comes back every time.
 import type { Extension } from '@codemirror/state'
 import { useEffect, useState } from 'react'
 
@@ -10,6 +8,7 @@ const waiting = new Map<string, Promise<void>>()
 const subs = new Set<() => void>()
 const NONE: Extension[] = []
 
+/** The editor's language for a path as a stable array, for diffs: [] until it loads, then the same array. */
 export function languageFor(path: string): Extension[] {
   const id = detect(path).id
   const got = cache.get(id)
