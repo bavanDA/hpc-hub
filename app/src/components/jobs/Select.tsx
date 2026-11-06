@@ -1,4 +1,3 @@
-// A dropdown in style E: an outlined button with a grey chevron, the system's own list when open.
 import { ChevronDown } from 'lucide-react'
 
 export function Select<T extends string>({ value, options, onChange, label, disabled }: {

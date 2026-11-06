@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { useAllClusters, useOfferAllClusters } from '../components/clusters/allClusters'
 import { NotConnected } from '../components/clusters/NotConnected'
 import { Segments } from '../components/e/ui'
-import { useClusters } from '../components/jobs/clusters'
+import { useActiveCluster } from '../components/clusters/active'
 import { Select } from '../components/jobs/Select'
 import { EmptyState, IconButton, Spinner } from '../components/ui'
 import { LoadTab } from '../components/usage/LoadTab'
@@ -21,7 +21,7 @@ const PERIODS = [['7', 'Last 7 days'], ['30', 'Last 30 days'], ['90', 'Last 90 d
 const TABS = [['overview', 'Overview'], ['su', 'Hours'], ['storage', 'Storage'], ['load', 'Queues']] as const
 
 export function Usage() {
-  const { clusters, sessions, cluster, session, connected, error: clustersError, setCluster } = useClusters()
+  const { clusters, sessions, cluster, session, connected, error: clustersError, setCluster } = useActiveCluster()
   useOfferAllClusters()
   const { all, setAll } = useAllClusters()
   const params = usePageParams()

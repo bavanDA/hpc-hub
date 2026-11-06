@@ -15,7 +15,7 @@ import { Actions, ScanningStep, StartStep } from '../components/backup/Steps'
 import { useBackup, type Step } from '../components/backup/useBackup'
 import { NotConnected } from '../components/clusters/NotConnected'
 import { EButton, EmptyState, EPage } from '../components/e/extra'
-import { useClusters } from '../components/jobs/clusters'
+import { useActiveCluster } from '../components/clusters/active'
 import { Spinner } from '../components/ui'
 import { useGo, usePageParams } from '../nav'
 
@@ -39,7 +39,7 @@ function Steps({ step }: { step: Step }) {
 }
 
 export function Backup() {
-  const { clusters, cluster, session, connected, error } = useClusters()
+  const { clusters, cluster, session, connected, error } = useActiveCluster()
   if (error) return <EmptyState icon={CircleAlert} title="Could not load clusters" text={error} />
   if (!clusters || !cluster) return <div className="grid h-full place-items-center"><Spinner size={24} /></div>
   if (!connected) return <NotConnected cluster={cluster} session={session} what="scratch" />

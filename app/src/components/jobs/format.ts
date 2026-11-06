@@ -1,4 +1,3 @@
-// How jobs read: state names, memory, sort keys, and the SU line of your accounts.
 import type { Job } from '../../types/jobs'
 import type { Account } from '../../types/usage'
 
@@ -17,7 +16,7 @@ export const memText = (mem: string) => mem.replace(/^(\d+(?:\.\d+)?)([KMGT])$/i
 const idNumber = (j: Job) => parseInt(j.job_id, 10) || 0
 
 export type SortKey = 'id' | 'name' | 'user' | 'queue' | 'state' | 'time' | 'res' | 'su' | 'where'
-export const SORT: Record<SortKey, (j: Job) => string | number> = {
+const SORT: Record<SortKey, (j: Job) => string | number> = {
   id: idNumber, name: (j) => j.name.toLowerCase(), user: (j) => j.user, queue, state: (j) => j.state,
   time: (j) => j.seconds, res: (j) => parseInt(j.cpus, 10) || 0, su: (j) => j.su_spent, where: (j) => j.reason || j.where,
 }
@@ -48,4 +47,27 @@ export function usageText(accounts: Account[]): string {
 export function reasonText(reason: string): string {
   const r = reason.replace(/^(waiting|pending)\s*:\s*/i, '')
   return r.charAt(0).toUpperCase() + r.slice(1)
+}
+
+/** "3 h 41 min" for Slurm's "3:41:10", "1 d 2 h" for "1-02:00:00", "12 min" for "12:30". */
+export function ranFor(t: string): string {
+  const [d, hms] = t.includes('-') ? t.split('-') : ['0', t]
+  const p = hms.split(':').map((x) => Number(x) || 0)
+  const [h, m] = p.length === 3 ? [p[0], p[1]] : [0, p[0]]
+  const days = Number(d) || 0
+  return days ? `${days} d${h ? ` ${h} h` : ''}` : h ? `${h} h${m ? ` ${m} min` : ''}` : `${m || 1} min`
+}
+
+/** How much of its time limit a job used, 0 to 1; a timed out job used all of it. */
+export const timeShare = (j: Job) => (j.state === 'TIMEOUT' ? 1 : j.limit_seconds ? j.seconds / j.limit_seconds : 0)
+
+/** "a, b and 2 more." past six names. */
+export const nameList = (names: string[], max = 6) =>
+  names.length > max ? `${names.slice(0, max).join(', ')} and ${names.length - max} more.` : `${names.join(', ')}.`
+
+/** Jobs in this state (or any) whose id, name, person, queue or reason holds the query. */
+export function filterJobs(jobs: Job[], state: string, query: string): Job[] {
+  const q = query.trim().toLowerCase()
+  return jobs.filter((j) => (!state || j.state === state) &&
+    (!q || [j.job_id, j.name, j.user, j.partition, j.reason].some((v) => v.toLowerCase().includes(q))))
 }
