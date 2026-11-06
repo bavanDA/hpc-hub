@@ -1,6 +1,5 @@
-"""Clusters reached through a local port instead of directly: the phone's VPN (connect/vpn_android.py) forwards
-127.0.0.1:<port> to the cluster's SSH port. SSH dials that port and still checks the cluster's own host key, under
-its own name."""
+"""Clusters reached through a local port (the phone's VPN). SSH dials the port but checks the cluster's own host
+key."""
 
 import threading
 

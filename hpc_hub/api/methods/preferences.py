@@ -1,5 +1,4 @@
-"""Preferences: light or dark, the default browser for links, terminal settings and the experimental pages (Papers,
-Skills and Scheduled agents, each its own switch), kept in app.toml."""
+"""Preferences kept in app.toml: appearance, the browser for links, terminal settings, experimental pages."""
 
 import threading
 

@@ -1,8 +1,5 @@
-"""Log in through the cluster's web portal (like the GTK app's key_setup.py, e.g. SDSC Expanse with ACCESS): you
-sign in in a window HPC Hub controls (our Chrome window where there is one, else the app's sign-in window, which
-the UI opens for the "web-login" question), then this computer's SSH key is added through the portal and your
-username is saved, so the cluster lets you in with the key. Your own browser is never touched. No password is
-stored; the cluster still asks for its code. The UI polls keysetup.status while its dialog is open."""
+"""Sign in on the cluster's web portal (SDSC Expanse) in a window HPC Hub controls, then add this computer's SSH
+key there and save the username. No password is stored. The UI polls keysetup.status."""
 
 import threading
 from dataclasses import dataclass, field

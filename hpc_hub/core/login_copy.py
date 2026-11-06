@@ -1,9 +1,5 @@
-"""Every sentence the sign-in screens say, in one place. The desktop app's copy is made from this file:
-`python -m hpc_hub.core.login_copy` writes app/src/components/clusters/loginStrings.ts (a test checks it's current).
-
-House rules (tests/core/test_login_copy.py checks them): the full cluster name only in the title, after that the
-org ("{who}") or nothing; no "if" (each state says only what is true now); "Sign in", never "Log in"; no dashes.
-"""
+"""Every sentence the sign-in screens say. `python -m hpc_hub.core.login_copy` writes the desktop's
+app/src/components/clusters/loginStrings.ts from it; tests/core/test_login_copy.py checks the wording rules."""
 
 import json
 import sys

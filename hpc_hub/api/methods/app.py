@@ -1,4 +1,4 @@
-"""What the UI can call. Each method takes keyword params and returns plain JSON data."""
+"""The app's version, its clusters and whether another HPC Hub holds the lock."""
 
 from dataclasses import asdict
 
@@ -20,7 +20,7 @@ def clusters() -> list[dict]:
 
 @method("app.status")
 def status() -> dict:
-    """blocked: another HPC Hub (the GTK app) is open, so this one leaves the clusters alone."""
+    """blocked: another HPC Hub is open, so this one leaves the clusters alone."""
     from ...core import single
     from ..hub import hub
     return {"blocked": hub().blocked, "message": single.MESSAGE if hub().blocked else ""}

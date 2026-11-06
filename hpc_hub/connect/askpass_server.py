@@ -29,7 +29,7 @@ def peer_uid(conn: socket.socket) -> int | None:
 
 class AskpassServer:
     def __init__(self, name: str = "askpass.sock"):
-        self.path = runtime_dir() / name  # each app its own: the GTK app and the Tauri backend can run together
+        self.path = runtime_dir() / name
         self._handlers: dict[str, Handler] = {}
         self._lock = threading.Lock()
         self._sock: socket.socket | None = None

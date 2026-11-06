@@ -1,7 +1,4 @@
-"""A shell kept open on the login node, so quick commands skip your .bashrc (about 0.7 s each on Wulver).
-
-Each command runs in a subshell with its output in temp files; we read back the exit code and both outputs.
-"""
+"""A shell kept open on the login node, so quick commands skip your .bashrc (about 0.7 s each on Wulver)."""
 
 import os
 import selectors

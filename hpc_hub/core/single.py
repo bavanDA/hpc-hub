@@ -1,5 +1,4 @@
-"""One HPC Hub at a time. The GTK app and the new app share SSH connections, VPN profiles and logs; two of them
-logging in at once fight over Duo and the clusters answer "Permission denied"."""
+"""One HPC Hub at a time: two logging in at once fight over Duo and the clusters answer "Permission denied"."""
 
 from .paths import runtime_dir
 

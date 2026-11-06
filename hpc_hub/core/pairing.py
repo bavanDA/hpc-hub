@@ -1,7 +1,5 @@
-"""Set up the phone app from the desktop: the desktop shows your logins as a QR code, the phone scans it and saves
-them in its own vault. Clusters that take SSH keys (key_login) get a key for the phone instead of a password
-(ssh_keys.py). A VPN with a login of its own (Yale's) comes along. Nothing goes over the network. The code is
-short lived and shown only when you ask."""
+"""The QR code that moves your logins from the desktop to the phone, offline and short lived. Clusters that take
+SSH keys get a key for the phone instead of a password (ssh_keys.py)."""
 
 import base64
 import json

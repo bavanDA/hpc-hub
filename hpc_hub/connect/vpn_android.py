@@ -1,11 +1,5 @@
-"""VPN on Android: openconnect and ocproxy (mobile/vpn/build.sh), run as programs from the app's native libraries.
-
-No VpnService and no system-wide VPN. openconnect hands the tunnel to ocproxy (--script-tun), a TCP/IP stack in
-userspace that forwards a local port to the cluster's SSH port, and SSH dials that port (core/tunnels.py). So only
-HPC Hub's own SSH goes through it, and Wulver and Yale can be up at once, each with its own port. Signing in is the
-laptop's: openconnect --authenticate, or the web sign-in (vpn_sso) for SAML gateways; the cookie goes to the
-tunnel on stdin. Each tunnel is noted in the runtime folder, so a restarted backend finds it again.
-"""
+"""VPN on Android without a VpnService: openconnect hands the tunnel to ocproxy, which forwards a local port to the
+cluster's SSH port (core/tunnels.py), so only HPC Hub's SSH uses it and several clusters can be up at once."""
 
 import atexit
 import json

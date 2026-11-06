@@ -1,5 +1,4 @@
-"""Both sides of core/pairing.py. The desktop makes the QR code (pairing.make, like the GTK app's
-connect/ui/phone_pair.py); the phone saves the logins (and the SSH key) from the code it scanned (pairing.apply)."""
+"""Both sides of core/pairing.py: the desktop makes the QR code, the phone saves the logins from it."""
 
 import time
 

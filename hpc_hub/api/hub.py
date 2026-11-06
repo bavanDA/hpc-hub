@@ -1,5 +1,5 @@
-"""The backend's live state: one ClusterSession per cluster (picking up connections that are already up), whose
-changes go out as events, and questions a login asks you, answered from the UI."""
+"""The backend's live state: one ClusterSession per cluster, its changes sent as events, and the questions a
+login asks, answered from the UI."""
 
 import json
 import secrets
@@ -50,7 +50,7 @@ class Hub:
         threading.Thread(target=self._adopt_all, daemon=True).start()
 
     def _adopt_all(self) -> None:
-        """Connections already up (the GTK app, or a restart) are used as they are."""
+        """Connections still up from before a restart are used as they are."""
         for s in self.sessions.values():
             try:  # a keyring hiccup on one cluster must not stop the others
                 login = credentials.load(s.cfg.id, credentials.SSH)
@@ -90,7 +90,6 @@ class Hub:
             raise RuntimeError(f"Connect to {s.cfg.name} first")
         return s
 
-    # -- questions ---------------------------------------------------------------------
     def question(self, kind: str, data: dict, future: Future | None = None) -> str | None:
         """Ask the UI and wait (worker thread). None: cancelled or no answer in time. Pass a future to answer it
         from elsewhere too."""
@@ -111,7 +110,6 @@ class Hub:
         if future and not future.done():
             future.set_result(answer)
 
-    # -- Listener ------------------------------------------------------------------------
     def state_changed(self, s: ClusterSession) -> None:
         self.emit("session", session_json(s))
         was, self._up[s.cfg.id] = self._up.get(s.cfg.id, False), s.connected

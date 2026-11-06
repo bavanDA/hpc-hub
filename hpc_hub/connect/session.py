@@ -1,4 +1,4 @@
-"""Connect flow for one cluster: VPN → SSH (+ Duo) → compute node. UI-agnostic."""
+"""Connect flow for one cluster: VPN, then SSH (and Duo), then a compute node."""
 
 import subprocess
 import sys
@@ -88,10 +88,9 @@ class ClusterSession(NodesMixin):
         return Vpn(self.cfg, self._log)
 
     def _confirm(self, title: str, text: str) -> bool:
-        confirm = getattr(self.listener, "confirm", None)  # the GTK app runs on Linux only: never asked
+        confirm = getattr(self.listener, "confirm", None)
         return bool(confirm and confirm(self, title, text))
 
-    # -- public API (call from UI thread) -----------------------------------
     def connect(self, ssh_login: Login, vpn_login: Login | None, vpn_only: bool = False) -> None:
         if self.state.busy:
             return

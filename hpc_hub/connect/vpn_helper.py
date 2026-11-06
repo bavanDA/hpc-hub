@@ -1,9 +1,5 @@
-"""VPN on Windows and macOS: sign in as you, then ask the helper service to run the tunnel.
-
-See docs/design/vpn-helper.md. The helper (app/vpn-helper, a Windows service or a launchd daemon) is installed
-once, with the admin prompt the system shows; after that it only starts and stops openconnect for the gateways
-it was installed for.
-"""
+"""VPN on Windows and macOS: sign in as you, then ask the helper service (docs/design/vpn-helper.md) to run the
+tunnel."""
 
 import ipaddress
 import json

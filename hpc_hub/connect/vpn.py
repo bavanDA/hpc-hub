@@ -1,7 +1,4 @@
-"""VPN: openconnect logs in as you (password + Duo), NetworkManager runs the tunnel.
-
-No root helper needed: the NM profile is private to your user.
-"""
+"""VPN on Linux: openconnect logs in as you, NetworkManager runs the tunnel from a profile private to you."""
 
 import getpass
 import ipaddress

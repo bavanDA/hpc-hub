@@ -1,5 +1,4 @@
-"""One module per feature (clusters.py, jobs.py, ...). Every module here is loaded at start, so adding a feature
-never means editing a shared file."""
+"""One module per feature; every module here is loaded at start."""
 
 import importlib
 import pkgutil

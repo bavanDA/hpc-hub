@@ -1,6 +1,5 @@
-"""Talk to an Open OnDemand web portal (e.g. the Expanse portal) with a sign-in made in a window HPC Hub controls
-(the app's sign-in window, or our Chrome window): find your username and home folder, and add this computer's
-SSH key, so the app can log in with it. Your own browser's cookies are never read."""
+"""An Open OnDemand portal (Expanse), signed in to in a window HPC Hub controls: find your username and add this
+computer's SSH key."""
 
 import html
 import json

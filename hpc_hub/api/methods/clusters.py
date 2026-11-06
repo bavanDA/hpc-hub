@@ -40,7 +40,7 @@ def _unsaved(cfg, kind: str, login: credentials.Login) -> credentials.Login:
 
 
 def _logins(cfg) -> tuple[credentials.Login, credentials.Login | None]:
-    """The saved SSH and VPN logins, like the GTK app's connect: the VPN uses the SSH login or its own."""
+    """The saved SSH and VPN logins: the VPN uses the SSH login or its own."""
     ssh = credentials.load(cfg.id, credentials.SSH)
     if not ssh or not ssh.username:
         raise ValueError(f"Add your {cfg.name} username in the cluster's settings first")

@@ -1,7 +1,5 @@
-"""Everything a cluster's settings dialog changes, like the GTK app's settings.py: second step, server and VPN,
-compute node defaults and queues, the VS Code job, and the agents' options. Only these fields, each checked
-(text is one line; extra Slurm arguments must be options, so nothing can become a command); a change with any
-error saves nothing. Logins go through clusters.set_login."""
+"""A cluster's settings dialog. Every field is checked so nothing can become a command, and a change with any
+error saves nothing."""
 
 import copy
 import re

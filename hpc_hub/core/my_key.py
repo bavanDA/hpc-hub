@@ -1,9 +1,6 @@
-"""This computer's SSH key, for clusters that log in with one (Yale): find it, make one when there is none (no
-ssh-keygen needed, so it works on Windows too), and check that a cluster takes it.
-
-The private half stays in ~/.ssh and never leaves this computer; you paste the public half on the cluster's key
-page. A key is never overwritten. No passphrase: the file is yours only (0600), the cluster still asks for Duo, and
-a passphrase would need an agent to type it on every login."""
+"""This computer's SSH key: find it, make one without ssh-keygen (Windows too), and check that a cluster takes it.
+A key is never overwritten. No passphrase: the file is 0600, the cluster still asks for Duo, and a passphrase
+would need an agent on every login."""
 
 import getpass
 import os
@@ -127,8 +124,6 @@ def create() -> MyKey:
     pub.write_text(line + "\n")
     return MyKey(str(key), "ed25519", line, key.stat().st_mtime)
 
-
-# -- does the cluster take it? ---------------------------------------------------------------------------------
 
 def test_argv(key: MyKey, user: str, host: str, port: int = 22) -> list[str]:
     """ssh with only this key and no prompts, verbose so the answer says how far the login got."""

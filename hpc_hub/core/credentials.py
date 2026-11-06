@@ -1,9 +1,5 @@
-"""Logins stored in the system keyring. Nothing touches disk in plain text.
-
-With GTK: GNOME Keyring through libsecret. Without it (the Tauri app's frozen backend): the same Secret Service
-entries through secretstorage on Linux, Keychain or Credential Manager through keyring elsewhere.
-Android has no keyring the backend can reach: a file encrypted with a key the phone's key store keeps
-(vault_file.py)."""
+"""Logins in the system keyring: libsecret when PyGObject is there, else secretstorage on Linux, Keychain or
+Credential Manager elsewhere, and the encrypted vault file on Android."""
 
 import json
 import sys
@@ -64,7 +60,6 @@ def clear(cluster_id: str, kind: str) -> None:
     _clear(_attrs(cluster_id, kind))
 
 
-# -- backends ----------------------------------------------------------------------------
 def _vault():
     """macOS Keychain or Windows Credential Manager, picked by name: left to itself, keyring may fall back to a
     weak store (a plain file) on a system without a vault, and other people's passwords must never land there."""

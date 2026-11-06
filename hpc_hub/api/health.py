@@ -1,7 +1,5 @@
-"""Keeps an eye on live connections, like the GTK app's _health_check and _watch_sleep: every 30 s each connected
-cluster is checked (healthy(), then check_node()), a lost one is marked, and right after the computer wakes up
-all are checked again (VPN and SSH rarely survive sleep). Waking up is heard from logind over D-Bus on Linux;
-elsewhere it shows as the wall clock jumping ahead of the monotonic one (which stops while asleep)."""
+"""Checks connected clusters every 30 s and right after the computer wakes up (VPN and SSH rarely survive sleep).
+Waking up comes from logind over D-Bus, else from the wall clock jumping ahead of the monotonic one."""
 
 import threading
 import time

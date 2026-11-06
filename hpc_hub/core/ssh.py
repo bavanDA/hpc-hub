@@ -1,6 +1,4 @@
-"""One SSH ControlMaster per cluster. Login (and Duo) happens once; later commands reuse it.
-
-Windows' OpenSSH has no ControlMaster, so there new_master() gives the asyncssh one (ssh_async.py) instead."""
+"""One SSH ControlMaster per cluster, so Duo is asked once. Windows' OpenSSH has none: there it is ssh_async.py."""
 
 import os
 import shlex

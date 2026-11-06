@@ -1,4 +1,4 @@
-"""Links: the Chrome profiles you can pick, and opening a link in one. The UI opens the system browser itself."""
+"""The Chrome profiles links may open in, and opening a link in one."""
 
 from dataclasses import asdict
 

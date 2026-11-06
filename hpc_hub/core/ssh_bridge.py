@@ -1,13 +1,9 @@
-"""A stand-in for `ssh host command` and `scp` when the login is an asyncssh connection inside the backend
-(Windows, see ssh_async.py): code that runs ssh.argv(...) as a local process gets this instead, and it runs the
-command on that connection through a loopback socket, passing stdin, stdout, stderr and the exit code along.
+"""Stands in for `ssh host command` and `scp` when the login is an asyncssh connection (Windows): it runs the
+command on that connection through a loopback socket. Stdlib only, since it runs as its own process.
 
-Stdlib only: the backend runs it as `python -I ssh_bridge.py PORT exec COMMAND` (or `PORT copy SRC DST`), and
-the frozen backend as `hpc-hub-backend --ssh-bridge PORT ...`. The socket only answers with the backend's secret,
-which children get through the environment (never on the command line).
-
-The wire: one JSON line {"token", "op", "args"}, then frames of one kind byte, a 4-byte big-endian length and
-the data. Here to there: i (stdin), c (stdin ended). There to here: o (stdout), e (stderr), x (exit code).
+Wire: a JSON line {"token", "op", "args"}, then frames of a kind byte, a 4-byte big-endian length and the data:
+i (stdin), c (stdin ended) one way; o (stdout), e (stderr), x (exit code) the other. The token comes through the
+environment, never the command line.
 """
 
 import json
