@@ -64,7 +64,6 @@ export function useAssist(a: Args) {
     try { await chooseAgent(p) } catch (e) { toast(lastLine((e as Error).message), { kind: 'error' }) }
   }
 
-  // -- notes ------------------------------------------------------------------------------------------------------
   const loadNotes = useCallback(() => {
     call<NoteList>('latex.notes', where).then(setNotes).catch(() => setNotes((n) => n ?? { notes: [], user: '', root: '' }))
   }, [where])
@@ -92,7 +91,6 @@ export function useAssist(a: Args) {
     }
   }
 
-  // -- jobs -------------------------------------------------------------------------------------------------------
   const apply = (j: Job, e: AgentEvent): Job => ({ ...j, label: e.label || j.label, node: e.node || j.node,
     seconds: e.seconds, about: e.about ?? j.about,
     stage: e.done ? (e.cancelled ? 'cancelled' : e.ok ? 'done' : 'failed') : e.stage ?? j.stage,

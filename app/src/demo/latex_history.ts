@@ -1,7 +1,4 @@
-// Demo history for the demo paper (demo/latex.ts): nine commits by jdoe, asmith and mygroup (made up), a tag, a
-// second branch, saved versions, a push that stops on one spot, and PDFs of old versions typeset in the browser.
-// The diffs are made here with a small line and word diff, close enough to the backend's for design work.
-// This file sorts after latex.ts, so its answers for latex.git_commit and latex.chunk take over (and lean on it).
+// Loaded after latex.ts, so its answers for latex.git_commit and latex.chunk take over (and lean on it).
 import type { Blame, Changes, FileDiff, GitJob, GitState, HCommit, Lanes, LineStory, Move, Refs, Row,
   SavedVersion, Spot, SwitchCheck, SyncState } from '../types/history'
 import { demoEmit } from './events'
@@ -17,7 +14,6 @@ type Files = Record<string, string>
 type Snap = { c: HCommit; files: Files }
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
-// -- the paper's past: each step undoes one commit, newest first ---------------------------------------------------
 function rep(f: Files, path: string, a: string, b: string) {
   if (f[path]?.includes(a)) f[path] = f[path].replace(a, b)
   else console.warn(`demo history: "${a.slice(0, 40)}" is not in ${path}`)
@@ -182,7 +178,6 @@ async function filesOf(v: string): Promise<Files> {
   return {}
 }
 
-// -- a small diff ---------------------------------------------------------------------------------------------------
 function lcs<T>(a: T[], b: T[], eq: (x: T, y: T) => boolean = (x, y) => x === y): [number, number][] {
   const n = a.length, m = b.length, t: number[][] = Array.from({ length: n + 1 }, () => new Array(m + 1).fill(0))
   for (let i = n - 1; i >= 0; i--) for (let j = m - 1; j >= 0; j--) {
@@ -307,7 +302,6 @@ function diffFiles(a: Files, b: Files, context = 3): Changes {
     removed: files.reduce((n, f) => n + f.removed, 0) }
 }
 
-// -- the answers --------------------------------------------------------------------------------------------------
 async function state(): Promise<GitState> {
   await setup()
   const d = diffFiles(await filesOf(headHash()), await filesOf(''), 0)

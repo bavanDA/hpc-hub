@@ -23,7 +23,6 @@ function width(text: string, font: Font, size: number): number {
   return (w * k * size) / 1000
 }
 
-// -- LaTeX to plain text (the few commands the demo paper uses) ------------------------------------------------
 const KNOWN = new Set(['documentclass', 'usepackage', 'title', 'author', 'date', 'begin', 'end', 'maketitle',
   'section', 'subsection', 'label', 'ref', 'cite', 'emph', 'textbf', 'textit', 'item', 'includegraphics', 'caption',
   'centering', 'input', 'bibliography', 'bibliographystyle', 'today', 'times', 'leq', 'geq', 'approx', 'log', 'sum',
@@ -59,7 +58,6 @@ function plain(src: string, ctx: Ctx, line: number): string {
   return s.replace(/[$^_{}]/g, '').replace(/\\/g, '').replace(/\s+/g, ' ')
 }
 
-// -- blocks: what the source says, with where it came from --------------------------------------------------
 type Words = { text: string; line: number }[]
 type Block =
   | { kind: 'title'; title: string; author: string; date: string; file: string; line: number }
@@ -164,7 +162,6 @@ function bibliography(text: string): Record<string, string> {
   return out
 }
 
-// -- layout ------------------------------------------------------------------------------------------------
 type Line = { text: string; font: Font; size: number; x: number; y: number; justify?: number }
 type Page = { lines: Line[]; ops: string[] }
 
@@ -340,7 +337,6 @@ function log(main: string, pages: number, issues: Typeset['issues'], ok: boolean
   return lines.join('\n') + '\n'
 }
 
-// -- the PDF file ------------------------------------------------------------------------------------------
 function escape(s: string): string {
   return s.replace(/[\\()]/g, (c) => '\\' + c).replace(/[^\x20-\x7e\x95\xa0-\xff]/g, '?')
     .replace(/[\x95\xa0-\xff]/g, (c) => '\\' + c.charCodeAt(0).toString(8))

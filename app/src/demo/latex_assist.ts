@@ -1,6 +1,4 @@
-// Demo answers for the agent's help in the demo paper's History (hpc_hub/api/methods/latex_assist.py): the agent
-// choice, Write message, Ask and Check my list as background jobs with `latex-agent` events and canned answers, and a
-// few notes by jdoe, asmith and mygroup (made up). Nothing runs anywhere.
+// Demo answers for the agent in the demo paper's History: background jobs with canned answers. Nothing runs anywhere.
 import type { About, AgentChoice, AgentKind, AgentLevel, AgentPick, Changes, GitState, HCommit, Note, NotePlace,
   Verdict } from '../types/history'
 import { demoEmit } from './events'
@@ -45,7 +43,6 @@ function switched(id: string): AgentPick {
   return { agent: a.id, model: keep(a.models, pick.model, start.model), effort: keep(a.efforts, pick.effort, start.effort) }
 }
 
-// -- notes ---------------------------------------------------------------------------------------------------------
 const DAY = 86400
 let n = 0
 const note = (text: string, place: NotePlace | null, author: string, ago: number, done = false): Note =>
@@ -60,7 +57,6 @@ const notes: Note[] = [
   note('Send the reply letter draft to mygroup', null, 'jdoe', 3000),
 ]
 
-// -- jobs ----------------------------------------------------------------------------------------------------------
 const running = new Map<string, { cancelled: boolean }>()
 
 function job(kind: AgentKind, p: AgentPick, about: Record<string, unknown>, ms: number, answer: () => Promise<unknown>) {
@@ -85,7 +81,6 @@ function job(kind: AgentKind, p: AgentPick, about: Record<string, unknown>, ms: 
 }
 const pickOf = (c?: AgentLevel | null): AgentPick => ({ ...pick, ...c })
 
-// -- the canned answers ----------------------------------------------------------------------------------------------
 async function written() {
   const st = await demoCall<GitState>('latex.git_state', {})
   const paths = st.changes.map((c) => c.path)

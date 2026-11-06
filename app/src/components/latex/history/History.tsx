@@ -100,7 +100,6 @@ export function History({ where, clusterName, main, pdf, active, ask, guard, onB
   }, [where, onPause])
   useEffect(() => { if (active) void refresh() }, [active, refresh])
 
-  // -- commit -----------------------------------------------------------------------------------------------------
   const commit = async (message: string, push: boolean) => {
     if (!(await onSave())) return false
     try {
@@ -131,7 +130,6 @@ export function History({ where, clusterName, main, pdf, active, ask, guard, onB
     }
   }
 
-  // -- switch -----------------------------------------------------------------------------------------------------
   const askSwitch = async (target: string) => {
     if (!(await onSave())) return
     try {
@@ -180,7 +178,6 @@ export function History({ where, clusterName, main, pdf, active, ask, guard, onB
     } catch (e) { toast(lastLine((e as Error).message), { kind: 'error' }) }
   }
 
-  // -- push and Get the latest -------------------------------------------------------------------------------------
   const startSync = async (push: boolean) => {
     if (!(await onSave())) return
     before.current = commits
@@ -253,7 +250,6 @@ export function History({ where, clusterName, main, pdf, active, ask, guard, onB
     }
   }
 
-  // -- timeline and compare -----------------------------------------------------------------------------------------
   const openTimeline = () => {
     setTimeline(true)
     setLanes(null)
@@ -292,7 +288,6 @@ export function History({ where, clusterName, main, pdf, active, ask, guard, onB
     } catch (e) { toast(lastLine((e as Error).message), { kind: 'error' }) }
   }
 
-  // -- asks from outside ------------------------------------------------------------------------------------------
   const showNote = (id: string) => { setNotesOpenState(true); setNotesFocus(id) }
   const handlers = useRef({ startSync, openTimeline, setSel, showNote })
   handlers.current = { startSync, openTimeline, setSel, showNote }

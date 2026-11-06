@@ -1,5 +1,4 @@
-// Demo data for the LaTeX page: a made-up paper (main.tex, a section, refs.bib, figures) that really builds into
-// a PDF in the browser, with SyncTeX, a build log, issues and a git history.
+// Demo LaTeX paper: a made-up paper that really builds into a PDF in the browser, with SyncTeX and a git history.
 import type {
   BuildDone, GitInfo, LatexProject, Opened, Paper, Picker, Settings, SourceSpot, Spot, TreeEntry,
 } from '../types/latex'
@@ -140,7 +139,6 @@ const papers: Paper[] = [
     mtime: now - 30 * DAY, others: 0, short: '~/proposals/nsf-2026', title: 'proposals / nsf-2026' },
 ]
 
-// -- the build: typeset in the browser -------------------------------------------------------------------------
 type Built = Awaited<ReturnType<typeof build>>
 let built: Promise<Built> | null = null
 let mtime = now - 3600
