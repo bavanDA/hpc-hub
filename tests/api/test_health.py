@@ -73,6 +73,7 @@ def test_runs_every_interval_and_after_waking():
     regular = a.calls.count("healthy")
     assert 2 <= regular <= 4
     h.every = 100
+    time.sleep(0.15)  # a check that was already due runs before the counting starts
     a.calls.clear()
     h.resumed()
     time.sleep(0.2)
