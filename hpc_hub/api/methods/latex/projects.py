@@ -5,6 +5,7 @@ import threading
 import time
 
 from ....files import remote_fs
+from ....projects import papers as tex_papers
 from ....projects import store
 from ....projects.store import Project
 from ...hub import hub
@@ -33,7 +34,7 @@ def _project_json(p: Project) -> dict:
             "cluster_name": _cluster_name(p.cluster), "path": p.path, "main_tex": p.main_tex, "opened": p.opened}
 
 
-def _paper_json(cluster: str, p: store.Paper) -> dict:
+def _paper_json(cluster: str, p: tex_papers.Paper) -> dict:
     parent, name = posixpath.split(p.folder)
     return {"cluster": cluster, "cluster_name": _cluster_name(cluster), "folder": p.folder, "main": p.main,
             "mtime": p.mtime, "others": p.others, "short": short(p.folder),
@@ -50,7 +51,7 @@ def picker() -> dict:
     items = sorted(store.load(store.PROJECTS_FILE), key=lambda p: (-p.opened, p.name.lower()))
     papers, found_at = [], {}
     for cid in sessions:
-        found, at = store.load_papers(cid)
+        found, at = tex_papers.load_papers(cid)
         if at:
             found_at[cid] = at
             papers += [_paper_json(cid, p) for p in found]
@@ -62,8 +63,8 @@ def picker() -> dict:
 
 @method("latex.scan")
 def scan(cluster: str) -> list[dict]:
-    found = store.find_papers(hub().connected(cluster).ssh)
-    store.save_papers(cluster, found)
+    found = tex_papers.find_papers(hub().connected(cluster).ssh)
+    tex_papers.save_papers(cluster, found)
     return [_paper_json(cluster, p) for p in found]
 
 
@@ -93,7 +94,7 @@ def _main_of(ssh, cluster: str, folder: str, main: str) -> str | list[str]:
                  None)
     if main or known:
         return main or known.main_tex
-    found = store.find_main_tex(ssh, folder)
+    found = tex_papers.find_main_tex(ssh, folder)
     if not found:
         raise FileNotFoundError(f"No .tex file with \\documentclass in {folder}")
     return found[0] if len(found) == 1 else found
