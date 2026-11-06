@@ -4,7 +4,7 @@ from types import SimpleNamespace
 import pytest
 
 from hpc_hub.api import hub as hub_module
-from hpc_hub.api.methods import files, files_local
+from hpc_hub.api.methods import files_copy, files_local
 from tests.helpers import LocalShell
 
 
@@ -29,7 +29,7 @@ class FakeHub:
 def h(monkeypatch):
     fake = FakeHub()
     monkeypatch.setattr(hub_module, "_hub", fake)
-    monkeypatch.setattr(files, "_transfers", {})
+    monkeypatch.setattr(files_copy, "_transfers", {})
     return fake
 
 
@@ -54,7 +54,7 @@ def test_upload_files_and_folders(h, tmp_path):
     assert (t["error"], t["done"], t["total"], t["how"]) == ("", 10, 10, "laptop")
     assert t["title"] == f"2 items: this computer → Wulver:{remote}"
     assert (remote / "a.txt").read_text() == "hello" and (remote / "data" / "b.csv").read_text() == "1,2,3"
-    assert any(x["id"] == tid for x in files.transfers())
+    assert any(x["id"] == tid for x in files_copy.transfers())
 
 
 def test_upload_needs_something_that_is_there(h, tmp_path):
@@ -99,7 +99,7 @@ def test_cancel_stops_the_copy_and_drops_the_half_file(h, tmp_path, monkeypatch)
     while not (tmp_path / "here" / "big.bin").exists() and time.monotonic() < end:
         time.sleep(0.02)
     start = time.monotonic()
-    files.cancel_transfer(got["id"])
+    files_copy.cancel_transfer(got["id"])
     t = _wait(h, got["id"])
     assert t["error"] == "Cancelled" and t["status"] == "Cancelled"
     assert time.monotonic() - start < 3

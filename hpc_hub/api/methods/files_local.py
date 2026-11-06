@@ -1,24 +1,22 @@
-"""Files between this computer and a cluster: upload and download over the open connection (the scp of
-remote_fs.upload and remote_fs.download, run so the X can stop it). Progress comes as `transfer` events, in the
-same list as the copies of files.py."""
+"""Upload and download between this computer and a cluster, with scp over the open connection. They show in
+the same transfer list as the copies of files_copy.py."""
 
 import os
 import posixpath
-import secrets
 import shutil
 import subprocess
-import threading
 import time
 from pathlib import Path
 
 from ...files import remote_fs, transfer
+from ...files.status import size_text
 from ..hub import hub
 from ..server import method
-from . import files
+from .files_copy import Transfer, emit, start
 
-POLL = 0.2  # seconds between looks at a running scp
-LOCAL_EVERY = 0.5  # how often a download's size on disk is read
-REMOTE_EVERY = 2.0  # how often an upload's size on the cluster is asked for
+POLL = 0.2
+LOCAL_EVERY = 0.5  # seconds between reads of a download's size on disk
+REMOTE_EVERY = 2.0  # seconds between asks for an upload's size on the cluster
 HERE = "this computer"
 
 
@@ -55,8 +53,8 @@ def _remove(path: Path) -> None:
         path.unlink(missing_ok=True)
 
 
-def _scp(t: files.Transfer, argv: list[str], measure, every: float, base: int = 0) -> None:
-    """Run one scp; meanwhile done = base + measure(). Cancelling stops it."""
+def _scp(t: Transfer, argv: list[str], measure, every: float, base: int = 0) -> None:
+    """Run one scp; meanwhile done = base + measure(), every few seconds."""
     p = t.progress
     proc = subprocess.Popen(argv, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE,
                             text=True)
@@ -77,24 +75,15 @@ def _scp(t: files.Transfer, argv: list[str], measure, every: float, base: int = 
                 p.done = base + measure()
             except Exception:  # noqa: BLE001 - progress is a nicety; the copy goes on
                 pass
-            files._emit(t)
+            emit(t)
     err = proc.stderr.read() if proc.stderr else ""
     if proc.returncode:
         raise remote_fs.FsError(err.strip() or "Copy failed")
 
 
-def _start(title: str, work) -> files.Transfer:
-    t = files.Transfer(secrets.token_hex(6), title, "laptop")
-    with files._lock:
-        files._transfers[t.id] = t
-    files._emit(t)
-    threading.Thread(target=files._run, args=(t, work), daemon=True, name=f"local-{t.id}").start()
-    return t
-
-
 @method("files.upload")
 def upload(cluster: str, local_paths: list[str], remote_dir: str) -> dict:
-    """Copy files or folders from this computer into remote_dir. Returns the transfer's id."""
+    """Copy files or folders from this computer into remote_dir; answers the transfer's id."""
     s = hub().connected(cluster)
     paths = [Path(p) for p in local_paths]
     if not paths:
@@ -106,7 +95,7 @@ def upload(cluster: str, local_paths: list[str], remote_dir: str) -> dict:
     what = paths[0].name if len(paths) == 1 else f"{len(paths)} items"
     ssh = s.ssh
 
-    def work(t: files.Transfer) -> None:
+    def work(t: Transfer) -> None:
         p = t.progress
         p.total = sum(sizes)
         t.status = ""
@@ -117,15 +106,14 @@ def upload(cluster: str, local_paths: list[str], remote_dir: str) -> dict:
             _scp(t, ssh.copy_argv(str(path), ":" + remote_dir.rstrip("/") + "/"),
                  lambda target=target: transfer.total_size(ssh, target), REMOTE_EVERY, sum(sizes[:i]))
             p.done = sum(sizes[:i + 1])
-        t.status = f"Done · {files.size_text(p.total)}"
+        t.status = f"Done · {size_text(p.total)}"
 
-    t = _start(f"{what}: {HERE} → {s.cfg.short_name}:{remote_dir}", work)
-    return {"id": t.id}
+    return {"id": start(f"{what}: {HERE} → {s.cfg.short_name}:{remote_dir}", "laptop", work).id}
 
 
 @method("files.download")
 def download(cluster: str, remote_path: str, local_dir: str) -> dict:
-    """Copy a file or folder into local_dir (made if needed), under a free name. Returns the transfer's id and
+    """Copy a file or folder into local_dir (made if needed) under a free name; answers the transfer's id and
     where it lands."""
     s = hub().connected(cluster)
     folder = Path(local_dir).expanduser()
@@ -136,11 +124,10 @@ def download(cluster: str, remote_path: str, local_dir: str) -> dict:
     target = free_name(folder, name)
     ssh = s.ssh
 
-    def work(t: files.Transfer) -> None:
-        t.status = "Starting…"
+    def work(t: Transfer) -> None:
         t.progress.total = transfer.total_size(ssh, remote_path)
         t.status = ""
-        files._emit(t)
+        emit(t)
         try:
             _scp(t, ssh.copy_argv(":" + remote_path, str(target)), lambda: local_size(target), LOCAL_EVERY)
         except Exception:
@@ -148,7 +135,7 @@ def download(cluster: str, remote_path: str, local_dir: str) -> dict:
                 _remove(target)
             raise
         t.progress.done = local_size(target)
-        t.status = f"Done · {files.size_text(t.progress.done)} · {target}"
+        t.status = f"Done · {size_text(t.progress.done)} · {target}"
 
-    t = _start(f"{name}: {s.cfg.short_name} → {HERE}", work)
+    t = start(f"{name}: {s.cfg.short_name} → {HERE}", "laptop", work)
     return {"id": t.id, "path": str(target)}
