@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 
 import { Spinner } from '../ui/Spinner'
-import type { Entry } from './dictionary'
+import type { Entry } from './lookUp'
 
 /** Meanings of an entry, a part of speech at a time, with examples; loading and not found too. */
 export function Meanings({ entry, pad = 'px-5' }: { entry: Entry | null; pad?: string }): ReactNode {

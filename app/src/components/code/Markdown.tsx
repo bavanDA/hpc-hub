@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 
 import { openLink } from '../app/openLink'
-import { parseMarkdown } from './markdown'
+import { parseMarkdown } from './parseMarkdown'
 
 const INLINE = /(`[^`]+`)|(\*\*[^*]+\*\*)|(\*[^*\s][^*]*\*|_[^_\s][^_]*_)|(\[[^\]]+\]\([^)\s]+\))/g
 

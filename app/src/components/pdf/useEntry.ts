@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 
-import { lookUp, type Entry } from './dictionary'
+import { lookUp, type Entry } from './lookUp'
 
 /** The word's entry: null while it loads. */
 export function useEntry(text: string) {
