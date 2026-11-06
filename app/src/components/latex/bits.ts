@@ -1,6 +1,10 @@
 export const basename = (p: string) => p.replace(/\/+$/, '').split('/').pop() || p
 export const dirname = (p: string) => p.slice(0, Math.max(0, p.lastIndexOf('/'))) || '/'
 export const rel = (folder: string, p: string) => p.startsWith(folder + '/') ? p.slice(folder.length + 1) : p
+export const inFolder = (folder: string, r: string) => r ? `${folder}/${r}` : folder
+export const under = (path: string, top: string) => path === top || path.startsWith(top + '/')
+/** Where path ends up when top moves to to, or null when it is not under top. */
+export const moved = (path: string, top: string, to: string) => under(path, top) ? to + path.slice(top.length) : null
 export const short = (p: string) => p.replace(/^(?:\/mmfs1)?\/home\/[^/]+/, '~')
 
 /** 5 minutes ago, 3 days ago, Mar 3 2024. */

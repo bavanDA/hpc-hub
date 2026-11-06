@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { ago, basename, dirname, ext, rel, short } from './bits'
+import { ago, basename, dirname, ext, inFolder, moved, rel, short, under } from './bits'
 
 describe('paths', () => {
   it('basename ignores trailing slashes', () => {
@@ -49,5 +49,24 @@ describe('ago', () => {
   })
   it('gives a date after a month', () => {
     expect(ago(new Date('2024-03-03T12:00:00Z').getTime() / 1000)).toBe('Mar 3, 2024')
+  })
+})
+
+describe('moves', () => {
+  it('inFolder joins a relative path, empty meaning the folder', () => {
+    expect(inFolder('/home/jdoe/paper', 'main.tex')).toBe('/home/jdoe/paper/main.tex')
+    expect(inFolder('/home/jdoe/paper', '')).toBe('/home/jdoe/paper')
+  })
+
+  it('under matches the path itself and what is inside, not a sibling prefix', () => {
+    expect(under('sec/intro.tex', 'sec')).toBe(true)
+    expect(under('sec', 'sec')).toBe(true)
+    expect(under('section/intro.tex', 'sec')).toBe(false)
+  })
+
+  it('moved follows a renamed file or folder', () => {
+    expect(moved('sec/intro.tex', 'sec', 'parts')).toBe('parts/intro.tex')
+    expect(moved('main.tex', 'main.tex', 'paper.tex')).toBe('paper.tex')
+    expect(moved('fig/a.png', 'sec', 'parts')).toBeNull()
   })
 })
