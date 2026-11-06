@@ -1,18 +1,18 @@
-import { ArrowLeft, ArrowRight, CircleAlert, Settings } from 'lucide-react'
+import { CircleAlert } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
-import { shortName } from '../components/clusters/loginCopy'
+import { Board } from '../components/globus/Board'
 import { CollectionPicker } from '../components/globus/CollectionPicker'
 import { LoginDialog } from '../components/globus/LoginDialog'
-import { Pane } from '../components/globus/Pane'
-import { join } from '../components/files/format'
-import { SetUp, SettingsDialog, SignIn } from '../components/globus/Setup'
-import { Transfers } from '../components/globus/Transfers'
-import { usePane, type Pane as PaneState } from '../components/globus/usePane'
+import { SettingsDialog } from '../components/globus/SettingsDialog'
+import { SetUp } from '../components/globus/SetUp'
+import { SignIn } from '../components/globus/SignIn'
+import { usePane, type Pane } from '../components/globus/usePane'
+import { useTasks } from '../components/globus/useTasks'
 import { useToast } from '../components/toast'
-import { Button, EmptyState, IconButton, Spinner } from '../components/ui'
+import { EmptyState, Spinner } from '../components/ui'
 import { call } from '../rpc'
-import type { CheckResult, GlobusCluster, GlobusStatus, Task } from '../types/globus'
+import type { CheckResult, GlobusCluster, GlobusStatus } from '../types/globus'
 
 const POLL_MS = 10_000
 
@@ -23,15 +23,13 @@ export function Globus() {
   const [login, setLogin] = useState<'globus.login_url' | 'globus.consent_url' | null>(null)
   const [picking, setPicking] = useState<GlobusCluster | null>(null)
   const [settings, setSettings] = useState(false)
-  const [tasks, setTasks] = useState<Task[] | null>(null)
-  const [tasksError, setTasksError] = useState('')
-  const seenActive = useRef(new Set<string>())
 
   const refresh = useCallback(() => call<GlobusStatus>('globus.status').then(setStatus).catch(() => {}), [])
   const left = usePane(refresh)
   const right = usePane(refresh)
-  const panes = useRef<PaneState[]>([])
+  const panes = useRef<Pane[]>([])
   panes.current = [left, right]
+  const { tasks, error: tasksError, load: loadTasks } = useTasks(panes)
   const signedIn = !!status?.signed_in
 
   useEffect(() => {
@@ -47,17 +45,6 @@ export function Globus() {
       if (r.changes.length) panes.current.forEach((p) => p.reload())
     }).catch((e: Error) => toast(`Globus: ${e.message}`))
   }, [toast])
-
-  const loadTasks = useCallback(() => {
-    call<Task[]>('globus.tasks').then((all) => {
-      setTasks(all)
-      setTasksError('')
-      if (all.some((t) => t.status === 'SUCCEEDED' && seenActive.current.has(t.task_id))) {
-        panes.current.forEach((p) => p.reload())  // a copy landed: show it
-      }
-      seenActive.current = new Set(all.filter((t) => t.active).map((t) => t.task_id))
-    }).catch((e: Error) => setTasksError(e.message))
-  }, [])
 
   // Signed in: open the two panes (clusters with a collection first), check, and watch transfers
   const firstClusters = useRef(false)
@@ -77,30 +64,6 @@ export function Globus() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [signedIn])
 
-  const transfer = (src: PaneState, dst: PaneState) => {
-    const it = src.selected
-    if (!it) return
-    if (!dst.path) { toast('Open a folder on the other side first'); return }
-    call('globus.transfer', { src_cluster: src.cluster, src_path: join(src.path, it.name),
-      dst_cluster: dst.cluster, dst_path: join(dst.path, it.name), recursive: it.is_dir })
-      .then(() => { toast(`Sent ${it.name} to Globus`); loadTasks() })
-      .catch((e: Error) => { toast(`Transfer failed: ${e.message}`); check() })
-  }
-
-  const cancel = (id: string) => call('globus.cancel', { task_id: id })
-    .then(() => toast('Transfer cancelled')).catch((e: Error) => toast(`Cancel failed: ${e.message}`))
-    .finally(loadTasks)
-
-  const startPersonal = async (c: GlobusCluster) => {
-    toast(`Starting Globus Connect on ${c.name}…`)
-    try {
-      await call('globus.start_personal', { cluster: c.id })
-      toast(`Globus Connect is running on ${c.name}`)
-    } catch (e) {
-      toast(`Could not start Globus Connect: ${(e as Error).message}`)
-    }
-  }
-
   const signedInNow = (s: GlobusStatus) => {
     const consent = login === 'globus.consent_url'
     setLogin(null)
@@ -117,29 +80,9 @@ export function Globus() {
   else if (!status) body = <div className="grid h-full place-items-center"><Spinner size={24} /></div>
   else if (!status.client_id) body = <SetUp onSaved={setStatus} />
   else if (!status.signed_in) body = <SignIn onSignIn={() => setLogin('globus.login_url')} />
-  else body = (
-    <div className="flex h-full min-h-[560px] flex-col gap-3 px-4 py-4 [color-scheme:light_dark]">
-      <div className="flex items-center gap-2 pl-1">
-        <p className="flex-1 text-sm text-dim">You can close the app or your laptop while files copy.</p>
-        <IconButton icon={Settings} label="Globus settings" size={16} onClick={() => setSettings(true)} />
-      </div>
-      <div className="flex min-h-[340px] flex-1 gap-3">
-        <Pane pane={left} clusters={status.clusters} onChoose={setPicking} onStart={startPersonal}
-          onConsent={() => setLogin('globus.consent_url')} />
-        <div className="flex shrink-0 flex-col items-center justify-center gap-2">
-          <Button kind={left.selected ? 'primary' : 'secondary'} disabled={!left.selected} title="Send the selected item"
-            onClick={() => transfer(left, right)}>Transfer<ArrowRight size={16} /></Button>
-          <Button kind={right.selected ? 'primary' : 'secondary'} disabled={!right.selected}
-            title="Send the selected item" onClick={() => transfer(right, left)}><ArrowLeft size={16} />Transfer</Button>
-        </div>
-        <Pane pane={right} clusters={status.clusters} onChoose={setPicking} onStart={startPersonal}
-          onConsent={() => setLogin('globus.consent_url')} />
-      </div>
-      <Transfers tasks={tasks} error={tasksError} onRefresh={loadTasks} onCancel={cancel}
-        names={Object.fromEntries(status.clusters.filter((c) => c.collection_name)
-          .map((c) => [c.collection_name, shortName(c)]))} />
-    </div>
-  )
+  else body = <Board status={status} left={left} right={right} tasks={tasks} tasksError={tasksError}
+    loadTasks={loadTasks} check={check} onSettings={() => setSettings(true)} onChoose={setPicking}
+    onConsent={() => setLogin('globus.consent_url')} />
 
   return (
     <>
