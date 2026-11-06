@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { call } from '../../../rpc'
-import type { GitState, HCommit, Lanes, SavedSetting } from '../../../types/history'
+import type { GitState, HCommit, SavedSetting } from '../../../types/history'
 import { useToast } from '../../useToast'
 import { Button, Spinner } from '../../ui'
 import { remember, remembered } from '../storage'
@@ -24,6 +24,7 @@ import { Timeline } from './timeline/Timeline'
 import { Center } from './ui/Center'
 import { NotInGit } from './ui/NotInGit'
 import type { Assist } from './useAssist'
+import { useCompare } from './useCompare'
 import { useRepo } from './useRepo'
 import { useSwitch } from './useSwitch'
 import { useSync } from './useSync'
@@ -54,9 +55,6 @@ export function History({ where, clusterName, main, pdf, active, ask, guard, onB
   const toast = useToast()
   const [sel, setSel] = useState<Sel>({ kind: 'now' })
   const [query, setQuery] = useState('')
-  const [timeline, setTimeline] = useState(false)
-  const [lanes, setLanes] = useState<Lanes | null>(null)
-  const [picking, setPicking] = useState<'from' | 'to' | null>(null)
   const [notesOpen, setNotesOpenState] = useState(() => remembered<string>('history.notes', '0') === '1')
   const [notesFocus, setNotesFocus] = useState('')
   const setNotesOpen = (on: boolean) => { setNotesOpenState(on); remember('history.notes', on ? '1' : '0') }
@@ -73,6 +71,7 @@ export function History({ where, clusterName, main, pdf, active, ask, guard, onB
   const switcher = useSwitch({ where, state, onSave, onPause, onFiles, onBuild, refresh, setSel })
   const { run, paused } = sync
   const { switching } = switcher
+  const compare = useCompare({ where, state, refs, commits, sel, setSel })
 
   const commit = async (message: string, push: boolean) => {
     if (!(await onSave())) return false
@@ -112,31 +111,8 @@ export function History({ where, clusterName, main, pdf, active, ask, guard, onB
     } catch (e) { toast(lastLine((e as Error).message), { kind: 'error' }) }
   }
 
-  const openTimeline = () => {
-    setTimeline(true)
-    setLanes(null)
-    if (sel.kind !== 'compare') {
-      const c = sel.kind === 'commit' ? commits.find((x) => x.hash === sel.hash) : null
-      setSel(c ? { kind: 'compare', from: c.parents[0] ?? c.hash, to: c.hash }
-        : { kind: 'compare', from: commits[0]?.hash ?? '', to: '' })
-    }
-  }
-  const compareBranch = async (name: string) => {
-    try {
-      const l = await git<Lanes>('lanes', where, { a: state?.branch || 'HEAD', b: name })
-      setLanes(l)
-      setTimeline(true)
-      const tip = l.only_b[0]?.hash ?? refs?.remote.find((r) => r.name === name)?.hash ?? name
-      setSel({ kind: 'compare', from: state?.head ?? '', to: tip })
-    } catch (e) { toast(lastLine((e as Error).message), { kind: 'error' }) }
-  }
   const select = (s: Sel) => {
-    if (picking && (s.kind === 'commit' || s.kind === 'now') && sel.kind === 'compare') {
-      const v = s.kind === 'now' ? '' : s.hash
-      setSel(picking === 'from' ? { ...sel, from: v } : { ...sel, to: v })
-      setPicking(null)
-      return
-    }
+    if (compare.pick(s)) return
     if (sel.kind === 'sync' && (run || paused)) return  // the push needs you first
     setSel(s)
   }
@@ -151,8 +127,8 @@ export function History({ where, clusterName, main, pdf, active, ask, guard, onB
   }
 
   const showNote = (id: string) => { setNotesOpenState(true); setNotesFocus(id) }
-  const handlers = useRef({ startSync: sync.start, openTimeline, setSel, showNote })
-  handlers.current = { startSync: sync.start, openTimeline, setSel, showNote }
+  const handlers = useRef({ startSync: sync.start, openTimeline: compare.open, setSel, showNote })
+  handlers.current = { startSync: sync.start, openTimeline: compare.open, setSel, showNote }
   const lastAsk = useRef(0)
   const root = state?.root
   useEffect(() => {
@@ -173,21 +149,22 @@ export function History({ where, clusterName, main, pdf, active, ask, guard, onB
   const { check } = switcher
   return (
     <div className="relative flex h-full min-h-0 flex-col bg-window">
-      {timeline && <Timeline commits={commits} saved={saved} branch={state.branch} lanes={lanes} backup={state.saved === 'backup'}
+      {compare.timeline && <Timeline commits={commits} saved={saved} branch={state.branch} lanes={compare.lanes}
+        backup={state.saved === 'backup'}
         before={sel.kind === 'compare' ? sel.from : commits[1]?.hash ?? ''} after={sel.kind === 'compare' ? sel.to : ''}
-        onChange={(from, to) => setSel({ kind: 'compare', from, to })} onClose={() => { setTimeline(false); setLanes(null) }} />}
+        onChange={(from, to) => setSel({ kind: 'compare', from, to })} onClose={compare.close} />}
       <div className="flex min-h-0 flex-1">
         <div className={`flex w-[340px] shrink-0 flex-col border-r border-line ${switching ? 'opacity-60' : ''}`}>
           <ListToolbar state={state} query={query} onQuery={setQuery} notesOpen={notesOpen}
             openNotes={assist.notes?.notes.filter((n) => !n.done).length ?? 0} onNotes={() => setNotesOpen(!notesOpen)}
-            onSetting={setSetting} onCompare={() => sel.kind === 'compare' ? openTimeline() : setSel({ kind: 'compare',
+            onSetting={setSetting} onCompare={() => sel.kind === 'compare' ? compare.open() : setSel({ kind: 'compare',
               from: selCommit?.parents[0] ?? commits[0]?.hash ?? '', to: selCommit?.hash ?? '' })} />
-          {picking && <PickHint end={picking} onCancel={() => setPicking(null)} />}
+          {compare.picking && <PickHint end={compare.picking} onCancel={() => compare.setPicking(null)} />}
           <CommitList state={state} commits={commits} saved={saved} sel={sel} query={query} pulled={sync.pulled}
             aside={paused ? paused.changes : 0} onSelect={select} />
           <BranchBar where={where} state={state} busy={busyLabel(switching?.target ?? null, run, paused)}
             start={selCommit?.hash ?? state.head} onSwitch={switcher.ask} onNewBranch={newBranch}
-            onCompareBranch={compareBranch} onLatest={() => void sync.start(false)} onPush={() => void sync.start(true)}
+            onCompareBranch={compare.branch} onLatest={() => void sync.start(false)} onPush={() => void sync.start(true)}
             agent={<AgentChip choice={assist.choice} clusterName={clusterName} installed={assist.installed}
               onOpen={assist.loadInstalled} onChoose={(c) => void assist.choose(c)} />} />
         </div>
@@ -200,7 +177,7 @@ export function History({ where, clusterName, main, pdf, active, ask, guard, onB
           ) : (
             <Detail key={JSON.stringify(sel) + (sel.kind === 'now' ? state.head : '')} sel={sel} where={where} state={state} commits={commits} saved={saved} refs={refs}
               clusterName={clusterName} main={main} pdf={pdf} guard={guard} onOpen={onOpen} onFiles={onFiles}
-              onRefresh={refresh} onSel={setSel} onPickInList={setPicking} onCommit={commit} onCommitSplit={commitSplit}
+              onRefresh={refresh} onSel={setSel} onPickInList={compare.setPicking} onCommit={commit} onCommitSplit={commitSplit}
               assist={assist} go={go} onSpot={onSpot} onPin={showNote} />
           )}
         </div>
