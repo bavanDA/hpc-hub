@@ -47,13 +47,12 @@ Experimental, off until you turn them on in Settings:
 
 ## Install
 
-The Windows and macOS installers come from the [Build](../../actions/workflows/build.yml) workflow: open its latest
-run and download `hpc-hub-Windows` or `hpc-hub-macOS` under Artifacts. They are not signed yet, so your system warns
-you the first time.
+Download the file for your system from [Releases](../../releases). The installers are not signed yet, so your
+system warns you the first time.
 
 ### Windows 10 and 11
 
-1. Run the `.msi` (or the `-setup.exe`) from `hpc-hub-Windows`. If Windows says "Windows protected your PC", click
+1. Run the `-setup.exe` (or the `.msi`). If Windows says "Windows protected your PC", click
    **More info**, then **Run anyway**.
 2. Open HPC Hub from the Start menu.
 3. The first time you connect a cluster with a VPN (Wulver, Yale), HPC Hub asks to set up its VPN helper. Click
@@ -61,7 +60,7 @@ you the first time.
 
 ### macOS (Apple silicon)
 
-1. Open the `.dmg` from `hpc-hub-macOS` and drag HPC Hub to Applications.
+1. Open the `.dmg` and drag HPC Hub to Applications.
 2. Open it. macOS says it can't check the app: go to **System Settings, Privacy & Security**, scroll down and click
    **Open Anyway**. This happens once.
 3. The first time you connect a cluster with a VPN, approve "Set up the VPN helper" and type your Mac password once.
@@ -71,14 +70,11 @@ doesn't sign you out on the VPN server (it ends by itself).
 
 ### Linux
 
-Fedora, Ubuntu, Debian, Arch, openSUSE and others:
+- Ubuntu, Debian: `sudo apt install ./HPC-Hub_*_linux_amd64.deb`
+- Fedora, RHEL: `sudo dnf install ./HPC-Hub_*_linux_x86_64.rpm`
+- Any other: `chmod +x HPC-Hub_*.AppImage` and run it.
 
-    git clone <this repo> && cd hpc-hub
-    ./install.sh
-
-It checks for GTK 4, libadwaita 1.7+, WebKitGTK, VTE, openconnect and the rest. If something is missing, it prints
-the install command for your distribution. Then it adds HPC Hub to the app grid and `hpc-hub` to `~/.local/bin`.
-`./install.sh --check` only checks. To run without installing: `./bin/hpc-hub`.
+The VPN needs `openconnect` from your distribution.
 
 ### Android
 
@@ -93,37 +89,44 @@ HPC Hub, redirect URL `https://auth.globus.org/v2/web/auth-code`) and paste it o
 
 ## Code layout
 
-    bin/          launcher, plus the helpers ssh and openconnect call (askpass, SSO)
-    hpc_hub/
+    app/          desktop app: Tauri (src-tauri, Rust) and React (src)
+    mobile/       Android app; reuses app/src
+    hpc_hub/      Python backend the apps talk to over JSON-RPC
+      api/        the RPC server and one module per feature in methods/
       core/       config, keyring, SSH: used by every feature
-      connect/    VPN, sign-in, Duo, cluster cards
+      connect/    VPN, sign-in, Duo
       compute/    Slurm, compute nodes, jobs, usage
       files/      browse, edit and copy files on the clusters
       globus/     Globus sign-in, collections and transfers
       agents/     Claude and other agents, chats, skills, permissions
       latex/      LaTeX editor, build, SyncTeX, git
-      pdf/        PDF viewers and read aloud
+      pdf/        PDF tools and read aloud
       projects/   named project folders and copying them across clusters
-      terminals/  tmux sessions and terminal tabs
-      ui/         main window and shared widgets
+      terminals/  tmux sessions
+      backup/     backups of cluster folders
+    bin/          helpers ssh and openconnect call (askpass, SSO)
+    packaging/    the frozen backend and release settings
     tests/        same folders as hpc_hub/
 
 ## Development
 
-    python3 -m venv --system-site-packages .venv
-    .venv/bin/pip install pytest ruff
+    python3 -m venv .venv
+    .venv/bin/pip install pytest ruff -r packaging/requirements-backend.txt
     .venv/bin/python -m pytest -q
-    .venv/bin/ruff check hpc_hub tests
+    .venv/bin/ruff check hpc_hub tests packaging
+
+    cd app && npm ci
+    npm run tauri dev      # the desktop app
+    npx tsc -b && npm test # types and frontend tests
 
 Guidelines:
 
-- Each feature keeps its logic at the top of its folder and its GTK pages and dialogs in `ui/`. Logic that parses
-  output or builds shell commands stays out of `ui/` and has tests. Shared test fakes are in `tests/helpers.py`.
-- Keep modules small and about one thing. A UI file over about 400 lines should be split.
-- Never block the GTK main loop: run remote work with `widgets.bg(work, done)`.
+- Each feature has its own folder in `hpc_hub/` and in `app/src/components/`. Logic that parses output or builds
+  shell commands has tests. Shared test fakes are in `tests/helpers.py`.
+- One job per file. A file over about 300 lines should be split.
 - Remote commands go through `SshMaster.run`. Quote paths with `shlex.quote`.
 - Never hardcode usernames, passwords or personal paths, including in tests. Use made-up names like `jdoe`.
-- Short docstrings, few comments, and only ones that say why. Lines up to 120 characters.
+- Few comments, and only ones that say why. Lines up to 120 characters.
 - UI text: plain and short, no em or en dashes.
 - Commits: atomic, `type(scope): short msg`.
 
