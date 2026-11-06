@@ -1,38 +1,13 @@
-// The project's files as a tree, like Overleaf: folders open and close, drag to move, right-click to manage.
-import { BookOpen, ChevronRight, File, FilePlus, FileText, Folder, FolderOpen, FolderPlus, Image, RefreshCw }
-  from 'lucide-react'
+import { ChevronRight, FilePlus, FolderPlus, RefreshCw } from 'lucide-react'
 import { useMemo, useState, type DragEvent } from 'react'
 
-import type { TreeEntry } from '../../types/latex'
-import { ContextMenu, type MenuItem } from '../files/ContextMenu'
-import { basename, dirname, ext, IMAGE_EXT } from './bits'
+import type { TreeEntry } from '../../../types/latex'
+import { ContextMenu, type MenuItem } from '../../files/ContextMenu'
+import { ext } from '../bits'
+import { FileIcon } from './FileIcon'
+import { buildTree, canMove, foldersAbove, targetFolder, type Node } from './tree'
 
-type Node = { path: string; name: string; dir: boolean; children: Node[] }
-
-function build(entries: TreeEntry[]): Node[] {
-  const root: Node[] = []
-  const dirs = new Map<string, Node>()
-  const sorted = [...entries].sort((a, b) => a.path.split('/').length - b.path.split('/').length ||
-    (a.kind === b.kind ? a.path.localeCompare(b.path, undefined, { sensitivity: 'base' }) : a.kind === 'd' ? -1 : 1))
-  for (const e of sorted) {
-    const node: Node = { path: e.path, name: basename(e.path), dir: e.kind === 'd', children: [] }
-    if (node.dir) dirs.set(e.path, node)
-    const parent = e.path.includes('/') ? dirs.get(dirname(e.path)) : undefined
-    ;(parent ? parent.children : root).push(node)
-  }
-  return root
-}
-
-function Icon({ node, open }: { node: Node; open: boolean }) {
-  const x = ext(node.name)
-  const cls = 'shrink-0'
-  if (node.dir) return open ? <FolderOpen size={16} className={`${cls} text-dim`} />
-    : <Folder size={16} className={`${cls} text-dim`} />
-  if (x === '.tex') return <FileText size={16} className={`${cls} text-dim`} />
-  if (x === '.bib') return <BookOpen size={16} className={`${cls} text-dim`} />
-  if (IMAGE_EXT.includes(x) || x === '.pdf' || x === '.eps') return <Image size={16} className={`${cls} text-dim`} />
-  return <File size={16} className={`${cls} text-dim`} />
-}
+const DRAG_TYPE = 'application/x-latex-path'
 
 // Open folders by project, kept while you visit other pages
 const opened = new Map<string, Set<string>>()
@@ -51,11 +26,10 @@ export type TreeActions = {
 
 export function FileTree({ id, entries, current, main, actions }:
   { id: string; entries: TreeEntry[]; current: string; main: string; actions: TreeActions }) {
-  const nodes = useMemo(() => build(entries), [entries])
+  const nodes = useMemo(() => buildTree(entries), [entries])
   const [open, setOpen] = useState<Set<string>>(() => {
     const was = opened.get(id) ?? new Set<string>()
-    const parts = current.split('/').slice(0, -1)  // the folders holding the open file
-    parts.forEach((_, i) => was.add(parts.slice(0, i + 1).join('/')))
+    foldersAbove(current).forEach((f) => was.add(f))
     return was
   })
   const [menu, setMenu] = useState<{ x: number; y: number; node: Node | null } | null>(null)
@@ -68,19 +42,17 @@ export function FileTree({ id, entries, current, main, actions }:
     opened.set(id, next)
     setOpen(next)
   }
-  const here = (n: Node | null) => n ? (n.dir ? n.path : n.path.includes('/') ? dirname(n.path) : '') : ''
+  const here = (n: Node | null) => n ? targetFolder(n.path, n.dir) : ''
 
   const drop = (into: string) => (e: DragEvent) => {
     e.preventDefault()
     e.stopPropagation()
     setOver(null)
-    const rel = e.dataTransfer.getData('application/x-latex-path')
-    if (rel && rel !== into && !into.startsWith(rel + '/') && (rel.includes('/') ? dirname(rel) : '') !== into) {
-      actions.move(rel, into)
-    }
+    const rel = e.dataTransfer.getData(DRAG_TYPE)
+    if (canMove(rel, into)) actions.move(rel, into)
   }
   const dragOver = (into: string) => (e: DragEvent) => {
-    if (!e.dataTransfer.types.includes('application/x-latex-path')) return
+    if (!e.dataTransfer.types.includes(DRAG_TYPE)) return
     e.preventDefault()
     e.stopPropagation()
     setOver(into)
@@ -88,11 +60,11 @@ export function FileTree({ id, entries, current, main, actions }:
 
   const row = (n: Node, depth: number) => {
     const isOpen = open.has(n.path)
-    const target = n.dir ? n.path : n.path.includes('/') ? dirname(n.path) : ''
+    const target = here(n)
     const active = !n.dir && n.path === current
     return (
       <div key={n.path}>
-        <div draggable onDragStart={(e) => { e.dataTransfer.setData('application/x-latex-path', n.path)
+        <div draggable onDragStart={(e) => { e.dataTransfer.setData(DRAG_TYPE, n.path)
           e.dataTransfer.effectAllowed = 'move' }}
           onDragOver={dragOver(target)} onDrop={drop(target)}
           onClick={() => { setPicked(n.path); if (n.dir) toggle(n.path); else actions.open(n.path) }}
@@ -105,7 +77,7 @@ export function FileTree({ id, entries, current, main, actions }:
             over === n.path && n.dir ? 'ring-2 ring-accent ring-inset' : ''}`}>
           {n.dir ? <ChevronRight size={14} className={`shrink-0 text-dim transition-transform ${isOpen ? 'rotate-90' : ''}`} />
             : <span className="w-[13px] shrink-0" />}
-          <Icon node={n} open={isOpen} />
+          <FileIcon node={n} open={isOpen} />
           <span className={`truncate ${n.path === main ? 'font-semibold' : ''}`}>{n.name}</span>
         </div>
         {n.dir && isOpen && n.children.map((c) => row(c, depth + 1))}
@@ -123,8 +95,8 @@ export function FileTree({ id, entries, current, main, actions }:
       { label: 'Rename…', onClick: () => actions.rename(n.path) },
       { label: 'Delete…', onClick: () => actions.remove(n.path), danger: true }] : [],
   ]
-  const pickedNode = picked ? entries.find((e) => e.path === picked) : undefined
-  const pickedDir = pickedNode ? (pickedNode.kind === 'd' ? picked! : picked!.includes('/') ? dirname(picked!) : '') : ''
+  const pickedEntry = picked ? entries.find((e) => e.path === picked) : undefined
+  const pickedDir = pickedEntry ? targetFolder(pickedEntry.path, pickedEntry.kind === 'd') : ''
 
   return (
     <div className="flex h-full flex-col bg-sidebar">
