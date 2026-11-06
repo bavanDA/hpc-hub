@@ -1,5 +1,5 @@
 import type { Live } from './live'
-import type { Spot } from './reader'
+import type { Spot } from './narrator'
 import { wordAround } from './words'
 
 /** A point on the screen as a spot in PDF points from the top left of the page under it. */

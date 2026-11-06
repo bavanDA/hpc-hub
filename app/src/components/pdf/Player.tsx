@@ -1,7 +1,8 @@
 import { Loader2, Pause, Play, Square, X } from 'lucide-react'
 
 import { clock } from './clock'
-import { speedLabel, SPEEDS, type Reader } from './reader'
+import { speedLabel, SPEEDS } from './narrator'
+import type { Reader } from './reader'
 import { TenSeconds } from './TenSeconds'
 import { Tool } from './tool'
 import { useReaderState, useVoices } from './useReader'

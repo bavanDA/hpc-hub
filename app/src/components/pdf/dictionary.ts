@@ -1,5 +1,5 @@
 import { call } from '../../rpc'
-import { playOnce } from './reader'
+import { playOnce } from './audio'
 
 export type Sense = { definition: string; example: string; synonyms: string[] }
 export type Entry = { word: string; phonetic?: string; respelling?: string; source?: string

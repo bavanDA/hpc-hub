@@ -1,6 +1,7 @@
 import { useEffect, useState, useSyncExternalStore } from 'react'
 
-import { Reader, type Snapshot, type Source } from './reader'
+import type { Snapshot, Source } from './narrator'
+import { Reader } from './reader'
 import { voices, type Voice } from './voices'
 
 /** One reader for as long as the component lives, following the PDF it reads. */

@@ -3,7 +3,7 @@ import { useEffect, type RefObject } from 'react'
 import type { WordPick } from './index'
 import type { Live } from './live'
 import { spotAt, textAt } from './points'
-import type { Narrator } from './reader'
+import type { Narrator } from './narrator'
 
 type Refs = {
   live: RefObject<Live | null>

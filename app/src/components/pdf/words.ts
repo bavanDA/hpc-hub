@@ -1,4 +1,4 @@
-import type { Box } from './reader'
+import type { Box } from './narrator'
 
 /** A word's id, when it starts and when it ends, in seconds into the recording. */
 export type Timing = [number, number, number]

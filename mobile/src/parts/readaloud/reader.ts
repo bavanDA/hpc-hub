@@ -6,7 +6,8 @@ import type { PDFDocumentProxy } from 'pdfjs-dist'
 import { useEffect, useState, useSyncExternalStore } from 'react'
 
 import { call } from '@shared/rpc'
-import { playOnce, SPEEDS, type Box, type Narrator, type Spot } from '@shared/components/pdf/reader'
+import { playOnce } from '@shared/components/pdf/audio'
+import { SPEEDS, type Box, type Narrator, type Spot } from '@shared/components/pdf/narrator'
 import { speech, type RawVoice, type SpeechEvent } from './speech'
 import { pdfWords, sentences, type Word } from './words'
 

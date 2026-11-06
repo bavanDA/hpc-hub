@@ -1,7 +1,7 @@
 import { lazy, Suspense, type ReactNode } from 'react'
 
 import { Spinner } from '../ui'
-import type { Narrator, Spot } from './reader'
+import type { Narrator, Spot } from './narrator'
 
 /** A word you right-clicked or held: its text, where it is on the page, and where on the screen. */
 export type WordPick = { text: string; spot: Spot; x: number; y: number; touch: boolean }

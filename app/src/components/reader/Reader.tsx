@@ -20,7 +20,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 
 import { useFocus, useFocusKeys, useNoJump } from '../pdf/focus'
 import { FocusOverlay } from '../pdf/FocusOverlay'
-import type { Narrator } from '../pdf/reader'
+import type { Narrator } from '../pdf/narrator'
 import { Tool } from '../pdf/tool'
 import { useLatest } from '../pdf/useLatest'
 import { Spinner } from '../ui'
