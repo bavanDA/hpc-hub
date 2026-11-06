@@ -11,7 +11,9 @@ import { shortName } from '../clusters/loginCopy'
 import { Menu } from '../projects/Menu'
 import { useToast } from '../toast'
 import { Button, Dialog, IconButton, Spinner } from '../ui'
-import { Field, formatSize, joinPath, parentPath, shortDate } from './parts'
+import { join, parent, size } from '../files/format'
+import { Field } from './Field'
+import { shortDate } from './format'
 import { usePlaces } from './places'
 import type { Pane as PaneState } from './usePane'
 
@@ -53,7 +55,7 @@ function ItemRow({ it, selected, onSelect, onOpen }:
         <Icon size={16} className={`shrink-0 ${'text-dim'}`} />
         <span className="min-w-0 [overflow-wrap:anywhere]">{it.name}</span>
       </span>
-      <span className="text-right text-sm tabular-nums text-dim">{it.is_dir ? '' : formatSize(it.size)}</span>
+      <span className="text-right text-sm tabular-nums text-dim">{it.is_dir ? '' : size(it.size)}</span>
       {/* a narrow side drops the date first, so names stay whole */}
       <span className="truncate text-sm tabular-nums text-dim @max-[400px]:hidden">{shortDate(it.modified)}</span>
     </div>
@@ -74,7 +76,7 @@ export function Pane({ pane, clusters, onChoose, onConsent, onStart }: {
 
   const mkdir = (name: string) => {
     setNaming(false)
-    call('globus.mkdir', { cluster: pane.cluster, path: joinPath(pane.path, name) })
+    call('globus.mkdir', { cluster: pane.cluster, path: join(pane.path, name) })
       .then(pane.reload).catch((e: Error) => toast(`Failed: ${e.message}`))
   }
 
@@ -109,7 +111,7 @@ export function Pane({ pane, clusters, onChoose, onConsent, onStart }: {
       {l.items.map((it) => (
         <ItemRow key={it.name} it={it} selected={pane.selected?.name === it.name}
           onSelect={() => pane.select(pane.selected?.name === it.name ? null : it)}
-          onOpen={() => it.is_dir && pane.go(joinPath(pane.path, it.name))} />
+          onOpen={() => it.is_dir && pane.go(join(pane.path, it.name))} />
       ))}
     </div>
   )
@@ -127,7 +129,7 @@ export function Pane({ pane, clusters, onChoose, onConsent, onStart }: {
             </select>
             <ChevronDown size={16} className="pointer-events-none absolute top-1/2 right-2.5 -translate-y-1/2 text-dim" />
           </div>
-          <IconButton icon={ArrowUp} label="Up" size={16} onClick={() => browsing && pane.go(parentPath(pane.path))} />
+          <IconButton icon={ArrowUp} label="Up" size={16} onClick={() => browsing && pane.go(parent(pane.path))} />
           <IconButton icon={Home} label="Home" size={16} onClick={() => pane.go('')} />
           <Menu label="Go to a folder" trigger={<FolderOpen size={16} />}
             className="grid size-9 shrink-0 place-items-center rounded-md text-dim hover:bg-hover hover:text-text

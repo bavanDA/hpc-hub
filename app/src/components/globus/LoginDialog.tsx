@@ -6,7 +6,8 @@ import { copyText, readText } from '../app/clipboard'
 import { openLink } from '../app/openLink'
 import type { GlobusStatus, Login } from '../../types/globus'
 import { Button, Dialog, List, Spinner } from '../ui'
-import { Field, looksLikeCode, pastedCode } from './parts'
+import { Field } from './Field'
+import { looksLikeCode, pastedCode } from './format'
 
 function Step({ n, title, text }: { n: number; title: string; text: string }) {
   return (

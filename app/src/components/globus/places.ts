@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import { call } from '../../rpc'
 import type { Place, Places, ProjectList } from '../../types/projects'
 
-export const globusPath = (path: string) =>
+const globusPath = (path: string) =>
   path === '~' || path === '~/' ? '' : path.startsWith('~/') ? `/~/${path.slice(2)}` : path
 
 export function usePlaces(cluster: string) {

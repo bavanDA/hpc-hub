@@ -1,7 +1,7 @@
 import type { Entry, Sort } from '../../types/files'
 
-export const ARCHIVES = ['.zip', '.tar.gz', '.tgz', '.tar', '.tar.bz2', '.tar.xz']
-export const IMAGES = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg', '.bmp']
+const ARCHIVES = ['.zip', '.tar.gz', '.tgz', '.tar', '.tar.bz2', '.tar.xz']
+const IMAGES = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg', '.bmp']
 export const TEXT = ['.txt', '.md', '.py', '.sh', '.tex', '.bib', '.sty', '.cls', '.json', '.yaml', '.yml', '.toml',
   '.cfg', '.ini', '.csv', '.tsv', '.log', '.out', '.err', '.c', '.h', '.cpp', '.hpp', '.cu', '.java', '.js', '.ts',
   '.r', '.jl', '.m', '.slurm', '.sbatch', '.bashrc', '.conf', '.xml', '.html', '.css', '.rs', '.go', '']
@@ -38,16 +38,13 @@ export function kind(e: Entry): Kind {
 export const isText = (e: Entry) => !isDir(e) && TEXT.includes(ext(e.name))
 export const isArchive = (e: Entry) => !isDir(e) && ARCHIVES.includes(ext(e.name))
 
-/** 1.2 MB, like GLib's format_size (powers of 1000). */
+/** 12 bytes, 2 kB, 1.2 MB: powers of 1000, no ".0". */
 export function size(n: number): string {
-  if (n < 1000) return `${n} bytes`
-  const units = ['kB', 'MB', 'GB', 'TB']
-  let v = n
-  for (const u of units) {
-    v /= 1000
-    if (v < 1000 || u === 'TB') return `${v >= 100 ? Math.round(v) : +v.toFixed(1)} ${u}`  // no ".0"
-  }
-  return ''
+  if (n < 1000) return `${n} byte${n === 1 ? '' : 's'}`
+  const units = ['kB', 'MB', 'GB', 'TB', 'PB']
+  let v = n / 1000, u = 0
+  while (v >= 1000 && u < units.length - 1) { v /= 1000; u++ }
+  return `${v >= 100 ? Math.round(v) : +v.toFixed(1)} ${units[u]}`
 }
 
 const pad = (n: number) => String(n).padStart(2, '0')

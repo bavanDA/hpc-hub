@@ -4,7 +4,7 @@ import { useState, useSyncExternalStore } from 'react'
 import { call } from '../../rpc'
 import { Confirm, EButton } from '../e/extra'
 import { getCopies, setCopies, subscribe } from './copies'
-import { formatSize } from './size'
+import { size } from '../files/format'
 
 export function Transfers() {
   const list = useSyncExternalStore(subscribe, getCopies)
@@ -18,7 +18,7 @@ export function Transfers() {
           const part = t.total ? Math.min(1, t.done / t.total) : 0
           const globus = t.title.endsWith('Globus')
           const line = t.finished || !t.total ? t.status : [t.status, `${Math.floor(part * 100)}%`,
-            ...globus ? [] : [`${formatSize(t.done)} of ${formatSize(t.total)}`]].join(' · ')
+            ...globus ? [] : [`${size(t.done)} of ${size(t.total)}`]].join(' · ')
           return (
             <div key={t.id} className="flex min-h-13 flex-wrap items-center gap-x-4 gap-y-1 border-b border-line py-2
               pr-2 pl-3">

@@ -11,7 +11,7 @@ import { EDialog, Field, List, MainButton, Segments, ToggleRow } from '../e/ui'
 import { Spinner } from '../ui'
 import { startFolder } from './copyInto'
 import { FolderPicker } from './FolderPicker'
-import { formatSize } from './size'
+import { size } from '../files/format'
 
 type How = 'laptop' | 'globus'
 const BIG = 5 * 1024 ** 3
@@ -105,7 +105,7 @@ export function CopyDialog({ p, onClose, onStarted }:
     <>
       <EDialog title={`Copy or sync ${p.name}`} width={580} onClose={picking ? () => {} : onClose}
         actions={info && info.targets.length > 0 && <MainButton disabled={!dst || !!missing || busy} onClick={go}>
-          {busy && <Spinner size={16} />}{sync ? 'Sync' : 'Copy'}{plan ? ` ${formatSize(files)}` : ''}</MainButton>}>
+          {busy && <Spinner size={16} />}{sync ? 'Sync' : 'Copy'}{plan ? ` ${size(files)}` : ''}</MainButton>}>
         {!info ? <div className="grid h-40 place-items-center">
             {error ? <p className="text-bad">{error}</p> : <Spinner size={24} />}</div>
           : (
@@ -161,7 +161,7 @@ export function CopyDialog({ p, onClose, onStarted }:
             <Step title="What to take">
               <List>
                 {plan?.parts.map((x) => (
-                  <CheckRow key={x.name} label={x.name} value={formatSize(x.size)} checked={!!keep[x.name]}
+                  <CheckRow key={x.name} label={x.name} value={size(x.size)} checked={!!keep[x.name]}
                     onChange={(v) => setKeep({ ...keep, [x.name]: v })} />
                 ))}
               </List>
@@ -174,7 +174,7 @@ export function CopyDialog({ p, onClose, onStarted }:
                   {plan.chats.length > 1 && <ToggleRow label="All of them" checked={allChats}
                     onChange={(on) => setChats(Object.fromEntries(plan.chats.map((c) => [c.id, on])))} />}
                   {plan.chats.map((c) => (
-                    <CheckRow key={c.id} label={c.name} value={formatSize(c.size)} checked={!!chats[c.id]}
+                    <CheckRow key={c.id} label={c.name} value={size(c.size)} checked={!!chats[c.id]}
                       onChange={(v) => setChats({ ...chats, [c.id]: v })} />
                   ))}
                 </List>

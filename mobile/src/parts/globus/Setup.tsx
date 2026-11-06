@@ -3,7 +3,7 @@
 import { ArrowLeftRight, LogIn, LogOut, RotateCw } from 'lucide-react'
 import { useState } from 'react'
 
-import { HELP } from '@shared/components/globus/parts'
+import { HELP } from '@shared/components/globus/format'
 import { call } from '@shared/rpc'
 import type { GlobusCluster, GlobusStatus } from '@shared/types/globus'
 import { EmptyState, Field, MainButton, Row, Section, Sheet, useToast } from '../../ui'

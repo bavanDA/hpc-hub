@@ -4,7 +4,7 @@ import { X } from 'lucide-react'
 import { useState, useSyncExternalStore } from 'react'
 
 import { getCopies, setCopies, subscribe } from '@shared/components/projects/copies'
-import { formatSize } from '@shared/components/projects/size'
+import { size as formatSize } from '@shared/components/files/format'
 import { call } from '@shared/rpc'
 import { useClusters } from '@shared/components/clusters/store'
 import { ConfirmSheet, Section } from '../../ui'

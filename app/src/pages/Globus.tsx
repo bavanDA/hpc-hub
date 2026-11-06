@@ -5,7 +5,7 @@ import { shortName } from '../components/clusters/loginCopy'
 import { CollectionPicker } from '../components/globus/CollectionPicker'
 import { LoginDialog } from '../components/globus/LoginDialog'
 import { Pane } from '../components/globus/Pane'
-import { joinPath } from '../components/globus/parts'
+import { join } from '../components/files/format'
 import { SetUp, SettingsDialog, SignIn } from '../components/globus/Setup'
 import { Transfers } from '../components/globus/Transfers'
 import { usePane, type Pane as PaneState } from '../components/globus/usePane'
@@ -81,8 +81,8 @@ export function Globus() {
     const it = src.selected
     if (!it) return
     if (!dst.path) { toast('Open a folder on the other side first'); return }
-    call('globus.transfer', { src_cluster: src.cluster, src_path: joinPath(src.path, it.name),
-      dst_cluster: dst.cluster, dst_path: joinPath(dst.path, it.name), recursive: it.is_dir })
+    call('globus.transfer', { src_cluster: src.cluster, src_path: join(src.path, it.name),
+      dst_cluster: dst.cluster, dst_path: join(dst.path, it.name), recursive: it.is_dir })
       .then(() => { toast(`Sent ${it.name} to Globus`); loadTasks() })
       .catch((e: Error) => { toast(`Transfer failed: ${e.message}`); check() })
   }

@@ -2,7 +2,8 @@
 import { CircleCheck, CircleX, ExternalLink, Loader2, Pause, X } from 'lucide-react'
 
 import { openSystem } from '@shared/components/app/openLink'
-import { formatSize, shortDate } from '@shared/components/globus/parts'
+import { size as formatSize } from '@shared/components/files/format'
+import { shortDate } from '@shared/components/globus/format'
 import type { Task } from '@shared/types/globus'
 
 const words = (s: string) => s.replace(/_/g, ' ').toLowerCase().replace(/^./, (c) => c.toUpperCase())

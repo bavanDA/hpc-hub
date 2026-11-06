@@ -3,7 +3,8 @@ import { CircleCheck, CircleX, ExternalLink, Loader2, Pause, RefreshCw, X } from
 import type { Task } from '../../types/globus'
 import { openSystem } from '../app/openLink'
 import { IconButton, List, Pill, Row } from '../ui'
-import { formatSize, shortDate } from './parts'
+import { size } from '../files/format'
+import { shortDate } from './format'
 
 function state(t: Task): [string, 'ok' | 'bad' | 'warn' | 'dim'] {
   if (t.status === 'SUCCEEDED') return ['Done', 'ok']
@@ -41,7 +42,7 @@ function TaskRow({ t, onCancel, names }:
   const [label, kind] = state(t)
   const files = !t.files ? 'Counting files' : t.files_done === t.files ? `${t.files} file${t.files === 1 ? '' : 's'}`
     : `${t.files_done} of ${t.files} files`
-  const rate = t.active && t.rate ? ` · ${formatSize(t.rate)}/s` : ''
+  const rate = t.active && t.rate ? ` · ${size(t.rate)}/s` : ''
   const failed = t.status === 'FAILED' && !t.cancelled
   return (
     <Row prefix={<Icon t={t} />}
@@ -49,7 +50,7 @@ function TaskRow({ t, onCancel, names }:
       subtitle={<>
         <span>{names[t.source] ?? t.source} → {names[t.destination] ?? t.destination}</span>
         <span className="block">{failed ? `Failed: ${reason(t)}`
-          : <>{formatSize(t.bytes)} · {files}{rate} · {shortDate(t.request_time)}</>}</span>
+          : <>{size(t.bytes)} · {files}{rate} · {shortDate(t.request_time)}</>}</span>
         {t.active && <Progress t={t} />}
       </>}
       suffix={<div className="flex items-center gap-1">

@@ -3,7 +3,7 @@
 import { Check } from 'lucide-react'
 import { useEffect, useState, type ReactNode } from 'react'
 
-import { formatSize } from '@shared/components/projects/size'
+import { size as formatSize } from '@shared/components/files/format'
 import { Spinner } from '@shared/components/ui'
 import { useEvent } from '@shared/hooks'
 import { call } from '@shared/rpc'

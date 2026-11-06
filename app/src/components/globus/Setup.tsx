@@ -7,7 +7,8 @@ import type { GlobusCluster, GlobusStatus } from '../../types/globus'
 import { useToast } from '../toast'
 import { EDialog, Field as EField, List, MainButton, Row, Section } from '../e/ui'
 import { Button, EmptyState } from '../ui'
-import { Field, HELP } from './parts'
+import { Field } from './Field'
+import { HELP } from './format'
 
 function ClientId({ value, onSaved }: { value: string; onSaved: (s: GlobusStatus) => void }) {
   const toast = useToast()

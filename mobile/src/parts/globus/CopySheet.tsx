@@ -6,7 +6,7 @@ import {
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
-import { formatSize, joinPath, parentPath } from '@shared/components/globus/parts'
+import { size as formatSize, join as joinPath, parent as parentPath } from '@shared/components/files/format'
 import { usePlaces } from '@shared/components/globus/places'
 import { Spinner } from '@shared/components/ui'
 import { call } from '@shared/rpc'
