@@ -6,12 +6,16 @@ import { History as HistoryIcon, MessageCircleQuestion, StickyNote, UsersRound }
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import type { Blame } from '../../../types/history'
-import type { Go } from './Ask'
-import { blameColumn, cells, LineCard } from './Blame'
+import { blameColumn } from './blame/blameColumn'
+import { cells } from './blame/cells'
+import { LineCard } from './blame/LineCard'
 import { fileName } from './format'
 import { git, type Where } from './git'
+import type { Go } from './go'
 import { History, type HistoryAsk } from './History'
-import { type CardSpot, isLine, notesGutter, SpotCard } from './Notes'
+import { notesGutter } from './notes/notesGutter'
+import { isLine } from './notes/places'
+import { type CardSpot, SpotCard } from './notes/SpotCard'
 import { useAssist } from './useAssist'
 import { RunningCards } from './Write'
 
@@ -145,6 +149,6 @@ export function useHistoryTab(a: Args) {
     {spot && <SpotCard key={spot.id} spot={spot} assist={assist} go={go} onClose={() => setSpot(null)} />}
     <RunningCards assist={assist} inHistory={a.active} />
   </>
-  return { tab, pane, blameButton, extensions, overlay, paused,
+  return { tab, pane, blameButton, extensions, overlay,
     push: () => send('push'), pull: () => send('pull'), timeline: () => send('timeline') }
 }

@@ -1,7 +1,7 @@
 import { useEffect, useSyncExternalStore } from 'react'
 
-import { call } from '../../../rpc'
-import type { AgentChoice, AgentPick } from '../../../types/history'
+import { call } from '../../../../rpc'
+import type { AgentChoice, AgentPick } from '../../../../types/history'
 
 let current: AgentChoice | null = null
 let loading = false

@@ -4,8 +4,8 @@ import { Fragment, type ReactNode, useEffect, useMemo, useRef, useState } from '
 
 import type { Changes, FileDiff, Move, Row } from '../../../types/history'
 import { Switch } from '../../ui'
-
 import { fileName, plural } from './format'
+
 import { Counts } from './ui/Counts'
 import { Segments } from './ui/Segments'
 

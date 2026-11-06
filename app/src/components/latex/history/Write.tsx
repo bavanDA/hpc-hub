@@ -3,15 +3,13 @@ import { useState } from 'react'
 
 import type { Change, GitState, SavedVersion, Suggested, Written } from '../../../types/history'
 import { Button, Spinner } from '../../ui'
-import { AgentIcon } from './Agent'
-import { Seconds } from './Ask'
+import { AgentIcon } from './agent/AgentIcon'
+import { agentOf, shortLabel } from './agent/labels'
 import { clock, fileName, plural } from './format'
 import { Counts } from './ui/Counts'
+import { Seconds } from './ui/Seconds'
 import { Segments } from './ui/Segments'
-import { type Assist, type Job, shortLabel } from './useAssist'
-
-const agentOf = (label: string) => label.startsWith('ChatGPT') ? 'codex' : label.startsWith('Cursor') ? 'cursor'
-  : label.startsWith('Antigravity') ? 'agy' : 'claude'
+import type { Assist, Job } from './useAssist'
 
 export function WriteButton({ assist }: { assist: Assist }) {
   const job = assist.running('write')

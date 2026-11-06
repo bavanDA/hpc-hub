@@ -2,16 +2,17 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { useEvent } from '../../../hooks'
 import { call } from '../../../rpc'
-import type { About, AgentChoice, AgentEvent, AgentKind, AgentLevel, AgentPick, AgentStarted, Answer, Checked, Note,
-  NoteList, NotePlace, Written } from '../../../types/history'
+import type { About, AgentEvent, AgentKind, AgentLevel, AgentStarted, Answer, Checked, Note, NoteList, NotePlace,
+  Written } from '../../../types/history'
 import { useToast } from '../../toast'
-import { chooseAgent, useAgentChoice } from './agentChoice'
+import { chooseAgent, useAgentChoice } from './agent/agentChoice'
+import { shortLabel } from './agent/labels'
 import { lastLine, plural } from './format'
 import type { Where } from './git'
 
 /** Where an ask's thread shows: scope is the History selection (c:<hash>, r:<from>..<to>, now, card) and anchor a
  *  row of the diff (path#n12, path#o12) or "top" (under the header). */
-export type AskMeta = { question: string; about: About; scope: string; anchor: string; title: string }
+type AskMeta = { question: string; about: About; scope: string; anchor: string; title: string }
 
 export type Job = {
   id: string
@@ -36,7 +37,7 @@ type Args = {
   showHistory: () => void
 }
 
-export const FEATURE: Record<AgentKind, string> = { write: 'Write message', ask: 'Ask', check: 'Check my list' }
+const FEATURE: Record<AgentKind, string> = { write: 'Write message', ask: 'Ask', check: 'Check my list' }
 
 export function useAssist(a: Args) {
   const toast = useToast()
@@ -112,7 +113,7 @@ export function useAssist(a: Args) {
       setChecked({ job: { ...j, seconds }, result: j.result as Checked })
       if (!t.inHistory) toast(`Checked ${plural((j.result as Checked).checked, 'note')}`, { action: { label: 'Open History', run: t.showHistory } })
     } else if (!t.inHistory && j.ask?.scope !== 'card') {
-      toast(`${j.label.split(',')[0]} answered: ${(j.result as Answer).question}`, { action: { label: 'Open History', run: t.showHistory } })
+      toast(`${shortLabel(j.label)} answered: ${(j.result as Answer).question}`, { action: { label: 'Open History', run: t.showHistory } })
     }
   }
 
@@ -165,20 +166,8 @@ export function useAssist(a: Args) {
     jobs, running, waitingFor: queued && a.waiting ? queued : '',
     write, ask, check, cancel, forget,
     draft, clearDraft: () => setDraft(null), checked, clearChecked: () => setChecked(null),
-    notes, loadNotes, addNote, setNote, removeNote,
+    notes, addNote, setNote, removeNote,
   }
 }
 
 export type Assist = ReturnType<typeof useAssist>
-
-/** 'Opus · High' for the chip, the agent's name in place of a model it has no setting for ('ChatGPT · Medium'), and
- *  no effort when it has none ('Auto'). */
-export function chipLabel(c: AgentPick, agents: AgentChoice['agents']): string {
-  const a = agents.find((x) => x.id === c.agent)
-  const model = a?.models.find(([v]) => v === c.model)?.[1]
-  const effort = a?.efforts.find(([v]) => v === c.effort)?.[1]
-  return [model && c.model ? model : a?.name ?? c.agent, effort && c.effort ? effort : ''].filter(Boolean).join(' · ')
-}
-
-/** 'Claude Haiku' for 'Claude Haiku, Low'. */
-export const shortLabel = (label: string) => label.split(',')[0]

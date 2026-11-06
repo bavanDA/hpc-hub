@@ -1,40 +1,19 @@
-import { type Extension, RangeSetBuilder, StateField } from '@codemirror/state'
-import { EditorView, gutter, GutterMarker } from '@codemirror/view'
-import { Check, CircleHelp, ListChecks, MapPin, MessageCircleQuestion, Plus, Trash2, X } from 'lucide-react'
+import { Check, CircleHelp, ListChecks, Plus, Trash2, X } from 'lucide-react'
 import { type ReactNode, useEffect, useState } from 'react'
 
-import type { About, Note, NotePlace, Verdict } from '../../../types/history'
-import { Button, Spinner, Switch } from '../../ui'
-import { AgentIcon } from './Agent'
-import { AnswerText, AskBox, type Go, Seconds, Thread } from './Ask'
-import { fileName, plural, shortHash, when } from './format'
-import { Avatar } from './ui/Avatar'
-import { Segments } from './ui/Segments'
-import { type Assist, shortLabel } from './useAssist'
-
-export const isLine = (p: NotePlace | null): p is { path: string; line: number } => !!p && 'path' in p
-export const isPage = (p: NotePlace | null): p is { page: number; x: number; y: number } => !!p && 'page' in p
-export const isCommit = (p: NotePlace | null): p is { hash: string } => !!p && 'hash' in p
-
-/** The numbered pin. */
-export function Pin({ n, done = false, size = 18 }: { n: number; done?: boolean; size?: number }) {
-  return (
-    <span style={{ width: size, height: size, fontSize: size * 0.6 }}
-      className={`note-pin grid shrink-0 place-items-center rounded-full font-semibold tabular-nums ${done ? 'done' : ''}`}>
-      {n}</span>
-  )
-}
-
-function PlaceChip({ place, onGo }: { place: NotePlace | null; onGo: () => void }) {
-  if (!place) return <span className="rounded bg-pill px-1.5 text-xs text-dim">To-do</span>
-  const label = isLine(place) ? <><span className="font-semibold">{fileName(place.path)}</span> {place.line}</>
-    : isPage(place) ? <>p. {place.page}</> : <>{shortHash((place as { hash: string }).hash)}</>
-  return (
-    <button onClick={onGo} title="Go there"
-      className="flex h-5 items-center gap-1 rounded bg-pill px-1.5 font-mono text-xs hover:bg-pressed">
-      <MapPin size={11} className="text-dim" /> {label}</button>
-  )
-}
+import type { Note, NotePlace, Verdict } from '../../../../types/history'
+import { Button, Spinner, Switch } from '../../../ui'
+import { AgentIcon } from '../agent/AgentIcon'
+import { shortLabel } from '../agent/labels'
+import { AnswerText } from '../ask/AnswerText'
+import { plural, when } from '../format'
+import type { Go } from '../go'
+import { Avatar } from '../ui/Avatar'
+import { Seconds } from '../ui/Seconds'
+import { Segments } from '../ui/Segments'
+import type { Assist } from '../useAssist'
+import { Pin } from './Pin'
+import { PlaceChip } from './PlaceChip'
 
 const VERDICT: Record<Verdict['verdict'], [ReactNode, string, string]> = {
   done: [<Check key="d" size={11} />, 'Looks done', 'bg-[rgb(26_127_55/0.12)] text-[var(--diff-add-ink)]'],
@@ -170,103 +149,6 @@ export function NotesPanel({ assist, focus, go, onClose }: PanelProps) {
         <p className="px-4 py-3 text-xs text-dim">Notes stay in this copy of the paper, in .git. They are never committed or
           pushed.</p>
       </div>
-    </div>
-  )
-}
-
-// -- pins in the editor's gutter ---------------------------------------------------------------------------------
-export type GutterPin = { line: number; n: number; done: boolean; text: string; id: string }
-
-class PinMarker extends GutterMarker {
-  pins: GutterPin[]
-  constructor(pins: GutterPin[]) { super(); this.pins = pins }
-  eq(o: PinMarker) { return o.pins.map((p) => p.id + p.done).join() === this.pins.map((p) => p.id + p.done).join() }
-  toDOM() {
-    const el = document.createElement('span')
-    el.className = 'cm-note-pins'
-    for (const p of this.pins.slice(0, 2)) {
-      const b = document.createElement('span')
-      b.className = `note-pin cm-note-pin${p.done ? ' done' : ''}`
-      b.textContent = String(p.n)
-      b.title = p.text
-      b.dataset.note = p.id
-      el.append(b)
-    }
-    return el
-  }
-}
-
-const pinLook = EditorView.theme({
-  '.cm-notes': { width: '24px' },
-  '.cm-note-pins': { display: 'flex', alignItems: 'center', height: '100%', paddingLeft: '3px', cursor: 'pointer' },
-  '.cm-note-pin': { display: 'inline-grid', placeItems: 'center', width: '16px', height: '16px', borderRadius: '50%',
-    fontSize: '10px', fontWeight: '600', fontFamily: 'var(--font-sans)', marginTop: '2px' },
-})
-
-/** The column with the notes of the file open in the editor; pick(id) on a click. */
-export function notesGutter(pins: GutterPin[], pick: (id: string) => void): Extension {
-  const field = StateField.define<GutterPin[]>({ create: () => pins, update: (v) => v })
-  return [field, pinLook, gutter({
-    class: 'cm-notes',
-    markers: (view) => {
-      const b = new RangeSetBuilder<GutterMarker>()
-      const doc = view.state.doc
-      const by = new Map<number, GutterPin[]>()
-      for (const p of view.state.field(field)) if (p.line >= 1 && p.line <= doc.lines) by.set(p.line, [...(by.get(p.line) ?? []), p])
-      for (const line of [...by.keys()].sort((x, y) => x - y)) b.add(doc.line(line).from, doc.line(line).from, new PinMarker(by.get(line)!))
-      return b.finish()
-    },
-    domEventHandlers: {
-      click: (_view, _line, e) => {
-        const id = (e.target as HTMLElement).closest<HTMLElement>('[data-note]')?.dataset.note
-        if (id) pick(id)
-        return !!id
-      },
-    },
-  })]
-}
-
-// -- the card for a passage in the editor or a spot in the PDF -----------------------------------------------------
-export type CardSpot = { id: string; mode: 'ask' | 'note'; title: string; about: About; place: NotePlace | null
-  here?: string }
-
-/** Floats over the editor or the PDF: ask about a passage or a spot (its answers show here), or add a note there. */
-export function SpotCard({ spot, assist, go, onClose }: { spot: CardSpot; assist: Assist; go: Go; onClose: () => void }) {
-  const [text, setText] = useState('')
-  const [asking, setAsking] = useState(true)
-  const jobs = assist.jobs.filter((j) => j.ask?.scope === 'card' && j.ask.anchor === spot.id)
-  const save = async () => { if (text.trim() && await assist.addNote(text.trim(), spot.place)) onClose() }
-  return (
-    <div className="menu-in fixed top-36 right-6 z-40 flex max-h-[calc(100vh-180px)] w-[560px] flex-col rounded-xl border
-      border-line bg-raised shadow-[var(--shadow-dialog)]">
-      <div className="flex shrink-0 items-center gap-2 px-4 pt-3.5">
-        {spot.mode === 'note' ? <MapPin size={14} className="text-dim" /> : <MessageCircleQuestion size={14} className="text-dim" />}
-        <b className="min-w-0 flex-1 truncate">{spot.mode === 'note' ? 'Note on' : 'Ask about'} {spot.title}</b>
-        <button onClick={onClose} aria-label="Close" className="grid size-7 place-items-center rounded-md text-dim hover:bg-hover">
-          <X size={14} /></button></div>
-      {spot.mode === 'note' ? <div className="px-4 pb-4">
-        <textarea autoFocus value={text} onChange={(e) => setText(e.target.value)} rows={3} aria-label="Note"
-          placeholder="A to-do or a comment" onKeyDown={(e) => {
-            if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) void save()
-            if (e.key === 'Escape') onClose()
-          }}
-          className="mt-2.5 block w-full resize-none rounded-lg bg-pill px-3 py-2 outline-none placeholder:text-faint
-            focus:ring-2 focus:ring-focus" />
-        <div className="mt-2.5 flex items-center justify-end gap-2">
-          <span className="flex-1 text-xs text-dim">Kept next to the paper in .git, never committed or pushed.</span>
-          <Button size="sm" kind="ghost" onClick={onClose}>Cancel</Button>
-          <Button size="sm" kind="primary" disabled={!text.trim()} onClick={() => void save()}>Add note</Button>
-        </div>
-      </div> : <div className="min-h-0 overflow-y-auto px-1 pb-2">
-        {jobs.map((j) => <Thread key={j.id} job={j} go={go} here={spot.here} className="mx-3 my-2"
-          onNote={(t) => void assist.addNote(t, spot.place)} onMore={() => setAsking(true)}
-          onCancel={() => assist.cancel(j.id)} onClose={() => assist.forget(j.id)} />)}
-        {asking && <AskBox className="mx-3 my-2" title={spot.title} choice={assist.choice} onClose={jobs.length
-          ? () => setAsking(false) : onClose} onAsk={(question, pick) => {
-          assist.ask({ question, about: spot.about, scope: 'card', anchor: spot.id, title: spot.title }, pick ?? undefined)
-          setAsking(false)
-        }} />}
-      </div>}
     </div>
   )
 }
