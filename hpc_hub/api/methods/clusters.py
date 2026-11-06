@@ -130,15 +130,6 @@ def request_node(cluster: str, profile: dict | None = None, remember: bool = Fal
     s.request_node(picked)
 
 
-@method("clusters.request_fast_node")
-def request_fast_node(cluster: str) -> None:
-    """A node on the cluster's fast queue (Settings: Fast node), with your usual cores and memory."""
-    s = hub().connected(cluster)
-    if not s.cfg.fast_profile():
-        raise ValueError(f"{s.cfg.name} has no fast queue set")
-    s.request_fast_node()
-
-
 @method("clusters.release_node")
 def release_node(cluster: str) -> None:
     """Cancel the node the app asked for, or just stop using your own job. You stay connected."""

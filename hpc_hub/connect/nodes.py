@@ -16,14 +16,12 @@ class NodesMixin:
     """ClusterSession's node handling. Uses self.ssh, self.cfg, self.limits, self.allocation, self.default_account,
     self._cancel, self._set and self._log."""
 
-    def fit(self, profile: ComputeProfile, pick_queue: bool = True) -> ComputeProfile:
+    def fit(self, profile: ComputeProfile) -> ComputeProfile:
         """The profile with your default account named when none is set, on the best queue (see queues), with
-        its time cut to what that queue allows (Slurm would refuse it otherwise). Blocking; worker thread.
-        pick_queue=False keeps the queue you asked for (Fast node)."""
+        its time cut to what that queue allows (Slurm would refuse it otherwise). Blocking; worker thread."""
         if not profile.account and self._account():
             profile = replace(profile, account=self._account())
-        if pick_queue:
-            profile = self._best_queue(profile)
+        profile = self._best_queue(profile)
         fitted, note = self._cut_time(profile)
         if note:
             self._log(note)
@@ -82,16 +80,6 @@ class NodesMixin:
         self.pick_node = False
         self._cancel.clear()
         self._thread = threading.Thread(target=self._allocate_safely, args=(profile,), daemon=True)
-        self._thread.start()
-
-    def request_fast_node(self) -> None:
-        """A node on the cluster's fast queue (cfg.fast, e.g. debug for 30 minutes): short, but it starts soon."""
-        fast = self.cfg.fast_profile()
-        if not fast or self.state != State.CONNECTED or self.allocation:
-            return
-        self.pick_node = False
-        self._cancel.clear()
-        self._thread = threading.Thread(target=self._allocate_safely, args=(fast, False), daemon=True)
         self._thread.start()
 
     def release_node(self) -> None:
@@ -184,7 +172,7 @@ class NodesMixin:
         except (OSError, subprocess.SubprocessError):
             return False
 
-    def _allocate_safely(self, profile: ComputeProfile | None = None, pick_queue: bool = True) -> None:
+    def _allocate_safely(self, profile: ComputeProfile | None = None) -> None:
         profile = profile or self.cfg.profile
         if self._reuse_running_job():
             self._set(State.CONNECTED)
@@ -192,7 +180,7 @@ class NodesMixin:
         self._set(State.ALLOCATING, profile.summary())
         try:
             self.allocation = slurm.allocate(
-                self.ssh, self.fit(profile, pick_queue), self._log,
+                self.ssh, self.fit(profile), self._log,
                 on_pending=lambda job: self._set(State.ALLOCATING, f"Job {job} waiting in queue"),
                 cancelled=self._cancel.is_set,
             )

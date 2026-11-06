@@ -398,28 +398,3 @@ def test_best_queue_on_wulver():
     s.cfg.queue_pick = "cheapest"
     s.cfg.queues = ""
     assert s.fit(config.ComputeProfile(partition="general", qos="low")).qos == "low"  # no list: as asked
-
-
-def test_fast_node_keeps_its_queue_and_your_cores():
-    import subprocess
-
-    from hpc_hub.connect.session import ClusterSession
-    from hpc_hub.core import config
-    wulver, yale, sdsc = config.default_clusters()
-    assert (sdsc.fast_label(), wulver.fast_label(), yale.fast_label()) == \
-        ("Fast node (30 min)", "Fast node (8 h)", "")
-    p = sdsc.fast_profile()
-    assert (p.partition, p.qos, p.time, p.cpus, p.mem_gb) == ("debug", "", "00:30:00", 2, 16)
-    assert yale.fast_profile() is None
-
-    asked = []
-
-    class Ssh:
-        def run(self, cmd, timeout=60):
-            asked.append(cmd)
-            return subprocess.CompletedProcess(cmd, 0, "abc123\n" if "defaultaccount" in cmd else "5\n", "")
-    s = object.__new__(ClusterSession)
-    s.cfg, s.ssh, s.limits, s.default_account, s._log = wulver, Ssh(), None, None, lambda m: None
-    got = s.fit(wulver.fast_profile(), pick_queue=False)
-    assert (got.partition, got.qos, got.account) == ("debug", "debug", "abc123")  # the account Expanse's debug needs
-    assert not any("--test-only" in c for c in asked)  # no queue comparison: debug it is

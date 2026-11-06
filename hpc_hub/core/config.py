@@ -3,10 +3,8 @@
 import json
 import os
 import tomllib
-from dataclasses import asdict, dataclass, field, fields, replace
+from dataclasses import asdict, dataclass, field, fields
 from pathlib import Path
-
-from . import login_copy
 
 CONFIG_DIR = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config")) / "hpc-hub"
 CONFIG_FILE = CONFIG_DIR / "clusters.toml"
@@ -160,30 +158,6 @@ class ClusterConfig:
         prefixes = self.paid_partitions.split()
         return not prefixes or any(partition.startswith(p) for p in prefixes)
 
-    def fast_profile(self) -> ComputeProfile | None:
-        """Your node settings on the fast queue (cores, memory and GPUs stay yours); None without one."""
-        part, _, rest = self.fast.partition(":")
-        qos, _, time = rest.partition(":")
-        if not part.strip():
-            return None
-        return replace(self.profile, partition=part.strip(), qos=qos.strip(), time=time.strip() or self.profile.time)
-
-    def fast_label(self) -> str:
-        """'Fast node (30 min)', 'Fast node (8 h)'."""
-        p = self.fast_profile()
-        if not p:
-            return ""
-        days, _, hms = p.time.rpartition("-")
-        h, m = (int(x) if x.isdigit() else 0 for x in (hms.split(":") + ["0", "0"])[:2])
-        minutes = (int(days) if days.isdigit() else 0) * 1440 + h * 60 + m
-        return f"Fast node ({minutes} min)" if minutes < 60 else f"Fast node ({minutes / 60:g} h)"
-
-    def second_step(self) -> str:
-        """What the cluster asks after the password. Its admins decide, so the app says it, never asks it."""
-        if self.second_factor == "code":
-            return login_copy.SECOND_CODE
-        return login_copy.SECOND_DUO
-
     @property
     def short_name(self) -> str:
         """"Wulver", "Yale", "SDSC": its short field, else the name without "(NJIT)"."""
@@ -193,13 +167,6 @@ class ClusterConfig:
     def who(self) -> str:
         """"Yale": the org, else the short name, for copy like "Yale uses an SSH key"."""
         return self.org or self.short_name
-
-    def key_intro(self) -> str:
-        return login_copy.KEY_INTRO.format(who=self.who)
-
-    @property
-    def key_help_url(self) -> str:
-        return self.key_help or login_copy.KEY_HELP
 
     @property
     def vpn_connection_name(self) -> str:

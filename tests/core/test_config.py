@@ -111,12 +111,6 @@ def test_short_names(tmp_path):
     assert config.load(path)[1].short_name == "Yale"
 
 
-def test_second_step_is_said_not_chosen():
-    by_id = {c.id: c for c in config.default_clusters()}
-    assert by_id["wulver"].second_step() == ""  # Duo says nothing: the push explains itself
-    assert by_id["sdsc"].second_step() == "You'll need a code from your authenticator app."
-
-
 def test_old_chrome_profile_sign_in_falls_back_to_the_app_window(tmp_path):
     path = tmp_path / "clusters.toml"
     path.write_text('[clusters.wulver.vpn]\nbrowser = "Uni"\n[clusters.yale.vpn]\nbrowser = "hpc-hub:chrome-window"\n')
@@ -132,7 +126,5 @@ def test_how_each_cluster_logs_in_is_said(tmp_path):
     assert wulver.password_only and not wulver.key_page
     assert wulver.username_label == "UCID" and yale.username_label == "NetID"
     assert yale.key_page.startswith("https://") and not yale.password_only
-    assert yale.who == "Yale" and yale.key_intro() == "Yale uses an SSH key instead of a password."
+    assert yale.who == "Yale" and yale.key_help.startswith("https://docs.ycrc.yale.edu/")
     assert not yale.password_too and yale.vpn.enabled
-    assert yale.key_help_url.startswith("https://docs.ycrc.yale.edu/")  # its own guide
-    assert by_id["sdsc"].key_help_url.startswith("https://docs.github.com/")  # else GitHub's
