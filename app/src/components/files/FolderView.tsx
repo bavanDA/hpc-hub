@@ -3,7 +3,8 @@ import { FolderOpen, FolderX } from 'lucide-react'
 import type { Cluster, Session } from '../../types/clusters'
 import type { Entry, Listing, Sort } from '../../types/files'
 import { NotConnected } from '../clusters/NotConnected'
-import { EmptyState, Spinner } from '../ui'
+import { EmptyState } from '../ui/EmptyState'
+import { Spinner } from '../ui/Spinner'
 import { FileTable } from './FileTable'
 
 /** The folder's entries, or why there are none to show. */

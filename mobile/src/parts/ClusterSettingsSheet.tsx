@@ -7,7 +7,7 @@ import { useEffect, useState } from 'react'
 import { priorityName, queueRowName } from '@shared/components/clusters/priority'
 import { PICKS, pickNote } from '@shared/components/clusters/queuePick'
 import { putCluster } from '@shared/components/clusters/store'
-import { Spinner } from '@shared/components/ui'
+import { Spinner } from '@shared/components/ui/Spinner'
 import { call } from '@shared/rpc'
 import type { AgentId, AgentSettings, Cluster, Limits, Logins, Profile, SettingsInfo, VsCode } from '@shared/types/clusters'
 import { Field, List, MainButton, NumberRow, PickerSheet, Row, Section, Segments, Sheet, ToggleRow, useAskBeforeClose, useToast }

@@ -6,7 +6,7 @@ import { ChoiceRow } from '../e/ChoiceRow'
 import { Field } from '../e/Field'
 import { List } from '../e/List'
 import { Segments } from '../e/Segments'
-import { Spinner } from '../ui'
+import { Spinner } from '../ui/Spinner'
 import { inside } from './copyInto'
 
 type Props = {

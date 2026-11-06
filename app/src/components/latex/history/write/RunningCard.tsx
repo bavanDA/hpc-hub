@@ -1,6 +1,6 @@
 import { Loader2 } from 'lucide-react'
 
-import { Button } from '../../../ui'
+import { Button } from '../../../ui/Button'
 import { AgentIcon } from '../agent/AgentIcon'
 import { agentOf } from '../agent/labels'
 import { plural } from '../format'

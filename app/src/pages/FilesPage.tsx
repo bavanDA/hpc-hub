@@ -2,7 +2,7 @@ import { lazy, Suspense } from 'react'
 
 import { Tabs, type TabItem } from '../components/app/Tabs'
 import { LaptopCopies } from '../components/files/LaptopCopies'
-import { Spinner } from '../components/ui'
+import { Spinner } from '../components/ui/Spinner'
 import { useGo, usePageParams } from '../nav'
 import { Files } from './Files'
 

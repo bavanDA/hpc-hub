@@ -1,5 +1,6 @@
 import type { Cluster, Session } from '../../types'
-import { Skeleton, Spinner } from '../ui'
+import { Skeleton } from '../ui/Skeleton'
+import { Spinner } from '../ui/Spinner'
 import { CARD } from './card'
 import { CardHead } from './CardHead'
 

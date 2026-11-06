@@ -6,7 +6,7 @@ import { IconBtn } from '../e/IconBtn'
 import { ItemRow } from '../e/ItemRow'
 import { Row } from '../e/Row'
 import { Section } from '../e/Section'
-import { Spinner } from '../ui'
+import { Spinner } from '../ui/Spinner'
 
 export function SkillSections({ list, adding, label, onAdd, onRemove }: {
   list: SkillList; adding: string; label: (target: string) => string

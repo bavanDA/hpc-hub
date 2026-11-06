@@ -8,7 +8,7 @@ import { EButton } from '../e/EButton'
 import { EDialog } from '../e/EDialog'
 import { IconBtn } from '../e/IconBtn'
 import { SearchField } from '../e/SearchField'
-import { Spinner } from '../ui'
+import { Spinner } from '../ui/Spinner'
 
 const join = (a: string, b: string) => `${a.replace(/\/+$/, '')}/${b}`
 const parent = (p: string) => p.replace(/\/+$/, '').replace(/\/[^/]*$/, '') || '/'

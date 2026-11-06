@@ -10,7 +10,7 @@ import { Field } from '../e/Field'
 import { List } from '../e/List'
 import { MainButton } from '../e/MainButton'
 import { ToggleRow } from '../e/ToggleRow'
-import { Spinner } from '../ui'
+import { Spinner } from '../ui/Spinner'
 import { FolderPicker } from './FolderPicker'
 
 export type Mode = 'add' | 'new' | 'edit'

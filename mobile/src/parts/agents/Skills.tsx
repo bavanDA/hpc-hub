@@ -3,7 +3,7 @@
 import { CircleAlert, GitBranch, Plus, Sparkles, Trash2 } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 
-import { Spinner } from '@shared/components/ui'
+import { Spinner } from '@shared/components/ui/Spinner'
 import { call } from '@shared/rpc'
 import type { CatalogSkill, Skill, SkillList, Target } from '@shared/types/skills'
 import { Button, ConfirmSheet, EmptyState, Field, List, MainButton, Row, Section, Sheet, ToggleRow, useToast } from '../../ui'

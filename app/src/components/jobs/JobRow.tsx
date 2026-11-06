@@ -1,7 +1,7 @@
 import { useState } from 'react'
 
 import type { Job } from '../../types/jobs'
-import { StatusPill } from '../ui'
+import { StatusPill } from '../ui/StatusPill'
 import { type Column, NUMBERS } from './columns'
 import { memText, reasonText, stateName } from './format'
 import { RowMenu } from './RowMenu'

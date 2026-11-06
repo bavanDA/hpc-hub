@@ -3,7 +3,7 @@
 import { FileX, Plus } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 
-import { Spinner } from '@shared/components/ui'
+import { Spinner } from '@shared/components/ui/Spinner'
 import { useCall, useEvent } from '@shared/hooks'
 import { usePageParams } from '@shared/nav'
 import { call } from '@shared/rpc'

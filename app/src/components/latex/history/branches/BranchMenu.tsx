@@ -2,7 +2,9 @@ import { Check, Cloud, GitBranch, GitBranchPlus, GitCompareArrows, RefreshCw, Se
 import { type ReactNode, useEffect, useState } from 'react'
 
 import type { GitState, Refs } from '../../../../types/history'
-import { Button, FIELD, Spinner } from '../../../ui'
+import { Button } from '../../../ui/Button'
+import { FIELD } from '../../../ui/field'
+import { Spinner } from '../../../ui/Spinner'
 import { clock, shortHash, when } from '../format'
 import { git, type Where } from '../git'
 

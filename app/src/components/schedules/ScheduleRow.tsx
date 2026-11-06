@@ -5,7 +5,7 @@ import { ItemRow } from '../e/ItemRow'
 import { StatusDot } from '../e/StatusDot'
 import { Switch } from '../e/Switch'
 import { Menu } from '../projects/Menu'
-import { Spinner } from '../ui'
+import { Spinner } from '../ui/Spinner'
 import { computeText, isBackupCheck, localWhen, status } from './format'
 
 export function ScheduleRow({ st, busy, onToggle, onRun, onLog, onEdit, onDelete }: {

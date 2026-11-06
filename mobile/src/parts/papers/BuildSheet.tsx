@@ -2,7 +2,7 @@
 // your compute node, and whether to build each time you save (kept on this phone).
 import { useState } from 'react'
 
-import { Spinner } from '@shared/components/ui'
+import { Spinner } from '@shared/components/ui/Spinner'
 import { call } from '@shared/rpc'
 import type { Settings } from '@shared/types/latex'
 import { Field, MainButton, PickerSheet, Row, Section, Sheet, ToggleRow, useToast } from '../../ui'

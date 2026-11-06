@@ -3,7 +3,7 @@ import { useState } from 'react'
 
 import { call } from '../../rpc'
 import { shortName } from '../clusters/loginCopy'
-import { Button } from '../ui'
+import { Button } from '../ui/Button'
 import { university, type SetupStatus } from './setup'
 
 export function Welcome({ status, onDone }: { status: SetupStatus; onDone: (chosen: string[]) => void }) {

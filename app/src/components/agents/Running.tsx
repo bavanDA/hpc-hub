@@ -15,7 +15,7 @@ import { useListings, useLive } from '../terminals/data'
 import { SessionMenu } from '../terminals/SessionMenu'
 import { openSession } from '../terminals/tabs'
 import { useTools } from '../tools/useTools'
-import { Spinner } from '../ui'
+import { Spinner } from '../ui/Spinner'
 import { agentIcon } from './AgentIcon'
 
 const STARTABLE = ['claude', 'codex', 'agy', 'cursor'] as const

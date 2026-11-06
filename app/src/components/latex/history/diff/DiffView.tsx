@@ -2,7 +2,7 @@ import { ChevronDown, ChevronRight, ChevronsUpDown, FileText, MessageCircleQuest
 import { type ReactNode, useEffect, useRef, useState } from 'react'
 
 import type { Changes } from '../../../../types/history'
-import { Switch } from '../../../ui'
+import { Switch } from '../../../ui/Switch'
 import { fileName, plural } from '../format'
 import { Counts } from '../ui/Counts'
 import { Segments } from '../ui/Segments'

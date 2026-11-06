@@ -5,7 +5,7 @@ import { AlarmClock, CircleAlert, FileText, Pencil, Play, Plus, Trash2 } from 'l
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { computeText, localWhen, status } from '@shared/components/schedules/format'
-import { Spinner } from '@shared/components/ui'
+import { Spinner } from '@shared/components/ui/Spinner'
 import { call } from '@shared/rpc'
 import type { ScheduleOptions, ScheduleStatus } from '@shared/types/schedules'
 import { ActionSheet, ConfirmSheet, EmptyState, List, Row, StatusDot, useToast } from '../../ui'

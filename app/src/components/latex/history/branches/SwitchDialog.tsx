@@ -2,7 +2,8 @@ import { CircleAlert, CircleCheck } from 'lucide-react'
 import { type ReactNode, useState } from 'react'
 
 import type { SwitchCheck } from '../../../../types/history'
-import { Button, Dialog } from '../../../ui'
+import { Button } from '../../../ui/Button'
+import { Dialog } from '../../../ui/Dialog'
 
 export function SwitchDialog({ check, clusterName, onClose, onSwitch, onCommitFirst }:
   { check: SwitchCheck; clusterName: string; onClose: () => void; onSwitch: (mode: 'bring' | 'keep') => void

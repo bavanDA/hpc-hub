@@ -3,7 +3,7 @@
 // Also the sheet with a schedule's last answer.
 import { useEffect, useState } from 'react'
 
-import { Spinner } from '@shared/components/ui'
+import { Spinner } from '@shared/components/ui/Spinner'
 import { useGo } from '@shared/nav'
 import { call } from '@shared/rpc'
 import type { ScheduleLog, ScheduleOptions, ScheduleStatus } from '@shared/types/schedules'

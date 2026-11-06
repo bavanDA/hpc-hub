@@ -3,7 +3,7 @@ import { ArrowRight, FileText } from 'lucide-react'
 import { lazy, Suspense, type ReactNode, type RefObject } from 'react'
 
 import type { Issue } from '../../types/latex'
-import { Spinner } from '../ui'
+import { Spinner } from '../ui/Spinner'
 import type { EditorHandle } from './editor/CodeEditor'
 import type { Doc } from './useDoc'
 

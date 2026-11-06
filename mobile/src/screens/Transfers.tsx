@@ -5,7 +5,7 @@ import { ArrowLeftRight, CircleAlert, KeyRound, Plus, RefreshCw, Settings } from
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { useTransfers } from '@shared/components/files/useTransfers'
-import { Spinner } from '@shared/components/ui'
+import { Spinner } from '@shared/components/ui/Spinner'
 import { useGo, usePageParams } from '@shared/nav'
 import { call } from '@shared/rpc'
 import type { Transfer } from '@shared/types/files'

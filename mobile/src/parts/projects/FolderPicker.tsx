@@ -3,7 +3,7 @@
 import { ArrowUp, Eye, EyeOff, Folder, FolderPlus, Pencil } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 
-import { Spinner } from '@shared/components/ui'
+import { Spinner } from '@shared/components/ui/Spinner'
 import { call } from '@shared/rpc'
 import type { Folder as FolderList, Place, Places, ProjectCluster } from '@shared/types/projects'
 import { Button, Chips, Field, List, MainButton, Row, Sheet } from '../../ui'

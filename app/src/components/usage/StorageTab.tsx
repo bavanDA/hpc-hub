@@ -1,5 +1,5 @@
 import type { Storage } from '../../types/usage'
-import { List } from '../ui'
+import { List } from '../ui/List'
 import { QuotaRow } from './QuotaRow'
 import { Section } from './Section'
 

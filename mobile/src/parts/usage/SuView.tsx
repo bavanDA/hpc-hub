@@ -4,7 +4,7 @@ import { ChevronDown } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
 
 import { n, pct } from '@shared/components/usage/format'
-import { Spinner } from '@shared/components/ui'
+import { Spinner } from '@shared/components/ui/Spinner'
 import type { Account, People } from '@shared/types/usage'
 import { List, Row, Section } from '../../ui'
 import { Bar } from './Bar'

@@ -8,7 +8,7 @@ import { inTauri } from '../app/platform'
 import { EButton } from '../e/EButton'
 import { EDialog } from '../e/EDialog'
 import { MainButton } from '../e/MainButton'
-import { Spinner } from '../ui'
+import { Spinner } from '../ui/Spinner'
 
 function Waiting({ title, text }: { title: string; text: string }) {
   return (

@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 
-import { Button, Dialog } from '../../ui'
+import { Button } from '../../ui/Button'
+import { Dialog } from '../../ui/Dialog'
 import { Diff, type DiffHandle } from '../Diff'
 import { languageFor, useLanguages } from './lang'
 

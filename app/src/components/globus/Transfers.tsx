@@ -2,8 +2,11 @@ import { CircleCheck, CircleX, ExternalLink, Loader2, Pause, RefreshCw, X } from
 
 import type { Task } from '../../types/globus'
 import { openSystem } from '../app/openLink'
-import { IconButton, List, Pill, Row } from '../ui'
 import { size } from '../files/format'
+import { IconButton } from '../ui/IconButton'
+import { List } from '../ui/List'
+import { Pill } from '../ui/Pill'
+import { Row } from '../ui/Row'
 import { shortDate } from './format'
 
 function state(t: Task): [string, 'ok' | 'bad' | 'warn' | 'dim'] {

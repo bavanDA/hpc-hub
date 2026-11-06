@@ -5,7 +5,7 @@ import { call } from '../../rpc'
 import type { Cluster, KeySetup } from '../../types/clusters'
 import { EButton } from '../e/EButton'
 import { EDialog } from '../e/EDialog'
-import { Spinner } from '../ui'
+import { Spinner } from '../ui/Spinner'
 import { shortName } from './loginCopy'
 
 /** onDone(username) once the key is on the cluster (then connect). */

@@ -2,7 +2,7 @@
 // desktop's ProjectDialog (projects.add, projects.create, projects.update).
 import { useState } from 'react'
 
-import { Spinner } from '@shared/components/ui'
+import { Spinner } from '@shared/components/ui/Spinner'
 import { call } from '@shared/rpc'
 import { TEMPLATES, type Place, type Project, type ProjectCluster } from '@shared/types/projects'
 import { Field, MainButton, PickerSheet, Row, Sheet, ToggleRow } from '../../ui'

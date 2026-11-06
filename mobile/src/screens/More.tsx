@@ -4,7 +4,7 @@ import {
 } from 'lucide-react'
 import { lazy, Suspense, useEffect, useState, type ComponentType } from 'react'
 
-import { Spinner } from '@shared/components/ui'
+import { Spinner } from '@shared/components/ui/Spinner'
 import { call } from '@shared/rpc'
 import { ScreenBackContext, usePhoneNav, type MoreScreen } from '../nav'
 import { Header } from '../parts/Header'

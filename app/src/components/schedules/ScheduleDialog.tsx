@@ -17,7 +17,7 @@ import { inRange } from '../e/range'
 import { Segments } from '../e/Segments'
 import { TextArea } from '../e/TextArea'
 import { FolderField } from '../tools/fields'
-import { Spinner } from '../ui'
+import { Spinner } from '../ui/Spinner'
 import { ownFrom, type OwnCompute } from './compute'
 import { computeText } from './format'
 

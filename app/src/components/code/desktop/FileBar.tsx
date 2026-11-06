@@ -1,6 +1,7 @@
 import { Clock, Play, RefreshCw, Save, Search, Send, Sparkles } from 'lucide-react'
 
-import { Button, IconButton } from '../../ui'
+import { Button } from '../../ui/Button'
+import { IconButton } from '../../ui/IconButton'
 import { isDirty, type OpenFile } from '../store'
 import { MOD } from './mod'
 import { isLog, linesLabel } from './text'

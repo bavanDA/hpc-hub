@@ -2,7 +2,7 @@
 import { Check, CircleAlert, X } from 'lucide-react'
 
 import { size } from '@shared/components/files/format'
-import { Spinner } from '@shared/components/ui'
+import { Spinner } from '@shared/components/ui/Spinner'
 import { useClusters } from '@shared/components/clusters/store'
 import type { Transfer } from '@shared/types/files'
 import { withShortNames, wrapPath } from '../code/util'

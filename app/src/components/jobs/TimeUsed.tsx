@@ -1,5 +1,5 @@
 import type { Job } from '../../types/jobs'
-import { Meter } from '../ui'
+import { Meter } from '../ui/Meter'
 import { timeShare } from './format'
 
 /** Running: a small bar and "1 h 12 min of 4 h". Waiting: "not started". Timed out: a full red bar. */

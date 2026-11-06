@@ -1,5 +1,5 @@
 import type { Job } from '../../types/jobs'
-import { Button } from '../ui'
+import { Button } from '../ui/Button'
 
 export function PickedBar({ chosen, onClear, onCancel }: { chosen: Job[]; onClear: () => void; onCancel: () => void }) {
   const one = chosen.length === 1

@@ -1,7 +1,7 @@
 // A new LaTeX paper on a cluster: a folder with main.tex and, by default, a git repository (projects.create).
 import { useState } from 'react'
 
-import { Spinner } from '@shared/components/ui'
+import { Spinner } from '@shared/components/ui/Spinner'
 import { call } from '@shared/rpc'
 import type { LatexCluster } from '@shared/types/latex'
 import { Field, MainButton, PickerSheet, Row, Sheet, ToggleRow, useToast } from '../../ui'

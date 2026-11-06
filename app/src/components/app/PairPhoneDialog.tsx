@@ -5,7 +5,13 @@ import { call } from '../../rpc'
 import type { Cluster, Logins } from '../../types/clusters'
 import { shortName } from '../clusters/loginCopy'
 import { useClusters } from '../clusters/store'
-import { Button, Dialog, IconTile, List, Row, Spinner, Switch } from '../ui'
+import { Button } from '../ui/Button'
+import { Dialog } from '../ui/Dialog'
+import { IconTile } from '../ui/IconTile'
+import { List } from '../ui/List'
+import { Row } from '../ui/Row'
+import { Spinner } from '../ui/Spinner'
+import { Switch } from '../ui/Switch'
 
 const SHOWN = 60  // seconds: anyone who sees the code sees the logins in it
 

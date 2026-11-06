@@ -8,7 +8,7 @@ import { useEffect, useState } from 'react'
 
 import { size as formatSize, join as joinPath, parent as parentPath } from '@shared/components/files/format'
 import { usePlaces } from '@shared/components/globus/places'
-import { Spinner } from '@shared/components/ui'
+import { Spinner } from '@shared/components/ui/Spinner'
 import { call } from '@shared/rpc'
 import type { GlobusCluster, GlobusStatus, Item } from '@shared/types/globus'
 import { ActionSheet, Button, EmptyState, MainButton, PickerSheet, PromptSheet, Segments, Sheet, useToast } from '../../ui'

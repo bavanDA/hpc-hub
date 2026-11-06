@@ -1,6 +1,7 @@
 import { Sparkles } from 'lucide-react'
 
-import { Button, Spinner } from '../../../ui'
+import { Button } from '../../../ui/Button'
+import { Spinner } from '../../../ui/Spinner'
 import { Seconds } from '../ui/Seconds'
 import type { Assist } from '../useAssist'
 

@@ -4,7 +4,7 @@ import { ArrowDown, ArrowUp, Copy, GitCommitHorizontal } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 
 import { copyText } from '@shared/components/terminals/xterm'
-import { Spinner } from '@shared/components/ui'
+import { Spinner } from '@shared/components/ui/Spinner'
 import { call } from '@shared/rpc'
 import type { Commit, GitInfo } from '@shared/types/latex'
 import { Button, Field, MainButton, Row, Section, Sheet, useToast } from '../../ui'

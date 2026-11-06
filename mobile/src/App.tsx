@@ -3,7 +3,7 @@
 import { FileCode2, ListChecks, Menu, Server, SquareTerminal, type LucideIcon } from 'lucide-react'
 import { lazy, Suspense } from 'react'
 
-import { Spinner } from '@shared/components/ui'
+import { Spinner } from '@shared/components/ui/Spinner'
 import { firstPlace, NavProvider, usePhoneNav, type Tab } from './nav'
 import { useEditorKeyboard } from './parts/keyboard'
 import { Questions } from './parts/Questions'

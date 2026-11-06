@@ -1,6 +1,6 @@
 import { call } from '../../rpc'
 import type { Job } from '../../types/jobs'
-import { AlertDialog } from '../ui'
+import { AlertDialog } from '../ui/AlertDialog'
 import { useToast } from '../useToast'
 import { nameList } from './format'
 

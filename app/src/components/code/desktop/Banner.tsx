@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 
-import { Button } from '../../ui'
+import { Button } from '../../ui/Button'
 import type { Draft } from '../drafts'
 import type { OpenFile } from '../store'
 import { time } from './time'

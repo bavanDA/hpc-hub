@@ -2,7 +2,7 @@ import { ArrowUp, X } from 'lucide-react'
 import { type ReactNode, useState } from 'react'
 
 import type { AgentChoice, AgentLevel } from '../../../../types/history'
-import { Button } from '../../../ui'
+import { Button } from '../../../ui/Button'
 import { chipLabel } from '../agent/labels'
 import { PickMenu } from '../agent/PickMenu'
 

@@ -2,7 +2,7 @@ import { X } from 'lucide-react'
 
 import type { AgentChoice } from '../../../../types/history'
 import { openSettings } from '../../../app/openSettings'
-import { Switch } from '../../../ui'
+import { Switch } from '../../../ui/Switch'
 
 import type { ChipProps } from './AgentChip'
 import { AgentIcon } from './AgentIcon'

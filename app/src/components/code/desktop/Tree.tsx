@@ -4,7 +4,8 @@ import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { call } from '../../../rpc'
 import type { Entry, Listing } from '../../../types/files'
 import { isDir, isText, join } from '../../files/format'
-import { IconButton, Spinner } from '../../ui'
+import { IconButton } from '../../ui/IconButton'
+import { Spinner } from '../../ui/Spinner'
 
 type Node = { entries: Entry[] | null; error: string }
 

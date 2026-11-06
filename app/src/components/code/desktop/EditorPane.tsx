@@ -1,7 +1,9 @@
 import { FileCode2 } from 'lucide-react'
 import { lazy, Suspense, type ReactNode, type RefObject } from 'react'
 
-import { Button, EmptyState, Spinner } from '../../ui'
+import { Button } from '../../ui/Button'
+import { EmptyState } from '../../ui/EmptyState'
+import { Spinner } from '../../ui/Spinner'
 import type { EditorHandle } from '../Editor'
 import type { Lang } from '../languages'
 import { closeFile, openFile, setText, type OpenFile } from '../store'

@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 
-import { Spinner } from '../ui'
+import { Spinner } from '../ui/Spinner'
 import type { Entry } from './dictionary'
 
 /** Meanings of an entry, a part of speech at a time, with examples; loading and not found too. */

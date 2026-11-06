@@ -1,7 +1,8 @@
 import { ArrowUp, Check, Pencil } from 'lucide-react'
 import { type ReactNode, useState } from 'react'
 
-import { Button, Spinner } from '../../../ui'
+import { Button } from '../../../ui/Button'
+import { Spinner } from '../../../ui/Spinner'
 import { shortHash, when } from '../format'
 import { DraftCard } from '../write/DraftCard'
 import { WriteButton } from '../write/WriteButton'

@@ -1,6 +1,6 @@
 import { ServerCog } from 'lucide-react'
 
-import { Button } from '../../../ui'
+import { Button } from '../../../ui/Button'
 
 export function Failed({ error, retry }: { error: string; retry: () => void }) {
   return (

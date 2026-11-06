@@ -2,7 +2,7 @@ import { useEffect } from 'react'
 
 import { ClusterCard } from '../components/ClusterCard'
 import { load, useClusters } from '../components/clusters/store'
-import { Spinner } from '../components/ui'
+import { Spinner } from '../components/ui/Spinner'
 
 export function Clusters() {
   const { clusters, sessions, logs, error } = useClusters()

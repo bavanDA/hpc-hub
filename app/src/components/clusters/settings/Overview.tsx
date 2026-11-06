@@ -4,7 +4,7 @@ import { summary, type Cluster, type SettingsInfo } from '../../../types/cluster
 import { List } from '../../e/List'
 import { Row } from '../../e/Row'
 import { Section } from '../../e/Section'
-import { Spinner } from '../../ui'
+import { Spinner } from '../../ui/Spinner'
 import { queueCount } from '../queueList'
 import type { Part } from './changes'
 

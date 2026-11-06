@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react'
 
 import { call } from '../../rpc'
 import type { Inside, Job } from '../../types/jobs'
-import { AlertDialog, Spinner } from '../ui'
+import { AlertDialog } from '../ui/AlertDialog'
+import { Spinner } from '../ui/Spinner'
 import { useToast } from '../useToast'
 import { ranFor } from './format'
 

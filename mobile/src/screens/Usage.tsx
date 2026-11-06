@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react'
 
 import { shortName } from '@shared/components/clusters/loginCopy'
 import { useRemote } from '@shared/components/usage/useRemote'
-import { Spinner } from '@shared/components/ui'
+import { Spinner } from '@shared/components/ui/Spinner'
 import { useGo, usePageParams } from '@shared/nav'
 import type { Account, Partition, People, Storage } from '@shared/types/usage'
 import { usePhoneNav } from '../nav'

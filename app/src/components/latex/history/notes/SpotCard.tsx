@@ -2,7 +2,7 @@ import { MapPin, MessageCircleQuestion, X } from 'lucide-react'
 import { useState } from 'react'
 
 import type { About, NotePlace } from '../../../../types/history'
-import { Button } from '../../../ui'
+import { Button } from '../../../ui/Button'
 import { AskBox } from '../ask/AskBox'
 import { Thread } from '../ask/Thread'
 import type { Go } from '../go'

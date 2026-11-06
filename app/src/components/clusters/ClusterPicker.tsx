@@ -2,7 +2,7 @@ import { Check, ChevronDown, Layers } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
 import type { Session } from '../../types'
-import { statusKind } from '../ui'
+import { statusKind } from '../ui/status'
 import { useActiveCluster } from './active'
 import { useAllClusters } from './allClusters'
 

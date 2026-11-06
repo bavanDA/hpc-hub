@@ -1,6 +1,6 @@
 import { lazy, Suspense, type ReactNode } from 'react'
 
-import { Spinner } from '../ui'
+import { Spinner } from '../ui/Spinner'
 import type { Narrator, Spot } from './narrator'
 
 /** A word you right-clicked or held: its text, where it is on the page, and where on the screen. */

@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 
-import { Spinner } from '../ui'
+import { Spinner } from '../ui/Spinner'
 
 /** In place of the pages: the caller's message, the error, or a spinner with the download's progress. */
 export function PdfStatus({ message, failed, loading, progress }:

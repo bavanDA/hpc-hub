@@ -2,7 +2,7 @@ import { Circle, History as HistoryIcon, Pencil } from 'lucide-react'
 import { type ReactNode, useEffect, useState } from 'react'
 
 import type { About, Changes, GitState, HCommit, Refs, SavedVersion } from '../../../../types/history'
-import { Spinner } from '../../../ui'
+import { Spinner } from '../../../ui/Spinner'
 import { useToast } from '../../../useToast'
 import { remember, remembered } from '../../storage'
 import { AskBox } from '../ask/AskBox'

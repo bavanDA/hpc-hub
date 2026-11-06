@@ -3,7 +3,7 @@ import { lazy, Suspense } from 'react'
 import { Running } from '../components/agents/Running'
 import { Tabs, type TabItem } from '../components/app/Tabs'
 import type { Experiments } from '../components/app/types'
-import { Spinner } from '../components/ui'
+import { Spinner } from '../components/ui/Spinner'
 import { useGo, usePageParams } from '../nav'
 
 const Permissions = lazy(() => import('./Permissions').then((m) => ({ default: m.Permissions })))

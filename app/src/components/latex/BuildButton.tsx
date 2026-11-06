@@ -1,7 +1,8 @@
 import { ChevronDown, RefreshCw } from 'lucide-react'
 
 import type { Settings } from '../../types/latex'
-import { Button, Spinner } from '../ui'
+import { Button } from '../ui/Button'
+import { Spinner } from '../ui/Spinner'
 import { BuildSettings } from './BuildSettings'
 import { Popover } from './ui/Popover'
 

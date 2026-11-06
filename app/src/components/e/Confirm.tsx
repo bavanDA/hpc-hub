@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 
-import { useEscape } from '../ui'
+import { useEscape } from '../ui/useEscape'
 import { EButton } from './EButton'
 
 export function Confirm({ title, children, keep, act, danger = true, disabled, onAct, onClose }: {

@@ -2,7 +2,7 @@ import { Server } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
 import { call } from '../../rpc'
-import { Dialog } from '../ui'
+import { Dialog } from '../ui/Dialog'
 
 export function AboutDialog({ onClose }: { onClose: () => void }) {
   const [version, setVersion] = useState('')

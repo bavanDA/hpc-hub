@@ -2,7 +2,7 @@ import { Circle, Copy, RotateCcw, Undo2 } from 'lucide-react'
 import { type ReactNode, useState } from 'react'
 
 import type { Changes, SavedVersion } from '../../../../types/history'
-import { Button } from '../../../ui'
+import { Button } from '../../../ui/Button'
 import { useToast } from '../../../useToast'
 import { fileName, lastLine, plural, when } from '../format'
 import { git } from '../git'

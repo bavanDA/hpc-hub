@@ -14,7 +14,7 @@ import { ProjectTable, type RowActions } from '../components/projects/ProjectTab
 import { Toolbar } from '../components/projects/Toolbar'
 import { Transfers } from '../components/projects/Transfers'
 import { OpenDialog } from '../components/tools/OpenDialog'
-import { Spinner } from '../components/ui'
+import { Spinner } from '../components/ui/Spinner'
 import { useToast } from '../components/useToast'
 import { useCall, useEvent } from '../hooks'
 import { useGo } from '../nav'

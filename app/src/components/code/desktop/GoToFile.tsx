@@ -3,7 +3,9 @@ import { useEffect, useRef, useState } from 'react'
 
 import { call } from '../../../rpc'
 import type { FoundFile } from '../../../types/code'
-import { Dialog, FIELD, Spinner } from '../../ui'
+import { Dialog } from '../../ui/Dialog'
+import { FIELD } from '../../ui/field'
+import { Spinner } from '../../ui/Spinner'
 
 /** Ctrl+P: type part of a name, pick from the files under the folder. */
 export function GoToFile({ cluster, root, onOpen, onClose }:

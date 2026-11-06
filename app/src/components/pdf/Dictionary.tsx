@@ -1,7 +1,7 @@
 import { Play, Volume2, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
-import { Spinner } from '../ui'
+import { Spinner } from '../ui/Spinner'
 import { hear } from './dictionary'
 import type { WordPick } from './index'
 import { Meanings } from './Meanings'

@@ -1,7 +1,7 @@
 // CodeMirror and pdf.js load with the page on its first visit, out of the main bundle.
 import { lazy, Suspense } from 'react'
 
-import { Spinner } from '../components/ui'
+import { Spinner } from '../components/ui/Spinner'
 
 const Page = lazy(() => import('../components/latex/Page'))
 

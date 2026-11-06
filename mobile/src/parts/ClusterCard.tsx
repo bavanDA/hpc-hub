@@ -8,7 +8,7 @@ import { useEffect, useState } from 'react'
 
 import { leftText, useTimeLeft } from '@shared/components/app/watch'
 import { agentIcon } from '@shared/components/agents/AgentIcon'
-import { Spinner } from '@shared/components/ui'
+import { Spinner } from '@shared/components/ui/Spinner'
 import { useGo } from '@shared/nav'
 import { call } from '@shared/rpc'
 import { BUSY, DUO, type Cluster, type Session } from '@shared/types/clusters'

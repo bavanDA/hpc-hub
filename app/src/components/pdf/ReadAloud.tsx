@@ -2,7 +2,7 @@ import { BookOpen, BookOpenText, Headphones } from 'lucide-react'
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 
 import { ContextMenu } from '../files/ContextMenu'
-import { Spinner } from '../ui'
+import { Spinner } from '../ui/Spinner'
 import { Dictionary } from './Dictionary'
 import { Pdf, type PdfProps, type WordPick } from './index'
 import type { Source } from './narrator'

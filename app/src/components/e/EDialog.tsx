@@ -1,7 +1,7 @@
 import { ArrowLeft, X, type LucideIcon } from 'lucide-react'
 import type { ReactNode } from 'react'
 
-import { useEscape } from '../ui'
+import { useEscape } from '../ui/useEscape'
 
 export function EDialog({ title, icon: Icon, onClose, onBack, children, actions, width = 520 }: {
   title: string; icon?: LucideIcon; onClose: () => void; onBack?: () => void; children: ReactNode; actions?: ReactNode

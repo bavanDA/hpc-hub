@@ -2,9 +2,11 @@ import { ChevronDown } from 'lucide-react'
 import { useState } from 'react'
 
 import type { Account, People } from '../../types/usage'
-import { List, Row, Spinner } from '../ui'
-import { n, pct } from './format'
+import { List } from '../ui/List'
+import { Row } from '../ui/Row'
+import { Spinner } from '../ui/Spinner'
 import { Bar } from './Bar'
+import { n, pct } from './format'
 import { Section } from './Section'
 import { SuSummary } from './SuSummary'
 

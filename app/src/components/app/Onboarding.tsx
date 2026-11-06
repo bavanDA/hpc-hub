@@ -14,7 +14,7 @@ import { List } from '../e/List'
 import { MainButton } from '../e/MainButton'
 import { Section } from '../e/Section'
 import { ToggleRow } from '../e/ToggleRow'
-import { Spinner } from '../ui'
+import { Spinner } from '../ui/Spinner'
 
 type Step = { cluster: Cluster; kind: 'login' | 'node' }
 

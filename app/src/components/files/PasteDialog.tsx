@@ -6,7 +6,7 @@ import { EDialog } from '../e/EDialog'
 import { MainButton } from '../e/MainButton'
 import { Section } from '../e/Section'
 import { Segments } from '../e/Segments'
-import { Spinner } from '../ui'
+import { Spinner } from '../ui/Spinner'
 import { size } from './format'
 
 const BIG = 5 * 1000 ** 3  // past this, Globus (cluster to cluster) beats streaming through the laptop

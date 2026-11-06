@@ -5,7 +5,7 @@ import { shortName } from '../components/backup/format'
 import { useActiveCluster } from '../components/clusters/active'
 import { NotConnected } from '../components/clusters/NotConnected'
 import { EmptyState } from '../components/e/EmptyState'
-import { Spinner } from '../components/ui'
+import { Spinner } from '../components/ui/Spinner'
 
 export function Backup() {
   const { clusters, cluster, session, connected, error } = useActiveCluster()

@@ -3,7 +3,8 @@ import { useEffect, useRef, useState } from 'react'
 
 import '@xterm/xterm/css/xterm.css'
 
-import { Button, IconButton } from '../ui'
+import { Button } from '../ui/Button'
+import { IconButton } from '../ui/IconButton'
 import { useToast } from '../useToast'
 import { dismiss } from './banners'
 import { MonitorBar } from './MonitorBar'

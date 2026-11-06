@@ -5,7 +5,7 @@ import { Copy } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
 import { copyText } from '@shared/components/terminals/xterm'
-import { Spinner } from '@shared/components/ui'
+import { Spinner } from '@shared/components/ui/Spinner'
 import { useGo } from '@shared/nav'
 import { call } from '@shared/rpc'
 import type { Job, JobDetails } from '@shared/types/jobs'

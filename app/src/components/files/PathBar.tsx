@@ -3,7 +3,8 @@ import { useState } from 'react'
 
 import type { Place } from '../../types/files'
 import { Segments } from '../e/Segments'
-import { IconButton, Spinner } from '../ui'
+import { IconButton } from '../ui/IconButton'
+import { Spinner } from '../ui/Spinner'
 
 type Props = {
   path: string

@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react'
 
 import type { SetupStatus } from '@shared/components/app/setup'
 import { load, useClusters } from '@shared/components/clusters/store'
-import { Spinner } from '@shared/components/ui'
+import { Spinner } from '@shared/components/ui/Spinner'
 import { call } from '@shared/rpc'
 import { ClusterCard } from '../parts/ClusterCard'
 import { Header } from '../parts/Header'

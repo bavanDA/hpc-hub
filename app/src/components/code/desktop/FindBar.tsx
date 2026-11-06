@@ -2,7 +2,7 @@ import type { EditorView } from '@codemirror/view'
 import { CaseSensitive, ChevronDown, ChevronUp, Regex, Replace, WholeWord, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
-import { IconButton } from '../../ui'
+import { IconButton } from '../../ui/IconButton'
 import { closeFind, countFind, countText, findNextMatch, findPreviousMatch, replaceEvery, replaceOne, setFind } from '../search'
 
 /** Find and replace in the open file, above the editor. */

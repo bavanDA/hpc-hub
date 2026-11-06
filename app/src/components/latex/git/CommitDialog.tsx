@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 
 import { call } from '../../../rpc'
-import { Dialog, Spinner } from '../../ui'
+import { Dialog } from '../../ui/Dialog'
+import { Spinner } from '../../ui/Spinner'
 import type { Where } from './where'
 
 const lineClass = (l: string) => l.startsWith('+') && !l.startsWith('+++') ? 'bg-ok-bg text-ok'

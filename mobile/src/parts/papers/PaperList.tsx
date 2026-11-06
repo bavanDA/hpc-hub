@@ -5,7 +5,7 @@ import { FileText, FolderSearch, MoreVertical, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 
 import { ago, short } from '@shared/components/latex/bits'
-import { Spinner } from '@shared/components/ui'
+import { Spinner } from '@shared/components/ui/Spinner'
 import { call } from '@shared/rpc'
 import type { LatexProject, Paper, Picker } from '@shared/types/latex'
 import { ActionSheet, PickerSheet, PromptSheet, Row, SearchField, Section, useToast } from '../../ui'

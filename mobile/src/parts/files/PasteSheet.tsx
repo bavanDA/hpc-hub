@@ -4,7 +4,7 @@ import { Check, Globe, Smartphone } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
 import { size } from '@shared/components/files/format'
-import { Spinner } from '@shared/components/ui'
+import { Spinner } from '@shared/components/ui/Spinner'
 import { call } from '@shared/rpc'
 import type { Clip, CopyPlan } from '@shared/types/files'
 import { MainButton, Row, Sheet } from '../../ui'

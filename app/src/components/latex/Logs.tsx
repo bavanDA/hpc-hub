@@ -2,7 +2,8 @@ import { AlertTriangle, ChevronRight, CircleX, Info, Square, X } from 'lucide-re
 import { useEffect, useRef, useState } from 'react'
 
 import type { BuildDone, Issue } from '../../types/latex'
-import { Button, Spinner } from '../ui'
+import { Button } from '../ui/Button'
+import { Spinner } from '../ui/Spinner'
 import { counts } from './issues'
 
 const LOOK = {

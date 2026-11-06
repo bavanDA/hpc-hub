@@ -2,7 +2,7 @@ import { ArrowUp, FileText, RefreshCw, ShieldCheck } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 
 import type { Pick, Step, SyncState } from '../../../../types/history'
-import { Button } from '../../../ui'
+import { Button } from '../../../ui/Button'
 import { Steps } from '../branches/Steps'
 import { plural } from '../format'
 import { pickLabel, spotKey } from './picks'

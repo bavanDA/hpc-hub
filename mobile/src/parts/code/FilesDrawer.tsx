@@ -6,14 +6,14 @@ import { useEffect, useMemo, useState } from 'react'
 
 import { isDir, join, parent, sorted } from '@shared/components/files/format'
 import { copyText } from '@shared/components/terminals/xterm'
-import { Spinner } from '@shared/components/ui'
+import { Spinner } from '@shared/components/ui/Spinner'
 import { call } from '@shared/rpc'
 import type { FoundFile } from '@shared/types/code'
 import type { Entry, Listing, Place } from '@shared/types/files'
 import { ActionSheet, Chips, ConfirmSheet, EmptyState, List, PromptSheet, Row, SearchField, Segments, Sheet, useToast }
   from '../../ui'
-import { useConnected } from '../useConnected'
 import { useLongPress } from '../terminal/useLongPress'
+import { useConnected } from '../useConnected'
 import { shortCluster } from './util'
 
 type Props = {

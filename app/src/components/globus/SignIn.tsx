@@ -1,6 +1,7 @@
 import { ArrowLeftRight, LogIn } from 'lucide-react'
 
-import { Button, EmptyState } from '../ui'
+import { Button } from '../ui/Button'
+import { EmptyState } from '../ui/EmptyState'
 
 export function SignIn({ onSignIn }: { onSignIn: () => void }) {
   return (

@@ -5,7 +5,7 @@ import type { LockSetup } from '../../types/permissions'
 import { EDialog } from '../e/EDialog'
 import { Field } from '../e/Field'
 import { MainButton } from '../e/MainButton'
-import { Spinner } from '../ui'
+import { Spinner } from '../ui/Spinner'
 
 /** The secret stays in the backend until it is on the cluster; this only shows it to scan. */
 export function LockSetupDialog({ cluster, name, onClose, onDone }:

@@ -6,7 +6,7 @@ import { EButton } from '../e/EButton'
 import { IconToggleRow } from '../e/IconToggleRow'
 import { List } from '../e/List'
 import { Row } from '../e/Row'
-import { Spinner } from '../ui'
+import { Spinner } from '../ui/Spinner'
 import { scanning, start } from './copy'
 import { count } from './format'
 

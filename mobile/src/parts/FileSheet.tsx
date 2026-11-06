@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react'
 
 import { kind, MEDIA_LIMIT } from '@shared/components/files/format'
 import { readFile } from '@shared/components/pdf/load'
-import { Spinner } from '@shared/components/ui'
+import { Spinner } from '@shared/components/ui/Spinner'
 import { call } from '@shared/rpc'
 import type { FileData } from '@shared/types/files'
 import { Button, EmptyState, Sheet, useToast } from '../ui'

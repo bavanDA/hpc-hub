@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react'
 
 import { call } from '../../rpc'
 import type { FileData } from '../../types/files'
-import { Dialog, Spinner } from '../ui'
+import { Dialog } from '../ui/Dialog'
+import { Spinner } from '../ui/Spinner'
 import { basename } from './format'
 
 export function ImageDialog({ cluster, path, onClose }: { cluster: string; path: string; onClose: () => void }) {

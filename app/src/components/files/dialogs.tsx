@@ -1,6 +1,9 @@
 import { useState } from 'react'
 
-import { AlertDialog, Button, Dialog, FIELD } from '../ui'
+import { AlertDialog } from '../ui/AlertDialog'
+import { Button } from '../ui/Button'
+import { Dialog } from '../ui/Dialog'
+import { FIELD } from '../ui/field'
 
 export function NameDialog({ title, action, initial = '', onDone, onClose }:
   { title: string; action: string; initial?: string; onDone: (name: string) => void; onClose: () => void }) {

@@ -2,7 +2,7 @@ import { Smartphone } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
 import { EButton } from '../e/EButton'
-import { Spinner } from '../ui'
+import { Spinner } from '../ui/Spinner'
 import { copy } from './loginCopy'
 
 const demoLate = new URLSearchParams(location.search).get('duoafter')  // design work: ?duoafter=0 shows it at once

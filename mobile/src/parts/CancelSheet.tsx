@@ -2,7 +2,7 @@
 // screen. Keep is the safe choice on the left, the confirm is solid red. HPC Hub's own node gets "Release node".
 import { useEffect, useState } from 'react'
 
-import { Spinner } from '@shared/components/ui'
+import { Spinner } from '@shared/components/ui/Spinner'
 import { call } from '@shared/rpc'
 import type { Inside, Job } from '@shared/types/jobs'
 import { BottomSheet, Button, useToast } from '../ui'

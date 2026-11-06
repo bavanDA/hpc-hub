@@ -2,7 +2,7 @@ import { useState } from 'react'
 
 import { call } from '../../rpc'
 import type { Settings } from '../../types/latex'
-import { Button } from '../ui'
+import { Button } from '../ui/Button'
 import { useToast } from '../useToast'
 
 const ENGINES: [Settings['engine'], string][] = [['pdf', 'pdfLaTeX'], ['xelatex', 'XeLaTeX'], ['lualatex', 'LuaLaTeX']]

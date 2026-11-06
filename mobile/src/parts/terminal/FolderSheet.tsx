@@ -4,7 +4,7 @@ import { ArrowUp, Folder, FolderPlus } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 
 import { shortName } from '@shared/components/clusters/loginCopy'
-import { Spinner } from '@shared/components/ui'
+import { Spinner } from '@shared/components/ui/Spinner'
 import { call } from '@shared/rpc'
 import type { Folder as FolderList, Place, Places } from '@shared/types/projects'
 import { Button, Chips, Field, List, MainButton, Row, SearchField, Sheet } from '../../ui'

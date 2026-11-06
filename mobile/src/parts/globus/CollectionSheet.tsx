@@ -1,7 +1,7 @@
 // Pick the Globus collection that holds a cluster's files: a search, the best match first.
 import { useEffect, useRef, useState } from 'react'
 
-import { Spinner } from '@shared/components/ui'
+import { Spinner } from '@shared/components/ui/Spinner'
 import { call } from '@shared/rpc'
 import type { Collection, GlobusCluster, GlobusStatus } from '@shared/types/globus'
 import { Row, SearchField, Sheet, useToast } from '../../ui'

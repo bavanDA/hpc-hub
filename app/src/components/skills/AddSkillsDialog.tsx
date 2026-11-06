@@ -9,7 +9,7 @@ import { MainButton } from '../e/MainButton'
 import { SearchField } from '../e/SearchField'
 import { Section } from '../e/Section'
 import { ToggleRow } from '../e/ToggleRow'
-import { Spinner } from '../ui'
+import { Spinner } from '../ui/Spinner'
 import { useToast } from '../useToast'
 
 export function AddSkillsDialog({ cluster, name, targets, repo, onClose, onDone }: {

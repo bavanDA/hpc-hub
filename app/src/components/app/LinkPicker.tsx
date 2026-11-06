@@ -1,7 +1,10 @@
 import { Check, Copy, ExternalLink } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
-import { Button, Dialog, List, Row } from '../ui'
+import { Button } from '../ui/Button'
+import { Dialog } from '../ui/Dialog'
+import { List } from '../ui/List'
+import { Row } from '../ui/Row'
 import { useToast } from '../useToast'
 import { copyText } from './clipboard'
 import { openIn, setAsk } from './openLink'

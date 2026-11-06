@@ -3,7 +3,7 @@ import { AlertTriangle, ChevronRight, CircleX, Info, Square } from 'lucide-react
 import { useEffect, useRef, useState } from 'react'
 
 import { counts } from '@shared/components/latex/issues'
-import { Spinner } from '@shared/components/ui'
+import { Spinner } from '@shared/components/ui/Spinner'
 import type { BuildDone, Issue } from '@shared/types/latex'
 import { Button } from '../../ui'
 

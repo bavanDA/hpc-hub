@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react'
 
 import { openSystem } from '@shared/components/app/openLink'
 import { looksLikeCode, pastedCode } from '@shared/components/globus/format'
-import { Spinner } from '@shared/components/ui'
+import { Spinner } from '@shared/components/ui/Spinner'
 import { call } from '@shared/rpc'
 import type { GlobusStatus, Login } from '@shared/types/globus'
 import { Button, Field, MainButton, Sheet } from '../../ui'

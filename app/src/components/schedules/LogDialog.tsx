@@ -5,7 +5,7 @@ import { call } from '../../rpc'
 import type { ScheduleLog } from '../../types/schedules'
 import { EButton } from '../e/EButton'
 import { EDialog } from '../e/EDialog'
-import { Spinner } from '../ui'
+import { Spinner } from '../ui/Spinner'
 
 export function LogDialog({ cluster, name, onClose }: { cluster: string; name: string; onClose: () => void }) {
   const [log, setLog] = useState<ScheduleLog | null>(null)

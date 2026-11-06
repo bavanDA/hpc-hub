@@ -1,6 +1,6 @@
 import { PanelLeftClose, Plus, RefreshCw } from 'lucide-react'
 
-import { IconButton } from '../ui'
+import { IconButton } from '../ui/IconButton'
 import { ClusterSessions } from './ClusterSessions'
 import type { Listed, Live } from './data'
 import { ListNote } from './ListNote'
