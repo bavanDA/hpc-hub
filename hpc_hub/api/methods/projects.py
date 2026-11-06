@@ -9,7 +9,7 @@ import time
 
 from ...core import config
 from ...files import remote_fs
-from ...projects import store
+from ...projects import papers, store, templates
 from ...projects import sync as shared
 from ...projects.store import Project
 from ..hub import CONNECTED, hub
@@ -143,7 +143,7 @@ def _checked(cluster: str, name: str, path: str) -> Project:
     target = remote_fs.expand(s.ssh, path)
     if s.ssh.run(f"test -d {remote_fs.q(target)}", timeout=30).returncode != 0:
         raise RuntimeError(f"No folder {target} on {s.cfg.name}")
-    mains = store.find_main_tex(s.ssh, target)
+    mains = papers.find_main_tex(s.ssh, target)
     latex = bool(mains) and "/" not in mains[0]
     return Project(name, cluster, target, main_tex=mains[0] if mains else "", kind="latex" if latex else "code")
 
@@ -220,16 +220,16 @@ def create(cluster: str, parent: str, name: str, template: str = "Empty", git: b
     name = name.strip()
     if not name:
         raise ValueError("Give the project a name")
-    if template not in store.TEMPLATES:
+    if template not in templates.TEMPLATES:
         raise ValueError(f"No template {template}")
     s = hub().session(cluster)
     if not s.connected:
         raise RuntimeError(f"Connect to {s.cfg.name} first to create the folder")
     target = posixpath.join(remote_fs.expand(s.ssh, parent.strip() or "~"), slug(name))
-    res = s.ssh.run(store.create_command(target, template, name, git), timeout=60)
+    res = s.ssh.run(templates.create_command(target, template, name, git), timeout=60)
     if res.returncode != 0:
         raise RuntimeError(res.stderr.strip() or "Could not create the folder (does it exist already?)")
-    mains = store.find_main_tex(s.ssh, target)
+    mains = papers.find_main_tex(s.ssh, target)
     return _add(Project(name, cluster, target, main_tex=mains[0] if mains else "",
                         kind="latex" if template == "LaTeX paper" else "code"))
 

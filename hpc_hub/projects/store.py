@@ -1,36 +1,15 @@
-"""Projects: a named folder on a cluster (myproj, thesis, paper...). Saved in projects.toml."""
+"""The project list in projects.toml: a named folder on a cluster each."""
 
 import json
-import os
-import posixpath
-import shlex
 import time
 import tomllib
 from dataclasses import asdict, dataclass, fields
 from pathlib import Path
 
 from ..core.config import CONFIG_DIR, _toml_value
-from ..core.ssh import SshMaster
 
 PROJECTS_FILE = CONFIG_DIR / "projects.toml"
 REMOVED = "projects-removed.json"  # next to the projects: cluster:path -> when, so a sync doesn't bring it back
-TEMPLATES = ["Empty", "LaTeX paper", "Python"]
-
-LATEX_MAIN = r"""\documentclass{article}
-\usepackage[utf8]{inputenc}
-\usepackage{amsmath,graphicx,hyperref}
-
-\title{%s}
-\author{}
-\date{\today}
-
-\begin{document}
-\maketitle
-
-\section{Introduction}
-
-\end{document}
-"""
 
 
 @dataclass
@@ -132,121 +111,3 @@ def save_removed(removed: dict[str, int], path: Path | None = None) -> None:
     tmp = path.with_suffix(".tmp")
     tmp.write_text(json.dumps(removed, indent=1))
     tmp.replace(path)
-
-
-def find_main_tex(ssh: SshMaster, folder: str) -> list[str]:
-    """.tex files with \\documentclass, nearest first (relative paths)."""
-    cmd = (f"cd {shlex.quote(folder)} && find . -maxdepth 3 -name '*.tex' -type f 2>/dev/null "
-           f"| xargs -r grep -l '^[^%]*\\\\documentclass' 2>/dev/null | sed 's|^./||' | head -50")
-    found = ssh.run(cmd, timeout=60).stdout.split("\n")
-    return sorted((f for f in found if f), key=lambda f: (f.count("/"), f != "main.tex", f))
-
-
-# .tex files that start a document, in home, project and scratch; newest first
-PAPERS = r"""R="$HOME"
-for d in /mmfs1/project/*/"$USER" /mmfs1/scratch/*/"$USER" "$SCRATCH" "$PROJECT"; do
-  [ -d "$d" ] && R="$R $d"
-done
-timeout 60 find $R -maxdepth 6 \( -name '.*' -o -name node_modules -o -name '*conda*' -o -name '*venv*' \
-  -o -name __pycache__ \) -prune -o -name '*.tex' -type f -print 2>/dev/null | head -5000 |
-while IFS= read -r f; do
-  grep -qs '^[^%]*\\documentclass' "$f" && printf '%s|%s\n' "$(stat -c %Y "$f")" "$f"
-done"""
-
-
-@dataclass
-class Paper:
-    folder: str
-    main: str  # file name inside folder
-    mtime: int
-    others: int = 0  # more .tex files with \documentclass in the same folder
-
-
-def parse_papers(text: str) -> list[Paper]:
-    """One paper per folder: main.tex if there is one, else its newest file."""
-    by_folder: dict[str, list[tuple[int, str]]] = {}
-    for line in text.splitlines():
-        t, _, path = line.partition("|")
-        if t.isdigit() and path.endswith(".tex"):
-            by_folder.setdefault(posixpath.dirname(path), []).append((int(t), posixpath.basename(path)))
-    out = []
-    for folder, files in by_folder.items():
-        files.sort(reverse=True)
-        main = next((f for f in files if f[1] == "main.tex"), files[0])
-        out.append(Paper(folder, main[1], max(t for t, _ in files), len(files) - 1))
-    return sorted(out, key=lambda p: -p.mtime)
-
-
-def find_papers(ssh: SshMaster) -> list[Paper]:
-    return parse_papers(ssh.run(PAPERS, timeout=90, fast=True).stdout)
-
-
-def _papers_file(cluster: str) -> Path:
-    base = os.environ.get("XDG_CACHE_HOME") or str(Path.home() / ".cache")
-    return Path(base) / "hpc-hub" / f"papers-{cluster}.json"
-
-
-def save_papers(cluster: str, papers: list[Paper]) -> None:
-    """Remember what the last search found, so the list shows at once next time."""
-    f = _papers_file(cluster)
-    f.parent.mkdir(parents=True, exist_ok=True)
-    f.write_text(json.dumps({"at": int(time.time()), "papers": [asdict(x) for x in papers]}))
-
-
-def load_papers(cluster: str) -> tuple[list[Paper], int]:
-    """(papers, when they were found) from the last search; ([], 0) if none."""
-    try:
-        raw = json.loads(_papers_file(cluster).read_text())
-        return [Paper(**x) for x in raw["papers"]], int(raw["at"])
-    except (OSError, ValueError, KeyError, TypeError):
-        return [], 0
-
-
-def create_command(folder: str, template: str, title: str, git_init: bool) -> str:
-    """Shell line that makes the project folder (fails if it already exists)."""
-    q = shlex.quote(folder)
-    steps = [f"mkdir -p {shlex.quote(posixpath.dirname(folder.rstrip('/')) or '/')}", f"mkdir {q}", f"cd {q}"]
-    if template == "LaTeX paper":
-        steps.append(f"printf %s {shlex.quote(LATEX_MAIN % title)} > main.tex")
-        ignore = "*.aux\n*.log\n*.out\n*.fls\n*.fdb_latexmk\n*.synctex.gz\n*.bbl\n*.blg\n"
-        steps.append(f"printf %s {shlex.quote(ignore)} > .gitignore")
-    elif template == "Python":
-        steps.append(f"printf %s {shlex.quote('# ' + title + chr(10))} > README.md")
-        steps.append("printf 'print(\"hello\")\\n' > main.py")
-        steps.append(f"printf %s {shlex.quote('__pycache__/' + chr(10) + '.venv/' + chr(10))} > .gitignore")
-    if git_init:
-        steps.append("git init -q")
-    return " && ".join(steps)
-
-
-class ProjectStore:
-    """The project list plus change listeners (Projects tab, LaTeX tab)."""
-
-    def __init__(self, path: Path = PROJECTS_FILE):
-        self.path = path
-        self.items = load(path)
-        self.listeners: list = []
-
-    def changed(self) -> None:
-        save(self.items, self.path)
-        for fn in self.listeners:
-            fn()
-
-    def add(self, p: Project) -> None:
-        self.items.append(p)
-        self.changed()
-
-    def remove(self, p: Project) -> None:
-        self.items.remove(p)
-        self.changed()
-
-    def touch(self, p: Project) -> None:
-        p.opened = int(time.time())
-        self.changed()
-
-    def find(self, cluster: str, path: str) -> Project | None:
-        path = path.rstrip("/")
-        return next((p for p in self.items if p.cluster == cluster and p.path.rstrip("/") == path), None)
-
-    def recent(self) -> list[Project]:
-        return sorted(self.items, key=lambda p: (-p.opened, p.name.lower()))
