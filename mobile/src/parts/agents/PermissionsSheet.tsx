@@ -5,7 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { shortName } from '@shared/components/clusters/loginCopy'
 import { askLabel } from '@shared/components/permissions/asks'
-import { lockConfig } from '@shared/components/permissions/Lock'
+import { lockConfig } from '@shared/components/permissions/lock'
 import { Spinner } from '@shared/components/ui'
 import { call } from '@shared/rpc'
 import type { Cluster } from '@shared/types/clusters'

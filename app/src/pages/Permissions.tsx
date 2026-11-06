@@ -8,21 +8,17 @@ import { Confirm, EButton, EmptyState, EPage, IconBtn } from '../components/e/ex
 import { Section, ToggleRow } from '../components/e/ui'
 import { askLabel } from '../components/permissions/asks'
 import { Commands } from '../components/permissions/Commands'
-import { LockSection, LockSetupDialog, lockConfig, lockOk } from '../components/permissions/Lock'
+import { draftOf, type Draft } from '../components/permissions/draft'
+import { lockOk } from '../components/permissions/lock'
+import { LockSection } from '../components/permissions/LockSection'
+import { LockSetupDialog } from '../components/permissions/LockSetupDialog'
 import { useToast } from '../components/toast'
 import { Spinner } from '../components/ui'
 import { useEvent } from '../hooks'
 import { setLeaveGuard } from '../nav'
 import { call } from '../rpc'
 import type { Session } from '../types'
-import type { ClaudePermissions, LockConfig } from '../types/permissions'
-
-type Draft = { allowed: string[]; custom: string[]; trash: boolean; ask: string[]; accept_edits: boolean
-  lock: LockConfig }
-
-const draftOf = (p: ClaudePermissions): Draft => ({ allowed: [...p.allowed].sort(), custom: p.custom,
-  trash: p.trash, ask: [...p.ask].sort(), accept_edits: p.accept_edits, lock: lockConfig(p.lock) })
-
+import type { ClaudePermissions } from '../types/permissions'
 
 export function Permissions() {
   const toast = useToast()
