@@ -1,5 +1,3 @@
-// The queues a node request tries, cheapest first: one row per queue and priority, instead of the raw
-// "general:low,general:standard" text the config keeps (ClusterConfig.queues). Click one to change or remove it.
 import { Plus } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
@@ -7,21 +5,8 @@ import { call } from '../../rpc'
 import type { Limits } from '../../types/clusters'
 import { EDialog, List, MainButton, Row } from '../e/ui'
 import { queueRowName } from './priority'
-import { QueuePickers } from './queues'
-
-type Queue = { queue: string; billing: string }
-
-export const parseQueues = (text: string): Queue[] => text.split(',').map((s) => s.trim()).filter(Boolean)
-  .map((s) => { const [queue = '', billing = ''] = s.split(':'); return { queue: queue.trim(), billing: billing.trim() } })
-
-export const queuesText = (list: Queue[]) => list.filter((q) => q.queue.trim())
-  .map((q) => (q.billing.trim() ? `${q.queue.trim()}:${q.billing.trim()}` : q.queue.trim())).join(',')
-
-/** "3 queues" for "general:low, debug:debug, general:standard". */
-export function queueCount(text?: string) {
-  const n = parseQueues(text ?? '').length
-  return n === 0 ? 'The one you pick' : n === 1 ? '1 queue' : `${n} queues`
-}
+import { parseQueues, queuesText, type Queue } from './queueList'
+import { QueuePickers } from './QueuePickers'
 
 export function QueueRows({ cluster, value, onChange }:
   { cluster: string; value: string; onChange: (text: string) => void }) {
