@@ -10,13 +10,9 @@ import base64
 import re
 import secrets
 import shlex
-import time
 from dataclasses import dataclass
 
 from ..core.ssh import SshMaster
-from . import links
-
-MARK = "@@HPCHUB_PANE "
 
 SEP = "\x1f"
 FIELDS = ["session_name", "session_created", "session_attached", "@hpchub_label", "@hpchub_color",
@@ -177,141 +173,6 @@ def kill(s: Session) -> str:
     if s.kind == "screen":
         return f"screen -S {shlex.quote(s.name)} -X quit"
     return on(s.node, f"tmux kill-session -t {_t(s.name)}")
-
-
-# Claude turned on by its remoteControlAtStartup setting prints no link: it is in the chat's transcript
-# (a bridge_status entry). The chat is found from the claude process in the pane, else from the session name.
-# Only this run of Claude counts, and only while connected: "disconnected ... run /remote-control" is off, any
-# other disconnect may come back by itself. Prints the link while on, "on" if on without a link yet, else "".
-CLAUDE_LINK = r"""import calendar, glob, json, os, subprocess, sys, time
-name, tag = sys.argv[1], sys.argv[2]
-def out(*a):
-    try:
-        return subprocess.run(a, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, universal_newlines=True).stdout
-    except OSError:  # no tmux or ps here: the tag still finds the chat
-        return ""
-pane = out("tmux", "display-message", "-p", "-t", "=" + name + ":", "#{pane_pid}").strip()
-sid, since, todo = "", 0, [pane]
-rows = [r.split(None, 2) for r in out("ps", "-e", "-o", "pid=,ppid=,comm=").splitlines()]
-while todo and not sid:
-    parent = todo.pop()
-    for r in rows:
-        if len(r) == 3 and (r[1] == parent or r[0] == pane == parent):
-            if r[0] != parent:
-                todo.append(r[0])
-            if r[2].strip() == "claude":
-                try:
-                    info = json.load(open(os.path.expanduser("~/.claude/sessions/%s.json" % r[0])))
-                    sid, since = info["sessionId"], info.get("startedAt", 0) / 1000.0
-                except (OSError, ValueError, KeyError):
-                    pass
-sid = sid or tag
-pattern = os.path.expanduser("~/.claude/projects/*/%s*.jsonl" % sid)
-files = sorted(glob.glob(pattern), key=os.path.getmtime) if sid else []
-on, url = False, ""
-for line in open(files[-1], errors="replace") if files else []:
-    marks = ('"bridge_status"', "Remote Control disconnected", "/remote-control</command-name>")
-    if not any(m in line for m in marks):
-        continue
-    try:
-        d = json.loads(line)
-    except ValueError:
-        continue
-    try:
-        when = calendar.timegm(time.strptime(d.get("timestamp", "")[:19], "%Y-%m-%dT%H:%M:%S"))
-    except ValueError:
-        when = 0
-    if d.get("type") != "system" or (since and when < int(since)):
-        continue
-    text = str(d.get("content", ""))
-    if d.get("subtype") == "bridge_status":
-        on, url = True, d.get("url") or url
-    elif "/remote-control</command-name>" in text:
-        on = True
-    elif "Remote Control disconnected" in text:  # "disconnected." you turned it off; "disconnected — why" it dropped
-        why = text.split("Remote Control disconnected", 1)[1]
-        on = why.lstrip().startswith("—") and not ("run /remote-control to retry" in why or "disabled after" in why)
-print((url or "on") if on else "")
-"""
-
-
-def _chat_tag(name: str) -> str:
-    """The chat id start in hpchub-claude-<job>-<tag> when a chat was resumed (8 hex), else ""."""
-    tag = name.rsplit("-", 1)[-1]
-    return tag if len(tag) == 8 and all(c in "0123456789abcdef" for c in tag) else ""
-
-
-def capture_command(sessions: list[Session]) -> str:
-    def one(t: Session) -> str:
-        if t.agent == "claude":
-            line = f"python3 -c {shlex.quote(CLAUDE_LINK)} {shlex.quote(t.name)} {shlex.quote(_chat_tag(t.name))}"
-        else:
-            line = f"tmux capture-pane -p -J -t {_opt(t.name)} -S -3000 2>/dev/null"
-        return f"echo {shlex.quote(MARK + t.name)}; " + on(t.node, line)
-    return "; ".join(one(t) for t in sessions)
-
-
-def parse_remotes(text: str) -> dict[str, str]:
-    """Newest remote link (or pairing code) per captured session. Claude sessions say "on" when connected
-    without a link yet."""
-    out, name, chunk = {}, "", []
-
-    def flush():
-        found = [x for x in links.find_links("\n".join(chunk)) if x.kind in (links.REMOTE, links.PAIR)]
-        if name and [c.strip() for c in chunk if c.strip()] == ["on"]:
-            out[name] = "on"
-        elif name and found:
-            last = found[-1]
-            out[name] = last.url if last.kind == links.REMOTE else f"code:{last.code}"
-    for line in text.splitlines():
-        if line.startswith(MARK):
-            flush()
-            name, chunk = line[len(MARK):], []
-        else:
-            chunk.append(line)
-    flush()
-    return out
-
-
-def disconnect_keys(screen: str) -> list[str]:
-    """Keys that pick "Disconnect" in Claude's Remote Control panel: arrows from the ❯ line, then Enter."""
-    lines = screen.splitlines()
-    cursor = next((i for i in range(len(lines) - 1, -1, -1) if lines[i].lstrip().startswith("❯ ")
-                   and "/remote-control" not in lines[i]), None)
-    target = next((i for i in range(len(lines) - 1, -1, -1) if "Disconnect" in lines[i]), None)
-    if cursor is None or target is None or abs(cursor - target) > 6:
-        return []
-    return ["Up" if target < cursor else "Down"] * abs(cursor - target) + ["Enter"]
-
-
-def set_remote_control(ssh: SshMaster, t: Session, want: bool) -> None:
-    """Turn Remote Control on or off in the Claude running in t: types /remote-control, and to turn it off,
-    picks Disconnect in the panel that opens. Blocking."""
-    target = _opt(t.name)
-    what = ssh.run(on(t.node, f"tmux display-message -p -t {target} '#{{pane_current_command}}'"), timeout=30)
-    if what.returncode != 0:
-        raise RuntimeError(what.stderr.strip() or "session not found")
-    if what.stdout.strip() not in ("claude", "node", "srun"):
-        raise RuntimeError(f"Claude is not running in this session ({what.stdout.strip() or 'nothing'})")
-    run(ssh, on(t.node, f"tmux send-keys -t {target} -l /remote-control && tmux send-keys -t {target} Enter"))
-    if want:
-        return
-    for _ in range(8):  # the status panel takes a moment
-        time.sleep(0.5)
-        screen = ssh.run(on(t.node, f"tmux capture-pane -p -t {target}"), timeout=30).stdout
-        keys = disconnect_keys(screen)
-        if keys:
-            run(ssh, on(t.node, f"tmux send-keys -t {target} {' '.join(keys)}"))
-            return
-    raise RuntimeError("Could not find Disconnect in Claude's panel; pick it in the tab")
-
-
-def find_remotes(ssh: SshMaster, sessions: list[Session]) -> dict[str, str]:
-    return parse_remotes(ssh.run(capture_command(sessions), timeout=30).stdout) if sessions else {}
-
-
-def set_remote(t: Session, value: str) -> str:
-    return on(t.node, f"tmux set-option -t {_opt(t.name)} @hpchub_remote {shlex.quote(value)}")
 
 
 SEND_MAX = 200_000  # characters pasted into a session at once

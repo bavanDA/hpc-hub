@@ -1,5 +1,3 @@
-import json
-import os
 import shutil
 import subprocess
 
@@ -94,15 +92,7 @@ def test_open_line_is_valid_shell():
     assert "exec tmux attach-session -t =hpchub-claude-1-x" in line
 
 
-def test_remote_links():
-    text = (f"{tmux.MARK}hpchub-agy-1-2\n  Open\n  https://antigravity.google.com/r/\n  abc-v2\n"
-            f"{tmux.MARK}hpchub-codex-1-3\n{{\"manualPairingCode\":\"AB12-CD34\"}}\n{{\"manualPairingCode\":\"ZZ99-YY88\"}}\n"
-            f"{tmux.MARK}hpchub-term-4\nplain output\n")
-    assert tmux.parse_remotes(text) == {"hpchub-agy-1-2": "https://antigravity.google.com/r/abc-v2",
-                                        "hpchub-codex-1-3": "code:ZZ99-YY88"}
-    assert "capture-pane -p -J -t =a: -S -3000" in tmux.capture_command([tmux.Session("a")])
-    on_node = tmux.capture_command([tmux.Session("b", node="n0076")])
-    assert "ssh" in on_node and "n0076" in on_node
+def test_parse_reads_the_remote_tag():
     row = tmux.SEP.join(["hpchub-claude-1-2", "1", "0", "", "", "srun", "1", "/h", "https://claude.ai/code/x"])
     assert tmux.parse(f"login02\nTMUX_OK\n{row}\n").sessions[0].remote == "https://claude.ai/code/x"
 
@@ -116,52 +106,10 @@ def test_sessions_on_compute_nodes():
     assert where == {"hpchub-claude-1440996-1530": "n0076", "hpchub-claude-1431766-0900": ""}
     assert got.nodes == {"1440996": "n0076"}
     t = next(t for t in got.sessions if t.node)
-    for line in (tmux.attach(t), tmux.kill(t), tmux.set_label(t, "x"), tmux.set_remote(t, "u")):
+    for line in (tmux.attach(t), tmux.kill(t), tmux.set_label(t, "x")):
         assert "n0076" in line and subprocess.run(["bash", "-n", "-c", line]).returncode == 0
     assert tmux.kill(next(t for t in got.sessions if not t.node)) == "tmux kill-session -t =hpchub-claude-1431766-0900"
     assert "NODE_LIST" in tmux.LIST and subprocess.run(["bash", "-n", "-c", tmux.LIST]).returncode == 0
-
-
-def test_claude_link_from_transcript(tmp_path):
-    chat = tmp_path / ".claude" / "projects" / "-p"
-    chat.mkdir(parents=True)
-    entry = {"type": "system", "subtype": "bridge_status", "url": "https://claude.ai/code/session_01abc"}
-    (chat / "b1aafc4b-1bbe-4f69.jsonl").write_text('{"type": "user"}\n' + json.dumps(entry) + "\n")
-    assert tmux._chat_tag("hpchub-claude-1440996-b1aafc4b") == "b1aafc4b"
-    assert tmux._chat_tag("hpchub-claude-1440996-153012") == ""
-    def run(tag):
-        return subprocess.run(["python3", "-c", tmux.CLAUDE_LINK, "no-such-session", tag], capture_output=True,
-                              text=True, env={**os.environ, "HOME": str(tmp_path)}).stdout.strip()
-    assert run("b1aafc4b") == "https://claude.ai/code/session_01abc"
-    assert run("") == ""
-    line = tmux.capture_command([tmux.Session("hpchub-claude-1-b1aafc4b", node="n1")])
-    assert "n1" in line and subprocess.run(["bash", "-n", "-c", line]).returncode == 0
-
-
-def test_disconnect_keys():
-    panel = ("❯ /remote-control\n  /remote-control is active\n   Remote Control\n\n"
-             "     Disconnect this session\n     Show QR code   Scan with your phone\n   ❯ Continue\n\n"
-             "   Enter to select · Esc to continue\n")
-    assert tmux.disconnect_keys(panel) == ["Up", "Up", "Enter"]
-    assert tmux.disconnect_keys("❯ \n") == []
-
-
-def test_claude_link_follows_on_and_off(tmp_path):
-    chat = tmp_path / ".claude" / "projects" / "-p"
-    chat.mkdir(parents=True)
-    rows = [{"type": "system", "subtype": "bridge_status", "url": "https://claude.ai/code/session_01x",
-             "timestamp": "2026-10-23T10:00:00.000Z"},
-            {"type": "system", "subtype": "local_command", "timestamp": "2026-10-23T10:05:00.000Z",
-             "content": "<local-command-stdout>Remote Control disconnected.</local-command-stdout>"}]
-    f = chat / "b1aafc4b-1.jsonl"
-    def run():
-        return subprocess.run(["python3", "-c", tmux.CLAUDE_LINK, "none", "b1aafc4b"], capture_output=True,
-                              text=True, env={**os.environ, "HOME": str(tmp_path)}).stdout.strip()
-    f.write_text(json.dumps(rows[0]) + "\n")
-    assert run() == "https://claude.ai/code/session_01x"
-    f.write_text("".join(json.dumps(r) + "\n" for r in rows))
-    assert run() == ""  # turned off: no button
-    assert tmux.parse_remotes(f"{tmux.MARK}a\non\n") == {"a": "on"}
 
 
 def test_attach_says_when_the_terminal_is_gone():
