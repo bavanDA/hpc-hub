@@ -6,7 +6,8 @@ import tomllib
 from dataclasses import asdict, dataclass, fields
 from pathlib import Path
 
-from ..core.config import CONFIG_DIR, _toml_value
+from ..core.config import CONFIG_DIR
+from ..core.toml_file import toml_value
 
 PROJECTS_FILE = CONFIG_DIR / "projects.toml"
 REMOVED = "projects-removed.json"  # next to the projects: cluster:path -> when, so a sync doesn't bring it back
@@ -72,7 +73,7 @@ def save(projects: list[Project], path: Path = PROJECTS_FILE, stamp: bool = True
     lines = ["# HPC Hub projects", ""]
     for p in projects:
         lines.append("[[projects]]")
-        lines += [f"{k} = {_toml_value(v)}" for k, v in asdict(p).items()]
+        lines += [f"{k} = {toml_value(v)}" for k, v in asdict(p).items()]
         lines.append("")
     tmp = path.with_suffix(".tmp")
     tmp.write_text("\n".join(lines), encoding="utf-8")
