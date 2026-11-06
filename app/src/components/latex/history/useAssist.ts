@@ -4,7 +4,7 @@ import { useEvent } from '../../../hooks'
 import { call } from '../../../rpc'
 import type { About, AgentEvent, AgentKind, AgentLevel, AgentStarted, Answer, Checked, Note, NoteList, NotePlace,
   Written } from '../../../types/history'
-import { useToast } from '../../toast'
+import { useToast } from '../../useToast'
 import { chooseAgent, useAgentChoice } from './agent/agentChoice'
 import { shortLabel } from './agent/labels'
 import { lastLine, plural } from './format'

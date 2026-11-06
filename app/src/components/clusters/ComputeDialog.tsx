@@ -2,9 +2,9 @@ import { useState } from 'react'
 
 import { call } from '../../rpc'
 import { summary, type Cluster, type Profile } from '../../types/clusters'
-import { NodeFields } from '../e/NodeFields'
+import { NodeFields } from './node/NodeFields'
 import { EDialog, MainButton, ToggleRow } from '../e/ui'
-import { useToast } from '../toast'
+import { useToast } from '../useToast'
 import { shortName } from './loginCopy'
 import { putCluster } from './store'
 

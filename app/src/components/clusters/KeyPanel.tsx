@@ -8,24 +8,11 @@ import { openSystem } from '../app/openLink'
 import { inTauri } from '../app/platform'
 import { EButton } from '../e/extra'
 import { Spinner } from '../ui'
-import { copy, fill, keyHelp, who } from './loginCopy'
+import { Result } from './KeyTestResult'
+import { copy, fill, who } from './loginCopy'
 import { S } from './loginStrings'
 
 const KEY = 0, ADD = 1, TEST = 2
-
-/** The screen's title and the line under it, for the page around the panel. */
-export function keyHeading(c: Cluster): { title: string; text: ReactNode } {
-  return { title: copy.signIn(c), text: <>{copy.keyIntro(c)} <KeyHelpLink cluster={c} /></> }
-}
-
-/** "What's an SSH key?": the cluster's own guide in the browser. */
-function KeyHelpLink({ cluster, label }: { cluster: Cluster; label?: string }) {
-  return (
-    <button type="button" onClick={() => openSystem(keyHelp(cluster))} title={keyHelp(cluster)}
-      className="inline-flex items-center gap-1 font-semibold underline-offset-2 hover:underline">
-      {label ?? copy.whatsAKey}<ExternalLink size={14} /></button>
-  )
-}
 
 /** A private key file from the system's file dialog, starting in ~/.ssh. */
 async function pickKeyFile(): Promise<string | null> {
@@ -199,23 +186,4 @@ function Step({ n, state, title, done, change, onOpen, last, children }: {
   )
 }
 
-const TONE = { ok: ['', CheckCircle2], wait: ['text-dim', Clock], error: ['font-semibold text-bad', AlertCircle] } as const
-
-/** What the key test said, plain text with its icon; red when it failed. */
-export function Result({ test, text }: { test: KeyTest; text: string }) {
-  const [look, Icon] = TONE[test.kind ?? (test.ok ? 'ok' : 'error')]
-  return (
-    <div role="status" className={`flex gap-2.5 ${look}`}>
-      <Icon size={16} className="mt-[2px] shrink-0" /><span>{text}</span>
-    </div>
-  )
-}
-
-/** Below the key panel of a cluster that also takes a password (password_too). */
-export function PasswordInstead({ on, onChange }: { on: boolean; onChange: (on: boolean) => void }) {
-  return (
-    <button type="button" onClick={() => onChange(!on)}
-      className="self-start text-sm font-semibold underline-offset-2 hover:underline">
-      {on ? copy.useKey : copy.usePassword}</button>
-  )
-}
+export const TONE = { ok: ['', CheckCircle2], wait: ['text-dim', Clock], error: ['font-semibold text-bad', AlertCircle] } as const

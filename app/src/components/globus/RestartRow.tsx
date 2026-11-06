@@ -5,7 +5,7 @@ import { call } from '../../rpc'
 import type { GlobusCluster } from '../../types/globus'
 import { shortName } from '../clusters/loginCopy'
 import { Row } from '../e/ui'
-import { useToast } from '../toast'
+import { useToast } from '../useToast'
 
 // Restarting picks up every folder you have on the cluster now
 export function RestartRow({ cluster: c }: { cluster: GlobusCluster }) {

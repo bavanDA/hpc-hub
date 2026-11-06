@@ -2,7 +2,7 @@ import { useRef } from 'react'
 
 import { call } from '../../rpc'
 import type { Clip, Entry, Transfer } from '../../types/files'
-import { useToast } from '../toast'
+import { useToast } from '../useToast'
 import { join } from './format'
 import { useLocalFiles } from './local'
 import { memory } from './memory'

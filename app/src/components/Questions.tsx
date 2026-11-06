@@ -5,13 +5,13 @@ import { useEffect, useRef, useState } from 'react'
 import { useEvent } from '../hooks'
 import { call } from '../rpc'
 import { DUO, type Question, type Session } from '../types/clusters'
+import { inTauri } from './app/platform'
 import { DuoDialog } from './clusters/DuoDialog'
 import { QuestionDialog } from './clusters/QuestionDialog'
 import { KeySetupDialog } from './clusters/KeySetupDialog'
 import { SettingsDialog } from './clusters/SettingsDialog'
-import { inTauri } from './clusters/SignIn'
 import { load, useClusters } from './clusters/store'
-import { useToast } from './toast'
+import { useToast } from './useToast'
 
 // a plain browser (design work): ?question=chrome-window|web-login or ?show=settings|keysetup,
 // with &cluster=id and &tab=login|compute|server|queues|vscode|agents (else the list), opens that dialog with

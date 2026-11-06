@@ -15,7 +15,7 @@ import { SettingsDialog } from './clusters/SettingsDialog'
 import { EButton, StatusDot, type Tone } from './e/extra'
 import { ConfirmDialog } from './e/parts'
 import { Menu, type MenuItem } from './projects/Menu'
-import { useToast } from './toast'
+import { useToast } from './useToast'
 import { useTools } from './tools/useTools'
 import { IconButton, IconTile, Spinner } from './ui'
 

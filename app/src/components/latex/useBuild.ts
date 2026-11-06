@@ -3,7 +3,7 @@ import { useRef, useState } from 'react'
 import { useEvent } from '../../hooks'
 import { call } from '../../rpc'
 import type { BuildDone } from '../../types/latex'
-import { useToast } from '../toast'
+import { useToast } from '../useToast'
 
 /** `guard` asks for a compute node first when the build should run on one. */
 export function useBuild({ cluster, main, save, guard, onDone }: { cluster: string; main: string

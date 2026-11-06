@@ -2,7 +2,7 @@ import { ArrowLeft, Copy, History as HistoryIcon, ScrollText } from 'lucide-reac
 import { useEffect, useState } from 'react'
 
 import type { LineStory } from '../../../../types/history'
-import { useToast } from '../../../toast'
+import { useToast } from '../../../useToast'
 import { Spinner } from '../../../ui'
 import { Tex } from '../diff/Tex'
 import { fullDate, lastLine, plural, when } from '../format'

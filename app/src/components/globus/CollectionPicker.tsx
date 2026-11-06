@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { call } from '../../rpc'
 import type { Collection, GlobusCluster, GlobusStatus } from '../../types/globus'
 import { Dialog, List, Row, Spinner } from '../ui'
-import { useToast } from '../toast'
+import { useToast } from '../useToast'
 
 type Found = { query: string; results: Collection[] }
 

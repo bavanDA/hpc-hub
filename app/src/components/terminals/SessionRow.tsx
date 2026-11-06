@@ -1,5 +1,5 @@
 import type { TmuxSession } from '../../types/terminals'
-import { useToast } from '../toast'
+import { useToast } from '../useToast'
 import { SessionIcon } from './Popover'
 import { openLink } from './pty'
 import { SessionMenu } from './SessionMenu'

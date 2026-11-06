@@ -5,7 +5,7 @@ import { call } from '../../rpc'
 import type { GlobusCluster, GlobusStatus } from '../../types/globus'
 import { shortName } from '../clusters/loginCopy'
 import { EDialog, Field as EField, List, MainButton, Row, Section } from '../e/ui'
-import { useToast } from '../toast'
+import { useToast } from '../useToast'
 import { HELP } from './format'
 import { RestartRow } from './RestartRow'
 

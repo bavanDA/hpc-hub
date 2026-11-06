@@ -7,7 +7,7 @@ import { SessionList } from '../components/terminals/SessionList'
 import { TabStrip } from '../components/terminals/TabStrip'
 import { setNotify, useTabs } from '../components/terminals/tabs'
 import { TerminalView } from '../components/terminals/TerminalView'
-import { useToast } from '../components/toast'
+import { useToast } from '../components/useToast'
 import { Button, EmptyState, IconButton } from '../components/ui'
 import { usePageParams } from '../nav'
 

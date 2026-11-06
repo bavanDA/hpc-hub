@@ -2,7 +2,7 @@ import { useState } from 'react'
 
 import { call } from '../../../rpc'
 import type { LatexCluster } from '../../../types/latex'
-import { useToast } from '../../toast'
+import { useToast } from '../../useToast'
 import { Button, Dialog, FIELD, Spinner } from '../../ui'
 import { ClusterSelect } from './ClusterSelect'
 import { openPath } from './papers'

@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { call } from '../../rpc'
 import type { Cluster } from '../../types/clusters'
 import type { Listing, Place } from '../../types/files'
-import { useToast } from '../toast'
+import { useToast } from '../useToast'
 import { memory } from './memory'
 
 /** The folder shown on a cluster: its listing, the places to jump to, and going somewhere else. */

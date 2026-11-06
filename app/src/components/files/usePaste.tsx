@@ -2,7 +2,7 @@ import { useState, type ReactNode } from 'react'
 
 import type { Session } from '../../types/clusters'
 import type { Clip, Entry } from '../../types/files'
-import { useToast } from '../toast'
+import { useToast } from '../useToast'
 import { isDir, join } from './format'
 import { memory } from './memory'
 import { PasteDialog, type How } from './PasteDialog'

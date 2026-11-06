@@ -5,7 +5,7 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 
 import { setActiveCluster } from '@shared/components/clusters/active'
-import type { Page } from '@shared/components/Sidebar'
+import type { Page } from '@shared/components/app/pages'
 import { NavContext, type Go } from '@shared/nav'
 
 export type Tab = 'clusters' | 'terminals' | 'code' | 'jobs' | 'more'

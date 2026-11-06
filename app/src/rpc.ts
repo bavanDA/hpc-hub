@@ -1,11 +1,10 @@
 import { invoke } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
 
+import { inTauri } from './components/app/platform'
 import { onDemoEvent } from './demo/events'
 import { demoCall } from './demo/index'
 
-// In a plain browser (design work) there is no Tauri: answer from demo data
-const inTauri = '__TAURI_INTERNALS__' in window
 
 type Waiting = { resolve: (v: unknown) => void; reject: (e: Error) => void }
 type Message = { id?: number | null; result?: unknown; error?: { message: string }; method?: string;

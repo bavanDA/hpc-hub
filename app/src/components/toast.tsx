@@ -1,11 +1,10 @@
 import { CircleAlert, X } from 'lucide-react'
-import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useState, type ReactNode } from 'react'
 
-type ToastOptions = { kind?: 'info' | 'error'; action?: { label: string; run: () => void } }
+import { ToastContext, type ToastOptions } from './useToast'
+
 type Toast = { id: number; text: string } & ToastOptions
 
-type Show = (text: string, options?: ToastOptions) => () => void
-const ToastContext = createContext<Show>(() => () => {})
 const SHOWN_MS = 4000
 
 export function ToastProvider({ children }: { children: ReactNode }) {
@@ -50,5 +49,3 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     </ToastContext.Provider>
   )
 }
-
-export const useToast = () => useContext(ToastContext)

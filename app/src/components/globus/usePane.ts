@@ -2,7 +2,7 @@ import { useCallback, useRef, useState } from 'react'
 
 import { call } from '../../rpc'
 import type { Item, Listing } from '../../types/globus'
-import { useToast } from '../toast'
+import { useToast } from '../useToast'
 
 export type Pane = {
   cluster: string

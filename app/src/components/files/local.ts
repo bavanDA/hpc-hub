@@ -3,7 +3,7 @@ import { useCallback } from 'react'
 import { call } from '../../rpc'
 import type { Transfer } from '../../types/files'
 import { inTauri } from '../app/platform'
-import { useToast } from '../toast'
+import { useToast } from '../useToast'
 
 type Mine = { kind: 'upload' | 'download'; path?: string; open?: boolean }
 

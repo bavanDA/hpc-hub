@@ -1,7 +1,7 @@
 import { Copy, CornerDownRight, Loader2, StickyNote, X } from 'lucide-react'
 
 import type { Answer } from '../../../../types/history'
-import { useToast } from '../../../toast'
+import { useToast } from '../../../useToast'
 import { AgentIcon } from '../agent/AgentIcon'
 import { agentOf, shortLabel } from '../agent/labels'
 import { lastLine, when } from '../format'

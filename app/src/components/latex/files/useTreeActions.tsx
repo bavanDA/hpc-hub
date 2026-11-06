@@ -5,7 +5,7 @@ import type { TreeEntry } from '../../../types/latex'
 import { ConfirmDialog, NameDialog } from '../../files/dialogs'
 import { ImageDialog } from '../../files/ImageDialog'
 import { PdfDialog } from '../../pdf/PdfDialog'
-import { useToast } from '../../toast'
+import { useToast } from '../../useToast'
 import { basename, ext, IMAGE_EXT, TEXT_EXT } from '../bits'
 import type { TreeActions } from './FileTree'
 

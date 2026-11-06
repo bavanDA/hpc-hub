@@ -2,7 +2,7 @@ import { Copy } from 'lucide-react'
 import type { ReactNode } from 'react'
 
 import type { HCommit } from '../../../../types/history'
-import { useToast } from '../../../toast'
+import { useToast } from '../../../useToast'
 import { fullDate, plural, when } from '../format'
 import { Avatar } from '../ui/Avatar'
 import { AskButton } from './AskButton'

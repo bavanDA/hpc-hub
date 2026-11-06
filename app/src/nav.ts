@@ -1,6 +1,6 @@
 import { createContext, useContext } from 'react'
 
-import type { Page } from './components/Sidebar'
+import type { Page } from './components/app/pages'
 
 export type Go = (page: Page, params?: Record<string, string>) => void
 export const NavContext = createContext<{ go: Go; params: Record<string, string> }>({ go: () => {}, params: {} })

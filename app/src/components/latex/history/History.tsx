@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { call } from '../../../rpc'
 import type { GitJob, GitState, HCommit, Lanes, Pick, Refs, SavedSetting, SavedVersion, SwitchCheck, SwitchDone,
   SyncDone, SyncState } from '../../../types/history'
-import { useToast } from '../../toast'
+import { useToast } from '../../useToast'
 import { Button, Spinner } from '../../ui'
 import { remember, remembered } from '../storage'
 import { AgentChip } from './agent/AgentChip'

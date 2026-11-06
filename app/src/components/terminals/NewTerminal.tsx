@@ -2,7 +2,7 @@ import { useState } from 'react'
 
 import { shortName } from '../clusters/loginCopy'
 import { EDialog, Field, MainButton, Segments } from '../e/ui'
-import { useToast } from '../toast'
+import { useToast } from '../useToast'
 import type { Live } from './data'
 import { openNew } from './tabs'
 

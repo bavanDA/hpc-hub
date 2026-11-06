@@ -4,13 +4,10 @@ import { Globe } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
 import type { Question } from '../../types/clusters'
+import { inTauri } from '../app/platform'
 import { EButton } from '../e/extra'
 import { EDialog, MainButton } from '../e/ui'
 import { Spinner } from '../ui'
-
-export const inTauri = '__TAURI_INTERNALS__' in window
-
-export const CHROME_WINDOW = { title: 'Chrome window', sub: 'Its own Chrome profile, kept apart from yours' }
 
 function Waiting({ title, text }: { title: string; text: string }) {
   return (

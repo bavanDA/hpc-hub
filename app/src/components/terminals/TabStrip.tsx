@@ -1,6 +1,6 @@
 import { X } from 'lucide-react'
 
-import { useToast } from '../toast'
+import { useToast } from '../useToast'
 import { SessionIcon } from './Popover'
 import { SessionMenu } from './SessionMenu'
 import { close, select, type Tab } from './tabs'

@@ -1,5 +1,5 @@
 import type { Cluster } from '../../../types/clusters'
-import { NodeFields } from '../../e/NodeFields'
+import { NodeFields } from '../node/NodeFields'
 import { List, ToggleRow } from '../../e/ui'
 import { ASK } from '../ComputeDialog'
 import { parseQueues } from '../queueList'

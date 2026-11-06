@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useEvent } from '../../hooks'
 import { call } from '../../rpc'
 import type { Transfer } from '../../types/files'
-import { useToast } from '../toast'
+import { useToast } from '../useToast'
 
 export function useTransfers(onFinished: (t: Transfer) => void) {
   const toast = useToast()

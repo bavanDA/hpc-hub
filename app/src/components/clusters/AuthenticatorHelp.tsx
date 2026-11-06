@@ -4,7 +4,7 @@ import type { Cluster } from '../../types/clusters'
 import { openSystem } from '../app/openLink'
 import { EButton } from '../e/extra'
 import { EDialog, MainButton, Row, Section } from '../e/ui'
-import { useToast } from '../toast'
+import { useToast } from '../useToast'
 import { shortName } from './loginCopy'
 
 function host(url: string) {

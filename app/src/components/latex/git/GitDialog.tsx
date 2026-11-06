@@ -3,7 +3,7 @@ import { useCallback, useEffect, useState } from 'react'
 
 import { call } from '../../../rpc'
 import type { GitInfo } from '../../../types/latex'
-import { useToast } from '../../toast'
+import { useToast } from '../../useToast'
 import { Button, Dialog, Spinner } from '../../ui'
 import { CommitDialog } from './CommitDialog'
 import { Prop } from './Prop'

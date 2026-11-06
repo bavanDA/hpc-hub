@@ -4,7 +4,7 @@ import { call } from '../../rpc'
 import type { Skill, Target } from '../../types/skills'
 import { EButton, SearchField } from '../e/extra'
 import { EDialog, Field, MainButton, Section, ToggleRow } from '../e/ui'
-import { useToast } from '../toast'
+import { useToast } from '../useToast'
 import { Spinner } from '../ui'
 
 export function AddSkillsDialog({ cluster, name, targets, repo, onClose, onDone }: {

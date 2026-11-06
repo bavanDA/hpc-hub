@@ -2,7 +2,7 @@ import { MoreVertical } from 'lucide-react'
 import { useRef, useState } from 'react'
 
 import { call } from '../../rpc'
-import { useToast } from '../toast'
+import { useToast } from '../useToast'
 import { AlertDialog, Button, Dialog, IconButton } from '../ui'
 import { MenuItem, Popover } from './Popover'
 import { close, getTab, tabKey, update } from './tabs'

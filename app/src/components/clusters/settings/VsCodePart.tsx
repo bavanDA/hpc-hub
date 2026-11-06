@@ -1,5 +1,5 @@
 import type { Cluster, VsCode } from '../../../types/clusters'
-import { NodeFields } from '../../e/NodeFields'
+import { NodeFields } from '../node/NodeFields'
 import { Field, Section, Segments, ToggleRow } from '../../e/ui'
 import { ASK_VS, ASK_VS_SUB } from '../../tools/vscodeWords'
 

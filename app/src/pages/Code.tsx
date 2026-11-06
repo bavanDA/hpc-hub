@@ -37,7 +37,7 @@ import { closeFile, getFile, isDirty, openFile, reloadFile, replaceText, selectF
   from '../components/code/store'
 import { undoAgentChange } from '../components/code/watch'
 import { FolderPicker } from '../components/projects/FolderPicker'
-import { useToast } from '../components/toast'
+import { useToast } from '../components/useToast'
 import { AlertDialog } from '../components/ui'
 import { useGo, usePageParams } from '../nav'
 import { call } from '../rpc'

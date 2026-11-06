@@ -3,7 +3,7 @@ import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { call } from '../../rpc'
 import type { Cluster, Session } from '../../types'
 import type { State } from '../../types/clusters'
-import { useToast } from '../toast'
+import { useToast } from '../useToast'
 import { Button, Dialog, Spinner } from '../ui'
 import { inTauri } from './platform'
 

@@ -11,9 +11,6 @@ const LOOK = {
   box: { icon: Info, bar: 'border-l-line', text: 'text-dim', label: 'Bad box' },
 }
 
-// The phone app imports counts from here
-export { counts } from './issues'
-
 export function Logs({ running, log, last, onGo, onStop, onClose }:
   { running: boolean; log: string; last: BuildDone | null; onGo: (i: Issue) => void; onStop: () => void;
     onClose: () => void }) {

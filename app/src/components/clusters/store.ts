@@ -2,10 +2,10 @@ import { useSyncExternalStore } from 'react'
 
 import { call, on } from '../../rpc'
 import type { Cluster, Session } from '../../types/clusters'
+import { inTauri } from '../app/platform'
 import { rememberShort } from './loginCopy'
 
 const MAX_LOG = 1000
-const inTauri = '__TAURI_INTERNALS__' in window
 
 type Snapshot = {
   clusters: Cluster[] | null

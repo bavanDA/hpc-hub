@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 
 import { call } from '../../../rpc'
 import type { OpenedFile } from '../../../types/code'
-import { useToast } from '../../toast'
+import { useToast } from '../../useToast'
 import { AlertDialog, Button, Dialog } from '../../ui'
 import { getFile, isDirty, reloadFile, replaceText, saveFile, type OpenFile } from '../store'
 import { CompareDialog } from './Compare'

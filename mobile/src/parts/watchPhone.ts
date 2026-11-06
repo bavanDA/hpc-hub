@@ -7,7 +7,7 @@ import { createElement, useEffect, useRef, useState, useSyncExternalStore } from
 import { shortName } from '@shared/components/clusters/loginCopy'
 import { setNotifier, useSessionNotifications, type Notice, type NoticeKind } from '@shared/components/app/notify'
 import { useWatch } from '@shared/components/app/watch'
-import type { Page } from '@shared/components/Sidebar'
+import type { Page } from '@shared/components/app/pages'
 import { useBackupAlertWatch } from '@shared/components/backup/alerts'
 import { agentName, isRunning, useAsks } from '@shared/components/code/ask'
 import { useClusters } from '@shared/components/clusters/store'

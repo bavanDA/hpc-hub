@@ -3,7 +3,7 @@ import { useCallback, useEffect, useState } from 'react'
 
 import { Picker } from './picker/Picker'
 import { Project } from './Project'
-import { useToast } from '../toast'
+import { useToast } from '../useToast'
 import { Button, Dialog, EmptyState, Spinner } from '../ui'
 import { useCall, useEvent } from '../../hooks'
 import { usePageParams } from '../../nav'

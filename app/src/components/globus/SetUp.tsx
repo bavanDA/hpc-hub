@@ -3,7 +3,7 @@ import { useState } from 'react'
 
 import { call } from '../../rpc'
 import type { GlobusStatus } from '../../types/globus'
-import { useToast } from '../toast'
+import { useToast } from '../useToast'
 import { Button, EmptyState } from '../ui'
 import { Field } from './Field'
 import { HELP } from './format'

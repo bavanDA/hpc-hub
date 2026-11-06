@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useGo } from '../../nav'
 import { call } from '../../rpc'
 import { BUSY, type Cluster, type Session } from '../../types/clusters'
-import { useToast } from '../toast'
+import { useToast } from '../useToast'
 import { AlertDialog, Button, EmptyState, Spinner } from '../ui'
 import { shortName } from './loginCopy'
 

@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 
 import '@xterm/xterm/css/xterm.css'
 
-import { useToast } from '../toast'
+import { useToast } from '../useToast'
 import { Button, IconButton } from '../ui'
 import { MonitorBar } from './MonitorBar'
 import { MenuItem, Popover } from './Popover'

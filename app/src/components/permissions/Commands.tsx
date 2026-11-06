@@ -3,7 +3,7 @@ import { useState } from 'react'
 import type { CommandGroup } from '../../types/permissions'
 import { EButton } from '../e/extra'
 import { EDialog, Field, List, MainButton, Row, Section, ToggleRow } from '../e/ui'
-import { useToast } from '../toast'
+import { useToast } from '../useToast'
 
 /** The groups in plain words. */
 const GROUPS: Record<string, string> = { Slurm: 'Jobs and modules' }

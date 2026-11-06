@@ -7,7 +7,7 @@ import { setActiveCluster } from '../clusters/active'
 import { shortName } from '../clusters/loginCopy'
 import { StatusDot } from '../clusters/ClusterPicker'
 import { load, useClusters } from '../clusters/store'
-import type { Page } from '../Sidebar'
+import type { Page } from './pages'
 import { leftText, useTimeLeft } from './watch'
 
 function Line({ c, s, onPick }: { c: Cluster; s: Session; onPick: (p: Page) => void }) {

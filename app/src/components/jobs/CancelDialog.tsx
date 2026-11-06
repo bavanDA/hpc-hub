@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 
 import { call } from '../../rpc'
 import type { Inside, Job } from '../../types/jobs'
-import { useToast } from '../toast'
+import { useToast } from '../useToast'
 import { AlertDialog, Spinner } from '../ui'
 import { ranFor } from './format'
 
