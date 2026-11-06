@@ -55,7 +55,6 @@ export type Link = {
   tunnel?: string
 }
 
-// Same as tmux.COLORS and tmux.AGENT_COLORS
 export const COLORS = ['#3584e4', '#2ec27e', '#e5a50a', '#ff7800', '#e01b24', '#9141ac', '#986a44', '#77767b']
 
 export const AGENT_NAMES: Record<string, string> = {

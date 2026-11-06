@@ -23,9 +23,6 @@ export type FileState = { path: string; exists: boolean; sha: string; mtime: num
 /** code.find_files(cluster, root, query): files under root whose name matches, for "Go to file". */
 export type FoundFile = { path: string; name: string }
 
-/** code.grep(cluster, root, text): matching lines, for "Find in folder". */
-export type GrepHit = { path: string; line: number; text: string }
-
 // -- asking an agent about code ------------------------------------------------------------------------------------
 
 export type AskKind = 'explain' | 'fix' | 'test' | 'free'
