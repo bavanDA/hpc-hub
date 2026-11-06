@@ -67,7 +67,7 @@ export function Detail(p: DetailProps) {
   const frm = sel.kind === 'commit' ? '' : from
   const context = more ? 100000 : 3
   useEffect(() => {
-    git<Changes>('changes', where, { frm, to, context }).then(setChanges)
+    git<Changes>('changes', where, { frm, to, context }).then((c) => { setChanges(c); setFailed('') })
       .catch((e: Error) => setFailed(lastLine(e.message)))
   }, [where, frm, to, context, reloads])
   const load = () => { setFailed(''); setReloads((n) => n + 1) }
