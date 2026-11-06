@@ -2,7 +2,7 @@ import json
 import subprocess
 import time
 
-from hpc_hub.agents import lock
+from hpc_hub.agents.lock import remote as lock
 
 
 class LocalSsh:

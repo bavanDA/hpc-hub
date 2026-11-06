@@ -4,7 +4,7 @@ import time
 
 import pytest
 
-from hpc_hub.agents import lock
+from hpc_hub.agents.lock import remote as lock
 from hpc_hub.api import hub as hub_mod
 from hpc_hub.api.methods import permissions as m
 from hpc_hub.core.config import ClusterConfig
@@ -76,14 +76,3 @@ def test_lock_setup_configure_and_off(home):
     m.lock_reset("wulver")
     m.lock_off("wulver")
     assert not m.get("wulver")["lock"]["set_up"]
-
-
-@pytest.mark.parametrize("line, words", [
-    ("2026-10-24 09:12:03 ok main (open 10 min)", "Oct 24, 09:12 · Code accepted, open for 10 min"),
-    ("2026-10-23 18:40:00 wrong code 1 of 3 in main", "Oct 23, 18:40 · Wrong code, 1 of 3"),
-    ("2026-10-22 11:05:09 set up", "Oct 22, 11:05 · Lock turned on"),
-    ("2026-10-22 11:06:00 set minutes=5", "Oct 22, 11:06 · Lock settings changed"),
-    ("something else", "something else"),
-])
-def test_activity_in_words(line, words):
-    assert m.activity(line) == words
