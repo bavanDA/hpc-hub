@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest'
 
-import { fromBib, loadLatex, mathFor, stripComments } from './latex'
-import { plain, type Block } from './model'
+import { plain, type Block } from '../model'
+import { fromBib } from './bib'
+import { loadLatex } from './load'
+import { mathFor } from './math'
+import { stripComments } from './scan'
 
 const files: Record<string, string> = {
   'p/main.tex': String.raw`\documentclass{article}

@@ -1,7 +1,7 @@
 import katex from 'katex'
 
 import { useCtx } from './context'
-import { mathFor } from './latex'
+import { mathFor } from './latex/math'
 
 const rendered = new Map<string, string>()
 

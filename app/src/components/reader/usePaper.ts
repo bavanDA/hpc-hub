@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 
 import { call } from '../../rpc'
 import { engine, open } from '../pdf/engine'
-import { loadLatex } from './latex'
+import { loadLatex } from './latex/load'
 import type { Doc } from './model'
 import { fromPdf, pageWords, place, readText } from './pdftext'
 
