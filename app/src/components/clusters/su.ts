@@ -23,6 +23,9 @@ const round = (n: number) => (n >= 10 ? Math.round(n) : Math.round(n * 10) / 10)
  *  a paid one would take. */
 export function suText(b: Billing, p: Profile, minutes: number, qos: string): { value: string; sub: string } {
   const rate = suPerHour(b, p)
+  if (!b.factor && b.free === 'partition') {
+    return { value: 'Free', sub: `This queue is free here. A priority queue bills ${round(rate)} SU an hour` }
+  }
   if (!b.factor) {
     return { value: 'Free', sub: `No SUs with the ${qos || 'chosen'} priority. A paid one: ${round(rate)} SU an hour` }
   }

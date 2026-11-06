@@ -18,7 +18,8 @@ def allocations(cluster: str, fresh: bool = False) -> dict:
     """Every group you can bill here: SUs used and left, SUs per week for the last 12 weeks (None: the cluster
     could not tell), the pace of the last 4 weeks and when it runs out at that pace. me: your user name."""
     s = hub().connected(cluster)
-    return {"groups": [asdict(a) for a in usage.allocations(s.ssh, cluster, bool(fresh))], "me": s.ssh.username}
+    groups = usage.allocations(s.ssh, cluster, bool(fresh), s.cfg.paid_partitions)
+    return {"groups": [asdict(a) for a in groups], "me": s.ssh.username}
 
 
 @method("usage.people")

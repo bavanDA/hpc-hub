@@ -26,7 +26,7 @@ class FakeSsh:
 class FakeHub:
     def __init__(self, connected=True):
         self.ok = connected
-        self.s = SimpleNamespace(ssh=FakeSsh())
+        self.s = SimpleNamespace(ssh=FakeSsh(), cfg=SimpleNamespace(paid_partitions="priority"))
 
     def connected(self, cluster):
         if not self.ok:
@@ -64,7 +64,8 @@ def test_people_storage_load(fake):
 def test_allocations(fake, monkeypatch):
     from hpc_hub.compute import usage
     monkeypatch.setattr(usage, "_weekly_cache", {})
-    monkeypatch.setattr(usage, "weekly", lambda ssh, cluster, accounts, fresh=False: {
+    asked = []
+    monkeypatch.setattr(usage, "weekly", lambda ssh, cluster, accounts, fresh=False, paid="": asked.append(paid) or {
         "mygroup": usage.Weekly([0.0] * 8 + [70.0] * 4, {"jdoe": 280.0})})
     got = m.allocations("yale")
     assert got["me"] == "jdoe"
@@ -72,3 +73,4 @@ def test_allocations(fake, monkeypatch):
     assert (g["account"], g["used"], g["rate"], g["per_day"], g["days_left"], g["people"]) == (
         "mygroup", 40, 0.01, 10.0, None, {"jdoe": 280.0})
     assert g["weeks"][-1] == 70.0 and len(g["weeks"]) == 12
+    assert asked == ["priority"]  # Yale's public partitions are free: only priority jobs count

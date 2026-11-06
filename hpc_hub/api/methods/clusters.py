@@ -242,7 +242,14 @@ def partitions(cluster: str, partition: str = "", qos: str = "", account: str = 
             "longest": longest, "why": why,
             "cores": cores, "memory_gb": memory_gb,
             "mem_per_core_gb": round(per_core / 1024, 2) if per_core else None, "gpu_caps": lim.gpu_caps(qos.strip()),
-            "billing": lim.billing_for(part, qos.strip())}
+            "billing": _billing(hub().session(cluster).cfg, lim.billing_for(part, qos.strip()), part)}
+
+
+def _billing(cfg, billing: dict | None, partition: str) -> dict | None:
+    """A partition the cluster doesn't bill (Yale's public ones) costs nothing, whatever the QoS says."""
+    if billing and not cfg.paid(partition):
+        return {**billing, "factor": 0, "free": "partition"}
+    return billing
 
 
 @method("clusters.gpus")

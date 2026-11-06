@@ -313,12 +313,14 @@ WEEKS = 12
 
 # One sacct for all your groups on the cluster: SUs (Slurm's billing times the time run) summed per group, start
 # day and QoS, and per group, person and QoS over the same 12 weeks. The QoS usage factor is applied here in Python.
-WEEKLY = r"""A=$1
+WEEKLY = r"""A=$1 PAID=$2
 echo @QOS; sacctmgr -n -P show qos format=name,usagefactor 2>/dev/null
 echo @JOBS
-sacct -a -A "$A" -X -n -P -S "$(date -d '-83 days' +%F)" -E now -o Account,User,Start,QOS,ElapsedRaw,AllocTRES \
-  2>/dev/null |
-  awk -F'|' '{b=0; if (match($6, /billing=[0-9]+/)) b=substr($6, RSTART+8, RLENGTH-8); s=b*$5/3600; if (s <= 0) next
+sacct -a -A "$A" -X -n -P -S "$(date -d '-83 days' +%F)" -E now \
+  -o Account,User,Start,QOS,ElapsedRaw,AllocTRES,Partition 2>/dev/null |
+  awk -F'|' -v paid="$PAID" 'BEGIN {n=split(paid, pre, " ")}
+             {if (n) {ok=0; for (i=1; i<=n; i++) if (index($7, pre[i]) == 1) ok=1; if (!ok) next}
+              b=0; if (match($6, /billing=[0-9]+/)) b=substr($6, RSTART+8, RLENGTH-8); s=b*$5/3600; if (s <= 0) next
               d[tolower($1)"|"substr($3, 1, 10)"|"$4]+=s; u[tolower($1)"|"$2"|"$4]+=s}
              END {for (k in d) printf "D|%s|%.2f\n", k, d[k]; for (k in u) printf "U|%s|%.2f\n", k, u[k]}'
 echo "@RC ${PIPESTATUS[0]}"
@@ -378,13 +380,15 @@ _weekly_cache: dict[tuple[str, str], tuple[float, dict[str, Weekly] | None]] = {
 CACHE_SECONDS = 600
 
 
-def weekly(ssh: SshMaster, cluster: str, accounts: list[str], fresh: bool = False) -> dict[str, Weekly] | None:
-    """The 12 weeks of every group, kept for 10 minutes (fresh: ask again)."""
+def weekly(ssh: SshMaster, cluster: str, accounts: list[str], fresh: bool = False,
+           paid: str = "") -> dict[str, Weekly] | None:
+    """The 12 weeks of every group, kept for 10 minutes (fresh: ask again). paid: only jobs on partitions starting
+    with these count (Yale's priority ones); "" = all."""
     key = (cluster, ",".join(sorted(accounts)))
     hit = _weekly_cache.get(key)
     if hit and not fresh and time.monotonic() - hit[0] < CACHE_SECONDS:
         return hit[1]
-    got = parse_weekly(_run(ssh, WEEKLY, key[1])) if accounts else {}
+    got = parse_weekly(_run(ssh, WEEKLY, key[1], paid)) if accounts else {}
     _weekly_cache[key] = (time.monotonic(), got)
     return got
 
@@ -418,10 +422,10 @@ def pace(a: AccountUsage, w: Weekly | None, today: date, end: str = "") -> Alloc
     return out
 
 
-def allocations(ssh: SshMaster, cluster: str, fresh: bool = False) -> list[Allocation]:
+def allocations(ssh: SshMaster, cluster: str, fresh: bool = False, paid: str = "") -> list[Allocation]:
     """Every group you can bill here with its SUs, last 12 weeks and pace. Weeks None: sacct could not answer."""
     groups = account_usage(ssh)
-    weeks = weekly(ssh, cluster, [a.account for a in groups], fresh) if groups else {}
+    weeks = weekly(ssh, cluster, [a.account for a in groups], fresh, paid) if groups else {}
     today = date.today()
     return [pace(a, None if weeks is None else weeks.get(a.account.lower(), Weekly([0.0] * WEEKS)), today)
             for a in groups]

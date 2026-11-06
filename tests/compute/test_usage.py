@@ -154,3 +154,26 @@ def test_allocations_ask_sacct_once_and_keep_it(monkeypatch):
 def test_weekly_script_is_valid_bash():
     import subprocess
     assert subprocess.run(["bash", "-n", "-c", usage.WEEKLY]).returncode == 0
+
+
+def test_only_billed_partitions_count_where_the_cluster_says_so(tmp_path):
+    """Yale bills its priority partitions only: a day job counts nothing there, and everything counts elsewhere."""
+    import os
+    import subprocess
+    bin_ = tmp_path / "bin"
+    bin_.mkdir()
+    (bin_ / "sacctmgr").write_text("#!/bin/sh\necho 'normal|1.000000'\n")
+    (bin_ / "sacct").write_text("#!/bin/sh\ncat <<'X'\n"
+                                "mygroup|jdoe|2026-11-02T10:00:00|normal|3600|cpu=4,billing=4|priority\n"
+                                "mygroup|jdoe|2026-11-02T11:00:00|normal|7200|cpu=8,billing=8|day\n"
+                                "X\n")
+    for f in bin_.iterdir():
+        f.chmod(0o755)
+    env = {**os.environ, "PATH": f"{bin_}:/usr/bin:/bin"}
+
+    def run(paid):
+        out = subprocess.run(["bash", "-c", usage.WEEKLY, "_", "mygroup", paid], env=env,
+                             capture_output=True, text=True).stdout
+        return sorted(line for line in out.splitlines() if line.startswith("D|"))
+    assert run("priority") == ["D|mygroup|2026-11-02|normal|4.00"]
+    assert run("") == ["D|mygroup|2026-11-02|normal|20.00"]

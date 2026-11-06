@@ -118,7 +118,8 @@ export type Logins = Record<'ssh' | 'vpn', { username: string; password: boolean
 /** Slurm's billing weights: SUs an hour per core, per GB and per GPU ("gpu:a100"; "gpu" for any), how they add up
  *  ('gres': the bigger of cores and memory, plus the GPUs; 'all': the biggest; '': all added), and the priority's
  *  factor (0: free). */
-export type Billing = { weights: Record<string, number>; max: '' | 'all' | 'gres'; factor: number }
+export type Billing = { weights: Record<string, number>; max: '' | 'all' | 'gres'; factor: number
+  free?: 'partition' }  // the cluster bills no job on this partition (Yale's public ones)
 
 export type Limits = {
   known: boolean

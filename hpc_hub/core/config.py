@@ -139,6 +139,7 @@ class ClusterConfig:
     queues: str = ""
     queue_wait: int = 60
     queue_pick: str = "cheapest"  # "fastest": the one that starts soonest, whatever it costs
+    paid_partitions: str = ""  # only partitions starting with these (space separated) are billed; "" = all (Yale)
     # Fast node: "partition:qos:time" of a short queue that starts quickly (debug); empty: no Fast node button
     fast: str = ""
     request_node_on_connect: bool = True
@@ -153,6 +154,11 @@ class ClusterConfig:
     cursor: AgentSettings = field(default_factory=lambda: AgentSettings(command="cursor-agent"))
     globus: GlobusSettings = field(default_factory=GlobusSettings)
     latex: LatexSettings = field(default_factory=LatexSettings)
+
+    def paid(self, partition: str) -> bool:
+        """Whether jobs on this partition are billed (Yale bills only its priority partitions)."""
+        prefixes = self.paid_partitions.split()
+        return not prefixes or any(partition.startswith(p) for p in prefixes)
 
     def fast_profile(self) -> ComputeProfile | None:
         """Your node settings on the fast queue (cores, memory and GPUs stay yours); None without one."""
@@ -230,6 +236,7 @@ def default_clusters() -> list[ClusterConfig]:
             key_page_note="That page only loads on campus or on the VPN.",
             key_help="https://docs.ycrc.yale.edu/clusters-at-yale/access/ssh/",
             reuse_running_job=True,
+            paid_partitions="priority",  # public partitions (day, devel, gpu, week...) cost nothing
             vpn=VpnSettings(
                 enabled=True,
                 gateway="access.yale.edu",
