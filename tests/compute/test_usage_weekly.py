@@ -95,3 +95,10 @@ def test_only_billed_partitions_count_where_the_cluster_says_so(tmp_path):
         return sorted(line for line in out.splitlines() if line.startswith("D|"))
     assert run("priority") == ["D|mygroup|2026-11-02|normal|4.00"]
     assert run("") == ["D|mygroup|2026-11-02|normal|20.00"]
+
+
+def test_weekly_skips_lines_it_cannot_read():
+    text = WEEKLY.replace("@JOBS\n", "@JOBS\nD|mygroup|2026-11-05|standard|lots\n").replace(
+        "@QOS\n", "@QOS\nbroken\nodd|x\n")
+    assert weekly.parse_weekly(text) == weekly.parse_weekly(WEEKLY)
+    assert weekly.parse_weekly(WEEKLY.replace("@TODAY\n2026-11-05", "@TODAY\nsoon")) is None
