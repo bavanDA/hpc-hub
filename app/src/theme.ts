@@ -8,7 +8,7 @@ export const THEMES: { id: Appearance; label: string; note: string; base: 'light
   { id: 'light', label: 'Light', note: 'White, black buttons', base: 'light',
     sample: ['#ffffff', '#f4f4f4', '#e6e6e6', '#0a0a0a', '#0a0a0a'] },
   { id: 'dark', label: 'Dark', note: 'Soft grey, white buttons', base: 'dark',
-    sample: ['#1c1c1f', '#252529', '#333338', '#f2f2f4', '#f2f2f4'] },
+    sample: ['#26262a', '#2e2e33', '#3c3c42', '#f2f2f4', '#f2f2f4'] },
   { id: 'charcoal', label: 'Charcoal', note: 'Near-black grey, blue buttons', base: 'dark',
     sample: ['#1f1f1f', '#181818', '#2b2b2b', '#cccccc', '#0078d4'] },
   { id: 'daylight', label: 'Daylight', note: 'White and pale grey, blue buttons', base: 'light',
