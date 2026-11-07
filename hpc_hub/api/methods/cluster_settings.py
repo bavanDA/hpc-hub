@@ -10,7 +10,7 @@ from ...agents.catalog import AGENTS, BY_ID
 from ...compute import slurm_args
 from ...connect import chrome_window
 from ...connect.vpn import split_errors
-from ...core.config import QUEUE_PICKS, VPN_PROTOCOLS, ComputeProfile
+from ...core.config import VPN_PROTOCOLS, ComputeProfile
 from ..hub import hub
 from ..server import method
 
@@ -23,7 +23,7 @@ NAME = re.compile(r"[A-Za-z0-9_.-]+")
 GROUP = re.compile(r"[A-Za-z0-9 _.-]*")
 NUMBERS = {"cpus": (1, 512), "mem_gb": (1, 4096), "gpus": (0, 16)}
 TOP = {"host", "port", "second_factor", "duo_answer", "request_node_on_connect", "ask_node", "reuse_running_job",
-       "queues", "queue_wait", "queue_pick", "vpn", "profile", "vscode", *BY_ID}
+       "vpn", "profile", "vscode", *BY_ID}
 VPN = {"enabled", "gateway", "protocol", "useragent", "authgroup", "same_login_as_ssh", "split_tunnel", "domains",
        "routes", "browser"}
 VSCODE = {"setup", "command", "workdir", "open_links", "open_in", "ask", "compute"}
@@ -81,19 +81,6 @@ def _profile(p: ComputeProfile, changes, label: str) -> ComputeProfile:
     if errors:
         raise ValueError(f"{label}: {'. '.join(errors)}")
     return p
-
-
-def _queues(v) -> str:
-    v = _text(v, "Queues")
-    out = []
-    for item in (x.strip() for x in v.split(",")):
-        part, _, qos = (x.strip() for x in item.partition(":"))
-        if not item:
-            continue
-        if not (NAME.fullmatch(part) and NAME.fullmatch(qos)):
-            raise ValueError(f"Queues: write {item} as queue:billing, like general:low")
-        out.append(f"{part}:{qos}")
-    return ",".join(out)
 
 
 def _vpn(v, changes, windows: list[str]) -> None:
@@ -169,12 +156,6 @@ def _field(c, k: str, x, windows: list[str]) -> None:
         c.duo_answer = _match(x, "Duo answer", NAME, 20) or "push"
     elif k in ("request_node_on_connect", "ask_node", "reuse_running_job"):
         setattr(c, k, _bool(x, k))
-    elif k == "queues":
-        c.queues = _queues(x)
-    elif k == "queue_wait":
-        c.queue_wait = _int(x, "Queue wait (seconds)", 0, 3600)
-    elif k == "queue_pick":
-        c.queue_pick = _choice(x, QUEUE_PICKS, f"Pick the queue by {' or '.join(QUEUE_PICKS)}")
     elif k == "vpn":
         _vpn(c.vpn, x, windows)
     elif k == "profile":

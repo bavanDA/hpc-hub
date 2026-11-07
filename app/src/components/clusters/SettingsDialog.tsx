@@ -15,7 +15,6 @@ import { changes, firstPart, ownVpnLogin, TITLES, type Part } from './settings/c
 import { ComputePart } from './settings/ComputePart'
 import { LoginPart } from './settings/LoginPart'
 import { Overview } from './settings/Overview'
-import { QueuesPart } from './settings/QueuesPart'
 import { ServerPart } from './settings/ServerPart'
 import { VsCodePart } from './settings/VsCodePart'
 import { putCluster, useClusters } from './store'
@@ -101,7 +100,6 @@ export function SettingsDialog({ cluster, hint, onClose, start = '', advanced = 
       signedIn={!!session && (session.connected ?? session.state === 'Connected')} />,
     compute: <ComputePart d={d} up={up} />,
     server: <ServerPart d={d} info={info} up={up} vpnLogin={vpnLogin} />,
-    queues: <QueuesPart d={d} up={up} />,
     vscode: <VsCodePart d={d} up={up} />,
     agents: <AgentsPart d={d} agents={info?.agents ?? []} up={up} />,
   }

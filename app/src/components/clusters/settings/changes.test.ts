@@ -5,7 +5,7 @@ import { changes, firstPart } from './changes'
 
 describe('firstPart', () => {
   it.each([
-    ['', false, ''], ['nope', true, 'server'], ['login', true, 'server'], ['compute', true, 'queues'],
+    ['', false, ''], ['nope', true, 'server'], ['login', true, 'server'], ['compute', true, 'compute'],
     ['vscode', false, 'vscode'], ['agents', true, 'agents'],
   ])('%s, advanced %s -> %s', (start, advanced, want) => expect(firstPart(start, advanced)).toBe(want))
 })

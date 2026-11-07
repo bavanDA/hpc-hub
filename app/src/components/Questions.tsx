@@ -14,7 +14,7 @@ import { load, useClusters } from './clusters/store'
 import { useToast } from './useToast'
 
 // a plain browser (design work): ?question=chrome-window|web-login or ?show=settings|keysetup,
-// with &cluster=id and &tab=login|compute|server|queues|vscode|agents (else the list), opens that dialog with
+// with &cluster=id and &tab=login|compute|server|vscode|agents (else the list), opens that dialog with
 // demo data
 const demo = inTauri ? null : new URLSearchParams(location.search)
 

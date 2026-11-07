@@ -38,8 +38,6 @@ def test_save_changes_everything_the_dialog_edits(hub):
     out = cs.save("wulver", {
         "host": " jdoe@wulver.example.edu ", "port": 2222, "second_factor": "code", "duo_answer": "",
         "request_node_on_connect": False, "ask_node": True, "reuse_running_job": True,
-        "queues": " general:low , debug:debug ",
-        "queue_wait": 90,
         "vpn": {"gateway": "https://vpn.example.edu/group", "protocol": "gp", "useragent": "AnyConnect Linux_64 4.10",
                 "authgroup": "Default Group", "same_login_as_ssh": False, "split_tunnel": True,
                 "domains": " example.edu  ", "routes": "10.0.0.0/8   10.1.0.0/16", "browser": config.CHROME_WINDOW},
@@ -53,8 +51,7 @@ def test_save_changes_everything_the_dialog_edits(hub):
     c = hub.sessions["wulver"].cfg
     assert (c.host, c.port, c.second_factor, c.duo_answer) == ("wulver.example.edu", 2222, "code", "push")
     assert not c.request_node_on_connect and c.ask_node and c.reuse_running_job
-    assert c.queues == "general:low,debug:debug"
-    assert c.queue_wait == 90 and c.vpn.protocol == "gp" and c.vpn.browser == config.CHROME_WINDOW
+    assert c.vpn.protocol == "gp" and c.vpn.browser == config.CHROME_WINDOW
     assert c.vpn.domains == "example.edu" and c.vpn.routes == "10.0.0.0/8 10.1.0.0/16"
     assert c.profile.cpus == 8 and c.profile.extra_args == "--constraint=a100 --exclusive"
     assert c.vscode.workdir == "~" and c.vscode.open_in == "browser" and c.vscode.compute.cpus == 4
@@ -67,8 +64,7 @@ def test_save_changes_everything_the_dialog_edits(hub):
     {"extra_args": "x"}, {"id": "other"}, {"name": "Evil"}, {"portal": "https://evil.example"},
     {"code_setup": "https://evil.example"}, {"globus": {}}, {"latex": {}},
     {"host": "evil host"}, {"host": "a;b"}, {"port": 0}, {"port": "22"}, {"second_factor": "sms"},
-    {"duo_answer": "push; rm"}, {"request_node_on_connect": "yes"}, {"queues": "general"},
-    {"queues": "gen;eral:low"}, {"queue_wait": -1},
+    {"duo_answer": "push; rm"}, {"request_node_on_connect": "yes"}, {"queues": "general:low"},
     {"vpn": {"gateway": "vpn.example.edu --script=/tmp/x"}}, {"vpn": {"protocol": "ssh"}},
     {"vpn": {"useragent": "a\nb"}}, {"vpn": {"routes": "not-a-net"}}, {"vpn": {"domains": "a;b"}},
     {"vpn": {"browser": "Nobody"}}, {"vpn": {"enabled": True, "gateway": ""}}, {"vpn": {"servercert": "x"}},

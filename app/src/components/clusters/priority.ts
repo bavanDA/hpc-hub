@@ -18,12 +18,3 @@ export function queueText(queue?: string, qos?: string): string {
   const q = (queue ?? '').trim(), b = (qos ?? '').trim()
   return [q, b && b !== q ? priorityName(b) : ''].filter(Boolean).join(', ') || 'Default'
 }
-
-/** One of the queues a node request tries, named so no queue is said twice: "Low priority" on the usual queue,
- *  "Debug queue" for a queue of its own, "Gpu queue, low priority". */
-export function queueRowName(queue: string, qos: string, usual = ''): string {
-  const priority = qos && qos !== queue ? `${priorityName(qos)} priority` : ''
-  if (priority && queue === (usual || queue)) return priority
-  const name = `${queue.charAt(0).toUpperCase()}${queue.slice(1)} queue`
-  return priority ? `${name}, ${priority.toLowerCase()}` : name
-}

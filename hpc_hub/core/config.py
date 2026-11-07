@@ -9,7 +9,6 @@ from .app_settings import APPEARANCES, EXPERIMENTS, AppSettings
 from .cluster_settings import (
     CHROME_WINDOW,
     LATEX_ENGINES,
-    QUEUE_PICKS,
     TUNNEL,
     VPN_PROTOCOLS,
     AgentSettings,
@@ -26,7 +25,7 @@ from .toml_file import merge, table, toml_value, write_atomic
 
 __all__ = [
     "APPEARANCES", "APP_FILE", "CHROME_WINDOW", "CONFIG_DIR", "CONFIG_FILE", "EXPERIMENTS", "LATEX_ENGINES",
-    "QUEUE_PICKS", "TUNNEL", "VPN_PROTOCOLS", "AgentSettings", "AppSettings", "ClusterConfig", "ComputeProfile",
+    "TUNNEL", "VPN_PROTOCOLS", "AgentSettings", "AppSettings", "ClusterConfig", "ComputeProfile",
     "GlobusSettings", "LatexSettings", "VpnSettings", "VsCodeSettings", "chosen", "default_clusters", "dumps",
     "first_run", "load", "load_app", "save", "save_app", "save_chosen", "short_time",
 ]
@@ -54,8 +53,6 @@ def _tidy(c: ClusterConfig, default: ClusterConfig) -> None:
     c.vscode.command = c.vscode.command or default.vscode.command  # old configs saved an empty alias
     if c.vpn.browser not in ("", CHROME_WINDOW):  # a Chrome profile's name, from before: the app's window
         c.vpn.browser = ""
-    if c.queue_pick not in QUEUE_PICKS:
-        c.queue_pick = "cheapest"
 
 
 def dumps(clusters: list[ClusterConfig]) -> str:

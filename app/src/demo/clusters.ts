@@ -22,7 +22,6 @@ const agents = { claude: { ...agent('claude'), model: 'opus', remote: true }, co
 const clusters: Cluster[] = [
   { id: 'wulver', name: 'Wulver (NJIT)', short: 'Wulver', org: 'NJIT', username_label: 'UCID', password_only: true, host: 'wulver.njit.edu', port: 22,
     duo_answer: 'push', second_factor: 'duo',
-    queues: 'general:low,debug:debug,general:standard', queue_wait: 60, queue_pick: 'cheapest', fast: 'debug:debug:08:00:00',
     request_node_on_connect: true,
     reuse_running_job: true, vpn: { ...vpn, enabled: true, gateway: 'vpn.njit.edu', same_login_as_ssh: true,
       domains: 'njit.edu', routes: '128.235.0.0/16' }, profile,
@@ -31,13 +30,13 @@ const clusters: Cluster[] = [
     username_label: 'NetID', key_page: 'https://sshkeys.ycrc.yale.edu/',
     key_page_note: 'That page only loads on campus or on the VPN.',
     key_help: 'https://docs.ycrc.yale.edu/clusters-at-yale/access/ssh/',
-    second_factor: 'duo', queues: '', queue_wait: 60, request_node_on_connect: true, reuse_running_job: true,
+    second_factor: 'duo', request_node_on_connect: true, reuse_running_job: true,
     vpn: { ...vpn, enabled: true, gateway: 'access.yale.edu', same_login_as_ssh: false, authgroup: 'Default',
       domains: 'yale.edu', routes: '130.132.0.0/16 128.36.0.0/16', browser: 'Uni' },
     profile: { ...profile, cpus: 2, partition: 'day' }, vscode: vscode({ partition: 'devel' }), ...agents },
   { id: 'sdsc', name: 'SDSC Expanse', short: 'SDSC', org: 'SDSC', username_label: 'ACCESS username', host: 'login.expanse.sdsc.edu', port: 22, duo_answer: 'push',
     second_factor: 'code', portal: 'https://portal.expanse.sdsc.edu', code_setup: 'https://passive.sdsc.edu',
-    queues: '', queue_wait: 60, request_node_on_connect: true, reuse_running_job: true,
+    request_node_on_connect: true, reuse_running_job: true,
     vpn: { ...vpn, enabled: false, gateway: '', same_login_as_ssh: true },
     profile: { ...profile, cpus: 2, partition: 'shared' }, vscode: vscode({ partition: 'shared' }), ...agents },
 ]

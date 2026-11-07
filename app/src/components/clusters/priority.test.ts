@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { groupName, priorityName, queueRowName, queueText } from './priority'
+import { groupName, priorityName, queueText } from './priority'
 
 describe('priorityName', () => {
   it.each([
@@ -23,12 +23,4 @@ describe('queueText', () => {
   it('joins the queue and its priority', () => expect(queueText('general', 'low')).toBe('general, Low'))
   it('skips a priority named like its queue', () => expect(queueText('debug', 'debug')).toBe('debug'))
   it('says Default for neither', () => expect(queueText()).toBe('Default'))
-})
-
-describe('queueRowName', () => {
-  it('names only the priority on the usual queue', () =>
-    expect(queueRowName('general', 'low', 'general')).toBe('Low priority'))
-  it('names a queue of its own', () => expect(queueRowName('debug', 'debug', 'general')).toBe('Debug queue'))
-  it('names both on another queue', () =>
-    expect(queueRowName('gpu', 'low', 'general')).toBe('Gpu queue, low priority'))
 })

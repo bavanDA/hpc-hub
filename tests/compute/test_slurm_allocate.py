@@ -82,13 +82,6 @@ def test_submit_reads_the_job_id_or_the_error():
         sbatch.submit(Ssh([]), ComputeProfile(), "x", "true")
 
 
-def test_queue_wait_estimate():
-    assert sbatch.wait_seconds(Ssh([], answers={"--test-only": "3600\n"}), ComputeProfile()) == 3600
-    assert sbatch.wait_seconds(Ssh([], answers={"--test-only": "-20\n"}), ComputeProfile()) == 0  # started already
-    assert sbatch.wait_seconds(Ssh([]), ComputeProfile()) is None
-    assert [sbatch.human_wait(s) for s in (30, 600, 7200, 200000)] == ["now", "10 min", "2 h", "2.3 days"]
-
-
 def test_running_jobs_and_their_resources():
     ssh = Ssh([], answers={"-t RUNNING": "5|hpc-hub|n1,n2|general\n6|pending||general\nbad\n",
                            "%C|%m": "16|64G|1:23:45|12:00:00\n"})

@@ -1,10 +1,10 @@
-"""Compute nodes for a connected session: pick the queue, ask Slurm, reuse a running job, give it back."""
+"""Compute nodes for a connected session: ask Slurm, reuse a running job, give it back."""
 
 import subprocess
 import threading
 from dataclasses import replace
 
-from ..compute import limits, salloc, sbatch, slurm
+from ..compute import limits, salloc, slurm
 from ..compute.slurm import Allocation, SlurmError
 from ..core.config import ComputeProfile
 from ..core.ssh import SshError
@@ -17,45 +17,14 @@ class NodesMixin:
     self._cancel, self._set and self._log."""
 
     def fit(self, profile: ComputeProfile) -> ComputeProfile:
-        """The profile with your default account named when none is set, on the best queue (see queues), with
-        its time cut to what that queue allows (Slurm would refuse it otherwise). Blocking; worker thread."""
+        """The profile with your default account named when none is set, and its time cut to what its queue
+        allows (Slurm would refuse it otherwise). Blocking; worker thread."""
         if not profile.account and self._account():
             profile = replace(profile, account=self._account())
-        profile = self._best_queue(profile)
-        fitted, note = self._cut_time(profile)
+        fitted, note = self.limits.fit(profile) if self.limits else (profile, "")
         if note:
             self._log(note)
         return fitted
-
-    def _cut_time(self, profile: ComputeProfile) -> tuple[ComputeProfile, str]:
-        return self.limits.fit(profile) if self.limits else (profile, "")
-
-    def _best_queue(self, profile: ComputeProfile) -> ComputeProfile:
-        """Ask Slurm how long each queue in cfg.queues would wait (nothing is submitted). Cheapest: of those that
-        start within queue_wait seconds, take the first listed; if none does, the one that starts soonest. Fastest
-        (cfg.queue_pick): the one that starts soonest, the cheaper on a tie. A queue Slurm would refuse for this
-        request (e.g. more cores than debug allows) is skipped."""
-        listed = [tuple(x.strip() for x in o.split(":", 1)) for o in self.cfg.queues.split(",") if ":" in o]
-        if not listed or not self.ssh:
-            return profile
-        mine = (profile.partition, profile.qos)
-        order = listed if mine in listed else [mine, *listed]
-        found = []  # (wait, rank, profile)
-        try:
-            for rank, (part, qos) in enumerate(order):
-                p, _ = self._cut_time(replace(profile, partition=part, qos=qos))
-                wait = sbatch.wait_seconds(self.ssh, p)
-                if wait is not None:
-                    found.append((wait, rank, p))
-        except (SshError, OSError, subprocess.SubprocessError):
-            return profile
-        if not found:
-            return profile
-        soon = [f for f in found if f[0] <= self.cfg.queue_wait] if self.cfg.queue_pick != "fastest" else []
-        wait, _, best = min(soon, key=lambda f: f[1]) if soon else min(found, key=lambda f: (f[0], f[1]))
-        seen = ", ".join(f"{p.partition}/{p.qos} {sbatch.human_wait(w)}" for w, _, p in found)
-        self._log(f"Queues: {seen}. Using {best.partition}/{best.qos} ({self.cfg.queue_pick})")
-        return best
 
     def _account(self) -> str:
         if self.default_account is None and self.ssh:

@@ -364,37 +364,19 @@ def test_default_account_is_named_on_requests():
     assert s.fit(config.ComputeProfile(account="other")).account == "other"
 
 
-def test_best_queue_on_wulver():
-    import re
+def test_the_queue_you_pick_is_the_one_asked_for():
     import subprocess
 
     from hpc_hub.connect.session import ClusterSession
     from hpc_hub.core import config
-    waits = {"low": "506340", "standard": "51720", "debug": "5"}
+    ran = []
 
     class Ssh:
         def run(self, cmd, timeout=60):
-            if "defaultaccount" in cmd:
-                return subprocess.CompletedProcess(cmd, 0, "mygroup\n", "")
-            qos = re.search(r"--qos=(\w+)", cmd).group(1)
-            return subprocess.CompletedProcess(cmd, 0, waits.get(qos, "") + "\n", "")
+            ran.append(cmd)
+            return subprocess.CompletedProcess(cmd, 0, "mygroup\n" if "defaultaccount" in cmd else "", "")
     s = object.__new__(ClusterSession)
-    s.cfg, s.ssh, s.limits, s.default_account, logged = config.default_clusters()[0], Ssh(), None, None, []
-    s._log = logged.append
-    std = config.ComputeProfile(partition="general", qos="standard")
-    p = s.fit(std)
-    assert (p.partition, p.qos) == ("debug", "debug")  # the only one that starts now
-    assert "general/low 5.9 days" in logged[-1] and "debug/debug now" in logged[-1]
-    waits["low"] = "30"
-    assert s.fit(std).qos == "low"  # low and debug both start now: low is listed first
-    waits.update(low="900000", debug="")  # debug refuses it (say 8 cores)
-    assert s.fit(std).qos == "standard"  # nothing starts soon: the soonest
-    waits.update(low="600", debug="5")
-    assert s.fit(std).qos == "debug"  # low waits 10 min, longer than the wait: debug, which starts now
-    waits.update(low="30", debug="5")
-    assert s.fit(std).qos == "low"
-    s.cfg.queue_pick = "fastest"
-    assert s.fit(std).qos == "debug" and "(fastest)" in logged[-1]  # fastest: debug starts sooner, though low is free
-    s.cfg.queue_pick = "cheapest"
-    s.cfg.queues = ""
-    assert s.fit(config.ComputeProfile(partition="general", qos="low")).qos == "low"  # no list: as asked
+    s.cfg, s.ssh, s.limits, s.default_account = config.default_clusters()[0], Ssh(), None, None
+    p = s.fit(config.ComputeProfile(partition="general", qos="standard", time="3-00:00:00"))
+    assert (p.partition, p.qos, p.time, p.account) == ("general", "standard", "3-00:00:00", "mygroup")
+    assert not any("--test-only" in c for c in ran)

@@ -1,11 +1,10 @@
-import { Bot, Code, Cpu, KeyRound, ListOrdered, Server, ShieldCheck } from 'lucide-react'
+import { Bot, Code, Cpu, KeyRound, Server, ShieldCheck } from 'lucide-react'
 
 import { summary, type Cluster, type SettingsInfo } from '../../../types/clusters'
 import { List } from '../../e/List'
 import { Row } from '../../e/Row'
 import { Section } from '../../e/Section'
 import { Spinner } from '../../ui/Spinner'
-import { queueCount } from '../queueList'
 import type { Part } from './changes'
 
 export function Overview({ d, info, user, open, onAuthenticator }: {
@@ -23,7 +22,6 @@ export function Overview({ d, info, user, open, onAuthenticator }: {
     </List>
     <Section title="Advanced" note="Changes apply the next time you connect.">
       <Row icon={Server} label="Server and VPN" value={d.host} opens onPress={() => open('server')} />
-      <Row icon={ListOrdered} label="Queues" value={queueCount(d.queues)} opens onPress={() => open('queues')} />
       {d.vscode && <Row icon={Code} label="VS Code job" opens onPress={() => open('vscode')} />}
       {!!info.agents.length && <Row icon={Bot} label="Agents" sub={info.agents.map((a) => a.name).join(', ')} opens
         onPress={() => open('agents')} />}

@@ -5,7 +5,6 @@ from dataclasses import dataclass, field
 LATEX_ENGINES = ["pdf", "xelatex", "lualatex"]
 VPN_PROTOCOLS = ["anyconnect", "gp", "nc", "pulse", "f5", "fortinet", "array"]
 CHROME_WINDOW = "hpc-hub:chrome-window"  # vpn.browser: sign in in HPC Hub's own Chrome window (chrome_window.py)
-QUEUE_PICKS = ("cheapest", "fastest")
 
 
 @dataclass
@@ -122,15 +121,7 @@ class ClusterConfig:
     password_too: bool = False  # with key_page: a password works as well, offered as "Use a password instead"
     key_login: bool = False  # takes SSH keys from ~/.ssh/authorized_keys: the phone app gets a key (pairing.py)
     code_setup: str = ""  # where you set up the authenticator app the cluster asks codes from
-    # "partition:qos" queues to choose from, cheapest first. queue_pick "cheapest": the first that starts within
-    # queue_wait seconds wins, else the one that starts soonest; "fastest": the one that starts soonest. Empty: always
-    # use the queue you picked.
-    queues: str = ""
-    queue_wait: int = 60
-    queue_pick: str = "cheapest"  # "fastest": the one that starts soonest, whatever it costs
     paid_partitions: str = ""  # only partitions starting with these (space separated) are billed; "" = all (Yale)
-    # Fast node: "partition:qos:time" of a short queue that starts quickly (debug); empty: no Fast node button
-    fast: str = ""
     request_node_on_connect: bool = True
     ask_node: bool = False  # with request_node_on_connect: show the node's settings first instead of asking Slurm
     reuse_running_job: bool = True  # a node you already have is used before asking for one

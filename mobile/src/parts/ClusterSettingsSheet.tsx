@@ -1,22 +1,20 @@
 // A cluster's settings on the phone (the desktop's SettingsDialog): a list of sections, each its own screen, and one
 // Save for all of them (cluster_settings.save checks every field). Sign-in has its own sheet (LoginSheet), the VPN's
 // own login included. The VPN's server settings stay as the cluster comes, so they have no section here.
-import { Bot, Code, Cpu, KeyRound, ListOrdered, Plus, Server, ShieldCheck } from 'lucide-react'
+import { Bot, Code, Cpu, KeyRound, Server, ShieldCheck } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
-import { priorityName, queueRowName } from '@shared/components/clusters/priority'
-import { PICKS, pickNote } from '@shared/components/clusters/queuePick'
 import { putCluster } from '@shared/components/clusters/store'
 import { Spinner } from '@shared/components/ui/Spinner'
 import { call } from '@shared/rpc'
-import type { AgentId, AgentSettings, Cluster, Limits, Logins, Profile, SettingsInfo, VsCode } from '@shared/types/clusters'
-import { Field, List, MainButton, NumberRow, PickerSheet, Row, Section, Segments, Sheet, ToggleRow, useAskBeforeClose, useToast }
+import type { AgentId, AgentSettings, Cluster, Logins, Profile, SettingsInfo, VsCode } from '@shared/types/clusters'
+import { Field, List, MainButton, PickerSheet, Row, Section, Sheet, ToggleRow, useAskBeforeClose, useToast }
   from '../ui'
 import { AuthenticatorSheet } from './AuthenticatorSheet'
 import { LoginSheet } from './LoginSheet'
 import { ASK, NodeFields, nodeSize } from './NodeSheet'
 
-type Section = '' | 'signin' | 'compute' | 'server' | 'queues' | 'vscode' | 'agents' | 'code'
+type Section = '' | 'signin' | 'compute' | 'server' | 'vscode' | 'agents' | 'code'
 
 const PROFILE_KEYS: (keyof Profile)[] = ['cpus', 'mem_gb', 'gpus', 'gpu_type', 'time', 'partition', 'account', 'qos', 'extra_args']
 const pick = <T extends object>(o: T, keys: (keyof T)[]) =>
@@ -26,7 +24,7 @@ const TEXT = { autoCapitalize: 'none', autoCorrect: 'off', spellCheck: false } a
 function changes(d: Cluster, info: SettingsInfo | null): Record<string, unknown> {
   const out: Record<string, unknown> = {
     host: d.host, port: d.port, request_node_on_connect: d.request_node_on_connect, ask_node: d.ask_node,
-    reuse_running_job: d.reuse_running_job, queues: d.queues, queue_wait: d.queue_wait, queue_pick: d.queue_pick,
+    reuse_running_job: d.reuse_running_job,
     profile: pick(d.profile, PROFILE_KEYS),
   }
   if (d.vscode) {
@@ -38,59 +36,6 @@ function changes(d: Cluster, info: SettingsInfo | null): Record<string, unknown>
     if (s) out[a.id] = pick(s, ['new_node', 'remote', 'workdir', ...a.options.map((o) => o.key)])
   }
   return Object.fromEntries(Object.entries(out).filter(([, x]) => x !== undefined))
-}
-
-/** "3 queues" for "general:low, debug:debug, general:standard". */
-function queueCount(queues?: string) {
-  const n = (queues ?? '').split(',').filter((q) => q.trim()).length
-  return n === 0 ? 'The one you pick' : n === 1 ? '1 queue' : `${n} queues`
-}
-
-/** "general:low, debug:debug" as [queue, billing] pairs, and back. */
-const parseQueues = (q?: string) => (q ?? '').split(',').map((x) => x.trim()).filter(Boolean)
-  .map((x) => { const [queue = '', billing = ''] = x.split(':'); return [queue.trim(), billing.trim()] as [string, string] })
-const joinQueues = (l: [string, string][]) => l.filter(([q]) => q).map(([q, b]) => (b ? `${q}:${b}` : q)).join(',')
-
-/** The queues to try, in order: one row each (queue and priority), tap to change or remove, then Add a queue. */
-function QueueRows({ cluster, value, onChange }: { cluster: string; value?: string; onChange: (v: string) => void }) {
-  const list = parseQueues(value)
-  const [edit, setEdit] = useState<number | null>(null)  // list.length: a new one
-  const [pick, setPick] = useState<'' | 'queue' | 'priority'>('')
-  const [limits, setLimits] = useState<Limits | null>(null)
-  const cur = edit === null ? null : (list[edit] ?? ['', ''] as [string, string])
-  const name = (q: string, b: string) => queueRowName(q, b, limits?.default_partition)
-  useEffect(() => {  // also for the rows' names: the usual queue goes unsaid
-    call<Limits>('clusters.partitions', { cluster, partition: cur?.[0] ?? '', qos: '' }).then(setLimits).catch(() => {})
-  }, [cluster, edit, cur?.[0]]) // eslint-disable-line react-hooks/exhaustive-deps
-  const put = (pair: [string, string] | null) => {
-    const next = [...list]
-    if (pair) next[edit!] = pair; else next.splice(edit!, 1)
-    onChange(joinQueues(next))
-  }
-  const close = () => { setEdit(null); setPick('') }
-  return <>
-    <Section title="Tried in this order">
-      {list.map(([q, b], i) => <Row key={`${q}:${b}:${i}`} label={name(q, b)} opens onPress={() => setEdit(i)} />)}
-      <Row icon={Plus} label="Add a queue" onPress={() => setEdit(list.length)} />
-    </Section>
-    {cur && <Sheet flush title={edit! < list.length ? name(cur[0], cur[1]) : 'Add a queue'} onClose={close}
-      actions={<MainButton onClick={close}>Done</MainButton>}>
-      <List>
-        <Row label="Queue" value={cur[0] || 'Pick one'} opens onPress={() => setPick('queue')} />
-        <Row label="Priority" value={priorityName(cur[1] || limits?.default_qos)} opens
-          onPress={() => setPick('priority')} />
-      </List>
-      {edit! < list.length && <List className="mt-6">
-        <Row label="Remove this queue" danger onPress={() => { put(null); close() }} />
-      </List>}
-      {pick === 'queue' && <PickerSheet title="Queue" value={cur[0]}
-        options={(limits?.partitions ?? []).map((q) => ({ value: q, label: q }))}
-        onPick={(v) => put([v, cur[1]])} onClose={() => setPick('')} />}
-      {pick === 'priority' && <PickerSheet title="Priority" value={cur[1] || limits?.default_qos || ''}
-        options={(limits?.qos ?? []).map((q) => ({ value: q, label: priorityName(q) }))}
-        onPick={(v) => put([cur[0] || limits?.default_partition || '', v])} onClose={() => setPick('')} />}
-    </Sheet>}
-  </>
 }
 
 /** One agent's choices: its own node or yours, Claude's remote control, its folder, its model and modes. */
@@ -139,11 +84,6 @@ export function ClusterSettingsSheet({ cluster, onClose }: { cluster: Cluster; o
   const upVs = (change: Partial<VsCode>) => setD((x) => ({ ...x, vscode: { ...x.vscode!, ...change } }))
   const upAgent = (id: AgentId, change: Partial<AgentSettings>) => setD((x) => ({ ...x, [id]: { ...x[id]!, ...change } }))
   const back = () => setSection('')
-  const pickQueue = parseQueues(d.queues).length > 1 && <div className="px-4 pt-6">
-    <Segments label="Pick the queue" value={d.queue_pick ?? 'cheapest'} options={PICKS}
-      onChange={(queue_pick) => up({ queue_pick })} />
-    <p className="pt-2 text-sm text-dim">{pickNote(d.queue_pick, d.queue_wait)}</p>
-  </div>
 
   async function save() {
     setBusy(true)
@@ -163,7 +103,7 @@ export function ClusterSettingsSheet({ cluster, onClose }: { cluster: Cluster; o
   if (section === 'signin') return <LoginSheet cluster={d} onClose={back} />
   if (section === 'code') return <AuthenticatorSheet cluster={d} onClose={back} />
   if (section) {
-    const title = { compute: 'Compute node', server: 'Server', queues: 'Queues', vscode: 'VS Code job',
+    const title = { compute: 'Compute node', server: 'Server', vscode: 'VS Code job',
       agents: 'Agents' }[section]
     return (
       <Sheet title={title} onClose={back} flush actions={<MainButton onClick={back}>Done</MainButton>}>
@@ -173,7 +113,6 @@ export function ClusterSettingsSheet({ cluster, onClose }: { cluster: Cluster; o
               checked={want} onChange={(on) => up({ request_node_on_connect: on })} />
           </List>
           {want && <div className="pt-5"><NodeFields cluster={d} value={d.profile} onChange={(profile) => up({ profile })} /></div>}
-          {want && pickQueue}
           <Section>
             {want && <ToggleRow label={ASK} sub="Shows the node screen when you connect."
               checked={d.ask_node ?? false} onChange={(on) => up({ ask_node: on })} />}
@@ -186,14 +125,6 @@ export function ClusterSettingsSheet({ cluster, onClose }: { cluster: Cluster; o
           <Field label="Port" inputMode="numeric" value={d.port ?? 22}
             onChange={(e) => up({ port: parseInt(e.target.value || '22', 10) || 22 })} />
         </div>}
-        {section === 'queues' && <>
-          <QueueRows cluster={d.id} value={d.queues} onChange={(queues) => up({ queues })} />
-          {pickQueue}
-          {d.queue_pick !== 'fastest' && <List className="mt-6">
-            <NumberRow label="Wait for a cheaper queue" unit="seconds" min={0} value={d.queue_wait ?? 60}
-              onChange={(n) => up({ queue_wait: n })} />
-          </List>}
-        </>}
         {section === 'vscode' && d.vscode && <>
           <div className="px-4">
             <Field label="Command" {...TEXT} value={d.vscode.command} onChange={(e) => upVs({ command: e.target.value })} />
@@ -229,7 +160,6 @@ export function ClusterSettingsSheet({ cluster, onClose }: { cluster: Cluster; o
         </List>
         <Section title="Advanced">
           <Row icon={Server} label="Server" value={d.host} opens onPress={() => setSection('server')} />
-          <Row icon={ListOrdered} label="Queues" value={queueCount(d.queues)} opens onPress={() => setSection('queues')} />
           {d.vscode && <Row icon={Code} label="VS Code job" opens onPress={() => setSection('vscode')} />}
           {!!info.agents.length && <Row icon={Bot} label="Agents" sub={info.agents.map((a) => a.name).join(', ')} opens
             onPress={() => setSection('agents')} />}

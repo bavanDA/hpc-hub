@@ -10,8 +10,6 @@ def default_clusters() -> list[ClusterConfig]:
     clusters = [
         ClusterConfig(
             id="wulver",
-            queues="general:low,debug:debug,general:standard",  # free, free (4 cores, 8 h), costs SUs
-            fast="debug:debug:08:00:00",  # one job at a time
             name="Wulver (NJIT)",
             short="Wulver",
             org="NJIT",
@@ -64,7 +62,6 @@ def default_clusters() -> list[ClusterConfig]:
             key_login=True,
             code_setup="https://passive.sdsc.edu",
             profile=ComputeProfile(cpus=2, mem_gb=16, partition="shared"),
-            fast="debug::00:30:00",  # 2 nodes, a short line; shared can wait hours
             vscode=VsCodeSettings(setup=FILE_KEYCHAIN,
                                   compute=ComputeProfile(cpus=2, mem_gb=8, time="08:00:00", partition="shared")),
         ),

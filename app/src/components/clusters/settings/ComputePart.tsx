@@ -3,8 +3,6 @@ import { List } from '../../e/List'
 import { ToggleRow } from '../../e/ToggleRow'
 import { ASK } from '../ComputeDialog'
 import { NodeFields } from '../node/NodeFields'
-import { parseQueues } from '../queueList'
-import { QueuePick } from './QueuePick'
 
 export function ComputePart({ d, up }: { d: Cluster; up: (change: Partial<Cluster>) => void }) {
   const want = d.request_node_on_connect ?? true
@@ -18,7 +16,6 @@ export function ComputePart({ d, up }: { d: Cluster; up: (change: Partial<Cluste
     </List>
     {want && <div className="pt-5">
       <NodeFields cluster={d.id} value={d.profile} onChange={(profile) => up({ profile })} />
-      {parseQueues(d.queues ?? '').length > 1 && <div className="pb-5"><QueuePick d={d} up={up} /></div>}
       <ToggleRow label={ASK} sub="Shows the node window when you connect." checked={d.ask_node ?? false}
         onChange={(on) => up({ ask_node: on })} />
       {reuse}

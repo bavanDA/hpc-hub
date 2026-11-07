@@ -67,10 +67,6 @@ export type Cluster = {
   password_only?: boolean  // its SSH server takes no keys
   password_too?: boolean  // with key_page: a password works as well
   code_setup?: string
-  queues?: string
-  fast?: string  // "partition:qos:time" of the Fast node queue
-  queue_wait?: number
-  queue_pick?: 'cheapest' | 'fastest'  // which of the queues to try wins (cheapest: free first, within queue_wait)
   request_node_on_connect?: boolean
   ask_node?: boolean  // with request_node_on_connect: show the node's settings first
   reuse_running_job?: boolean
