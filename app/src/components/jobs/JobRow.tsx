@@ -28,13 +28,15 @@ export function JobRow({ job: j, cols, anyCancel, picked, onPick, onOpen, onCanc
       case 'res': return <>{j.cpus} · {memText(j.mem)}</>
       case 'su': return <span className={j.su === 'free' ? 'text-dim' : ''}>{j.su}</span>
       case 'where': return j.reason
-        ? <span className="block max-w-[200px] truncate text-dim @max-[820px]:max-w-[120px]" title={reasonText(j.reason)}>{reasonText(j.reason)}</span>
-        : <span className="block max-w-[180px] truncate font-mono text-sm" title={j.where}>{j.where}</span>
+        ? <span className="block w-[220px] whitespace-normal text-dim @max-[820px]:w-[150px]">
+          {reasonText(j.reason)}</span>
+        : <span className="block max-w-[180px] font-mono text-sm whitespace-normal [overflow-wrap:anywhere]">
+          {j.where}</span>
       default: return null
     }
   }
   return (
-    <tr onClick={onOpen} title="Show details"
+    <tr onClick={onOpen}
       className={`group h-11 cursor-default border-b border-line hover:bg-hover ${picked ? 'bg-selected' : ''}`}>
       {anyCancel && <td className="w-10 pl-4" onClick={(e) => e.stopPropagation()}>
         {j.cancellable && <Tick label={`Pick job ${j.job_id}`} checked={picked} onChange={onPick} />}</td>}

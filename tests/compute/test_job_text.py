@@ -66,3 +66,7 @@ def test_exit_codes_in_words():
     assert t.exit_text("1:0") == "1, the program reported an error"
     assert t.exit_text("0:9") == "Stopped by signal 9"
     assert t.exit_text("") == ""
+
+
+def test_a_job_over_its_queue_limit_says_what_it_waits_for():
+    assert t.reason_text("(QOSMaxJobsPerUserLimit)") == "Waiting: one of your jobs must end first"
