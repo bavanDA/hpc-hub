@@ -1,43 +1,34 @@
-// Where you are on the phone: a tab at the bottom, and inside More a screen on top of the list. Shared desktop code
-// moves around with go('files', { cluster, path }) (app/src/nav.ts); here each desktop page maps to a tab or a More
-// screen. Android's Back walks the browser history, so every sheet and every screen on top pushes an entry and
-// Back closes the top one first (useBackLayer), and only then leaves the app.
+// Where you are on the phone: one page of the desktop's sidebar (nav.ts on the desktop, the drawer here). Shared
+// desktop code moves around with go('files', { cluster, path }) (app/src/nav.ts); here
+// each desktop page maps to a page, or to a tab of one. Android's Back walks the browser history, so every sheet,
+// dialog on top pushes an entry and Back closes the top one first (useBackLayer), and only then leaves
+// the app.
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 
 import { setActiveCluster } from '@shared/components/clusters/active'
 import type { Page } from '@shared/components/app/pages'
-import { NavContext, type Go } from '@shared/nav'
+import { leave, NavContext, type Go } from '@shared/nav'
 
-export type Tab = 'clusters' | 'terminals' | 'code' | 'jobs' | 'more'
-export type MoreScreen = 'projects' | 'agents' | 'backup' | 'files' | 'transfers' | 'papers' | 'usage' | 'settings' |
-  'about'
-/** from: the screen that opened this one (Backup from Agents), where back returns to. */
-export type Place = { tab: Tab; screen?: MoreScreen; from?: MoreScreen; params: Record<string, string> }
+/** The pages in the drawer, the desktop sidebar's (latex is Papers there). */
+export type PhonePage = 'clusters' | 'projects' | 'terminals' | 'code' | 'agents' | 'latex' | 'jobs' | 'usage' | 'files'
+export type Place = { page: PhonePage; params: Record<string, string> }
 
-export const TABS: Tab[] = ['clusters', 'terminals', 'code', 'jobs', 'more']
-export const SCREENS: MoreScreen[] = ['projects', 'agents', 'backup', 'files', 'transfers', 'papers', 'usage', 'settings',
-  'about']
-
-/** A desktop page (and its tab param) on the phone. Unknown pages land on Clusters. */
-export function placeOf(page: Page | Tab | MoreScreen | string, params: Record<string, string> = {}): Place {
+/** A desktop page (and its tab param), or an older phone name, on the phone. Unknown pages land on Clusters. */
+export function placeOf(page: Page | PhonePage | string, params: Record<string, string> = {}): Place {
   const p = { ...params }
   switch (page) {
-    case 'clusters': case 'terminals': case 'code': case 'jobs': case 'more':
-      return { tab: page, params: p }
-    case 'latex': return { tab: 'more', screen: 'papers', params: p }
-    case 'backup': return { tab: 'more', screen: 'backup', from: 'agents', params: p }
-    case 'agents':
-      if (p.tab === 'backup') return { tab: 'more', screen: 'backup', from: 'agents', params: p }
-      return { tab: 'more', screen: 'agents', params: p }
-    case 'permissions': return { tab: 'more', screen: 'agents', params: { ...p, tab: 'permissions' } }
-    case 'skills': return { tab: 'more', screen: 'agents', params: { ...p, tab: 'skills' } }
-    case 'schedules': return { tab: 'more', screen: 'agents', params: { ...p, tab: 'scheduled' } }
-    case 'globus': return { tab: 'more', screen: 'transfers', params: { ...p, view: 'globus' } }
+    case 'clusters': case 'projects': case 'terminals': case 'code': case 'jobs': case 'usage': case 'latex':
     case 'files':
-      return { tab: 'more', screen: p.tab === 'transfers' ? 'transfers' : 'files', params: p }
-    default:
-      return SCREENS.includes(page as MoreScreen)
-        ? { tab: 'more', screen: page as MoreScreen, params: p } : { tab: 'clusters', params: {} }
+      return { page, params: p }
+    case 'papers': return { page: 'latex', params: p }
+    case 'backup': return { page: 'agents', params: { ...p, tab: 'backup' } }
+    case 'agents': return { page: 'agents', params: p }
+    case 'permissions': return { page: 'agents', params: { ...p, tab: 'permissions' } }
+    case 'skills': return { page: 'agents', params: { ...p, tab: 'skills' } }
+    case 'schedules': return { page: 'agents', params: { ...p, tab: 'scheduled' } }
+    case 'globus': return { page: 'files', params: { ...p, tab: 'transfers', view: 'globus' } }
+    case 'transfers': return { page: 'files', params: { ...p, tab: 'transfers' } }
+    default: return { page: 'clusters', params: {} }
   }
 }
 
@@ -106,7 +97,10 @@ export function useBackLayer(onBack: () => void, active = true) {
 }
 
 // -- the provider ----------------------------------------------------------------------------------------------
-type PhoneNav = { place: Place; go: Go; open: (tab: Tab) => void; openScreen: (s: MoreScreen, from?: MoreScreen) => void; closeScreen: () => void }
+type PhoneNav = {
+  place: Place; go: Go; open: (page: PhonePage) => void
+  drawer: boolean; setDrawer: (on: boolean) => void; settings: boolean; setSettings: (on: boolean) => void
+}
 const PhoneNavContext = createContext<PhoneNav | null>(null)
 
 export function usePhoneNav() {
@@ -115,37 +109,39 @@ export function usePhoneNav() {
   return nav
 }
 
-/** The More screen on top, so its Header shows a back arrow (null on the tabs themselves). */
-export const ScreenBackContext = createContext<(() => void) | null>(null)
-
 export function NavProvider({ first, children }: { first: Place; children: ReactNode }) {
   const [place, setPlace] = useState<Place>(first)
-  const go: Go = useCallback((page, params = {}) => {
+  const [drawer, setDrawer] = useState(false)
+  const [settings, setSettings] = useState(firstSettings)
+  // leave: a page with unsaved changes (Agents › Permissions) can hold the move and ask first
+  const go: Go = useCallback((page, params = {}) => leave(() => {
     if (params.cluster) setActiveCluster(params.cluster)
     setPlace(placeOf(page, params))
-  }, [])
-  const open = useCallback((tab: Tab) => setPlace({ tab, params: {} }), [])
-  const openScreen = useCallback((screen: MoreScreen, from?: MoreScreen) =>
-    setPlace({ tab: 'more', screen, from, params: {} }), [])
-  const closeScreen = useCallback(() => setPlace((p) => ({ tab: p.tab, screen: p.from, params: {} })), [])
-  // Back: a screen on top of More goes back to the list first; another tab then goes back to Clusters. The tab's
-  // layer is declared first so the screen's sits above it.
-  useBackLayer(() => open('clusters'), place.tab !== 'clusters')
-  useBackLayer(closeScreen, !!place.screen)
-  useBackLayer(closeScreen, !!place.from)
+  }), [])
+  const open = useCallback((page: PhonePage) => leave(() => setPlace({ page, params: {} })), [])
+  // Back: another page goes back to Clusters, and from Clusters Back leaves the app.
+  useBackLayer(() => open('clusters'), place.page !== 'clusters')
   return (
-    <PhoneNavContext.Provider value={{ place, go, open, openScreen, closeScreen }}>
+    <PhoneNavContext.Provider value={{ place, go, open, drawer, setDrawer, settings, setSettings }}>
       <NavContext.Provider value={{ go, params: place.params }}>{children}</NavContext.Provider>
     </PhoneNavContext.Provider>
   )
 }
 
-/** ?tab=jobs, ?tab=usage or ?tab=files&path=... in a plain browser (design work with the demo data). */
+const inTauri = () => '__TAURI_INTERNALS__' in window
+
+/** ?page=jobs&tab=transfers, or the older ?tab=jobs, in a plain browser (design work with the demo data). */
 export function firstPlace(): Place {
-  if ('__TAURI_INTERNALS__' in window) return { tab: 'clusters', params: {} }
+  if (inTauri()) return { page: 'clusters', params: {} }
   const search = new URLSearchParams(location.search)
-  const tab = search.get('tab')
-  if (!tab) return { tab: 'clusters', params: {} }
-  const params = Object.fromEntries([...search].filter(([k]) => k !== 'tab' && k !== 'theme'))
-  return placeOf(tab, params)
+  const asked = search.get('page') ?? search.get('tab')
+  if (!asked || asked === 'settings') return { page: 'clusters', params: {} }
+  const skip = search.has('page') ? ['page', 'theme', 'experimental'] : ['tab', 'theme', 'experimental']
+  const params = Object.fromEntries([...search].filter(([k]) => !skip.includes(k)))
+  return placeOf(asked, params)
+}
+
+/** ?page=settings opens the Settings dialog on start (design work). */
+function firstSettings() {
+  return !inTauri() && new URLSearchParams(location.search).get('page') === 'settings'
 }

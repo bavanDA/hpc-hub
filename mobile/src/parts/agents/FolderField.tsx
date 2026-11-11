@@ -15,8 +15,8 @@ export function FolderField({ cluster, name, label = 'Folder', value, onChange }
           spellCheck={false} placeholder="Home folder" onChange={(e) => onChange(e.target.value || '~')} />
       </div>
       <button aria-label="Choose a folder" onClick={() => setPicking(true)}
-        className="mb-2 grid size-12 shrink-0 place-items-center rounded-lg border border-line-strong active:bg-pressed">
-        <FolderOpen size={22} className="text-dim" /></button>
+        className="mb-1.5 grid size-10 shrink-0 place-items-center rounded-lg border border-line-strong active:bg-pressed">
+        <FolderOpen size={16} className="text-dim" /></button>
       {picking && <FolderSheet cluster={cluster} name={name} start={value.trim() || '~'} onPick={onChange}
         onClose={() => setPicking(false)} />}
     </div>

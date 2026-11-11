@@ -8,7 +8,7 @@ import { looksLikeCode, pastedCode } from '@shared/components/globus/format'
 import { Spinner } from '@shared/components/ui/Spinner'
 import { call } from '@shared/rpc'
 import type { GlobusStatus, Login } from '@shared/types/globus'
-import { Button, Field, MainButton, Sheet } from '../../ui'
+import { Button, Dialog, Field, MainButton } from '../../ui'
 
 const read = () => navigator.clipboard.readText().catch(() => '')
 
@@ -53,9 +53,10 @@ export function SignInSheet({ start, onClose, onDone }:
   const fresh = !login || login.fresh || !!login.domain
 
   return (
-    <Sheet title={fresh ? 'Sign in to Globus' : 'Allow Globus'} onClose={onClose} actions={
+    <Dialog title={fresh ? 'Sign in to Globus' : 'Allow Globus'} onClose={onClose} actions={
       <MainButton disabled={!clean || busy} onClick={finish}>
         {busy && <Spinner size={16} />}{fresh ? 'Sign in' : 'Done'}</MainButton>}>
+      <div className="px-5">
       {!login ? (
         <div className="grid h-40 place-items-center">{error ? <p className="text-bad">{error}</p> : <Spinner size={28} />}</div>
       ) : (
@@ -82,6 +83,7 @@ export function SignInSheet({ start, onClose, onDone }:
           {error && <p className="text-sm text-bad">{error}</p>}
         </div>
       )}
-    </Sheet>
+      </div>
+    </Dialog>
   )
 }

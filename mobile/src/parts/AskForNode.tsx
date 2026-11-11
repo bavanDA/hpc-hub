@@ -8,7 +8,7 @@ export function useAskForNode() {
   const n = useNodeFirst()
   const sheet = <>
     {n.words && <ConfirmSheet {...n.words} onConfirm={n.getNode} onKeep={n.runHere} onClose={n.close} />}
-    {n.getting && <NodeSheet cluster={n.getting} mode="request" onClose={n.closeNode} />}
+    {n.getting && <NodeSheet cluster={n.getting} onClose={n.closeNode} />}
   </>
-  return { guard: n.guard, sheet }
+  return { guard: n.guard, waiting: n.waiting, sheet }
 }

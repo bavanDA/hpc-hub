@@ -48,3 +48,13 @@ export async function keepAlive(on: boolean, text?: string): Promise<void> {
   }
   await native('keep_alive', { on, text })
 }
+
+/** Whether Android leaves HPC Hub out of its battery limits, which can close connections in the background. */
+export async function batteryUnrestricted(): Promise<boolean> {
+  return (await native<{ unrestricted: boolean }>('battery_status', {})).unrestricted
+}
+
+/** Android's own question about those limits. */
+export async function askBatteryUnrestricted(): Promise<void> {
+  await native('battery_ask', {})
+}

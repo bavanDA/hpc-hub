@@ -6,7 +6,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Spinner } from '@shared/components/ui/Spinner'
 import { call } from '@shared/rpc'
 import type { Folder as FolderList, Place, Places, ProjectCluster } from '@shared/types/projects'
-import { Button, Chips, Field, List, MainButton, Row, Sheet } from '../../ui'
+import { Button, Chips, Field, List, MainButton, Row, Dialog } from '../../ui'
 import { shortCluster, wrapPath } from '../code/util'
 
 const join = (a: string, b: string) => `${a.replace(/\/+$/, '')}/${b}`
@@ -55,10 +55,10 @@ export function FolderPicker({ cluster, start, onPick, onClose, projects = [] }:
   const folders = (at?.folders ?? []).filter((f) => hidden || !f.startsWith('.'))
 
   return (
-    <Sheet flush title={`Choose a folder on ${shortCluster(cluster.name)}`} onClose={onClose}
+    <Dialog title={`Choose a folder on ${shortCluster(cluster.name)}`} onClose={onClose}
       actions={<MainButton disabled={!at} onClick={() => { if (at) { onClose(); onPick(at.path) } }}>
         Choose this folder</MainButton>}>
-      <div className="px-4">
+      <div className="px-5">
         <Chips one value={[]} onChange={([path]) => path && load(path)}
           options={jumps.map((p) => [p.path, p.label] as const)} />
       </div>
@@ -76,14 +76,14 @@ export function FolderPicker({ cluster, start, onPick, onClose, projects = [] }:
       </div>
 
       {typing !== null && (
-        <form className="px-4" onSubmit={(e) => { e.preventDefault(); if (typing.trim()) load(typing.trim()) }}>
+        <form className="px-5" onSubmit={(e) => { e.preventDefault(); if (typing.trim()) load(typing.trim()) }}>
           <Field label="Go to a path" value={typing} autoFocus autoCapitalize="none" autoCorrect="off"
             spellCheck={false} placeholder="~/myproj or /scratch" onChange={(e) => setTyping(e.target.value)} />
         </form>
       )}
 
       {naming !== null && (
-        <form className="px-4 pb-3" onSubmit={(e) => { e.preventDefault(); newFolder() }}>
+        <form className="px-5 pb-3" onSubmit={(e) => { e.preventDefault(); newFolder() }}>
           <Field label="New folder name" value={naming} autoFocus autoCapitalize="none" autoCorrect="off"
             spellCheck={false} onChange={(e) => setNaming(e.target.value)} />
           <div className="flex gap-3">
@@ -93,7 +93,7 @@ export function FolderPicker({ cluster, start, onPick, onClose, projects = [] }:
         </form>
       )}
 
-      {error && <p className="px-4 py-2 select-text text-bad">{error}</p>}
+      {error && <p className="px-5 py-2 select-text text-bad">{error}</p>}
       <List>
         {naming === null && <Row icon={FolderPlus} label="New folder here" onPress={() => setNaming('')} />}
         {loading && !at
@@ -107,7 +107,7 @@ export function FolderPicker({ cluster, start, onPick, onClose, projects = [] }:
             ))}
       </List>
       {loading && at && <div className="flex justify-center py-2"><Spinner /></div>}
-    </Sheet>
+    </Dialog>
   )
 }
 

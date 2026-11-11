@@ -1,6 +1,6 @@
-// Is the on-screen keyboard up while a code editor has the focus? One set of listeners, shared by the Code tab (its
-// key row) and App.tsx (the bottom tabs give their room to the editor). Android shrinks the visual viewport, not the
-// window, when the keyboard opens.
+// Is the on-screen keyboard up while a code editor has the focus? One set of listeners, shared by the Code page
+// (its key row, and the header giving its room to the editor). Android shrinks the visual viewport, not the window,
+// when the keyboard opens.
 import { useSyncExternalStore } from 'react'
 
 const LIFT = 120  // px the visual viewport shrinks by before it counts as a keyboard, not a toolbar

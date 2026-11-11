@@ -13,21 +13,24 @@ import { agentName, isRunning, useAsks } from '@shared/components/code/ask'
 import { useClusters } from '@shared/components/clusters/store'
 import { placeOf, usePhoneNav, type Place } from '../nav'
 import { ConfirmSheet } from '../ui'
-import { keepAlive } from './native'
+import { askBatteryUnrestricted, keepAlive } from './native'
 
 // -- your choices, kept on this phone ----------------------------------------------------------------------------
 export const KINDS: [NoticeKind, string][] = [['duo', 'Duo is waiting'], ['connected', 'A cluster connected'],
   ['node', "Your node's time is almost up"], ['job', 'A job ended'], ['copy', 'A copy finished'],
   ['ask', 'An agent answered'], ['backup', 'Scratch files are about to be deleted'], ['backup_done', 'A backup finished']]
 
-export type PhonePrefs = { notify: boolean; kinds: Record<NoticeKind, boolean>; keep: boolean; asked: boolean }
+export type PhonePrefs = { notify: boolean; kinds: Record<NoticeKind, boolean>; keep: boolean; asked: boolean
+  keepAsked: boolean }
 
 const KEY = 'hpchub.phone'
+const KEEP_EXPLAIN = "Android can close HPC Hub's connection when you lock the phone or switch apps. This keeps it open and "
+  + 'uses a little more battery. Android will then ask you to let HPC Hub run without battery limits.'
 const OLD_KEEP = 'hpchub.keep-connected'  // before this file: the stay-connected switch alone
 
 function load(): PhonePrefs {
   const kinds = Object.fromEntries(KINDS.map(([k]) => [k, true])) as Record<NoticeKind, boolean>
-  const base: PhonePrefs = { notify: true, kinds, keep: false, asked: false }
+  const base: PhonePrefs = { notify: true, kinds, keep: false, asked: false, keepAsked: false }
   try {
     const saved = JSON.parse(localStorage.getItem(KEY) ?? 'null') as Partial<PhonePrefs> | null
     if (saved) return { ...base, ...saved, kinds: { ...kinds, ...saved.kinds } }
@@ -83,7 +86,8 @@ function lookingAt(about: Notice): boolean {
   if (document.visibilityState !== 'visible' || !document.hasFocus()) return false
   if (about.kind === 'duo') return true  // the Duo screen covers every page
   const there = placeOf(about.page, about.params)
-  return !!shownPlace && shownPlace.tab === there.tab && shownPlace.screen === there.screen
+  return !!shownPlace && shownPlace.page === there.page
+    && (shownPlace.params.tab === 'backup') === (there.params.tab === 'backup')
 }
 
 async function phoneNotify(title: string, body: string, about?: Notice) {
@@ -145,6 +149,7 @@ export function PhoneWatch() {
   const p = usePhonePrefs()
   const { sessions } = useClusters()
   const [explain, setExplain] = useState(false)
+  const [offerKeep, setOfferKeep] = useState(false)
   shownPlace = place
 
   useEffect(() => {
@@ -176,6 +181,18 @@ export function PhoneWatch() {
       .catch(() => {})
   }, [anyUp, p.notify, p.asked])
 
+  // then, once, what keeps the connection open while you use other apps
+  useEffect(() => {
+    if (anyUp && p.asked && !p.keep && !p.keepAsked && inApp) setOfferKeep(true)
+  }, [anyUp, p.asked, p.keep, p.keepAsked])
+
+  if (offerKeep && !explain) {
+    return createElement(ConfirmSheet, {
+      title: 'Stay connected in the background?', text: KEEP_EXPLAIN, keep: 'Not now', confirm: 'Turn on',
+      onConfirm: () => { setPhonePrefs({ keep: true }); askBatteryUnrestricted().catch(() => {}) },
+      onClose: () => { setOfferKeep(false); setPhonePrefs({ keepAsked: true }) },
+    })
+  }
   if (!explain) return null
   return createElement(ConfirmSheet, {
     title: 'Get notifications?', text: EXPLAIN, keep: 'Not now', confirm: 'Allow',

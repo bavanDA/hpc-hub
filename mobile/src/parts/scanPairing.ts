@@ -5,6 +5,7 @@ import { call } from '@shared/rpc'
 
 /** What to tell you ('' when you closed the camera), and the clusters that got a login. */
 export async function scanPairing(): Promise<{ msg: string; names: string[] }> {
+  if (!('__TAURI_INTERNALS__' in window)) return { msg: 'Scanning needs the phone app.', names: [] }
   let text: string
   try {
     text = await invoke<string>('scan_qr')

@@ -1,24 +1,9 @@
-// Small helpers for the phone's Code tab: recently opened files, logs and the error lines in them, the command that
-// runs a file in a terminal, and the editor's languages kept once loaded (the diff of an ask uses them too).
+// Small helpers for the phone's Code tab: logs and the error lines in them, the command that runs a file in a
+// terminal, and the editor's languages kept once loaded (the diff of an ask uses them too).
 import type { Extension } from '@codemirror/state'
 
 import { detect, loadLanguage, type LangId } from '@shared/components/code/languages'
 import { chunkBars } from './chunkBars'
-
-// -- recent files ------------------------------------------------------------------------------------------------
-export type Recent = { cluster: string; path: string; at: number }
-const RECENT = 'hpc-hub-code-recent'
-const KEEP = 12
-
-export function recentFiles(): Recent[] {
-  try { return JSON.parse(localStorage.getItem(RECENT) ?? '[]') as Recent[] } catch { return [] }
-}
-
-export function rememberFile(cluster: string, path: string) {
-  const list = [{ cluster, path, at: Date.now() },
-    ...recentFiles().filter((r) => r.cluster !== cluster || r.path !== path)].slice(0, KEEP)
-  try { localStorage.setItem(RECENT, JSON.stringify(list)) } catch { /* private window */ }
-}
 
 // -- paths -------------------------------------------------------------------------------------------------------
 export const nameOf = (path: string) => path.replace(/\/+$/, '').split('/').pop() || path
@@ -63,13 +48,6 @@ export function lastError(text: string): string {
   const hit = lines.map((l) => ERROR.test(l)).lastIndexOf(true)
   if (hit < 0) return ''
   return lines.slice(Math.max(0, hit - 15), hit + 5).join('\n').trim()
-}
-
-/** The user's own file an error points at last (not a library's), for "Fix this error". */
-export function blamed(error: string, dir: string): Spot | null {
-  const spots = error.split('\n').map((l) => spotIn(l, dir)).filter((s): s is Spot => !!s)
-  const mine = spots.filter((s) => !/site-packages|dist-packages|\/lib\/python|\/usr\/lib|\/opt\//.test(s.path))
-  return mine[mine.length - 1] ?? spots[spots.length - 1] ?? null
 }
 
 // -- running a file ----------------------------------------------------------------------------------------------

@@ -7,6 +7,7 @@ import type { Job, JobDetails } from '../../types/jobs'
 import { EDialog } from '../e/EDialog'
 import { Row } from '../e/Row'
 import { Section } from '../e/Section'
+import { ReportLink } from '../report/ReportLink'
 import { Button } from '../ui/Button'
 import { IconButton } from '../ui/IconButton'
 import { Meter } from '../ui/Meter'
@@ -62,7 +63,7 @@ export function DetailsDialog({ cluster, job: j, onClose, onCancel }:
             : <Row key={r.label} label={r.label} value={<span className="font-normal select-text">{r.value}</span>} />)}
         </Section>
       ))}
-      {error && <p className="px-5 py-3 text-bad">{error}</p>}
+      {error && <p className="px-5 py-3 text-bad">{error} <ReportLink className="ml-1" error={error} /></p>}
       {!details && !error && <div className="grid h-32 place-items-center"><Spinner size={24} /></div>}
       {details && <Section>
         <Row label="All fields" value={<span className="font-normal text-dim">{all ? 'Hide' : 'Show'}</span>}

@@ -58,9 +58,9 @@ export function PathBar(p: Props) {
         </button>
       </div>
       {p.connected ? <div className="flex min-h-12 items-center gap-2 px-3 py-2">
-        {p.places.length > 0 && <div className="min-w-0" style={{ width: p.places.length * 120 }}>
-          <Segments label="Places" value={here?.path ?? ''} onChange={(path) => p.onGo(path)}
-            options={p.places.map((pl) => [pl.path, pl.label] as const)} /></div>}
+        {p.places.length > 0 && <div className="min-w-0 flex-1 overflow-x-auto [scrollbar-width:none]">
+          <div className="w-max"><Segments label="Places" value={here?.path ?? ''} fit onChange={(path) => p.onGo(path)}
+            options={p.places.map((pl) => [pl.path, pl.label] as const)} /></div></div>}
         <span className="ml-auto shrink-0 pl-2 text-sm text-dim">
           {p.count === null ? '' : p.count === 1 ? '1 item' : `${p.count} items`}
         </span>

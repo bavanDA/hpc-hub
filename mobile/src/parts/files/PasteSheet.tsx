@@ -7,7 +7,7 @@ import { size } from '@shared/components/files/format'
 import { Spinner } from '@shared/components/ui/Spinner'
 import { call } from '@shared/rpc'
 import type { Clip, CopyPlan } from '@shared/types/files'
-import { MainButton, Row, Sheet } from '../../ui'
+import { Dialog, MainButton, Row, Section } from '../../ui'
 import { shortCluster, wrapPath } from '../code/util'
 
 const BIG = 5 * 1000 ** 3  // past this, Globus beats sending everything through the phone
@@ -44,7 +44,7 @@ export function PasteSheet({ clip, dstName, dstDir, onGo, onClose }: {
 
   const where = (cluster: string, path: string) => wrapPath(`${shortCluster(cluster)}: ${path}`)
   return (
-    <Sheet flush title={`Copy ${clip.name}`} onClose={onClose}
+    <Dialog title={`Copy ${clip.name}`} onClose={onClose}
       actions={<MainButton disabled={!ready} onClick={go}>{total ? `Copy ${size(total)}` : 'Copy'}</MainButton>}>
       <div className="border-t border-line">
         <Row label="From" value={where(clip.clusterName, clip.path)} />
@@ -52,14 +52,13 @@ export function PasteSheet({ clip, dstName, dstDir, onGo, onClose }: {
       </div>
 
       {clip.folder && (
-        <section className="pt-5">
-          <h3 className="px-4 pb-1.5 text-xs font-semibold tracking-wide text-dim uppercase">What to copy</h3>
-          <div className="border-t border-line">
+        <Section title="What to copy">
+          <div className="max-h-[280px] overflow-y-auto">
             {!plan && !error && <div className="grid h-14 place-items-center"><Spinner /></div>}
-            {error && <p className="px-4 py-3 text-bad">Couldn't measure it: {error}</p>}
-            {plan && !plan.sizes.length && <p className="px-4 py-3 text-dim">The folder is empty.</p>}
+            {error && <p className="px-5 py-3 text-bad">Couldn't measure it: {error}</p>}
+            {plan && !plan.sizes.length && <p className="px-5 py-3 text-dim">The folder is empty.</p>}
             {plan?.sizes.map((s) => (
-              <label key={s.name} className="flex min-h-14 items-center gap-3 border-b border-line px-4 active:bg-pressed">
+              <label key={s.name} className="flex min-h-14 items-center gap-3 border-b border-line px-5 active:bg-pressed">
                 <input type="checkbox" checked={!left.has(s.name)} onChange={() => flip(s.name)}
                   className="size-5 shrink-0 accent-[var(--color-accent)]" />
                 <span className="min-w-0 flex-1 break-all">{s.name}</span>
@@ -67,13 +66,11 @@ export function PasteSheet({ clip, dstName, dstDir, onGo, onClose }: {
               </label>
             ))}
           </div>
-          {plan && plan.sizes.length > 0 && <p className="px-4 pt-2 text-sm text-dim">Untick what stays behind.</p>}
-        </section>
+          {plan && plan.sizes.length > 0 && <p className="px-5 py-2 text-sm text-dim">Untick what stays behind.</p>}
+        </Section>
       )}
 
-      <section className="pt-5">
-        <h3 className="px-4 pb-1.5 text-xs font-semibold tracking-wide text-dim uppercase">How</h3>
-        <div className="border-t border-line">
+      <Section title="How">
           {([['globus', Globe, 'Globus', 'Cluster to cluster. Keeps going with the app closed.'],
             ['laptop', Smartphone, 'Through this phone',
               'Uses your phone\'s data. Keep HPC Hub open until it\'s done.']] as const).map(([k, Icon, t, sub]) => (
@@ -81,12 +78,11 @@ export function PasteSheet({ clip, dstName, dstDir, onGo, onClose }: {
               {how === k && <Check size={20} aria-label="Chosen" className="shrink-0" />}
             </Row>
           ))}
-        </div>
         {how === 'laptop' && total > BIG && (
-          <p className="px-4 pt-2 text-sm text-dim">
+          <p className="px-5 py-2 text-sm text-dim">
             That's {size(total)} through your phone. Globus is much faster for this much.</p>
         )}
-      </section>
-    </Sheet>
+      </Section>
+    </Dialog>
   )
 }

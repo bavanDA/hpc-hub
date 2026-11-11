@@ -1,27 +1,29 @@
-// Terminals: your tmux sessions on each connected cluster; one opens full screen with a key row and the
-// monitoring bar. Open terminals live in the shared tabs store, so they keep running on other screens.
-// Tap a session to open it, press and hold (or ⋮) to rename or stop it. Each cluster's heading names its node,
-// so the rows only say where a session runs when it's somewhere else.
-import { Plus, RefreshCw, SquareTerminal, WifiOff } from 'lucide-react'
+// Terminals: your sessions on each connected cluster, the list on its own screen, and the open terminals as tabs with
+// the monitoring bar and a row of keys. Everything open stays mounted (App.tsx) and attached, so it keeps running on
+// other pages, and a tab that lost its cluster reattaches by itself after sign-in (shared tabs.ts).
+import { Plus, RefreshCw } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
 import { shortName } from '@shared/components/clusters/loginCopy'
-import { useListings, useLive } from '@shared/components/terminals/data'
+import { useListings, useLive, type Live } from '@shared/components/terminals/data'
+import { ListNote } from '@shared/components/terminals/ListNote'
+import { PanelHead } from '@shared/components/terminals/PanelHead'
+import { withOpened } from '@shared/components/terminals/sessionText'
 import { tabKey } from '@shared/components/terminals/tabKey'
 import { setNotify } from '@shared/components/terminals/tabNotify'
 import { select } from '@shared/components/terminals/tabStore'
-import { openSession } from '@shared/components/terminals/tabs'
+import type { Tab } from '@shared/components/terminals/tabs'
 import { useTabs } from '@shared/components/terminals/useTabs'
 import { usePageParams } from '@shared/nav'
-import type { TmuxSession } from '@shared/types/terminals'
+import { useBackLayer } from '../nav'
 import { Header } from '../parts/Header'
+import { KeyBar } from '../parts/terminal/KeyBar'
 import { NewTerminalSheet } from '../parts/terminal/NewTerminalSheet'
 import { OpenOthers } from '../parts/terminal/OpenTabs'
-import { SessionActions, type Target } from '../parts/terminal/SessionActions'
-import { SessionRow } from '../parts/terminal/SessionRow'
-import { TerminalScreen } from '../parts/TerminalScreen'
-import { EmptyState, List, MainButton, useToast } from '../ui'
-
+import { TabBar } from '../parts/terminal/TabBar'
+import { TerminalPane } from '../parts/terminal/TerminalPane'
+import { TerminalRow } from '../parts/terminal/TerminalRow'
+import { IconBtn, useToast } from '../ui'
 
 export function Terminals({ shown }: { shown: boolean }) {
   const toast = useToast()
@@ -32,79 +34,70 @@ export function Terminals({ shown }: { shown: boolean }) {
   const params = usePageParams()
   const [creating, setCreating] = useState<string | null>(null)  // the cluster a new terminal starts on
   const [startIn, setStartIn] = useState('')  // and its folder, from a project or a paper
-  const [acting, setActing] = useState<Target | null>(null)
   const open = tabs.find((t) => t.key === current)
+  const inTerminal = !!open
 
-  // go('terminals', { cluster, new: '1', folder? }) from a cluster card or a project: the New terminal sheet for that
-  // cluster. Each go() brings new params, so the same card button opens the sheet again after it was closed
+  // go('terminals', { cluster, new: '1', folder? }) from a cluster card or a project: the New terminal window for that
+  // cluster. Each go() brings new params, so the same card button opens it again after it was closed
   useEffect(() => {
     if (shown && params.new && params.cluster) { setStartIn(params.folder ?? ''); setCreating(params.cluster) }
   }, [shown, params])
 
-  if (open) return <TerminalScreen tab={open} shown={shown} onChanged={refresh}
-    onBack={() => { select(null); refresh() }} />
+  // Back from a terminal shows the list first. One effect later than nav.tsx's own layer, so this one is above it.
+  const [backToList, setBackToList] = useState(false)
+  useEffect(() => setBackToList(shown && inTerminal), [shown, inTerminal])
+  useBackLayer(() => { select(null); refresh() }, backToList)
 
-  const sessionsOf = (id: string): TmuxSession[] => {
-    const listed = [...(listings[id]?.listing?.sessions ?? [])]
-    // just started here, not listed yet
-    for (const t of tabs) {
-      if (t.cluster === id && t.session && !listed.some((s) => s.name === t.session)) {
-        listed.unshift({ name: t.session, kind: t.kind, created: 0, attached: 1, label: t.title, color: '',
-          command: '', windows: 1, path: '', remote: '', node: t.node, title: t.title, agent: 'term', job: '' })
-      }
-    }
-    return listed
+  const newOne = () => {
+    if (!live.length) return toast('Connect a cluster first')
+    setStartIn('')
+    setCreating(live[0].id)
   }
-  const newOne = () => { setStartIn(''); setCreating(live[0].id) }
-  const none = live.length > 0 && live.every((c) => listings[c.id]?.listing && !sessionsOf(c.id).length)
 
   return (
     <div className="flex h-full flex-col">
-      <Header title="Terminals">
-        {live.length > 0 && <button aria-label="Refresh" onClick={refresh}
-          className="grid size-12 place-items-center rounded-full active:bg-pressed"><RefreshCw size={22} /></button>}
-        {live.length > 0 && <button aria-label="New terminal" onClick={newOne}
-          className="grid size-12 place-items-center rounded-full active:bg-pressed"><Plus size={24} /></button>}
-      </Header>
-      <div className="min-h-0 flex-1 overflow-y-auto pb-6">
-        {!live.length && <EmptyState icon={WifiOff} title="Not connected" text="Connect a cluster to open terminals." />}
-        {none && <EmptyState icon={SquareTerminal} title="No terminals yet"
-          text="A terminal keeps running when you leave it or close the app."
-          action={<MainButton icon={Plus} className="px-6" onClick={newOne}>New terminal</MainButton>} />}
-        <OpenOthers tabs={tabs} />
-        {!none && live.map((c) => {
-          const l = listings[c.id]
-          const sessions = sessionsOf(c.id)
-          return (
-            <section key={c.id} className="pt-5">
-              <h2 className="px-4 pb-1.5 text-sm font-semibold text-dim">
-                {shortName(c)}{c.node ? ` · ${c.node}` : ''}</h2>
-              {l?.error && <p className="px-4 pb-2 text-bad">{l.error}</p>}
-              {l?.listing && !l.listing.has_tmux && !sessions.length &&
-                <p className="px-4 pb-2 text-dim">tmux isn't installed on {shortName(c)}.</p>}
-              {l?.listing && l.listing.has_tmux && !sessions.length &&
-                <p className="px-4 pb-2 text-dim">No sessions yet.</p>}
-              {sessions.length > 0 && (
-                <List>
-                  {sessions.map((s) => (
-                    <SessionRow key={s.name} s={s} nodes={l?.listing?.nodes ?? null} here={c.node}
-                      open={tabs.some((t) => t.key === tabKey(c.id, s.name))}
-                      onOpen={() => openSession(c.id, s)}
-                      onActions={() => setActing({ cluster: c.id, name: s.name, kind: s.kind, node: s.node,
-                        title: s.title || s.name, remote: s.remote })} />
-                  ))}
-                </List>
-              )}
-            </section>
-          )
-        })}
-        {live.length > 0 && !none && <p className="px-4 pt-3 text-sm text-dim">Sessions keep running when you leave
-          them. Press and hold one to rename or stop it.</p>}
+      <Header title="Terminals" />
+      {inTerminal && <TabBar tabs={tabs} current={current} onChanged={refresh} />}
+      <div className="relative min-h-0 flex-1">
+        {tabs.map((t) => <TerminalPane key={t.key} tab={t} shown={shown && t.key === current} rail />)}
+        {!inTerminal && (
+          <div className="absolute inset-0 flex flex-col overflow-y-auto bg-window pb-4">
+            <PanelHead title="Sessions">
+              <IconBtn icon={RefreshCw} label="Refresh" onClick={refresh} />
+              <IconBtn icon={Plus} label="New terminal" iconSize={18} onClick={newOne} />
+            </PanelHead>
+            {!live.length && <ListNote>Connect a cluster to see its sessions.</ListNote>}
+            <OpenOthers tabs={tabs} />
+            {live.map((c) => <ClusterSessions key={c.id} cluster={c} listed={listings[c.id]} tabs={tabs}
+              onRefresh={refresh} />)}
+            <p className="px-4 pt-2 text-sm text-dim">Sessions keep running when you close a tab.</p>
+          </div>
+        )}
       </div>
+      {open && <KeyBar tab={open} />}
       {creating !== null && <NewTerminalSheet live={live} cluster={creating} folder={startIn}
-        onClose={() => setCreating(null)}
-        onOpened={() => setTimeout(refresh, 2000)} />}
-      {acting && <SessionActions target={acting} onClose={() => setActing(null)} onChanged={refresh} />}
+        onClose={() => setCreating(null)} onOpened={() => setTimeout(refresh, 2000)} />}
+    </div>
+  )
+}
+
+function ClusterSessions({ cluster, listed, tabs, onRefresh }: {
+  cluster: Live; listed?: ReturnType<typeof useListings>['listings'][string]; tabs: Tab[]; onRefresh: () => void
+}) {
+  const listing = listed?.listing
+  const items = withOpened(listing?.sessions ?? [], tabs, cluster.id)
+  return (
+    <div className="mb-2">
+      <h3 className="border-b border-line px-4 pt-4 pb-1.5 text-xs font-semibold tracking-wide text-dim uppercase">
+        {shortName(cluster)}</h3>
+      {!listing && listed?.error && <ListNote>{listed.error}</ListNote>}
+      {!listing && !listed?.error && !items.length && <ListNote>Loading…</ListNote>}
+      {listing && !listing.has_tmux && !items.length && <ListNote>tmux is not installed here.</ListNote>}
+      {listing && listing.has_tmux && !items.length && <ListNote>No sessions yet.</ListNote>}
+      {items.map((s) => (
+        <TerminalRow key={s.name} cluster={cluster.id} s={s} nodes={listing?.nodes ?? null} onRefresh={onRefresh}
+          open={tabs.some((t) => t.key === tabKey(cluster.id, s.name))} />
+      ))}
     </div>
   )
 }

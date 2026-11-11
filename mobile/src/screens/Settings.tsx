@@ -1,5 +1,6 @@
-// More › Settings: light or dark, the clusters you use, staying connected in the background, which notifications to
-// get (parts/watchPhone.ts), the monitoring bar, experimental pages, and disconnecting everything at once.
+// Settings, opened from the bottom of the drawer: the desktop's window, with the appearance, the clusters you use,
+// staying connected in the background, which notifications to get (parts/watchPhone.ts), the monitoring bar, the
+// experimental switches, About and disconnecting everything at once.
 import { Power } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
@@ -8,34 +9,43 @@ import { useClusters } from '@shared/components/clusters/store'
 import { setMonitorBar } from '@shared/components/terminals/monitorBarSetting'
 import { call } from '@shared/rpc'
 import { ThemePicker } from '@shared/components/app/ThemePicker'
-import type { Appearance } from '@shared/theme'
-import { Header } from '../parts/Header'
+import { AboutDialog } from '@shared/components/app/About'
+import { experimentsOf, type Preferences } from '@shared/components/app/types'
+import { openReport } from '@shared/components/report/open'
+import { setExperiments } from '../parts/experiments'
+import { askBatteryUnrestricted, batteryUnrestricted } from '../parts/native'
 import { askForNotifications, EXPLAIN, KINDS, notificationsAllowed, setPhonePrefs, usePhonePrefs } from '../parts/watchPhone'
-import { ConfirmSheet, Row, Section, ToggleRow, useToast } from '../ui'
+import { BackLayer, ConfirmSheet, Dialog, Row, Section, ToggleRow, useToast } from '../ui'
 
-type Prefs = { monitor_bar: boolean; appearance: Appearance; experimental: boolean }
-
-
-export function Settings() {
+export function Settings({ onClose }: { onClose: () => void }) {
   const toast = useToast()
   const { sessions } = useClusters()
-  const [prefs, setPrefs] = useState<Prefs | null>(null)
+  const [prefs, setPrefs] = useState<Preferences | null>(null)
   const [setup, setSetup] = useState<SetupStatus | null>(null)
   const phone = usePhonePrefs()
   const [allowed, setAllowed] = useState<boolean | null>(null)
+  const [battery, setBattery] = useState<boolean | null>(null)  // null: not on a phone
   const [explain, setExplain] = useState(false)
   const [confirm, setConfirm] = useState(false)
+  const [about, setAbout] = useState(false)
   useEffect(() => {
-    call<Prefs>('preferences.get').then(setPrefs).catch((e: Error) => toast(e.message))
+    call<Preferences>('preferences.get').then(setPrefs).catch((e: Error) => toast(e.message))
     call<SetupStatus>('setup.status').then(setSetup).catch(() => {})
     notificationsAllowed().then(setAllowed).catch(() => setAllowed(false))
   }, [toast])
+  useEffect(() => {  // again when you come back from Android's question
+    const look = () => { if (document.visibilityState === 'visible') batteryUnrestricted().then(setBattery).catch(() => {}) }
+    look()
+    document.addEventListener('visibilitychange', look)
+    return () => document.removeEventListener('visibilitychange', look)
+  }, [])
 
-  async function save(change: Partial<Prefs>) {
+  async function save(change: Partial<Preferences>) {
     try {
-      const p = await call<Prefs>('preferences.set', change)
+      const p = await call<Preferences>('preferences.set', change)
       setPrefs(p)
       setMonitorBar(p.monitor_bar)
+      setExperiments(experimentsOf(p))
     } catch (e) {
       toast((e as Error).message)
     }
@@ -64,18 +74,17 @@ export function Settings() {
   }
 
   return (
-    <div className="flex h-full flex-col">
-      <Header title="Settings" />
-      <div className="min-h-0 flex-1 overflow-y-auto pb-8">
-        <section className="pb-6">
-          <h3 className="px-4 pb-3 text-xs font-semibold tracking-wide text-dim uppercase">Appearance</h3>
-          <div className="px-4">
+    <>
+      <Dialog title="Settings" onClose={onClose}>
+        <section className="pb-1">
+          <h3 className="px-5 pb-1.5 text-xs font-semibold tracking-wide text-dim uppercase">Appearance</h3>
+          <div className="px-5">
             <ThemePicker value={prefs?.appearance ?? 'system'} onChange={(appearance) => save({ appearance })} />
           </div>
         </section>
 
         {setup && (
-          <Section title="Clusters you use" note="Hidden clusters keep their settings.">
+          <Section title="Clusters" note="The ones you use. The others are hidden, their settings kept.">
             {setup.choices.map((c) => (
               <ToggleRow key={c.id} label={c.name} checked={setup.chosen.includes(c.id)} onChange={(on) => use(c.id, on)} />
             ))}
@@ -96,25 +105,37 @@ export function Settings() {
         <Section title="On the phone">
           <ToggleRow label="Stay connected in the background" sub="Uses a little more battery while a cluster is connected."
             checked={phone.keep} onChange={(keep) => setPhonePrefs({ keep })} />
-          <ToggleRow label="Monitoring bar" sub="CPU, memory and network under each terminal."
+          {battery !== null && <Row label="Run without battery limits" value={battery ? 'On' : 'Turn on'}
+            sub="So Android doesn't close your connections to save battery."
+            onPress={battery ? undefined : () => askBatteryUnrestricted().catch((e: Error) => toast(e.message))} />}
+          <ToggleRow label="Monitoring bar" sub="CPU, memory and network of the host, under each terminal."
             checked={prefs?.monitor_bar ?? true} onChange={(on) => save({ monitor_bar: on })} />
-          <ToggleRow label="Experimental features" sub="Papers, and the Scheduled and Skills tabs in Agents."
-            checked={prefs?.experimental ?? false} onChange={(on) => save({ experimental: on })} />
         </Section>
 
-        {!!live.length && (
-          <Section>
-            <Row icon={Power} danger label="Disconnect all"
-              sub={live.length === 1 ? '1 cluster connected' : `${live.length} clusters connected`}
-              onPress={() => setConfirm(true)} />
-          </Section>
-        )}
-      </div>
+        <Section title="Experimental" note="They may change or break.">
+          <ToggleRow label="Papers" sub="Write LaTeX papers with their history, notes and the agent's help."
+            checked={prefs?.experimental_papers ?? false} onChange={(on) => save({ experimental_papers: on })} />
+          <ToggleRow label="Skills" sub="The Skills tab of Agents: what each agent knows on a cluster."
+            checked={prefs?.experimental_skills ?? false} onChange={(on) => save({ experimental_skills: on })} />
+          <ToggleRow label="Scheduled agents" sub="The Scheduled tab of Agents: an agent runs a task on its own at set times."
+            checked={prefs?.experimental_schedules ?? false} onChange={(on) => save({ experimental_schedules: on })} />
+        </Section>
+
+        <Section title="HPC Hub">
+          <Row label="About HPC Hub" opens onPress={() => setAbout(true)} />
+          <Row label="Report a problem" opens onPress={() => { onClose(); openReport({ kind: 'user' }) }} />
+          {!!live.length && <Row icon={Power} danger label="Disconnect all"
+            sub={live.length === 1 ? '1 cluster connected' : `${live.length} clusters connected`}
+            onPress={() => setConfirm(true)} />}
+        </Section>
+        <div className="h-3" />
+      </Dialog>
+      {about && <BackLayer onBack={() => setAbout(false)}><AboutDialog onClose={() => setAbout(false)} /></BackLayer>}
       {explain && <ConfirmSheet title="Get notifications?" text={EXPLAIN} keep="Not now" confirm="Allow" onConfirm={allow}
         onClose={() => setExplain(false)} />}
       {confirm && <ConfirmSheet title="Disconnect all clusters?" danger keep="Stay connected" confirm="Disconnect all"
         text="Nodes you got in HPC Hub are released. Your terminal sessions keep running."
         onConfirm={disconnectAll} onClose={() => setConfirm(false)} />}
-    </div>
+    </>
   )
 }

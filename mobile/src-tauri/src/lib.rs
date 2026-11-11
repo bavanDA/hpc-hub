@@ -31,7 +31,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![backend::rpc_send, scan::scan_qr, duo::open_duo,
             websignin::web_sign_in, websignin::vpn_sign_in,
             websignin::close_sign_in, phone::pick_files, phone::save_to_downloads, phone::open_with,
-            phone::share_file, phone::keep_alive, phone::speech_listen, phone::speech_voices, phone::speech_speak,
+            phone::share_file, phone::keep_alive, phone::battery_status, phone::battery_ask, phone::speech_listen, phone::speech_voices, phone::speech_speak,
             phone::speech_stop])
         .build(tauri::generate_context!())
         .expect("error while building HPC Hub")

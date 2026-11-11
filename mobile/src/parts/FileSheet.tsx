@@ -1,5 +1,5 @@
-// A file from the cluster, to look at: text, images and PDFs (pdf.js, fetched a few MB at a time). Edit opens it in
-// the Code tab; Download and Share copy it to this phone first.
+// A file from the cluster, to look at, in a window (the desktop's preview pane): text, images and PDFs (pdf.js,
+// fetched a few MB at a time). Edit opens it in the Code page; Download and Share copy it to this phone first.
 import { Download, FileQuestion, Pencil, Share2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
@@ -8,7 +8,7 @@ import { readFile } from '@shared/components/pdf/load'
 import { Spinner } from '@shared/components/ui/Spinner'
 import { call } from '@shared/rpc'
 import type { FileData } from '@shared/types/files'
-import { Button, EmptyState, Sheet, useToast } from '../ui'
+import { Button, Dialog, EmptyState, useToast } from '../ui'
 import { ReadAloudPdf } from './ReadAloudPdf'
 
 const TEXT_LIMIT = 2 * 1024 * 1024
@@ -21,14 +21,14 @@ export function FileSheet({ cluster, path, size = 0, onClose, onEdit, onDownload
   const pdf = kind({ name, kind: 'f', size, mtime: 0 }) === 'pdf'
   const actions = onEdit || onDownload || onShare
   return (
-    <Sheet title={name} onClose={onClose} actions={actions && <>
+    <Dialog title={name} onClose={onClose} width={640} actions={actions && <>
       {onShare && <Button icon={Share2} aria-label="Share" onClick={onShare} />}
       {onDownload && <Button icon={Download} className="flex-1" onClick={onDownload}>Download</Button>}
       {onEdit && <Button kind="primary" icon={Pencil} className="flex-1" onClick={onEdit}>Edit</Button>}
     </>}>
       {pdf ? <PdfPreview cluster={cluster} path={path} size={size} onDownload={onDownload} />
-        : <Preview cluster={cluster} path={path} onClose={onClose} />}
-    </Sheet>
+        : <div className="px-5"><Preview cluster={cluster} path={path} onClose={onClose} /></div>}
+    </Dialog>
   )
 }
 
@@ -71,7 +71,7 @@ function PdfPreview({ cluster, path, size, onDownload }:
       text="Download it to read it in a PDF app." action={onDownload && <Button onClick={onDownload}>Download</Button>} />
   }
   return (
-    <div className="-m-4 h-[calc(100%+2rem)]">
+    <div className="h-[70vh]">
       <ReadAloudPdf compact cluster={cluster} data={data} memory={`phone:${cluster}:${path}`} loading={!data && !error} progress={progress}
         message={error ? <EmptyState icon={FileQuestion} title="Can't show this PDF" text={error} /> : undefined} />
     </div>

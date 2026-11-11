@@ -2,52 +2,60 @@
 /* shared pieces the phone shows use classes from there: Tailwind only makes the classes it finds in these files */
 @source '../../app/src/components/terminals';
 @source '../../app/src/components/clusters';
+@source '../../app/src/components/ClusterAction.tsx';
+@source '../../app/src/components/app/onboarding';
+@source '../../app/src/components/app/PairPhoneDialog.tsx';
 @source '../../app/src/components/app/ThemePicker.tsx';
 @source '../../app/src/components/app/ThemeWindow.tsx';
+@source '../../app/src/components/app/SidebarFooter.tsx';
+@source '../../app/src/components/app/FooterLine.tsx';
+@source '../../app/src/components/app/About.tsx';
+@source '../../app/src/components/e';
 @source '../../app/src/components/ui';
 @source '../../app/src/components/toast.tsx';
+@source '../../app/src/components/report';
 @source '../../app/src/components/Term.tsx';
 @source '../../app/src/components/permissions';
 @source '../../app/src/pages/Permissions.tsx';
 /* used by the screens built next: the code editor, agents, projects, files, transfers, Globus, papers, PDFs */
 @source '../../app/src/components/code';
 @source '../../app/src/components/agents';
+@source '../../app/src/components/backup';
 @source '../../app/src/components/tools';
 @source '../../app/src/components/projects';
 @source '../../app/src/components/files';
 @source '../../app/src/components/globus';
 @source '../../app/src/components/latex';
+@source '../../app/src/components/reader';
 @source '../../app/src/components/pdf';
 @source '../../app/src/components/jobs';
 @source '../../app/src/components/usage';
 @source '../../app/src/components/schedules';
 @source '../../app/src/components/skills';
 
-/* A phone reads at arm's length: its text sizes stay a step larger than the desktop scale */
-@theme {
-  --text-xs: 12px;   --text-xs--line-height: 16px;
-  --text-sm: 14px;   --text-sm--line-height: 20px;
-  --text-base: 16px; --text-base--line-height: 24px;
-  --text-lg: 18px;   --text-lg--line-height: 28px;
-  --text-xl: 20px;   --text-xl--line-height: 28px;
-  --text-2xl: 24px;  --text-2xl--line-height: 32px;
-}
-
 /* A phone: no tap flash, no rubber band of the whole page, text you can't select by accident */
 html, body { overscroll-behavior: none; -webkit-tap-highlight-color: transparent; }
-body { font-size: 16px; }
 
 /* Room for the status bar and the gesture bar: the app draws under them (edge to edge) */
 :root { --top: env(safe-area-inset-top, 0px); --bottom: env(safe-area-inset-bottom, 0px); }
 .safe { padding-top: var(--top); padding-bottom: var(--bottom); }
 
-/* Style E colors come from the desktop's index.css (imported above). */
+/* Style E colors and the type scale come from the desktop's index.css (imported above); the page frame's rules: */
 
-/* The desktop's monitor bar is one 24 px line; on a phone its items wrap to a second line instead of being cut off. */
-.phone-monitor > div { height: auto; flex-wrap: wrap; row-gap: 2px; padding-block: 3px; }
-/* On a phone: host, CPU, memory and network only, all grey. Uptime, people and disks are desktop detail. */
+/* Shared dialogs ask for their desktop width; on a phone they take the room there is (with the scrim's padding). */
+.dialog-scrim { grid-template-columns: minmax(0, 1fr); }
+
+/* The drawer's Settings row is as tall as its links; the desktop's toasts clear the gesture bar. */
+.phone-drawer-foot > div > button:last-child { height: 40px; }
+[aria-live="polite"].fixed { bottom: calc(var(--bottom) + 16px); }
+
+/* The drawer slides in */
+@keyframes drawer-in { from { transform: translateX(-16px); opacity: 0; } to { transform: none; opacity: 1; } }
+.drawer-in { animation: drawer-in 220ms var(--ease-enter); }
+
+/* The desktop's monitor bar is one 24 px line; on a phone it scrolls sideways for what doesn't fit. All grey. */
+.phone-monitor > div { overflow-x: auto; scrollbar-width: none; }
 .phone-monitor > div > span { color: inherit; font-weight: inherit; }
-.phone-monitor > div > span:nth-child(n+6) { display: none; }
 
 /* Code and LaTeX editors: the current line and the selection in grey, not the desktop's blue. */
 html:root { --code-active-line: var(--color-soft); --cm-active-line: var(--color-soft);

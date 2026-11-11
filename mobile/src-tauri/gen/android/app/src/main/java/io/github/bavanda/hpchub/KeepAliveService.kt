@@ -6,10 +6,15 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
+import android.content.ActivityNotFoundException
+import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.os.Build
+import android.net.Uri
 import android.os.IBinder
+import android.os.PowerManager
+import android.provider.Settings
 import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
@@ -17,6 +22,7 @@ import app.tauri.annotation.Command
 import app.tauri.annotation.InvokeArg
 import app.tauri.annotation.TauriPlugin
 import app.tauri.plugin.Invoke
+import app.tauri.plugin.JSObject
 import app.tauri.plugin.Plugin
 
 private const val CHANNEL = "connections"
@@ -82,5 +88,25 @@ class KeepAlivePlugin(private val activity: Activity) : Plugin(activity) {
     } catch (e: Exception) { // Android refuses to start it from the background
       invoke.reject("Android didn't let HPC Hub stay connected: ${e.message}")
     }
+  }
+
+  @Command
+  fun batteryStatus(invoke: Invoke) {
+    val power = activity.getSystemService(Context.POWER_SERVICE) as PowerManager
+    val answer = JSObject()
+    answer.put("unrestricted", power.isIgnoringBatteryOptimizations(activity.packageName))
+    invoke.resolve(answer)
+  }
+
+  /** Android's own question; where a phone doesn't have it, its list of apps. */
+  @Command
+  fun batteryAsk(invoke: Invoke) {
+    try {
+      activity.startActivity(Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
+        Uri.parse("package:${activity.packageName}")))
+    } catch (e: ActivityNotFoundException) {
+      activity.startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
+    }
+    invoke.resolve()
   }
 }

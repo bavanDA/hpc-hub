@@ -5,7 +5,7 @@ import { useState } from 'react'
 import { Spinner } from '@shared/components/ui/Spinner'
 import { call } from '@shared/rpc'
 import { TEMPLATES, type Place, type Project, type ProjectCluster } from '@shared/types/projects'
-import { Field, MainButton, PickerSheet, Row, Sheet, ToggleRow } from '../../ui'
+import { Field, MainButton, PickerSheet, Row, Dialog, ToggleRow } from '../../ui'
 import { shortCluster, wrapPath } from '../code/util'
 import { FolderPicker, folderText } from './FolderPicker'
 
@@ -58,10 +58,10 @@ export function ProjectSheet({ mode, project, clusters, projects, onClose, onSav
   const title = create ? 'New project' : mode === 'edit' ? 'Edit project' : 'Add a folder'
   return (
     <>
-      <Sheet flush title={title} onClose={onClose} actions={
+      <Dialog title={title} onClose={onClose} actions={
         <MainButton disabled={busy} onClick={save}>{busy ? <Spinner /> : create ? 'Create' : 'Save'}</MainButton>}>
         {/* only the name is in the form: Enter there saves, and the rows' buttons below don't submit */}
-        <form className="px-4 pb-3" onSubmit={(e) => { e.preventDefault(); save() }}>
+        <form className="px-5 pb-3" onSubmit={(e) => { e.preventDefault(); save() }}>
           <Field label="Name" value={name} placeholder="myproj, thesis…" autoCapitalize="none"
             onChange={(e) => setName(e.target.value)} />
           <button type="submit" hidden />
@@ -77,10 +77,10 @@ export function ProjectSheet({ mode, project, clusters, projects, onClose, onSav
           </>}
         </div>
         {create && name.trim() && (
-          <p className="px-4 pt-2 text-sm text-dim">Makes <span className="font-mono break-words">{wrapPath(target)}</span></p>
+          <p className="px-5 pt-2 text-sm text-dim">Makes <span className="font-mono break-words">{wrapPath(target)}</span></p>
         )}
-        {error && <p className="px-4 pt-3 select-text text-bad">{error}</p>}
-      </Sheet>
+        {error && <p className="px-5 pt-3 select-text text-bad">{error}</p>}
+      </Dialog>
 
       {open === 'cluster' && (
         <PickerSheet title="Cluster" value={cluster} onClose={() => setOpen('')}

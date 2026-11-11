@@ -1,26 +1,22 @@
 // What a login asks while it runs (hpc_hub/api/hub.py): a password, a 6-digit code, a yes or no, a web sign-in
-// (the VPN's, in a page of its own: websignin.rs); and the Duo screen while it waits for your phone, which opens
-// Duo Mobile for you. A push expires after about a minute, so
-// after LATE seconds it says so and offers a new one (a fresh login, like the desktop's DuoDialog). The backend
-// waits on a worker thread until question.answer arrives.
+// (the VPN's, in a page of its own: websignin.rs); and the desktop's Duo window while it waits for your phone, with
+// Duo Mobile opened for you. The backend waits on a worker thread until question.answer arrives.
 import { invoke } from '@tauri-apps/api/core'
-import { Smartphone } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
+import { DuoDialog } from '@shared/components/clusters/DuoDialog'
 import { copy } from '@shared/components/clusters/loginCopy'
 import { load, useClusters } from '@shared/components/clusters/store'
 import { useEvent } from '@shared/hooks'
 import { call } from '@shared/rpc'
 import { DUO, type Question, type Session } from '@shared/types/clusters'
-import { Button, Field, MainButton, Sheet, useToast } from '../ui'
+import { BackLayer, Button, Field, Sheet, useToast } from '../ui'
 
 const digits = (text: string) => text.replace(/\s/g, '')
 // our own Chrome window is the desktop's; the phone signs in in its own page (web-login)
 const UNSUPPORTED: Question['kind'][] = ['chrome-window']
 const inTauri = '__TAURI_INTERNALS__' in window
 const demo = inTauri ? null : new URLSearchParams(location.search)
-const demoLate = demo?.get('duoafter') ?? null  // design work: ?duoafter=0 shows it at once
-const LATE = demoLate === null ? 60 : Number(demoLate)
 
 /** Design work in a plain browser: ?question=code|ask|confirm&cluster=sdsc shows that question. */
 function demoQuestions(): Question[] {
@@ -30,21 +26,6 @@ function demoQuestions(): Question[] {
   const prompt = kind === 'confirm' ? "The server looks different from last time. Connect anyway?"
     : kind === 'ask' ? 'Password:' : ''
   return [{ id: 'demo', kind, cluster, name: cluster, prompt, title: kind === 'confirm' ? 'Check the server' : undefined }]
-}
-
-/** How long Duo has waited, counting up each second. */
-function useSeconds(running: boolean) {
-  const [start, setStart] = useState(0)
-  const [now, setNow] = useState(0)
-  useEffect(() => {
-    if (!running) return
-    const t0 = Date.now()
-    setStart(t0)
-    setNow(t0)
-    const t = setInterval(() => setNow(Date.now()), 1000)
-    return () => clearInterval(t)
-  }, [running])
-  return Math.floor((now - start) / 1000)
 }
 
 export function Questions() {
@@ -102,8 +83,6 @@ export function Questions() {
 
   // while the sign-in page is open, Duo is part of that page: no Duo screen, and Duo Mobile is not opened for it
   const duo = signingIn.length ? undefined : Object.values(sessions).find((s) => s.state === DUO)
-  const waited = useSeconds(!!duo)
-  const late = waited >= LATE
   const newPush = (id: string) => {
     again.current = id
     call('clusters.cancel', { cluster: id }).catch((e: Error) => toast(e.message))
@@ -156,23 +135,9 @@ export function Questions() {
     )
   }
   if (duo) {
-    const name = nameOf(duo.id)
     const stop = () => call('clusters.cancel', { cluster: duo.id }).catch((e: Error) => toast(e.message))
-    return (
-      <Sheet title={name} onClose={stop} actions={<div className="flex w-full flex-col gap-3">
-        {late
-          ? <MainButton onClick={() => newPush(duo.id)}>{copy.newPush}</MainButton>
-          : <MainButton onClick={openDuo}>Open Duo</MainButton>}
-        <Button onClick={stop}>Stop signing in</Button></div>}>
-        <div className="flex h-full flex-col items-center justify-center gap-4 text-center">
-          <Smartphone size={64} strokeWidth={1.25} className="text-dim" />
-          <h2 className="text-2xl font-semibold">Approve Duo</h2>
-          <p className="text-dim">{late ? copy.duoLate : 'Approve the sign-in in Duo Mobile, then come back here.'}</p>
-          <p className="text-dim tabular-nums">Waiting {Math.floor(waited / 60)}:{String(waited % 60).padStart(2, '0')}</p>
-          {late && <Button kind="quiet" onClick={openDuo}>Open Duo</Button>}
-        </div>
-      </Sheet>
-    )
+    return <BackLayer key={duo.id} onBack={stop}>
+      <DuoDialog name={nameOf(duo.id)} onCancel={stop} onRetry={() => newPush(duo.id)} /></BackLayer>
   }
   return null
 }

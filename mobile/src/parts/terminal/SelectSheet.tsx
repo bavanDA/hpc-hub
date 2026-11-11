@@ -6,7 +6,7 @@ import { useMemo } from 'react'
 import type { Tab } from '@shared/components/terminals/tabs'
 import { copyText } from '@shared/components/terminals/xterm'
 import { call } from '@shared/rpc'
-import { Button, Sheet, useToast } from '../../ui'
+import { Button, Dialog, useToast } from '../../ui'
 
 /** The lines on screen now, trailing spaces trimmed and blank lines at the end dropped. */
 export function screenText(tab: Tab): string {
@@ -27,13 +27,15 @@ export function SelectSheet({ tab, onClose }: { tab: Tab; onClose: () => void })
     .then((t) => t ? copy(t) : toast('The tmux buffer is empty. Select text in tmux first.'))
     .catch((e: Error) => toast(`Could not read the tmux buffer: ${e.message}`))
   return (
-    <Sheet title="Copy text" onClose={onClose} actions={<>
+    <Dialog title="Copy text" onClose={onClose} actions={<>
       {tab.session && <Button icon={ClipboardCopy} className="flex-1" onClick={buffer}>Copy tmux buffer</Button>}
       <Button kind="primary" icon={Copy} className="flex-1" onClick={() => copy(text).then(onClose)}>Copy screen</Button>
     </>}>
-      <p className="mb-3 text-sm text-dim">Press and hold to select part of it, or copy the whole screen.</p>
-      <pre className="overflow-x-auto rounded-lg bg-soft p-3 font-mono text-xs leading-relaxed whitespace-pre
-        select-text">{text || 'The screen is empty.'}</pre>
-    </Sheet>
+      <div className="px-5">
+        <p className="mb-3 text-sm text-dim">Press and hold to select part of it, or copy the whole screen.</p>
+        <pre className="overflow-x-auto rounded-lg bg-soft p-3 font-mono text-xs leading-relaxed whitespace-pre
+          select-text">{text || 'The screen is empty.'}</pre>
+      </div>
+    </Dialog>
   )
 }

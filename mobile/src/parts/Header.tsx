@@ -1,17 +1,24 @@
-// A screen's title bar: the title, and buttons on the right. Inside More, a back arrow returns to the list.
-import { ArrowLeft } from 'lucide-react'
-import { useContext, type ReactNode } from 'react'
+// A page's title bar, the desktop's HeaderBar: the sidebar button, the title (and a cluster chip) in the middle. Old
+// pages keep their actions on the right until they are redone.
+import { PanelLeft } from 'lucide-react'
+import type { ReactNode } from 'react'
 
-import { ScreenBackContext } from '../nav'
+import { usePhoneNav } from '../nav'
 
-export function Header({ title, children }: { title: string; children?: ReactNode }) {
-  const back = useContext(ScreenBackContext)
+const BUTTON = 'grid size-10 shrink-0 place-items-center rounded-md text-dim active:bg-pressed active:text-text'
+
+/** chip: <ClusterPicker /> on pages that show one cluster at a time. children: only for pages not redone yet. */
+export function Header({ title, chip, children }: { title: string; chip?: ReactNode; children?: ReactNode }) {
+  const { setDrawer } = usePhoneNav()
   return (
-    <header className={`flex min-h-16 shrink-0 items-center gap-2 ${back ? 'pr-2 pl-1' : 'pr-2 pl-4'}`}>
-      {back && <button aria-label="Back" onClick={back}
-        className="grid size-12 shrink-0 place-items-center rounded-full active:bg-pressed"><ArrowLeft size={24} /></button>}
-      <h1 className="min-w-0 flex-1 text-2xl leading-tight font-semibold tracking-tight">{title}</h1>
-      {children}
+    <header className="flex h-12 shrink-0 items-center gap-2 border-b border-line bg-header px-2">
+      <button aria-label="Show or hide the sidebar" onClick={() => setDrawer(true)} className={BUTTON}>
+        <PanelLeft size={16} /></button>
+      <div className="flex min-w-0 flex-1 items-center justify-center gap-3">
+        <h1 className="truncate text-md font-semibold">{title}</h1>
+        {chip}
+      </div>
+      {children ? <div className="flex shrink-0 items-center">{children}</div> : <span className="size-10 shrink-0" />}
     </header>
   )
 }

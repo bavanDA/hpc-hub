@@ -32,7 +32,7 @@ export function Clusters() {
       <div className="min-h-0 flex-1 overflow-y-auto pb-6">
         {error && <EmptyState icon={Server} title="Couldn't load the clusters" text={error} />}
         {!clusters && !error && <div className="grid h-40 place-items-center"><Spinner size={28} /></div>}
-        <div className="flex flex-col gap-8">
+        <div className="flex flex-col gap-2.5 pt-3">
           {clusters?.map((c) => (
             <ClusterCard key={c.id} cluster={c} log={logs[c.id] ?? []} session={session(c.id)}
               primary={c.id === first} />

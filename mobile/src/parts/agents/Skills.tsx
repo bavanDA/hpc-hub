@@ -1,37 +1,37 @@
-// Agents › Skills (experimental): what Claude, ChatGPT and the others know on a cluster. Add HPC Hub's own skills,
-// any from a git repository, and remove the ones you added.
-import { CircleAlert, GitBranch, Plus, Sparkles, Trash2 } from 'lucide-react'
-import { useCallback, useEffect, useState } from 'react'
+// Agents › Skills (experimental): what Claude, ChatGPT and the others know on the cluster picked in the header. Add
+// HPC Hub's own skills, any from a git repository, and remove the ones you added. The desktop's page.
+import { CircleAlert, GitBranch, RefreshCw } from 'lucide-react'
+import { useState } from 'react'
 
+import { useActiveCluster } from '@shared/components/clusters/active'
+import { shortName } from '@shared/components/clusters/loginCopy'
+import { NotConnected } from '@shared/components/clusters/NotConnected'
+import { AddSkillsDialog } from '@shared/components/skills/AddSkillsDialog'
+import { AddToDialog } from '@shared/components/skills/AddTo'
+import { SkillSections } from '@shared/components/skills/SkillSections'
+import { useSkills } from '@shared/components/skills/useSkills'
 import { Spinner } from '@shared/components/ui/Spinner'
 import { call } from '@shared/rpc'
-import type { CatalogSkill, Skill, SkillList, Target } from '@shared/types/skills'
-import { Button, ConfirmSheet, EmptyState, Field, List, MainButton, Row, Section, Sheet, ToggleRow, useToast } from '../../ui'
-import { NotConnectedHere, useClusterTab } from './ClusterTabs'
+import type { CatalogSkill, Skill } from '@shared/types/skills'
+import { BackLayer, Button, ConfirmDialog, EmptyState, IconBtn, PageBar, useToast } from '../../ui'
 
 export function Skills() {
   const toast = useToast()
-  const { current, picker } = useClusterTab()
-  const cluster = current?.id ?? ''
-  const [list, setList] = useState<SkillList | null>(null)
-  const [error, setError] = useState('')
-  const [adding, setAdding] = useState<CatalogSkill | null>(null)
-  const [fromGit, setFromGit] = useState(false)
+  const { cluster: active, session, connected } = useActiveCluster()
+  const cluster = active?.id ?? ''
+  const { list, error, loading, load } = useSkills(cluster, connected)
+  const [adding, setAdding] = useState('')  // the catalog skill being added
+  const [choosing, setChoosing] = useState<CatalogSkill | null>(null)
+  const [dialog, setDialog] = useState(false)
   const [removing, setRemoving] = useState<Skill | null>(null)
-
-  const load = useCallback(() => {
-    if (!cluster) return
-    call<SkillList>('skills.list', { cluster })
-      .then((l) => { setList(l); setError('') })
-      .catch((e: Error) => { setList(null); setError(e.message) })
-  }, [cluster])
-  useEffect(() => { setList(null); setError(''); load() }, [load])
   const label = (id: string) => list?.targets.find((t) => t.id === id)?.label ?? id
 
-  const addOwn = (k: CatalogSkill, targets: string[]) => {
-    call('skills.add', { cluster, folder: k.folder, targets })
-      .then(() => { toast(`Added ${k.name} to ${targets.map(label).join(', ')}`); load() })
-      .catch((e: Error) => toast(`Could not add ${k.name}: ${e.message}`))
+  const addOwn = (folder: string, skill: string, targets: string[]) => {
+    setAdding(folder)
+    call('skills.add', { cluster, folder, targets })
+      .then(() => { toast(`Added ${skill} to ${targets.map(label).join(', ')}`); load() })
+      .catch((e: Error) => toast(`Could not add ${skill}: ${e.message}`))
+      .finally(() => setAdding(''))
   }
   const remove = (k: Skill) => {
     call('skills.remove', { cluster, path: k.path, target: k.target })
@@ -39,135 +39,41 @@ export function Skills() {
       .catch((e: Error) => toast(`Could not remove ${k.name}: ${e.message}`))
   }
 
-  if (!current) return <NotConnectedHere what="skills" />
-  return (
-    <div>
-      {picker}
-      {error && <EmptyState icon={CircleAlert} title="Could not read the skills" text={error} />}
-      {!error && !list && <div className="grid h-40 place-items-center"><Spinner size={24} /></div>}
-      {list && <>
-        <Section title="HPC Hub skills">
-          {list.catalog.map((k) => (
-            <div key={k.folder} className="flex min-h-16 items-center gap-3 border-b border-line py-2.5 pr-2 pl-4">
-              <Sparkles size={22} className="shrink-0 text-dim" />
-              <span className="min-w-0 flex-1 break-words">
-                <span className="block font-medium">{k.name}</span>
-                <span className="block text-sm text-dim">{k.on.length ? `In ${k.on.map(label).join(', ')} · ` : ''}
-                  {k.description}</span>
-              </span>
-              <Button icon={Plus} className="shrink-0" onClick={() => setAdding(k)}>Add</Button>
-            </div>
-          ))}
-        </Section>
-        {list.targets.map((t) => {
-          const mine = list.installed.filter((k) => k.target === t.id && !k.managed)
-          const builtIn = list.installed.filter((k) => k.target === t.id && k.managed)
-          return (
-            <Section key={t.id} title={t.label}
-              note={builtIn.length > 0 && `Comes with ${t.label}: ${builtIn.map((k) => k.name).join(', ')}`}>
-              {mine.map((k) => (
-                <div key={k.path} className="flex min-h-14 items-center gap-3 border-b border-line py-2 pr-1 pl-4">
-                  <span className="min-w-0 flex-1 break-words">
-                    <span className="block">{k.name}</span>
-                    <span className="block text-sm break-words text-dim">{k.description || k.path}</span>
-                  </span>
-                  <button aria-label={`Remove ${k.name}`} onClick={() => setRemoving(k)}
-                    className="grid size-12 shrink-0 place-items-center rounded-full text-dim active:bg-pressed">
-                    <Trash2 size={20} /></button>
-                </div>
-              ))}
-              {!mine.length && <Row label={<span className="text-dim">None added yet</span>} />}
-            </Section>
-          )
-        })}
-        <List className="mt-5">
-          <Row icon={GitBranch} label="Add skills from a git repository" opens onPress={() => setFromGit(true)} />
-        </List>
-      </>}
+  let body
+  if (active && (!connected || error.startsWith('Connect to'))) body = <div className="h-[60vh]"><NotConnected
+    cluster={active} session={session} what="skills" /></div>
+  else if ((!cluster && !error) || (!list && !error)) body = <div className="grid h-64 place-items-center"><Spinner size={24} /></div>
+  else if (error || !list) body = <EmptyState icon={CircleAlert} title="Could not read the skills" text={error} report />
+  else body = <SkillSections list={list} adding={adding} label={label} onAdd={setChoosing} onRemove={setRemoving} />
 
-      {adding && list && <AddToSheet skill={adding} targets={list.targets} onClose={() => setAdding(null)}
-        onAdd={(t) => addOwn(adding, t)} />}
-      {fromGit && list && <FromGitSheet cluster={cluster} targets={list.targets} repo={list.default_repo}
-        onClose={() => setFromGit(false)} onDone={load} />}
-      {removing && (
-        <ConfirmSheet title={`Remove ${removing.name}?`} danger keep="Keep it" confirm="Remove" onClose={() => setRemoving(null)}
-          text={`${label(removing.target)} no longer has it. Its folder is deleted.`}
-          onConfirm={() => remove(removing)} />
+  return (
+    <>
+      <PageBar>
+        <span className="flex-1" />
+        {connected && <>
+          {loading && list && <Spinner />}
+          <IconBtn icon={RefreshCw} label="Refresh" onClick={load} />
+          <Button kind="primary" icon={GitBranch} disabled={!list} onClick={() => setDialog(true)}>Add skills from git</Button>
+        </>}
+      </PageBar>
+      <div className="min-h-0 flex-1 overflow-y-auto pb-6">{body}</div>
+      {choosing && list && (
+        <BackLayer onBack={() => setChoosing(null)}>
+          <AddToDialog skill={choosing} targets={list.targets} onClose={() => setChoosing(null)}
+            onAdd={(t) => addOwn(choosing.folder, choosing.name, t)} />
+        </BackLayer>
       )}
-    </div>
-  )
-}
-
-/** Tick the agents that should get one of HPC Hub's skills (those without it are ticked). */
-function AddToSheet({ skill, targets, onClose, onAdd }:
-  { skill: CatalogSkill; targets: Target[]; onClose: () => void; onAdd: (targets: string[]) => void }) {
-  const [picked, setPicked] = useState(() => targets.map((t) => t.id).filter((t) => !skill.on.includes(t)))
-  return (
-    <Sheet title={`Add ${skill.name}`} flush onClose={onClose} actions={
-      <MainButton disabled={!picked.length} onClick={() => { onClose(); onAdd(picked) }}>Add</MainButton>}>
-      <p className="px-4 pb-2 text-dim">{skill.description}</p>
-      <Section title="Add it to">
-        {targets.map((t) => (
-          <ToggleRow key={t.id} label={t.label} sub={skill.on.includes(t.id) ? 'Has it already' : t.folder}
-            checked={picked.includes(t.id)}
-            onChange={(on) => setPicked(on ? [...picked, t.id] : picked.filter((x) => x !== t.id))} />
-        ))}
-      </Section>
-    </Sheet>
-  )
-}
-
-/** A git repository's skills: look first, then pick which ones and for which agents. */
-function FromGitSheet({ cluster, targets, repo, onClose, onDone }:
-  { cluster: string; targets: Target[]; repo: string; onClose: () => void; onDone: () => void }) {
-  const toast = useToast()
-  const [url, setUrl] = useState(repo)
-  const [found, setFound] = useState<Skill[] | null>(null)
-  const [looking, setLooking] = useState(false)
-  const [note, setNote] = useState('')
-  const [picked, setPicked] = useState<string[]>([])
-  const [to, setTo] = useState<string[]>(['claude'])
-  const [installing, setInstalling] = useState(false)
-
-  const look = () => {
-    setLooking(true); setNote(''); setFound(null)
-    call<Skill[]>('skills.browse', { cluster, url: url.trim() })
-      .then((s) => { setFound(s); setPicked([]); if (!s.length) setNote('No skills found there.') })
-      .catch((e: Error) => setNote(e.message))
-      .finally(() => setLooking(false))
-  }
-  const install = () => {
-    setInstalling(true)
-    call('skills.install', { cluster, paths: picked, targets: to })
-      .then(() => { toast(`Added ${picked.length} skill${picked.length === 1 ? '' : 's'}`); onClose(); onDone() })
-      .catch((e: Error) => { setNote(e.message); setInstalling(false) })
-  }
-
-  return (
-    <Sheet title="Skills from git" flush onClose={onClose} actions={found?.length ? (
-      <MainButton disabled={!picked.length || !to.length || installing} onClick={install}>
-        {installing && <Spinner size={16} />}Add {picked.length || ''}</MainButton>) : undefined}>
-      <div className="px-4">
-        <Field label="Repository" value={url} autoCapitalize="none" autoCorrect="off" spellCheck={false}
-          inputMode="url" onChange={(e) => setUrl(e.target.value)} />
-        <Button kind={found?.length ? 'plain' : 'primary'} className="mt-1 w-full" disabled={!url.trim() || looking}
-          onClick={look}>{looking && <Spinner size={16} />}Look for skills</Button>
-        {note && <p className="mt-3 text-dim">{note}</p>}
-      </div>
-      {found && found.length > 0 && <>
-        <Section title={`Skills (${found.length})`}>
-          {found.map((k) => (
-            <ToggleRow key={k.path} label={k.name} sub={k.description} checked={picked.includes(k.path)}
-              onChange={(on) => setPicked(on ? [...picked, k.path] : picked.filter((x) => x !== k.path))} />
-          ))}
-        </Section>
-        <Section title="Add them to">
-          {targets.map((t) => (
-            <ToggleRow key={t.id} label={t.label} checked={to.includes(t.id)}
-              onChange={(on) => setTo(on ? [...to, t.id] : to.filter((x) => x !== t.id))} />
-          ))}
-        </Section>
-      </>}
-    </Sheet>
+      {dialog && list && (
+        <BackLayer onBack={() => setDialog(false)}>
+          <AddSkillsDialog cluster={cluster} name={shortName(list)} targets={list.targets} repo={list.default_repo}
+            onClose={() => setDialog(false)} onDone={load} />
+        </BackLayer>
+      )}
+      {removing && (
+        <ConfirmDialog title={`Remove ${removing.name}?`} danger keep="Keep it" confirm="Remove"
+          text={`${label(removing.target)} no longer has it on ${list ? shortName(list) : ''}. Its folder is deleted.`}
+          onClose={() => setRemoving(null)} onConfirm={() => remove(removing)} />
+      )}
+    </>
   )
 }

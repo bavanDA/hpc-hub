@@ -1,0 +1,18 @@
+/* The Reader on a phone: the desktop's reader.css with the phone's narrow column and the page label over the text. */
+.phone-reader .reader-pad { padding: 16px 20px 24px !important; }
+.phone-reader .reader-page {
+  display: block; position: static; margin-bottom: 4px; letter-spacing: 0; text-transform: none;
+  font: 12px var(--font-sans); color: var(--color-faint);
+}
+.phone-reader button[aria-label="Full screen (F)"] { display: none; }
+.phone-reader input[aria-label="Find in text"] { width: 112px; }
+
+/* The push view with a clash (desktop's PushView): the title on its own line, its buttons under it, the two versions
+   one above the other. */
+.phone-push h2 { flex-basis: calc(100% - 44px); }
+.phone-push > div > div:first-child { flex-wrap: wrap; }
+.phone-push .mt-3.flex.gap-3 { flex-direction: column; }
+
+/* Desktop tips about right-click and Shift-click, which a phone doesn't have. */
+.phone-tips .pointer-events-none.absolute.bottom-3 .text-xs,
+.phone-tips .menu-in > p { display: none; }

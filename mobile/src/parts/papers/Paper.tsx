@@ -1,312 +1,301 @@
-// One open paper on the phone: Source, PDF and Log, one at a time, with the files and Git in full-screen sheets.
-// Build saves and runs latexmk on the cluster; a double-tap in the PDF jumps to the source line, and "Show in PDF"
-// goes the other way (SyncTeX). Errors in the log jump to their line.
-import { ArrowLeft, Check, FileText, FolderOpen, GitBranch, LocateFixed, MoreVertical, Pencil, RefreshCw,
-  Save, Settings2, SquareArrowOutUpRight, X } from 'lucide-react'
-import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+// One open paper on the phone: the desktop's project, one view at a time under its project bar (Editor, PDF, Reader,
+// History). Saving, building, the PDF and the history use the desktop's hooks (components/latex); a double-tap in the
+// PDF jumps to the source line, and To PDF goes the other way (SyncTeX). Errors in the log jump to their line.
+import './reader.css'
 
-import type { EditorHandle } from '@shared/components/code/Editor'
-import { keyRow } from '@shared/components/code/keys'
+import type { Extension } from '@codemirror/state'
+import { EditorState } from '@codemirror/state'
+import { EditorView } from '@codemirror/view'
+import { Save, StickyNote } from 'lucide-react'
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type RefObject } from 'react'
+
+import type { EditorHandle as KeyHandle } from '@shared/components/code/Editor'
 import { detect } from '@shared/components/code/languages'
-import { basename, ext, rel, TEXT_EXT } from '@shared/components/latex/bits'
-import { counts } from '@shared/components/latex/issues'
+import { basename, ext, inFolder, moved as movedPath, rel, TEXT_EXT, under } from '@shared/components/latex/bits'
+import type { EditorHandle } from '@shared/components/latex/editor/CodeEditor'
+import { fileName } from '@shared/components/latex/history/format'
+import type { Go } from '@shared/components/latex/history/go'
+import { notesGutter } from '@shared/components/latex/history/notes/notesGutter'
+import { isLine } from '@shared/components/latex/history/notes/places'
+import type { CardSpot } from '@shared/components/latex/history/notes/SpotCard'
+import { useAssist } from '@shared/components/latex/history/useAssist'
+import { RunningCard } from '@shared/components/latex/history/write/RunningCard'
+import { buildMessage, counts, issueFile, issuesIn, labels as labelsIn } from '@shared/components/latex/issues'
+import { remember, remembered } from '@shared/components/latex/storage'
+import { useBuild } from '@shared/components/latex/useBuild'
+import { useBuiltPdf } from '@shared/components/latex/useBuiltPdf'
+import { useCites } from '@shared/components/latex/useCites'
+import { useDoc } from '@shared/components/latex/useDoc'
 import type { PdfTarget } from '@shared/components/pdf'
-import { readFile } from '@shared/components/pdf/load'
 import { copyText } from '@shared/components/terminals/xterm'
 import { Spinner } from '@shared/components/ui/Spinner'
-import { useEvent } from '@shared/hooks'
 import { call } from '@shared/rpc'
-import type { BuildDone, Issue, Opened, PdfInfo, Settings, SourceSpot, Spot, TreeEntry } from '@shared/types/latex'
+import type { BuildDone, Issue, Opened, Settings, SourceSpot, Spot, TreeEntry } from '@shared/types/latex'
 import { useBackLayer } from '../../nav'
-import { ActionSheet, MainButton, Segments, useToast } from '../../ui'
+import { Button, Dialog, Row, useToast } from '../../ui'
 import { useAskForNode } from '../AskForNode'
-import { shortCluster } from '../code/util'
+import { KeyRow } from '../code/KeyRow'
+import { Header } from '../Header'
+import { useEditorKeyboard } from '../keyboard'
 import { useOpenIn } from '../projects/openIn'
-import { BuildSheet } from './BuildSheet'
-import { FilesSheet, type FileActions } from './FilesSheet'
-import { GitSheet } from './GitSheet'
+import { BuildDialog } from './BuildDialog'
+import { FilesPanel, type FileActions } from './FilesPanel'
+import { GitDialog } from './GitDialog'
+import { History, type HistoryAsk } from './history/History'
+import { SpotDialog } from './history/SpotDialog'
 import { LogPane } from './LogPane'
 import { PdfPane } from './PdfPane'
+import { ProjectBar, type View } from './ProjectBar'
 
-const Editor = lazy(() => import('@shared/components/code/Editor'))
-type Pane = 'source' | 'pdf' | 'log'
-type Doc = { path: string; text: string; version: number; line?: number }
-type PdfState = { data: Uint8Array | null; path?: string; none?: boolean; error?: string }
-type Open = 'files' | 'git' | 'build' | 'menu' | 'open' | null
-
-function remembered(key: string): boolean {
-  try { return localStorage.getItem(key) === '1' } catch { return false }
-}
+const CodeEditor = lazy(() => import('@shared/components/latex/editor/CodeEditor'))
+const centered = <div className="grid h-full place-items-center"><Spinner size={24} /></div>
+type Open = 'files' | 'git' | 'build' | 'logs' | 'open' | null
+const PAUSED: Extension[] = [EditorState.readOnly.of(true), EditorView.editable.of(false)]
 
 export function Paper({ paper, onClose }: { paper: Opened; onClose: () => void }) {
   const toast = useToast()
-  const openIn = useOpenIn()
   const nodeFirst = useAskForNode()
+  const openIn = useOpenIn()
+  const keyboard = useEditorKeyboard()
   const { cluster, folder } = paper
   const where = useMemo(() => ({ cluster, folder }), [cluster, folder])
   const [main, setMain] = useState(paper.main)
   const [tree, setTree] = useState<TreeEntry[]>(paper.tree)
   const [settings, setSettings] = useState<Settings>(paper.settings)
-  const [pane, setPane] = useState<Pane>('source')
-  const [doc, setDoc] = useState<Doc | null>(null)
-  const [docError, setDocError] = useState('')
-  const [dirty, setDirty] = useState(false)
-  const [saving, setSaving] = useState(false)
-  const [editing, setEditing] = useState(false)
-  const [pdf, setPdf] = useState<PdfState>({ data: null })
-  const [progress, setProgress] = useState(0)
-  const [running, setRunning] = useState<string | null>(null)
-  const [log, setLog] = useState('')
-  const [last, setLast] = useState<BuildDone | null>(null)
-  const [target, setTarget] = useState<PdfTarget | null>(null)
+  const [auto, setAuto] = useState(() => remembered<string>('latex.auto', '0') === '1')
+  const [view, setViewState] = useState<View>(() => remembered<View>('latex.phone.view', 'editor'))
+  const [historyOpened, setHistoryOpened] = useState(view === 'history')  // mounted once shown, so it keeps its place
   const [open, setOpen] = useState<Open>(null)
-  const [auto, setAuto] = useState(() => remembered('latex.auto'))
+  const [target, setTarget] = useState<PdfTarget | null>(null)
+  const [ask, setAsk] = useState<HistoryAsk | null>(null)
+  const [paused, setPaused] = useState(false)
+  const [assistOpen, setAssistOpen] = useState(false)  // Ask and Notes, in place of the commit list
+  const [spot, setSpot] = useState<CardSpot | null>(null)
+  const [top, setTop] = useState(0)
   const editor = useRef<EditorHandle | null>(null)
-  const docRef = useRef(doc)
-  docRef.current = doc
-  const runningRef = useRef(running)
-  runningRef.current = running
-  const logs = useRef<Record<string, string>>({})  // log text by build id, also before we know our id
-  const abs = (r: string) => r ? `${folder}/${r}` : folder
+  const editorBox = useRef<HTMLDivElement>(null)
+  // KeyRow only needs view(); the desktop's LaTeX editor hands over its handle without one
+  const viewOf = (): EditorView | null => {
+    const el = editorBox.current?.querySelector('.cm-editor')
+    return el instanceof HTMLElement ? EditorView.findFromDOM(el) : null
+  }
+  const keyHandle = useRef({ view: viewOf } as unknown as KeyHandle)
+  keyHandle.current = { view: viewOf } as unknown as KeyHandle
+  const { doc, setDoc, docRef, error: docError, dirty, saving, load, save, edit } = useDoc(cluster, paper.main)
+  const { pdf, progress, reload: loadPdf } = useBuiltPdf(cluster, main)
+  const cites = useCites(cluster, folder, tree)
 
-  // -- the open file ------------------------------------------------------------------------------
-  const load = useCallback((path: string, line?: number) => {
-    setDocError('')
-    call<{ text: string }>('latex.read', { cluster, path })
-      .then(({ text }) => {
-        setDoc((d) => ({ path, text, version: (d?.version ?? 0) + 1, line }))
-        setDirty(false)
-        setEditing(false)  // a new document opens in view mode
-      })
-      .catch((e: Error) => { setDocError(e.message); setDoc(null) })
-  }, [cluster])
-
-  const save = useCallback(async (): Promise<boolean> => {
-    const d = docRef.current
-    if (!d || !dirty || !editor.current) return true
-    setSaving(true)
-    try {
-      await call('latex.write', { cluster, path: d.path, text: editor.current.text() })
-      setDirty(false)
-      return true
-    } catch (e) {
-      toast(`Couldn't save: ${(e as Error).message}`)
-      return false
-    } finally { setSaving(false) }
-  }, [cluster, dirty, toast])
-
-  const switchTo = async (path: string, line?: number) => {
-    setPane('source')
-    if (docRef.current?.path === path) { if (line) setTimeout(() => editor.current?.goto(line)); return }
-    if (await save()) load(path, line)
+  const setView = (v: View) => {
+    if (v !== 'history') setAssistOpen(false)
+    if (v === 'history' && view === 'history') setTop((n) => n + 1)
+    if (v === 'history') setHistoryOpened(true)
+    setViewState(v)
+    remember('latex.phone.view', v)
   }
 
+  const dismissKeyboard = () => setTimeout(() => {
+    const a = document.activeElement
+    if (a instanceof HTMLElement && a.closest('.cm-editor')) a.blur()
+  })
+  const switchTo = async (path: string, line?: number) => {
+    if (docRef.current?.path === path) { if (line) { editor.current?.goto(line); dismissKeyboard() } return }
+    if (await save()) load(path, line)
+  }
+  const reloadDoc = () => { const d = docRef.current; if (d) load(d.path, editor.current?.line()) }
   const refresh = useCallback(() => {
     call<TreeEntry[]>('latex.tree', where).then(setTree).catch((e: Error) => toast(e.message))
   }, [where, toast])
 
-  const loadPdf = useCallback(() => {
-    setProgress(0)
-    call<PdfInfo | null>('latex.pdf', { cluster, main })
-      .then((info) => info ? readFile(cluster, info.path, setProgress).then((data) => setPdf({ data, path: info.path }))
-        : setPdf({ data: null, none: true }))
-      .catch((e: Error) => setPdf({ data: null, error: e.message }))
-  }, [cluster, main])
-
-  useEffect(() => { load(paper.main) }, [load, paper.main])
-  useEffect(loadPdf, [loadPdf])
-
-  // -- build ------------------------------------------------------------------------------------------
-  const finish = useCallback((d: BuildDone) => {
-    delete logs.current[d.id]
-    setRunning(null)
-    setLast(d)
-    setLog(d.log)
-    const { errors, warnings } = counts(d.issues)
-    if (d.ok) {
-      loadPdf()
-      toast(warnings ? `Built, with ${warnings} ${warnings === 1 ? 'warning' : 'warnings'}` : 'Built')
-    } else if (!d.stopped) {
-      setPane('log')
-      toast(errors ? `The build failed with ${errors} ${errors === 1 ? 'error' : 'errors'}` : 'The build failed')
-    }
-  }, [loadPdf, toast])
-
-  const runBuild = async () => {
-    if (runningRef.current || !(await save())) return
-    setLog('')
-    setRunning('starting')
-    try {
-      const r = await call<{ id: string; done?: BuildDone }>('latex.build', { cluster, main })
-      if (r.done) { finish(r.done); return }
-      setRunning(r.id)
-      setLog(logs.current[r.id] ?? '')
-    } catch (e) {
-      setRunning(null)
-      toast(`Couldn't build: ${(e as Error).message}`)
-    }
+  const built = (d: BuildDone) => {
+    if (d.ok) loadPdf()
+    else if (!d.stopped) setOpen('logs')
+    const message = buildMessage(d)
+    if (message) toast(message)
   }
-  // "Build on my compute node" with none yet would build on the login node: ask first
-  const build = () => {
-    if (runningRef.current) return
-    if (settings.on_node) nodeFirst.guard(cluster, 'The PDF build', runBuild)
-    else void runBuild()
-  }
-  useEvent<{ id: string; text: string }>('latex-log', ({ id, text }) => {
-    logs.current[id] = (logs.current[id] ?? '') + text
-    if (id === runningRef.current) setLog(logs.current[id])
-  })
-  useEvent<BuildDone>('latex-build', (d) => { if (d.cluster === cluster && d.main === main) finish(d) })
-  const stop = () => { if (running && running !== 'starting') call('latex.stop', { id: running }).catch(() => {}) }
-  const saveNow = async () => { if (await save()) { if (auto) build(); else toast('Saved') } }
+  const builder = useBuild({ cluster, main, save, onDone: built,
+    guard: (run) => settings.on_node ? nodeFirst.guard(cluster, 'The PDF build', run) : run() })
+  const { build, last } = builder
+  const saveNow = async () => { if (await save() && auto) build() }
 
-  // -- SyncTeX and the log's issues ------------------------------------------------------------------
-  const toPdf = () => {
-    const d = docRef.current, line = editor.current?.line()
-    if (!d || !line) return
+  const toPdf = (line: number) => {
+    const d = docRef.current
+    if (!d) return
     call<Spot | null>('latex.sync_view', { cluster, main, path: d.path, line })
       .then((s) => {
-        if (!s) { toast("This line isn't in the PDF"); return }
-        setPane('pdf')
+        if (!s) { toast('This line is not in the PDF'); return }
+        setView('pdf')
         setTarget({ ...s, n: Date.now() })
       })
       .catch((e: Error) => toast(e.message))
   }
   const fromPdf = (page: number, x: number, y: number) => {
     call<SourceSpot | null>('latex.sync_edit', { cluster, main, page, x, y })
-      .then((s) => { if (s) void switchTo(s.path, s.line); else toast('No source for that spot') })
+      .then((s) => {
+        if (!s) { toast('No source for that spot'); return }
+        setView('editor')
+        void switchTo(s.path, s.line)
+      })
       .catch((e: Error) => toast(e.message))
   }
   const goIssue = (i: Issue) => {
-    // the log names a file as given to \input: "results.tex" or "sections/results.tex"
-    const same = (path: string) => path === i.file || path.endsWith(`/${i.file}`) || basename(path) === i.file
-    const hit = !i.file ? rel(folder, main) : tree.find((e) => e.kind === 'f' && same(e.path))?.path
-    if (!hit) { toast(`${i.file} isn't in this paper`); return }
-    switchTo(abs(hit), i.line || 1)
+    const files = tree.filter((e) => e.kind === 'f').map((e) => e.path)
+    const hit = issueFile(i, files, folder, main, docRef.current?.path ?? null)
+    if (!hit) { toast(`${i.file} is not in the project`); return }
+    setOpen(null)
+    setView('editor')
+    void switchTo(inFolder(folder, hit), i.line || 1)
   }
 
-  // -- the files sheet's actions ---------------------------------------------------------------------
-  const failed = (e: Error) => toast(e.message)
-  const moved = (from: string, to: string) => {
-    const d = docRef.current
-    if (d && (d.path === from || d.path.startsWith(from + '/'))) setDoc({ ...d, path: to + d.path.slice(from.length) })
-    if (main === from || main.startsWith(from + '/')) setMain(to + main.slice(from.length))
+  // -- the agent and the notes: the desktop's hook, Ask and Notes in the History tab ---------------------------------
+  const send = (kind: HistoryAsk['kind'], hash?: string) => {
+    setAsk({ kind, hash, n: Date.now() })
+    setView('history')
   }
+  const assist = useAssist({ where, clusterName: paper.cluster_name,
+    guard: (detail, run) => nodeFirst.guard(cluster, 'The agent', run, detail), waiting: nodeFirst.waiting === 'The agent',
+    inHistory: view === 'history', showHistory: () => send('now') })
+  const root = assist.notes?.root ?? ''
+  const docRel = doc ? rel(folder, doc.path) : ''
+  const repoRel = doc && root && doc.path.startsWith(root + '/') ? doc.path.slice(root.length + 1) : ''
+  const notes = assist.notes?.notes
+  const pins = useMemo(() => (notes ?? []).filter((n) => isLine(n.place) && n.place.path === repoRel && !n.done)
+    .map((n) => ({ id: n.id, n: n.n, done: n.done, text: n.text, line: (n.place as { line: number }).line })), [notes, repoRel])
+  const showNote = useRef((id: string) => send('notes', id))
+  showNote.current = (id: string) => send('notes', id)
+  const extensions = useMemo(() => [...(paused ? PAUSED : []),
+    ...(pins.length ? [notesGutter(pins, (id) => showNote.current(id))] : [])], [paused, pins])
+  const go: Go = {
+    line: (path, line) => { setView('editor'); void switchTo(root ? `${root}/${path}` : path, line) },
+    page: (page) => { setView('pdf'); setTarget({ page, x: 0, y: 0, n: Date.now() }) },
+  }
+  // Ask about or note the selected text, or the line the cursor is on
+  const fromEditor = (mode: CardSpot['mode']) => {
+    const s = editor.current?.selection()
+    if (!s || !repoRel) return
+    const lines = s.from === s.to ? `line ${s.from}` : `lines ${s.from} to ${s.to}`
+    setSpot({ id: `ed-${Date.now()}`, mode, title: s.text ? `the selected text in ${fileName(repoRel)}` : `${fileName(repoRel)}, ${lines}`,
+      about: { kind: 'lines', path: repoRel, line: s.from, end: s.to, text: s.text || undefined },
+      place: { path: repoRel, line: s.from }, here: repoRel })
+  }
+
+  // -- the files panel's actions --------------------------------------------------------------------------------------
+  const failed = (e: Error) => toast(e.message)
+  const movedTo = (from: string, to: string) => {
+    const d = docRef.current
+    const path = d ? movedPath(d.path, from, to) : null
+    if (d && path !== null) setDoc({ ...d, path })
+    const m = movedPath(main, from, to)
+    if (m !== null) setMain(m)
+  }
+  const abs = (r: string) => inFolder(folder, r)
   const files: FileActions = {
-    open: (r) => TEXT_EXT.includes(ext(r)) ? switchTo(abs(r)) : toast(`Open ${basename(r)} from Files`),
+    open: (r) => {
+      if (TEXT_EXT.includes(ext(r))) { setView('editor'); void switchTo(abs(r)) }
+      else toast(`Open ${basename(r)} from Files`)
+    },
     newFile: (into, name) => call<string>('latex.new_file', { ...where, into: abs(into), name })
-      .then((p) => { refresh(); if (TEXT_EXT.includes(ext(p))) switchTo(p) }).catch(failed),
+      .then((p) => { refresh(); if (TEXT_EXT.includes(ext(p))) { setView('editor'); void switchTo(p) } }).catch(failed),
     newFolder: (into, name) => call('latex.mkdir', { ...where, into: abs(into), name })
-      .then(() => { refresh(); toast(`Made ${name}`) }).catch(failed),
+      .then(() => { refresh(); toast(`Created ${name}`) }).catch(failed),
     rename: (r, name) => call<string>('latex.rename', { ...where, path: abs(r), name })
-      .then((to) => { moved(abs(r), to); refresh() }).catch(failed),
+      .then((to) => { movedTo(abs(r), to); refresh(); toast(`Renamed to ${name}`) }).catch(failed),
     remove: (r) => call('latex.delete', { ...where, path: abs(r) }).then(() => {
       refresh()
       toast(`Deleted ${basename(r)}`)
       const d = docRef.current
-      if (d && (d.path === abs(r) || d.path.startsWith(abs(r) + '/'))) load(main)
+      if (d && under(d.path, abs(r))) load(main)
     }).catch(failed),
     setMain: (r) => call('latex.set_main', { ...where, main: abs(r) })
-      .then(() => { setMain(abs(r)); toast(`${basename(r)} builds the PDF now`) }).catch(failed),
-    copyPath: (r) => copyText(abs(r)).then((ok) => toast(ok ? 'Path copied' : "Couldn't copy")),
+      .then(() => { setMain(abs(r)); toast(`Main file: ${basename(r)}`) }).catch(failed),
+    copyPath: (r) => void copyText(abs(r)).then((ok) => toast(ok ? `Copied ${abs(r)}` : 'Could not copy')),
+    refresh,
   }
 
   const leave = async () => { if (await save()) onClose() }
-  useBackLayer(() => { leave() })
+  useBackLayer(() => { void leave() })
 
-  const { errors } = counts(last?.issues ?? [])
-  const docRel = doc ? rel(folder, doc.path) : ''
+  useEffect(() => { if (doc?.line) dismissKeyboard() }, [doc?.path, doc?.version])  // a jump opens without the keyboard
+  const fileIssues = useMemo(() => doc ? issuesIn(last?.issues ?? [], doc.path, main) : [], [last, doc, main])
+  const labels = useMemo(() => doc ? labelsIn(doc.text) : [], [doc])
   const lang = doc ? detect(doc.path).id : 'latex'
-  const keys = useMemo(() => keyRow(lang), [lang])
-  const typing = pane === 'source' && editing && !!doc
+  const { errors, warnings } = counts(last?.issues ?? [])
+  const status = saving ? 'Saving' : dirty ? 'Not saved' : 'Saved'
+  const showEditor = view === 'editor' || view === 'split'
+  const showPdf = view === 'pdf' || view === 'reader' || view === 'split'
+  const latex = useMemo(() => ({ cluster, main }), [cluster, main])
+  // while you are in History the button or the notes show it; elsewhere a card says it is running
+  const running = view === 'history' ? [] : assist.jobs.filter((j) => ['starting', 'preparing', 'running'].includes(j.stage)
+    && (j.kind !== 'ask' || j.ask?.scope !== 'card'))
 
   return (
     <div className="flex h-full flex-col">
-      <header className="flex h-16 shrink-0 items-center gap-1 pr-2 pl-1">
-        <button aria-label="Back to papers" onClick={leave}
-          className="grid size-12 shrink-0 place-items-center rounded-full active:bg-pressed"><ArrowLeft size={24} /></button>
-        <div className="min-w-0 flex-1 leading-tight">
-          <h1 className="text-lg font-semibold break-all">{paper.name}</h1>
-          <p className="text-sm text-dim">{shortCluster(paper.cluster_name)} · {saving ? 'Saving' : dirty ? 'Not saved'
-            : 'Saved'}</p>
-        </div>
-        <button aria-label="Files" onClick={() => setOpen('files')}
-          className="grid size-12 place-items-center rounded-full active:bg-pressed"><FolderOpen size={22} /></button>
-        <button aria-label="Paper options" onClick={() => setOpen('menu')}
-          className="grid size-12 place-items-center rounded-full active:bg-pressed"><MoreVertical size={22} /></button>
-      </header>
-      <div className="shrink-0 px-4 pb-2">
-        <Segments value={pane} onChange={setPane} options={[['source', 'Source'], ['pdf', 'PDF'],
-          ['log', running ? 'Log · building' : errors ? `Log · ${errors}` : 'Log']]} />
-      </div>
+      {!keyboard && <Header title="Papers" />}
+      {!keyboard && <ProjectBar name={paper.name} where={`${paper.cluster_name} · ${rel(folder, main)}`} status={status}
+        view={view} onView={setView} running={builder.running} onBuild={build} onFiles={() => setOpen('files')}
+        onBuildSettings={() => setOpen('build')} onLogs={() => setOpen('logs')} logCount={errors + warnings}
+        onGit={() => setOpen('git')} onOpen={() => { void save(); setOpen('open') }} onClose={() => void leave()} />}
 
-      <div className="relative min-h-0 flex-1">
-        <div className={`h-full flex-col ${pane === 'source' ? 'flex' : 'hidden'}`}>
-          <div className="flex min-h-12 shrink-0 items-center gap-1 border-y border-line px-2">
-            <FileText size={18} className="ml-2 shrink-0 text-dim" />
-            <span className="min-w-0 flex-1 px-1 font-semibold break-all">{docRel || basename(main)}</span>
-            <button aria-label="Show this line in the PDF" onClick={toPdf}
-              className="grid size-12 place-items-center rounded-full text-dim active:bg-pressed"><LocateFixed size={20} /></button>
-            {dirty && <button aria-label="Save" onClick={saveNow}
-              className="grid size-12 place-items-center rounded-full active:bg-pressed"><Save size={20} /></button>}
-            <button aria-label={editing ? 'Done editing' : 'Edit'} onClick={() => editor.current?.setEditable(!editing)}
-              className="flex h-12 items-center gap-1.5 rounded-[10px] border border-line-strong px-3 font-semibold
-                active:bg-pressed">
-              {editing ? <><Check size={18} /> Done</> : <><Pencil size={18} /> Edit</>}</button>
-          </div>
+      <div className="flex min-h-0 flex-1 flex-col">
+        <div ref={editorBox} className={`min-h-0 flex-1 flex-col ${showEditor ? 'flex' : 'hidden'}
+          ${view === 'split' ? 'border-b border-line' : ''}`}>
+          {!keyboard && (
+            <div className="flex h-10 shrink-0 items-center gap-0.5 border-b border-line px-2">
+              <span className="min-w-0 flex-1 truncate font-mono text-xs">{docRel || basename(main)}</span>
+              {dirty && <Button small kind="quiet" icon={Save} onClick={saveNow}>Save</Button>}
+              <Button small kind="quiet" disabled={!repoRel} onClick={() => fromEditor('ask')}>Ask</Button>
+              <Button small kind="quiet" icon={StickyNote} disabled={!repoRel} onClick={() => fromEditor('note')}>Note</Button>
+              <Button small kind="quiet" onClick={() => editor.current && toPdf(editor.current.line())}>To PDF</Button>
+            </div>
+          )}
           <div className="min-h-0 flex-1">
-            {docError ? <p className="p-6 text-center text-bad">{docError}</p>
-              : !doc ? <div className="grid h-full place-items-center"><Spinner size={28} /></div>
-              : <Suspense fallback={<div className="grid h-full place-items-center"><Spinner size={28} /></div>}>
-                  <Editor docKey={`${doc.path}:${doc.version}`} path={doc.path} text={doc.text} line={doc.line}
-                    handle={editor} className="h-full" onChange={() => setDirty(true)} onSave={saveNow}
-                    onEditable={setEditing} />
+            {docError ? <p className="p-6 text-center text-sm text-bad">{docError}</p>
+              : !doc ? centered
+              : <Suspense fallback={centered}>
+                  <CodeEditor key={`${doc.path}:${doc.version}`} path={doc.path} version={doc.version} text={doc.text}
+                    line={doc.line} issues={fileIssues} words={{ labels, cites }} handle={editor}
+                    onChange={edit} onSave={saveNow} onBuild={build} onToPdf={toPdf} extensions={extensions} />
                 </Suspense>}
           </div>
+          {!keyboard && view === 'editor' && (
+            <div className="flex h-7 shrink-0 items-center justify-end gap-3 border-t border-line bg-window px-3 text-xs text-dim">
+              <span>{docRel || basename(main)}</span><span>{status}</span></div>
+          )}
+          {keyboard && <KeyRow lang={lang} editor={keyHandle as RefObject<KeyHandle | null>} />}
         </div>
-        {pane === 'pdf' && <PdfPane cluster={cluster} data={pdf.data} memory={`latex:${cluster}:${main}`}
-          target={target} onSync={fromPdf}
-          loading={!pdf.none && !pdf.error} progress={progress}
-          message={pdf.none ? <Empty title="No PDF yet" text="Tap Build to make it on the cluster." />
-            : pdf.error ? <Empty title="Couldn't read the PDF" text={pdf.error} /> : undefined} />}
-        {pane === 'log' && <LogPane running={!!running} log={log} last={last} onGo={goIssue} onStop={stop} />}
+        {showPdf && <div className="min-h-0 flex-1"><PdfPane data={pdf.data} memory={`latex:${cluster}:${main}`}
+          target={target} onSync={fromPdf} loading={!pdf.none && !pdf.error} progress={progress} reflow={view === 'reader'} latex={latex}
+          message={pdf.none ? <Empty title="No PDF yet" text="Press Recompile to build it on the cluster." />
+            : pdf.error ? <Empty title="Could not read the PDF" text={pdf.error} /> : undefined} /></div>}
+        {historyOpened && <div className={view === 'history' ? 'min-h-0 flex-1' : 'hidden'}>
+          <History where={where} clusterName={paper.cluster_name} main={main} pdf={pdf.data} active={view === 'history'} ask={ask}
+            top={top} guard={(what, run) => settings.on_node ? nodeFirst.guard(cluster, what, run) : run()} onBuild={build}
+            onFiles={() => { refresh(); loadPdf(); reloadDoc() }} onPause={setPaused} onSave={save} assist={assist} go={go} onSpot={setSpot}
+            assistOpen={assistOpen} onAssist={setAssistOpen}
+            onOpen={(path, line) => { setView('editor'); void switchTo(path, line) }} />
+        </div>}
       </div>
-      {pane !== 'log' && !typing && (
-        <div className="shrink-0 border-t border-line px-4 py-2">
-          <MainButton onClick={build} disabled={!!running} icon={running ? undefined : RefreshCw}>
-            {running ? <><Spinner size={20} /> Building</> : 'Build'}</MainButton>
-        </div>
-      )}
 
-      {typing && (
-        <div className="flex shrink-0 gap-1 overflow-x-auto border-t border-line bg-window px-2 py-1">
-          {keys.map((k) => (
-            <button key={k.id} aria-label={k.title} onPointerDown={(e) => e.preventDefault()}
-              onClick={() => { const v = editor.current?.view(); if (v) k.run(v) }}
-              className="h-11 min-w-11 shrink-0 rounded-lg border border-line px-3 font-mono text-base active:bg-pressed">
-              {k.label}</button>
-          ))}
-        </div>
-      )}
+      {running.length > 0 && <div className="pointer-events-none fixed inset-x-3 bottom-[calc(var(--bottom)+12px)] z-30 flex flex-col gap-2">
+        {running.map((j) => <RunningCard key={j.id} job={j} onCancel={() => assist.cancel(j.id)} />)}
+      </div>}
 
-      {open === 'menu' && <ActionSheet title={paper.name} onClose={() => setOpen(null)} actions={[
-        { label: 'Show this line in the PDF', icon: LocateFixed, onPick: toPdf },
-        { label: 'Git', icon: GitBranch, onPick: () => setOpen('git') },
-        { label: 'Build settings', icon: Settings2, onPick: () => setOpen('build') },
-        { label: 'Open the folder', icon: SquareArrowOutUpRight, onPick: () => { void save(); setOpen('open') } },
-        { label: 'Close the paper', icon: X, onPick: leave },
-      ]} />}
-      {open === 'open' && <ActionSheet title={`Open ${paper.name}`} onClose={() => setOpen(null)}
-        actions={openIn({ cluster, clusterName: paper.cluster_name, folder }, toast)} />}
-      {open === 'files' && <FilesSheet entries={tree} current={docRel} main={rel(folder, main)} actions={files}
+      {open === 'files' && <FilesPanel entries={tree} current={docRel} main={rel(folder, main)} actions={files}
         onClose={() => setOpen(null)} />}
-      {open === 'git' && <GitSheet where={where} before={save} onClose={() => setOpen(null)}
-        onPulled={() => { refresh(); if (doc) load(doc.path, editor.current?.line()) }} />}
-      {open === 'build' && <BuildSheet cluster={cluster} clusterName={paper.cluster_name} settings={settings}
-        onSaved={setSettings} onClose={() => setOpen(null)} auto={auto} onAuto={(on) => {
-          setAuto(on)
-          try { localStorage.setItem('latex.auto', on ? '1' : '0') } catch { /* private window */ }
-        }} />}
+      {open === 'git' && <GitDialog where={where} before={save} onClose={() => setOpen(null)}
+        onPulled={() => { refresh(); reloadDoc() }}
+        safe={{ push: () => send('push'), pull: () => send('pull'), timeline: () => send('timeline') }} />}
+      {open === 'build' && <BuildDialog cluster={cluster} clusterName={paper.cluster_name} settings={settings}
+        onSaved={setSettings} onClose={() => setOpen(null)} auto={auto}
+        onAuto={(on) => { setAuto(on); remember('latex.auto', on ? '1' : '0') }} />}
+      {open === 'logs' && <LogPane running={builder.running} log={builder.log} last={last} onGo={goIssue}
+        onStop={builder.stop} onClose={() => setOpen(null)} />}
+      {open === 'open' && <Dialog title={`Open ${paper.name}`} onClose={() => setOpen(null)}>
+        <div className="border-t border-line">
+          {openIn({ cluster, clusterName: paper.cluster_name, folder }, toast).map((a) => (
+            <Row key={a.label} icon={a.icon} label={a.label} opens onPress={() => { setOpen(null); a.onPick() }} />))}
+        </div>
+      </Dialog>}
+      {spot && <SpotDialog key={spot.id} spot={spot} assist={assist} go={go} onClose={() => setSpot(null)} />}
       {nodeFirst.sheet}
     </div>
   )
@@ -315,9 +304,8 @@ export function Paper({ paper, onClose }: { paper: Opened; onClose: () => void }
 function Empty({ title, text }: { title: string; text: string }) {
   return (
     <div className="flex max-w-xs flex-col items-center gap-2">
-      <FileText size={40} strokeWidth={1.5} className="text-dim" />
       <div className="font-semibold">{title}</div>
-      <p className="text-dim">{text}</p>
+      <p className="text-sm text-dim">{text}</p>
     </div>
   )
 }

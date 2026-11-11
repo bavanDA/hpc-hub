@@ -1,275 +1,183 @@
-// More › Files: a cluster's folders, with everything you can do to them. Tap opens; ⋮ or a long press shows what a
-// file or folder offers; the ⋮ at the top is for the folder you are in. "Copy, then paste anywhere" keeps the copy
-// at the bottom while you move to another folder or cluster. Quick editing lives in the Code tab.
-import {
-  ArchiveRestore, ArrowDownUp, ArrowLeftRight, ArrowUp, ClipboardPaste, Code2, Copy, Download, File, FileArchive,
-  Folder, FolderInput, FolderPlus, FolderX, MoreVertical, Pencil, Share2, Trash2, Upload, type LucideIcon,
-} from 'lucide-react'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+// Files, Browse: the desktop page on a phone (app/src/pages/Files.tsx): the path bar, the table, the action bar and
+// running copies under it. A long press is the desktop's right-click menu. Uploads and downloads go through Android
+// (parts/files/local.ts) and a file opens in a window instead of the preview pane.
+import { useLayoutEffect, useState, type ReactNode } from 'react'
+import { FolderOpen, FolderX } from 'lucide-react'
 
-import { agentIcon } from '@shared/components/agents/AgentIcon'
-import { basename, isArchive, isDir, isText, join, kind, parent, size, sorted, when } from '@shared/components/files/format'
+import { setActiveCluster, useActiveCluster } from '@shared/components/clusters/active'
+import { ClusterPicker } from '@shared/components/clusters/ClusterPicker'
+import { shortName } from '@shared/components/clusters/loginCopy'
+import { NotConnected } from '@shared/components/clusters/NotConnected'
+import { ActionBar, type Action } from '@shared/components/files/ActionBar'
+import { ClipBanner } from '@shared/components/files/ClipBanner'
+import { ConfirmDialog } from '@shared/components/files/ConfirmDialog'
+import { basename, isDir, isText, join, kind, parent, sorted } from '@shared/components/files/format'
+import { memory } from '@shared/components/files/memory'
+import { menuFor } from '@shared/components/files/menu'
+import { NameDialog } from '@shared/components/files/NameDialog'
+import { PathBar } from '@shared/components/files/PathBar'
+import { useListing } from '@shared/components/files/useListing'
 import { useTransfers } from '@shared/components/files/useTransfers'
 import { copyText } from '@shared/components/terminals/xterm'
+import { EmptyState } from '@shared/components/ui/EmptyState'
 import { Spinner } from '@shared/components/ui/Spinner'
 import { useGo, usePageParams } from '@shared/nav'
 import { call } from '@shared/rpc'
-import type { Entry, Listing, Place, Sort } from '@shared/types/files'
+import type { Entry, Sort } from '@shared/types/files'
 import { ScratchBanner } from '../parts/backup/ScratchBanner'
-import { shortCluster, wrapPath } from '../parts/code/util'
 import { setClip, useClip } from '../parts/files/clip'
-import { ClipBanner } from '../parts/files/ClipBanner'
+import { FileList, useFolderPress } from '../parts/files/FileList'
 import { download, setLocalNotify, upload } from '../parts/files/local'
 import { PasteSheet, type How } from '../parts/files/PasteSheet'
+import { TransferRow, useStopCopy } from '../parts/files/TransferRow'
 import { FileSheet } from '../parts/FileSheet'
 import { Header } from '../parts/Header'
-import { useConnected } from '../parts/useConnected'
-import {
-  ActionSheet, Button, ConfirmSheet, EmptyState, List, MainButton, PickerSheet, PromptSheet, Row as Line, Segments,
-  useToast, type SheetAction,
-} from '../ui'
+import { NoClusters } from '../parts/NoClusters'
+import { ActionSheet, BackLayer, useToast, type SheetAction } from '../ui'
 
-// kept while you visit other screens: the folder per cluster and the sort
-const memory = { paths: {} as Record<string, string>, sort: { key: 'name', desc: false } as Sort }
-
-const SORTS = [
-  { value: 'name', label: 'Name, A to Z' }, { value: 'name-desc', label: 'Name, Z to A' },
-  { value: 'mtime-desc', label: 'Newest first' }, { value: 'mtime', label: 'Oldest first' },
-  { value: 'size-desc', label: 'Largest first' }, { value: 'size', label: 'Smallest first' },
-] as const
-const sortValue = (s: Sort) => `${s.key}${s.desc ? '-desc' : ''}`
-
-const ICONS: Record<string, LucideIcon> = { folder: Folder, archive: FileArchive, code: Code2 }
-
-type Dialog =
-  | { kind: 'entry'; entry: Entry } | { kind: 'folder' } | { kind: 'sort' } | { kind: 'goto' } | { kind: 'mkdir' }
-  | { kind: 'rename'; entry: Entry } | { kind: 'delete'; entry: Entry } | { kind: 'paste' }
-
-/** A long press (half a second without moving) calls onLong instead of the tap. */
-function useLongPress(onLong: () => void) {
-  const timer = useRef<number>(0)
-  const fired = useRef(false)
-  const clear = () => window.clearTimeout(timer.current)
-  return {
-    fired,
-    handlers: {
-      onPointerDown: () => {
-        fired.current = false
-        clear()
-        timer.current = window.setTimeout(() => { fired.current = true; navigator.vibrate?.(15); onLong() }, 500)
-      },
-      onPointerUp: clear, onPointerLeave: clear, onPointerCancel: clear, onPointerMove: (e: React.PointerEvent) => {
-        if (Math.abs(e.movementX) + Math.abs(e.movementY) > 6) clear()
-      },
-      onContextMenu: (e: React.MouseEvent) => { e.preventDefault(); clear(); fired.current = true; onLong() },
-    },
-  }
-}
-
-function Row({ entry, onOpen, onMenu }: { entry: Entry; onOpen: () => void; onMenu: () => void }) {
-  const press = useLongPress(onMenu)
-  const k = kind(entry)
-  const Icon = ICONS[k] ?? File
-  return (
-    <div className="flex items-center border-b border-line">
-      <button {...press.handlers} onClick={() => !press.fired.current && onOpen()}
-        className="flex min-h-14 min-w-0 flex-1 items-center gap-3 py-2 pl-4 text-left active:bg-pressed">
-        <Icon size={22} className="shrink-0 text-dim" />
-        <span className="min-w-0 flex-1">
-          <span className="block break-all">{entry.name}</span>
-          <span className="block text-sm text-dim">
-            {isDir(entry) ? when(entry.mtime) : `${size(entry.size)} · ${when(entry.mtime)}`}</span>
-        </span>
-      </button>
-      <button aria-label={`More for ${entry.name}`} onClick={onMenu}
-        className="grid size-12 shrink-0 place-items-center text-dim active:bg-pressed"><MoreVertical size={20} /></button>
-    </div>
-  )
-}
-
-export function FilesManager() {
-  const { live, current, pick } = useConnected()
-  const params = usePageParams()
-  const go = useGo()
+export function FilesManager({ tabs }: { tabs?: ReactNode }) {
   const toast = useToast()
-  const clip = useClip()
-  const id = current?.id ?? ''
-  const [places, setPlaces] = useState<Place[]>([])
-  const [path, setPathState] = useState(memory.paths[id] ?? '')
-  const [listing, setListing] = useState<Listing | null>(null)
-  const [error, setError] = useState('')
-  const [stamp, setStamp] = useState(0)
+  const goPage = useGo()
+  const params = usePageParams()  // opened from elsewhere: a job's folder, a project
+  useLayoutEffect(() => {  // opened for a cluster and folder: go there
+    if (params.cluster && params.path) memory.paths[params.cluster] = params.path
+    if (params.cluster) setActiveCluster(params.cluster)
+  }, [params.cluster, params.path])
+  const { clusters, sessions, cluster: active, session, connected, error: clustersError } = useActiveCluster()
+  const cluster = memory.cluster = active?.id ?? ''
   const [sort, setSortState] = useState<Sort>(memory.sort)
-  const [viewing, setViewing] = useState<Entry | null>(null)
-  const [dialog, setDialog] = useState<Dialog | null>(null)
-  const close = useCallback(() => setDialog(null), [])
+  const [dialog, setDialog] = useState<ReactNode>(null)
+  const [menu, setMenu] = useState<{ entry: Entry | null } | null>(null)
+  const clip = useClip()
+  const folderPress = useFolderPress(() => setMenu({ entry: null }))
+  const close = () => setDialog(null)
+  const setSort = (s: Sort) => { memory.sort = s; setSortState(s) }
 
-  useEffect(() => { setLocalNotify(toast) }, [toast])
-  const { items } = useTransfers((t) => {
+  const here = active ? shortName(active) : cluster
+  const { listing, path, loading, error, places, selected, setSelected, go } = useListing(cluster, connected, clusters)
+  const entries = listing ? sorted(listing.entries, sort) : []
+  const entry = entries.find((e) => e.name === selected) ?? null
+  const refresh = () => go(path)
+  const done = (msg: string) => () => { toast(msg); refresh() }
+  const failed = (e: Error) => toast(`Failed: ${e.message}`)
+
+  useLayoutEffect(() => setLocalNotify(toast), [toast])
+  const transfers = useTransfers((t) => {
+    if (!t.error && path) refresh()  // it may have landed here
     if (t.error || t.title.includes('this computer')) return  // uploads and downloads speak for themselves (local.ts)
     toast(`Copied ${t.title.split(':')[0]}`)
-    setStamp((s) => s + 1)  // it may have landed here
   })
-  const running = items.filter((t) => !t.finished).length
+  const running = transfers.items.filter((t) => !t.finished)
+  const [stopCopy, stopDialog] = useStopCopy(transfers.x)
 
-  const setPath = useCallback((p: string) => { memory.paths[id] = p; setPathState(p) }, [id])
-  const setSort = (s: Sort) => { memory.sort = s; setSortState(s) }
-  const reload = () => setStamp((s) => s + 1)
-
-  // opened with go('files', { cluster, path }), or another cluster picked
-  // each go() brings new params: the same folder link works again after you browsed away
-  useEffect(() => { if (params.path && (!params.cluster || params.cluster === id)) setPath(params.path) },
-    [params, id, setPath])
-  useEffect(() => {
-    if (!id) return
-    setPathState(params.path && params.cluster === id ? params.path : memory.paths[id] ?? '')
-    call<Place[]>('files.places', { cluster: id }).then(setPlaces).catch(() => setPlaces([]))
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id])
-  useEffect(() => {
-    if (!id) return
-    let live = true
-    setError('')
-    call<Listing>('files.list', { cluster: id, path })
-      .then((l) => { if (live) { setListing(l); if (l.path !== path) memory.paths[id] = l.path } })
-      .catch((e: Error) => { if (live) { setError(e.message); setListing(null) } })
-    return () => { live = false }
-  }, [id, path, stamp])
-
-  const here = listing?.path ?? path
-  const entries = useMemo(() => (listing ? sorted(listing.entries, sort) : []), [listing, sort])
-
-  if (!current) {
-    return <div className="flex h-full flex-col"><Header title="Files" />
-      <EmptyState icon={FolderX} title="No cluster connected" text="Connect one to see its files."
-        action={<MainButton onClick={() => go('clusters')}>Go to Clusters</MainButton>} /></div>
+  const layer = (node: ReactNode) => setDialog(<BackLayer onBack={close}>{node}</BackLayer>)
+  const open = (e: Entry) => {
+    if (isDir(e)) { go(join(path, e.name)); return }
+    layer(<FileSheet cluster={cluster} path={join(path, e.name)} size={e.size} onClose={close}
+      onEdit={isText(e) ? () => { close(); edit(e) } : undefined}
+      onDownload={() => download(cluster, join(path, e.name))}
+      onShare={() => download(cluster, join(path, e.name), 'share')} />)
   }
-
-  const name = current.name
-  const short = shortCluster(name)
-  const failed = (what: string) => (e: Error) => toast(`Could not ${what}: ${e.message}`)
-  const full = (e: Entry) => join(here, e.name)
-  const copyPath = (p: string) => copyText(p).then((ok) => toast(ok ? `Copied ${p}` : 'Could not copy'))
-  const open = (e: Entry) => (isDir(e) ? setPath(full(e)) : setViewing(e))
-  const edit = (e: Entry) => go('code', { cluster: id, path: full(e) })
-  const tool = (start: 'vscode' | 'claude', folder: string) => go('agents', { cluster: id, folder, start })
+  const edit = (e: Entry) => goPage('code', { cluster, path: join(path, e.name) })
+  const rename = (e: Entry) => layer(
+    <NameDialog title={`Rename ${e.name}`} action="Rename" initial={e.name} onClose={close}
+      onDone={(n) => call('files.rename', { cluster, path: join(path, e.name), name: n })
+        .then(done(`Renamed to ${n}`)).catch(failed)} />)
+  const newFolder = () => {
+    if (!connected || !path) return
+    layer(<NameDialog title="New folder" action="Create" onClose={close}
+      onDone={(n) => call('files.mkdir', { cluster, path, name: n }).then(done(`Created ${n}`)).catch(failed)} />)
+  }
+  const remove = (e: Entry) => layer(
+    <ConfirmDialog title={`Delete ${e.name}?`} action="Delete" onClose={close}
+      text={`This permanently deletes it on ${here}${isDir(e) ? ' with everything inside.' : '.'}`}
+      onYes={() => call('files.delete', { cluster, path: join(path, e.name) })
+        .then(done(`Deleted ${e.name}`)).catch(failed)} />)
   const zip = (e: Entry) => {
-    const p = full(e)
-    const extract = isArchive(e)
-    toast(extract ? `Extracting ${e.name}` : `Zipping ${e.name}`)
-    call(extract ? 'files.extract' : 'files.zip', { cluster: id, path: p })
-      .then(() => { toast(extract ? `Extracted ${e.name}` : `Zipped ${e.name}`); reload() })
-      .catch(failed(extract ? 'extract it' : 'zip it'))
+    const p = join(path, e.name)
+    if (kind(e) === 'archive') {
+      toast(`Extracting ${e.name}…`)
+      call('files.extract', { cluster, path: p }).then(done(`Extracted ${e.name}`)).catch(failed)
+    } else {
+      toast(`Zipping ${e.name} on ${here}…`)
+      call('files.zip', { cluster, path: p }).then(done(`Zipped ${e.name}`)).catch(failed)
+    }
   }
-  const start = (skip: string[], how: How, total: number) => {
+  const copyPath = (e: Entry | null) => {
+    const p = e ? join(path, e.name) : path
+    copyText(p).then((ok) => toast(ok ? `Copied ${p}` : 'Could not copy'))
+  }
+  const copy = (e: Entry) => setClip({ cluster, clusterName: here, path: join(path, e.name), name: e.name, folder: isDir(e) })
+  const folderOf = (e: Entry | null) => (e && isDir(e) ? join(path, e.name) : path)
+  const tool = (start: 'vscode' | 'claude', folder: string) => goPage('agents', { cluster, folder, start })
+
+  const startCopy = (skip: string[], how: How, total: number) => {
     const c = clip
     if (!c) return
     setClip(null)
-    call('files.copy', { src_cluster: c.cluster, src_path: c.path, dst_cluster: id, dst_dir: here, skip, how,
+    call('files.copy', { src_cluster: c.cluster, src_path: c.path, dst_cluster: cluster, dst_dir: path, skip, how,
       folder: c.folder, total })
-      .then(() => toast(c.cluster === id ? `Copying ${c.name}` : how === 'globus' ? `Sent ${c.name} to Globus`
-        : `Copying ${c.name} through this phone`))
-      .catch(failed('start the copy'))
+      .then(() => toast(c.cluster === cluster ? `Copying ${c.name}…` : how === 'globus' ? 'Sent to Globus. Progress is in Transfers'
+        : 'Copying. Progress is below'))
+      .catch((e: Error) => toast(`Could not start: ${e.message}`))
   }
   const paste = () => {
-    if (!clip || !here) return
-    if (!live.some((c) => c.id === clip.cluster)) { toast(`Connect to ${shortCluster(clip.clusterName)} first. The copy comes from there.`); return }
-    if (clip.cluster === id) start([], 'laptop', 0)
-    else setDialog({ kind: 'paste' })
+    if (!clip) return
+    if (!connected || !path) { toast('Open a folder to paste into first'); return }
+    if (!sessions[clip.cluster]?.connected) { toast(`Connect to ${clip.clusterName} first, the copy comes from there`); return }
+    if (clip.cluster === cluster) startCopy([], 'laptop', 0)
+    else setDialog(<PasteSheet clip={clip} dstName={here} dstDir={path} onClose={close} onGo={startCopy} />)
   }
 
-  const entryActions = (e: Entry): SheetAction[] => {
-    const dir = isDir(e)
-    return [
-      { label: 'Open', icon: dir ? FolderInput : File, onPick: () => open(e) },
-      ...(isText(e) ? [{ label: 'Edit in Code', icon: Pencil, onPick: () => edit(e) }] : []),
-      { label: 'Copy path', icon: Copy, onPick: () => copyPath(full(e)) },
-      { label: dir ? 'Download folder' : 'Download', icon: Download, onPick: () => download(id, full(e)) },
-      ...(dir ? [] : [{ label: 'Share', icon: Share2, onPick: () => download(id, full(e), 'share') }]),
-      { label: 'Rename', icon: Pencil, onPick: () => setDialog({ kind: 'rename', entry: e }) },
-      { label: isArchive(e) ? 'Extract here' : 'Make a zip', icon: isArchive(e) ? ArchiveRestore : FileArchive,
-        onPick: () => zip(e) },
-      { label: 'Copy, then paste anywhere', icon: ArrowLeftRight, onPick: () => {
-        setClip({ cluster: id, clusterName: name, path: full(e), name: e.name, folder: dir })
-        toast(`Copied ${e.name}. Open a folder and press Paste here`)
-      } },
-      ...(dir ? [{ label: 'VS Code in the browser', icon: Code2, onPick: () => tool('vscode', full(e)) },
-        { label: 'Claude here', icon: agentIcon('claude'), onPick: () => tool('claude', full(e)) }] : []),
-      { label: 'Delete', icon: Trash2, danger: true, onPick: () => setDialog({ kind: 'delete', entry: e }) },
-    ]
+  const act = (a: Action, e: Entry | null = entry) => {
+    if (!e) return
+    ({ open, download: (x: Entry) => download(cluster, join(path, x.name)), rename, zip, delete: remove, copy } as
+      Record<Action, (e: Entry) => void>)[a](e)
   }
-  const folderActions: SheetAction[] = [
-    { label: 'New folder', icon: FolderPlus, onPick: () => setDialog({ kind: 'mkdir' }) },
-    { label: 'Upload here', icon: Upload, onPick: () => upload(id, here) },
-    ...(clip ? [{ label: `Paste ${clip.name} here`, icon: ClipboardPaste, onPick: paste }] : []),
-    { label: 'VS Code in the browser', icon: Code2, onPick: () => tool('vscode', here) },
-    { label: 'Claude here', icon: agentIcon('claude'), onPick: () => tool('claude', here) },
-    { label: 'Go to a folder', icon: FolderInput, onPick: () => setDialog({ kind: 'goto' }) },
-    { label: 'Sort', icon: ArrowDownUp, onPick: () => setDialog({ kind: 'sort' }) },
-    { label: 'Copy path', icon: Copy, onPick: () => copyPath(here) },
-  ]
+  const on = menu?.entry ?? null  // what was pressed; null: the folder itself
+  const items: SheetAction[] = menu ? menuFor(on, !!clip, {
+    open: () => act('open', on), edit: () => on && edit(on), copyPath: () => copyPath(on),
+    download: () => act('download', on), rename: () => act('rename', on), zip: () => act('zip', on),
+    copy: () => act('copy', on), delete: () => act('delete', on), newFolder,
+    upload: () => upload(cluster, path), paste,
+    vscode: () => tool('vscode', folderOf(on)), claude: () => tool('claude', folderOf(on)),
+    code: () => goPage('code', { cluster, folder: folderOf(on) }),
+  }).flat().flatMap((m): SheetAction[] => [{ label: m.label, danger: m.danger, onPick: m.onClick },
+    ...(m.label === 'Download' && on && !isDir(on)
+      ? [{ label: 'Share', onPick: () => download(cluster, join(path, on.name), 'share') }] : [])]) : []
+
+  let body
+  if (clusters && !clusters.length) body = <NoClusters />
+  else if (clustersError && !clusters) body = <p className="p-8 text-bad">Could not load clusters: {clustersError}</p>
+  else if (!clusters || !active) body = <div className="grid h-full place-items-center"><Spinner size={24} /></div>
+  else if (!connected) body = <NotConnected cluster={active} session={session} what="files" />
+  else if (!listing) {
+    body = error ? <EmptyState icon={FolderX} title="Could not open folder" text={error} />
+      : <div className="grid h-full place-items-center"><Spinner size={24} /></div>
+  } else if (!entries.length) body = <div className="h-full" {...folderPress}><EmptyState icon={FolderOpen} title="Empty folder" /></div>
+  else body = <FileList entries={entries} sort={sort} onSort={setSort} selected={selected} onSelect={setSelected}
+    onOpen={open} onMenu={(e) => setMenu({ entry: e })} />
 
   return (
-    <div className="flex h-full flex-col">
-      <Header title="Files">
-        <button aria-label="This folder" onClick={() => setDialog({ kind: 'folder' })}
-          className="grid size-12 place-items-center rounded-full active:bg-pressed"><MoreVertical size={22} /></button>
-      </Header>
-      <div className="flex flex-col gap-2 px-4 pb-2">
-        {live.length > 1 && <Segments label="Cluster" value={id} options={live.map((c) => [c.id, shortCluster(c.name)] as const)}
-          onChange={pick} />}
-        {places.length > 1 && <Segments label="Place" value={places.find((p) => p.path === here)?.path ?? ''}
-          options={places.map((p) => [p.path, p.label] as const)} onChange={setPath} />}
-        <ScratchBanner cluster={id} path={here} places={places}
-          onOpen={() => go('backup', { cluster: id, step: 'plan' })} />
-      </div>
-      <div className="flex items-center gap-1 pr-2 pl-1">
-        <button aria-label="Up one folder" disabled={!here || here === '/'} onClick={() => setPath(parent(here))}
-          className="grid size-12 shrink-0 place-items-center rounded-full text-dim active:bg-pressed disabled:opacity-40">
-          <ArrowUp size={20} /></button>
-        <button aria-label="Go to a folder" onClick={() => setDialog({ kind: 'goto' })}
-          className="flex min-h-12 min-w-0 flex-1 items-center rounded-[10px] px-1 py-1 text-left text-sm break-words
-            text-dim active:bg-pressed">{wrapPath(here || '~')}</button>
-      </div>
-      <div className="min-h-0 flex-1 overflow-y-auto pb-4">
-        <List>
-          {running > 0 && <Line icon={ArrowLeftRight} label={running === 1 ? '1 copy running' : `${running} copies running`}
-            opens onPress={() => go('files', { tab: 'transfers' })} />}
-          {listing && entries.map((e) => <Row key={e.name} entry={e} onOpen={() => open(e)}
-            onMenu={() => setDialog({ kind: 'entry', entry: e })} />)}
-        </List>
-        {error && <EmptyState icon={FolderX} title="Can't open this folder" text={error}
-          action={<Button onClick={() => setPath('')}>Go to home</Button>} />}
-        {!listing && !error && <div className="grid h-40 place-items-center"><Spinner size={28} /></div>}
-        {listing && !entries.length && <p className="p-4 text-center text-dim">This folder is empty.</p>}
-      </div>
-      {clip && <ClipBanner clip={clip} canPaste={!!here && !error} onPaste={paste} onDrop={() => setClip(null)} />}
-
-      {viewing && <FileSheet cluster={id} path={full(viewing)} size={viewing.size} onClose={() => setViewing(null)}
-        onEdit={isText(viewing) ? () => { setViewing(null); edit(viewing) } : undefined}
-        onDownload={() => download(id, full(viewing))} onShare={() => download(id, full(viewing), 'share')} />}
-      {dialog?.kind === 'entry' && <ActionSheet title={dialog.entry.name} actions={entryActions(dialog.entry)}
-        onClose={close} />}
-      {dialog?.kind === 'folder' && <ActionSheet title={basename(here) || here} actions={folderActions}
-        onClose={close} />}
-      {dialog?.kind === 'sort' && <PickerSheet title="Sort" value={sortValue(sort)} onClose={close}
-        options={SORTS.map((s) => ({ value: s.value, label: s.label }))}
-        onPick={(v) => setSort({ key: v.replace('-desc', '') as Sort['key'], desc: v.endsWith('-desc') })} />}
-      {dialog?.kind === 'goto' && <PromptSheet title="Go to a folder" label="Folder" value={here}
-        placeholder="/scratch/jdoe" confirm="Go" onClose={close} onSubmit={setPath} />}
-      {dialog?.kind === 'mkdir' && <PromptSheet title="New folder" label="Name" confirm="Make it" onClose={close}
-        onSubmit={(n) => call('files.mkdir', { cluster: id, path: here, name: n })
-          .then(() => { toast(`Made ${n}`); reload() }).catch(failed('make the folder'))} />}
-      {dialog?.kind === 'rename' && <PromptSheet title={`Rename ${dialog.entry.name}`} label="New name"
-        value={dialog.entry.name} confirm="Rename" onClose={close}
-        onSubmit={(n) => call('files.rename', { cluster: id, path: full(dialog.entry), name: n })
-          .then(() => { toast(`Renamed to ${n}`); reload() }).catch(failed('rename it'))} />}
-      {dialog?.kind === 'delete' && <ConfirmSheet danger keep="Keep it" confirm="Delete" title={`Delete ${dialog.entry.name}?`}
-        text={`There's no trash on ${short}, so it's gone for good.`} onClose={close}
-        onConfirm={() => call('files.delete', { cluster: id, path: full(dialog.entry) })
-          .then(() => { toast(`Deleted ${dialog.entry.name}`); reload() }).catch(failed('delete it'))} />}
-      {dialog?.kind === 'paste' && clip && <PasteSheet clip={clip} dstName={name} dstDir={here} onClose={close}
-        onGo={start} />}
+    <div className="flex h-full flex-col bg-window">
+      <Header title="Files" chip={<ClusterPicker />} />
+      {tabs}
+      {connected && <div className="[&_[aria-label=Preview]]:hidden">
+        <PathBar path={path} connected={connected} loading={loading} places={places}
+          count={listing ? entries.length : null} preview={false} onPreview={() => {}}
+          onGo={go} onUp={() => path && go(parent(path))} onRefresh={refresh} onNewFolder={newFolder}
+          onUpload={() => path && upload(cluster, path)} />
+      </div>}
+      {connected && <div className="px-4"><ScratchBanner cluster={cluster} path={path} places={places}
+        onOpen={() => goPage('backup', { cluster, step: 'plan' })} /></div>}
+      {clip && <ClipBanner clip={clip} canPaste={connected && !!path} onPaste={paste} onDrop={() => setClip(null)} />}
+      <div className="flex min-h-0 flex-1 flex-col">{body}</div>
+      {connected && <ActionBar entry={entry} onAction={(a) => act(a)} />}
+      {running.length > 0 && <div className="max-h-[188px] shrink-0 divide-y divide-line overflow-y-auto border-t border-line bg-window">
+        {running.map((t) => <TransferRow key={t.id} t={t} onX={stopCopy} />)}</div>}
+      {stopDialog}
+      {menu && <ActionSheet title={on?.name ?? (basename(path) || path)} actions={items} onClose={() => setMenu(null)} />}
+      {dialog}
     </div>
   )
 }

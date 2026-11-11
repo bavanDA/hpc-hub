@@ -125,6 +125,21 @@ pub async fn keep_alive<R: Runtime>(app: AppHandle<R>, on: bool, text: Option<St
     call(handle, "set", KeepAliveArgs { on, text }).await
 }
 
+#[derive(Serialize)]
+struct NoArgs {}
+
+#[tauri::command]
+pub async fn battery_status<R: Runtime>(app: AppHandle<R>) -> Result<Value, String> {
+    let handle = app.try_state::<KeepAlive<R>>().ok_or(NOT_HERE)?.0.clone();
+    call(handle, "batteryStatus", NoArgs {}).await
+}
+
+#[tauri::command]
+pub async fn battery_ask<R: Runtime>(app: AppHandle<R>) -> Result<Value, String> {
+    let handle = app.try_state::<KeepAlive<R>>().ok_or(NOT_HERE)?.0.clone();
+    call(handle, "batteryAsk", NoArgs {}).await
+}
+
 // -- the phone's own voice, for Read aloud (SpeechPlugin.kt) -------------------------------------------------------
 
 struct Speech<R: Runtime>(tauri::plugin::PluginHandle<R>);

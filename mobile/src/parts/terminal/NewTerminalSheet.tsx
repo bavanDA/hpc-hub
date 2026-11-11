@@ -6,7 +6,7 @@ import { shortName } from '@shared/components/clusters/loginCopy'
 import type { Live } from '@shared/components/terminals/data'
 import { openNew } from '@shared/components/terminals/tabs'
 import { FolderField } from '../agents/FolderField'
-import { Field, List, MainButton, Row, Segments, Sheet, useToast } from '../../ui'
+import { Dialog, Field, List, MainButton, Row, Segments, useToast } from '../../ui'
 
 
 export function NewTerminalSheet({ live, cluster: first = '', folder: startIn = '', onClose, onOpened }:
@@ -29,9 +29,9 @@ export function NewTerminalSheet({ live, cluster: first = '', folder: startIn = 
   const hint = onNode ? 'Your own compute node. Best for builds, scripts and heavy work.'
     : 'Shared with everyone on the cluster. Best for editing files and submitting jobs.'
   return (
-    <Sheet title="New terminal" flush onClose={onClose}
+    <Dialog title="New terminal" onClose={onClose}
       actions={<MainButton disabled={!c} onClick={open}>Open terminal</MainButton>}>
-      <div className="px-4">
+      <div className="px-5">
         <Field label="Name" value={name} onChange={(e) => setName(e.target.value)} />
         {live.length > 1 && (
           <div className="py-2">
@@ -54,10 +54,10 @@ export function NewTerminalSheet({ live, cluster: first = '', folder: startIn = 
           <Row label="Runs on" value="Login node" sub={hint} />
         </List>
       )}
-      <div className="px-4 pt-2">
+      <div className="px-5 pt-2">
         {c && <FolderField cluster={c.id} name={shortName(c)} label="Start in" value={folder} onChange={setFolder} />}
         <p className="pt-2 text-sm text-dim">It keeps running when you leave it or close the app.</p>
       </div>
-    </Sheet>
+    </Dialog>
   )
 }

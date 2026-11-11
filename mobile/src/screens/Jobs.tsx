@@ -1,140 +1,122 @@
-// Jobs: yours, your group's, your last week, or everyone's, on one cluster. Search sits over the list; whose jobs,
-// states and order are in the filter sheet, and one line says what the list shows. A job opens its details (with
-// Cancel). Usage opens it on one person's jobs ({ cluster, user }).
-import { ListChecks, RefreshCw, SearchX, SlidersHorizontal, WifiOff } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+// Jobs: the desktop page on a phone (app/src/pages/Jobs.tsx): whose jobs and which state as selects, search, a list
+// with ticks, cancel one or several (always asks first), the details window. Usage opens it on one person's jobs
+// ({ cluster, user }).
+import { CircleAlert, ListChecks, RefreshCw, Search } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
-import { shortName } from '@shared/components/clusters/loginCopy'
+import { useActiveCluster } from '@shared/components/clusters/active'
+import { ClusterPicker } from '@shared/components/clusters/ClusterPicker'
+import { NotConnected } from '@shared/components/clusters/NotConnected'
+import { CancelDialog } from '@shared/components/jobs/CancelDialog'
+import { CancelManyDialog } from '@shared/components/jobs/CancelManyDialog'
+import type { Sort } from '@shared/components/jobs/columns'
+import { DetailsDialog } from '@shared/components/jobs/DetailsDialog'
+import { filterJobs, sortJobs, stateName, usageText } from '@shared/components/jobs/format'
+import { PickedBar } from '@shared/components/jobs/PickedBar'
+import { useJobList } from '@shared/components/jobs/useJobList'
+import { EmptyState } from '@shared/components/ui/EmptyState'
+import { SkeletonRows } from '@shared/components/ui/SkeletonRows'
 import { Spinner } from '@shared/components/ui/Spinner'
-import { useGo, usePageParams } from '@shared/nav'
-import { call } from '@shared/rpc'
-import type { Job, JobList, Scope } from '@shared/types/jobs'
-import type { Account } from '@shared/types/usage'
-import { usePhoneNav } from '../nav'
+import { usePageParams } from '@shared/nav'
+import type { Job, Scope } from '@shared/types/jobs'
+import { Choice } from '../parts/Choice'
 import { Header } from '../parts/Header'
-import { ORDERS, SCOPE_TEXT, shownJobs } from '../parts/jobs/filters'
-import { FilterSheet } from '../parts/jobs/FilterSheet'
-import { JobRow } from '../parts/jobs/JobRow'
-import { stateWord } from '../parts/jobs/words'
-import { JobSheet } from '../parts/JobSheet'
-import { useConnected } from '../parts/useConnected'
-import { Button, EmptyState, List, Row, SearchField, Segments } from '../ui'
+import { JobHead, JobRow } from '../parts/jobs/JobList'
+import { NoClusters } from '../parts/NoClusters'
+import { BackLayer, IconBtn, SearchField } from '../ui'
 
-const REFRESH_MS = 15_000
-const n = (v: number) => Math.round(v).toLocaleString('en-US')
-
-/** The account most of your hours go to, as one row that opens Usage. */
-function HoursRow({ accounts, onOpen }: { accounts: Account[]; onOpen: () => void }) {
-  const a = accounts.reduce<Account | null>((x, y) => (!x || y.used > x.used ? y : x), null)
-  if (!a) return null
-  return a.quota > 0
-    ? <Row label="Hours left (SU)" sub={a.account} value={n(Math.max(0, a.quota - a.used))} opens onPress={onOpen} />
-    : <Row label="Hours used (SU)" sub={[a.account, a.period].filter(Boolean).join(' · ')} value={n(a.used)} opens
-        onPress={onOpen} />
-}
+const SCOPES = [['mine', 'My jobs'], ['group', 'My group'], ['history', 'My history (7 days)'],
+  ['all', 'All jobs']] as const
+const STATES = [['', 'Any state'], ...['RUNNING', 'PENDING', 'COMPLETED', 'FAILED', 'CANCELLED', 'TIMEOUT']
+  .map((s) => [s, stateName(s)] as const)] as const
 
 export function Jobs() {
-  const { live, current, pick } = useConnected()
-  const { open: openTab } = usePhoneNav()
-  const go = useGo()
+  const { clusters, cluster, session, connected, setCluster, error: clustersError } = useActiveCluster()
   const params = usePageParams()  // from Usage: { cluster, user } shows that person's jobs
   const [scope, setScope] = useState<Scope>(params.user ? 'all' : 'mine')
-  const [states, setStates] = useState<string[]>([])
+  const [state, setState] = useState('')
   const [group, setGroup] = useState('')  // with My group: one of your groups, '' = all of them
   const [query, setQuery] = useState(params.user ?? '')
-  const [order, setOrder] = useState(ORDERS[0])
-  const [filtering, setFiltering] = useState(false)
-  const [got, setGot] = useState({ key: '', list: null as JobList | null, error: '' })
-  const [loading, setLoading] = useState(false)
-  const [open, setOpen] = useState<Job | null>(null)
-  const turn = useRef(0)
-  const id = current?.id ?? ''
-  const account = scope === 'group' ? group : ''
-  const key = `${id}|${scope}|${account}`
-
   useEffect(() => {
-    if (params.cluster) pick(params.cluster)
+    if (params.cluster) setCluster(params.cluster)
     if (params.user) { setScope('all'); setQuery(params.user) }
-  }, [params.cluster, params.user, pick])
+  }, [params.cluster, params.user])  // eslint-disable-line react-hooks/exhaustive-deps
+  const [sort, setSort] = useState<Sort>({ key: 'id', desc: true })
+  const [open, setOpen] = useState<Job | null>(null)
+  const [cancel, setCancel] = useState<Job | null>(null)
+  const [picked, setPicked] = useState<Set<string>>(new Set())
+  const [cancelMany, setCancelMany] = useState(false)
+  const lastGroups = useRef<string[]>([])  // kept while another view loads
+  const { key, list, error, updated, loading, refresh } =
+    useJobList(cluster?.id ?? '', scope, scope === 'group' ? group : '', connected)
 
-  const refresh = useCallback(() => {
-    if (!id) return
-    const mine = ++turn.current
-    setLoading(true)
-    call<JobList>('jobs.list', { cluster: id, scope, account })
-      .then((list) => mine === turn.current && setGot({ key: `${id}|${scope}|${account}`, list, error: '' }))
-      .catch((e: Error) => mine === turn.current &&
-        setGot({ key: `${id}|${scope}|${account}`, list: null, error: e.message }))
-      .finally(() => mine === turn.current && setLoading(false))
-  }, [id, scope, account])
-  useEffect(() => {
-    refresh()
-    const t = setInterval(() => document.visibilityState === 'visible' && refresh(), REFRESH_MS)
-    return () => clearInterval(t)
-  }, [refresh])
+  useEffect(() => setPicked(new Set()), [key])
+  const chosen = (list?.jobs ?? []).filter((j) => j.cancellable && picked.has(j.job_id))  // gone ones drop out
+  const shown = useMemo(() => sortJobs(filterJobs(list?.jobs ?? [], state, query), sort.key, sort.desc),
+    [list, state, query, sort])
 
-  const list = got.key === key ? got.list : null
-  const error = got.key === key ? got.error : ''
-  const shown = useMemo(() => shownJobs(list?.jobs ?? [], states, query, order), [list, states, query, order])
-  const filtered = scope !== 'mine' || states.length > 0 || order !== ORDERS[0]
-  const reset = () => { setScope('mine'); setStates([]); setOrder(ORDERS[0]) }
-  const total = list?.jobs.length ?? 0
-  const narrowed = states.length > 0 || query.trim() !== ''
-  const what = [SCOPE_TEXT[scope], states.map(stateWord).join(', '), order === ORDERS[0] ? '' : order.label]
-    .filter(Boolean).join(' · ')
+  const groups = list?.groups ?? lastGroups.current
+  if (list?.groups) lastGroups.current = list.groups
+  const done = () => { setPicked(new Set()); refresh(true) }
+  const flip = (id: string) => {
+    const next = new Set(picked)
+    if (!next.delete(id)) next.add(id)
+    setPicked(next)
+  }
+  const usage = list ? usageText(list.accounts) : ''
+
+  let body
+  if (clusters && !clusters.length) body = <NoClusters />
+  else if (clustersError) body = <EmptyState icon={CircleAlert} title="Could not load clusters" text={clustersError} report />
+  else if (!clusters || !cluster) body = <div className="grid h-full place-items-center"><Spinner size={24} /></div>
+  else if (!connected) body = <NotConnected cluster={cluster} session={session} what="jobs" />
+  else if (error) body = <EmptyState icon={CircleAlert} title="Could not load jobs" text={error} report />
+  else if (!list) body = <SkeletonRows rows={6} height={60} />
+  else if (!list.jobs.length) body = <EmptyState icon={ListChecks} title="No jobs" text="Nothing to show for this view." />
+  else if (!shown.length) body = <EmptyState icon={Search} title="No matching jobs" text="Try another state or filter." />
+  else {
+    const anyCancel = shown.some((j) => j.cancellable)
+    body = shown.map((j) => <JobRow key={j.job_id} job={j} showUser={scope === 'all' || scope === 'group'}
+      anyCancel={anyCancel} picked={picked.has(j.job_id)} onPick={() => flip(j.job_id)} onOpen={() => setOpen(j)}
+      onCancel={() => setCancel(j)} />)
+  }
 
   return (
     <div className="flex h-full flex-col">
-      <Header title="Jobs">
-        {current && <>
-          <button aria-label={filtered ? 'Filter, some on' : 'Filter'} onClick={() => setFiltering(true)}
-            className="relative grid size-12 place-items-center rounded-full active:bg-pressed">
-            <SlidersHorizontal size={22} />
-            {filtered && <span className="absolute top-3 right-3 size-2 rounded-full bg-text" />}</button>
-          <button aria-label="Refresh" onClick={refresh}
-            className="grid size-12 place-items-center rounded-full active:bg-pressed">
-            {loading ? <Spinner size={22} /> : <RefreshCw size={22} />}</button>
-        </>}
-      </Header>
-      {!current
-        ? <div className="flex flex-1 flex-col justify-center">
-            <EmptyState icon={WifiOff} title="No cluster connected" text="Connect a cluster to see its jobs."
-              action={<Button kind="primary" onClick={() => openTab('clusters')}>Go to Clusters</Button>} />
+      <Header title="Jobs" chip={<ClusterPicker />} />
+      {connected && (
+        <div className="flex shrink-0 flex-col gap-2 p-3">
+          <div className="flex items-center gap-2">
+            <Choice label="Which jobs" value={scope} onPick={setScope} options={SCOPES} className="min-w-0 flex-1" />
+            <Choice label="State" value={state} onPick={setState} options={STATES} className="min-w-0 flex-1" />
+            {loading ? <span className="grid size-10 shrink-0 place-items-center"><Spinner /></span>
+              : <IconBtn icon={RefreshCw} label="Refresh" onClick={() => refresh()} />}
           </div>
-        : (
-          <div className="flex min-h-0 flex-1 flex-col">
-            <div className="flex flex-col gap-3 px-4 pb-1">
-              {live.length > 1 && <Segments label="Cluster" value={current.id}
-                options={live.map((c) => [c.id, shortName(c)] as const)} onChange={pick} />}
-              <SearchField value={query} onChange={setQuery} placeholder="Search id, name, person, queue" />
-            </div>
-            <div className="min-h-0 flex-1 overflow-y-auto pb-4">
-              <button onClick={() => setFiltering(true)} className="flex min-h-12 w-full items-center px-4 text-left
-                text-sm break-words text-dim active:bg-pressed">
-                {list && total > 0 ? `${what} · ${narrowed ? `${shown.length} of ${total}` : total}` : what}</button>
-              {error && <p className="px-4 py-3 text-bad">{error}</p>}
-              {!list && !error && <div className="grid h-40 place-items-center"><Spinner size={28} /></div>}
-              {list && !total && <EmptyState icon={ListChecks} title="No jobs"
-                text={scope === 'mine' ? "You don't have any jobs running or waiting." : 'Nothing to show here.'} />}
-              {list && total > 0 && !shown.length && <EmptyState icon={SearchX} title="No jobs match"
-                text="Try another state or search."
-                action={<Button onClick={() => { setStates([]); setQuery('') }}>Show all</Button>} />}
-              {shown.length > 0 && <List>
-                {shown.map((j) => <JobRow key={j.job_id} job={j} showUser={scope === 'all' || scope === 'group'}
-                  onOpen={() => setOpen(j)} />)}
-              </List>}
-              {list?.accounts.length ? <List className="mt-6">
-                <HoursRow accounts={list.accounts} onOpen={() => go('usage', { cluster: id })} />
-              </List> : null}
-            </div>
-          </div>
-        )}
-      {filtering && <FilterSheet scope={scope} states={states} order={order} onScope={setScope} onStates={setStates}
-        groups={got.list?.groups ?? []} group={group} onGroup={setGroup}
-        onOrder={setOrder} onReset={reset} onClose={() => setFiltering(false)}
-        count={list ? shown.length : null} />}
-      {open && current && <JobSheet cluster={current.id} job={open} appJob={list?.app_job ?? ''}
-        onClose={() => setOpen(null)} onChanged={refresh} />}
+          {scope === 'group' && groups.length > 1 && <Choice label="Group" value={group} onPick={setGroup}
+            options={[['', 'All my groups'], ...groups.map((g) => [g, g] as const)]} />}
+          <SearchField value={query} onChange={setQuery} placeholder="Search id, name, person, queue" />
+        </div>
+      )}
+      {connected && chosen.length > 0 && <PickedBar chosen={chosen} onClear={() => setPicked(new Set())}
+        onCancel={() => (chosen.length === 1 ? setCancel(chosen[0]) : setCancelMany(true))} />}
+      {connected && list && shown.length > 0 && <JobHead sort={sort} onSort={setSort} jobs={shown} picked={picked}
+        onPick={setPicked} />}
+      <div className="min-h-0 flex-1 overflow-y-auto">{body}</div>
+      {connected && !error && (
+        <footer className="flex shrink-0 flex-col border-t border-line bg-window px-3 pt-1.5 pb-2 text-sm">
+          <span className="text-dim">{list ? `${list.jobs.length} jobs · updated ${updated}` : 'Loading…'}</span>
+          {usage && <span>{usage}</span>}
+        </footer>
+      )}
+      {open && cluster && <BackLayer onBack={() => setOpen(null)}>
+        <DetailsDialog cluster={cluster.id} job={open} onClose={() => setOpen(null)}
+          onCancel={() => { setOpen(null); setCancel(open) }} /></BackLayer>}
+      {cancel && cluster && <BackLayer onBack={() => setCancel(null)}>
+        <CancelDialog cluster={cluster.id} job={cancel} appJob={list?.app_job ?? ''}
+          onClose={() => setCancel(null)} onDone={done} /></BackLayer>}
+      {cancelMany && cluster && <BackLayer onBack={() => setCancelMany(false)}>
+        <CancelManyDialog cluster={cluster.id} jobs={chosen} appJob={list?.app_job ?? ''}
+          onClose={() => setCancelMany(false)} onDone={done} /></BackLayer>}
     </div>
   )
 }

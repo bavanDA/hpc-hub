@@ -21,7 +21,7 @@ export function useOpenIn() {
     const then = (to: (folder: string) => void) => () => where().then(to).catch((e: Error) => failed(e.message))
     const start = (key: string) => then((folder) => go('agents', { cluster: t.cluster, folder, start: key }))
     return [
-      { label: 'Code', icon: FileCode, onPick: then((path) => go('code', { cluster: t.cluster, path })) },
+      { label: 'Code', icon: FileCode, onPick: then((folder) => go('code', { cluster: t.cluster, folder })) },
       { label: 'Files', icon: FolderOpen, onPick: then((path) => go('files', { cluster: t.cluster, path })) },
       { label: 'Terminal', icon: SquareTerminal,
         onPick: then((folder) => go('terminals', { cluster: t.cluster, new: '1', folder })) },

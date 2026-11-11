@@ -17,7 +17,7 @@ export function FolderView({ cluster, session, listing, error, entries, sort, on
 }) {
   if (!session?.connected) return <NotConnected cluster={cluster} session={session} what="files" />
   if (!listing) {
-    return error ? <EmptyState icon={FolderX} title="Could not open folder" text={error} />
+    return error ? <EmptyState icon={FolderX} title="Could not open folder" text={error} report />
       : <div className="grid h-full place-items-center"><Spinner size={24} /></div>
   }
   if (!entries.length) {

@@ -10,7 +10,7 @@ copying it. App id `io.github.bavanda.hpchub` (permanent), license MIT.
     hpc_hub/                 Python logic, shared with the desktop
     app/src/                 desktop screens; mobile uses rpc.ts, hooks.ts, types/, components/terminals/pty.ts
     mobile/                  everything Android
-      src/                   phone screens: bottom tabs, full-screen sheets, terminal key row
+      src/                   phone screens: sidebar drawer, full-screen sheets, terminal key row
       src-tauri/             Tauri shell (Rust): starts the backend, keeps the vault key
       src-tauri/gen/android/ the Gradle project (Tauri generates it)
       launcher/              a tiny C program that runs Python: `libhpchub_backend.so`
@@ -45,21 +45,19 @@ from the logic is added to `hpc_hub/` as a normal feature, behind a setting or a
 
 ## Screens
 
-Bottom tabs: **Clusters, Terminals, Code, Jobs, More**, in the desktop sidebar's order. More is a list of screens
-that open on top with a back arrow: Projects, Agents (running, scheduled, skills, permissions), Papers
-(experimental), Usage, Files (the full file manager), Transfers (copies between clusters, Globus), Settings, About.
-Code is a light editor for files on the cluster that works with the agents (docs/design/code.md); its file drawer is
-where you browse to read or edit, so Files moved under More.
+The desktop's sidebar, as a drawer from the top left of every page: the same items and order, the experimental
+ones hidden until they are on in Settings. There is no bottom tab bar and no More page; Settings is at the bottom
+of the drawer, as on the desktop. Files keeps Browse and Transfers as tabs; Agents has Backup as a tab
+(`mobile/REDESIGN.md` is the guide for the redesign of each page).
 
-- **Moving around:** `mobile/src/nav.tsx` keeps the tab and the More screen, and gives shared desktop code the same
-  `go(page, params)` as the desktop (`app/src/nav.ts`): each desktop page maps to a tab or a More screen
+- **Moving around:** `mobile/src/nav.tsx` keeps the page and any screen on top of it, and gives shared desktop code
+  the same `go(page, params)` as the desktop (`app/src/nav.ts`): each desktop page maps to a page or a tab of one
   (`placeOf`). Every page that shows one cluster follows the cluster picked anywhere (`clusters/active.ts`).
 - **Back:** Android's Back walks the WebView's history. Each sheet and each screen on top pushes an entry
-  (`useBackLayer`), so Back closes the top one first, then returns to the More list, then to Clusters, and only
-  then leaves the app.
+  (`useBackLayer`), so Back closes the top one first, then goes to Clusters, and only then leaves the app.
 - **Pieces** (`mobile/src/ui.tsx`): full-screen sheets, bottom sheets for actions, confirms and pickers, list rows,
-  chips, search and text fields. Touch targets are at least 44 px; long-press opens actions instead of a right-click
-  menu; nothing depends on hover.
+  chips, search and text fields, most of them the desktop's own (`mobile/REDESIGN.md`). Long-press opens actions
+  instead of a right-click menu; nothing depends on hover.
 - **Terminals** have a key row over the keyboard (Esc, Tab, Ctrl, arrows).
 - **What only Android can do** (pick files, save to Downloads, open or share a file, stay connected in the
   background) goes through `mobile/src/parts/native.ts`.
@@ -71,7 +69,7 @@ where you browse to read or edit, so Files moved under More.
   recording, or says the word with the phone's voice. In a browser the demo uses the browser's voices, or a quiet
   one that only keeps time (`?speech=quiet`).
 
-`npm run dev` in `mobile/` shows the screens in a browser with the desktop's demo data; `?tab=jobs`, `?tab=usage`
+`npm run dev` in `mobile/` shows the screens in a browser with the desktop's demo data; `?page=jobs`, `?page=usage`
 or any desktop page name opens that screen.
 
 ## VPN
@@ -95,8 +93,8 @@ SSH goes through it, so Wulver and Yale can be up at the same time, each with it
   `<cluster>:22`, looking the name up with the VPN's DNS. It is up when the cluster's SSH server greets through
   that port. SSH dials the port (`core/tunnels.py`) but checks the host key under the cluster's own name.
   Disconnect stops openconnect (it logs out); ocproxy stops by itself.
-- **Logins:** the same saved logins as the laptop. A VPN with a login of its own (Yale's) has it in the phone's
-  sign-in sheet, and the desktop's QR code brings it along.
+- **Logins:** the same saved logins as the laptop. A VPN with a login of its own (Yale's) has it under Server and
+  VPN in the cluster's settings, and the desktop's QR code brings it along.
 - **In the background:** "Keep connected in the background" (`KeepAliveService.kt`) keeps the tunnels up with the
   SSH sessions: they are the app's own processes, and Android lets an app with that service use the network in
   Doze.

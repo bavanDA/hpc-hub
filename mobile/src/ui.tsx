@@ -1,42 +1,213 @@
-// The phone's own pieces, in style E (docs/design/style-e/README.md): rows on a plain background with hairlines, the
-// label on the left and the value on the right, numbers you type in place, one solid main button. Every sheet takes
-// part in Android's Back (nav.tsx useBackLayer). Touch targets are at least 48 px. Text wraps; nothing is cut off.
-import { Check, ChevronRight, Search, X, type LucideIcon } from 'lucide-react'
-import {
-  createContext, useCallback, useContext, useState, type ButtonHTMLAttributes, type ReactNode,
-  type TextareaHTMLAttributes,
-} from 'react'
+// The phone's pieces, the same as the desktop's (app/src/components/e), so the phone matches it row for row. Pieces
+// made for a phone: Dialog and the other windows take part in Android's Back (nav.tsx useBackLayer), Tabs scroll
+// sideways, and the old full-screen Sheet and bottom panels stay until their pages are redone (mobile/REDESIGN.md).
+import { ChevronDown, ChevronRight, X, type LucideIcon } from 'lucide-react'
+import { useEffect, useLayoutEffect, useRef, useState, type ComponentProps, type ReactNode } from 'react'
 
-import { human } from '@shared/components/clusters/time'
+import type { TabItem } from '@shared/components/app/Tabs'
+import { ConfirmDialog as EConfirmDialog } from '@shared/components/e/ConfirmDialog'
+import { EDialog } from '@shared/components/e/EDialog'
+import { Field } from '@shared/components/e/Field'
+import { MainButton } from '@shared/components/e/MainButton'
+import { PickDialog as EPickDialog } from '@shared/components/e/PickDialog'
+import { Row } from '@shared/components/e/Row'
+import { ROW } from '@shared/components/e/styles'
+import { Segments } from '@shared/components/e/Segments'
+import { Switch as ETrack } from '@shared/components/e/Switch'
+import type { MenuItem } from '@shared/components/projects/Menu'
+import { ToastProvider } from '@shared/components/toast'
+import { useToast } from '@shared/components/useToast'
 import { useBackLayer } from './nav'
 
-type Kind = 'primary' | 'danger' | 'plain' | 'quiet'
-const LOOK: Record<Kind, string> = {
-  primary: 'bg-accent text-on-accent active:bg-accent-pressed',
-  danger: 'bg-bad-fill text-white active:brightness-90',  // destructive: always solid red, never pale
-  plain: 'border border-line-strong active:bg-pressed',
-  quiet: 'active:bg-pressed',
-}
-
-/** A button. One "primary" per screen (the main action); the rest are plain. */
-export function Button({ kind = 'plain', icon: Icon, className = '', children, ...props }:
-  ButtonHTMLAttributes<HTMLButtonElement> & { kind?: Kind; icon?: LucideIcon }) {
-  return (
-    <button {...props} className={`flex min-h-12 items-center justify-center gap-2 rounded-[10px] px-4 text-center
-      leading-tight font-semibold disabled:opacity-40 ${LOOK[kind]} ${className}`}>
-      {Icon && <Icon size={20} className="shrink-0" />}{children}
-    </button>
-  )
-}
-
-/** The screen's main action: full width, solid (black on light, white on dark). */
-export function MainButton(props: ButtonHTMLAttributes<HTMLButtonElement> & { icon?: LucideIcon }) {
-  return <Button kind="primary" {...props} className={`h-[52px] w-full text-base ${props.className ?? ''}`} />
-}
+export { Amount } from '@shared/components/e/Amount'
+export { DurationRow } from '@shared/components/e/DurationRow'
+export { EButton as Button } from '@shared/components/e/EButton'
+export { EmptyState } from '@shared/components/e/EmptyState'
+export { Field }
+export { ItemRow } from '@shared/components/e/ItemRow'
+export { MainButton }
+export { NumberRow } from '@shared/components/e/NumberRow'
+export { inRange } from '@shared/components/e/range'
+export { Row }
+export { SearchField } from '@shared/components/e/SearchField'
+export { Section } from '@shared/components/e/Section'
+export { Segments }
+export { StatusDot, type Tone } from '@shared/components/e/StatusDot'
+export { TextArea } from '@shared/components/e/TextArea'
+export type { TabItem } from '@shared/components/app/Tabs'
+export type { MenuItem } from '@shared/components/projects/Menu'
+export { ToastProvider, useToast }
 
 export function Card({ children, className = '' }: { children: ReactNode; className?: string }) {
   return <section className={`rounded-xl border border-line bg-card p-4 ${className}`}>{children}</section>
 }
+
+/** Mount with a window from the desktop that doesn't know about Back: Back closes it (AboutDialog in Settings). */
+export function BackLayer({ onBack, children }: { onBack: () => void; children: ReactNode }) {
+  useBackLayer(onBack)
+  return children
+}
+
+// -- windows: the desktop's dialog, centred, closed by Android's Back -------------------------------------------
+
+/** The desktop's window: title and close at the top, content that scrolls, actions at the bottom. Content has no
+ *  padding, for windows made of rows; padded content goes in a div with px-5. */
+export function Dialog(props: ComponentProps<typeof EDialog>) {
+  useBackLayer(props.onClose)
+  useBackLayer(props.onBack ?? props.onClose, !!props.onBack)  // with a back arrow, Android's Back does what it does first
+  return <EDialog {...props} />
+}
+
+/** The desktop's confirm window: what happens, then two buttons that say what they do (never a bare Cancel). */
+export function ConfirmDialog(props: ComponentProps<typeof EConfirmDialog>) {
+  useBackLayer(props.onClose)
+  return <EConfirmDialog {...props} />
+}
+export const ConfirmSheet = ConfirmDialog
+
+/** Pick one of many: the desktop's list window, a check on the current one. */
+export function PickDialog<T extends string>(props: ComponentProps<typeof EPickDialog<T>>) {
+  useBackLayer(props.onClose)
+  return <EPickDialog {...props} />
+}
+export type PickerOption<T extends string> = { value: T; label: string; hint?: string }
+export const PickerSheet = PickDialog
+
+// -- the page frame: tabs, buttons, menus -------------------------------------------------------------------------
+
+/** The desktop's tab row, scrolling sideways when there isn't room (under a page's Header). */
+export function Tabs<T extends string>({ tabs, current, onPick, label }:
+  { tabs: TabItem<T>[]; current: T; onPick: (id: T) => void; label: string }) {
+  return (
+    <div role="tablist" aria-label={label} className="flex shrink-0 gap-1 overflow-x-auto border-b border-line px-2
+      [scrollbar-width:none]">
+      {tabs.map(({ id, title, icon: Icon }) => (
+        <button key={id} role="tab" aria-selected={id === current} onClick={() => onPick(id)}
+          className={`-mb-px flex h-11 shrink-0 items-center gap-2 border-b-2 px-2.5 font-semibold ${
+            id === current ? 'border-accent text-text' : 'border-transparent text-dim active:text-text'}`}>
+          {Icon && <Icon size={16} />}{title}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+/** Above the page's content, under the tabs: buttons on the right, a note on the left (the desktop's page actions). */
+export function PageBar({ children }: { children: ReactNode }) {
+  return <div className="flex min-h-14 shrink-0 items-center gap-2 pr-3 pb-2 pl-5">{children}</div>
+}
+
+/** A square icon button, 40 px (36 with small). */
+export function IconBtn({ icon: Icon, label, onClick, small = false, iconSize = 16, disabled }: {
+  icon: LucideIcon; label: string; onClick?: () => void; small?: boolean; iconSize?: number; disabled?: boolean
+}) {
+  return (
+    <button aria-label={label} onClick={onClick} disabled={disabled}
+      className={`grid shrink-0 place-items-center rounded-md text-dim active:bg-pressed disabled:opacity-40 ${
+        small ? 'size-9' : 'size-10'}`}><Icon size={iconSize} /></button>
+  )
+}
+
+/** The desktop's select (filters, a queue): the current choice and an arrow. Opens a PickDialog. */
+export function SelectButton({ label, onPress, className = '' }:
+  { label: ReactNode; onPress: () => void; className?: string }) {
+  return (
+    <button onClick={onPress} className={`flex h-9 min-w-0 items-center justify-between gap-2 rounded-lg border
+      border-line-strong bg-window pr-2.5 pl-3 font-medium whitespace-nowrap active:bg-pressed ${className}`}>
+      <span className="min-w-0 truncate">{label}</span><ChevronDown size={16} className="shrink-0 text-dim" />
+    </button>
+  )
+}
+
+/** The desktop's menu: a button (⋮ with an icon as trigger) and its list under it. Back and a tap away close it.
+ *  Each group is separated by a hairline. */
+export function Menu({ groups, trigger, label, className = '' }:
+  { groups: MenuItem[][]; trigger: ReactNode; label: string; className?: string }) {
+  const [open, setOpen] = useState(false)
+  const [at, setAt] = useState<{ top: number; right: number } | null>(null)
+  const button = useRef<HTMLButtonElement>(null)
+  const menu = useRef<HTMLDivElement>(null)
+  useBackLayer(() => setOpen(false), open)
+  useLayoutEffect(() => {
+    if (!open || !button.current) return
+    const r = button.current.getBoundingClientRect()
+    const height = menu.current?.offsetHeight ?? 0
+    const up = r.bottom + 6 + height > window.innerHeight && r.top - 6 - height > 0
+    setAt({ top: up ? r.top - 6 - height : r.bottom + 6, right: window.innerWidth - r.right })
+  }, [open])
+  useEffect(() => {
+    if (!open) return
+    const away = (e: Event) => {
+      if (e.target instanceof Node && (menu.current?.contains(e.target) || button.current?.contains(e.target))) return
+      setOpen(false)
+    }
+    window.addEventListener('mousedown', away, true)
+    window.addEventListener('scroll', away, true)
+    return () => { window.removeEventListener('mousedown', away, true); window.removeEventListener('scroll', away, true) }
+  }, [open])
+  return (
+    <>
+      <button ref={button} aria-label={label} aria-expanded={open} onClick={() => setOpen(!open)} className={className}>
+        {trigger}</button>
+      {open && (
+        <div ref={menu} role="menu" style={{ top: at?.top ?? -9999, right: at?.right ?? 0 }}
+          className="menu-in fixed z-50 min-w-[200px] rounded-lg bg-raised py-1 shadow-[var(--shadow-menu)]">
+          {groups.filter((g) => g.length).map((g, n) => (
+            <div key={n} className={n ? 'mt-1 border-t border-line pt-1' : ''}>
+              {g.map(({ label: text, icon: Icon, onClick, danger }) => (
+                <button key={text} role="menuitem" onClick={() => { setOpen(false); onClick() }}
+                  className={`flex h-10 w-full items-center gap-3 px-3 text-left active:bg-pressed ${danger ? 'text-bad' : ''}`}>
+                  {Icon && <Icon size={16} className={`shrink-0 ${danger ? '' : 'text-dim'}`} />}
+                  <span className="truncate">{text}</span>
+                </button>
+              ))}
+            </div>
+          ))}
+        </div>
+      )}
+    </>
+  )
+}
+
+// -- rows and switches ---------------------------------------------------------------------------------------------
+
+/** A list of rows: a hairline on top, each row draws the one under it. */
+export function List({ children, className = '' }: { children: ReactNode; className?: string }) {
+  return <div className={`border-t border-line ${className}`}>{children}</div>
+}
+
+/** A label and a switch, inside padded content. */
+export function Switch({ label, hint, checked, onChange }:
+  { label: string; hint?: string; checked: boolean; onChange: (on: boolean) => void }) {
+  return (
+    <label className="flex min-h-12 items-center gap-3 py-2">
+      <span className="min-w-0 flex-1 break-words">
+        <span className="block">{label}</span>
+        {hint && <span className="block text-sm text-dim">{hint}</span>}
+      </span>
+      <ETrack checked={checked} onChange={onChange} label={label} />
+    </label>
+  )
+}
+
+/** A switch as a row of a list (the desktop's, with room for an icon). */
+export function ToggleRow({ label, sub, checked, onChange, icon: Icon }:
+  { label: string; sub?: ReactNode; checked: boolean; onChange: (on: boolean) => void; icon?: LucideIcon }) {
+  return (
+    <label className={`${ROW} active:bg-pressed`}>
+      {Icon && <Icon size={18} className="shrink-0 text-dim" />}
+      <span className="min-w-0 flex-1 break-words">
+        <span className="block">{label}</span>
+        {sub && <span className="block text-sm text-dim">{sub}</span>}
+      </span>
+      <ETrack checked={checked} onChange={onChange} label={typeof label === 'string' ? label : undefined} />
+    </label>
+  )
+}
+
+export const Segmented = Segments
+
+// -- the old pieces, until their pages are redone (mobile/REDESIGN.md) ----------------------------------------------
 
 /** A screen over everything (a phone's dialog): close, title, content that scrolls, the actions at the bottom.
  *  flush: the content has no padding, for screens made of rows. */
@@ -57,218 +228,6 @@ export function Sheet({ title, onClose, children, actions, flush = false }:
   )
 }
 
-/** A list of rows: a hairline on top, each row draws the one under it. */
-export function List({ children, className = '' }: { children: ReactNode; className?: string }) {
-  return <div className={`border-t border-line ${className}`}>{children}</div>
-}
-
-/** A titled group of rows. */
-export function Section({ title, note, children }: { title?: string; note?: ReactNode; children: ReactNode }) {
-  return (
-    <section className="pt-5">
-      {title && <h3 className="px-4 pb-1.5 text-xs font-semibold tracking-wide text-dim uppercase">{title}</h3>}
-      <List>{children}</List>
-      {note && <p className="px-4 pt-2 text-sm text-dim">{note}</p>}
-    </section>
-  )
-}
-
-/** One row: label on the left, value on the right. A chevron only when it opens another screen (opens). */
-export function Row({ label, sub, value, icon: Icon, opens = false, onPress, danger = false, children }: {
-  label: ReactNode; sub?: ReactNode; value?: ReactNode; icon?: LucideIcon; opens?: boolean; onPress?: () => void
-  danger?: boolean; children?: ReactNode
-}) {
-  const body = (
-    <>
-      {Icon && <Icon size={22} className={`shrink-0 ${danger ? 'text-bad' : 'text-dim'}`} />}
-      <span className="min-w-0 flex-1 break-words">
-        <span className={`block ${danger ? 'text-bad' : ''}`}>{label}</span>
-        {sub && <span className="block text-sm text-dim">{sub}</span>}
-      </span>
-      {value !== undefined && <span className="max-w-[60%] text-right font-medium break-words tabular-nums">
-        {value}</span>}
-      {children}
-      {opens && <ChevronRight size={18} className="-mr-1 shrink-0 text-dim" />}
-    </>
-  )
-  const cls = 'flex min-h-14 w-full items-center gap-3 border-b border-line px-4 py-2 text-left text-base'
-  return onPress
-    ? <button onClick={onPress} className={`${cls} active:bg-pressed`}>{body}</button>
-    : <div className={cls}>{body}</div>
-}
-
-/** A number and its unit, the unit smaller and grey: 8 GB. */
-export function Amount({ n, unit }: { n: ReactNode; unit?: string }) {
-  return <>{n}{unit && <small className="ml-1 text-sm font-normal text-dim">{unit}</small>}</>
-}
-
-/** Whether a typed number is allowed. */
-export const inRange = (v: number, min: number, max?: number | null) => v >= min && (!max || v <= max)
-
-/** The box you type a number in: big, with its unit inside on the right. */
-function NumberBox({ label, value, unit, bad, onChange, autoFocus, inline = false }: {
-  label: string; value: string; unit: string; bad: boolean; onChange: (text: string) => void; autoFocus?: boolean
-  inline?: boolean  // one of several side by side
-}) {
-  return (
-    <label className={`flex h-[52px] min-w-0 shrink-0 items-center ${inline ? 'grow basis-0' : ''} rounded-lg border-[1.5px] bg-window px-3.5
-      ${bad ? 'border-bad' : 'border-accent'}`}>
-      <input aria-label={label} aria-invalid={bad} type="text" inputMode="numeric" pattern="[0-9]*"
-        enterKeyHint="done" autoFocus={autoFocus} value={value}
-        onChange={(e) => onChange(e.target.value.replace(/\D/g, '').slice(0, 6))}
-        onFocus={(e) => e.target.select()}
-        onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur() }}
-        className="w-full min-w-0 bg-transparent text-[22px] font-semibold tabular-nums outline-none" />
-      <span className="ml-2 shrink-0 text-[15px] text-dim">{unit}</span>
-    </label>
-  )
-}
-
-/** A number row (cores, GB, GPUs). Tap it and it opens in place as a big input with its limit; any whole number
- *  from min to max can be typed. Out of range, the limit turns red and stays under the row; the screen disables its
- *  main button (inRange). */
-export function NumberRow({ label, value, unit, showUnit = true, min = 1, max, onChange }: {
-  label: string; value: number; unit: string; showUnit?: boolean; min?: number; max?: number | null
-  onChange: (n: number) => void
-}) {
-  const [draft, setDraft] = useState<string | null>(null)
-  const ok = inRange(value, min, max)
-  const units = (n: number) => `${n} ${n === 1 && unit.endsWith('s') ? unit.slice(0, -1) : unit}`  // 1 core
-  const limit = value < min ? `At least ${units(min)}` : max ? `Up to ${units(max)}` : ''
-  if (draft !== null) {
-    return (
-      <div className="flex flex-col gap-2 border-b border-line bg-soft px-4 pt-3 pb-3.5"
-        onBlur={() => setDraft(null)}>
-        <div className="flex justify-between gap-3 text-sm text-dim">
-          <span>{label}</span><span className={ok ? '' : 'font-semibold text-bad'}>{limit}</span></div>
-        <NumberBox label={label} value={draft} unit={unit} bad={!ok} autoFocus
-          onChange={(t) => { setDraft(t); onChange(t ? parseInt(t, 10) : 0) }} />
-      </div>
-    )
-  }
-  return (
-    <Row label={label} sub={!ok && <span className="font-semibold text-bad">{limit}</span>}
-      onPress={() => setDraft(String(value || ''))}
-      value={<span className={ok ? '' : 'text-bad'}>{value >= 0
-        ? <Amount n={value} unit={showUnit ? unit : undefined} /> : 'Not set'}</span>} />
-  )
-}
-
-/** "1 day 4 h" in row form: numbers strong, units grey, the parts that are 0 left out. */
-function Duration({ total }: { total: number }) {
-  const d = Math.floor(total / 1440), h = Math.floor((total % 1440) / 60), m = total % 60
-  const parts = ([[d, d === 1 ? 'day' : 'days'], [h, 'h'], [m, 'min']] as const).filter(([n]) => n > 0)
-  if (!parts.length) return <Amount n={0} unit="min" />
-  return <>{parts.map(([n, unit], i) => <span key={unit}>{i > 0 && ' '}<Amount n={n} unit={unit} /></span>)}</>
-}
-
-/** A length of time typed as days, hours and minutes, in place like NumberRow. max: the longest allowed (minutes). */
-export function DurationRow({ label, minutes: total, max, onChange }:
-  { label: string; minutes: number; max?: number | null; onChange: (m: number) => void }) {
-  const [draft, setDraft] = useState<[string, string, string] | null>(null)
-  const ok = inRange(total, 1, max)
-  const limit = total < 1 ? 'At least 1 min' : max ? `Up to ${human(max)}` : ''
-  if (draft !== null) {
-    const set = (i: number, t: string) => {
-      const next = [...draft] as [string, string, string]
-      next[i] = t
-      setDraft(next)
-      const [d, h, m] = next.map((x) => parseInt(x || '0', 10))
-      onChange(d * 1440 + h * 60 + m)
-    }
-    return (
-      <div className="flex flex-col gap-2 border-b border-line bg-soft px-4 pt-3 pb-3.5"
-        onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setDraft(null) }}>
-        <div className="flex justify-between gap-3 text-sm text-dim">
-          <span>{label}</span><span className={ok ? '' : 'font-semibold text-bad'}>{limit}</span></div>
-        <div className="flex gap-2">
-          <NumberBox inline label="Days" value={draft[0]} unit="d" bad={!ok} onChange={(t) => set(0, t)} />
-          <NumberBox inline label="Hours" value={draft[1]} unit="h" bad={!ok} autoFocus onChange={(t) => set(1, t)} />
-          <NumberBox inline label="Minutes" value={draft[2]} unit="min" bad={!ok} onChange={(t) => set(2, t)} />
-        </div>
-      </div>
-    )
-  }
-  const open = () => setDraft([String(Math.floor(total / 1440)), String(Math.floor((total % 1440) / 60)),
-    String(total % 60)])
-  return (
-    <Row label={label} sub={!ok && <span className="font-semibold text-bad">{limit}</span>} onPress={open}
-      value={<span className={ok ? '' : 'text-bad'}><Duration total={total} /></span>} />
-  )
-}
-
-/** On or off: the switch alone, black (or white on dark) when on. */
-function Track({ checked, onChange, label }: { checked: boolean; onChange: (on: boolean) => void; label?: string }) {
-  return (
-    <>
-      <input type="checkbox" role="switch" aria-label={label} checked={checked}
-        onChange={(e) => onChange(e.target.checked)} className="peer sr-only" />
-      <span className="relative h-7 w-12 shrink-0 rounded-full bg-line-strong transition-colors peer-checked:bg-accent
-        peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-focus
-        after:absolute after:top-1 after:left-1 after:size-5 after:rounded-full after:bg-window after:transition
-        peer-checked:after:translate-x-5 peer-checked:after:bg-on-accent" />
-    </>
-  )
-}
-
-/** A label and a switch, inside padded content. */
-export function Switch({ label, hint, checked, onChange }:
-  { label: string; hint?: string; checked: boolean; onChange: (on: boolean) => void }) {
-  return (
-    <label className="flex min-h-14 items-center gap-3 py-2">
-      <span className="min-w-0 flex-1 break-words">
-        <span className="block">{label}</span>
-        {hint && <span className="block text-sm text-dim">{hint}</span>}
-      </span>
-      <Track checked={checked} onChange={onChange} />
-    </label>
-  )
-}
-
-/** A switch as a row of a list. */
-export function ToggleRow({ label, sub, checked, onChange, icon: Icon }:
-  { label: string; sub?: ReactNode; checked: boolean; onChange: (on: boolean) => void; icon?: LucideIcon }) {
-  return (
-    <label className="flex min-h-14 w-full items-center gap-3 border-b border-line px-4 py-2 active:bg-pressed">
-      {Icon && <Icon size={22} className="shrink-0" />}
-      <span className="min-w-0 flex-1 break-words">
-        <span className="block">{label}</span>
-        {sub && <span className="block text-sm text-dim">{sub}</span>}
-      </span>
-      <Track checked={checked} onChange={onChange} />
-    </label>
-  )
-}
-
-const BOX = 'h-12 w-full rounded-lg border border-line-strong bg-window px-3.5 text-base outline-none '
-  + 'focus:border-accent focus:ring-1 focus:ring-accent'
-
-export function Field({ label, ...props }: { label: string } & React.InputHTMLAttributes<HTMLInputElement>) {
-  return (
-    <label className="block py-2">
-      <span className="mb-1.5 block text-sm text-dim">{label}</span>
-      <input {...props} className={BOX} />
-    </label>
-  )
-}
-
-/** One choice of a few, side by side (quick sizes, scope of jobs). value '' when none of them is the current one. */
-export function Segments<T extends string>({ value, options, onChange, label }:
-  { value: T | ''; options: readonly (readonly [T, string])[]; onChange: (v: T) => void; label?: string }) {
-  return (
-    <div role="radiogroup" aria-label={label} className="flex min-h-14 gap-[3px] rounded-[10px] border
-      border-line-strong p-[3px]">
-      {options.map(([v, text]) => (
-        <button key={v} role="radio" aria-checked={v === value} onClick={() => onChange(v)}
-          className={`min-w-0 flex-1 rounded-[7px] px-1.5 py-1 text-sm leading-tight break-words
-            ${v === value ? 'bg-accent font-semibold text-on-accent' : 'font-medium text-dim active:bg-pressed'}`}>
-          {text}</button>
-      ))}
-    </div>
-  )
-}
-export const Segmented = Segments
-
 /** One row of a list inside padded content: icon, title, a line under it, a chevron when it opens something. */
 export function ListRow({ icon: Icon, title, subtitle, trailing, onClick, danger = false }: {
   icon?: LucideIcon; title: ReactNode; subtitle?: ReactNode; trailing?: ReactNode; onClick?: () => void
@@ -285,7 +244,7 @@ export function ListRow({ icon: Icon, title, subtitle, trailing, onClick, danger
       {onClick && !trailing && <ChevronRight size={18} className="shrink-0 text-dim" />}
     </>
   )
-  const cls = 'flex min-h-14 w-full items-center gap-3 py-2 text-left'
+  const cls = 'flex min-h-12 w-full items-center gap-3 py-2 text-left'
   return onClick
     ? <button onClick={onClick} className={`${cls} active:bg-pressed`}>{body}</button>
     : <div className={cls}>{body}</div>
@@ -333,69 +292,6 @@ export function useAskBeforeClose(dirty: boolean, onClose: () => void): [() => v
   return [close, ask]
 }
 
-/** Are you sure: what happens, then two buttons that say what they do. keep is the safe one ("Keep it", "Keep
- *  running", "Stay connected"), never a bare Cancel; a danger confirm is solid red. onKeep: keep does something too
- *  (Run on the login node), which closing the sheet doesn't. */
-export function ConfirmSheet({ title, text, keep, confirm, danger = false, onConfirm, onKeep, onClose }: {
-  title: string; text?: ReactNode; keep: string; confirm: string; danger?: boolean; onConfirm: () => void
-  onKeep?: () => void; onClose: () => void
-}) {
-  return (
-    <BottomSheet onClose={onClose}>
-      <h2 className="text-lg font-semibold">{title}</h2>
-      {text && <p className="pt-1 text-dim">{text}</p>}
-      <div className="mt-5 flex flex-wrap gap-3">
-        <Button className="min-w-fit flex-1 whitespace-nowrap" onClick={() => { onClose(); onKeep?.() }}>
-          {keep}</Button>
-        <Button kind={danger ? 'danger' : 'primary'} className="min-w-fit flex-1 whitespace-nowrap"
-          onClick={() => { onClose(); onConfirm() }}>{confirm}</Button>
-      </div>
-    </BottomSheet>
-  )
-}
-
-export type PickerOption<T extends string> = { value: T; label: string; hint?: string }
-
-/** Pick one of many (a queue, a group to bill, a cluster): a list with a check on the current one. */
-export function PickerSheet<T extends string>({ title, options, value, onPick, onClose }: {
-  title: string; options: PickerOption<T>[]; value?: T; onPick: (v: T) => void; onClose: () => void
-}) {
-  return (
-    <BottomSheet title={title} onClose={onClose}>
-      <div className="-mx-4 border-t border-line">
-        {options.map((o) => (
-          <Row key={o.value} label={o.label} sub={o.hint} onPress={() => { onClose(); onPick(o.value) }}>
-            {o.value === value ? <Check size={20} aria-label="Chosen" className="shrink-0" /> : <span className="w-5" />}
-          </Row>
-        ))}
-      </div>
-    </BottomSheet>
-  )
-}
-
-export function TextArea({ label, ...props }: { label: string } & TextareaHTMLAttributes<HTMLTextAreaElement>) {
-  return (
-    <label className="block py-2">
-      <span className="mb-1.5 block text-sm text-dim">{label}</span>
-      <textarea {...props} className={`${BOX} min-h-28 py-3`} />
-    </label>
-  )
-}
-
-export function SearchField({ value, onChange, placeholder = 'Search' }:
-  { value: string; onChange: (v: string) => void; placeholder?: string }) {
-  return (
-    <label className="flex h-12 items-center gap-2 rounded-[10px] bg-soft px-3.5">
-      <Search size={20} className="shrink-0 text-dim" />
-      <input type="search" value={value} placeholder={placeholder} aria-label={placeholder}
-        onChange={(e) => onChange(e.target.value)}
-        className="min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-dim" />
-      {value && <button aria-label="Clear" onClick={() => onChange('')}
-        className="-mr-2 grid size-12 place-items-center rounded-full text-dim active:bg-pressed"><X size={18} /></button>}
-    </label>
-  )
-}
-
 /** Filters as a row of chips; several can be on (state filters), or exactly one when one is set. */
 export function Chips<T extends string>({ options, value, onChange, one = false }: {
   options: readonly (readonly [T, string])[]; value: T[]; onChange: (v: T[]) => void; one?: boolean
@@ -415,54 +311,6 @@ export function Chips<T extends string>({ options, value, onChange, one = false 
     </div>
   )
 }
-
-export type Tone = 'on' | 'busy' | 'off' | 'error'
-
-/** A small status dot: solid when on, breathing while something happens, hollow when off, red on an error. */
-export function StatusDot({ tone }: { tone: Tone }) {
-  const look = { on: 'bg-ok-dot', busy: 'bg-dim animate-pulse', off: 'border-[1.5px] border-dim', error: 'bg-bad' }[tone]
-  return <span aria-hidden className={`inline-block size-2 shrink-0 rounded-full ${look}`} />
-}
-
-/** Nothing here yet: a grey icon, what is missing, and what to do about it. */
-export function EmptyState({ icon: Icon, title, text, action }:
-  { icon: LucideIcon; title: string; text?: ReactNode; action?: ReactNode }) {
-  return (
-    <div className="flex flex-col items-center gap-2 px-8 py-12 text-center">
-      <Icon size={28} className="mb-1 text-dim" />
-      <h2 className="text-base font-semibold">{title}</h2>
-      {text && <p className="max-w-[36ch] text-dim">{text}</p>}
-      {action && <div className="mt-3">{action}</div>}
-    </div>
-  )
-}
-
-/** toast('Saved'); it answers a function that takes the toast away early. */
-const ToastContext = createContext<(text: string) => () => void>(() => () => {})
-
-export function ToastProvider({ children }: { children: ReactNode }) {
-  const [toasts, setToasts] = useState<{ id: number; text: string }[]>([])
-  const toast = useCallback((text: string) => {
-    const id = Date.now() + Math.random()
-    const drop = () => setToasts((t) => t.filter((x) => x.id !== id))
-    setToasts((t) => [...t, { id, text }])
-    setTimeout(drop, 4000)
-    return drop
-  }, [])
-  return (
-    <ToastContext.Provider value={toast}>
-      {children}
-      <div className="pointer-events-none fixed inset-x-4 bottom-[calc(var(--bottom)+88px)] z-50 flex flex-col
-        items-center gap-2">
-        {toasts.map((t) => (
-          <div key={t.id} className="rounded-[10px] bg-text px-4 py-3 text-center text-window">{t.text}</div>
-        ))}
-      </div>
-    </ToastContext.Provider>
-  )
-}
-
-export const useToast = () => useContext(ToastContext)
 
 /** The panel from the bottom on its own, for sheets that need more than a list or a yes/no (cancel a job). */
 export { BottomSheet }

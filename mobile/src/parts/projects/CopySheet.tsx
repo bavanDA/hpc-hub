@@ -8,7 +8,7 @@ import { Spinner } from '@shared/components/ui/Spinner'
 import { useEvent } from '@shared/hooks'
 import { call } from '@shared/rpc'
 import type { CopyPlan, CopyTargets, Place, Places, Project } from '@shared/types/projects'
-import { MainButton, PickerSheet, Row, Segments, Sheet } from '../../ui'
+import { MainButton, PickerSheet, Row, Segments, Dialog } from '../../ui'
 import { useAskForNode } from '../AskForNode'
 import { shortCluster, wrapPath } from '../code/util'
 import { startFolder } from '@shared/components/projects/copyInto'
@@ -23,20 +23,20 @@ const inside = (into: string, path: string) => into === path || into.startsWith(
 function Step({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section className="pt-5">
-      <h3 className="px-4 pb-1.5 text-xs font-semibold tracking-wide text-dim uppercase">{title}</h3>
+      <h3 className="px-5 pb-1.5 text-xs font-semibold tracking-wide text-dim uppercase">{title}</h3>
       {children}
     </section>
   )
 }
 
-const NOTE = 'px-4 pt-2 text-sm text-dim'
+const NOTE = 'px-5 pt-2 text-sm text-dim'
 
 /** A row you tick: name on the left, its size on the right. */
 function Tick({ title, size, checked, onChange }:
   { title: string; size: number; checked: boolean; onChange: (on: boolean) => void }) {
   return (
     <button role="checkbox" aria-checked={checked} onClick={() => onChange(!checked)}
-      className="flex min-h-14 w-full items-center gap-3 border-b border-line px-4 py-2 text-left active:bg-pressed">
+      className="flex min-h-14 w-full items-center gap-3 border-b border-line px-5 py-2 text-left active:bg-pressed">
       <span className={`grid size-6 shrink-0 place-items-center rounded-md border-2 ${
         checked ? 'border-accent bg-accent text-on-accent' : 'border-line-strong'}`}>{checked && <Check size={16} />}</span>
       <span className="min-w-0 flex-1 break-all">{title}</span>
@@ -117,7 +117,7 @@ export function CopySheet({ p, onClose, onStarted }:
 
   return (
     <>
-      <Sheet flush title={`Copy ${p.name}`} onClose={onClose} actions={
+      <Dialog title={`Copy ${p.name}`} onClose={onClose} actions={
         <MainButton disabled={!dst || !!missing || busy} onClick={go}>
           {busy ? <Spinner /> : `Copy${plan ? ` ${formatSize(files)}` : ''}`}</MainButton>}>
         {!info ? <div className="grid h-40 place-items-center">
@@ -132,7 +132,7 @@ export function CopySheet({ p, onClose, onStarted }:
                     : 'Pick one'} />
               </div>
               {spots.length > 0 && (
-                <div className="px-4 pt-3">
+                <div className="px-5 pt-3">
                   <Segments label="Into" value={spot?.label ?? ''} options={spots.map((s) => [s.label, s.label] as const)}
                     onChange={(label) => {
                       const s = spots.find((x) => x.label === label)
@@ -152,7 +152,7 @@ export function CopySheet({ p, onClose, onStarted }:
             {same ? <p className={NOTE}>{shortCluster(dst?.name ?? '')} copies it from folder to folder itself. Copying
               again only sends what changed, and the files count for the group whose folder they land in.</p>
               : <Step title="How">
-              <div className="px-4">
+              <div className="px-5">
                 <Segments label="How" value={how} onChange={setHow}
                   options={[['globus', 'Globus'], ['phone', 'Through this phone']] as const} />
               </div>
@@ -185,10 +185,10 @@ export function CopySheet({ p, onClose, onStarted }:
                   : 'Tick the ones to keep going there.'}</p>
               </Step>
             )}
-            {error && <p className="px-4 pt-4 select-text text-bad">{error}</p>}
+            {error && <p className="px-5 pt-4 select-text text-bad">{error}</p>}
           </>
         )}
-      </Sheet>
+      </Dialog>
       {nodeFirst.sheet}
 
       {open === 'to' && info && (
