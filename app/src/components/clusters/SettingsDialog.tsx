@@ -111,7 +111,7 @@ export function SettingsDialog({ cluster, hint, onClose, start = '', advanced = 
         actions={part && part !== entry ? <MainButton onClick={back}>Done</MainButton>
           : <MainButton disabled={busy || !saved || !info} onClick={save}>Save</MainButton>}>
         {hint && (part === '' || part === 'login') && <DialogNote>{hint}</DialogNote>}
-        {(error || login.failed) && <DialogNote error>{error || login.failed}</DialogNote>}
+        {(error || login.failed) && <DialogNote error report={error || undefined}>{error || login.failed}</DialogNote>}
         <div className="pb-3">{pages[part]}</div>
       </EDialog>
       {open === 'leave' && <ConfirmDialog title="Throw away your changes?" danger keep="Keep editing"

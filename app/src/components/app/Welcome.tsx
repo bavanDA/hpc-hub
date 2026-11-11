@@ -3,6 +3,7 @@ import { useState } from 'react'
 
 import { call } from '../../rpc'
 import { shortName } from '../clusters/loginCopy'
+import { ReportLink } from '../report/ReportLink'
 import { Button } from '../ui/Button'
 import { university, type SetupStatus } from './setup'
 
@@ -40,7 +41,7 @@ export function Welcome({ status, onDone }: { status: SetupStatus; onDone: (chos
           )
         })}
       </div>
-      {error && <p className="text-bad">{error}</p>}
+      {error && <p className="text-bad">{error} <ReportLink className="ml-1" error={error} /></p>}
       <div className="flex w-full max-w-[640px] items-center justify-between gap-4">
         <p className="text-sm text-dim">You can change this later in Settings.</p>
         <Button kind="primary" pill disabled={!picked.length} onClick={go}>Continue</Button>

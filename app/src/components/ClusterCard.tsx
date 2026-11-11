@@ -17,6 +17,7 @@ import { EButton } from './e/EButton'
 import { StatusDot, type Tone } from './e/StatusDot'
 import { Menu, type MenuItem } from './projects/Menu'
 import { useTools } from './tools/useTools'
+import { ReportLink } from './report/ReportLink'
 import { IconButton } from './ui/IconButton'
 import { IconTile } from './ui/IconTile'
 import { Spinner } from './ui/Spinner'
@@ -107,6 +108,8 @@ export function ClusterCard({ cluster: c, session: s, log, primary = false }:
           <div className={`flex items-center gap-2 text-base ${s.state === 'Error' ? 'text-bad' : ''}`}>
             {busy && <Spinner />}
             <span className={`min-w-0 break-words ${s.state === DUO ? 'font-semibold' : ''}`}>{s.detail}</span>
+            {s.state === 'Error' && s.detail && <ReportLink className="ml-auto" error={`${c.name}: ${s.detail}`}
+              cluster={c.id} />}
           </div>
         )}
         {s.state === WAITING && <p className="-mt-1 text-sm text-dim">

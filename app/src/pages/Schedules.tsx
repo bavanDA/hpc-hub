@@ -49,7 +49,7 @@ export function Schedules() {
   let body
   if (active && (!connected || error.startsWith('Connect to'))) body = <div className="h-[60vh]"><NotConnected
     cluster={active} session={session} what="scheduled agents" /></div>
-  else if (error) body = <EmptyState icon={CircleAlert} title="Could not load the schedules" text={error} />
+  else if (error) body = <EmptyState icon={CircleAlert} title="Could not load the schedules" text={error} report />
   else if (!list) body = <div className="grid h-64 place-items-center"><Spinner size={24} /></div>
   else if (!list.length) body = <EmptyState icon={AlarmClock} title="No scheduled agents yet"
     text={`An agent can work on a task on ${name} by itself, every night or on the days you pick.`} />

@@ -8,6 +8,7 @@ import { ToggleRow } from '../e/ToggleRow'
 import { Select } from '../jobs/Select'
 import { setMonitorBar } from '../terminals/monitorBarSetting'
 import { setSelectToCopy } from '../terminals/xterm'
+import { openReport } from '../report/open'
 import { Spinner } from '../ui/Spinner'
 import { useToast } from '../useToast'
 import { AboutDialog } from './About'
@@ -88,6 +89,7 @@ export function PreferencesDialog({ onClose, onExperimental, onDisconnectAndQuit
         <Section title="HPC Hub">
           <Row label="Set up the phone app" opens onPress={() => setInner('phone')} />
           <Row label="About HPC Hub" opens onPress={() => setInner('about')} />
+          <Row label="Report a problem" opens onPress={() => { onClose(); openReport({ kind: 'user' }) }} />
           <Row label="Disconnect all and quit" danger onPress={onDisconnectAndQuit} />
         </Section>
         <div className="h-3" />

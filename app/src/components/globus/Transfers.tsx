@@ -1,6 +1,7 @@
 import { RefreshCw } from 'lucide-react'
 
 import type { Task } from '../../types/globus'
+import { ReportLink } from '../report/ReportLink'
 import { IconButton } from '../ui/IconButton'
 import { List } from '../ui/List'
 import { TaskRow } from './TaskRow'
@@ -16,7 +17,7 @@ export function Transfers({ tasks, error, onRefresh, onCancel, names = {} }:
       </div>
       <div className="max-h-[168px] min-h-0 overflow-auto">
         <List>
-          {error ? <p className="p-4 text-center text-sm text-bad">{error}</p>
+          {error ? <p className="p-4 text-center text-sm text-bad">{error} <ReportLink className="ml-1" error={error} /></p>
             : !tasks?.length ? <p className="p-4 text-center text-dim">{tasks ? 'No transfers yet' : 'Loading…'}</p>
             : tasks.map((t) => <TaskRow key={t.task_id} t={t} onCancel={onCancel} names={names} />)}
         </List>

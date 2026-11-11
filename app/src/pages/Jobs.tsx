@@ -50,7 +50,7 @@ export function Jobs() {
   const shown = useMemo(() => sortJobs(filterJobs(list?.jobs ?? [], state, query), sort.key, sort.desc),
     [list, state, query, sort])
 
-  if (clustersError) return <EmptyState icon={CircleAlert} title="Could not load clusters" text={clustersError} />
+  if (clustersError) return <EmptyState icon={CircleAlert} title="Could not load clusters" text={clustersError} report />
   if (!clusters || !cluster) return <div className="grid h-full place-items-center"><Spinner size={24} /></div>
 
   const off = !connected
@@ -59,7 +59,7 @@ export function Jobs() {
   const done = () => { setPicked(new Set()); refresh(true) }
   let body
   if (off) body = <NotConnected cluster={cluster} session={session} what="jobs" />
-  else if (error) body = <EmptyState icon={CircleAlert} title="Could not load jobs" text={error} />
+  else if (error) body = <EmptyState icon={CircleAlert} title="Could not load jobs" text={error} report />
   else if (!list) body = <SkeletonRows rows={6} height={44} />
   else if (!list.jobs.length) body = <EmptyState icon={ListChecks} title="No jobs" text="Nothing to show for this view." />
   else if (!shown.length) body = <EmptyState icon={Search} title="No matching jobs" text="Try another state or filter." />

@@ -47,7 +47,7 @@ export function Skills() {
   if (active && (!connected || error.startsWith('Connect to'))) body = <div className="h-[60vh]"><NotConnected
     cluster={active} session={session} what="skills" /></div>
   else if ((!cluster && !error) || (!list && !error)) body = <div className="grid h-64 place-items-center"><Spinner size={24} /></div>
-  else if (error || !list) body = <EmptyState icon={CircleAlert} title="Could not read the skills" text={error} />
+  else if (error || !list) body = <EmptyState icon={CircleAlert} title="Could not read the skills" text={error} report />
   else body = <SkillSections list={list} adding={adding} label={label} onAdd={setChoosing} onRemove={setRemoving} />
 
   return (

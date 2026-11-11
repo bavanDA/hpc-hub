@@ -30,7 +30,7 @@ export function EditorPane({ file, start, connected, following, handle, onGoTo, 
           action={connected ? <Button onClick={onGoTo}>Go to file</Button> : undefined} />
       ) : file.loading ? spinner : file.error ? (
         <EmptyState icon={FileCode2} title={`Couldn't open ${file.name}`} text={file.error}
-          action={<Button onClick={() => { closeFile(file.key); void openFile(file.cluster, file.path) }}>Try again</Button>} />
+          action={<Button onClick={() => { closeFile(file.key); void openFile(file.cluster, file.path) }}>Try again</Button>} report />
       ) : (
         <Suspense fallback={spinner}>
           <Editor key={file.key} docKey={file.key} path={file.path} text={file.text} handle={handle}

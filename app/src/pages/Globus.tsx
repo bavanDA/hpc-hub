@@ -77,7 +77,7 @@ export function Globus() {
   }
 
   let body
-  if (error) body = <EmptyState icon={CircleAlert} title="Could not load Globus" text={error} />
+  if (error) body = <EmptyState icon={CircleAlert} title="Could not load Globus" text={error} report />
   else if (!status) body = <div className="grid h-full place-items-center"><Spinner size={24} /></div>
   else if (!status.client_id) body = <SetUp onSaved={setStatus} />
   else if (!status.signed_in) body = <SignIn onSignIn={() => setLogin('globus.login_url')} />

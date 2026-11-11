@@ -7,6 +7,7 @@ import { inTauri } from '../app/platform'
 import { EButton } from '../e/EButton'
 import { EDialog } from '../e/EDialog'
 import { MainButton } from '../e/MainButton'
+import { ReportLink } from '../report/ReportLink'
 import { SignInWaiting } from './SignInWaiting'
 
 /** The app's sign-in window: opened in Tauri, answered by Questions.tsx when it reports back. */
@@ -42,7 +43,8 @@ export function WebLogin({ q, onAnswer }: { q: Question; onAnswer: (a: string | 
         Show sign-in window</MainButton>}
     </>}>
       {error
-        ? <p role="alert" className="px-5 pb-2 font-semibold text-bad">Couldn't open the sign-in window: {error}</p>
+        ? <p role="alert" className="px-5 pb-2 font-semibold text-bad">Couldn't open the sign-in window: {error}{' '}
+          <ReportLink className="ml-1 text-sm" error={`Couldn't open the sign-in window: ${error}`} /></p>
         : <SignInWaiting title="Sign in in the window that opened" text={status} />}
       {!error && q.note && <p className="mt-3 px-5 text-center text-sm text-dim">{q.note}</p>}
     </EDialog>

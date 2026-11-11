@@ -84,7 +84,7 @@ export function Permissions() {
   if (!active) body = <div className="grid h-64 place-items-center"><Spinner size={24} /></div>
   else if (!connected || error.startsWith('Connect to')) body = <div className="h-[60vh]"><NotConnected
     cluster={active} session={session} what="agent permissions" /></div>
-  else if (error) body = <EmptyState icon={CircleAlert} title="Could not read Claude's settings" text={error} />
+  else if (error) body = <EmptyState icon={CircleAlert} title="Could not read Claude's settings" text={error} report />
   else if (!perm || !draft) body = <div className="grid h-64 place-items-center"><Spinner size={24} /></div>
   else body = (
     <div className="-mt-5">
