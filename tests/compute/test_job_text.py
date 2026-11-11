@@ -68,5 +68,9 @@ def test_exit_codes_in_words():
     assert t.exit_text("") == ""
 
 
+def test_a_job_held_by_maintenance_says_so():
+    assert t.reason_text("(ReqNodeNotAvail, Reserved for maintenance)") == "Waiting: maintenance has to finish first"
+
+
 def test_a_job_over_its_queue_limit_says_what_it_waits_for():
     assert t.reason_text("(QOSMaxJobsPerUserLimit)") == "Waiting: one of your jobs must end first"

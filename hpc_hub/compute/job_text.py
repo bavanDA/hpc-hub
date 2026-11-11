@@ -16,6 +16,7 @@ REASONS = [
     ("JobHeldUser", "On hold by you"),
     ("JobHeldAdmin", "On hold by the admins"),
     ("launch failed requeued held", "Held after a failed start"),
+    ("ReqNodeNotAvail, Reserved for maintenance", "Waiting: maintenance has to finish first"),
     ("ReqNodeNotAvail", "Waiting: its nodes are down or reserved"),
     ("Reservation", "Waiting for its reservation"),
     ("PartitionTimeLimit", "Won't start: longer than this queue allows"),

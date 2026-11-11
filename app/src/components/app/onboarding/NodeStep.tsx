@@ -9,6 +9,7 @@ import { List } from '../../e/List'
 import { MainButton } from '../../e/MainButton'
 import { Section } from '../../e/Section'
 import { ToggleRow } from '../../e/ToggleRow'
+import { ReportLink } from '../../report/ReportLink'
 import { Footer } from './Footer'
 import { Heading } from './Heading'
 
@@ -40,12 +41,13 @@ export function NodeStep({ cluster: c, onNext, last }: { cluster: Cluster; onNex
             sub={want ? 'Ready as soon as you sign in.' : 'You can still get one from the cluster card.'} />
         </List>
         {want && <div className="pt-5">
-          <NodeFields cluster={c.id} value={p} onChange={setP} onValid={setOk} extra={false} /></div>}
+          <NodeFields cluster={c.id} value={p} onChange={setP} onValid={setOk} extra={false} now /></div>}
         {want ? <Section note="You can change this later in Settings.">
           <ToggleRow label={ASK} sub="Shows the node window when you connect." checked={ask} onChange={setAsk} />
         </Section> : <p className="px-5 pt-2 text-sm text-dim">You can change this later in Settings.</p>}
       </div>
-      {error && <p role="alert" className="px-5 font-semibold text-bad">{error}</p>}
+      {error && <p role="alert" className="px-5 font-semibold text-bad">{error}{' '}
+        <ReportLink className="ml-1 text-sm" error={error} /></p>}
       <Footer>
         <MainButton type="submit" disabled={want && !ok}>{last ? 'Done' : copy.continue}</MainButton>
       </Footer>

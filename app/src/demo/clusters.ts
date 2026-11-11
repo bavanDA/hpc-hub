@@ -1,6 +1,6 @@
 // Demo data for the Clusters page. Actions change this state over a few seconds, the page polls it.
 import {
-  summary, type AgentSettings, type Cluster, type KeySetup, type Limits, type Logins, type Profile, type Session,
+  summary, type AgentSettings, type Cluster, type KeySetup, type Limits, type Logins, type Maintenance, type Profile, type Session,
   type SettingsInfo, type State, type VsCode,
 } from '../types/clusters'
 import type { Gpu } from '../components/clusters/gpus'
@@ -219,6 +219,7 @@ export const answers: Record<string, unknown> = {
   }),
   'clusters.set_login': () => null,
   'clusters.forget_logins': () => null,
+  'clusters.maintenance': (): Maintenance => ({ start: '2026-11-10T07:50:00', tz: 'EST', minutes_left: 2345, active: false }),
   'clusters.partitions': ({ partition, qos }: { partition?: string; qos?: string }): Limits => {
     const caps: [number, string][] = []
     const part = partition || 'general'

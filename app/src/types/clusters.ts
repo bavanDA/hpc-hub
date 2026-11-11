@@ -111,9 +111,14 @@ export type Logins = Record<'ssh' | 'vpn', { username: string; password: boolean
 
 /** Slurm's billing weights: SUs an hour per core, per GB and per GPU ("gpu:a100"; "gpu" for any), how they add up
  *  ('gres': the bigger of cores and memory, plus the GPUs; 'all': the biggest; '': all added), and the priority's
- *  factor (0: free). */
+ *  factor (0: free). per_su: Slurm's number for 1 SU (Expanse counts 3600 for each), and weights.node what a whole
+ *  node costs where one is billed. */
 export type Billing = { weights: Record<string, number>; max: '' | 'all' | 'gres'; factor: number
-  free?: 'partition' }  // the cluster bills no job on this partition (Yale's public ones)
+  free?: 'partition'  // the cluster bills no job on this partition (Yale's public ones)
+  per_su?: number }
+
+/** The cluster-wide maintenance Slurm has booked next; start and tz are the cluster's own clock. */
+export type Maintenance = { start: string; tz: string; minutes_left: number; active: boolean }
 
 /** longest: minutes, null = no limit. */
 export type Limits = {
