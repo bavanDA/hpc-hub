@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en" class="no-js">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Questions and answers · HPC Hub wiki</title>
+<meta name="description" content="Privacy, cost and what keeps running when you close the app.">
+<meta name="color-scheme" content="light dark">
+<link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="assets/wiki.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to the text</a>
+<header class="topbar">
+<a class="brand" href="index.html"><svg width="26" height="26" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="#1c71d8"/><g fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="7" width="18" height="7" rx="2"/><rect x="7" y="18" width="18" height="7" rx="2"/><path d="M11 10.5h.01M11 21.5h.01"/></g></svg><span>HPC Hub <small>wiki</small></span></a>
+<button class="menu-btn" type="button" aria-expanded="false" aria-controls="sidebar"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>Menu</button>
+</header>
+<div class="scrim"></div>
+<div class="layout">
+<aside class="sidebar" id="sidebar">
+<a class="brand" href="index.html"><svg width="26" height="26" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="#1c71d8"/><g fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="7" width="18" height="7" rx="2"/><rect x="7" y="18" width="18" height="7" rx="2"/><path d="M11 10.5h.01M11 21.5h.01"/></g></svg><span>HPC Hub <small>wiki</small></span></a>
+<div class="search" role="search">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+<input id="search" type="search" placeholder="Search the wiki" aria-label="Search the wiki" autocomplete="off">
+<div class="results" id="results" hidden></div>
+</div>
+<nav class="nav" aria-label="Pages">
+<div class="nav-group">Start</div>
+<a href="index.html">Home</a>
+<a href="install.html">Install</a>
+<a href="first-sign-in.html">First sign-in</a>
+<div class="nav-group">Work on a cluster</div>
+<a href="compute-nodes.html">Compute nodes and queues</a>
+<a href="terminals.html">Terminals</a>
+<a href="agents.html">AI agents</a>
+<a href="jobs.html">Jobs</a>
+<a href="usage.html">Usage and SUs</a>
+<div class="nav-group">Your data</div>
+<a href="files.html">Files, transfers and Globus</a>
+<a href="projects.html">Projects and moving between clusters</a>
+<a href="backup.html">Backup of scratch</a>
+<div class="nav-group">More</div>
+<a href="phone.html">Phone app</a>
+<a href="experimental.html">Experimental</a>
+<a href="troubleshooting.html">Troubleshooting</a>
+<a href="report-a-problem.html">Report a problem</a>
+<a href="faq.html" aria-current="page">FAQ</a>
+</nav>
+</aside>
+<main id="main">
+<article class="content">
+<h1>Questions and answers</h1>
+<p class="lead">Privacy, cost and what keeps running when you close the app.</p>
+<h2 id="where-are-my-passwords-kept">Where are my passwords kept?<a class="anchor" href="#where-are-my-passwords-kept" aria-label="Link to this part">#</a></h2>
+<p>Usernames and passwords are typed into the app and kept in your system's keyring:</p>
+<ul>
+<li>Linux: GNOME Keyring (the Secret Service)</li>
+<li>macOS: the Keychain</li>
+<li>Windows: Credential Manager</li>
+<li>Android: an encrypted file whose key stays in the phone's Keystore</li>
+</ul>
+<p>Never in plain text, and never in the app's settings files. Globus sign-in happens in your own browser, and
+its tokens go in the keyring too.</p>
+
+<h2 id="does-hpc-hub-send-my-data-anywhere">Does HPC Hub send my data anywhere?<a class="anchor" href="#does-hpc-hub-send-my-data-anywhere" aria-label="Link to this part">#</a></h2>
+<p>No. There is no tracking and no account with HPC Hub. The app connects to your clusters, their VPN and
+sign-in pages, and the services you choose to use, such as Globus, or an AI agent's company when you run that
+agent. The PDF viewer's dictionary and read aloud use online services when you use them.</p>
+<p>The one thing HPC Hub ever sends about you or the app is a <a href="report-a-problem.html">problem report</a>,
+only when you press Send, and only after you have read it.</p>
+
+<h2 id="does-hpc-hub-cost-sus">Does HPC Hub cost SUs?<a class="anchor" href="#does-hpc-hub-cost-sus" aria-label="Link to this part">#</a></h2>
+<p>The app itself doesn't. Your compute node, VS Code and agents are Slurm jobs, and the cluster bills them like
+any other job, by the queue and priority you pick. The node window shows the cost before you ask for a node. A
+whole-node queue bills for the whole node; see
+<a href="compute-nodes.html#what-a-whole-node-queue-means">what a whole-node queue means</a>.</p>
+
+<h2 id="what-keeps-running-when-i-close-the-app">What keeps running when I close the app?<a class="anchor" href="#what-keeps-running-when-i-close-the-app" aria-label="Link to this part">#</a></h2>
+<p>Terminals, agents, VS Code and your compute node keep running on the cluster, until you stop them or the node's
+time is up. Globus transfers, backup copies and scheduled agents run on their own too. Copies <em>through this
+laptop</em> need the app open.</p>
+<p>To release your nodes as you leave, use <strong>Settings</strong>, <strong>Disconnect all and quit</strong>.
+Jobs you started yourself and VS Code jobs keep running.</p>
+
+<h2 id="can-i-use-a-cluster-that-isn-t-listed">Can I use a cluster that isn't listed?<a class="anchor" href="#can-i-use-a-cluster-that-isn-t-listed" aria-label="Link to this part">#</a></h2>
+<p>HPC Hub comes set up for Wulver (NJIT), Bouchet (Yale) and Expanse (SDSC). Show or hide them in
+<strong>Settings</strong>, <strong>Clusters</strong>.</p>
+
+<h2 id="can-i-use-the-phone-and-the-computer-at-the-same-time">Can I use the phone and the computer at the same time?<a class="anchor" href="#can-i-use-the-phone-and-the-computer-at-the-same-time" aria-label="Link to this part">#</a></h2>
+<p>Yes. Both connect to the same clusters, see the same sessions and the same terminal marks. Duo asks on each
+device when it connects.</p>
+
+<h2 id="why-does-my-system-warn-me-when-i-open-the-app">Why does my system warn me when I open the app?<a class="anchor" href="#why-does-my-system-warn-me-when-i-open-the-app" aria-label="Link to this part">#</a></h2>
+<p>The installers are not signed yet. See <a href="install.html">Install</a> for how to open it the first
+time.</p>
+
+<h2 id="is-it-open-source">Is it open source?<a class="anchor" href="#is-it-open-source" aria-label="Link to this part">#</a></h2>
+<p>Yes, under the MIT license. The code is on <a href="https://github.com/bavanDA/hpc-hub">GitHub</a>.</p>
+
+<h2 id="how-do-i-change-the-colors">How do I change the colors?<a class="anchor" href="#how-do-i-change-the-colors" aria-label="Link to this part">#</a></h2>
+<p><strong>Settings</strong>, <strong>Appearance</strong>. <strong>System</strong> follows your computer's light or
+dark mode, and there are a few more themes to pick from.</p>
+<nav class="pager" aria-label="Next and previous"><a class="prev" href="report-a-problem.html"><small>Previous</small><b>Report a problem</b></a></nav>
+<p class="foot">HPC Hub is open source. The code and the releases are on
+<a href="https://github.com/bavanDA/hpc-hub">GitHub</a>.</p>
+</article>
+</main>
+</div>
+<script src="assets/wiki.js"></script>
+</body>
+</html>

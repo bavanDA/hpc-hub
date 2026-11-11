@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en" class="no-js">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Report a problem · HPC Hub wiki</title>
+<meta name="description" content="Something broken or confusing? HPC Hub can send a report for you, and you read every word of it before it goes.">
+<meta name="color-scheme" content="light dark">
+<link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="assets/wiki.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to the text</a>
+<header class="topbar">
+<a class="brand" href="index.html"><svg width="26" height="26" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="#1c71d8"/><g fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="7" width="18" height="7" rx="2"/><rect x="7" y="18" width="18" height="7" rx="2"/><path d="M11 10.5h.01M11 21.5h.01"/></g></svg><span>HPC Hub <small>wiki</small></span></a>
+<button class="menu-btn" type="button" aria-expanded="false" aria-controls="sidebar"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>Menu</button>
+</header>
+<div class="scrim"></div>
+<div class="layout">
+<aside class="sidebar" id="sidebar">
+<a class="brand" href="index.html"><svg width="26" height="26" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="#1c71d8"/><g fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="7" width="18" height="7" rx="2"/><rect x="7" y="18" width="18" height="7" rx="2"/><path d="M11 10.5h.01M11 21.5h.01"/></g></svg><span>HPC Hub <small>wiki</small></span></a>
+<div class="search" role="search">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+<input id="search" type="search" placeholder="Search the wiki" aria-label="Search the wiki" autocomplete="off">
+<div class="results" id="results" hidden></div>
+</div>
+<nav class="nav" aria-label="Pages">
+<div class="nav-group">Start</div>
+<a href="index.html">Home</a>
+<a href="install.html">Install</a>
+<a href="first-sign-in.html">First sign-in</a>
+<div class="nav-group">Work on a cluster</div>
+<a href="compute-nodes.html">Compute nodes and queues</a>
+<a href="terminals.html">Terminals</a>
+<a href="agents.html">AI agents</a>
+<a href="jobs.html">Jobs</a>
+<a href="usage.html">Usage and SUs</a>
+<div class="nav-group">Your data</div>
+<a href="files.html">Files, transfers and Globus</a>
+<a href="projects.html">Projects and moving between clusters</a>
+<a href="backup.html">Backup of scratch</a>
+<div class="nav-group">More</div>
+<a href="phone.html">Phone app</a>
+<a href="experimental.html">Experimental</a>
+<a href="troubleshooting.html">Troubleshooting</a>
+<a href="report-a-problem.html" aria-current="page">Report a problem</a>
+<a href="faq.html">FAQ</a>
+</nav>
+</aside>
+<main id="main">
+<article class="content">
+<h1>Report a problem</h1>
+<p class="lead">Something broken or confusing? HPC Hub can send a report for you, and you read every word of it before it goes.</p>
+<h2 id="where-to-find-it">Where to find it<a class="anchor" href="#where-to-find-it" aria-label="Link to this part">#</a></h2>
+<ul>
+<li><strong>Settings</strong>, then <strong>Report a problem</strong>, for anything you noticed.</li>
+<li>A quiet <strong>Report</strong> next to an error: on a cluster card that failed to connect, in an error
+message at the bottom of the window, or on a page that couldn't load. The report then starts with that
+error.</li>
+<li>If a page breaks completely, it shows <strong>Reload</strong> and <strong>Report it</strong> instead of a blank
+window. Your clusters, jobs and files are not affected.</li>
+</ul>
+
+<h2 id="sending-a-report">Sending a report<a class="anchor" href="#sending-a-report" aria-label="Link to this part">#</a></h2>
+<ol>
+<li>Write what went wrong under <strong>What went wrong?</strong>: what you did, what you expected, and what
+happened instead.</li>
+<li>If you'd like an answer, add your email. It is optional.</li>
+<li>Tick <strong>Add a screenshot of the window</strong> if a picture helps. It shows whatever is on screen, so
+look at it first; it appears in the window before anything is sent.</li>
+<li>Read <strong>Everything that will be sent</strong>, then press <strong>Send report</strong>.</li>
+</ol>
+<p>When it has gone, the window says <strong>Report sent</strong> and gives the report a number. Use that number
+if you write about it later.</p>
+
+<h2 id="what-is-sent-and-what-is-not">What is sent, and what is not<a class="anchor" href="#what-is-sent-and-what-is-not" aria-label="Link to this part">#</a></h2>
+<ul>
+<li><strong>Nothing is sent until you press Send.</strong> Cancel, or close the window, and nothing leaves your
+computer.</li>
+<li><strong>You see exactly what is sent.</strong> The box <strong>Everything that will be sent</strong> holds the
+whole report: the app's version and your system, the page you were on, the error, your note, your email if you
+gave one, and the app's recent log.</li>
+<li><strong>Personal details are removed first.</strong> Names, folders and addresses are replaced with
+placeholders such as <code>&lt;user&gt;</code>, <code>&lt;home&gt;</code>, <code>&lt;account&gt;</code> and
+<code>&lt;ip&gt;</code>, also in what you type.</li>
+<li><strong>Passwords are never included.</strong> Tokens, cookies and keys become <code>&lt;hidden&gt;</code>.</li>
+</ul>
+
+<h2 id="other-ways">Other ways<a class="anchor" href="#other-ways" aria-label="Link to this part">#</a></h2>
+<p>You can also open an issue on the <a href="https://github.com/bavanDA/hpc-hub/issues">GitHub repository</a>.
+Issues there are public, so leave out usernames, group names, paths and anything else about you or your
+work.</p>
+<nav class="pager" aria-label="Next and previous"><a class="prev" href="troubleshooting.html"><small>Previous</small><b>Troubleshooting</b></a><a class="next" href="faq.html"><small>Next</small><b>FAQ</b></a></nav>
+<p class="foot">HPC Hub is open source. The code and the releases are on
+<a href="https://github.com/bavanDA/hpc-hub">GitHub</a>.</p>
+</article>
+</main>
+</div>
+<script src="assets/wiki.js"></script>
+</body>
+</html>

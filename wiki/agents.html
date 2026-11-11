@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en" class="no-js">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI agents · HPC Hub wiki</title>
+<meta name="description" content="Run Claude, ChatGPT (Codex), Antigravity or Cursor on a compute node, next to your code and data. They keep working when you close the app, and you decide which commands they may run without asking.">
+<meta name="color-scheme" content="light dark">
+<link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="assets/wiki.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to the text</a>
+<header class="topbar">
+<a class="brand" href="index.html"><svg width="26" height="26" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="#1c71d8"/><g fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="7" width="18" height="7" rx="2"/><rect x="7" y="18" width="18" height="7" rx="2"/><path d="M11 10.5h.01M11 21.5h.01"/></g></svg><span>HPC Hub <small>wiki</small></span></a>
+<button class="menu-btn" type="button" aria-expanded="false" aria-controls="sidebar"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>Menu</button>
+</header>
+<div class="scrim"></div>
+<div class="layout">
+<aside class="sidebar" id="sidebar">
+<a class="brand" href="index.html"><svg width="26" height="26" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="#1c71d8"/><g fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="7" width="18" height="7" rx="2"/><rect x="7" y="18" width="18" height="7" rx="2"/><path d="M11 10.5h.01M11 21.5h.01"/></g></svg><span>HPC Hub <small>wiki</small></span></a>
+<div class="search" role="search">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+<input id="search" type="search" placeholder="Search the wiki" aria-label="Search the wiki" autocomplete="off">
+<div class="results" id="results" hidden></div>
+</div>
+<nav class="nav" aria-label="Pages">
+<div class="nav-group">Start</div>
+<a href="index.html">Home</a>
+<a href="install.html">Install</a>
+<a href="first-sign-in.html">First sign-in</a>
+<div class="nav-group">Work on a cluster</div>
+<a href="compute-nodes.html">Compute nodes and queues</a>
+<a href="terminals.html">Terminals</a>
+<a href="agents.html" aria-current="page">AI agents</a>
+<a href="jobs.html">Jobs</a>
+<a href="usage.html">Usage and SUs</a>
+<div class="nav-group">Your data</div>
+<a href="files.html">Files, transfers and Globus</a>
+<a href="projects.html">Projects and moving between clusters</a>
+<a href="backup.html">Backup of scratch</a>
+<div class="nav-group">More</div>
+<a href="phone.html">Phone app</a>
+<a href="experimental.html">Experimental</a>
+<a href="troubleshooting.html">Troubleshooting</a>
+<a href="report-a-problem.html">Report a problem</a>
+<a href="faq.html">FAQ</a>
+</nav>
+</aside>
+<main id="main">
+<article class="content">
+<h1>AI agents</h1>
+<p class="lead">Run Claude, ChatGPT (Codex), Antigravity or Cursor on a compute node, next to your code and data. They keep working when you close the app, and you decide which commands they may run without asking.</p>
+<h2 id="before-you-start">Before you start<a class="anchor" href="#before-you-start" aria-label="Link to this part">#</a></h2>
+<p>HPC Hub starts the agent's own program on the cluster, so it has to be installed in your account there, and
+you need your own account with that agent's company. The <strong>Ask all</strong> window shows <strong>Not
+installed</strong> next to any agent it can't find on the cluster.</p>
+<p>The four agents are <strong>Claude</strong>, <strong>ChatGPT</strong> (Codex), <strong>Antigravity</strong>
+and <strong>Cursor</strong>.</p>
+
+<h2 id="start-an-agent">Start an agent<a class="anchor" href="#start-an-agent" aria-label="Link to this part">#</a></h2>
+<p>Open <strong>Agents</strong> on a cluster card and pick one, or press <strong>Open</strong> on a project and
+pick it under <strong>Agents</strong>. The window, for example <strong>Claude on Wulver</strong>, has:</p>
+<ul>
+<li><strong>Task (optional)</strong>: a first thing to work on, like <em>Fix the failing test in
+train.py</em>.</li>
+<li><strong>Folder</strong>: where it works.</li>
+<li><strong>Use a new compute node</strong>: off, it shares your node with your terminals; on, it gets a node
+just for itself. With no node yet, the window asks for the size.</li>
+<li><strong>Remote control</strong> (see below), and the agent's own options, such as <strong>Model</strong>,
+<strong>Effort</strong>, <strong>Permission mode</strong> or <strong>Sandbox</strong>.</li>
+</ul>
+<p>Press <strong>Start</strong>. The agent opens in a terminal tab.</p>
+<h3 id="continue-a-chat">Continue a chat<a class="anchor" href="#continue-a-chat" aria-label="Link to this part">#</a></h3>
+<p>Under <strong>Or continue a chat</strong>, the same window lists your earlier chats with that agent on the
+cluster, newest first, with a search box when there are many. Click one to pick up where you left off.</p>
+
+<h2 id="it-keeps-running">It keeps running<a class="anchor" href="#it-keeps-running" aria-label="Link to this part">#</a></h2>
+<p>An agent runs in a tmux session on a compute node and keeps going when you close the app. The
+<strong>Running</strong> tab of the <strong>Agents</strong> page lists every agent running on your clusters; click
+one to open it again. Like a terminal on a node, an agent stops when its node's time is up.</p>
+
+<h2 id="remote-control">Remote control<a class="anchor" href="#remote-control" aria-label="Link to this part">#</a></h2>
+<p>Some agents can be used from another device while they run on the cluster:</p>
+<ul>
+<li><strong>Claude</strong>: <strong>Remote control</strong> lets you use the session from claude.ai/code or the
+Claude app.</li>
+<li><strong>ChatGPT</strong>: <strong>ChatGPT remote</strong> lets you use it from the ChatGPT app, one session at
+a time. A pairing code shows in the terminal; in the ChatGPT app open Codex, connect a machine and enter
+it.</li>
+<li><strong>Antigravity</strong>: <strong>Remote control</strong> lets you use it from Antigravity on another
+device.</li>
+</ul>
+
+<h2 id="ask-all">Ask all<a class="anchor" href="#ask-all" aria-label="Link to this part">#</a></h2>
+<p><strong>Ask all agents</strong>, in a project's <strong>Open</strong> window, puts one question to several agents
+at once, for example <em>Which of these two plotting scripts is easier to maintain, and why?</em></p>
+<ul>
+<li><strong>Prompt</strong>, <strong>Folder</strong>, and <strong>Answers go to</strong> (a new folder inside the
+one above, unless you name one).</li>
+<li><strong>Who answers</strong>: switch each agent on or off.</li>
+<li><strong>Let them read each other's answers</strong>: each one answers again after reading the others.</li>
+</ul>
+
+<h2 id="permissions">Permissions<a class="anchor" href="#permissions" aria-label="Link to this part">#</a></h2>
+<p>The <strong>Permissions</strong> tab of <strong>Agents</strong> sets what Claude may do on a cluster without
+asking you. It is saved in Claude's own settings on that cluster, so it applies however you start Claude there.
+Running Claude sessions pick up a change when they restart.</p>
+<ul>
+<li><strong>Edit files without asking</strong>.</li>
+<li><strong>Move deleted files to the trash</strong>: instead of deleting, files go to a trash folder and are
+kept for 7 days.</li>
+<li><strong>Ask first</strong>: cancelling jobs, force pushing, and throwing away unsaved changes always ask.</li>
+<li><strong>Run without asking</strong>: groups of commands, such as <em>Read and search</em>,
+<em>Files</em>, <em>Code and builds</em>, <em>Jobs</em>, <em>Git</em> and <em>Network</em>, each with a short note
+on what it allows. <strong>Add a command</strong> adds one of your own. Anything not allowed here asks you
+first.</li>
+</ul>
+<p>ChatGPT and Antigravity ask before running commands.</p>
+<h3 id="passcode-lock">Passcode lock<a class="anchor" href="#passcode-lock" aria-label="Link to this part">#</a></h3>
+<p>The <strong>Passcode lock</strong> on the same tab guards Claude on a cluster. Once it is set up with Google Authenticator or another authenticator app, Claude takes no messages until you start one with
+the current code, like <code>123456 fix the tests</code>. You choose how long a code lasts and how many wrong
+codes are allowed before it locks; <strong>Recent activity</strong> shows what happened.</p>
+
+<h2 id="vs-code-on-a-compute-node">VS Code on a compute node<a class="anchor" href="#vs-code-on-a-compute-node" aria-label="Link to this part">#</a></h2>
+<p><strong>VS Code</strong> on a cluster card starts VS Code on a compute node as a job of its own, through a VS
+Code tunnel. When the tunnel is ready the terminal says <strong>VS Code is ready</strong> with <strong>Open in
+browser</strong>. The first time, GitHub asks you to sign in.</p>
+<div class="note"><p>VS Code keeps that GitHub sign-in in your home folder on the cluster, unencrypted, so a tunnel
+on a new node doesn't ask again. Run <code>code tunnel user logout</code> on the cluster if you don't want
+that.</p></div>
+
+<h2 id="experimental-tabs">Experimental tabs<a class="anchor" href="#experimental-tabs" aria-label="Link to this part">#</a></h2>
+<p><strong>Skills</strong> and <strong>Scheduled</strong> are two more tabs of Agents. They are experimental and
+off by default. See <a href="experimental.html">Experimental features</a>.</p>
+<nav class="pager" aria-label="Next and previous"><a class="prev" href="terminals.html"><small>Previous</small><b>Terminals</b></a><a class="next" href="jobs.html"><small>Next</small><b>Jobs</b></a></nav>
+<p class="foot">HPC Hub is open source. The code and the releases are on
+<a href="https://github.com/bavanDA/hpc-hub">GitHub</a>.</p>
+</article>
+</main>
+</div>
+<script src="assets/wiki.js"></script>
+</body>
+</html>

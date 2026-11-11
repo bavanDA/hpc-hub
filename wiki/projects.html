@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en" class="no-js">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Projects and moving between clusters · HPC Hub wiki</title>
+<meta name="description" content="A project is a named folder on a cluster. Open it in your tools in one click, and copy or sync it to another cluster together with its Claude chats.">
+<meta name="color-scheme" content="light dark">
+<link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="assets/wiki.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to the text</a>
+<header class="topbar">
+<a class="brand" href="index.html"><svg width="26" height="26" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="#1c71d8"/><g fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="7" width="18" height="7" rx="2"/><rect x="7" y="18" width="18" height="7" rx="2"/><path d="M11 10.5h.01M11 21.5h.01"/></g></svg><span>HPC Hub <small>wiki</small></span></a>
+<button class="menu-btn" type="button" aria-expanded="false" aria-controls="sidebar"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>Menu</button>
+</header>
+<div class="scrim"></div>
+<div class="layout">
+<aside class="sidebar" id="sidebar">
+<a class="brand" href="index.html"><svg width="26" height="26" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="#1c71d8"/><g fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="7" width="18" height="7" rx="2"/><rect x="7" y="18" width="18" height="7" rx="2"/><path d="M11 10.5h.01M11 21.5h.01"/></g></svg><span>HPC Hub <small>wiki</small></span></a>
+<div class="search" role="search">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+<input id="search" type="search" placeholder="Search the wiki" aria-label="Search the wiki" autocomplete="off">
+<div class="results" id="results" hidden></div>
+</div>
+<nav class="nav" aria-label="Pages">
+<div class="nav-group">Start</div>
+<a href="index.html">Home</a>
+<a href="install.html">Install</a>
+<a href="first-sign-in.html">First sign-in</a>
+<div class="nav-group">Work on a cluster</div>
+<a href="compute-nodes.html">Compute nodes and queues</a>
+<a href="terminals.html">Terminals</a>
+<a href="agents.html">AI agents</a>
+<a href="jobs.html">Jobs</a>
+<a href="usage.html">Usage and SUs</a>
+<div class="nav-group">Your data</div>
+<a href="files.html">Files, transfers and Globus</a>
+<a href="projects.html" aria-current="page">Projects and moving between clusters</a>
+<a href="backup.html">Backup of scratch</a>
+<div class="nav-group">More</div>
+<a href="phone.html">Phone app</a>
+<a href="experimental.html">Experimental</a>
+<a href="troubleshooting.html">Troubleshooting</a>
+<a href="report-a-problem.html">Report a problem</a>
+<a href="faq.html">FAQ</a>
+</nav>
+</aside>
+<main id="main">
+<article class="content">
+<h1>Projects and moving between clusters</h1>
+<p class="lead">A project is a named folder on a cluster. Open it in your tools in one click, and copy or sync it to another cluster together with its Claude chats.</p>
+<h2 id="make-or-add-a-project">Make or add a project<a class="anchor" href="#make-or-add-a-project" aria-label="Link to this part">#</a></h2>
+<p>On the <strong>Projects</strong> page:</p>
+<ul>
+<li><strong>New project</strong> makes a new folder: a <strong>Name</strong> (like <code>thesis</code>), the
+<strong>Cluster</strong>, what to <strong>Start with</strong> (Empty, LaTeX paper or Python), whether to
+<strong>Make it a git repository</strong>, and where to make it.</li>
+<li><strong>Add folder</strong> turns a folder you already have into a project.</li>
+</ul>
+<p>The list shows each project's folder, cluster, group, when you last opened it, what is running in it and its
+git branch. The <strong>&#8942;</strong> menu has <strong>Edit</strong>, <strong>Copy path</strong> and
+<strong>Remove from the list</strong>. Removing only takes it off the list; the folder on the cluster stays.</p>
+<div class="note"><p>Scratch gets cleaned up. Keep work you need in your project space. See
+<a href="backup.html">Backup of scratch</a>.</p></div>
+
+<h2 id="open-a-project">Open a project<a class="anchor" href="#open-a-project" aria-label="Link to this part">#</a></h2>
+<p><strong>Open</strong> connects to the cluster if needed and offers: <strong>Code</strong>,
+<strong>Files</strong>, <strong>Terminal</strong>, <strong>VS Code</strong>, and under <strong>Agents</strong>,
+Claude, ChatGPT, Antigravity, Cursor and <strong>Ask all agents</strong>. With Papers turned on there is also
+LaTeX. Each one starts in the project's folder.</p>
+
+<h2 id="copy-or-sync-to-another-cluster">Copy or sync to another cluster<a class="anchor" href="#copy-or-sync-to-another-cluster" aria-label="Link to this part">#</a></h2>
+<p>Moving to a new cluster, or keeping a copy of your work on two? <strong>Copy or sync</strong> on a project
+does it in one window:</p>
+<ol>
+<li><strong>Where</strong>: the cluster and the folder to put it in. The app suggests your project space
+there.</li>
+<li><strong>How</strong>:
+<ul>
+<li><strong>Globus</strong>: cluster to cluster, for big projects. Copying again only sends what changed, so
+it works as a sync. Globus has to be set up first (Files, Transfers).</li>
+<li><strong>Through this laptop</strong>: simple, fine for smaller projects.</li>
+</ul></li>
+<li><strong>What to take</strong>: the app measures the project's parts. Untick what stays behind, such as large
+outputs you can make again.</li>
+<li><strong>Claude chats</strong>: tick the chats to keep going there. They move with the project, so you can
+continue them on the new cluster.</li>
+</ol>
+<p>Press <strong>Copy</strong> or <strong>Sync</strong>, with the size on the button. Both clusters must be
+connected. Progress shows under <strong>Copies</strong> on the Projects page, where <strong>Stop copy</strong> can
+stop it.</p>
+<p>Copying to another folder on the same cluster works too. The cluster copies it itself, on your compute
+node, and copying again only sends what changed.</p>
+<nav class="pager" aria-label="Next and previous"><a class="prev" href="files.html"><small>Previous</small><b>Files, transfers and Globus</b></a><a class="next" href="backup.html"><small>Next</small><b>Backup of scratch</b></a></nav>
+<p class="foot">HPC Hub is open source. The code and the releases are on
+<a href="https://github.com/bavanDA/hpc-hub">GitHub</a>.</p>
+</article>
+</main>
+</div>
+<script src="assets/wiki.js"></script>
+</body>
+</html>

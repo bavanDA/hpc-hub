@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en" class="no-js">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HPC Hub wiki</title>
+<meta name="description" content="One app for the computing clusters you use for research. Sign in once, get a compute node, and keep your terminals, jobs, files and AI agents in one window, on your computer or your Android phone.">
+<meta name="color-scheme" content="light dark">
+<link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="assets/wiki.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to the text</a>
+<header class="topbar">
+<a class="brand" href="index.html"><svg width="26" height="26" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="#1c71d8"/><g fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="7" width="18" height="7" rx="2"/><rect x="7" y="18" width="18" height="7" rx="2"/><path d="M11 10.5h.01M11 21.5h.01"/></g></svg><span>HPC Hub <small>wiki</small></span></a>
+<button class="menu-btn" type="button" aria-expanded="false" aria-controls="sidebar"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>Menu</button>
+</header>
+<div class="scrim"></div>
+<div class="layout">
+<aside class="sidebar" id="sidebar">
+<a class="brand" href="index.html"><svg width="26" height="26" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="#1c71d8"/><g fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="7" width="18" height="7" rx="2"/><rect x="7" y="18" width="18" height="7" rx="2"/><path d="M11 10.5h.01M11 21.5h.01"/></g></svg><span>HPC Hub <small>wiki</small></span></a>
+<div class="search" role="search">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+<input id="search" type="search" placeholder="Search the wiki" aria-label="Search the wiki" autocomplete="off">
+<div class="results" id="results" hidden></div>
+</div>
+<nav class="nav" aria-label="Pages">
+<div class="nav-group">Start</div>
+<a href="index.html" aria-current="page">Home</a>
+<a href="install.html">Install</a>
+<a href="first-sign-in.html">First sign-in</a>
+<div class="nav-group">Work on a cluster</div>
+<a href="compute-nodes.html">Compute nodes and queues</a>
+<a href="terminals.html">Terminals</a>
+<a href="agents.html">AI agents</a>
+<a href="jobs.html">Jobs</a>
+<a href="usage.html">Usage and SUs</a>
+<div class="nav-group">Your data</div>
+<a href="files.html">Files, transfers and Globus</a>
+<a href="projects.html">Projects and moving between clusters</a>
+<a href="backup.html">Backup of scratch</a>
+<div class="nav-group">More</div>
+<a href="phone.html">Phone app</a>
+<a href="experimental.html">Experimental</a>
+<a href="troubleshooting.html">Troubleshooting</a>
+<a href="report-a-problem.html">Report a problem</a>
+<a href="faq.html">FAQ</a>
+</nav>
+</aside>
+<main id="main">
+<article class="content">
+<h1>HPC Hub</h1>
+<p class="lead">One app for the computing clusters you use for research. Sign in once, get a compute node, and keep your terminals, jobs, files and AI agents in one window, on your computer or your Android phone.</p>
+<h2 id="what-it-is">What it is<a class="anchor" href="#what-it-is" aria-label="Link to this part">#</a></h2>
+<p>A cluster (or HPC system, for high performance computing) is a large group of computers that a university
+shares among its researchers. Using one usually means a VPN, an SSH client, a Duo approval, a few Slurm commands
+to get a machine to work on, and a separate tool to move files. HPC Hub puts all of that behind one
+<strong>Connect</strong> button.</p>
+<p>Once you are connected you can open a terminal, start VS Code or an AI coding agent on your own compute node,
+look at your jobs and your group's hours, browse and copy files, and back up scratch before the cluster deletes
+it. Terminals and agents keep running on the cluster when you close the laptop.</p>
+<p>HPC Hub runs on Linux, Windows and macOS. There is also an Android app that does the same things on a
+phone.</p>
+
+<h2 id="clusters-it-knows">Clusters it knows<a class="anchor" href="#clusters-it-knows" aria-label="Link to this part">#</a></h2>
+<p>HPC Hub comes set up for three clusters:</p>
+<ul>
+<li><strong>Wulver</strong> at NJIT</li>
+<li><strong>Bouchet</strong> at Yale</li>
+<li><strong>Expanse</strong> at SDSC</li>
+</ul>
+<p>On the first start you pick the ones you use. You can change that later in <strong>Settings</strong>.</p>
+
+<h2 id="new-to-hpc-a-few-words-first">New to HPC? A few words first<a class="anchor" href="#new-to-hpc-a-few-words-first" aria-label="Link to this part">#</a></h2>
+<p>These words come up all over the app and this wiki.</p>
+<dl class="terms">
+<dt>Login node</dt>
+<dd>The shared computer you land on when you sign in. Fine for editing files and submitting jobs. Heavy work
+does not belong here, since everyone on the cluster shares it.</dd>
+<dt>Compute node</dt>
+<dd>One computer in the cluster that runs your work. You borrow it for a set time, with the cores and memory you
+asked for. HPC Hub can get one for you every time you connect.</dd>
+<dt>Job</dt>
+<dd>One request for cluster time. Your compute node, VS Code and agents each run as a job.</dd>
+<dt>Slurm</dt>
+<dd>The program most clusters use to hand out compute nodes and run jobs. HPC Hub talks to it for you.</dd>
+<dt>Queue</dt>
+<dd>Which group of nodes and time limits your job uses. Slurm calls it a partition.</dd>
+<dt>Priority</dt>
+<dd>How your job is billed and how soon it starts. Slurm calls it QoS.</dd>
+<dt>Group</dt>
+<dd>The account your hours are billed to, usually your lab or your advisor's allocation.</dd>
+<dt>SU</dt>
+<dd>Service units, the cluster's currency. 1 SU is roughly 1 core for 1 hour.</dd>
+<dt>Scratch</dt>
+<dd>Fast storage for working files. Most clusters delete old files there after a set number of days.</dd>
+<dt>Session</dt>
+<dd>A terminal or agent that keeps running on the cluster, even when the app is closed.</dd>
+</dl>
+
+<h2 id="where-to-start">Where to start<a class="anchor" href="#where-to-start" aria-label="Link to this part">#</a></h2>
+<div class="cards">
+<a class="card" href="install.html"><b>Install</b><span>Get the app for Linux, Windows, macOS or Android.</span></a>
+<a class="card" href="first-sign-in.html"><b>First sign-in</b><span>Pick your clusters, sign in once, VPN and Duo.</span></a>
+<a class="card" href="compute-nodes.html"><b>Compute nodes</b><span>Get a node, pick a queue, see the time left.</span></a>
+<a class="card" href="terminals.html"><b>Terminals</b><span>Sessions that survive disconnects, and the timeline.</span></a>
+<a class="card" href="agents.html"><b>AI agents</b><span>Claude, ChatGPT, Antigravity and Cursor on a node.</span></a>
+<a class="card" href="troubleshooting.html"><b>Troubleshooting</b><span>When something doesn't connect or stops.</span></a>
+</div>
+
+<h2 id="the-pages-in-the-app">The pages in the app<a class="anchor" href="#the-pages-in-the-app" aria-label="Link to this part">#</a></h2>
+<p>The sidebar on the left of the app (the menu at the top left on a phone) has these pages:</p>
+<div class="table-wrap"><table>
+<tr><th>Page</th><th>What it is for</th></tr>
+<tr><td><strong>Clusters</strong></td><td>Connect, get a compute node, open a terminal, VS Code, Files or an agent.</td></tr>
+<tr><td><strong>Projects</strong></td><td>Named folders on your clusters, opened in one click, copied between clusters.</td></tr>
+<tr><td><strong>Terminals</strong></td><td>Terminal sessions in tmux, with the timeline and marks.</td></tr>
+<tr><td><strong>Code</strong></td><td>A light editor for files on the cluster. Text files you open from Files land here.</td></tr>
+<tr><td><strong>Agents</strong></td><td>Running agents, Backup of scratch, and what agents may run without asking.</td></tr>
+<tr><td><strong>Papers</strong></td><td>LaTeX papers. <a href="experimental.html">Experimental</a>, hidden until you turn it on.</td></tr>
+<tr><td><strong>Jobs</strong></td><td>Your jobs, your group's jobs and your history, with details and cancel.</td></tr>
+<tr><td><strong>Usage</strong></td><td>SUs left, storage, how busy the queues are, and queue limits.</td></tr>
+<tr><td><strong>Files</strong></td><td>Browse, preview, edit, upload and download, and copy between clusters, also with Globus.</td></tr>
+</table></div>
+<p><strong>Settings</strong> is at the bottom of the sidebar.</p>
+<nav class="pager" aria-label="Next and previous"><a class="next" href="install.html"><small>Next</small><b>Install</b></a></nav>
+<p class="foot">HPC Hub is open source. The code and the releases are on
+<a href="https://github.com/bavanDA/hpc-hub">GitHub</a>.</p>
+</article>
+</main>
+</div>
+<script src="assets/wiki.js"></script>
+</body>
+</html>

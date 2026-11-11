@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en" class="no-js">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Install · HPC Hub wiki</title>
+<meta name="description" content="HPC Hub is downloaded from its releases page on GitHub. Pick the file for your system, then follow the steps for it.">
+<meta name="color-scheme" content="light dark">
+<link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="assets/wiki.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to the text</a>
+<header class="topbar">
+<a class="brand" href="index.html"><svg width="26" height="26" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="#1c71d8"/><g fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="7" width="18" height="7" rx="2"/><rect x="7" y="18" width="18" height="7" rx="2"/><path d="M11 10.5h.01M11 21.5h.01"/></g></svg><span>HPC Hub <small>wiki</small></span></a>
+<button class="menu-btn" type="button" aria-expanded="false" aria-controls="sidebar"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>Menu</button>
+</header>
+<div class="scrim"></div>
+<div class="layout">
+<aside class="sidebar" id="sidebar">
+<a class="brand" href="index.html"><svg width="26" height="26" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="#1c71d8"/><g fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="7" width="18" height="7" rx="2"/><rect x="7" y="18" width="18" height="7" rx="2"/><path d="M11 10.5h.01M11 21.5h.01"/></g></svg><span>HPC Hub <small>wiki</small></span></a>
+<div class="search" role="search">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+<input id="search" type="search" placeholder="Search the wiki" aria-label="Search the wiki" autocomplete="off">
+<div class="results" id="results" hidden></div>
+</div>
+<nav class="nav" aria-label="Pages">
+<div class="nav-group">Start</div>
+<a href="index.html">Home</a>
+<a href="install.html" aria-current="page">Install</a>
+<a href="first-sign-in.html">First sign-in</a>
+<div class="nav-group">Work on a cluster</div>
+<a href="compute-nodes.html">Compute nodes and queues</a>
+<a href="terminals.html">Terminals</a>
+<a href="agents.html">AI agents</a>
+<a href="jobs.html">Jobs</a>
+<a href="usage.html">Usage and SUs</a>
+<div class="nav-group">Your data</div>
+<a href="files.html">Files, transfers and Globus</a>
+<a href="projects.html">Projects and moving between clusters</a>
+<a href="backup.html">Backup of scratch</a>
+<div class="nav-group">More</div>
+<a href="phone.html">Phone app</a>
+<a href="experimental.html">Experimental</a>
+<a href="troubleshooting.html">Troubleshooting</a>
+<a href="report-a-problem.html">Report a problem</a>
+<a href="faq.html">FAQ</a>
+</nav>
+</aside>
+<main id="main">
+<article class="content">
+<h1>Install</h1>
+<p class="lead">HPC Hub is downloaded from its releases page on GitHub. Pick the file for your system, then follow the steps for it.</p>
+<p>All downloads are on the <a href="https://github.com/bavanDA/hpc-hub/releases">releases page</a> of the
+public <code>bavanDA/hpc-hub</code> repository on GitHub. Each release lists its files under
+<strong>Assets</strong>.</p>
+<div class="note"><p>The installers are not signed yet, so your system warns you the first time you open the app.
+The steps below say how to get past that warning. It only happens once.</p></div>
+
+<h2 id="linux">Linux<a class="anchor" href="#linux" aria-label="Link to this part">#</a></h2>
+<p>Pick one of these:</p>
+<ul>
+<li><strong>AppImage</strong>, for any distribution. Make it runnable, then start it:
+<pre><code>chmod +x HPC-Hub_*.AppImage
+./HPC-Hub_*.AppImage</code></pre></li>
+<li><strong>Ubuntu and Debian</strong>: <code>sudo apt install ./HPC-Hub_*_linux_amd64.deb</code></li>
+<li><strong>Fedora and RHEL</strong>: <code>sudo dnf install ./HPC-Hub_*_linux_x86_64.rpm</code></li>
+</ul>
+<h3 id="for-the-vpn">For the VPN<a class="anchor" href="#for-the-vpn" aria-label="Link to this part">#</a></h3>
+<p>Wulver and Yale need their university VPN. On Linux, HPC Hub uses <code>openconnect</code> for it, and
+NetworkManager runs the tunnel. Install openconnect from your distribution if you don't have it.</p>
+<p>A VPN that signs you in on the university's own web page (Yale's) also needs PyGObject with GTK 4 and
+WebKitGTK 6:</p>
+<ul>
+<li>Ubuntu and Debian: <code>python3-gi gir1.2-webkit-6.0</code></li>
+<li>Fedora: <code>python3-gobject webkitgtk6.0</code></li>
+</ul>
+
+<h2 id="windows-10-and-11">Windows 10 and 11<a class="anchor" href="#windows-10-and-11" aria-label="Link to this part">#</a></h2>
+<ol>
+<li>Download the <code>-setup.exe</code> (or the <code>.msi</code>) and run it. If Windows says
+<strong>Windows protected your PC</strong>, click <strong>More info</strong>, then <strong>Run anyway</strong>.</li>
+<li>Open HPC Hub from the Start menu.</li>
+<li>The first time you connect a cluster with a VPN (Wulver, Yale), HPC Hub asks to set up its VPN helper.
+Click <strong>Set up</strong> and approve the Windows prompt. This happens once.</li>
+</ol>
+
+<h2 id="macos">macOS<a class="anchor" href="#macos" aria-label="Link to this part">#</a></h2>
+<p>The macOS build is for Macs with Apple silicon.</p>
+<ol>
+<li>Open the <code>.dmg</code> and drag HPC Hub to Applications.</li>
+<li>Open it. macOS says it can't check the app. Go to <strong>System Settings</strong>, <strong>Privacy &amp;
+Security</strong>, scroll down and click <strong>Open Anyway</strong>. This happens once.</li>
+<li>The first time you connect a cluster with a VPN, approve <strong>Set up the VPN helper</strong> and type your
+Mac password once.</li>
+</ol>
+<div class="note"><p>On Windows and macOS, all your DNS goes through the university while the VPN is up. On Windows,
+<strong>Disconnect</strong> doesn't sign you out on the VPN server; that session ends by itself.</p></div>
+
+<h2 id="android">Android<a class="anchor" href="#android" aria-label="Link to this part">#</a></h2>
+<p>The phone app is not on Google Play, F-Droid or any other store yet. Until it is, it is not one of the regular
+downloads. If an Android file (<code>.apk</code>) is attached to a release, you can install it from there.
+Otherwise the app can be built from the source code; the steps are in <code>docs/design/android.md</code> in the
+repository.</p>
+<p>Once it is on your phone, the easiest way to sign in is to scan a code from HPC Hub on your computer. See
+<a href="phone.html">Phone app</a>.</p>
+
+<h2 id="next">Next<a class="anchor" href="#next" aria-label="Link to this part">#</a></h2>
+<p>Open the app and follow <a href="first-sign-in.html">First sign-in</a>.</p>
+<nav class="pager" aria-label="Next and previous"><a class="prev" href="index.html"><small>Previous</small><b>Home</b></a><a class="next" href="first-sign-in.html"><small>Next</small><b>First sign-in</b></a></nav>
+<p class="foot">HPC Hub is open source. The code and the releases are on
+<a href="https://github.com/bavanDA/hpc-hub">GitHub</a>.</p>
+</article>
+</main>
+</div>
+<script src="assets/wiki.js"></script>
+</body>
+</html>

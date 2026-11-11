@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en" class="no-js">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Jobs · HPC Hub wiki</title>
+<meta name="description" content="The Jobs page shows what is running and waiting on a cluster, in plain words, with details and cancel.">
+<meta name="color-scheme" content="light dark">
+<link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="assets/wiki.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to the text</a>
+<header class="topbar">
+<a class="brand" href="index.html"><svg width="26" height="26" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="#1c71d8"/><g fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="7" width="18" height="7" rx="2"/><rect x="7" y="18" width="18" height="7" rx="2"/><path d="M11 10.5h.01M11 21.5h.01"/></g></svg><span>HPC Hub <small>wiki</small></span></a>
+<button class="menu-btn" type="button" aria-expanded="false" aria-controls="sidebar"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>Menu</button>
+</header>
+<div class="scrim"></div>
+<div class="layout">
+<aside class="sidebar" id="sidebar">
+<a class="brand" href="index.html"><svg width="26" height="26" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="#1c71d8"/><g fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="7" width="18" height="7" rx="2"/><rect x="7" y="18" width="18" height="7" rx="2"/><path d="M11 10.5h.01M11 21.5h.01"/></g></svg><span>HPC Hub <small>wiki</small></span></a>
+<div class="search" role="search">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+<input id="search" type="search" placeholder="Search the wiki" aria-label="Search the wiki" autocomplete="off">
+<div class="results" id="results" hidden></div>
+</div>
+<nav class="nav" aria-label="Pages">
+<div class="nav-group">Start</div>
+<a href="index.html">Home</a>
+<a href="install.html">Install</a>
+<a href="first-sign-in.html">First sign-in</a>
+<div class="nav-group">Work on a cluster</div>
+<a href="compute-nodes.html">Compute nodes and queues</a>
+<a href="terminals.html">Terminals</a>
+<a href="agents.html">AI agents</a>
+<a href="jobs.html" aria-current="page">Jobs</a>
+<a href="usage.html">Usage and SUs</a>
+<div class="nav-group">Your data</div>
+<a href="files.html">Files, transfers and Globus</a>
+<a href="projects.html">Projects and moving between clusters</a>
+<a href="backup.html">Backup of scratch</a>
+<div class="nav-group">More</div>
+<a href="phone.html">Phone app</a>
+<a href="experimental.html">Experimental</a>
+<a href="troubleshooting.html">Troubleshooting</a>
+<a href="report-a-problem.html">Report a problem</a>
+<a href="faq.html">FAQ</a>
+</nav>
+</aside>
+<main id="main">
+<article class="content">
+<h1>Jobs</h1>
+<p class="lead">The Jobs page shows what is running and waiting on a cluster, in plain words, with details and cancel.</p>
+<h2 id="which-jobs">Which jobs<a class="anchor" href="#which-jobs" aria-label="Link to this part">#</a></h2>
+<p>Pick the cluster at the top of the window, then choose under <strong>Which jobs</strong>:</p>
+<ul>
+<li><strong>My jobs</strong>: running and waiting now.</li>
+<li><strong>My group</strong>: everyone in your groups. With more than one group, a second list picks one.</li>
+<li><strong>My history (7 days)</strong>: your jobs from the last week, finished ones too.</li>
+<li><strong>All jobs</strong>: everyone's jobs on the cluster.</li>
+</ul>
+<p><strong>State</strong> filters by running, waiting, finished, failed, cancelled or ran out of time. The search
+box finds a job by id, name, person or queue, for example <code>jdoe</code>.</p>
+
+<h2 id="reading-the-table">Reading the table<a class="anchor" href="#reading-the-table" aria-label="Link to this part">#</a></h2>
+<div class="table-wrap"><table>
+<tr><th>Column</th><th>What it shows</th></tr>
+<tr><td>ID, Name, User</td><td>The Slurm job id, its name and who started it.</td></tr>
+<tr><td>State</td><td>In plain words: Running, Finished, Failed, Ran out of time, Ran out of memory and so on.</td></tr>
+<tr><td>Time used</td><td>How long it has run, out of the time it asked for.</td></tr>
+<tr><td>CPUs · memory</td><td>What it asked for.</td></tr>
+<tr><td>Hours (SU)</td><td>What it has cost so far.</td></tr>
+<tr><td>Node or reason</td><td>Where it runs, or why it is waiting.</td></tr>
+</table></div>
+<p>The reason a job waits is written out instead of Slurm's code word. Some examples:</p>
+<ul>
+<li><strong>Waiting: higher-priority jobs go first</strong></li>
+<li><strong>Waiting: not enough free nodes yet</strong></li>
+<li><strong>Waiting: maintenance has to finish first</strong></li>
+<li><strong>Waiting: your group is out of SUs</strong></li>
+<li><strong>Won't start: longer than this queue allows</strong></li>
+</ul>
+<p>On a narrow window some columns are hidden; <strong>Details</strong> shows everything.</p>
+
+<h2 id="details-and-cancel">Details and cancel<a class="anchor" href="#details-and-cancel" aria-label="Link to this part">#</a></h2>
+<p>Click a job to open its details: the time used, its folders and output files (each with <strong>Copy
+path</strong>), and <strong>All fields</strong> for everything Slurm knows.</p>
+<p>The <strong>&#8942;</strong> on a row has <strong>Details</strong> and <strong>Cancel job</strong>. Cancel
+always asks first. To cancel several, tick them and use the bar that appears.</p>
+<p>If the job is the node HPC Hub got for you, cancelling it is <strong>Release node</strong>, and the app warns
+that your terminals on that node stop too.</p>
+
+<h2 id="submitting-a-job">Submitting a job<a class="anchor" href="#submitting-a-job" aria-label="Link to this part">#</a></h2>
+<p>Open your Slurm script in <strong>Code</strong> (from Files, a project or a job's folder). For a Slurm script,
+the bar above the file has <strong>Submit job</strong>. The new job shows up here.</p>
+
+<h2 id="notifications">Notifications<a class="anchor" href="#notifications" aria-label="Link to this part">#</a></h2>
+<p>While a cluster is connected, HPC Hub checks your jobs about once a minute and tells you when one ends, for
+example <em>Wulver: job 123456 ended</em>. Clicking the notification opens Jobs.</p>
+<nav class="pager" aria-label="Next and previous"><a class="prev" href="agents.html"><small>Previous</small><b>AI agents</b></a><a class="next" href="usage.html"><small>Next</small><b>Usage and SUs</b></a></nav>
+<p class="foot">HPC Hub is open source. The code and the releases are on
+<a href="https://github.com/bavanDA/hpc-hub">GitHub</a>.</p>
+</article>
+</main>
+</div>
+<script src="assets/wiki.js"></script>
+</body>
+</html>

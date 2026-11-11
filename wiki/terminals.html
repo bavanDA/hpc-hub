@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en" class="no-js">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Terminals · HPC Hub wiki</title>
+<meta name="description" content="Every terminal in HPC Hub is a tmux session on the cluster, so it keeps running when your laptop sleeps, the Wi-Fi drops or you close the app. The timeline lets you read back and mark what matters.">
+<meta name="color-scheme" content="light dark">
+<link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="assets/wiki.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to the text</a>
+<header class="topbar">
+<a class="brand" href="index.html"><svg width="26" height="26" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="#1c71d8"/><g fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="7" width="18" height="7" rx="2"/><rect x="7" y="18" width="18" height="7" rx="2"/><path d="M11 10.5h.01M11 21.5h.01"/></g></svg><span>HPC Hub <small>wiki</small></span></a>
+<button class="menu-btn" type="button" aria-expanded="false" aria-controls="sidebar"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>Menu</button>
+</header>
+<div class="scrim"></div>
+<div class="layout">
+<aside class="sidebar" id="sidebar">
+<a class="brand" href="index.html"><svg width="26" height="26" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="#1c71d8"/><g fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="7" width="18" height="7" rx="2"/><rect x="7" y="18" width="18" height="7" rx="2"/><path d="M11 10.5h.01M11 21.5h.01"/></g></svg><span>HPC Hub <small>wiki</small></span></a>
+<div class="search" role="search">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+<input id="search" type="search" placeholder="Search the wiki" aria-label="Search the wiki" autocomplete="off">
+<div class="results" id="results" hidden></div>
+</div>
+<nav class="nav" aria-label="Pages">
+<div class="nav-group">Start</div>
+<a href="index.html">Home</a>
+<a href="install.html">Install</a>
+<a href="first-sign-in.html">First sign-in</a>
+<div class="nav-group">Work on a cluster</div>
+<a href="compute-nodes.html">Compute nodes and queues</a>
+<a href="terminals.html" aria-current="page">Terminals</a>
+<a href="agents.html">AI agents</a>
+<a href="jobs.html">Jobs</a>
+<a href="usage.html">Usage and SUs</a>
+<div class="nav-group">Your data</div>
+<a href="files.html">Files, transfers and Globus</a>
+<a href="projects.html">Projects and moving between clusters</a>
+<a href="backup.html">Backup of scratch</a>
+<div class="nav-group">More</div>
+<a href="phone.html">Phone app</a>
+<a href="experimental.html">Experimental</a>
+<a href="troubleshooting.html">Troubleshooting</a>
+<a href="report-a-problem.html">Report a problem</a>
+<a href="faq.html">FAQ</a>
+</nav>
+</aside>
+<main id="main">
+<article class="content">
+<h1>Terminals</h1>
+<p class="lead">Every terminal in HPC Hub is a tmux session on the cluster, so it keeps running when your laptop sleeps, the Wi-Fi drops or you close the app. The timeline lets you read back and mark what matters.</p>
+<h2 id="open-a-terminal">Open a terminal<a class="anchor" href="#open-a-terminal" aria-label="Link to this part">#</a></h2>
+<p>Press <strong>Terminal</strong> on a cluster card, or <strong>New terminal</strong> on the
+<strong>Terminals</strong> page. The <strong>New terminal</strong> window asks:</p>
+<ul>
+<li><strong>Name</strong>: anything you like. It starts as the time, like <em>Terminal 14:05</em>.</li>
+<li><strong>Cluster</strong>, when more than one is connected.</li>
+<li><strong>Run on</strong>: <strong>Login node</strong> or <strong>Node n0123</strong>, your compute node.</li>
+<li><strong>Start in</strong>: the folder to start in. Empty means your home folder.</li>
+</ul>
+<p>Press <strong>Open terminal</strong>.</p>
+
+<h2 id="login-node-or-compute-node">Login node or compute node?<a class="anchor" href="#login-node-or-compute-node" aria-label="Link to this part">#</a></h2>
+<p>The login node is shared with everyone on the cluster. It is the right place for editing files, moving them
+around and submitting jobs. Your compute node is yours alone, and it is the right place for builds, scripts and
+heavy work.</p>
+<h3 id="long-installs">Long installs<a class="anchor" href="#long-installs" aria-label="Link to this part">#</a></h3>
+<p>Installing a big package (a conda environment, a large pip install, compiling code) can take a long time and a
+lot of CPU. Run it on your compute node: pick <strong>Node</strong> under <strong>Run on</strong>.</p>
+<p>A terminal on the compute node lives as long as the node does. When the node's time is up, the terminal stops
+with it. Before a long install, check the time left on the cluster card, and get a node with enough time if
+needed. See <a href="compute-nodes.html#time-left">Time left</a>.</p>
+
+<h2 id="sessions-keep-running">Sessions keep running<a class="anchor" href="#sessions-keep-running" aria-label="Link to this part">#</a></h2>
+<p>Each terminal runs inside tmux on the cluster. Closing a tab doesn't stop it; the app tells you
+<strong>Terminal 14:05 is still running. Reopen it from Sessions.</strong></p>
+<p>The <strong>Sessions</strong> list on the Terminals page shows every session on each connected cluster, also
+ones you started yourself outside the app (tmux and screen). Click one to open it again. Its
+<strong>&#8942;</strong> menu has <strong>Rename</strong> and <strong>Stop session</strong>; stopping asks first,
+because everything running in it stops.</p>
+<p>If the cluster says <strong>tmux is not installed here</strong>, sessions can't be kept for you on it.</p>
+
+<h2 id="reconnecting">Reconnecting<a class="anchor" href="#reconnecting" aria-label="Link to this part">#</a></h2>
+<p>When the connection drops (sleep, a new network, the VPN going away), the tab says so and offers the way
+back:</p>
+<ul>
+<li><strong>Wulver disconnected. Your session should still be running there.</strong> with <strong>Reconnect to
+Wulver</strong>. Once the cluster is back, the tab attaches to the session again by itself.</li>
+<li><strong>You left this session. It is still running.</strong> with <strong>Attach again</strong>, when you
+detached from tmux yourself.</li>
+<li><strong>This session has ended.</strong> when the session is gone, for example because the shell in it
+exited or the compute node's time ran out. Close the tab or start a new one from the list.</li>
+</ul>
+
+<h2 id="the-timeline">The timeline<a class="anchor" href="#the-timeline" aria-label="Link to this part">#</a></h2>
+<p>A long build or training run prints far more than fits on the screen. The timeline is a map of the whole
+session, so you can find your way around it. It works on tmux sessions.</p>
+<ul>
+<li><strong>The map</strong> runs along the right edge of the terminal. It shows the shape of the session's
+output, with prompts and tables marked in color, your marks as small blue flags, and a band for the part you are
+looking at. Hover it to see the line number; drag it to read any part of the history.</li>
+<li><strong>Scroll up</strong> in the terminal, or drag the map, and a calm copy of the history opens over the
+terminal. The session underneath keeps running and nothing is sent to it.</li>
+<li><strong>Back to live</strong>, at the bottom, takes you back. It shows how many new lines came in while you
+were reading, like <em>+120</em>. <kbd>Esc</kbd> does the same, and so does starting to type.</li>
+<li>The bar above the terminal has <strong>Previous prompt</strong> and <strong>Next prompt</strong> to jump
+between the commands you ran, and <strong>Previous mark</strong> and <strong>Next mark</strong>.</li>
+</ul>
+<h3 id="marks">Marks<a class="anchor" href="#marks" aria-label="Link to this part">#</a></h3>
+<p>A mark is a named place in the history, like a bookmark: the line where the error started, the table of
+results, the command that finally worked.</p>
+<ol>
+<li>While reading the history, click the gutter at the left of a line, or press <kbd>M</kbd>. A click on a
+table marks the whole table.</li>
+<li>Give it a name in <strong>Name this mark</strong> and press <strong>Save</strong>.</li>
+</ol>
+<p>The <strong>Marks</strong> button, with the count, lists them. Click one to jump to it; each has
+<strong>Copy</strong>, <strong>Rename</strong> and <strong>Remove</strong>.</p>
+<p>Marks are kept on the cluster, in your home folder, with the text of the marked lines. That means:</p>
+<ul>
+<li>Every device signed in to the cluster sees the same marks, your phone too.</li>
+<li>When tmux has trimmed old lines, or the session has ended, a mark still has its text. It shows as
+<strong>Saved copy</strong>, and you can read and copy it.</li>
+</ul>
+
+<h2 id="terminal-settings">Terminal settings<a class="anchor" href="#terminal-settings" aria-label="Link to this part">#</a></h2>
+<p>In <strong>Settings</strong>, under <strong>Terminals</strong>:</p>
+<ul>
+<li><strong>Select to copy</strong>: highlight text with the mouse to copy it.</li>
+<li><strong>Monitoring bar</strong>: CPU, memory and network of the host, under each terminal.</li>
+</ul>
+
+<h2 id="pasting-scripts">Pasting scripts<a class="anchor" href="#pasting-scripts" aria-label="Link to this part">#</a></h2>
+<p>A script that starts with <code>set -e</code> stops at the first command that fails. Pasted into a
+terminal, that stop is the shell itself exiting, which ends the session. Save the script to a file and run it
+with <code>bash</code> instead:</p>
+<pre><code>bash setup.sh</code></pre>
+<p>More in <a href="troubleshooting.html#a-pasted-script-closed-my-terminal">Troubleshooting</a>.</p>
+<nav class="pager" aria-label="Next and previous"><a class="prev" href="compute-nodes.html"><small>Previous</small><b>Compute nodes and queues</b></a><a class="next" href="agents.html"><small>Next</small><b>AI agents</b></a></nav>
+<p class="foot">HPC Hub is open source. The code and the releases are on
+<a href="https://github.com/bavanDA/hpc-hub">GitHub</a>.</p>
+</article>
+</main>
+</div>
+<script src="assets/wiki.js"></script>
+</body>
+</html>

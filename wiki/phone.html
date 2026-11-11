@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en" class="no-js">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Phone app · HPC Hub wiki</title>
+<meta name="description" content="The Android app has the same pages as the desktop, made for a phone. Sign it in by scanning a code from your computer.">
+<meta name="color-scheme" content="light dark">
+<link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="assets/wiki.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to the text</a>
+<header class="topbar">
+<a class="brand" href="index.html"><svg width="26" height="26" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="#1c71d8"/><g fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="7" width="18" height="7" rx="2"/><rect x="7" y="18" width="18" height="7" rx="2"/><path d="M11 10.5h.01M11 21.5h.01"/></g></svg><span>HPC Hub <small>wiki</small></span></a>
+<button class="menu-btn" type="button" aria-expanded="false" aria-controls="sidebar"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>Menu</button>
+</header>
+<div class="scrim"></div>
+<div class="layout">
+<aside class="sidebar" id="sidebar">
+<a class="brand" href="index.html"><svg width="26" height="26" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="#1c71d8"/><g fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="7" width="18" height="7" rx="2"/><rect x="7" y="18" width="18" height="7" rx="2"/><path d="M11 10.5h.01M11 21.5h.01"/></g></svg><span>HPC Hub <small>wiki</small></span></a>
+<div class="search" role="search">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+<input id="search" type="search" placeholder="Search the wiki" aria-label="Search the wiki" autocomplete="off">
+<div class="results" id="results" hidden></div>
+</div>
+<nav class="nav" aria-label="Pages">
+<div class="nav-group">Start</div>
+<a href="index.html">Home</a>
+<a href="install.html">Install</a>
+<a href="first-sign-in.html">First sign-in</a>
+<div class="nav-group">Work on a cluster</div>
+<a href="compute-nodes.html">Compute nodes and queues</a>
+<a href="terminals.html">Terminals</a>
+<a href="agents.html">AI agents</a>
+<a href="jobs.html">Jobs</a>
+<a href="usage.html">Usage and SUs</a>
+<div class="nav-group">Your data</div>
+<a href="files.html">Files, transfers and Globus</a>
+<a href="projects.html">Projects and moving between clusters</a>
+<a href="backup.html">Backup of scratch</a>
+<div class="nav-group">More</div>
+<a href="phone.html" aria-current="page">Phone app</a>
+<a href="experimental.html">Experimental</a>
+<a href="troubleshooting.html">Troubleshooting</a>
+<a href="report-a-problem.html">Report a problem</a>
+<a href="faq.html">FAQ</a>
+</nav>
+</aside>
+<main id="main">
+<article class="content">
+<h1>Phone app</h1>
+<p class="lead">The Android app has the same pages as the desktop, made for a phone. Sign it in by scanning a code from your computer.</p>
+<div class="note"><p>The phone app is not on any store yet. See <a href="install.html#android">Install</a>.</p></div>
+
+<h2 id="scan-from-your-computer">Scan from your computer<a class="anchor" href="#scan-from-your-computer" aria-label="Link to this part">#</a></h2>
+<p>The first start asks which clusters you use, then for each one offers <strong>Scan from your
+computer</strong>, <strong>Type it instead</strong> or <strong>Do this later</strong>.</p>
+<p>To scan:</p>
+<ol>
+<li>On your computer, open <strong>Settings</strong> in HPC Hub and choose <strong>Set up the phone app</strong>.
+(The <strong>&#8942;</strong> menu on a cluster card has <strong>Connect phone</strong> for just that
+cluster.)</li>
+<li>Pick the logins to send. <strong>Include passwords</strong>: on, the phone signs in by itself; off, the phone
+asks for each password.</li>
+<li>Press <strong>Show QR code</strong> and scan it with the phone. The code hides itself after a minute.</li>
+</ol>
+<p>One code can carry several clusters. For a cluster that uses SSH keys, the phone gets a key of its own instead
+of a copy of yours. Duo still asks when the phone connects.</p>
+
+<h2 id="finding-your-way-around">Finding your way around<a class="anchor" href="#finding-your-way-around" aria-label="Link to this part">#</a></h2>
+<p>The menu at the top left has the same pages, in the same order, as the desktop's sidebar, and
+<strong>Settings</strong> at the bottom. Android's Back closes the sheet on top first, then goes to Clusters.
+Long-press a row (a session, a file, a project) for its actions.</p>
+
+<h2 id="stay-connected-in-the-background">Stay connected in the background<a class="anchor" href="#stay-connected-in-the-background" aria-label="Link to this part">#</a></h2>
+<p>Android can close HPC Hub's connection when you lock the phone or switch apps. Two settings keep it open, under
+<strong>Settings</strong>, <strong>On the phone</strong>:</p>
+<ul>
+<li><strong>Stay connected in the background</strong>: keeps your connections open, with a notification like
+<em>Connected to Wulver</em>. It uses a little more battery while a cluster is connected.</li>
+<li><strong>Run without battery limits</strong>: so Android doesn't close your connections to save battery. Tap
+<strong>Turn on</strong> and Android asks you to allow it.</li>
+</ul>
+<p>The app offers both once, after your first connect. If you said <strong>Not now</strong>, turn them on in
+Settings.</p>
+
+<h2 id="notifications">Notifications<a class="anchor" href="#notifications" aria-label="Link to this part">#</a></h2>
+<p>The phone can tell you when Duo is waiting, a cluster connected, your node's time is almost up, a job ended, a
+copy finished, an agent answered, scratch files are about to be deleted, or a backup finished. Pick which ones in
+<strong>Settings</strong>, <strong>Notifications</strong>. Tapping one opens the right page.</p>
+
+<h2 id="terminals-on-the-phone">Terminals on the phone<a class="anchor" href="#terminals-on-the-phone" aria-label="Link to this part">#</a></h2>
+<ul>
+<li><strong>Swipe to scroll.</strong> Swipe up and down on the terminal to move through its history, as a mouse
+wheel would. A tap opens the keyboard.</li>
+<li><strong>The key row</strong> over the keyboard has <strong>Esc</strong>, <strong>Tab</strong>,
+<strong>Ctrl</strong>, <strong>Alt</strong>, the arrows and a few symbols that are hard to reach on a phone
+keyboard. Tap <strong>Ctrl</strong> or <strong>Alt</strong> to see the keys that go with it, like
+<strong>^C</strong>.</li>
+<li><strong>The timeline</strong> works as on the desktop. The marks list opens from the bottom, and Back leaves
+the history. Marks you made on the computer are there too.</li>
+</ul>
+
+<h2 id="vpn-on-the-phone">VPN on the phone<a class="anchor" href="#vpn-on-the-phone" aria-label="Link to this part">#</a></h2>
+<p>The phone uses the same university VPN, but only for HPC Hub's own connections. Nothing else on the phone goes
+through it, and several clusters can be connected at once.</p>
+
+<h2 id="your-passwords-on-the-phone">Your passwords on the phone<a class="anchor" href="#your-passwords-on-the-phone" aria-label="Link to this part">#</a></h2>
+<p>The phone keeps logins in an encrypted file in the app's private storage. Its key is held by the phone's
+Android Keystore and never leaves the phone, and the file is left out of Android backups.</p>
+<nav class="pager" aria-label="Next and previous"><a class="prev" href="backup.html"><small>Previous</small><b>Backup of scratch</b></a><a class="next" href="experimental.html"><small>Next</small><b>Experimental</b></a></nav>
+<p class="foot">HPC Hub is open source. The code and the releases are on
+<a href="https://github.com/bavanDA/hpc-hub">GitHub</a>.</p>
+</article>
+</main>
+</div>
+<script src="assets/wiki.js"></script>
+</body>
+</html>

@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en" class="no-js">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Experimental features · HPC Hub wiki</title>
+<meta name="description" content="Three parts of HPC Hub are still taking shape. They are off by default, and each has its own switch.">
+<meta name="color-scheme" content="light dark">
+<link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="assets/wiki.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to the text</a>
+<header class="topbar">
+<a class="brand" href="index.html"><svg width="26" height="26" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="#1c71d8"/><g fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="7" width="18" height="7" rx="2"/><rect x="7" y="18" width="18" height="7" rx="2"/><path d="M11 10.5h.01M11 21.5h.01"/></g></svg><span>HPC Hub <small>wiki</small></span></a>
+<button class="menu-btn" type="button" aria-expanded="false" aria-controls="sidebar"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>Menu</button>
+</header>
+<div class="scrim"></div>
+<div class="layout">
+<aside class="sidebar" id="sidebar">
+<a class="brand" href="index.html"><svg width="26" height="26" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="#1c71d8"/><g fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="7" width="18" height="7" rx="2"/><rect x="7" y="18" width="18" height="7" rx="2"/><path d="M11 10.5h.01M11 21.5h.01"/></g></svg><span>HPC Hub <small>wiki</small></span></a>
+<div class="search" role="search">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+<input id="search" type="search" placeholder="Search the wiki" aria-label="Search the wiki" autocomplete="off">
+<div class="results" id="results" hidden></div>
+</div>
+<nav class="nav" aria-label="Pages">
+<div class="nav-group">Start</div>
+<a href="index.html">Home</a>
+<a href="install.html">Install</a>
+<a href="first-sign-in.html">First sign-in</a>
+<div class="nav-group">Work on a cluster</div>
+<a href="compute-nodes.html">Compute nodes and queues</a>
+<a href="terminals.html">Terminals</a>
+<a href="agents.html">AI agents</a>
+<a href="jobs.html">Jobs</a>
+<a href="usage.html">Usage and SUs</a>
+<div class="nav-group">Your data</div>
+<a href="files.html">Files, transfers and Globus</a>
+<a href="projects.html">Projects and moving between clusters</a>
+<a href="backup.html">Backup of scratch</a>
+<div class="nav-group">More</div>
+<a href="phone.html">Phone app</a>
+<a href="experimental.html" aria-current="page">Experimental</a>
+<a href="troubleshooting.html">Troubleshooting</a>
+<a href="report-a-problem.html">Report a problem</a>
+<a href="faq.html">FAQ</a>
+</nav>
+</aside>
+<main id="main">
+<article class="content">
+<h1>Experimental features <span class="tag">Experimental</span></h1>
+<p class="lead">Three parts of HPC Hub are still taking shape. They are off by default, and each has its own switch.</p>
+<div class="exp"><p>Turn them on in <strong>Settings</strong>, under <strong>Experimental</strong>. As the app
+says there, they may change or break.</p></div>
+
+<h2 id="papers-latex">Papers (LaTeX)<a class="anchor" href="#papers-latex" aria-label="Link to this part">#</a></h2>
+<p>The <strong>Papers</strong> switch adds a Papers page to the sidebar: an editor for LaTeX papers that live in a
+project on the cluster, with builds done there.</p>
+<ul>
+<li>Views: <strong>Editor</strong>, <strong>Both</strong> (source and PDF side by side), <strong>PDF</strong> and
+<strong>Reader</strong>.</li>
+<li>Builds with latexmk, and jumps between a line of source and its place in the PDF.</li>
+<li>Git: commit, pull and push.</li>
+<li><strong>History</strong>: a timeline of the paper's changes, comparing versions, who last changed each line
+and why, and notes. Notes are kept next to the paper in <code>.git</code>, and are never committed or
+pushed.</li>
+<li>Assist: <strong>Ask about</strong> asks the agent about the selected text or a line, and the agent can write
+commit messages and compare your open notes with your changes. You decide each one.</li>
+</ul>
+<p>With Papers on, <strong>Settings</strong> also has <strong>Agent for papers</strong>, the agent used for this.
+It runs on your compute node. A new project can start as a <strong>LaTeX paper</strong>.</p>
+
+<h2 id="skills">Skills<a class="anchor" href="#skills" aria-label="Link to this part">#</a></h2>
+<p>The <strong>Skills</strong> switch adds a Skills tab to <strong>Agents</strong>: what each agent knows on a
+cluster. Add skills to the agents on each cluster, from HPC Hub's own set or from any git repository.</p>
+
+<h2 id="scheduled-agents">Scheduled agents<a class="anchor" href="#scheduled-agents" aria-label="Link to this part">#</a></h2>
+<p>The <strong>Scheduled agents</strong> switch adds a Scheduled tab to <strong>Agents</strong>: an agent runs a
+task on its own at set times, for example every night at 02:00. Each run is a Slurm job on the cluster, so it
+runs with your laptop off and is billed like any other job. Each run keeps a log you can read.</p>
+<nav class="pager" aria-label="Next and previous"><a class="prev" href="phone.html"><small>Previous</small><b>Phone app</b></a><a class="next" href="troubleshooting.html"><small>Next</small><b>Troubleshooting</b></a></nav>
+<p class="foot">HPC Hub is open source. The code and the releases are on
+<a href="https://github.com/bavanDA/hpc-hub">GitHub</a>.</p>
+</article>
+</main>
+</div>
+<script src="assets/wiki.js"></script>
+</body>
+</html>
