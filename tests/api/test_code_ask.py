@@ -24,6 +24,7 @@ class FakeSsh:
             if key in command:
                 return subprocess.CompletedProcess(command, 0, out, "")
         return subprocess.CompletedProcess(command, 0, "", "")
+    on_login = run
 
 
 class FakeSession:

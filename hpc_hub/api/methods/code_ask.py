@@ -45,8 +45,8 @@ def agent_command(a: catalog.Agent, settings) -> str:
 def tmux_line(a: asks.Ask) -> str:
     """Start run.sh on the node in its own tmux session (a login shell, so the agent's PATH is there)."""
     run = f"bash -ic {shlex.quote(asks.run_line(a))}"
-    line = (f"if command -v tmux >/dev/null 2>&1; then tmux new-session -d -s {shlex.quote(a.session)} "
-            f"{shlex.quote(run)}; else nohup {run} >/dev/null 2>&1 & fi")
+    line = (f"if command -v tmux >/dev/null 2>&1; then {tmux.new_session(a.session, run)}; "
+            f"else nohup {run} >/dev/null 2>&1 & fi")
     return tmux.on(a.node, line)
 
 

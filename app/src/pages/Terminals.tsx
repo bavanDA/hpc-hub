@@ -43,7 +43,7 @@ export function Terminals() {
       <section className="flex min-w-0 flex-1 flex-col">
         {tabs.length > 0 && <TabStrip tabs={tabs} current={current} onChanged={refresh} />}
         <div className="relative min-h-0 flex-1">
-          {tabs.map((t) => <TerminalView key={t.key} tab={t} shown={t.key === current} />)}
+          {tabs.map((t) => <TerminalView key={t.key} tab={t} shown={t.key === current} rail />)}
           {!tabs.length && (
             <EmptyState icon={SquareTerminal} title="Nothing open"
               text={list ? 'Click a session on the left, or start a new terminal.' : 'Start a new terminal.'}

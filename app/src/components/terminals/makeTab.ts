@@ -21,7 +21,7 @@ export function makeTab(key: string, fields: Fields): Tab {
   const el = document.createElement('div')
   el.className = 'h-full w-full'
   const tab: Tab = { key, ...fields, term, fit, el, argv: null, pty: null, ended: false, error: '', banners: [],
-    seen: new Set() }
+    lost: '', waiting: false, input: [], seen: new Set() }
   clipboardKeys(tab, tabNotify)
   return tab
 }

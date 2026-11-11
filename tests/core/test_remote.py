@@ -17,5 +17,6 @@ def test_agent_tmux_runs_on_the_node():
     assert words[:2] == ["exec", "ssh"] and "-t" in words and words[-2] == "n0076"
     inner = words[-1]  # the whole tmux line runs on the node
     assert inner.startswith("if command -v tmux") and "srun" not in line
-    assert "new-session -d -s hpchub-claude-42-x 'bash -ic " in inner and "claude; exec bash -i" in inner
+    assert "new-session -d -s hpchub-claude-42-x" in inner and "claude; exec bash -i" in inner
+    assert "split-window -t =hpchub-claude-42-x: 'bash -ic " in inner
     assert subprocess.run(["bash", "-n", "-c", line]).returncode == 0

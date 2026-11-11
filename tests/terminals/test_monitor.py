@@ -79,6 +79,7 @@ class FakeSsh:
     def argv(self, command=None, tty=False):
         self.ran.append(command)
         return ["sh", "-c", f"printf %s {shlex.quote(self.text)}; exec sleep 30"]
+    node_argv = argv
 
 
 def collect(ssh, node: str, count: int):
@@ -129,6 +130,7 @@ def test_the_script_runs_here(monkeypatch):
     class Local:
         def argv(self, command=None, tty=False):
             return ["sh", "-c", command]
+        node_argv = argv
     got, done, unwatch = collect(Local(), "", 2)
     try:
         assert done.wait(10)
