@@ -54,7 +54,7 @@ def list_jobs(cluster: str, scope: str = jobs.MINE, account: str = "") -> dict:
         raise ValueError(f"No scope {scope}")
     s = hub().connected(cluster)
     try:
-        found = jobs.list_jobs(s.ssh, scope, account=account.strip())
+        found = jobs.list_jobs(s.ssh, scope, account=account.strip(), per_su=s.cfg.billing_per_su)
     except Exception:
         try:
             lost = not s.healthy()  # the link died, not Slurm: let the cluster card say so
@@ -82,7 +82,8 @@ def inside(cluster: str, job_id: str) -> dict:
     """What stops with this job: terminals and agents the app started in it, and the app's own node."""
     s = hub().connected(cluster)
     try:  # the app names them hpchub-<agent>-<job>-...
-        titles = [t.title for t in tmux.list_sessions(s.ssh).sessions if f"-{job_id}-" in t.name]
+        also = s.allocation.node if s.allocation else ""
+        titles = [t.title for t in tmux.list_sessions(s.ssh, also).sessions if f"-{job_id}-" in t.name]
     except Exception:  # noqa: BLE001 - the dialog still works without them
         titles = []
     return {"sessions": titles, "app_node": s.allocation is not None and s.allocation.job_id == job_id}

@@ -40,7 +40,7 @@ def status(ssh: SshMaster) -> dict:
 def install(ssh: SshMaster, secret: str) -> None:
     _run(ssh, _install_bin(ssh))
     # the secret goes through stdin, so it never shows up in ps on the shared login node
-    res = subprocess.run(ssh.argv(f"~/{BIN} setup --stdin"), input=secret + "\n", capture_output=True, text=True,
+    res = subprocess.run(ssh.node_argv(f"~/{BIN} setup --stdin"), input=secret + "\n", capture_output=True, text=True,
                          timeout=60)
     if res.returncode != 0:
         raise OSError(res.stderr.strip() or "remote-lock setup failed")

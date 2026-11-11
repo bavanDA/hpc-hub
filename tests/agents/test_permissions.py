@@ -133,6 +133,7 @@ def test_remote_off_turns_off_resumed_chats_too(tmp_path, monkeypatch):
     class Shell(LocalShell):
         def run(self, command, timeout=60, fast=None):
             return sp.run(["bash", "-c", command], capture_output=True, text=True, timeout=timeout)
+        on_login = run
     permissions.set_remote(Shell(), "remoteControlAtStartup", False)
     s = json.loads((tmp_path / permissions.SETTINGS).read_text())
     assert s == {"theme": "dark", "remoteControlAtStartup": False, "disableRemoteControl": True}

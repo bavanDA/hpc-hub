@@ -30,11 +30,13 @@ class FakeSsh:
         out = (SQUEUE if command.startswith("squeue -h -u") else USAGE if "expanse-client" in command
                else SCONTROL if command.startswith("scontrol show job") else "")
         return subprocess.CompletedProcess(command, 0, out, "")
+    on_login = run
+    read = run
 
 
 class FakeSession:
     def __init__(self, connected=True):
-        self.cfg = SimpleNamespace(id="wulver", name="Wulver")
+        self.cfg = SimpleNamespace(id="wulver", name="Wulver", billing_per_su=1)
         self.ssh = FakeSsh()
         self.connected = connected
         self.allocation = None

@@ -171,7 +171,7 @@ def save_command(p: Permissions) -> str:
 
 
 def save(ssh: SshMaster, p: Permissions) -> None:
-    res = subprocess.run(ssh.argv(save_command(p)), input=json.dumps(apply(p), indent=2) + "\n",
+    res = subprocess.run(ssh.node_argv(save_command(p)), input=json.dumps(apply(p), indent=2) + "\n",
                          capture_output=True, text=True, timeout=60)
     if res.returncode != 0:
         raise OSError(res.stderr.strip() or "could not save the settings")

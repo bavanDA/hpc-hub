@@ -24,7 +24,7 @@ POSIX = {
     "compute/test_slurm.py", "connect/test_askpass.py", "connect/test_session.py",
     "connect/test_session_asyncssh.py", "core/test_paths.py", "core/test_remote.py",
     "files/test_remote_fs.py", "files/test_transfer.py", "latex/test_latex_git.py",
-    "projects/test_projects.py", "terminals/test_tmux.py",
+    "projects/test_projects.py", "terminals/test_tmux.py", "terminals/test_history.py",
 }
 # single posix tests in files that otherwise run on Windows
 POSIX_TESTS = {

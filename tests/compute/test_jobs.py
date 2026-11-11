@@ -46,12 +46,14 @@ def test_wait_gone(monkeypatch):
     class Ssh:
         def run(self, cmd, timeout=60):
             return subprocess.CompletedProcess(cmd, 0, next(states) + "\n", "")
+        on_login = run
     monkeypatch.setattr(jobs.time, "sleep", lambda _s: None)
     assert jobs.wait_gone(Ssh(), "42")
 
     class Stuck:
         def run(self, cmd, timeout=60):
             return subprocess.CompletedProcess(cmd, 0, "RUNNING\n", "")
+        on_login = run
     clock = iter(range(0, 100, 5))
     monkeypatch.setattr(jobs.time, "monotonic", lambda: next(clock))
     assert not jobs.wait_gone(Stuck(), "42", seconds=12)
@@ -73,3 +75,9 @@ def test_group_scope_lists_my_accounts_jobs():
     cmd = jobs.jobs_command(jobs.GROUP)
     assert "sacctmgr -n -P show assoc user=\"$USER\" format=account" in cmd
     assert '-A $a' in cmd and '-u $USER' in cmd  # falls back to your own jobs without an account
+
+
+def test_expanse_billing_is_su_seconds_an_hour():
+    line = "5|x|me|shared|COMPLETED|01:00:00|02:00:00|4|16G|n1|shared-normal|billing=28800,cpu=4,mem=16G,node=1\n"
+    job = jobs.parse_jobs(line, per_su=3600)[0]
+    assert (job.billing, job.su_spent, job.su_max) == (8, 8, 16)

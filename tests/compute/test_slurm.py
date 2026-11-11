@@ -57,6 +57,7 @@ def test_tunnel_link(tmp_path):
         def run(self, cmd, timeout=60):
             cmd = cmd.replace(job_log.log_path("7"), f"echo {log}")
             return subprocess.run(["bash", "-c", cmd], capture_output=True, text=True)
+        on_login = run
     assert job_log.tunnel_link(Ssh(), "7") == "https://vscode.dev/tunnel/n0018/mmfs1/home/jdoe"
 
 

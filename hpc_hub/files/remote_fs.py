@@ -62,6 +62,13 @@ def _run(ssh: SshMaster, command: str, timeout: float = 120) -> str:
     return res.stdout
 
 
+def _long(ssh: SshMaster, command: str, timeout: float) -> None:
+    """On the login node, so it doesn't end with the job."""
+    res = ssh.on_login(command, timeout=timeout)
+    if res.returncode != 0:
+        raise FsError(res.stderr.strip() or "Command failed")
+
+
 def home(ssh: SshMaster) -> str:
     return _run(ssh, 'printf %s "$HOME"').strip() or "/"
 
@@ -167,7 +174,7 @@ replace_file() {
 def pipe(ssh: SshMaster, script: str, args: list[str], data: bytes, timeout: float = 300) -> str:
     """Run a bash script on the cluster with args, data on its stdin. Its stdout; FsError with its last error."""
     cmd = f"bash -c {q(script)} _ " + " ".join(q(a) for a in args)
-    res = subprocess.run(ssh.argv(cmd), input=data, capture_output=True, timeout=timeout)
+    res = subprocess.run(ssh.node_argv(cmd), input=data, capture_output=True, timeout=timeout)
     if res.returncode != 0:
         err = res.stderr.decode(errors="replace").strip().splitlines()
         raise FsError(err[-1] if err else "Could not save file")
@@ -189,7 +196,7 @@ def rename(ssh: SshMaster, src: str, dst: str) -> None:
 def remove(ssh: SshMaster, path: str) -> None:
     if len([part for part in path.split("/") if part not in ("", ".", "~")]) < 2:
         raise FsError("Refusing to delete that")
-    _run(ssh, f"rm -rf -- {q(path)}", timeout=600)
+    _long(ssh, f"rm -rf -- {q(path)}", timeout=600)
 
 
 def zip_command(path: str) -> str:
@@ -212,11 +219,11 @@ def unzip_command(path: str) -> str:
 
 
 def make_zip(ssh: SshMaster, path: str) -> None:
-    _run(ssh, zip_command(path), timeout=3600)
+    _long(ssh, zip_command(path), timeout=3600)
 
 
 def extract(ssh: SshMaster, path: str) -> None:
-    _run(ssh, unzip_command(path), timeout=3600)
+    _long(ssh, unzip_command(path), timeout=3600)
 
 
 def upload(ssh: SshMaster, local_path: str, remote_dir: str) -> None:

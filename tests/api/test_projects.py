@@ -132,8 +132,8 @@ def test_status_reads_git_of_every_project_at_once(hub, tmp_path, monkeypatch):
     store.save([Project("thesis", "wulver", str(repo)), Project("notes", "wulver", str(plain)),
                 Project("paper", "wulver", "~/paper"), Project("sims", "sdsc", "/s")], store.PROJECTS_FILE)
     commands = []
-    run = hub.sessions["wulver"].ssh.run
-    monkeypatch.setattr(hub.sessions["wulver"].ssh, "run", lambda c, **k: commands.append(c) or run(c, **k))
+    read = hub.sessions["wulver"].ssh.read
+    monkeypatch.setattr(hub.sessions["wulver"].ssh, "read", lambda c, **k: commands.append(c) or read(c, **k))
     got = git.status("wulver")
     assert got == {str(repo): {"branch": "main", "changed": 2}, "~/paper": {"branch": "main", "changed": 0}}
     assert len([c for c in commands if "git" in c]) == 1  # one ssh command for all of them

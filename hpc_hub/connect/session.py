@@ -42,14 +42,15 @@ SSO_PASS = "hpc-hub:sso-password"
 
 
 class ClusterSession(NodesMixin):
+    _allocation: Allocation | None = None
+    _ssh: SshMaster | None = None
+
     def __init__(self, cfg: ClusterConfig, askpass: AskpassServer, listener: Listener):
         self.cfg = cfg
         self.askpass = askpass
         self.listener = listener
         self.state = State.DISCONNECTED
         self.detail = ""
-        self.allocation: Allocation | None = None
-        self.ssh: SshMaster | None = None
         self.vpn_used = False
         self.vpn_only = False
         self._cancel = threading.Event()
@@ -57,6 +58,28 @@ class ClusterSession(NodesMixin):
         self.limits = limits.cached(cfg.id)  # longest time per partition and QoS
         self.default_account: str | None = None  # looked up once per login
         self.pick_node = False  # connected and waiting for you to pick a node (cfg.ask_node)
+
+    @property
+    def allocation(self) -> Allocation | None:
+        return self._allocation
+
+    @allocation.setter
+    def allocation(self, a: Allocation | None) -> None:
+        self._allocation = a
+        self._point_reads()
+
+    @property
+    def ssh(self) -> SshMaster | None:
+        return self._ssh
+
+    @ssh.setter
+    def ssh(self, master: SshMaster | None) -> None:
+        self._ssh = master
+        self._point_reads()
+
+    def _point_reads(self) -> None:
+        if self._ssh:
+            self._ssh.work_node = self._allocation.node if self._allocation else ""
 
     # -- state -------------------------------------------------------------
     def _set(self, state: State, detail: str = "") -> None:
@@ -151,7 +174,7 @@ class ClusterSession(NodesMixin):
             return False
         for attempt in range(2):  # after sleep the master can look alive while its link is dead
             try:
-                if self.ssh.run("true", timeout=15).returncode == 0:
+                if self.ssh.on_login("true", timeout=15).returncode == 0:
                     return True
             except subprocess.TimeoutExpired:
                 pass

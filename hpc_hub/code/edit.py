@@ -169,7 +169,7 @@ def find_command(root: str, query: str, cap: int = MAX_FOUND) -> str:
 
 def find_files(ssh: SshMaster, root: str, query: str = "", cap: int = MAX_FOUND) -> list[dict]:
     """Files under root whose name has query in it (any case), shortest names first."""
-    lines = ssh.run(find_command(root, query, cap), timeout=60).stdout.splitlines()
+    lines = ssh.read(find_command(root, query, cap), timeout=60).stdout.splitlines()
     found = [{"path": p, "name": p.rsplit("/", 1)[-1]} for p in lines if p]
     return sorted(found, key=lambda f: (len(f["name"]), f["path"]))
 

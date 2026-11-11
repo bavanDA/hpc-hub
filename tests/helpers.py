@@ -15,10 +15,13 @@ class LocalShell:
         if sys.platform == "win32":
             pytest.skip("the local bash stands in for the cluster")
         return ["bash", "-c", command]
+    node_argv = argv
 
     def run(self, command, timeout=60, fast=None):
         import subprocess
         return subprocess.run(self.argv(command), capture_output=True, text=True, timeout=timeout)
+    on_login = run
+    read = run
 
     def popen(self, command, **kwargs):
         import subprocess

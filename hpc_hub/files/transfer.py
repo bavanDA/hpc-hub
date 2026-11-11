@@ -93,7 +93,7 @@ def copy_here(ssh: SshMaster, src: str, dest_dir: str, progress: Progress,
         while not ended.is_set():
             if progress.cancelled.wait(0.5):
                 if pid[0]:
-                    ssh.run(cancel_command(pid[0]), timeout=30)
+                    ssh.on_login(cancel_command(pid[0]), timeout=30)
                 proc.kill()
                 return
     threading.Thread(target=stop_when_asked, daemon=True).start()

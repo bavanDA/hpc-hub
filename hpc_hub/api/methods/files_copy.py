@@ -141,8 +141,10 @@ def copy(src_cluster: str, src_path: str, dst_cluster: str, dst_dir: str, skip: 
 
 
 def _cp_command(src_path: str, dst_dir: str) -> str:
-    """Prints cp's process id first, so a cancel can stop it on the cluster."""
-    return f"cp -r -- {remote_fs.q(src_path)} {remote_fs.q(dst_dir.rstrip('/') + '/')} & echo $!; wait $!"
+    """Prints the process id first, so a cancel can stop it. With rsync, copying again picks up where it stopped."""
+    src, dst = remote_fs.q(src_path.rstrip("/")), remote_fs.q(dst_dir.rstrip("/") + "/")
+    return (f"if command -v rsync >/dev/null; then rsync -rlt --partial -- {src} {dst} & "
+            f"else cp -r -- {src} {dst} & fi; echo $!; wait $!")
 
 
 def _on_cluster(t: Transfer, ssh, src_path: str, dst_dir: str) -> None:
@@ -152,7 +154,7 @@ def _on_cluster(t: Transfer, ssh, src_path: str, dst_dir: str) -> None:
     pid = (proc.stdout.readline() or "").strip()
     while proc.poll() is None:
         if t.progress.cancelled.is_set() and pid.isdigit():
-            ssh.run(f"kill {int(pid)}", timeout=30)
+            ssh.on_login(f"kill {int(pid)}", timeout=30)
             proc.wait(timeout=30)
             raise RuntimeError("Cancelled")
         time.sleep(0.5)

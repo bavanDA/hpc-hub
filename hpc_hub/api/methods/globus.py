@@ -278,6 +278,6 @@ def start_personal(cluster: str, restart: bool = False) -> None:
     stop it first even when it runs with those folders."""
     s = hub().connected(cluster)
     folders = [p.path for p in remote_fs.storage(remote_fs.places(s.ssh)) if p.label != "Home"]
-    res = s.ssh.run(personal.start_command(folders, restart), timeout=90)
+    res = s.ssh.on_login(personal.start_command(folders, restart), timeout=90)  # outlasts any job
     if res.returncode != 0:
         raise RuntimeError(res.stderr.strip() or "Could not start it")

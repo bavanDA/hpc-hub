@@ -4,6 +4,7 @@ import socket
 import subprocess
 import threading
 import time
+from concurrent.futures import ThreadPoolExecutor
 
 import pytest
 
@@ -194,6 +195,34 @@ def test_commands(master):
         with pytest.raises(subprocess.TimeoutExpired):
             master.run("sleep 3", timeout=0.5, fast=fast)
     assert master.run("echo again").stdout == "again\n"
+
+
+def test_commands_run_at_the_same_time(master):
+    master.run("true")  # one shell open, so all three share it
+    start = time.monotonic()
+    with ThreadPoolExecutor(3) as pool:
+        got = list(pool.map(lambda i: master.run(f"sleep 0.6; echo {i}").stdout, range(3)))
+    assert got == ["0\n", "1\n", "2\n"] and time.monotonic() - start < 1.5
+    assert len(master._open) == 1  # all in one shell
+
+
+def test_big_outputs_at_once_stay_whole(master):
+    with ThreadPoolExecutor(4) as pool:
+        got = list(pool.map(lambda c: master.run(f"head -c 200000 /dev/zero | tr '\\0' {c}").stdout, "abcd"))
+    assert got == [c * 200000 for c in "abcd"]
+
+
+def test_a_timeout_stops_only_that_command(master, tmp_path):
+    master.run("true")  # one shell open, so both share it
+    mark = tmp_path / "ran"
+    with ThreadPoolExecutor(2) as pool:
+        slow = pool.submit(master.run, "sleep 1; echo slow", 10)
+        with pytest.raises(subprocess.TimeoutExpired):
+            master.run(f"sleep 1; touch {mark}", timeout=0.3, fast=True)
+        assert slow.result(5).stdout == "slow\n"
+    assert len(master._open) == 1 and master.run("echo again").stdout == "again\n"
+    time.sleep(1)
+    assert not mark.exists()
 
 
 def test_argv_runs_on_the_connection(master):

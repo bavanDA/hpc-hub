@@ -34,7 +34,7 @@ def find_main_tex(ssh: SshMaster, folder: str) -> list[str]:
     """.tex files with \\documentclass, nearest first (relative paths)."""
     cmd = (f"cd {shlex.quote(folder)} && find . -maxdepth 3 -name '*.tex' -type f 2>/dev/null "
            f"| xargs -r grep -l '^[^%]*\\\\documentclass' 2>/dev/null | sed 's|^./||' | head -50")
-    found = ssh.run(cmd, timeout=60).stdout.split("\n")
+    found = ssh.read(cmd, timeout=60).stdout.split("\n")
     return sorted((f for f in found if f), key=lambda f: (f.count("/"), f != "main.tex", f))
 
 
@@ -54,7 +54,7 @@ def parse_papers(text: str) -> list[Paper]:
 
 
 def find_papers(ssh: SshMaster) -> list[Paper]:
-    return parse_papers(ssh.run(PAPERS, timeout=90, fast=True).stdout)
+    return parse_papers(ssh.read(PAPERS, timeout=90, fast=True).stdout)
 
 
 def _papers_file(cluster: str) -> Path:

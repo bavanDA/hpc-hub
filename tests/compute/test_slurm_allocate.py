@@ -34,6 +34,7 @@ class Ssh:
         self.ran.append(command)
         out = self.node if "-o %N" in command else next((v for k, v in self.answers.items() if k in command), "")
         return subprocess.CompletedProcess(command, 0, out, "")
+    on_login = run
 
 
 def test_granted_after_waiting_gives_the_first_node():
@@ -94,6 +95,7 @@ def test_running_jobs_failing_is_not_no_jobs():
     class Down(Ssh):
         def run(self, command, timeout=60):
             return subprocess.CompletedProcess(command, 1, "", "squeue: error")
+        on_login = run
     with pytest.raises(subprocess.CalledProcessError):
         slurm.running_jobs(Down([]))
 

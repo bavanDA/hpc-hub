@@ -42,6 +42,6 @@ def network_name(dev: str) -> str:
 def link_works(ssh: SshMaster) -> bool:
     """The login is alive and a command really gets through (not just a stale socket)."""
     try:
-        return ssh.alive() and ssh.run("true", timeout=15).returncode == 0
+        return ssh.alive() and ssh.on_login("true", timeout=15).returncode == 0
     except (OSError, subprocess.SubprocessError):
         return False

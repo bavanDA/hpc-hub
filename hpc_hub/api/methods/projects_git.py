@@ -32,7 +32,7 @@ def status(cluster: str) -> dict:
         return {}
     home = _home(cluster) if any(p.startswith("~") for p in paths) else ""
     full = {home + p[1:] if p.startswith("~") else p: p for p in paths}
-    res = s.ssh.run(git_command(sorted(full)), timeout=GIT_SECONDS * 2 + 30)
+    res = s.ssh.read(git_command(sorted(full)), timeout=GIT_SECONDS * 2 + 30)
     out = {}
     for line in res.stdout.splitlines():
         path, branch, changed = (line.rsplit("\t", 2) + ["", ""])[:3]

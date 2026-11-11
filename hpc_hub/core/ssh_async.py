@@ -23,7 +23,7 @@ import asyncssh
 
 from . import ssh_bridge, tunnels
 from .config import ClusterConfig
-from .fastshell import START, FastShellError, wrap
+from .fastshell import SLOTS, START, FastShellError, stop_line, wrap
 from .ssh import CHANNEL, SshError, SshMaster
 
 KNOWN_HOSTS = Path.home() / ".ssh" / "known_hosts"  # where Windows' own OpenSSH keeps them too
@@ -129,25 +129,34 @@ class _Client(asyncssh.SSHClient):
 class _Shell:
     """A shell kept open on a channel (fastshell's protocol). Lives on the loop."""
 
-    def __init__(self, proc: asyncssh.SSHClientProcess):
+    def __init__(self, proc: asyncssh.SSHClientProcess, slots: int = SLOTS):
         self.proc = proc
         self.closed = False
+        self.waiting: dict[bytes, asyncio.Future] = {}
+        self.free = asyncio.Semaphore(slots)
+        self.reader: asyncio.Task | None = None
 
     @classmethod
-    async def open(cls, conn: asyncssh.SSHClientConnection, timeout: float, launcher: str) -> "_Shell":
+    async def open(cls, conn: asyncssh.SSHClientConnection, timeout: float, launcher: str,
+                   slots: int = SLOTS) -> "_Shell":
         ready = f"HPCHUB_READY_{uuid.uuid4().hex}"
-        shell = cls(await conn.create_process(f"{launcher} -s {ready}", encoding=None, stderr=asyncssh.DEVNULL))
+        shell = cls(await conn.create_process(f"{launcher} -s {ready}", encoding=None, stderr=asyncssh.DEVNULL), slots)
         try:
             shell.proc.stdin.write(START.encode())
             await asyncio.wait_for(shell._line_with(ready.encode()), timeout)
         except (FastShellError, OSError, asyncssh.Error, TimeoutError):
             shell.close()
             raise FastShellError("fast shell did not start")
+        shell.reader = asyncio.create_task(shell._read_results())
         return shell
 
-    def close(self) -> None:
+    def close(self, error: str = "shell closed") -> None:
         self.closed = True
         self.proc.close()
+        waiting, self.waiting = self.waiting, {}
+        for future in waiting.values():
+            if not future.done():
+                future.set_exception(FastShellError(error, sent=True))
 
     async def _line_with(self, word: bytes) -> bytes:
         while True:
@@ -157,38 +166,64 @@ class _Shell:
             if word in line:
                 return line
 
+    async def _read_results(self) -> None:
+        """Hands each result to the command waiting for it; one given up on is dropped."""
+        error = "shell closed"
+        try:
+            while True:
+                head = (await self._line_with(b"HPCHUB_")).split()
+                rc, n_out, n_err = int(head[1]), int(head[2]), int(head[3])
+                out = await self.proc.stdout.readexactly(n_out)
+                err = await self.proc.stdout.readexactly(n_err)
+                future = self.waiting.pop(head[0], None)
+                if future and not future.done():
+                    future.set_result(subprocess.CompletedProcess(
+                        "", rc, out.decode(errors="replace"), err.decode(errors="replace")))
+        except (OSError, ValueError, IndexError, FastShellError, asyncio.IncompleteReadError, asyncssh.Error) as e:
+            error = str(e) or error
+        self.close(error)
+
     async def run(self, command: str, timeout: float) -> subprocess.CompletedProcess:
+        try:
+            async with asyncio.timeout(timeout), self.free:
+                res = await self._sent(command)
+        except TimeoutError:
+            raise subprocess.TimeoutExpired(command, timeout)
+        res.args = command
+        return res
+
+    async def _sent(self, command: str) -> subprocess.CompletedProcess:
+        if self.closed:
+            raise FastShellError("shell closed")
         token = f"HPCHUB_{uuid.uuid4().hex}"
+        future = asyncio.get_running_loop().create_future()
+        self.waiting[token.encode()] = future
         try:
             self.proc.stdin.write(wrap(command, token).encode())
         except (OSError, asyncssh.Error) as e:
             self.close()
             raise FastShellError(str(e))
         try:
-            async with asyncio.timeout(timeout):
-                head = (await self._line_with(token.encode())).split()
-                rc, n_out, n_err = int(head[1]), int(head[2]), int(head[3])
-                out = await self.proc.stdout.readexactly(n_out)
-                err = await self.proc.stdout.readexactly(n_err)
-        except TimeoutError:
-            self.close()  # the command may still be running; this shell is done
-            raise subprocess.TimeoutExpired(command, timeout)
-        except (OSError, ValueError, IndexError, FastShellError, asyncio.IncompleteReadError, asyncssh.Error) as e:
-            self.close()
-            raise FastShellError(str(e), sent=True)
-        return subprocess.CompletedProcess(command, rc, out.decode(errors="replace"), err.decode(errors="replace"))
+            return await future
+        except asyncio.CancelledError:  # out of time: stop only this command
+            self.waiting.pop(token.encode(), None)
+            try:
+                self.proc.stdin.write(stop_line(token).encode())
+            except (OSError, asyncssh.Error):
+                pass
+            raise
 
 
 class _SyncShell:
     """What SshMaster's shell pool holds: a _Shell, used from worker threads."""
-
-    def __init__(self, master: "AsyncSshMaster", timeout: float = 20, launcher: str = SHELL):
+    def __init__(self, master: "AsyncSshMaster", timeout: float = 20, launcher: str = SHELL, slots: int = SLOTS):
         self.master = master
+        self.slots = slots
         conn = master._conn
         if conn is None or not master.alive():
             raise FastShellError("not connected")
         try:
-            self.shell = call(_Shell.open(conn, timeout, launcher), timeout + 10)
+            self.shell = call(_Shell.open(conn, timeout, launcher, slots), timeout + 10)
         except (FastShellError, OSError, asyncssh.Error, TimeoutError):
             raise FastShellError("fast shell did not start")
 

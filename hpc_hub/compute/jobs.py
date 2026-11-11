@@ -32,7 +32,7 @@ class JobInfo:
     mem: str
     where: str  # node list, or pending reason
     qos: str = ""
-    billing: int = 0  # SU charged per hour (Slurm's billing TRES); 0 = unknown
+    billing: float = 0  # SU charged per hour (Slurm's billing TRES); 0 = unknown
     factor: float = 1.0  # the QoS usage factor: 0 means free
 
     @property
@@ -89,7 +89,8 @@ def _billing(tres: str) -> int:
     return int(m.group(1)) if m else 0
 
 
-def parse_jobs(text: str) -> list[JobInfo]:
+def parse_jobs(text: str, per_su: int = 1) -> list[JobInfo]:
+    """per_su: Slurm's billing number for 1 SU an hour on this cluster."""
     jobs, billing, factors, part = [], {}, {}, ""
     for line in text.splitlines():
         line = line.strip()
@@ -111,16 +112,16 @@ def parse_jobs(text: str) -> list[JobInfo]:
                 job.billing = _billing(parts[11])
             jobs.append(job)
     for j in jobs:
-        j.billing = j.billing or billing.get(j.job_id, 0)
+        j.billing = (j.billing or billing.get(j.job_id, 0)) / per_su
         j.factor = factors.get(j.qos, 1.0)
     return jobs
 
 
-def list_jobs(ssh: SshMaster, scope: str, days: int = 7, account: str = "") -> list[JobInfo]:
-    res = ssh.run(jobs_command(scope, days, account), timeout=60)
+def list_jobs(ssh: SshMaster, scope: str, days: int = 7, account: str = "", per_su: int = 1) -> list[JobInfo]:
+    res = ssh.read(jobs_command(scope, days, account), timeout=60)
     if res.returncode != 0 and not res.stdout.strip():
         raise SlurmError(res.stderr.strip() or "Could not list jobs")
-    jobs = parse_jobs(res.stdout)
+    jobs = parse_jobs(res.stdout, per_su)
     return sorted(jobs, key=lambda j: _id_key(j.job_id), reverse=True)
 
 
@@ -136,7 +137,7 @@ def _check_id(job_id: str) -> None:
 
 def job_details(ssh: SshMaster, job_id: str) -> str:
     _check_id(job_id)
-    res = ssh.run(f"scontrol show job {job_id} 2>/dev/null || sacct -P -j {job_id} -o ALL", timeout=30)
+    res = ssh.read(f"scontrol show job {job_id} 2>/dev/null || sacct -P -j {job_id} -o ALL", timeout=30)
     return res.stdout.strip() or res.stderr.strip()
 
 
@@ -168,6 +169,6 @@ def wait_gone(ssh: SshMaster, job_id: str, seconds: float = 15) -> bool:
 
 def cancel_job(ssh: SshMaster, job_id: str) -> None:
     _check_id(job_id)
-    res = ssh.run(f"scancel {job_id}")
+    res = ssh.on_login(f"scancel {job_id}")  # it may be the job this shell lives in
     if res.returncode != 0:
         raise SlurmError(res.stderr.strip() or "scancel failed")

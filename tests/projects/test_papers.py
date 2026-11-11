@@ -9,6 +9,8 @@ pytestmark = on_linux_cluster
 class LocalSsh:
     def run(self, cmd, timeout=60):
         return subprocess.run(["bash", "-c", cmd], capture_output=True, text=True)
+    on_login = run
+    read = run
 
 
 def test_find_main_tex(tmp_path):

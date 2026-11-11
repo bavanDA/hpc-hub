@@ -1,5 +1,6 @@
 import threading
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -165,7 +166,7 @@ def test_vpn_only(env, monkeypatch):
     s.connect(Login("u", "pw"), Login("u", "pw"), vpn_only=True)
     assert rec.done.wait(20)
     assert s.state == State.CONNECTED and s.detail == "VPN only" and s.ssh is None, rec.lines
-    s.ssh = object()  # an SSH session left over from before must not bring back the node buttons
+    s.ssh = SimpleNamespace()  # an SSH session left over from before must not bring back the node buttons
     assert not s.connected
     s.ssh = None
     assert calls == ["up"] and s.healthy()
@@ -262,11 +263,11 @@ def test_healthy_needs_working_link(env, monkeypatch):
     server, tmp = env
     s, rec = connect(server, "pw")
     assert s.healthy()
-    run = s.ssh.run
-    s.ssh.run = lambda *a, **k: __import__("subprocess").CompletedProcess([], 255, "", "")
+    run = s.ssh.on_login
+    s.ssh.on_login = lambda *a, **k: __import__("subprocess").CompletedProcess([], 255, "", "")
     monkeypatch.setattr("hpc_hub.connect.session.time.sleep", lambda _s: None)
     assert not s.healthy()
-    s.ssh.run = run
+    s.ssh.on_login = run
     rec.done.clear()
     s.disconnect()
     assert rec.done.wait(20)
@@ -358,6 +359,7 @@ def test_default_account_is_named_on_requests():
         def run(self, cmd, timeout=60):
             import subprocess
             return subprocess.CompletedProcess(cmd, 0, "abc123\n" if "defaultaccount" in cmd else "", "")
+        on_login = run
     s = object.__new__(ClusterSession)
     s.cfg, s.ssh, s.limits, s.default_account = config.default_clusters()[2], Ssh(), None, None
     assert s.fit(config.ComputeProfile()).account == "abc123"
@@ -375,8 +377,23 @@ def test_the_queue_you_pick_is_the_one_asked_for():
         def run(self, cmd, timeout=60):
             ran.append(cmd)
             return subprocess.CompletedProcess(cmd, 0, "mygroup\n" if "defaultaccount" in cmd else "", "")
+        on_login = run
     s = object.__new__(ClusterSession)
     s.cfg, s.ssh, s.limits, s.default_account = config.default_clusters()[0], Ssh(), None, None
     p = s.fit(config.ComputeProfile(partition="general", qos="standard", time="3-00:00:00"))
     assert (p.partition, p.qos, p.time, p.account) == ("general", "standard", "3-00:00:00", "mygroup")
     assert not any("--test-only" in c for c in ran)
+
+
+def test_commands_follow_the_running_job():
+    from hpc_hub.compute.slurm import Allocation
+    from hpc_hub.connect.session import ClusterSession
+    s = object.__new__(ClusterSession)
+    s.ssh = SimpleNamespace(work_node="")
+    s.allocation = Allocation("7", "n7")
+    assert s.ssh.work_node == "n7"
+    s.ssh = SimpleNamespace(work_node="")  # logged in again, the job still running
+    assert s.ssh.work_node == "n7"
+    s.allocation = None
+    assert s.ssh.work_node == ""
+

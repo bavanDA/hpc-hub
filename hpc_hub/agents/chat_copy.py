@@ -45,13 +45,13 @@ def copy(src: SshMaster, chat: Chat, dst: SshMaster, dest_folder: str, progress:
     dst_dir = posixpath.join(dst_home, ".claude/projects", project_dir(folder))
     progress.total = progress.total or chat.size
 
-    got = subprocess.run(src.argv(f"cat {shlex.quote(f'{src_dir}/{chat.id}.jsonl')}"), capture_output=True,
+    got = subprocess.run(src.node_argv(f"cat {shlex.quote(f'{src_dir}/{chat.id}.jsonl')}"), capture_output=True,
                          timeout=600)
     if got.returncode != 0:
         raise transfer.TransferError(got.stderr.decode(errors="replace").strip() or "Could not read the chat")
     data = moved(got.stdout, chat.cwd, folder)
     target = shlex.quote(f"{dst_dir}/{chat.id}.jsonl")
-    put = subprocess.run(dst.argv(f"mkdir -p {shlex.quote(dst_dir)} && cat > {target}.new && mv {target}.new "
+    put = subprocess.run(dst.node_argv(f"mkdir -p {shlex.quote(dst_dir)} && cat > {target}.new && mv {target}.new "
                                   f"{target}"), input=data, capture_output=True, timeout=600)
     if put.returncode != 0:
         raise transfer.TransferError(put.stderr.decode(errors="replace").strip() or "Could not write the chat")

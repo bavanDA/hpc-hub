@@ -1,3 +1,5 @@
+import os
+import subprocess
 import threading
 import time
 from types import SimpleNamespace
@@ -192,3 +194,18 @@ def test_copy_on_one_cluster_copies_and_can_be_stopped(tmp_path, monkeypatch):
         raise AssertionError("should stop")
     except RuntimeError as e:
         assert str(e) == "Cancelled" and time.time() - start < 10
+
+
+def test_copying_again_picks_up_where_it_stopped(tmp_path):
+    src, dst = tmp_path / "src", tmp_path / "dst"
+    (src / "sub").mkdir(parents=True)
+    (src / "sub" / "a").write_text("one")
+    dst.mkdir()
+    line = copies._cp_command(str(src) + "/", str(dst))
+    assert subprocess.run(["bash", "-c", line], capture_output=True, text=True).returncode == 0
+    (dst / "src" / "sub" / "a").write_text("ONE")  # rsync only sends what changed: same size and time stay
+    os.utime(dst / "src" / "sub" / "a", (os.path.getatime(src / "sub" / "a"), os.path.getmtime(src / "sub" / "a")))
+    (src / "b").write_text("two")
+    assert subprocess.run(["bash", "-c", line], capture_output=True, text=True).returncode == 0
+    assert (dst / "src" / "b").read_text() == "two" and (dst / "src" / "sub" / "a").read_text() == "ONE"
+

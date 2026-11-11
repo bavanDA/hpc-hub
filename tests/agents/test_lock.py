@@ -10,9 +10,11 @@ class LocalSsh:
 
     def run(self, command, timeout=60):
         return subprocess.run(["bash", "-c", command], capture_output=True, text=True, timeout=timeout)
+    on_login = run
 
     def argv(self, command):
         return ["bash", "-c", command]
+    node_argv = argv
 
 
 def test_install_configure_uninstall(tmp_path, monkeypatch):

@@ -14,10 +14,12 @@ class HomeShell(LocalShell):
 
     def argv(self, command, tty=False):
         return ["env", f"HOME={self.home}", "bash", "-c", command]
+    node_argv = argv
 
     def run(self, command, timeout=60, fast=None):
         import subprocess
         return subprocess.run(self.argv(command), capture_output=True, text=True, timeout=timeout)
+    on_login = run
 
 
 def test_project_dir_matches_claude():

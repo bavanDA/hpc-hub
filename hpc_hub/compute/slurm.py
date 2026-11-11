@@ -56,7 +56,7 @@ def resources(ssh: SshMaster, job_id: str) -> str:
 
 
 def cancel(ssh: SshMaster, job_id: str) -> None:
-    ssh.run(f"scancel {int(job_id)}")
+    ssh.on_login(f"scancel {int(job_id)}")  # it may be the job this shell lives in
 
 
 def job_state(ssh: SshMaster, job_id: str) -> str:

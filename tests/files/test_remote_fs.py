@@ -1,3 +1,5 @@
+import subprocess
+
 import pytest
 
 from hpc_hub.files import remote_fs
@@ -86,3 +88,25 @@ def test_storage_names():
 def test_parse_places_skips_junk():
     text = "Home\t/h\t/h\nbad line\nx\t/h2\t/h\n"
     assert [(p.label, p.path) for p in remote_fs.parse_places(text)] == [("Home", "/h")]
+
+
+def test_long_work_stays_on_the_login_node_so_it_outlasts_the_job():
+    class Ssh:
+        def __init__(self):
+            self.login, self.node = [], []
+
+        def on_login(self, command, timeout=60, fast=None):
+            self.login.append(command)
+            return subprocess.CompletedProcess(command, 0, "", "")
+
+        def run(self, command, timeout=60, fast=None):
+            self.node.append(command)
+            return subprocess.CompletedProcess(command, 0, "", "")
+    ssh = Ssh()
+    remote_fs.remove(ssh, "/scratch/jdoe/old")
+    remote_fs.make_zip(ssh, "/scratch/jdoe/data")
+    remote_fs.extract(ssh, "/scratch/jdoe/data.zip")
+    assert len(ssh.login) == 3 and not ssh.node
+    remote_fs.mkdir(ssh, "/scratch/jdoe/new")
+    assert len(ssh.node) == 1
+

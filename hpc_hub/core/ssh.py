@@ -10,7 +10,7 @@ from collections import deque
 from collections.abc import Callable
 
 from .config import ClusterConfig
-from .fastshell import FastShell, FastShellError
+from .fastshell import NODE_SLOTS, FastShell, FastShellError
 from .paths import WINDOWS, runtime_dir
 
 COMMON = [
@@ -21,6 +21,8 @@ COMMON = [
 
 
 FAST_SHELLS = 3  # quick commands share these; more at once (or long ones) use plain ssh
+NODE_SHELLS = 2  # shells kept open on compute nodes: each holds a session under the server's MaxSessions
+NODE_SSH = "ssh -o BatchMode=yes -o ConnectTimeout=10 -o LogLevel=ERROR"
 CHANNEL = "hpc-hub-channel"  # argv(tty=True) of a login no local ssh can ride: [CHANNEL, cluster id, command]
 
 
@@ -42,12 +44,15 @@ class SshMaster:
         self.control_path = runtime_dir() / f"cm-{cfg.id}"
         self.proc: subprocess.Popen | None = None
         self._errors: deque[str] = deque(maxlen=8)
-        self._idle: list[FastShell] = []
+        self._idle: list[FastShell] = []  # one entry per free slot
+        self._open: set[FastShell] = set()
         self._shells = 0
         self._shell_lock = threading.Lock()
         self._plain = threading.BoundedSemaphore(PLAIN_SESSIONS)
         self._fast_off_until = 0.0  # after a failed start, use plain ssh for a while
-        self._node_shells: dict[str, tuple[FastShell | None, threading.Lock]] = {}  # job id -> shell on its node
+        self.work_node = ""  # the running job's node: read() prefers it
+        self._node_off: dict[str, float] = {}  # node -> no shell there until then
+        self._node_shells: dict[str, tuple[FastShell | None, threading.Lock]] = {}  # job id or node -> shell
 
     def _target(self) -> list[str]:
         return ["-p", str(self.cfg.port), "-l", self.username, "-S", str(self.control_path), "--", self.cfg.host]
@@ -106,23 +111,43 @@ class SshMaster:
         return subprocess.run(check, capture_output=True).returncode == 0
 
     def run(self, command: str, timeout: float = 60, fast: bool | None = None) -> subprocess.CompletedProcess:
-        """Quick commands (or fast=True) go through a shell kept open on the login node; the rest through
-        plain ssh."""
+        """On the running job's node, with no job on the login node. A command that may have run isn't run twice."""
+        shell = self._shell_on(self.work_node) if self.work_node else None
+        if shell:
+            try:
+                return shell.run(command, timeout)
+            except FastShellError as e:
+                if e.sent:
+                    return subprocess.CompletedProcess(command, 255, "", f"connection to the node broke: {e}")
+        return self.on_login(command, timeout, fast)
+
+    def on_login(self, command: str, timeout: float = 60, fast: bool | None = None) -> subprocess.CompletedProcess:
+        """For what lives on the login node or must outlast the job. Quick commands (or fast=True) go through a
+        shell kept open there; the rest through plain ssh."""
         shell = self._take_shell() if (timeout <= 60 if fast is None else fast) else None
         if shell:
             try:
-                res = shell.run(command, timeout)
-            except subprocess.TimeoutExpired:
-                self._drop_shell()
-                raise
+                return shell.run(command, timeout)
             except FastShellError as e:
-                self._drop_shell()
                 if e.sent:  # it may have run: don't run it twice (think sbatch)
                     return subprocess.CompletedProcess(command, 255, "", f"connection to the cluster broke: {e}")
-            else:
+            finally:
                 self._return_shell(shell)
-                return res
         return self._run_plain(command, timeout)
+
+    def read(self, command: str, timeout: float = 60, fast: bool | None = None) -> subprocess.CompletedProcess:
+        """A read-only command, safe to repeat: on the running job's node, else on the login node."""
+        if self.work_node:
+            res = self.run_on_host(self.work_node, command, timeout)
+            if res is not None and res.returncode != 127:  # 127: that node lacks the tool
+                return res
+        return self.on_login(command, timeout, fast)
+
+    def node_argv(self, command: str) -> list[str]:
+        """argv for a command fed on stdin (a kept shell can't): on the running job's node when there is one."""
+        if self.work_node and self._shell_on(self.work_node):
+            command = f"{NODE_SSH} {shlex.quote(self.work_node)} {shlex.quote(command)}"
+        return self.argv(command)
 
     def _run_plain(self, command: str, timeout: float) -> subprocess.CompletedProcess:
         for wait in (*REFUSED_WAITS, None):
@@ -148,30 +173,31 @@ class SshMaster:
                 return None
             self._shells += 1
         try:
-            return self._new_shell()
+            shell = self._new_shell()
         except FastShellError:
             with self._shell_lock:
                 self._shells -= 1
                 self._fast_off_until = time.monotonic() + 120
             return None
+        with self._shell_lock:
+            self._open.add(shell)
+            self._idle.extend([shell] * (getattr(shell, "slots", 1) - 1))
+        return shell
 
     def _return_shell(self, shell: FastShell) -> None:
         with self._shell_lock:
             if shell.alive:
                 self._idle.append(shell)
-            else:
+            elif shell in self._open:  # several commands can come back from one dead shell
+                self._open.discard(shell)
+                self._idle = [s for s in self._idle if s is not shell]
                 self._shells -= 1
-
-    def _drop_shell(self) -> None:
-        with self._shell_lock:
-            self._shells -= 1
 
     def close_shells(self) -> None:
         with self._shell_lock:
-            idle, self._idle = self._idle, []
-            self._shells -= len(idle)
+            shells, self._open, self._idle, self._shells = self._open, set(), [], 0
             nodes, self._node_shells = self._node_shells, {}
-        for shell in idle + [sh for sh, _ in nodes.values() if sh]:  # a node whose shell failed has None
+        for shell in [*shells, *(sh for sh, _ in nodes.values() if sh)]:  # a node whose shell failed has None
             shell.close()
 
     def run_on_node(self, job_id: str, command: str, timeout: float = 900) -> subprocess.CompletedProcess:
@@ -198,6 +224,41 @@ class SshMaster:
                     if e.sent:
                         return subprocess.CompletedProcess(command, 255, "", f"connection to the node broke: {e}")
         return self.run(f"srun --jobid={job} --overlap bash -c {shlex.quote(command)}", timeout, fast=True)
+
+    def run_on_host(self, node: str, command: str, timeout: float = 15) -> subprocess.CompletedProcess | None:
+        """A quick read-only command on a compute node, through a shell kept open there with ssh: srun's /tmp is
+        the job's own, so only ssh sees the node's tmux. None: no shell for it, run it another way."""
+        shell = self._shell_on(node)
+        if not shell:
+            return None
+        try:
+            return shell.run(command, timeout)
+        except (FastShellError, subprocess.TimeoutExpired):
+            return None
+
+    def _shell_on(self, node: str) -> FastShell | None:
+        with self._shell_lock:
+            if time.monotonic() < self._node_off.get(node, 0):
+                return None
+            open_now = sum(1 for sh, _ in self._node_shells.values() if sh and sh.alive)
+            shell, lock = self._node_shells.get(node, (None, None))
+            if not (shell and shell.alive) and open_now >= NODE_SHELLS:
+                return None
+            if lock is None:
+                lock = threading.Lock()
+                self._node_shells[node] = (None, lock)
+        with lock:  # commands arriving together share one new shell
+            shell = self._node_shells.get(node, (None, None))[0]
+            if shell is None or not shell.alive:
+                try:
+                    shell = self._new_shell(timeout=20, slots=NODE_SLOTS,
+                                            launcher=f"exec {NODE_SSH} {shlex.quote(node)} bash --norc --noprofile")
+                except FastShellError:
+                    shell = None
+                    self._node_off[node] = time.monotonic() + 60  # the job may be over: don't try on every command
+                with self._shell_lock:
+                    self._node_shells[node] = (shell, lock)
+        return shell
 
     def popen(self, command: str, **kwargs) -> subprocess.Popen:
         return subprocess.Popen(self.argv(command), stdin=subprocess.DEVNULL, text=True, **kwargs)
