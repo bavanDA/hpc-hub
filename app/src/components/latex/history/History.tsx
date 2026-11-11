@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { call } from '../../../rpc'
 import type { GitState, HCommit, SavedSetting } from '../../../types/history'
+import { ReportLink } from '../../report/ReportLink'
 import { Button } from '../../ui/Button'
 import { Spinner } from '../../ui/Spinner'
 import { useToast } from '../../useToast'
@@ -143,7 +144,7 @@ export function History({ where, clusterName, main, pdf, active, ask, guard, onB
     else if (ask.kind === 'notes') h.showNote(ask.hash ?? '')
   }, [ask, root])
 
-  if (error) return <Center><p className="text-bad">{error}</p><Button size="sm" onClick={refresh}>Try again</Button></Center>
+  if (error) return <Center><p className="text-bad">{error}</p><ReportLink error={error} /><Button size="sm" onClick={refresh}>Try again</Button></Center>
   if (!state) return <Center><Spinner size={24} /></Center>
   if (!state.root) return <NotInGit />
   const selCommit = sel.kind === 'commit' ? commits.find((c) => c.hash === sel.hash) ?? null : null

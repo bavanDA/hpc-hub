@@ -1,25 +1,19 @@
 import type { AgentDesc, AgentLevel } from '../../../../types/history'
-import { Choices } from './Choices'
+import { SelectField } from '../../../e/SelectField'
 
 /** Model and Effort, each its own choice from what the agent offers; words when it has no such setting. */
 export function Levels({ agent, value, onChange }:
   { agent: AgentDesc | undefined; value: AgentLevel; onChange: (p: Partial<AgentLevel>) => void }) {
-  const block = 'border-t border-line py-2.5'
-  const none = (text: string) => <p className="text-sm text-dim">{text}</p>
+  const level = (label: string, options: [string, string][] | undefined, picked: string, pick: (v: string) => void, none: string) => (
+    <div className="border-t border-line py-1">
+      {options?.length ? <SelectField label={label} value={picked} options={options} onChange={pick} />
+        : <><div className="pt-1.5 text-sm text-dim">{label}</div><p className="pb-1.5 text-sm">{none}</p></>}
+    </div>
+  )
   return (
     <>
-      <div className={block}>
-        <div className="mb-1.5 text-sm">Model</div>
-        {agent && agent.models.length > 0
-          ? <Choices label="Model" value={value.model} options={agent.models} onChange={(model) => onChange({ model })} />
-          : none('Its default model')}
-      </div>
-      <div className={block}>
-        <div className="mb-1.5 text-sm">Effort</div>
-        {agent && agent.efforts.length > 0
-          ? <Choices label="Effort" value={value.effort} options={agent.efforts} onChange={(effort) => onChange({ effort })} />
-          : none('Its default effort')}
-      </div>
+      {level('Model', agent?.models, value.model, (model) => onChange({ model }), 'Its default model')}
+      {level('Effort', agent?.efforts, value.effort, (effort) => onChange({ effort }), 'Its default effort')}
     </>
   )
 }

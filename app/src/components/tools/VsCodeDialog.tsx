@@ -69,7 +69,7 @@ export function VsCodeDialog({ setup, found, folder: start = '', target: wanted,
       {!keep && <section className="pt-5">
         <h3 className="px-5 pb-1 text-xs font-semibold tracking-wide text-dim uppercase">Compute node</h3>
         <p className="px-5 pb-2.5 text-sm text-dim">VS Code runs as a job of its own.</p>
-        <NodeFields cluster={setup.id} value={profile} onChange={setProfile} onValid={setFits} />
+        <NodeFields cluster={setup.id} value={profile} onChange={setProfile} onValid={setFits} now />
         <ToggleRow label="Use these next time" checked={remember} onChange={setRemember} />
         <ToggleRow label={ASK_VS} sub={ASK_VS_SUB} checked={ask} onChange={setAsk} />
       </section>}

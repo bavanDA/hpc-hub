@@ -13,8 +13,10 @@ import { ownVpnLogin } from './changes'
 export type VpnLogin = { user: string; setUser: (u: string) => void; password: string
   setPassword: (p: string) => void; saved: boolean }
 
-export function ServerPart({ d, info, up, vpnLogin }: {
+/** Choice: a row that opens a list; the phone gives its own, which answers Android's Back. */
+export function ServerPart({ d, info, up, vpnLogin, Choice = ChoiceRow }: {
   d: Cluster; info: SettingsInfo | null; up: (change: Partial<Cluster>) => void; vpnLogin: VpnLogin
+  Choice?: typeof ChoiceRow
 }) {
   const v = d.vpn
   const upVpn = (change: Partial<Cluster['vpn']>) => up({ vpn: { ...v, ...change } })
@@ -45,7 +47,7 @@ export function ServerPart({ d, info, up, vpnLogin }: {
         </div>}
       </div>
       <div className="pt-4"><List>
-        <ChoiceRow label="Protocol" value={protocol} onChange={(p) => upVpn({ protocol: p })}
+        <Choice label="Protocol" value={protocol} onChange={(p) => upVpn({ protocol: p })}
           options={[...new Set([...(info?.protocols ?? []), protocol])].map((p) => ({ value: p, label: p }))} />
         <ToggleRow label="Split tunnel" sub="Only the domains and networks below go through this VPN."
           checked={v.split_tunnel ?? true} onChange={(split_tunnel) => upVpn({ split_tunnel })} />

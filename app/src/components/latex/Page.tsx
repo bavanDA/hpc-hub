@@ -46,7 +46,7 @@ export default function LatexPage() {
   }
   if (picker.error && !picker.data) {
     return <EmptyState icon={FileX} title="Could not load your papers" text={picker.error}
-      action={<Button onClick={reload}>Try again</Button>} />
+      action={<Button onClick={reload}>Try again</Button>} report />
   }
   if (!picker.data) return <div className="grid h-full place-items-center"><Spinner size={24} /></div>
   return (

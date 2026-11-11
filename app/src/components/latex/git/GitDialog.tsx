@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from 'react'
 
 import { call } from '../../../rpc'
 import type { GitInfo } from '../../../types/latex'
+import { ReportLink } from '../../report/ReportLink'
 import { Button } from '../../ui/Button'
 import { Dialog } from '../../ui/Dialog'
 import { Spinner } from '../../ui/Spinner'
@@ -46,7 +47,7 @@ export function GitDialog({ where, before, onClose, onPulled }:
   return (
     <>
       <Dialog title="Git" onClose={onClose} width={720}>
-        {error ? <p className="py-8 text-center text-bad">{error}</p>
+        {error ? <p className="py-8 text-center text-bad">{error} <ReportLink className="ml-1" error={error} /></p>
           : !info ? <div className="grid h-60 place-items-center"><Spinner size={24} /></div>
           : !info.root ? <p className="py-8 text-center text-dim">{where.folder} is not a git repository.</p>
           : <div className="flex flex-col gap-5 pb-2 text-base">

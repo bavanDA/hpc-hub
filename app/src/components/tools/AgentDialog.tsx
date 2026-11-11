@@ -6,7 +6,7 @@ import type { AgentInfo, Chats, ToolSetup } from '../../types/tools'
 import { agentIcon } from '../agents/AgentIcon'
 import { shortName } from '../clusters/loginCopy'
 import { NodeFields } from '../clusters/node/NodeFields'
-import { ChoiceRow } from '../e/ChoiceRow'
+import { SelectField } from '../e/SelectField'
 import { EDialog } from '../e/EDialog'
 import { MainButton } from '../e/MainButton'
 import { Row } from '../e/Row'
@@ -80,9 +80,10 @@ export function AgentDialog({ setup, agent: a, project = '', onClose, onBack }:
         {a.remote_label && <ToggleRow label={a.remote_label} sub={a.remote_hint} checked={remote}
           onChange={setRemote} />}
         {a.options.map((o) => (
-          <ChoiceRow key={o.key} label={o.label} value={options[o.key] ?? ''}
-            options={o.choices.map(([value, label]) => ({ value, label }))}
-            onChange={(v) => setOptions({ ...options, [o.key]: v })} />
+          <div key={o.key} className="border-b border-line px-5 pb-2">
+            <SelectField label={o.label} value={options[o.key] ?? ''} options={o.choices}
+              onChange={(v) => setOptions({ ...options, [o.key]: v })} />
+          </div>
         ))}
       </Section>
       {asks && <section className="pt-5">
@@ -90,7 +91,7 @@ export function AgentDialog({ setup, agent: a, project = '', onClose, onBack }:
           {newNode ? 'New compute node' : 'Compute node'}</h3>
         <p className="px-5 pb-2.5 text-sm text-dim">{newNode ? 'Asked for when the agent starts.'
           : 'You have no node yet, so it asks for one.'}</p>
-        <NodeFields cluster={setup.id} value={profile} onChange={setProfile} onValid={setFits} />
+        <NodeFields cluster={setup.id} value={profile} onChange={setProfile} onValid={setFits} now />
       </section>}
       <Section title={project ? 'Or continue a chat here' : 'Or continue a chat'} note={status || undefined}>
         {list.length > 6 && <div className="border-b border-line px-5 py-2">

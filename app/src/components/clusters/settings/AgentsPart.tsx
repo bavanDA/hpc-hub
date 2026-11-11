@@ -1,6 +1,6 @@
 import type { AgentId, AgentSettings, Cluster, SettingsInfo } from '../../../types/clusters'
 import { agentIcon } from '../../agents/AgentIcon'
-import { ChoiceRow } from '../../e/ChoiceRow'
+import { SelectField } from '../../e/SelectField'
 import { Field } from '../../e/Field'
 import { Section } from '../../e/Section'
 import { ToggleRow } from '../../e/ToggleRow'
@@ -19,9 +19,10 @@ export function AgentsPart({ d, agents, up }: {
         {a.remote_label && <ToggleRow label={a.remote_label} sub={a.remote_hint} checked={s.remote}
           onChange={(remote) => upAgent(a.id, { remote })} />}
         {a.options.map((o) => (
-          <ChoiceRow key={o.key} label={o.label} value={String(s[o.key] ?? '')}
-            options={o.choices.map(([value, label]) => ({ value, label }))}
-            onChange={(x) => upAgent(a.id, { [o.key]: x })} />
+          <div key={o.key} className="border-b border-line px-5 pb-2">
+            <SelectField label={o.label} value={String(s[o.key] ?? '')} options={o.choices}
+              onChange={(x) => upAgent(a.id, { [o.key]: x })} />
+          </div>
         ))}
         <div className="border-b border-line px-5 pb-2">
           <Field label="Folder it starts in" value={s.workdir === '~' ? '' : s.workdir} placeholder="Home folder"

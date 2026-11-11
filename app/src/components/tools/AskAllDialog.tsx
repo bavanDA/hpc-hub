@@ -81,7 +81,7 @@ export function AskAllDialog({ setup, folder: start = '', onClose, onBack }:
             <section className="pt-5">
               <h3 className="px-5 pb-1 text-xs font-semibold tracking-wide text-dim uppercase">Compute node</h3>
               <p className="px-5 pb-2.5 text-sm text-dim">You have no node yet, so it asks for one.</p>
-              <NodeFields cluster={setup.id} value={profile} onChange={setProfile} onValid={setFits} />
+              <NodeFields cluster={setup.id} value={profile} onChange={setProfile} onValid={setFits} now />
             </section>
             <Section><ToggleRow label="Use this size next time" checked={remember} onChange={setRemember} /></Section>
           </>}

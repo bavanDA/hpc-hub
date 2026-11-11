@@ -3,6 +3,7 @@ import { ArrowRight, FileText } from 'lucide-react'
 import { lazy, Suspense, type ReactNode, type RefObject } from 'react'
 
 import type { Issue } from '../../types/latex'
+import { ReportLink } from '../report/ReportLink'
 import { Spinner } from '../ui/Spinner'
 import type { EditorHandle } from './editor/CodeEditor'
 import type { Doc } from './useDoc'
@@ -41,7 +42,7 @@ export function EditorPane({ doc, error, name, dirty, issues, words, editor, ext
           To PDF <ArrowRight size={14} /></button>
       </div>
       <div className="min-h-0 flex-1">
-        {error ? <p className="p-6 text-center text-sm text-bad">{error}</p>
+        {error ? <p className="p-6 text-center text-sm text-bad">{error} <ReportLink className="ml-1" error={error} /></p>
           : !doc ? centered
           : <Suspense fallback={centered}>
               <CodeEditor key={`${doc.path}:${doc.version}`} path={doc.path} version={doc.version} text={doc.text}
