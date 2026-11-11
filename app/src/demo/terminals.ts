@@ -23,6 +23,8 @@ const listings: Record<string, Listing> = {
         command: 'python', created: now - 3 * 3600, path: THESIS }),
       session('hpchub-term-1024-093000', { label: 'Data prep', agent: 'term', node: 'n0042', command: 'bash',
         created: now - 5 * 3600, path: `${THESIS}/src` }),
+      session('hpchub-term-1022-200000', { label: 'Finished run', agent: 'term', command: 'bash',
+        created: now - 30 * 3600, path: THESIS }),
       session('build', { color: '#e5a50a', created: now - 26 * 3600 }),
       session('4321.notes', { kind: 'screen', label: 'notes', command: '', created: 0 }),
     ],

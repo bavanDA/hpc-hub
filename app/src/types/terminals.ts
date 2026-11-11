@@ -55,6 +55,39 @@ export type Link = {
   tunnel?: string
 }
 
+/** A window of a session's tmux history, counted from the top of the history. gone: the session has ended. */
+export type HistoryWindow = {
+  gone?: boolean
+  start: number
+  rows: string[]  // with their colors, as tmux prints them
+  total: number
+  history: number
+  limit: number
+  height: number
+  width: number
+  alternate: boolean  // a full screen program has the pane
+  in_mode: boolean  // tmux's own copy mode is on
+}
+
+/** The whole history at a glance. map has one [kind, longest line] per row of the rail; kind: 0 blank, 1 text, 2 table, 3 prompt. */
+export type HistoryOutline = {
+  gone?: boolean
+  total: number
+  history: number
+  limit: number
+  height: number
+  width: number
+  alternate: boolean
+  in_mode: boolean
+  map: [number, number][]
+  prompts: number[]
+}
+
+/** A named place in a session's history. live false: tmux has dropped the lines, only text is left. */
+export type Mark = { id: string; name: string; line: number; rows: number; text: string; created: number; live: boolean }
+
+export type MarksAnswer = { marks: Mark[]; ended: boolean }
+
 export const COLORS = ['#3584e4', '#2ec27e', '#e5a50a', '#ff7800', '#e01b24', '#9141ac', '#986a44', '#77767b']
 
 export const AGENT_NAMES: Record<string, string> = {
