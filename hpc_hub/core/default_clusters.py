@@ -61,6 +61,7 @@ def default_clusters() -> list[ClusterConfig]:
             portal="https://portal.expanse.sdsc.edu",
             key_login=True,
             code_setup="https://passive.sdsc.edu",
+            billing_per_su=3600,
             profile=ComputeProfile(cpus=2, mem_gb=16, partition="shared"),
             vscode=VsCodeSettings(setup=FILE_KEYCHAIN,
                                   compute=ComputeProfile(cpus=2, mem_gb=8, time="08:00:00", partition="shared")),

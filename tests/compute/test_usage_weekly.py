@@ -57,6 +57,8 @@ def test_allocations_ask_sacct_once_and_keep_it(monkeypatch):
             calls.append(command)
             out = WEEKLY if "@RC" in command else "mygroup|18000000|11071200|76824000\nabc123|3000000|2766000|0\n"
             return subprocess.CompletedProcess(command, 0, out, "")
+        on_login = run
+        read = run
 
     monkeypatch.setattr(weekly, "_weekly_cache", {})
     got = weekly.allocations(Ssh(), "wulver")
@@ -102,3 +104,9 @@ def test_weekly_skips_lines_it_cannot_read():
         "@QOS\n", "@QOS\nbroken\nodd|x\n")
     assert weekly.parse_weekly(text) == weekly.parse_weekly(WEEKLY)
     assert weekly.parse_weekly(WEEKLY.replace("@TODAY\n2026-11-05", "@TODAY\nsoon")) is None
+
+
+def test_expanse_counts_su_seconds_so_the_app_divides():
+    assert weekly.parse_weekly(WEEKLY, per_su=2) != weekly.parse_weekly(WEEKLY)
+    one, half = weekly.parse_weekly(WEEKLY)["mygroup"], weekly.parse_weekly(WEEKLY, per_su=2)["mygroup"]
+    assert sum(half.weeks) == sum(one.weeks) / 2

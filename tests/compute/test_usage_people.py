@@ -12,3 +12,8 @@ def test_group():
 def test_script_is_valid_bash():
     import subprocess
     assert subprocess.run(["bash", "-n", "-c", people.GROUP]).returncode == 0
+
+
+def test_expanse_charges_in_su():
+    got = people.parse_group("@QOS\nnormal|1.000000\n@JOBS\njdoe|normal|7200.0\n@NAMES\n", per_su=3600)
+    assert (got[0].charged, got[0].hours) == (2, 2)

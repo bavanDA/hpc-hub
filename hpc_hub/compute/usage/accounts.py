@@ -74,4 +74,4 @@ def parse_usage(text: str) -> list[AccountUsage]:
 
 
 def account_usage(ssh: SshMaster) -> list[AccountUsage]:
-    return parse_usage(ssh.run(USAGE, timeout=60).stdout)
+    return parse_usage(ssh.read(USAGE, timeout=60).stdout)

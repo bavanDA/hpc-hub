@@ -43,8 +43,8 @@ class Allocation(AccountUsage):
     near: bool = False  # runs out before the end (or within 30 days when the end is not known), or used up
 
 
-def parse_weekly(text: str) -> dict[str, Weekly] | None:
-    """Per group (lowercase). None when sacct could not answer."""
+def parse_weekly(text: str, per_su: int = 1) -> dict[str, Weekly] | None:
+    """Per group (lowercase). None when sacct could not answer. per_su: Slurm's billing number for 1 SU an hour."""
     sec = sections(text)
     rc = re.search(r"^@RC (\d+)", text, re.M)
     try:
@@ -60,7 +60,7 @@ def parse_weekly(text: str) -> dict[str, Weekly] | None:
         if len(p) != 5 or p[0] not in ("D", "U") or not p[1]:
             continue
         try:
-            sus = float(p[4]) * factor.get(p[3], 1.0)
+            sus = float(p[4]) * factor.get(p[3], 1.0) / per_su
         except ValueError:
             continue
         w = out.setdefault(p[1], Weekly([0.0] * WEEKS))
@@ -84,12 +84,12 @@ _weekly_cache: dict[tuple[str, str], tuple[float, dict[str, Weekly] | None]] = {
 
 
 def weekly(ssh: SshMaster, cluster: str, accounts: list[str], fresh: bool = False,
-           paid: str = "") -> dict[str, Weekly] | None:
+           paid: str = "", per_su: int = 1) -> dict[str, Weekly] | None:
     key = (cluster, ",".join(sorted(accounts)))
     hit = _weekly_cache.get(key)
     if hit and not fresh and time.monotonic() - hit[0] < CACHE_SECONDS:
         return hit[1]
-    got = parse_weekly(run_script(ssh, WEEKLY, key[1], paid)) if accounts else {}
+    got = parse_weekly(run_script(ssh, WEEKLY, key[1], paid), per_su) if accounts else {}
     _weekly_cache[key] = (time.monotonic(), got)
     return got
 
@@ -111,9 +111,10 @@ def pace(a: AccountUsage, w: Weekly | None, today: date, end: str = "") -> Alloc
     return out
 
 
-def allocations(ssh: SshMaster, cluster: str, fresh: bool = False, paid: str = "") -> list[Allocation]:
+def allocations(ssh: SshMaster, cluster: str, fresh: bool = False, paid: str = "",
+                per_su: int = 1) -> list[Allocation]:
     groups = account_usage(ssh)
-    weeks = weekly(ssh, cluster, [a.account for a in groups], fresh, paid) if groups else {}
+    weeks = weekly(ssh, cluster, [a.account for a in groups], fresh, paid, per_su) if groups else {}
     today = date.today()
     return [pace(a, None if weeks is None else weeks.get(a.account.lower(), Weekly([0.0] * WEEKS)), today)
             for a in groups]

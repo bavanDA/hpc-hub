@@ -31,4 +31,4 @@ def qos_factors(lines: list[str]) -> dict[str, float]:
 
 def run_script(ssh: SshMaster, script: str, *args: str) -> str:
     line = f"bash -c {shlex.quote(script)} _ " + " ".join(shlex.quote(a) for a in args)
-    return ssh.run(line, timeout=120).stdout
+    return ssh.read(line, timeout=120).stdout

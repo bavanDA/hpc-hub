@@ -15,6 +15,14 @@ describe('suPerHour', () => {
   it('takes the biggest part with max all', () =>
     expect(suPerHour(bill({ max: 'all' }), size({ cpus: 2, gpus: 4, gpu_type: 'a100' }))).toBe(16))
   it('adds every part without a max', () => expect(suPerHour(bill({ max: '' }), size())).toBe(31))
+  it('turns Expanse billing into SUs', () => {
+    const shared = bill({ weights: { cpu: 3600, mem: 1800 }, max: 'all', per_su: 3600 })
+    expect(suPerHour(shared, size({ cpus: 4, mem_gb: 16 }))).toBe(8)
+  })
+  it('charges the whole node where whole nodes are billed', () => {
+    const compute = bill({ weights: { cpu: 3600, mem: 1800, node: 460800 }, max: 'all', per_su: 3600 })
+    expect(suPerHour(compute, size({ cpus: 2, mem_gb: 8 }))).toBe(128)
+  })
 })
 
 describe('suText', () => {

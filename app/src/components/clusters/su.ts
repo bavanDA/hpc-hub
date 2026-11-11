@@ -2,17 +2,17 @@ import type { Billing, Profile } from '../../types/clusters'
 
 /** SUs an hour for this size, before the priority's factor. Slurm drops the fraction (16 cores and 63 GB: 16). */
 export function suPerHour(b: Billing, p: Profile): number {
-  return Math.floor(weighted(b, p))
+  return Math.floor(weighted(b, p)) / (b.per_su ?? 1)
 }
 
 function weighted(b: Billing, p: Profile): number {
   const w = b.weights
-  const cpu = p.cpus * (w.cpu ?? 1), mem = p.mem_gb * (w.mem ?? 0)
+  const cpu = p.cpus * (w.cpu ?? 1), mem = p.mem_gb * (w.mem ?? 0), node = w.node ?? 0
   const n = p.gpus ?? 0
   const gpu = n * ((w.gpu ?? 0) + (p.gpu_type ? w[`gpu:${p.gpu_type}`] ?? 0 : 0))
-  if (b.max === 'all') return Math.max(cpu, mem, gpu)
-  if (b.max === 'gres') return Math.max(cpu, mem) + gpu
-  return cpu + mem + gpu
+  if (b.max === 'all') return Math.max(cpu, mem, gpu, node)
+  if (b.max === 'gres') return Math.max(cpu, mem, node) + gpu
+  return cpu + mem + gpu + node
 }
 
 const round = (n: number) => (n >= 10 ? Math.round(n) : Math.round(n * 10) / 10)

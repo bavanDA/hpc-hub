@@ -122,6 +122,7 @@ class ClusterConfig:
     key_login: bool = False  # takes SSH keys from ~/.ssh/authorized_keys: the phone app gets a key (pairing.py)
     code_setup: str = ""  # where you set up the authenticator app the cluster asks codes from
     paid_partitions: str = ""  # only partitions starting with these (space separated) are billed; "" = all (Yale)
+    billing_per_su: int = 1  # Slurm's billing number for 1 SU an hour; Expanse counts SU-seconds, so 3600
     request_node_on_connect: bool = True
     ask_node: bool = False  # with request_node_on_connect: show the node's settings first instead of asking Slurm
     reuse_running_job: bool = True  # a node you already have is used before asking for one

@@ -20,7 +20,7 @@ def allocations(cluster: str, fresh: bool = False) -> dict:
     """Every group you can bill, with its SUs per week for the last 12 weeks (None: the cluster could not tell),
     the pace of the last 4 weeks and when it runs out at that pace. me: your user name."""
     s = hub().connected(cluster)
-    groups = weekly.allocations(s.ssh, cluster, bool(fresh), s.cfg.paid_partitions)
+    groups = weekly.allocations(s.ssh, cluster, bool(fresh), s.cfg.paid_partitions, s.cfg.billing_per_su)
     return {"groups": [asdict(a) for a in groups], "me": s.ssh.username}
 
 
@@ -28,7 +28,8 @@ def allocations(cluster: str, fresh: bool = False) -> dict:
 def people(cluster: str, account: str, days: int = 30) -> dict:
     """SU charged per person in an account over the last days, busiest first."""
     s = hub().connected(cluster)
-    return {"people": [asdict(p) for p in su_people.group_usage(s.ssh, account, int(days))], "me": s.ssh.username}
+    found = su_people.group_usage(s.ssh, account, int(days), s.cfg.billing_per_su)
+    return {"people": [asdict(p) for p in found], "me": s.ssh.username}
 
 
 @method("usage.storage")

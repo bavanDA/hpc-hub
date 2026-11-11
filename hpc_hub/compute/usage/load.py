@@ -54,4 +54,4 @@ def parse_load(text: str) -> list[Partition]:
 
 
 def load(ssh: SshMaster) -> list[Partition]:
-    return parse_load(ssh.run(LOAD, timeout=60).stdout)
+    return parse_load(ssh.read(LOAD, timeout=60).stdout)

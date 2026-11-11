@@ -23,7 +23,7 @@ class Person:
     hours: float = 0.0  # all core hours, free QoS included
 
 
-def parse_group(text: str) -> list[Person]:
+def parse_group(text: str, per_su: int = 1) -> list[Person]:
     sec = sections(text)
     factor = qos_factors(sec.get("QOS", []))
     people: dict[str, Person] = {}
@@ -35,12 +35,12 @@ def parse_group(text: str) -> list[Person]:
         p = line.split("|")
         if len(p) != 3 or not p[0]:
             continue
-        hours = float(p[2])
+        hours = float(p[2]) / per_su
         who = people.setdefault(p[0], Person(p[0]))
         who.hours += hours
         who.charged += hours * factor.get(p[1], 1.0)
     return sorted(people.values(), key=lambda x: (-x.charged, -x.hours, x.user))
 
 
-def group_usage(ssh: SshMaster, account: str, days: int) -> list[Person]:
-    return parse_group(run_script(ssh, GROUP, account, str(int(days))))
+def group_usage(ssh: SshMaster, account: str, days: int, per_su: int = 1) -> list[Person]:
+    return parse_group(run_script(ssh, GROUP, account, str(int(days))), per_su)

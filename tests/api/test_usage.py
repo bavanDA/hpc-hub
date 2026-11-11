@@ -21,12 +21,14 @@ class FakeSsh:
         out = (YALE if "getusage" in command else GROUP if "@JOBS" in command else STORAGE if "@QUOTA" in command
                else LOAD if "@PART" in command else "")
         return subprocess.CompletedProcess(command, 0, out, "")
+    on_login = run
+    read = run
 
 
 class FakeHub:
     def __init__(self, connected=True):
         self.ok = connected
-        self.s = SimpleNamespace(ssh=FakeSsh(), cfg=SimpleNamespace(paid_partitions="priority"))
+        self.s = SimpleNamespace(ssh=FakeSsh(), cfg=SimpleNamespace(paid_partitions="priority", billing_per_su=1))
 
     def connected(self, cluster):
         if not self.ok:
@@ -65,7 +67,8 @@ def test_allocations(fake, monkeypatch):
     from hpc_hub.compute.usage import weekly
     monkeypatch.setattr(weekly, "_weekly_cache", {})
     asked = []
-    monkeypatch.setattr(weekly, "weekly", lambda ssh, cluster, accounts, fresh=False, paid="": asked.append(paid) or {
+    monkeypatch.setattr(weekly, "weekly", lambda ssh, cluster, accounts, fresh=False, paid="", per_su=1:
+                        asked.append(paid) or {
         "mygroup": weekly.Weekly([0.0] * 8 + [70.0] * 4, {"jdoe": 280.0})})
     got = m.allocations("yale")
     assert got["me"] == "jdoe"
