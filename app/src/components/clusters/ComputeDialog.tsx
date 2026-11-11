@@ -42,7 +42,7 @@ export function ComputeDialog({ cluster: c, onClose }: { cluster: Cluster; onClo
     <EDialog title={`Get a node on ${shortName(c)}`} onClose={onClose}
       actions={<MainButton disabled={sending || !ok} onClick={go}>Get node</MainButton>}>
       <div className="pt-1">
-        <NodeFields cluster={c.id} value={p} onChange={setP} onValid={setOk} extra={false} /></div>
+        <NodeFields cluster={c.id} value={p} onChange={setP} onValid={setOk} extra={false} now /></div>
       <ToggleRow label="Use this size next time" checked={remember}
         sub={remember ? undefined : `Next time: ${summary(c.profile)}`} onChange={setRemember} />
       <ToggleRow label={ASK} sub={ASK_SUB} checked={ask} onChange={setAsk} />

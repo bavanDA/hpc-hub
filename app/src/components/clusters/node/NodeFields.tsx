@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useContext, useEffect, useState } from 'react'
 
 import type { Profile } from '../../../types/clusters'
 import { DurationRow } from '../../e/DurationRow'
@@ -14,15 +14,19 @@ import { useGpus } from '../useGpus'
 import { coresFor, fits, sizeOf } from './fit'
 import { GpuPart } from './GpuPart'
 import { keptFor, remember } from './kept'
-import { QueueDialog } from './QueueDialog'
+import { MaintenanceNote } from './MaintenanceNote'
+import { QueueWindow } from './QueueDialog'
 import { useLimits } from './useLimits'
 
 /** onValid hears whether every number is allowed, so the window can turn its button off. extra: false where the
- *  extra options can't be kept (a request for a node now). */
-export function NodeFields({ cluster, value: p, onChange, onValid, extra = true }: {
+ *  extra options can't be kept (a request for a node now). now: this job goes to Slurm when the window closes, so
+ *  say if it would run into maintenance. */
+export function NodeFields({ cluster, value: p, onChange, onValid, extra = true, now = false }: {
   cluster: string; value: Profile; onChange: (p: Profile) => void; onValid?: (ok: boolean) => void; extra?: boolean
+  now?: boolean
 }) {
   const [open, setOpen] = useState(false)
+  const Queue = useContext(QueueWindow)
   const { gpus } = useGpus(cluster)
   const limits = useLimits(cluster, p)
   const quick = presets(gpus)
@@ -66,9 +70,11 @@ export function NodeFields({ cluster, value: p, onChange, onValid, extra = true 
           onChange={(m) => set({ time: slurmTime(Math.max(1, m)) })} />
         <Row label="Queue and priority" value={queue} opens onPress={() => setOpen(true)} />
       </List>
+      {now && <MaintenanceNote cluster={cluster} asked={minutes(p.time) ?? 240}
+        onShorten={(m) => set({ time: slurmTime(m) })} />}
       {!!p.gpus && gpus.length > 0 && <GpuPart gpus={gpus} limits={limits} value={p} onChange={change} />}
       {su && <List><Row label="Cost" sub={su.sub} value={su.value} /></List>}
-      {open && <QueueDialog limits={limits} value={p} onChange={change} extra={extra}
+      {open && <Queue cluster={cluster} limits={limits} value={p} onChange={change} extra={extra}
         only={p.gpus ? gpuQueues : undefined} onClose={() => setOpen(false)} />}
     </>
   )
