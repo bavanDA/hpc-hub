@@ -10,6 +10,7 @@ import { Field } from '../e/Field'
 import { List } from '../e/List'
 import { MainButton } from '../e/MainButton'
 import { ToggleRow } from '../e/ToggleRow'
+import { ReportLink } from '../report/ReportLink'
 import { Spinner } from '../ui/Spinner'
 import { FolderPicker } from './FolderPicker'
 
@@ -97,7 +98,7 @@ export function ProjectDialog({ mode, project, clusters, projects, onClose, onSa
           <p className="px-5 pt-1 text-sm text-dim">
             {shortName(c)} is not connected. The folder is checked the first time you open the project.</p>
         )}
-        {error && <p className="px-5 pt-2 select-text text-bad">{error}</p>}
+        {error && <p className="px-5 pt-2 select-text text-bad">{error} <ReportLink className="ml-1" error={error} /></p>}
       </EDialog>
       {picking && c && (
         <FolderPicker cluster={c} start={path.trim() || '~'} projects={mine} onPick={picked}

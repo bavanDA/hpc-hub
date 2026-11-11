@@ -7,6 +7,7 @@ import { shortName } from '../clusters/loginCopy'
 import { EDialog } from '../e/EDialog'
 import { MainButton } from '../e/MainButton'
 import { size } from '../files/format'
+import { ReportLink } from '../report/ReportLink'
 import { Spinner } from '../ui/Spinner'
 import { CopyChats } from './CopyChats'
 import { CopyHow } from './CopyHow'
@@ -66,7 +67,7 @@ export function CopyDialog({ p, onClose, onStarted }:
         actions={info && info.targets.length > 0 && <MainButton disabled={!dst || !!missing || busy} onClick={go}>
           {busy && <Spinner size={16} />}{sync ? 'Sync' : 'Copy'}{plan ? ` ${size(files)}` : ''}</MainButton>}>
         {!info ? <div className="grid h-40 place-items-center">
-            {error ? <p className="text-bad">{error}</p> : <Spinner size={24} />}</div>
+            {error ? <p className="text-bad">{error} <ReportLink className="ml-1" error={error} /></p> : <Spinner size={24} />}</div>
           : (
           <>
             <CopyWhere info={info} to={to} onTo={pickTarget} dst={dst} spots={spots} spot={spotFor(intoPath, spots)}
