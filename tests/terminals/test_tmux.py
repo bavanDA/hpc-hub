@@ -1,3 +1,4 @@
+import os
 import shutil
 import subprocess
 
@@ -114,3 +115,61 @@ def test_sessions_on_compute_nodes():
 def test_attach_says_when_the_terminal_is_gone():
     line = tmux.attach(tmux.Session("hpchub-term-1", "tmux"))
     assert line.startswith("tmux has-session -t =hpchub-term-1") and "has ended" in line
+
+
+def test_only_our_jobs_nodes_are_looked_at(tmp_path):
+    (tmp_path / "squeue").write_text('#!/bin/sh\necho "hpc-hub-claude n0006"\necho "my-experiment n0031"\n')
+    (tmp_path / "scontrol").write_text('#!/bin/sh\necho "$3"\n')
+    for stub in ("squeue", "scontrol"):
+        (tmp_path / stub).chmod(0o755)
+    out = subprocess.run(["bash", "-c", tmux.LIST], capture_output=True, text=True,
+                         env={**os.environ, "PATH": f"{tmp_path}:{os.environ['PATH']}"}).stdout
+    assert out.partition("NODE_LIST\n")[2].split() == ["n0006"]
+
+
+def _row(name):
+    return tmux.SEP.join([name, "1", "0", "", "", "bash", "1", "/h"])
+
+
+class NodeSsh:
+    def __init__(self, nodes, kept=True):
+        self.nodes, self.kept, self.ran = nodes, kept, []
+
+    def run(self, command, timeout=60, fast=None):
+        self.ran.append(command)
+        if command == tmux.LIST:
+            return subprocess.CompletedProcess(command, 0, f"login1\nTMUX_OK\nNODE_LIST\n{self.nodes}", "")
+        return subprocess.CompletedProcess(command, 0, _row("by-hop") + "\n", "")
+    on_login = run
+
+    def run_on_host(self, node, command, timeout=15):
+        return subprocess.CompletedProcess(command, 0, _row(f"on-{node}") + "\n", "") if self.kept else None
+
+
+def test_sessions_come_from_the_shell_kept_on_the_node():
+    got = tmux.list_sessions(NodeSsh("n0006\n")).sessions
+    assert [(t.name, t.node) for t in got] == [("on-n0006", "n0006")]
+
+
+def test_the_node_in_use_is_looked_at_too():
+    got = tmux.list_sessions(NodeSsh("n0006\n"), also="n0031").sessions
+    assert {t.node for t in got} == {"n0006", "n0031"}
+    assert len(tmux.list_sessions(NodeSsh("n0006\n"), also="n0006").sessions) == 1
+
+
+def test_without_a_kept_shell_it_hops_with_ssh():
+    ssh = NodeSsh("n0006\n", kept=False)
+    assert [(t.name, t.node) for t in tmux.list_sessions(ssh).sessions] == [("by-hop", "n0006")]
+    assert any("n0006" in c and "tmux list-sessions" in c for c in ssh.ran[1:])
+
+
+def test_the_wheel_scrolls_in_the_apps_sessions():
+    for line in (tmux.attach(tmux.Session("hpchub-claude-1-x", "tmux")),
+                 tmux.open_line("hpchub-claude-1-x", "claude", "Claude")):
+        assert "set-option -t =hpchub-claude-1-x: mouse on" in line
+        assert subprocess.run(["bash", "-n", "-c", line]).returncode == 0
+
+
+def test_your_own_sessions_keep_your_mouse_setting():
+    assert "mouse on" not in tmux.attach(tmux.Session("build", "tmux"))
+

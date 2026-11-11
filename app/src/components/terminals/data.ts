@@ -36,7 +36,7 @@ export function useListings(live: Live[]) {
   }, [ids])
   useEffect(() => {
     refresh()
-    const timer = setInterval(refresh, REFRESH_MS)
+    const timer = setInterval(() => document.visibilityState === 'visible' && refresh(), REFRESH_MS)
     return () => clearInterval(timer)
   }, [refresh])
   return { listings, refresh }

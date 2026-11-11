@@ -11,14 +11,20 @@ class FakeSsh:
     """Records what would run on the cluster."""
 
     def __init__(self, out: str = ""):
-        self.out, self.ran = out, []
+        self.out, self.ran, self.on_node = out, [], {}
 
     def argv(self, command=None, tty=False):
         return ["ssh", *(["-tt"] if tty else []), "jdoe@cluster", *([command] if command else [])]
+    node_argv = argv
 
     def run(self, command, timeout=60, fast=None):
         self.ran.append(command)
         return subprocess.CompletedProcess(command, 0, self.out, "")
+    on_login = run
+
+    def run_on_host(self, node, command, timeout=15):
+        self.ran.append((node, command))
+        return subprocess.CompletedProcess(command, 0, self.on_node.get(node, ""), "")
 
 
 class FakeSession:
@@ -46,7 +52,8 @@ def ssh(monkeypatch):
 def test_list_gives_sessions_with_colors(ssh):
     mine = tmux.SEP.join(["build", "100", "0", "Build", "#2ec27e", "bash", "1", "/home/jdoe"])
     agent = tmux.SEP.join(["hpchub-claude-123-0900", "200", "1", "", "", "srun", "1", "/h"])
-    ssh.out = f"login1\nTMUX_OK\n{mine}\nSCREEN_LIST\nJOB_LIST\n123 n0042\nNODE_LIST\n@@NODE n0042\n{agent}\n"
+    ssh.out = f"login1\nTMUX_OK\n{mine}\nSCREEN_LIST\nJOB_LIST\n123 n0042\nNODE_LIST\nn0042\n"
+    ssh.on_node = {"n0042": f"{agent}\n"}
     got = terminals.sessions("wulver")
     assert got["host"] == "login1" and got["has_tmux"] and got["nodes"] == {"123": "n0042"}
     claude, build = got["sessions"]
@@ -116,3 +123,25 @@ def test_send_types_into_a_session_on_its_node(ssh):
     assert "n0042" in line and "paste-buffer -p" in line and "Enter" in line
     with pytest.raises(ValueError, match="Nothing"):
         terminals.send("wulver", "s", "   ")
+
+
+def test_history_reads_on_the_sessions_node(monkeypatch):
+    from hpc_hub.api.methods import terminal_history
+
+    ssh = FakeSsh()
+    monkeypatch.setattr(terminal_history, "hub", lambda: FakeHub(FakeSession(ssh)))
+    terminal_history.read_history("wulver", "hpchub-term-1", node="n0042", start=5, count=10)
+    assert ssh.ran[-1][0] == "n0042" and "capture-pane" in ssh.ran[-1][1]
+    terminal_history.read_history("wulver", "build", start=None, count=10)
+    assert isinstance(ssh.ran[-1], str) and "capture-pane" in ssh.ran[-1]
+
+
+def test_marks_store_under_the_clusters_home(monkeypatch):
+    from hpc_hub.api.methods import terminal_history
+
+    ssh = FakeSsh()
+    monkeypatch.setattr(terminal_history, "hub", lambda: FakeHub(FakeSession(ssh)))
+    ssh.out = ""
+    got = terminal_history.mark_add("wulver", "hpchub-term-1", "Table", 4, 2, "| a |\n| b |")
+    assert got["name"] == "Table" and got["text"] == "| a |\n| b |"
+    assert any("hpc-hub/marks" in c for c in ssh.ran if isinstance(c, str))

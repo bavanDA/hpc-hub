@@ -20,9 +20,8 @@ LIST = ("hostname; command -v tmux >/dev/null && echo TMUX_OK; "
         f"{_LS}; "
         "echo SCREEN_LIST; screen -ls 2>/dev/null; "
         'echo JOB_LIST; squeue -h -u "$USER" -t RUNNING -o "%i %N" 2>/dev/null; '
-        'echo NODE_LIST; for n in $(squeue -h -u "$USER" -t RUNNING -o %N 2>/dev/null | '
-        "xargs -r -n1 scontrol show hostnames 2>/dev/null | sort -u); do "
-        f'echo "{NODE_MARK}$n"; {NODE_SSH} "$n" {shlex.quote(_LS)} </dev/null; done')
+        'echo NODE_LIST; squeue -h -u "$USER" -t RUNNING -o "%j %N" 2>/dev/null | '
+        "awk '$1 ~ /^hpc-hub/ {print $NF}' | xargs -r -n1 scontrol show hostnames 2>/dev/null | sort -u")
 SCREEN_RE = re.compile(r"^\s+(\d+)\.(\S+)\s+\((?:\d.*?\)\s+\()?(Attached|Detached)\)", re.M)
 AGENT_COLORS = {"claude": "#d97757", "codex": "#10a37f", "agy": "#4285f4", "cursor": "#8b8b8b",
                 "ask": "#9141ac", "vscode": "#3584e4"}
@@ -117,6 +116,12 @@ def _opt(name: str) -> str:
     return shlex.quote(f"={name}:")  # set-option wants a pane-style target
 
 
+def _mouse(name: str) -> str:
+    """For the app's own sessions: with tmux's mouse off the wheel sends arrow keys, which an agent's input box takes
+    as going through its history. Only that session changes, never your own settings."""
+    return f"tmux set-option -t {_opt(name)} mouse on 2>/dev/null; " if name.startswith("hpchub-") else ""
+
+
 def on(node: str, line: str, tty: bool = False) -> str:
     """Run line on a compute node (ssh from the login node), or right here when node is ""."""
     if not node:
@@ -124,11 +129,28 @@ def on(node: str, line: str, tty: bool = False) -> str:
     return f"{NODE_SSH}{' -t' if tty else ''} {shlex.quote(node)} {shlex.quote(line)}"
 
 
+HISTORY_LIMIT = 50_000  # lines an app session keeps; tmux's default is 2000
+PLACEHOLDER = "sleep 300"  # holds a session open for a moment while its real pane is made
+
+
+def new_session(name: str, command: str, cwd: str = "") -> str:
+    """Start a detached session. tmux fixes a pane's history limit when the pane is made, so an app session (hpchub-) is
+    born with a placeholder pane, gets the higher limit on the session alone, and its real pane is split off that. If
+    the split fails the placeholder turns into the real pane instead, with tmux's default limit. Shell line."""
+    c = f" -c {shlex.quote(cwd)}" if cwd else ""
+    cmd = f" {shlex.quote(command)}" if command else ""
+    if not name.startswith("hpchub-"):
+        return f"tmux new-session -d -s {shlex.quote(name)}{c}{cmd}"
+    t = _opt(name)
+    return (f"tmux new-session -d -s {shlex.quote(name)}{c} {shlex.quote(PLACEHOLDER)} && "
+            f"{{ tmux set-option -t {t} history-limit {HISTORY_LIMIT} 2>/dev/null; "
+            f"if tmux split-window -t {t}{c}{cmd} 2>/dev/null; then tmux kill-pane -a -t {t}; "
+            f"else tmux respawn-pane -k -t {t}{c}{cmd}; fi; }}")
+
+
 def create(name: str, command: str, label: str = "", color: str = "", cwd: str = "") -> str:
     """Start a detached session unless it exists, then tag it. Shell line."""
-    q = shlex.quote(name)
-    new = f"tmux new-session -d -s {q}" + (f" -c {shlex.quote(cwd)}" if cwd else "")
-    new += f" {shlex.quote(command)}" if command else ""
+    new = new_session(name, command, cwd)
     tags = "".join(f" && tmux set-option -t {_opt(name)} {opt} {shlex.quote(val)}"
                    for opt, val in (("@hpchub_label", label), ("@hpchub_color", color)) if val)
     return f"tmux has-session -t {_t(name)} 2>/dev/null || {{ {new}{tags}; }}"
@@ -138,7 +160,7 @@ def open_line(name: str, command: str, label: str = "", color: str = "", cwd: st
     """Create (if needed) and attach, on node if given. Without tmux, just run the command."""
     fallback = f"exec {command}" if command else "exec bash -l"
     line = (f"if command -v tmux >/dev/null 2>&1; then {create(name, command, label, color, cwd)} && "
-            f"exec tmux attach-session -t {_t(name)}; else {fallback}; fi")
+            f"{{ {_mouse(name)}exec tmux attach-session -t {_t(name)}; }}; else {fallback}; fi")
     return f"exec {on(node, line, tty=True)}" if node else line
 
 
@@ -150,7 +172,7 @@ def attach(s: Session) -> str:
         return f"exec screen -x {shlex.quote(s.name)}"
     # without the check tmux only says "no sessions" and the tab closes
     line = (f"tmux has-session -t {_t(s.name)} 2>/dev/null || {{ echo {shlex.quote(GONE)}; exit 1; }}; "
-            f"exec tmux attach-session -t {_t(s.name)}")
+            f"{_mouse(s.name)}exec tmux attach-session -t {_t(s.name)}")
     return f"exec {on(s.node, line, tty=True)}" if s.node else line
 
 
@@ -187,11 +209,18 @@ def save_buffer(node: str) -> str:
     return on(node, "tmux save-buffer - 2>/dev/null")
 
 
-def list_sessions(ssh: SshMaster) -> Listing:
-    return parse(ssh.run(LIST, timeout=30).stdout)
+def _on_node(ssh: SshMaster, node: str) -> str:
+    res = ssh.run_on_host(node, _LS) or ssh.on_login(on(node, _LS), timeout=20)
+    return f"{NODE_MARK}{node}\n{res.stdout}"
+
+
+def list_sessions(ssh: SshMaster, also: str = "") -> Listing:
+    """Sessions on the login node and on the nodes of our own jobs; also: the node in use, if it isn't one."""
+    text, mark, nodes = ssh.on_login(LIST, timeout=30).stdout.partition("NODE_LIST\n")
+    return parse(text + mark + "".join(_on_node(ssh, n) for n in sorted({*nodes.split(), also} - {""})))
 
 
 def run(ssh: SshMaster, line: str) -> None:
-    res = ssh.run(line, timeout=30)
+    res = ssh.on_login(line, timeout=30)  # the line itself says which node
     if res.returncode != 0:
         raise RuntimeError(res.stderr.strip() or "tmux command failed")

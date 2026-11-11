@@ -3,19 +3,23 @@ import { useEffect, useRef, useState } from 'react'
 
 import '@xterm/xterm/css/xterm.css'
 
+import { useGo } from '../../nav'
+import { setActiveCluster } from '../clusters/active'
 import { Button } from '../ui/Button'
 import { IconButton } from '../ui/IconButton'
 import { useToast } from '../useToast'
 import { dismiss } from './banners'
+import { HistoryFrame } from './history/HistoryFrame'
 import { MenuItem } from './MenuItem'
 import { MonitorBar } from './MonitorBar'
 import { Popover } from './Popover'
 import { start, type Tab } from './tabs'
 import { copy, paste } from './xterm'
 
-export function TerminalView({ tab, shown }: { tab: Tab; shown: boolean }) {
+export function TerminalView({ tab, shown, rail = false }: { tab: Tab; shown: boolean; rail?: boolean }) {
   const host = useRef<HTMLDivElement>(null)
   const toast = useToast()
+  const go = useGo()
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null)
 
   useEffect(() => {
@@ -42,17 +46,20 @@ export function TerminalView({ tab, shown }: { tab: Tab; shown: boolean }) {
 
   useEffect(() => { if (shown) tab.term.focus() }, [shown, tab])
 
+  const terminal = <div ref={host} className="min-h-0 flex-1 bg-view py-1 pl-2"
+    onContextMenu={(e) => { e.preventDefault(); setMenu({ x: e.clientX, y: e.clientY }) }} />
+
   return (
     <div className={`absolute inset-0 flex flex-col ${shown ? '' : 'invisible'}`}>
       {tab.banners.map((b) => (
         <div key={b.id} className="flex min-h-11 shrink-0 items-center gap-3 border-b border-line bg-accent/15 py-1 pr-2 pl-4">
           <span className="min-w-0 flex-1 text-center text-sm">{b.text}</span>
-          {b.button && <Button kind="suggested" onClick={b.action}>{b.button}</Button>}
+          {b.button && <Button kind="suggested" onClick={b.cluster
+            ? () => { setActiveCluster(b.cluster!); go('clusters') } : b.action}>{b.button}</Button>}
           <IconButton icon={X} label="Dismiss" size={14} onClick={() => dismiss(tab, b.id)} />
         </div>
       ))}
-      <div ref={host} className="min-h-0 flex-1 bg-view py-1 pl-2"
-        onContextMenu={(e) => { e.preventDefault(); setMenu({ x: e.clientX, y: e.clientY }) }} />
+      {rail ? <HistoryFrame tab={tab} shown={shown}>{terminal}</HistoryFrame> : terminal}
       {tab.session && tab.cluster && <MonitorBar cluster={tab.cluster} node={tab.node} shown={shown} />}
       {menu && (
         <Popover x={menu.x} y={menu.y} onClose={() => setMenu(null)}>

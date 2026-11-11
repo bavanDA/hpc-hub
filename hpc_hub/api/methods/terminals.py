@@ -33,7 +33,8 @@ def _target(session: str, node: str = "", kind: str = "tmux") -> tmux.Session:
 @method("terminals.list")
 def sessions(cluster: str) -> dict:
     """tmux (and screen) sessions on the cluster and on your running jobs' nodes."""
-    listing = tmux.list_sessions(hub().connected(cluster).ssh)
+    s = hub().connected(cluster)
+    listing = tmux.list_sessions(s.ssh, s.allocation.node if s.allocation else "")
     return {"host": listing.host, "has_tmux": listing.has_tmux, "nodes": listing.nodes,
             "sessions": [_session_json(t) for t in listing.sessions]}
 

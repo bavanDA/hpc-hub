@@ -3,7 +3,7 @@ import { useSyncExternalStore } from 'react'
 import { call, on } from '../../rpc'
 import type { Cluster, Session } from '../../types/clusters'
 import { inTauri } from '../app/platform'
-import { rememberShort } from './loginCopy'
+import { rememberShort, shortName } from './loginCopy'
 
 const MAX_LOG = 1000
 
@@ -74,6 +74,14 @@ export function load() {
 }
 
 /** Put back a cluster the backend changed (clusters.update answers with it). */
+/** The cluster's short name, for words on screen. */
+export function clusterLabel(id: string): string {
+  const c = snap.clusters?.find((x) => x.id === id)
+  return c ? shortName(c) : id
+}
+
+export const isConnected = (id: string) => !!snap.sessions[id]?.connected
+
 export function putCluster(c: Cluster) {
   set({ clusters: (snap.clusters ?? []).map((x) => (x.id === c.id ? c : x)) })
 }
