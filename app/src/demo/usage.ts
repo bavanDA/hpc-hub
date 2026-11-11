@@ -1,5 +1,5 @@
 // Demo data for the Usage page: made-up accounts, people, quotas and partitions on Wulver, Yale and SDSC.
-import type { Account, Allocation, Allocations, Partition, People, Person, Storage } from '../types/usage'
+import type { Account, Allocation, Allocations, Guide, GuideQueue, Partition, People, Person, Storage } from '../types/usage'
 import { demoConnected } from './clusters'
 
 const ACCOUNTS: Record<string, Account[]> = {
@@ -88,6 +88,44 @@ const LOAD: Record<string, Partition[]> = {
     p('gpu', 52, 1420, 2080, 166, 208, 61, 0), p('debug', 8, 64, 1024, 0, 0, 4, 0)],
 }
 
+const queue = (name: string, nodes: number, longest: number | null, change: Partial<GuideQueue> = {}): GuideQueue => ({
+  name, default: false, up: true, nodes, longest, default_time: 60, max_nodes: 1, cores: 128, cores_per_node: 128,
+  memory_gb: 243, mem_per_core_gb: null, default_mem_per_core_gb: null, gpus: [], whole_nodes: false,
+  can_be_stopped: false, billing: null, ...change })
+
+const WULVER_RATE = { weights: { cpu: 1, mem: 0.25, gpu: 0, 'gpu:a100': 16, 'gpu:a100_40g': 8 }, max: 'gres', factor: 1 } as const
+const SHARED_RATE = { weights: { cpu: 3600, mem: 1800 }, max: 'all', factor: 1, per_su: 3600 } as const
+
+const GUIDE: Record<string, Guide> = {
+  wulver: { known: true, others: 1, queues: [
+    queue('general', 97, 4320, { default: true, default_time: null, max_nodes: 97, cores: 12416, memory_gb: 502, billing: WULVER_RATE }),
+    queue('gpu', 28, 4320, { default_time: null, max_nodes: 28, cores: 3584, memory_gb: 502, mem_per_core_gb: 3.9,
+      gpus: [{ type: 'a100', count: 4, per_node: 4 }, { type: 'a100_40g', count: 2, per_node: 2 }], billing: WULVER_RATE }),
+    queue('debug', 2, 480, { default_time: null, cores: 4, memory_gb: 16,
+      billing: { weights: { cpu: 1, mem: 0.25 }, max: 'gres', factor: 0 } }),
+  ], qos: [
+    { name: 'standard', longest: 4320, per_job: {}, per_user: { 'gpu:l40': 0 }, factor: 1, queues: ['general', 'gpu'] },
+    { name: 'low', longest: 4320, per_job: {}, per_user: {}, factor: 0, queues: ['general', 'gpu'] },
+    { name: 'debug', longest: 480, per_job: { cpu: 4, mem: 16 }, per_user: { cpu: 4, mem: 16 }, factor: 0, queues: ['debug'] },
+  ] },
+  yale: { known: true, others: 0, queues: [
+    queue('devel', 4, 360, { default: true, cores: 4, memory_gb: 180, billing: { weights: { cpu: 1 }, max: '', factor: 0, free: 'partition' } }),
+    queue('day', 180, 1440, { max_nodes: 180, cores: 11520, memory_gb: 1007, billing: { weights: { cpu: 1 }, max: '', factor: 0, free: 'partition' } }),
+    queue('priority', 180, 10080, { max_nodes: 180, cores: 11520, memory_gb: 1007, billing: { weights: { cpu: 1 }, max: '', factor: 1 } }),
+  ], qos: [] },
+  sdsc: { known: true, others: 12, queues: [
+    queue('shared', 734, 2880, { default: true, cores: 127, default_mem_per_core_gb: 1, billing: SHARED_RATE }),
+    queue('compute', 734, 2880, { max_nodes: 32, cores: 4096, whole_nodes: true,
+      billing: { weights: { cpu: 3600, mem: 1800, node: 460800 }, max: 'all', factor: 1, per_su: 3600 } }),
+    queue('debug', 2, 30, { default_time: 15, max_nodes: 2, cores: 256, billing: SHARED_RATE }),
+    queue('preempt', 726, 10080, { max_nodes: 32, cores: 4096, can_be_stopped: true,
+      billing: { weights: { cpu: 2880, mem: 1440 }, max: 'all', factor: 1, per_su: 3600 } }),
+  ], qos: [
+    { name: 'shared-normal', longest: 2880, per_job: { cpu: 127, node: 1 }, per_user: { cpu: 8192, node: 64 }, factor: 1, queues: ['shared'] },
+    { name: 'normal', longest: 2880, per_job: { cpu: 4096, node: 32 }, per_user: { cpu: 8192, node: 64 }, factor: 1, queues: ['compute'] },
+  ] },
+}
+
 const connected = (cluster: unknown) => {
   if (!LOAD[String(cluster)] || !demoConnected(String(cluster))) throw new Error('Connect to this cluster first')
   return String(cluster)
@@ -100,4 +138,5 @@ export const answers: Record<string, unknown> = {
   'usage.people': (params: Record<string, unknown>) => (connected(params.cluster), people(params)),
   'usage.storage': ({ cluster }: Record<string, unknown>) => STORAGE[connected(cluster)],
   'usage.load': ({ cluster }: Record<string, unknown>) => LOAD[connected(cluster)],
+  'clusters.limits': ({ cluster }: Record<string, unknown>) => GUIDE[connected(cluster)],
 }

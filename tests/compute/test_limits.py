@@ -1,5 +1,6 @@
 from hpc_hub.compute import limits
 from hpc_hub.core.config import ComputeProfile
+from tests.compute.test_guide import EXPANSE
 
 WULVER = """general*|infinite
 debug|8:00:00
@@ -78,3 +79,16 @@ def test_billing_weights_and_usage_factor():
     assert L.billing_for("gpu") == {"weights": L.billing["gpu"], "max": "gres", "factor": 1.0}
     assert L.billing_for("gpu", "low")["factor"] == 0.0
     assert L.billing_for("general") is None
+
+
+def test_expanse_limits():
+    L = limits.parse(EXPANSE)
+    assert L.billing["compute"] == {"cpu": 3600.0, "mem": 1800.0, "node": 460800.0} and L.billing_max == "all"
+    assert L.biggest("compute") == (128, 243)  # its own QoS, not your default one, which allows 127 cores
+    assert L.biggest("shared") == (127, 243)
+    assert L.longest("debug", "") == (30, "partition debug")
+    assert L.qos_per_user["normal"] == {"cpu": 8192, "node": 64}
+
+
+def test_qos_is_asked_with_a_field_every_slurm_knows():
+    assert "maxtres," in limits.FETCH and "maxtrespj" not in limits.FETCH  # Slurm 23 refuses the whole query for it

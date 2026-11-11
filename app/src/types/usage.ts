@@ -1,3 +1,5 @@
+import type { Billing } from './clusters'
+
 export type Account = {
   account: string
   quota: number // SU the account may use, 0 = no limit
@@ -46,3 +48,27 @@ export type Allocation = Account & {
   near: boolean // runs out before the end (or within 30 days when the end is not known), or used up
 }
 export type Allocations = { groups: Allocation[]; me: string }
+
+/** What one job may ask for on a queue, read from Slurm. null: no limit, or Slurm doesn't say. */
+export type GuideQueue = {
+  name: string
+  default: boolean
+  up: boolean
+  nodes: number | null
+  longest: number | null  // minutes
+  default_time: number | null  // minutes, when the job doesn't say
+  max_nodes: number | null
+  cores: number | null
+  cores_per_node: number | null
+  memory_gb: number | null  // on one node
+  mem_per_core_gb: number | null
+  default_mem_per_core_gb: number | null
+  gpus: { type: string; count: number; per_node: number }[]
+  whole_nodes: boolean  // jobs get, and pay for, whole nodes
+  can_be_stopped: boolean  // other jobs can take its nodes back
+  billing: Billing | null
+}
+/** caps: cpu, node, mem (GB), gpu, gpu:<type>. */
+export type GuideQos = { name: string; longest: number | null; per_job: Record<string, number>
+  per_user: Record<string, number>; factor: number; queues: string[] }
+export type Guide = { known: boolean; queues: GuideQueue[]; qos: GuideQos[]; others: number }

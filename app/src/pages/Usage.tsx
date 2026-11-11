@@ -9,6 +9,7 @@ import { Select } from '../components/jobs/Select'
 import { EmptyState } from '../components/ui/EmptyState'
 import { IconButton } from '../components/ui/IconButton'
 import { Spinner } from '../components/ui/Spinner'
+import { LimitsTab } from '../components/usage/LimitsTab'
 import { LoadTab } from '../components/usage/LoadTab'
 import { Overview } from '../components/usage/Overview'
 import { StorageTab } from '../components/usage/StorageTab'
@@ -17,10 +18,11 @@ import { SuTab } from '../components/usage/SuTab'
 import { useRemote } from '../components/usage/useRemote'
 import type { View } from '../components/usage/view'
 import { useGo, usePageParams } from '../nav'
-import type { Account, Partition, People, Storage } from '../types/usage'
+import type { Account, Guide, Partition, People, Storage } from '../types/usage'
 
 const PERIODS = [['7', 'Last 7 days'], ['30', 'Last 30 days'], ['90', 'Last 90 days'], ['365', 'Last year']] as const
-const TABS = [['overview', 'Overview'], ['su', 'Hours'], ['storage', 'Storage'], ['load', 'Queues']] as const
+const TABS = [['overview', 'Overview'], ['su', 'Hours'], ['storage', 'Storage'], ['load', 'Queues'],
+  ['limits', 'Limits']] as const
 
 export function Usage() {
   const { clusters, sessions, cluster, session, connected, error: clustersError, setCluster } = useActiveCluster()
@@ -45,8 +47,10 @@ export function Usage() {
     ready && name ? { cluster: id, account: name, days: Number(days) } : null, tick)
   const storage = useRemote<Storage>('usage.storage', ready ? { cluster: id, account: name } : null, tick)
   const load = useRemote<Partition[]>('usage.load', id && single ? { cluster: id } : null, tick)
+  const guide = useRemote<Guide>('clusters.limits', id && single && tab === 'limits' ? { cluster: id } : null, tick)
+  const noAccounts = tab === 'load' || tab === 'limits'  // what these show doesn't depend on the group
 
-  if (clustersError) return <EmptyState icon={CircleAlert} title="Could not load clusters" text={clustersError} />
+  if (clustersError) return <EmptyState icon={CircleAlert} title="Could not load clusters" text={clustersError} report />
   if (!clusters || !cluster) return <div className="grid h-full place-items-center"><Spinner size={24} /></div>
 
   const open = (to: string, view: View, group?: string) => {
@@ -65,14 +69,14 @@ export function Usage() {
   }
 
   const off = !connected
-  const loading = accounts.loading || people.loading || storage.loading || load.loading
+  const loading = accounts.loading || people.loading || storage.loading || load.loading || guide.loading
   let body
   if (off) body = <NotConnected cluster={cluster} session={session} what="usage" />
   else if (tab === 'overview') {
     body = <Overview clusters={[cluster]} sessions={sessions} onOpen={open} inset />
-  } else if (tab !== 'load' && accounts.error) {
-    body = <EmptyState icon={CircleAlert} title="Could not read accounts" text={accounts.error} />
-  } else if (tab !== 'load' && !accounts.data) body = <div className="grid h-full place-items-center"><Spinner size={24} /></div>
+  } else if (!noAccounts && accounts.error) {
+    body = <EmptyState icon={CircleAlert} title="Could not read accounts" text={accounts.error} report />
+  } else if (!noAccounts && !accounts.data) body = <div className="grid h-full place-items-center"><Spinner size={24} /></div>
   else body = (
     <div className="flex max-w-[900px] flex-col gap-6 px-4 pt-2 pb-6">
       {tab === 'su' && <SuTab account={account} people={people.data} error={people.error} loading={people.loading}
@@ -81,20 +85,21 @@ export function Usage() {
       {tab === 'storage' && <StorageTab storage={storage.data} error={storage.error}
         onBackup={() => go('backup', { cluster: cluster.id })} />}
       {tab === 'load' && <LoadTab parts={load.data} error={load.error} />}
+      {tab === 'limits' && <LimitsTab guide={guide.data} error={guide.error} />}
     </div>
   )
 
   return (
     <div className="flex h-full flex-col">
       {!off && <div className="flex shrink-0 flex-wrap items-center gap-2 px-4 py-3">
-        <div className="mr-2 w-[400px] max-w-full shrink">
+        <div className="mr-2 w-[480px] max-w-full shrink">
           <Segments label="Show" value={tab} onChange={setTab} options={TABS} /></div>
-        {single && tab !== 'load' && <Select label="Group to bill" value={name} onChange={setPick}
+        {single && !noAccounts && <Select label="Group to bill" value={name} onChange={setPick}
           disabled={!list.length}
           options={list.length ? list.map((a) => [a.account, a.account] as const) : [['', '(no account)'] as const]} />}
         {tab === 'su' && <Select label="Period" value={days} onChange={setDays} options={PERIODS} />}
         <span className="flex-1" />
-        {single && (loading && (accounts.data || tab === 'load')
+        {single && (loading && (accounts.data || noAccounts)
           ? <span className="grid size-9 shrink-0 place-items-center"><Spinner /></span>
           : <IconButton icon={RefreshCw} label="Refresh" onClick={() => setTick(tick + 1)} disabled={!connected} />)}
       </div>}

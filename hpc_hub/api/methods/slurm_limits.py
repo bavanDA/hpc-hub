@@ -1,6 +1,9 @@
 """What Slurm allows on a cluster, read at the last login: partitions, QoS, accounts, sizes, GPUs and billing."""
 
+from dataclasses import asdict
+
 from ...compute import gpus as gpu_list
+from ...compute import guide, limits, maintenance
 from ..hub import hub
 from ..server import method
 
@@ -12,8 +15,8 @@ UNKNOWN = {"known": False, "partitions": [], "default_partition": "", "qos": [],
 def _billing(cfg, billing: dict | None, partition: str) -> dict | None:
     """A partition the cluster doesn't bill (Yale's public ones) costs nothing, whatever the QoS says."""
     if billing and not cfg.paid(partition):
-        return {**billing, "factor": 0, "free": "partition"}
-    return billing
+        billing = {**billing, "factor": 0, "free": "partition"}
+    return billing and {**billing, "per_su": cfg.billing_per_su}
 
 
 @method("clusters.partitions")
@@ -36,6 +39,28 @@ def partitions(cluster: str, partition: str = "", qos: str = "", account: str = 
             "longest": longest, "why": why, "cores": cores, "memory_gb": memory_gb,
             "mem_per_core_gb": round(per_core / 1024, 2) if per_core else None, "gpu_caps": lim.gpu_caps(qos),
             "billing": _billing(s.cfg, lim.billing_for(part, qos), part)}
+
+
+@method("clusters.limits")
+def guide_for(cluster: str) -> dict:
+    """What each queue lets one job ask for, read from Slurm now (see guide.guide), with what an hour costs on it.
+    Also keeps what it read for the job dialogs. known is false when Slurm answered nothing."""
+    s = hub().connected(cluster)
+    got = limits.fetch(s.ssh, s.cfg.id)
+    if not got.partitions:
+        return {"known": False, "queues": [], "qos": [], "others": 0}
+    s.limits = got
+    out = guide.guide(got)
+    for q in out["queues"]:
+        q["billing"] = _billing(s.cfg, got.billing_for(q["name"]), q["name"])
+    return {"known": True, **out}
+
+
+@method("clusters.maintenance")
+def next_maintenance(cluster: str) -> dict | None:
+    """The cluster-wide maintenance Slurm has booked next, read now. None: nothing booked."""
+    found = maintenance.next_maintenance(hub().connected(cluster).ssh)
+    return asdict(found) if found else None
 
 
 @method("clusters.gpus")
