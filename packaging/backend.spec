@@ -21,6 +21,8 @@ def one(path: Path) -> tuple[str, str]:
 datas = [
     *files(PKG / "agents" / "guard_files"),  # copied to the clusters
     *files(PKG / "agents" / "skill_catalog"),
+    # pasted into the scripts a backup runs on the cluster (backup/scan.py)
+    *[one(PKG / "backup" / f"{name}.py") for name in ("context", "classify", "summarize", "listfilter")],
     # run as scripts in their own Python, so they ship as source
     one(PKG / "pdf" / "readaloud" / "worker.py"),
     one(PKG / "pdf" / "readaloud" / "words_worker.py"),

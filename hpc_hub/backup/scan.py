@@ -112,8 +112,9 @@ def _b64(text: str) -> str:
     return base64.b64encode(text.encode()).decode()
 
 
-def start_command(scan_id: str, meta: dict, job: str) -> str:
-    """Write the scan's folder (meta, summarize.py, the job) and submit it; prints the job id."""
+def start_command(scan_id: str, meta: dict, job: str, on_node: bool = False) -> str:
+    """Write the scan's folder (meta, summarize.py, the job) and submit it; prints the job id. on_node: run it right
+    here on the running job's node instead, apart from this shell so it goes on without the app; prints its pid."""
     d = folder(scan_id)
     return " && ".join([
         f"mkdir -p {d}",
@@ -122,13 +123,15 @@ def start_command(scan_id: str, meta: dict, job: str) -> str:
         f"printf %s {shlex.quote(_b64(remote_source('classify', 'summarize')))} | base64 -d > summarize.py",
         f"printf %s {shlex.quote(_b64(job))} | base64 -d > scan.sbatch",
         "echo starting > state",
-        "sbatch --parsable scan.sbatch | tee job_id",
+        "{ setsid nohup bash -l scan.sbatch > slurm.out 2>&1 < /dev/null & echo $! | tee pid; }" if on_node
+        else "sbatch --parsable scan.sbatch | tee job_id",
     ])
 
 
 def cancel_command(scan_id: str) -> str:
     d = folder(scan_id)
     return (f'[ -f {d}/job_id ] && scancel "$(cat {d}/job_id)" 2>/dev/null; '
+            f'[ -f {d}/pid ] && kill -TERM -- -"$(cat {d}/pid)" 2>/dev/null; '
             f'echo cancelled > {d}/state.tmp && mv -f {d}/state.tmp {d}/state')
 
 

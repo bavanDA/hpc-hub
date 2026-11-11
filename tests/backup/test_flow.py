@@ -208,3 +208,39 @@ def test_a_copy_out_of_time_goes_on_in_a_new_job(cluster, tree):
                          capture_output=True, text=True, timeout=60)
     assert res.returncode == 0 and (d / "copy.state").read_text().strip() == "done"
     assert "runs/sweep/results/table.csv" in copied(cluster)
+
+
+def wait_for(path, text, seconds=20):
+    for _ in range(int(seconds * 20)):
+        if path.exists() and path.read_text().strip() == text:
+            return True
+        time.sleep(0.05)
+    return False
+
+
+def test_a_scan_runs_on_the_node_without_a_new_job(cluster):
+    scan_id = scan.new_id()
+    job = scan.script(scan_id, str(cluster.scratch), PURGE, 14, ComputeProfile())
+    res = cluster.run(scan.start_command(scan_id, {"id": scan_id}, job, on_node=True))
+    assert res.returncode == 0, res.stderr
+    d = work(cluster, scan_id)
+    assert res.stdout.strip() == (d / "pid").read_text().strip()
+    assert wait_for(d / "state", "done"), (d / "slurm.out").read_text()
+    assert (d / "summary.json").exists() and not (cluster.root / "sbatch.log").exists()
+
+
+def test_cancelling_stops_a_scan_on_the_node(cluster):
+    scan_id = scan.new_id()
+    job = "#!/bin/bash\nsleep 30\necho done > state\n"
+    cluster.run(scan.start_command(scan_id, {"id": scan_id}, job, on_node=True))
+    d = work(cluster, scan_id)
+    pid = (d / "pid").read_text().strip()
+    time.sleep(0.2)
+    cluster.run(scan.cancel_command(scan_id))
+    assert (d / "state").read_text().strip() == "cancelled"
+    for _ in range(100):
+        if subprocess.run(["kill", "-0", pid], capture_output=True).returncode:
+            return
+        time.sleep(0.05)
+    raise AssertionError("the scan is still running")
+

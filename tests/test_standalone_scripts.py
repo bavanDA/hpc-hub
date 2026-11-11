@@ -2,6 +2,7 @@
 own Python start them by path, where hpc_hub can't be imported. One of them importing it broke the VPN sign-in."""
 
 import ast
+import re
 from pathlib import Path
 
 import pytest
@@ -24,3 +25,13 @@ def test_the_spec_ships_them_as_source():
     spec = (PKG.parent / "packaging" / "backend.spec").read_text()
     for name in ALONE:
         assert Path(name).name in spec
+
+
+def test_the_spec_ships_what_backups_paste_into_their_scripts():
+    spec = (PKG.parent / "packaging" / "backend.spec").read_text()
+    used = {n for f in (PKG / "backup").glob("*.py") for call in re.findall(r"remote_source\(([^)]*)\)", f.read_text())
+            for n in re.findall(r"""['"](\w+)['"]""", call)}
+    assert used >= {"context", "classify", "summarize", "listfilter"}
+    for name in used:
+        assert f'"{name}"' in spec
+

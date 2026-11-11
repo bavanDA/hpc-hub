@@ -9,6 +9,7 @@ from ...agents import catalog
 from ...backup import agent as backup_agent
 from ...backup import policy, scan
 from ...backup.model import Destination
+from ...compute import limits
 from ...compute.usage import storage as quotas
 from ...files import remote_fs
 from ..hub import hub
@@ -91,6 +92,17 @@ def get_policy(cluster: str) -> dict:
     return _policy(cluster)
 
 
+def _node_with_time(s) -> str:
+    """The node of the running job, if it has time for a whole scan; "" when the scan needs a job of its own."""
+    if not s.allocation:
+        return ""
+    left = s.ssh.run(f"squeue -h -j {int(s.allocation.job_id)} -o %L", timeout=30).stdout.strip()
+    if not left:
+        return ""
+    minutes = limits.minutes(left)
+    return s.allocation.node if minutes is None or minutes >= scan.SCAN_MINUTES else ""
+
+
 @method("backup.scan")
 def start_scan(cluster: str, horizon_days: int = 14, group: bool = False, agent: str = "") -> dict:
     """Start a scan job; answers its id and job id. agent: also let that agent sort the folders."""
@@ -106,6 +118,11 @@ def start_scan(cluster: str, horizon_days: int = 14, group: bool = False, agent:
                       group=bool(group), expected=pol["files_in_scratch"], agent_cmd=cmd)
     meta = {"id": scan_id, "cluster": s.cfg.id, "scratch": pol["scratch"], "horizon": int(horizon_days),
             "group": bool(group), "agent": agent, "policy": pol}
+    node = _node_with_time(s)
+    if node:
+        res = s.ssh.run_on_host(node, scan.start_command(scan_id, meta, job, on_node=True), timeout=60)
+        if res is not None and res.returncode == 0:
+            return {"id": scan_id, "job_id": s.allocation.job_id}
     out = _run(s.ssh, scan.start_command(scan_id, meta, job))
     return {"id": scan_id, "job_id": _job_id(out)}
 

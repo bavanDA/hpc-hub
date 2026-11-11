@@ -2,6 +2,7 @@
 the scan, the trial run and the copy as the cluster would."""
 
 import json
+import subprocess
 from types import SimpleNamespace
 
 import pytest
@@ -31,7 +32,7 @@ def env(tmp_path, monkeypatch):
     c = Cluster(tmp_path)
     make_tree(c)
     cfg = next(x for x in config.default_clusters() if x.id == "wulver")
-    monkeypatch.setattr(hub_module, "_hub", FakeHub(SimpleNamespace(ssh=c, cfg=cfg)))
+    monkeypatch.setattr(hub_module, "_hub", FakeHub(SimpleNamespace(ssh=c, cfg=cfg, allocation=None)))
     rows = [Storage("mygroup project", 10, 100, 2, {"jdoe": 2.0, "other": 8.0}),
             Storage("mygroup scratch", 1, 100, 1, files=19), Storage("Home", 1, 50, 1)]
     monkeypatch.setattr(backup.quotas, "storage", lambda ssh, account: (rows, ""))
@@ -113,3 +114,27 @@ def test_cancel_and_not_connected(env):
         backup_copy.dry_run("yale", sid)
     with pytest.raises(ValueError):
         backup.summary("wulver", "../../x")
+
+
+class NodeSsh:
+    def __init__(self, left):
+        self.left, self.on_node = left, []
+
+    def run(self, command, timeout=60, fast=None):
+        return subprocess.CompletedProcess(command, 0, self.left, "")
+
+    def run_on_host(self, node, command, timeout=15):
+        self.on_node.append((node, command))
+        return subprocess.CompletedProcess(command, 0, "99\n", "")
+
+
+@pytest.mark.parametrize("left,node", [("1-02:00:00", "n1"), ("1:31:00", "n1"), ("45:00", ""), ("", ""),
+                                       ("UNLIMITED", "n1")])
+def test_a_scan_needs_a_node_with_time_for_all_of_it(left, node):
+    s = SimpleNamespace(ssh=NodeSsh(left), allocation=SimpleNamespace(job_id="7", node="n1"))
+    assert backup._node_with_time(s) == node
+
+
+def test_no_job_means_no_node():
+    assert backup._node_with_time(SimpleNamespace(ssh=NodeSsh("1:00:00"), allocation=None)) == ""
+

@@ -46,9 +46,11 @@ class Cluster:
     def run(self, command, timeout=120, fast=None):
         return subprocess.run(["bash", "-c", command], capture_output=True, text=True, timeout=timeout,
                               env=self.env)
+    on_login = run
 
     def argv(self, command, tty=False):
         return ["bash", "-c", command]
+    node_argv = argv
 
 
 def put(path: Path, data: bytes = b"x", days_old: float = 0) -> Path:
