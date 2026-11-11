@@ -46,6 +46,7 @@ class KeySsh:
         import subprocess
         self.ran.append(command)
         return subprocess.CompletedProcess(command, 1 if self.fail else 0, "", self.fail)
+    on_login = run
 
 
 def test_make_puts_a_key_on_clusters_that_take_keys(store):

@@ -16,11 +16,13 @@ class FakeSsh:
 
     def argv(self, command=None, tty=False):
         return ["ssh", *(["-tt"] if tty else []), "jdoe@cluster", *([command] if command else [])]
+    node_argv = argv
 
     def run(self, command, timeout=60, fast=None):
         self.ran.append(command)
         out = next((v for k, v in self.answers.items() if k in command), "")
         return subprocess.CompletedProcess(command, 0, out, "")
+    on_login = run
 
     def forward(self, host, port):
         self.forwarded = (host, port)
