@@ -1,0 +1,19 @@
+[Unit]
+Description=HPC Hub bug report inbox (report.hpchub.staylazy.app)
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/python3 -I /opt/hpchub-report/inbox.py
+LoadCredential=key:/etc/hpchub-report/key
+Environment=REPORT_KEY_FILE=%d/key
+DynamicUser=yes
+StateDirectory=hpchub-report
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+NoNewPrivileges=yes
+MemoryMax=128M
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
