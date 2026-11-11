@@ -16,6 +16,9 @@ import { setActiveCluster } from './components/clusters/active'
 import { ClusterPicker } from './components/clusters/ClusterPicker'
 import { HeaderBar } from './components/HeaderBar'
 import { Questions } from './components/Questions'
+import { setReportPage } from './components/report/open'
+import { DemoCrash, PageBoundary } from './components/report/PageBoundary'
+import { ReportHost } from './components/report/ReportHost'
 import { Sidebar } from './components/Sidebar'
 import { ToastProvider } from './components/toast'
 import { EmptyState } from './components/ui/EmptyState'
@@ -114,6 +117,7 @@ export default function App() {
     setExperiments(e)
     if (off(page, e)) go('clusters')
   }
+  useEffect(() => setReportPage(params.tab ? `${page}/${params.tab}` : page), [page, params.tab])
   useSessionNotifications()
   useWatch()
   useBackupAlertWatch()
@@ -148,12 +152,15 @@ export default function App() {
           <HeaderBar title={TITLES[page]} onSidebar={toggle} sidebar={sidebar && !narrow}
             chip={picksCluster(page, params.tab) ? <ClusterPicker /> : undefined} />
           <div className="min-h-0 flex-1 overflow-auto">
+            <PageBoundary key={page}>
             <Suspense fallback={<div className="grid h-full place-items-center"><Spinner size={24} /></div>}>
+              <DemoCrash />
               {page === 'agents' ? <Agents experiments={experiments} />
                 : off(page, experiments)
                   ? (prefsRead ? <p className="p-8 text-dim">{TITLES[page]} is experimental.</p> : null)
                   : Current ? <Current /> : <p className="p-8 text-dim">{TITLES[page]} is experimental.</p>}
             </Suspense>
+            </PageBoundary>
           </div>
         </main>
       </div>
@@ -161,6 +168,7 @@ export default function App() {
         onExperimental={showExperimental} />
       <Questions />
       <LinkPicker />
+      <ReportHost />
     </ToastProvider>
     </NavContext.Provider>
   )

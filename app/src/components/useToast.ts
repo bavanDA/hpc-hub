@@ -1,6 +1,11 @@
 import { createContext, useContext } from 'react'
 
-export type ToastOptions = { kind?: 'info' | 'error'; action?: { label: string; run: () => void } }
+import type { ReportStart } from './report/open'
+
+/** report: what its Report button sends. Error toasts, and toasts showing a failed call's message, get one by
+ *  themselves; false leaves it out. */
+export type ToastOptions = { kind?: 'info' | 'error'; action?: { label: string; run: () => void }
+  report?: ReportStart | false }
 type Show = (text: string, options?: ToastOptions) => () => void
 export const ToastContext = createContext<Show>(() => () => {})
 export const useToast = () => useContext(ToastContext)

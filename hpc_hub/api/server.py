@@ -12,6 +12,8 @@ import traceback
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 
+from . import recent
+
 METHODS: dict[str, Callable] = {}
 
 
@@ -58,8 +60,12 @@ class Server:
             try:
                 reply = {"result": fn(**params) if isinstance(params, dict) else fn(*params)}
             except Exception as e:  # noqa: BLE001 - every failure goes back to the UI
-                traceback.print_exc(file=sys.stderr)
-                reply = {"error": {"code": -32000, "message": str(e) or type(e).__name__}}
+                trace = traceback.format_exc()
+                sys.stderr.write(trace)
+                message = str(e) or type(e).__name__
+                # ref: the UI keeps it with the error it shows, so a bug report can send this traceback
+                ref = recent.note(name, message, trace)
+                reply = {"error": {"code": -32000, "message": message, "data": {"ref": ref}}}
         if rid is not None:  # no id: a notification, no answer wanted
             self.send({"jsonrpc": "2.0", "id": rid, **reply})
 
