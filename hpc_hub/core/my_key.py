@@ -8,7 +8,7 @@ import re
 import socket
 import subprocess
 import time
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
 from pathlib import Path
 
 from . import login_copy as C
@@ -125,6 +125,23 @@ def create() -> MyKey:
     return MyKey(str(key), "ed25519", line, key.stat().st_mtime)
 
 
+def adopt(path: str | Path) -> Path:
+    """A private key picked from a temporary copy (the phone's file picker), kept in ~/.ssh: only a real key, 0600,
+    never over another file. The temporary copy goes."""
+    source = Path(path).expanduser()
+    load(source)  # not a key: ValueError with the reason
+    folder = ssh_dir()
+    folder.mkdir(mode=0o700, exist_ok=True)
+    target, n = folder / source.name, 1
+    while target.exists() or target.with_name(target.name + ".pub").exists():
+        target, n = folder / f"{source.name}-{n}", n + 1
+    fd = os.open(target, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    with os.fdopen(fd, "wb") as f:
+        f.write(source.read_bytes())
+    source.unlink(missing_ok=True)
+    return target
+
+
 def test_argv(key: MyKey, user: str, host: str, port: int = 22) -> list[str]:
     """ssh with only this key and no prompts, verbose so the answer says how far the login got."""
     return ["ssh", "-v", "-o", "BatchMode=yes", "-o", "IdentitiesOnly=yes", "-i", key.path,
@@ -184,3 +201,28 @@ def test(key: MyKey, user: str, host: str, port: int, who: str, vpn: bool = Fals
     except subprocess.TimeoutExpired:
         return verdict("Connection timed out", 255, who, vpn)
     return verdict(p.stderr, p.returncode, who, vpn)
+
+
+SECOND_STEP = re.compile(r"duo|passcode|one[- ]?time|verification code", re.I)  # asked after the key is taken
+
+
+def test_asyncssh(key: MyKey, user: str, cfg) -> Result:
+    """The same check where there is no ssh program (the phone), through asyncssh. Nothing asked is answered: a
+    cluster that goes on to its second step (Duo) has taken the key."""
+    try:
+        from . import ssh_async
+    except ImportError:
+        return Result("no_ssh", cfg.who)
+    asked: list[str] = []
+
+    def ask(prompt: str) -> None:
+        asked.append(prompt)
+    master = ssh_async.AsyncSshMaster(replace(cfg, ssh_key=key.path), user, {}, lambda _: None, ask)
+    try:
+        master.start(timeout=30)
+    except ssh_async.SshError as e:
+        if SECOND_STEP.search(" ".join(asked)):
+            return Result("ok", cfg.who)
+        return verdict(str(e).replace("SSH login timed out", "Connection timed out"), 255, cfg.who, cfg.vpn.enabled)
+    master.stop()
+    return Result("ok", cfg.who)
