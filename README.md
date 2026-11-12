@@ -30,13 +30,6 @@ Today a cluster asks for all of that, plus a VS Code tunnel and tmux, and all of
 HPC Hub takes care of it, so cluster work is simpler and faster, especially across several clusters at once: they
 stay connected side by side in one window, and your projects and files move between them.
 
-| Without HPC Hub | With HPC Hub |
-| --- | --- |
-| A VPN, SSH and Duo for each cluster | One Connect button per cluster, all connected at once |
-| Slurm commands to get a compute node | Pick Light CPU, Heavy CPU or GPU |
-| tmux so work survives closing the laptop | Sessions keep running until the job's time runs out |
-| Copying files between clusters by hand | Copy files and projects between clusters, or with Globus |
-
 ## Features
 
 <table>
