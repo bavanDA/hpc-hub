@@ -71,7 +71,14 @@ Built in: SDSC Expanse, NJIT Wulver, and Yale Bouchet. Adding yours is [one file
 
 ## Contributing
 
-Contributions welcome. See [CONTRIBUTING.md](CONTRIBUTING.md).
+We welcome contributions of every size. You can:
+
+- **Fix an issue**: pick one from [Issues](https://github.com/bavanDA/hpc-hub/issues) or report a bug you found.
+- **Add a feature**: open an issue first so we can agree on the idea, then send a pull request.
+- **Add your cluster**: one file makes it built in for everyone at your school.
+- **Improve the docs**: the guides at [hpchub.staylazy.app](https://hpchub.staylazy.app) live in `wiki/docs`.
+
+[CONTRIBUTING.md](CONTRIBUTING.md) shows how to set up, test and send your change.
 
 ## Safety
 

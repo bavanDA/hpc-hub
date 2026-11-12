@@ -1,5 +1,15 @@
 # Contributing to HPC Hub
 
+Thank you for helping. We welcome contributions of every size:
+
+- **Fix an issue**: pick one from [Issues](https://github.com/bavanDA/hpc-hub/issues), or report a bug you found.
+- **Add a feature**: open an issue first so we can agree on the idea, then send a pull request.
+- **Add your cluster**: see below. It takes one file.
+- **Improve the docs**: the user guides live in `wiki/docs` as Markdown (MkDocs Material).
+
+Every pull request runs the tests below. Keep changes focused, follow the guidelines at the end, and never put real
+usernames, passwords or personal paths in code or tests.
+
 ## Add your cluster
 
 Each built-in cluster is one file in `hpc_hub/clusters/` (`wulver.py`, `yale.py`, `sdsc.py`):
@@ -55,6 +65,9 @@ Guidelines:
 - Commits: atomic, `type(scope): short msg`.
 
 Releasing a version (the update key, the Build workflow's publish option): [docs/releasing.md](docs/releasing.md).
+
+Docs: `pip install -r wiki/requirements.txt`, then `mkdocs serve -f wiki/mkdocs.yml` shows the guides at
+http://127.0.0.1:8000 while you edit `wiki/docs`. `mkdocs build -f wiki/mkdocs.yml --strict` catches broken links.
 
 ## Globus app id
 
