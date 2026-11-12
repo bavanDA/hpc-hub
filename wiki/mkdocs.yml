@@ -1,0 +1,73 @@
+# The user wiki at hpchub.staylazy.app: Markdown pages in docs/, built with MkDocs Material.
+#   pip install -r wiki/requirements.txt && mkdocs build -f wiki/mkdocs.yml --strict   (output: wiki/site)
+site_name: HPC Hub
+site_description: Guides for HPC Hub, the desktop app for HPC clusters.
+site_url: https://hpchub.staylazy.app/
+repo_url: https://github.com/bavanDA/hpc-hub
+repo_name: bavanDA/hpc-hub
+edit_uri: edit/main/wiki/docs/
+use_directory_urls: false  # install.html, as the old site had: links from the app and the README keep working
+
+theme:
+  name: material
+  logo: assets/icon.svg
+  favicon: assets/icon.svg
+  icon:
+    repo: fontawesome/brands/github
+  features:
+    - navigation.sections
+    - navigation.footer
+    - navigation.top
+    - search.highlight
+    - content.code.copy
+    - content.action.edit
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: black
+      accent: blue
+      toggle: {icon: material/weather-night, name: Dark mode}
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: black
+      accent: blue
+      toggle: {icon: material/weather-sunny, name: Light mode}
+
+extra_css:
+  - assets/extra.css
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - def_list
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.superfences
+  - pymdownx.details
+  - pymdownx.tabbed:
+      alternate_style: true
+
+nav:
+  - Start here:
+      - Home: index.md
+      - Install and update: install.md
+      - First sign-in: first-sign-in.md
+  - Run your work:
+      - Compute nodes and queues: compute-nodes.md
+      - Terminals: terminals.md
+      - VS Code: vscode.md
+      - Jobs: jobs.md
+  - Manage your work:
+      - Files and transfers: files.md
+      - Projects: projects.md
+      - Back up scratch: backup.md
+      - Usage and SUs: usage.md
+  - Optional tools:
+      - AI agents: agents.md
+      - Android app: phone.md
+      - Experimental features: experimental.md
+  - Get help:
+      - Troubleshooting: troubleshooting.md
+      - Report a problem: report-a-problem.md
+      - FAQ: faq.md
