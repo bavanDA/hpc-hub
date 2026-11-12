@@ -2,20 +2,21 @@
 import type { Go } from '../../nav'
 import { call, on } from '../../rpc'
 import type { Session } from '../../types/clusters'
-import type { Link } from '../../types/terminals'
-import type { Opened, Started, Target, VsStarted } from '../../types/tools'
+import type { Follow, Opened, Started, Target, VsStarted, VsStatus } from '../../types/tools'
 import { openLink } from '../app/openLink'
 import { addBanner } from '../terminals/banners'
 import { openCommand, openTmux } from '../terminals/tabs'
-import { getTab, select } from '../terminals/tabStore'
+import { copyText } from '../terminals/xterm'
+import type { ToastOptions } from '../useToast'
 
-let notify: (text: string) => void = () => {}
-export const setNotify = (fn: (text: string) => void) => { notify = fn }
+type Notify = (text: string, options?: ToastOptions) => void
+let notify: Notify = () => {}
+export const setNotify = (fn: Notify) => { notify = fn }
 
 const stop = on('tools-progress', (d) => notify((d as { text: string }).text))
 import.meta.hot?.dispose(stop)
 
-const failed = (e: Error) => notify(e.message)
+const failed = (e: Error) => notify(e.message, { kind: 'error' })
 
 /** Run once the cluster is connected: connects it first when it is not */
 export async function whenConnected(cluster: string, name: string): Promise<void> {
@@ -66,70 +67,144 @@ export function startAsk(cluster: string, run: AskRun, go: Go) {
     .catch(failed)
 }
 
+// -- VS Code ---------------------------------------------------------------------------------------
+// One VS Code job per cluster. After you start one (or open the one you have), a watcher asks the backend how far
+// it got every few seconds (tools.vscode_status), so the VS Code window can show each step, and it opens the
+// folder once the tunnel is up, even with the window closed. Whatever goes wrong is said, never dropped.
 function opened(o: Opened) {
-  if (o.app) notify('Opening in VS Code. First time, sign in with GitHub in VS Code.')
+  if (o.app) notify('Opening in the VS Code app. The first time, it asks you to sign in with GitHub.')
   else {
-    if (o.missing) notify('VS Code app not found, opening in the browser')
+    if (o.missing) notify('The VS Code app is not installed here, so it opens in the browser')
     openLink(o.url)
   }
 }
 
 /** Open a folder on a tunnel in the VS Code app (if it is here) or the browser. */
-function openTunnel(tunnel: string, folder: string, target: Target) {
-  call<Opened>('tools.vscode_open', { tunnel, folder, target }).then(opened).catch(failed)
+export function openTunnel(tunnel: string, folder: string, target: Target) {
+  call<Opened>('tools.vscode_open', { tunnel, folder, target }).then(opened)
+    .catch((e: Error) => notify(`Could not open VS Code: ${e.message}`, { kind: 'error' }))
 }
 
-// cluster -> the VS Code job whose log a tab follows, and the folder to open once its tunnel is up
-const following = new Map<string, { job: string; key: string }>()
-const pending = new Map<string, { folder: string; target: Target }>()
+export type VsWatch = {
+  cluster: string; name: string; job: string; folder: string; target: Target; openLinks: boolean
+  status: VsStatus | null
+  error: string  // the status could not be read
+  signedIn: boolean  // a GitHub sign-in was asked for (shown as a step from then on)
+  opened: boolean
+  web: string  // the forwarded address of code serve-web
+}
 
-/** https://vscode.dev/tunnel/<name>/home/jdoe -> /home/jdoe */
-const tunnelHome = (url: string) => '/' + (new URL(url).pathname.split('/').slice(3).join('/'))
+const watches = new Map<string, VsWatch>()
+const listeners = new Map<string, Set<() => void>>()
+const timers = new Map<string, ReturnType<typeof setTimeout>>()
+const codes = new Set<string>()  // device codes already handled
 
-function onLink(cluster: string, job: string, key: string, openLinks: boolean, openIn: Target) {
-  return (link: Link) => {
-    if (link.kind === 'tunnel' && link.tunnel) {
-      const name = link.tunnel, home = tunnelHome(link.url)
-      addBanner(key, 'VS Code is ready', 'Open VS Code', () => openTunnel(name, home, openIn))
-      const p = pending.get(cluster)
-      pending.delete(cluster)
-      if (p) openTunnel(name, p.folder, p.target)
-      else if (openLinks) openTunnel(name, home, openIn)
-    } else if (link.kind === 'device-login') {
-      if (openLinks) openLink(link.url)
-    } else if (link.kind === 'local-web') {
-      call<string>('tools.forward', { cluster, url: link.url, job })
-        .then((url) => {
-          addBanner(key, `VS Code web is at ${url}`, 'Open', () => openLink(url))
-          if (openLinks) openLink(url)
-        })
-        .catch((e: Error) => addBanner(key, `Port forward failed: ${e.message}`))
-    }
+export const getWatch = (cluster: string) => watches.get(cluster) ?? null
+
+/** Run fn whenever the cluster's VS Code watch changes; answers the way to stop. */
+export function onWatch(cluster: string, fn: () => void): () => void {
+  const set = listeners.get(cluster) ?? new Set()
+  listeners.set(cluster, set)
+  set.add(fn)
+  return () => { set.delete(fn) }
+}
+
+const watched = (cluster: string) => (listeners.get(cluster)?.size ?? 0) > 0
+
+function changed(w: VsWatch) {
+  watches.set(w.cluster, { ...w })
+  for (const fn of listeners.get(w.cluster) ?? []) fn()
+}
+
+/** Watch this VS Code job: shows its steps and opens folder in target once its tunnel is up. */
+export function watchVscode(cluster: string, name: string, job: string, folder: string, target: Target,
+  openLinks: boolean, alreadyOpen = false): VsWatch {
+  const old = watches.get(cluster)
+  clearTimeout(timers.get(cluster))
+  const same = old?.job === job
+  changed({ cluster, name, job, folder, target, openLinks, status: same ? old.status : null, error: '',
+    signedIn: same ? old.signedIn : false, opened: alreadyOpen, web: same ? old.web : '' })
+  poll(cluster, 0)
+  return watches.get(cluster)!
+}
+
+export function forgetWatch(cluster: string) {
+  clearTimeout(timers.get(cluster))
+  watches.delete(cluster)
+  for (const fn of listeners.get(cluster) ?? []) fn()
+}
+
+function poll(cluster: string, failures: number) {
+  const w = watches.get(cluster)
+  if (!w) return
+  call<VsStatus>('tools.vscode_status', { cluster, job: w.job })
+    .then((st) => { if (watches.get(cluster)?.job === w.job) step(watches.get(cluster)!, st) })
+    .catch((e: Error) => {
+      const now = watches.get(cluster)
+      if (now?.job !== w.job) return
+      if (failures < 2) { timers.set(cluster, setTimeout(() => poll(cluster, failures + 1), 3000)); return }
+      changed({ ...now, error: `Could not check the VS Code job: ${e.message}` })
+      if (!watched(cluster)) notify(`${w.name}: could not check the VS Code job: ${e.message}`, { kind: 'error' })
+    })
+}
+
+function step(w: VsWatch, st: VsStatus) {
+  const next: VsWatch = { ...w, status: st, error: '' }
+  const quiet = !watched(w.cluster)  // the window is closed: say what matters in a toast instead
+  if (st.device && !codes.has(st.device.code)) {
+    codes.add(st.device.code)
+    next.signedIn = true
+    const device = st.device
+    copyText(device.code).then((copied) => {
+      if (quiet) notify(`VS Code on ${w.name}: sign in to GitHub with code ${device.code}${copied ? ' (copied)' : ''}`,
+        { kind: 'error', report: false, action: { label: 'Open GitHub', run: () => openLink(device.url) } })
+    })
   }
+  if (st.phase === 'ready' && !w.opened) {
+    next.opened = true
+    openTunnel(st.tunnel, w.folder || st.home, w.target)
+  }
+  if (st.web && !w.web) {
+    call<string>('tools.forward', { cluster: w.cluster, url: st.web, job: w.job })
+      .then((url) => {
+        const now = watches.get(w.cluster)
+        if (now) changed({ ...now, web: url })
+        if (w.openLinks) openLink(url)
+      })
+      .catch((e: Error) => notify(`VS Code web: the port forward failed: ${e.message}`, { kind: 'error' }))
+  }
+  if (st.phase === 'ended' && quiet) notify(`${w.name}: ${st.problem}`, { kind: 'error' })
+  changed(next)
+  // keep asking until VS Code runs (or the job ended); with the window open, also while its server installs
+  const more = st.phase !== 'ended' && (st.phase !== 'ready' || (!quiet && !st.server))
+  if (more) timers.set(w.cluster, setTimeout(() => poll(w.cluster, 0), st.phase === 'queued' ? 5000 : 3000))
 }
 
-type VsRun = { folder: string; target: Target; job: string; replace_job: boolean
+/** Ask again now (the window opened on a job that is up: its server may still install). */
+export function refreshWatch(cluster: string) {
+  const w = watches.get(cluster)
+  if (!w || w.status?.phase === 'ended') return
+  clearTimeout(timers.get(cluster))
+  poll(cluster, 0)
+}
+
+/** The VS Code job's whole log in a terminal tab. */
+export function showLog(cluster: string, f: Follow, go: Go) {
+  openCommand(f.title, f.argv, f.color, '', cluster)
+  go('terminals')
+}
+
+export type VsRun = { folder: string; target: Target; job: string; replace_job: boolean
   profile: Record<string, unknown> | null; remember: boolean; remember_folder: boolean; ask?: boolean }
 
-export function startVscode(cluster: string, run: VsRun, openLinks: boolean, _go?: Go) {
-  if (!run.job || run.replace_job) notify(run.job ? `Stopping VS Code job ${run.job}…` : 'Submitting the VS Code job…')
-  call<VsStarted>('tools.vscode_start', { cluster, ...run })
-    .then((r) => {
-      if (r.open) return opened(r.open)
-      if (!r.follow) return
-      notify(r.submitted ? `VS Code job ${r.submitted} is starting. It opens by itself when it's ready.`
-        : "VS Code is starting. It opens by itself when it's ready.")
-      pending.set(cluster, { folder: r.folder, target: r.target })
-      const f = following.get(cluster)
-      if (f && f.job === r.follow.job && getTab(f.key)) {
-        select(f.key)  // already following it; the tunnel link opens the folder
-      } else {
-        const { argv, title, color, job } = r.follow
-        const key: string = openCommand(title, argv, color, '', cluster,
-          (link) => onLink(cluster, job, key, openLinks, r.target)(link))
-        following.set(cluster, { job, key })
-      }
-      // you stay where you are: the job's log is in Terminals, and the folder opens once the tunnel is up
-    })
-    .catch(failed)
+/** Submit the VS Code job (or use the one you have) and watch it. Throws what went wrong, for the window. */
+export async function startVscode(cluster: string, name: string, run: VsRun, openLinks: boolean): Promise<VsWatch> {
+  const r = await call<VsStarted>('tools.vscode_start', { cluster, ...run })
+  if (r.open) opened(r.open)
+  return watchVscode(cluster, name, r.job, r.folder, r.target, openLinks, Boolean(r.open))
+}
+
+export async function stopVscode(cluster: string, job: string) {
+  await call('tools.vscode_stop', { cluster, job })
+  forgetWatch(cluster)
 }

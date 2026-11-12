@@ -58,15 +58,46 @@ def test_vscode_replaces_the_running_job(env):
     assert got["submitted"] == "5000" and "scancel 991" in env.s.ssh.ran
 
 
+def test_vscode_wont_submit_a_second_job(env):
+    env.s.ssh.answers.update({"squeue -h -u": "991|hpc-hub-vscode|n0007|general\n", "sbatch --parsable": "5000\n"})
+    with pytest.raises(RuntimeError, match="already have a VS Code job \\(991\\)"):
+        vscode.vscode_start("wulver", "", "desktop")
+    assert not any("sbatch" in r for r in env.s.ssh.ran)
+
+
+def test_vscode_status_and_stop(env):
+    env.s.ssh.answers.update({"@@state": "@@state RUNNING|n0007|None|x\n@@done \n@@log\n"
+                              "To grant access to the server, please log into https://github.com/login/device "
+                              "and use code AB12-CD34\n"})
+    got = vscode.vscode_status("wulver", "991")
+    assert got["phase"] == "login" and got["device"]["code"] == "AB12-CD34"
+    assert got["follow"]["title"] == "VS Code · Wulver · job 991"
+    vscode.vscode_stop("wulver", "991")
+    assert "scancel 991" in env.s.ssh.ran
+    with pytest.raises(ValueError):
+        vscode.vscode_status("wulver", "991; rm -rf ~")
+
+
 def test_vscode_open_in_the_app(monkeypatch):
     started = []
-    monkeypatch.setattr(vscode.shutil, "which", lambda name: r"C:\VS Code\bin\code.cmd")
+    monkeypatch.setattr(vscode.shutil, "which", lambda name: "/usr/bin/code")
+    monkeypatch.setattr(vscode.sys, "platform", "linux")
     monkeypatch.setattr(vscode.subprocess, "Popen", lambda argv, **kw: started.append(argv))
     assert vscode.vscode_open("abc123", "/home/jdoe", "desktop")["app"]
-    assert started == [[r"C:\VS Code\bin\code.cmd", "--folder-uri", "vscode-remote://tunnel+abc123/home/jdoe"]]
+    assert started == [["/usr/bin/code", "--folder-uri", "vscode-remote://tunnel+abc123/home/jdoe"]]
     assert vscode.vscode_open("abc123", "/home/jdoe", "browser")["url"] == "https://vscode.dev/tunnel/abc123/home/jdoe"
     with pytest.raises(ValueError):
         vscode.vscode_open("abc; rm", "/")
+
+
+def test_vscode_open_on_windows_runs_code_exe(monkeypatch):
+    started = []
+    monkeypatch.setattr(vscode.shutil, "which", lambda name: r"C:\VS Code\bin\code.cmd")
+    monkeypatch.setattr(vscode.os.path, "isfile", lambda path: path == r"C:\VS Code\Code.exe")
+    monkeypatch.setattr(vscode.subprocess, "Popen", lambda argv, **kw: started.append(argv))
+    assert vscode.vscode_open("abc123", "/home/jdoe", "desktop")["app"]
+    # Code.exe itself: Windows can't start code.cmd by its bare name, and cmd.exe would read & or % in a folder
+    assert started == [[r"C:\VS Code\Code.exe", "--folder-uri", "vscode-remote://tunnel+abc123/home/jdoe"]]
 
 
 def test_forward_a_node_web_server(env):

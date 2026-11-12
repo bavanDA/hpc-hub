@@ -2,12 +2,11 @@ import { useCallback, useEffect, useState, type ReactNode } from 'react'
 
 import { useGo } from '../../nav'
 import { call } from '../../rpc'
-import type { Target, ToolSetup, VsFound } from '../../types/tools'
-import { shortName } from '../clusters/loginCopy'
+import type { Target, ToolSetup } from '../../types/tools'
 import { useToast } from '../useToast'
 import { AgentDialog } from './AgentDialog'
 import { AskAllDialog } from './AskAllDialog'
-import { setNotify, startVscode, whenConnected } from './run'
+import { setNotify, whenConnected } from './run'
 import { VsCodeDialog } from './VsCodeDialog'
 
 export function useTools() {
@@ -31,21 +30,15 @@ export function useTools() {
         go(kind, where ? { cluster, path: where } : { cluster })
         return 'done'
       }
-      const looking = kind === 'vscode' ? toast(`Looking for VS Code on ${shortName({ name })}…`) : undefined
-      const [setup, found] = await Promise.all([call<ToolSetup>('tools.setup', { cluster }),
-        kind === 'vscode' ? call<VsFound>('tools.vscode_find', { cluster }) : Promise.resolve(null)])
-        .finally(() => looking?.())  // found it: the window opens, the note would only cover it
-      if (kind === 'vscode' && found) {
+      if (kind === 'vscode') {  // the window shows at once and says what it finds; never a silent start
         const target = what === 'desktop' || what === 'browser' ? what as Target : undefined
-        if (setup.vscode.ask === false) {  // Ask every time is off: the saved choices, a running job if there is one
-          startVscode(cluster, { folder: where || setup.vscode.workdir || '~', target: target ?? setup.vscode.open_in,
-            job: found.job?.id ?? '', replace_job: false, profile: null, remember: false, remember_folder: false },
-          setup.vscode.open_links, go)
-          return 'done'
-        }
-        setDialog(<VsCodeDialog setup={setup} found={found} folder={where} target={target} onClose={close}
-          onBack={onBack} />)
-      } else if (kind === 'agent') {
+        const ask = await call<ToolSetup>('tools.setup', { cluster }).then((s) => s.vscode.ask !== false)
+        setDialog(<VsCodeDialog key={`${cluster}-vscode`} cluster={cluster} name={name} folder={where}
+          target={target} go={!ask} onClose={close} onBack={onBack} />)
+        return 'window'
+      }
+      const setup = await call<ToolSetup>('tools.setup', { cluster })
+      if (kind === 'agent') {
         const agent = setup.agents.find((a) => a.id === what)
         if (!agent) throw new Error(`No agent ${what}`)
         setDialog(<AgentDialog key={`${cluster}-${what}`} setup={setup} agent={agent} project={where}
@@ -58,7 +51,7 @@ export function useTools() {
       }
       return 'window'
     } catch (e) {
-      toast((e as Error).message)
+      toast((e as Error).message, { kind: 'error' })
       return 'failed'
     }
   }, [go, toast, close])

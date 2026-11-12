@@ -1,10 +1,14 @@
 """VS Code on a compute node: a batch job that runs a tunnel, opened in the app or the browser."""
 
+import ntpath
+import os
 import re
 import shutil
 import subprocess
+import sys
+import threading
 
-from ...compute import job_log, sbatch, slurm
+from ...compute import job_log, sbatch, slurm, vscode_job
 from ...core import remote
 from ...files import remote_fs
 from ...terminals import links, tmux
@@ -13,10 +17,11 @@ from ..server import method
 from .clusters import _profile
 from .tools import progress
 
-VSCODE_JOB = "hpc-hub-vscode"
+VSCODE_JOB = vscode_job.JOB_NAME
 VSCODE_JOBS = [VSCODE_JOB, "vscode", "vs-code", "vscode_slurm.sh"]  # also your own scripts' jobs
 TARGETS = ("desktop", "browser")
 TUNNEL = re.compile(r"^[A-Za-z0-9._-]{1,80}$")
+_submitting: dict[str, threading.Lock] = {}  # cluster -> held while a VS Code job is being submitted
 
 
 @method("tools.vscode_find")
@@ -40,13 +45,16 @@ def vscode_start(cluster: str, folder: str = "", target: str = "", job: str = ""
                  profile: dict | None = None, remember: bool = False, remember_folder: bool = False,
                  ask: bool | None = None) -> dict:
     """Open folder through the VS Code job's tunnel. job: the running one to use ({"open": ...} once its tunnel
-    is known), or to stop first (replace_job). With none, submits one. {"follow": ...} is the command line that
-    shows the job's log, where the tunnel link appears."""
+    is known), or to stop first (replace_job). With none, submits one, unless you already have one (one VS Code
+    job at a time). {"follow": ...} is the command line that shows the job's log; tools.vscode_status says how far
+    it got. Every answer names the job."""
     s = hub().connected(cluster)
     v = s.cfg.vscode
     target = target or v.open_in
     if target not in TARGETS:
         raise ValueError(f"Open in {target}?")
+    if job and not job.isdigit():
+        raise ValueError("That job id looks wrong")
     picked = _profile(v.compute, profile) if profile else v.compute
     where = remote_fs.expand(s.ssh, folder.strip() or v.workdir)
     if ask is not None and ask != v.ask:
@@ -60,19 +68,63 @@ def vscode_start(cluster: str, folder: str = "", target: str = "", job: str = ""
             v.workdir = folder.strip() or v.workdir
         hub().save_clusters()
     if job and not replace_job:
-        if not job.isdigit():
-            raise ValueError("That job id looks wrong")
         tunnel = links.tunnel_name(job_log.tunnel_link(s.ssh, job))
         if tunnel:
-            return {"open": vscode_open(tunnel, where, target), "folder": where, "target": target}
-        return {"follow": _follow(s, job), "folder": where, "target": target}
-    if job:
-        progress(cluster, f"Stopping VS Code job {job}…")
-        slurm.cancel(s.ssh, job)
-    body = "\n".join(x for x in (remote.cd_part(v.workdir), v.setup, v.command) if x.strip())
-    job_id = sbatch.submit(s.ssh, s.fit(picked), VSCODE_JOB, body)
+            return {"open": vscode_open(tunnel, where, target), "folder": where, "target": target, "job": job}
+        return {"follow": _follow(s, job), "folder": where, "target": target, "job": job}
+    lock = _submitting.setdefault(cluster, threading.Lock())
+    if not lock.acquire(blocking=False):
+        raise RuntimeError("A VS Code job is being submitted already. Wait a moment")
+    try:
+        if job:
+            progress(cluster, f"Stopping VS Code job {job}…")
+            slurm.cancel(s.ssh, job)
+        elif running := slurm.find_job(s.ssh, VSCODE_JOBS):
+            raise RuntimeError(f"You already have a VS Code job ({running.job_id}). Open that one, or stop it "
+                               "first")
+        body = "\n".join(x for x in (remote.cd_part(v.workdir), v.setup, v.command) if x.strip())
+        job_id = sbatch.submit(s.ssh, s.fit(picked), VSCODE_JOB, body)
+    finally:
+        lock.release()
     s._log(f"Submitted VS Code job {job_id}")
-    return {"follow": _follow(s, job_id), "folder": where, "target": target, "submitted": job_id}
+    return {"follow": _follow(s, job_id), "folder": where, "target": target, "submitted": job_id, "job": job_id}
+
+
+@method("tools.vscode_status")
+def vscode_status(cluster: str, job: str) -> dict:
+    """How far the VS Code job got (compute/vscode_job.py): phase queued, starting, login (with the GitHub code),
+    ready (with its tunnel; installing while the VS Code server downloads on the node) or ended (problem says why).
+    follow: the command line that shows its whole log."""
+    if not job.isdigit():
+        raise ValueError("That job id looks wrong")
+    s = hub().connected(cluster)
+    got = vscode_job.status(job, s.ssh.run(vscode_job.status_command(job), timeout=30).stdout)
+    return {**got, "follow": _follow(s, job)}
+
+
+@method("tools.vscode_stop")
+def vscode_stop(cluster: str, job: str) -> None:
+    if not job.isdigit():
+        raise ValueError("That job id looks wrong")
+    s = hub().connected(cluster)
+    slurm.cancel(s.ssh, job)
+    s._log(f"Stopped VS Code job {job}")
+
+
+def _code_app() -> str:
+    """The VS Code program to start here, or "". Windows: Code.exe itself (code.cmd can't be started by name, and
+    cmd.exe would read & or % in a folder). macOS: the app's own code when "code" isn't on PATH."""
+    found = shutil.which("code") or ""
+    if sys.platform == "win32" or found.lower().endswith(".cmd"):
+        places = [ntpath.join(ntpath.dirname(ntpath.dirname(found)), "Code.exe")] if found else []
+        places += [ntpath.join(os.environ.get(var, ""), *rest, "Code.exe") for var, *rest in (
+            ("LOCALAPPDATA", "Programs", "Microsoft VS Code"), ("ProgramFiles", "Microsoft VS Code"))
+            if os.environ.get(var)]
+        return next((p for p in places if os.path.isfile(p)), "")
+    if not found and sys.platform == "darwin":
+        app = "/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code"
+        found = app if os.path.isfile(app) else ""
+    return found
 
 
 @method("tools.vscode_open")
@@ -81,10 +133,11 @@ def vscode_open(tunnel: str, folder: str = "", target: str = "desktop") -> dict:
     if not TUNNEL.match(tunnel):
         raise ValueError("That tunnel name looks wrong")
     desktop, browser = links.tunnel_urls(tunnel, folder)
-    code = shutil.which("code") if target == "desktop" else None
-    if code:  # the full path: Windows starts code.cmd only by its path
-        subprocess.Popen([code, "--folder-uri", desktop], stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
-                         stderr=subprocess.DEVNULL, start_new_session=True)
+    app = _code_app() if target == "desktop" else ""
+    if app:
+        flags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+        subprocess.Popen([app, "--folder-uri", desktop], stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                         stderr=subprocess.DEVNULL, start_new_session=True, creationflags=flags)
         return {"app": True, "url": desktop, "missing": False}
     return {"app": False, "url": browser, "missing": target == "desktop"}
 

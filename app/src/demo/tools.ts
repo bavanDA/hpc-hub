@@ -1,7 +1,7 @@
 // Demo data for VS Code, the agents and Ask all: made-up chats, a VS Code job, pretend command lines.
 import type { Profile } from '../types/clusters'
 import { demoCluster } from './clusters'
-import type { AgentInfo, Chat, Chats, Opened, Started, ToolSetup, VsFound, VsStarted } from '../types/tools'
+import type { AgentInfo, Chat, Chats, Opened, Started, ToolSetup, VsFound, VsStarted, VsStatus } from '../types/tools'
 
 const now = Math.floor(Date.now() / 1000)
 const profile: Profile = { cpus: 4, mem_gb: 16, time: '04:00:00', partition: 'general', account: 'mygroup', qos: '',
@@ -69,9 +69,24 @@ function vscodeStart({ folder, target, job, replace_job }:
   { folder: string; target: 'desktop' | 'browser'; job?: string; replace_job?: boolean }): VsStarted {
   const where = folder.replace(/^~/, '/home/jdoe')
   const id = job && !replace_job ? job : '123999'
-  return { folder: where, target, submitted: id === job ? undefined : id,
-    follow: { argv: ['ssh', '-tt', 'jdoe@wulver'], job: id, title: `VS Code · Wulver (NJIT) · job ${id}`,
-      color: '#3584e4' } }
+  return { folder: where, target, job: id, submitted: id === job ? undefined : id, follow: follow(id) }
+}
+
+const follow = (id: string) => ({ argv: ['ssh', '-tt', 'jdoe@wulver'], job: id,
+  title: `VS Code · Wulver (NJIT) · job ${id}`, color: '#3584e4' })
+
+// A new demo job walks through every step: the queue, starting, the GitHub code, installing, running
+const born = new Map<string, number>()
+function vscodeStatus({ job }: { job: string }): VsStatus {
+  if (!born.has(job)) born.set(job, Date.now())
+  const age = job === '123500' ? 999 : (Date.now() - born.get(job)!) / 1000
+  const phase = age < 6 ? 'queued' : age < 10 ? 'starting' : age < 22 ? 'login' : 'ready'
+  const ready = phase === 'ready'
+  return { job, phase, state: age < 6 ? 'PENDING' : 'RUNNING', node: age < 6 ? '' : 'n0111',
+    reason: age < 6 ? 'Priority' : '', start: age < 6 ? new Date(Date.now() + 120000).toISOString() : '',
+    tunnel: ready ? 'n0111' : '', url: ready ? 'https://vscode.dev/tunnel/n0111/home/jdoe' : '', home: '/home/jdoe',
+    device: phase === 'login' ? { url: 'https://github.com/login/device', code: 'AB12-CD34' } : null,
+    installing: ready && age < 32, server: age >= 32, web: '', problem: '', tail: [], follow: follow(job) }
 }
 
 export const answers: Record<string, unknown> = {
@@ -84,6 +99,8 @@ export const answers: Record<string, unknown> = {
       tunnel: '' }
     : { job: null, tunnel: '' },
   'tools.vscode_start': vscodeStart,
+  'tools.vscode_status': vscodeStatus,
+  'tools.vscode_stop': null,
   'tools.vscode_open': ({ tunnel, folder }: { tunnel: string; folder: string }): Opened =>
     ({ app: false, url: `https://vscode.dev/tunnel/${tunnel}${folder}`, missing: false }),
   'tools.forward': 'http://127.0.0.1:50123/',
