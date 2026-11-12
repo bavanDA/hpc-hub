@@ -110,3 +110,28 @@ describe('marks', () => {
   })
 })
 
+
+describe('new output while reading', () => {
+  beforeEach(() => { calls.length = 0 })
+
+  it('counts lines from tmux, not line feeds (a redraw in place adds none)', async () => {
+    vi.useFakeTimers()
+    try {
+      const v = new HistoryView(tab)
+      answer.window = win()
+      v.openAt(500)
+      for (let i = 0; i < 200; i++) v.noteOutput()  // Claude's status line redrawn 200 times
+      expect(v.total).toBe(0)  // nothing guessed from line feeds
+      await vi.runAllTimersAsync()
+      const asked = calls.filter((c) => c.method === 'terminals.history' && c.params.start === null)
+      expect(asked).toHaveLength(1)  // one look, however many line feeds came
+      answer.window = win({ total: 1003, history: 963 })
+      v.noteOutput()
+      await vi.advanceTimersByTimeAsync(2000)
+      expect(v.total).toBe(1003)
+      expect(v.newLines).toBe(1003 - 0)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+})

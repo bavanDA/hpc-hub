@@ -12,6 +12,7 @@ const BUCKETS = 300
 const OUTLINE_FRESH = 20_000  // ms an outline counts as new
 const PASS_MS = 1500  // a full screen program or copy mode: the wheel goes to tmux this long after it was last used
 const BLOCK_MAX = 150  // furthest a mark grows up or down from the line you pressed
+const CHECK_MS = 1500  // while reading, how often the line count is asked again when output arrives
 
 export type BlockRange = [number, number]
 
@@ -61,8 +62,9 @@ export class HistoryView {
   private fetchTimer: ReturnType<typeof setTimeout> | undefined
   private passUntil = 0
   private opening = false
-  private refreshAt = 0
-  private drawnAt = 0
+  private checking = false
+  private checkedAt = 0
+  private openedTotal = 0  // the line count when you started reading, for "+N new lines"
   private subscribers = new Set<() => void>()
   private tick = 0
 
@@ -203,6 +205,7 @@ export class HistoryView {
     if (!this.reading) {
       this.reading = true
       this.newLines = 0
+      this.openedTotal = this.total
       void this.loadOutline()
     }
     this.top = Math.max(0, Math.min(row, Math.max(this.total - this.visibleRows, 0)))
@@ -245,16 +248,32 @@ export class HistoryView {
     this.changed()
   }
 
-  /** New output arrived while reading: more lines to come back to, and a fresh bottom if you are looking at it. */
+  /** Output arrived. A line feed is not a new line: a program that redraws in place (Claude's status, a spinner)
+   * sends line feeds all the time without adding to the history, and counting them made the reading copy grow
+   * empty rows and jump. While reading, tmux is asked for the real count, at most every CHECK_MS. */
   noteOutput() {
-    if (!this.reading) { this.total++; return }
-    this.newLines++
-    this.total++
-    if (Date.now() - this.drawnAt > 300) { this.drawnAt = Date.now(); this.changed() }
-    if (this.reading && this.top + this.visibleRows >= this.total - 5 && Date.now() - this.refreshAt > 2500) {
-      this.refreshAt = Date.now()
-      this.forgetFrom(this.total - this.height - 5)
-      this.ensure()
+    if (!this.reading || this.checking) return
+    const wait = this.checkedAt + CHECK_MS - Date.now()
+    this.checking = true
+    setTimeout(() => void this.checkTotal(), Math.max(wait, 0))
+  }
+
+  private async checkTotal() {
+    try {
+      if (!this.reading) return
+      const w = await call<HistoryWindow>('terminals.history', { ...this.where(), start: null, count: 1 })
+      if (w.gone) { this.gone(); return }
+      if (!this.reading) return
+      const atBottom = this.top + this.visibleRows >= this.total - 5
+      this.setMeta(w)
+      this.newLines = Math.max(0, this.total - this.openedTotal)
+      if (atBottom) this.ensure()
+      this.changed()
+    } catch {
+      // the next output tries again; reading what is there keeps working
+    } finally {
+      this.checkedAt = Date.now()
+      this.checking = false
     }
   }
 
