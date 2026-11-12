@@ -16,7 +16,10 @@ TIMEOUT = 45
 
 
 def check(cfg: ClusterConfig, askpass, username: str, password: str) -> dict:
-    """{ok: True} it works, {ok: False, text} it doesn't and why, {ok: None, text} can't tell from here."""
+    """{ok: True} it works, {ok: False, text} the password was refused, {ok: None, text} can't tell (no password,
+    the cluster out of reach, any other failure): the first start goes on and the real connect says more."""
+    if not password:
+        return {"ok": None, "text": "No password to check yet, so your login is checked when you connect."}
     if not reachable(cfg.host, cfg.port or 22):
         how = " without the VPN" if cfg.vpn.enabled else ""
         return {"ok": None, "text": f"Can't reach {cfg.name} from this network{how}, so your login is checked when "
@@ -45,4 +48,4 @@ def check(cfg: ClusterConfig, askpass, username: str, password: str) -> dict:
         return {"ok": True, "text": ""}
     if seen["passwords"] > 1:
         return {"ok": False, "text": wrong_password(cfg, username)}
-    return {"ok": False, "text": plain(failed, cfg)}
+    return {"ok": None, "text": plain(failed, cfg)}

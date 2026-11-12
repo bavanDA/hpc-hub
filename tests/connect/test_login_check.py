@@ -72,3 +72,23 @@ def test_off_campus_without_the_vpn_it_says_it_will_check_later(monkeypatch):
     monkeypatch.setattr(login_check, "reachable", lambda host, port: False)
     got = login_check.check(WULVER, Askpass(), "ab123", "secret")
     assert got["ok"] is None and "checked when you connect" in got["text"]
+
+
+def test_other_failures_cant_tell_so_the_step_goes_on(online, monkeypatch):
+    class Master:
+        def __init__(self, cfg, username, env, log, ask=None):
+            pass
+
+        def start(self, timeout=180, cancelled=lambda: False):
+            raise SshError("SSH login timed out")
+
+        def stop(self):
+            pass
+    monkeypatch.setattr(login_check, "new_master", Master)
+    got = login_check.check(WULVER, Askpass(), "ab123", "secret")
+    assert got["ok"] is None and got["text"]  # not a wrong password: say what happened, don't block
+
+
+def test_no_password_is_not_sent(online, monkeypatch):
+    monkeypatch.setattr(login_check, "new_master", lambda *a, **k: pytest.fail("no login without a password"))
+    assert login_check.check(WULVER, Askpass(), "ab123", "")["ok"] is None
