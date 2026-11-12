@@ -18,12 +18,14 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     const reportWith = options.report === false ? undefined : options.report
       ?? (options.kind === 'error' || failureFor(text) ? errorReport(text) : undefined)
     setToasts((t) => [...t.filter((x) => x.text !== text), { id, text, reportWith, ...options }].slice(-4))
-    if (options.kind !== 'error') setTimeout(() => drop(id), options.action || reportWith ? SHOWN_MS * 2 : SHOWN_MS)
+    if (options.kind !== 'error' && !options.stay) {
+      setTimeout(() => drop(id), options.action || reportWith ? SHOWN_MS * 2 : SHOWN_MS)
+    }
     return () => drop(id)
   }, [drop])
   useEffect(() => {  // a plain browser (design work): ?toast=error shows one
     if ('__TAURI_INTERNALS__' in window || new URLSearchParams(location.search).get('toast') !== 'error') return
-    toast('Could not connect to SDSC Expanse: the sign-in was refused.',
+    toast('Could not connect: the sign-in was refused.',
       { kind: 'error', action: { label: 'Try again', run: () => {} } })
   }, [toast])
   return (
@@ -50,7 +52,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                 className="shrink-0 rounded-md px-2.5 py-1 font-semibold text-window/75 hover:bg-window/15
                   hover:text-window">Report</button>
             )}
-            {(t.kind === 'error' || t.action || t.reportWith) && (
+            {(t.kind === 'error' || t.stay || t.action || t.reportWith) && (
               <button onClick={() => drop(t.id)} aria-label="Close"
                 className="grid size-8 shrink-0 place-items-center rounded-md text-window/70 hover:bg-window/15">
                 <X size={16} /></button>

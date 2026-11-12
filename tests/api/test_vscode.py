@@ -68,7 +68,7 @@ def test_vscode_wont_submit_a_second_job(env):
 def test_vscode_status_and_stop(env):
     env.s.ssh.answers.update({"@@state": "@@state RUNNING|n0007|None|x\n@@done \n@@log\n"
                               "To grant access to the server, please log into https://github.com/login/device "
-                              "and use code AB12-CD34\n"})
+                              "and use code AB12-CD34\n@@end\n"})
     got = vscode.vscode_status("wulver", "991")
     assert got["phase"] == "login" and got["device"]["code"] == "AB12-CD34"
     assert got["follow"]["title"] == "VS Code · Wulver · job 991"

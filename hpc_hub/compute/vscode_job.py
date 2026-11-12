@@ -12,11 +12,11 @@ from .sbatch import BATCH_DIR
 JOB_NAME = "hpc-hub-vscode"
 LOG_BYTES = 30_000  # the end of the log is enough: the links and the latest lines
 ANSI = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
-# Lines that mean the command did not start (a wrong path, a missing module), worth showing while it still runs
 # Queue reasons that never clear by themselves: the job would wait forever. Limits on all your jobs together
 # (PerUser, Grp...) do clear when your other jobs end, so they are not here.
 NEVER = re.compile(r"not permitted|not allowed|NotAllowed|Invalid(QOS|Qos|Account)|PerJob|PartitionTimeLimit|"
                    r"PartitionNodeLimit|PartitionConfig|BadConstraints|DependencyNeverSatisfied")
+# Lines that mean the command did not start (a wrong path, a missing module), worth showing while it still runs
 TROUBLE = re.compile(r"command not found|No such file or directory|Permission denied|^\s*error\b|\berror:|"
                      r"Traceback|panicked|Unable to|Could not", re.I)
 WHY_ENDED = {
@@ -36,7 +36,7 @@ def status_command(job_id: str) -> str:
     return (f"q=$(squeue -h -j {j} -o '%T|%N|%r|%S' 2>/dev/null | head -1); echo \"@@state $q\"; "
             f"d=; [ -z \"$q\" ] && d=$(sacct -n -X -P -j {j} -o State,ExitCode 2>/dev/null | head -1); "
             f"echo \"@@done $d\"; f=$({log_path(job_id)}); [ -n \"$f\" ] || f=\"{fallback}\"; "
-            f"echo @@log; [ -f \"$f\" ] && tail -c {LOG_BYTES} \"$f\"; true")
+            f"echo @@log; [ -f \"$f\" ] && tail -c {LOG_BYTES} \"$f\"; echo; echo @@end")
 
 
 def _field(out: str, tag: str) -> str:
@@ -44,10 +44,22 @@ def _field(out: str, tag: str) -> str:
     return m.group(1).strip() if m else ""
 
 
+# sacct's states for a job that hasn't finished: with squeue saying nothing, it was squeue that failed
+STILL_ON = ("PENDING", "RUNNING", "CONFIGURING", "COMPLETING", "REQUEUED", "SUSPENDED", "RESIZING")
+UNREADABLE = "Could not read the VS Code job's state from the cluster. Trying again."
+
+
 def status(job_id: str, out: str) -> dict:
+    """Raises RuntimeError when the answer is cut off or contradicts itself (a dropped connection, squeue failing):
+    that is not a job that ended, and the caller asks again."""
+    if not re.search(r"^@@end$", out, re.M):
+        raise RuntimeError(UNREADABLE)
     queue = _field(out, "state").split("|")
     done = _field(out, "done").split("|")
-    log = ANSI.sub("", out.split("@@log\n", 1)[1] if "@@log\n" in out else "")
+    if not queue[0] and done[0].split(" ")[0] in STILL_ON:
+        raise RuntimeError(UNREADABLE)
+    log = out.split("@@log\n", 1)[1] if "@@log\n" in out else ""
+    log = ANSI.sub("", re.split(r"^@@end$", log, maxsplit=1, flags=re.M)[0])
     lines = [x.rstrip() for x in log.splitlines() if x.strip() and x.strip() != "*"]
     state, node, reason, start = (queue + ["", "", "", ""])[:4]
     found = links.find_links(log)

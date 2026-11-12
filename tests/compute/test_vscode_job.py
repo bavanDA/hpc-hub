@@ -18,7 +18,7 @@ STARTED = INSTALLING + "[2026-11-11 21:20:46] info [rpc.0] Server started\n"
 
 
 def out(state="", done="", log=""):
-    return f"@@state {state}\n@@done {done}\n@@log\n{log}"
+    return f"@@state {state}\n@@done {done}\n@@log\n{log}\n@@end\n"
 
 
 def test_waiting_in_the_queue():
@@ -72,3 +72,19 @@ def test_a_job_that_can_never_start_says_so():
         assert vscode_job.status("42", out(f"PENDING||{code}|N/A"))["stuck"], code
     for code in ("Priority", "Resources", "QOSMaxCpuPerUserLimit", "AssocGrpCPULimit"):  # these clear by themselves
         assert not vscode_job.status("42", out(f"PENDING||{code}|N/A"))["stuck"], code
+
+
+def test_a_broken_connection_is_not_a_job_that_ended():
+    import pytest
+    with pytest.raises(RuntimeError, match="Could not read"):
+        vscode_job.status("42", "")  # ssh gave nothing back: no end marker
+    with pytest.raises(RuntimeError, match="Could not read"):
+        vscode_job.status("42", "@@state \n@@done \n@@log\n")  # cut off before the end
+    with pytest.raises(RuntimeError, match="Could not read"):  # squeue said nothing, yet the job still runs
+        vscode_job.status("42", out(done="RUNNING|0:0"))
+    assert vscode_job.status("42", out(done="COMPLETED|0:0"))["phase"] == "ended"
+    assert vscode_job.status("42", out())["phase"] == "ended"  # gone from both: long over
+
+
+def test_the_command_ends_with_its_marker():
+    assert vscode_job.status_command("42").rstrip().endswith("echo @@end")

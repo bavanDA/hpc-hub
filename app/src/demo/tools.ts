@@ -83,7 +83,8 @@ function vscodeStatus({ job }: { job: string }): VsStatus {
   if (job !== '123500' && new URLSearchParams(location.search).has('vsstuck')) {  // ?vsstuck: one that can't start
     const why = "Job's QOS not permitted to use this partition (debug allows debug not low)"
     return { job, phase: 'queued', state: 'PENDING', node: '', reason: why, start: '', tunnel: '', url: '', home: '',
-      device: null, installing: false, server: false, web: '', problem: `This job can't start with this queue and priority. Slurm says: ${why}.`, stuck: true,
+      device: null, installing: false, server: false, web: '', stuck: true,
+      problem: `This job can't start with this queue and priority. Slurm says: ${why}.`,
       tail: [], follow: follow(job) }
   }
   const phase = age < 6 ? 'queued' : age < 10 ? 'starting' : age < 22 ? 'login' : 'ready'

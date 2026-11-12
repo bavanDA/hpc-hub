@@ -97,6 +97,8 @@ export type VsWatch = {
 const watches = new Map<string, VsWatch>()
 const listeners = new Map<string, Set<() => void>>()
 const timers = new Map<string, ReturnType<typeof setTimeout>>()
+// cluster -> the newest poll: an answer from an older one is dropped, so overlapping asks never make two loops
+const rounds = new Map<string, number>()
 const codes = new Set<string>()  // device codes already handled
 
 export const getWatch = (cluster: string) => watches.get(cluster) ?? null
@@ -120,7 +122,6 @@ function changed(w: VsWatch) {
 export function watchVscode(cluster: string, name: string, job: string, folder: string, target: Target,
   openLinks: boolean, alreadyOpen = false): VsWatch {
   const old = watches.get(cluster)
-  clearTimeout(timers.get(cluster))
   const same = old?.job === job
   changed({ cluster, name, job, folder, target, openLinks, status: same ? old.status : null, error: '',
     signedIn: same ? old.signedIn : false, opened: alreadyOpen, web: same ? old.web : '' })
@@ -130,19 +131,30 @@ export function watchVscode(cluster: string, name: string, job: string, folder: 
 
 export function forgetWatch(cluster: string) {
   clearTimeout(timers.get(cluster))
+  rounds.set(cluster, (rounds.get(cluster) ?? 0) + 1)  // an answer still on its way is dropped
   watches.delete(cluster)
   for (const fn of listeners.get(cluster) ?? []) fn()
 }
 
+/** Ask again after ms; any ask already waiting is replaced. */
+function later(cluster: string, ms: number, failures = 0) {
+  clearTimeout(timers.get(cluster))
+  timers.set(cluster, setTimeout(() => poll(cluster, failures), ms))
+}
+
 function poll(cluster: string, failures: number) {
+  clearTimeout(timers.get(cluster))
   const w = watches.get(cluster)
   if (!w) return
+  const round = (rounds.get(cluster) ?? 0) + 1
+  rounds.set(cluster, round)
+  const current = () => rounds.get(cluster) === round && watches.get(cluster)?.job === w.job
   call<VsStatus>('tools.vscode_status', { cluster, job: w.job })
-    .then((st) => { if (watches.get(cluster)?.job === w.job) step(watches.get(cluster)!, st) })
+    .then((st) => { if (current()) step(watches.get(cluster)!, st) })
     .catch((e: Error) => {
-      const now = watches.get(cluster)
-      if (now?.job !== w.job) return
-      if (failures < 2) { timers.set(cluster, setTimeout(() => poll(cluster, failures + 1), 3000)); return }
+      if (!current()) return
+      const now = watches.get(cluster)!
+      if (failures < 2) { later(cluster, 3000, failures + 1); return }
       changed({ ...now, error: `Could not check the VS Code job: ${e.message}` })
       if (!watched(cluster)) notify(`${w.name}: could not check the VS Code job: ${e.message}`, { kind: 'error' })
     })
@@ -157,7 +169,7 @@ function step(w: VsWatch, st: VsStatus) {
     const device = st.device
     copyText(device.code).then((copied) => {
       if (quiet) notify(`VS Code on ${w.name}: sign in to GitHub with code ${device.code}${copied ? ' (copied)' : ''}`,
-        { kind: 'error', report: false, action: { label: 'Open GitHub', run: () => openLink(device.url) } })
+        { stay: true, action: { label: 'Open GitHub', run: () => openLink(device.url) } })
     })
   }
   if (st.phase === 'ready' && !w.opened) {
@@ -180,15 +192,7 @@ function step(w: VsWatch, st: VsStatus) {
   changed(next)
   // keep asking until VS Code runs (or the job ended); with the window open, also while its server installs
   const more = st.phase !== 'ended' && (st.phase !== 'ready' || (!quiet && !st.server))
-  if (more) timers.set(w.cluster, setTimeout(() => poll(w.cluster, 0), st.phase === 'queued' ? 5000 : 3000))
-}
-
-/** Ask again now (the window opened on a job that is up: its server may still install). */
-export function refreshWatch(cluster: string) {
-  const w = watches.get(cluster)
-  if (!w || w.status?.phase === 'ended') return
-  clearTimeout(timers.get(cluster))
-  poll(cluster, 0)
+  if (more) later(w.cluster, st.phase === 'queued' ? 5000 : 3000)
 }
 
 /** The VS Code job's whole log in a terminal tab. */
