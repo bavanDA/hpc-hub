@@ -17,16 +17,6 @@ def _most(limits: list[int | None]) -> int | None:
     return None if not limits or None in limits else max(limits)
 
 
-def _yours(lim: Limits, name: str) -> bool:
-    """Whether you can send jobs here: it has nodes, takes one of your QoS and one of your groups."""
-    rules = lim.rules.get(name, {})
-    groups = set(lim.account_qos)
-    allow, deny = rules.get("AllowAccounts", "ALL").split(","), rules.get("DenyAccounts", "").split(",")
-    if rules.get("TotalNodes") == "0" or (lim.allowed_qos and not lim.usable_qos(name)):
-        return False
-    return not groups or (("ALL" in allow or bool(groups & set(allow))) and not groups <= set(deny))
-
-
 def _gpus(lim: Limits, name: str, qos: list[str]) -> list[dict]:
     """Each GPU type here and the most of it one node can give a job."""
     per_node: dict[str, int] = {}
@@ -70,7 +60,7 @@ def _queue(lim: Limits, name: str) -> dict:
 def guide(lim: Limits) -> dict:
     """The queues you can use, default first, with what one job may ask for on each; the priorities (QoS) you may use
     on them; and how many other queues exist that your groups can't use. None: no limit, or Slurm doesn't say."""
-    yours = sorted((p for p in lim.partitions if _yours(lim, p)), key=lambda p: p != lim.default_partition)
+    yours = sorted((p for p in lim.partitions if lim.yours(p)), key=lambda p: p != lim.default_partition)
     used = {q for p in yours for q in lim.usable_qos(p)}
     return {
         "queues": [_queue(lim, p) for p in yours],

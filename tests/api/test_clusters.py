@@ -179,6 +179,14 @@ def test_the_priorities_offered_follow_the_partition(hub):
     assert slurm_limits.partitions("wulver", partition="general")["needs_gpu"] is False
 
 
+def test_queues_for_other_groups_are_not_offered(hub):
+    hub.sessions["wulver"].limits = Limits(partitions={"general": 4320, "course": 4320}, default_partition="general",
+                                           allowed_qos=["low", "course"], account_qos={"mygroup": ["low", "course"]},
+                                           rules={"course": {"AllowQos": "course", "AllowAccounts": "courses"}})
+    got = slurm_limits.partitions("wulver")
+    assert got["partitions"] == ["general"] and got["default_partition"] == "general"  # course: the courses group
+
+
 def test_log_tail(hub, monkeypatch, tmp_path):
     monkeypatch.setattr(clusters, "log_dir", lambda: tmp_path)
     assert clusters.log("wulver") == []
