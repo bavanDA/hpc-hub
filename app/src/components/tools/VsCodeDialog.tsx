@@ -174,7 +174,7 @@ function Start({ setup, start, wanted, onError }:
   </>
 }
 
-type StepState = 'done' | 'now' | 'todo'
+type StepState = 'done' | 'now' | 'todo' | 'bad'
 
 function Step({ state, title, sub, children }:
   { state: StepState; title: string; sub?: ReactNode; children?: ReactNode }) {
@@ -182,6 +182,7 @@ function Step({ state, title, sub, children }:
     done: <span className="grid size-6 place-items-center rounded-full bg-ok-bg text-ok"><Check size={14} /></span>,
     now: <span className="grid size-6 place-items-center"><Spinner size={18} /></span>,
     todo: <span className="block size-6 rounded-full border-2 border-line-strong" />,
+    bad: <span className="grid size-6 place-items-center rounded-full bg-bad-bg text-bad"><TriangleAlert size={13} /></span>,
   }[state]
   return (
     <div className="flex gap-3 px-4 py-3">
@@ -233,6 +234,18 @@ function Progress({ w, onNew, onClose }: { w: VsWatch; onNew: () => void; onClos
     }
   }
 
+  /** A job that can never start: stop it, and the form comes back to pick another queue or priority. */
+  async function stopAndChange() {
+    setStopping('busy')
+    try {
+      await stopVscode(w.cluster, w.job)  // forgets the watch, so the window shows the form again
+      onNew()
+    } catch (e) {
+      toast(`Could not stop VS Code job ${w.job}: ${(e as Error).message}`, { kind: 'error' })
+      setStopping('')
+    }
+  }
+
   const queued = st?.reason ? `In the queue (${WAIT[st.reason] ?? st.reason})` : 'In the queue'
   const ready = phase === 'ready' && st
   return <>
@@ -240,12 +253,15 @@ function Progress({ w, onNew, onClose }: { w: VsWatch; onNew: () => void; onClos
     {ended && st && <Problem text={st.problem} tail={st.tail}
       action={<EButton small icon={TerminalSquare} onClick={() => showLog(w.cluster, st.follow, go)}>
         Show the whole log</EButton>} />}
-    {!ended && st?.problem && <Problem text={`The job may be stuck: ${st.problem}`} tail={st.tail} />}
+    {!ended && st?.stuck && <Problem text={`${st.problem} It would wait forever.`}
+      action={<EButton small kind="primary" disabled={stopping === 'busy'} onClick={stopAndChange}>
+        {stopping === 'busy' ? 'Stopping…' : 'Stop and change'}</EButton>} />}
+    {!ended && st?.problem && !st.stuck && <Problem text={`The job may be stuck: ${st.problem}`} tail={st.tail} />}
     <div className="pt-3">
       <List>
         <Step state="done" title={`Job ${w.job} submitted`} sub={`Opens ${w.folder || '~'} in ${where}`} />
         {!ended && <>
-          <Step state={!st ? 'now' : past('queued')} title="Waiting for a compute node"
+          <Step state={!st ? 'now' : st.stuck ? 'bad' : past('queued')} title="Waiting for a compute node"
             sub={!st ? 'Checking…' : phase === 'queued'
               ? `${queued}.${st.start ? ` Slurm expects it to start ${when(st.start)}.` : ''}`
               : st.node ? `Running on ${st.node}` : undefined} />
@@ -290,7 +306,7 @@ function Progress({ w, onNew, onClose }: { w: VsWatch; onNew: () => void; onClos
             {other === 'browser' ? 'Open in the browser' : 'Open in the app'}</EButton>
           <EButton kind="primary" icon={ExternalLink} onClick={() => openTunnel(st.tunnel, w.folder || st.home, w.target)}>
             Open again</EButton></>
-        : <EButton kind="primary" onClick={onClose}>Keep going in the background</EButton>}
+        : !st?.stuck && <EButton kind="primary" onClick={onClose}>Keep going in the background</EButton>}
     </div>
   </>
 }

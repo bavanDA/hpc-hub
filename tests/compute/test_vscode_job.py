@@ -61,3 +61,14 @@ def test_a_running_job_stuck_on_an_error_says_so():
 def test_the_command_reads_the_job_and_its_log():
     cmd = vscode_job.status_command("42")
     assert "squeue -h -j 42" in cmd and "sacct" in cmd and "hpc-hub-vscode-42.out" in cmd
+
+
+def test_a_job_that_can_never_start_says_so():
+    why = "Job's QOS not permitted to use this partition (debug allows debug not low)"
+    got = vscode_job.status("42", out(f"PENDING||{why}|N/A"))
+    assert got["phase"] == "queued" and got["stuck"]
+    assert got["problem"].startswith("This job can't start with this queue and priority. Slurm says: Job's QOS")
+    for code in ("InvalidAccount", "QOSMaxWallDurationPerJobLimit", "PartitionTimeLimit", "QOSNotAllowed"):
+        assert vscode_job.status("42", out(f"PENDING||{code}|N/A"))["stuck"], code
+    for code in ("Priority", "Resources", "QOSMaxCpuPerUserLimit", "AssocGrpCPULimit"):  # these clear by themselves
+        assert not vscode_job.status("42", out(f"PENDING||{code}|N/A"))["stuck"], code

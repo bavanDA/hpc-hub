@@ -70,6 +70,7 @@ export type VsStatus = {
   server: boolean  // and has started
   web: string  // code serve-web's address on the node, if your command runs that
   problem: string
+  stuck: boolean  // in the queue for a reason that never clears (a priority the partition refuses): stop it
   tail: string[]  // the log's last lines
   follow: Follow
 }

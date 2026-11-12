@@ -80,13 +80,20 @@ const born = new Map<string, number>()
 function vscodeStatus({ job }: { job: string }): VsStatus {
   if (!born.has(job)) born.set(job, Date.now())
   const age = job === '123500' ? 999 : (Date.now() - born.get(job)!) / 1000
+  if (job !== '123500' && new URLSearchParams(location.search).has('vsstuck')) {  // ?vsstuck: one that can't start
+    const why = "Job's QOS not permitted to use this partition (debug allows debug not low)"
+    return { job, phase: 'queued', state: 'PENDING', node: '', reason: why, start: '', tunnel: '', url: '', home: '',
+      device: null, installing: false, server: false, web: '', problem: `This job can't start with this queue and priority. Slurm says: ${why}.`, stuck: true,
+      tail: [], follow: follow(job) }
+  }
   const phase = age < 6 ? 'queued' : age < 10 ? 'starting' : age < 22 ? 'login' : 'ready'
   const ready = phase === 'ready'
   return { job, phase, state: age < 6 ? 'PENDING' : 'RUNNING', node: age < 6 ? '' : 'n0111',
     reason: age < 6 ? 'Priority' : '', start: age < 6 ? new Date(Date.now() + 120000).toISOString() : '',
     tunnel: ready ? 'n0111' : '', url: ready ? 'https://vscode.dev/tunnel/n0111/home/jdoe' : '', home: '/home/jdoe',
     device: phase === 'login' ? { url: 'https://github.com/login/device', code: 'AB12-CD34' } : null,
-    installing: ready && age < 32, server: age >= 32, web: '', problem: '', tail: [], follow: follow(job) }
+    installing: ready && age < 32, server: age >= 32, web: '', problem: '', stuck: false, tail: [],
+    follow: follow(job) }
 }
 
 export const answers: Record<string, unknown> = {

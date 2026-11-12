@@ -174,6 +174,9 @@ function step(w: VsWatch, st: VsStatus) {
       .catch((e: Error) => notify(`VS Code web: the port forward failed: ${e.message}`, { kind: 'error' }))
   }
   if (st.phase === 'ended' && quiet) notify(`${w.name}: ${st.problem}`, { kind: 'error' })
+  if (st.stuck && !w.status?.stuck && quiet) {  // once: it would wait forever
+    notify(`${w.name}: ${st.problem} Open VS Code to stop it and pick another queue.`, { kind: 'error' })
+  }
   changed(next)
   // keep asking until VS Code runs (or the job ended); with the window open, also while its server installs
   const more = st.phase !== 'ended' && (st.phase !== 'ready' || (!quiet && !st.server))

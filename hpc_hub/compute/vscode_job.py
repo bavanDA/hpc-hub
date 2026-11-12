@@ -13,6 +13,10 @@ JOB_NAME = "hpc-hub-vscode"
 LOG_BYTES = 30_000  # the end of the log is enough: the links and the latest lines
 ANSI = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
 # Lines that mean the command did not start (a wrong path, a missing module), worth showing while it still runs
+# Queue reasons that never clear by themselves: the job would wait forever. Limits on all your jobs together
+# (PerUser, Grp...) do clear when your other jobs end, so they are not here.
+NEVER = re.compile(r"not permitted|not allowed|NotAllowed|Invalid(QOS|Qos|Account)|PerJob|PartitionTimeLimit|"
+                   r"PartitionNodeLimit|PartitionConfig|BadConstraints|DependencyNeverSatisfied")
 TROUBLE = re.compile(r"command not found|No such file or directory|Permission denied|^\s*error\b|\berror:|"
                      r"Traceback|panicked|Unable to|Could not", re.I)
 WHY_ENDED = {
@@ -62,7 +66,7 @@ def status(job_id: str, out: str) -> dict:
         "device": {"url": device.url, "code": device.code} if device and not tunnel else None,
         "installing": downloading > started, "server": started >= 0,
         "web": next((x.url for x in found if x.kind == links.LOCAL_WEB), ""),
-        "problem": "", "tail": lines[-12:],
+        "problem": "", "tail": lines[-12:], "stuck": False,
     }
     if not state:
         got["phase"] = "ended"
@@ -70,6 +74,9 @@ def status(job_id: str, out: str) -> dict:
         got["problem"] = f"The VS Code job ended. {why}." + (f" {trouble[-1].strip()}" if trouble else "")
     elif state in ("PENDING", "REQUEUED", "SUSPENDED"):
         got["phase"] = "queued"
+        if NEVER.search(reason):
+            got["stuck"] = True
+            got["problem"] = f"This job can't start with this queue and priority. Slurm says: {reason}."
     elif tunnel:
         got["phase"] = "ready"
     elif device:
