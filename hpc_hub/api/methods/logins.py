@@ -1,5 +1,6 @@
 """Logins kept in the keyring: usernames come out, passwords only go in."""
 
+from ...connect import login_check
 from ...core import credentials
 from ...core.credentials import Login
 from ..hub import hub
@@ -99,6 +100,18 @@ def set_login(cluster: str, kind: str, username: str, password: str | None = Non
         hub().save_clusters()
     save = _save_with_password if remember else _save_username_only
     save(cfg.id, kind, username, password)
+
+
+@method("clusters.check_login")
+def check_login(cluster: str, username: str, password: str = "") -> dict:
+    """Whether this username and password work, before you connect (login_check.py: no Duo push). An empty
+    password checks the saved one. {ok: True | False | None (can't tell from this network), text}."""
+    cfg = hub().session(cluster).cfg
+    username = credentials.cluster_username(cfg.host, username)
+    if not username:
+        raise ValueError("Username is empty")
+    saved = credentials.load(cfg.id, credentials.SSH)
+    return login_check.check(cfg, hub().askpass, username, password or (saved.password if saved else ""))
 
 
 @method("clusters.forget_logins")

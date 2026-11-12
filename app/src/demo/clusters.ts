@@ -218,6 +218,11 @@ export const answers: Record<string, unknown> = {
     remember: true,
   }),
   'clusters.set_login': () => null,
+  // the password "wrong" is refused, like the cluster asking for it again
+  'clusters.check_login': ({ username, password }: { username: string; password: string }) =>
+    new Promise((done) => setTimeout(() => done(password === 'wrong'
+      ? { ok: false, text: `Wulver (NJIT) didn't accept the password for ${username}. Type it again, or check your UCID.` }
+      : { ok: true, text: '' }), 1200)),
   'clusters.forget_logins': () => null,
   'clusters.maintenance': (): Maintenance => ({ start: '2026-11-10T07:50:00', tz: 'EST', minutes_left: 2345, active: false }),
   'clusters.partitions': ({ partition, qos }: { partition?: string; qos?: string }): Limits => {

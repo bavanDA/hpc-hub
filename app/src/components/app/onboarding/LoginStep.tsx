@@ -1,5 +1,6 @@
 import { useState } from 'react'
 
+import { call } from '../../../rpc'
 import type { Cluster } from '../../../types/clusters'
 import { keyHeading } from '../../clusters/keyHeading'
 import { KeySetupDialog } from '../../clusters/KeySetupDialog'
@@ -7,11 +8,13 @@ import { copy } from '../../clusters/loginCopy'
 import { LoginFields } from '../../clusters/LoginFields'
 import { useLogin } from '../../clusters/useLogin'
 import { MainButton } from '../../e/MainButton'
+import { useToast } from '../../useToast'
 import { Footer } from './Footer'
 import { Heading } from './Heading'
 
 export function LoginStep({ cluster: c, onNext }: { cluster: Cluster; onNext: () => void }) {
   const login = useLogin(c.id)
+  const toast = useToast()
   const [portal, setPortal] = useState(false)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
@@ -21,6 +24,17 @@ export function LoginStep({ cluster: c, onNext }: { cluster: Cluster; onNext: ()
     setBusy(true)
     setError('')
     try {
+      // a password login is checked before going on, so a typo shows here, not at the first connect (no Duo push)
+      if (!keys && (login.password || login.saved?.ssh.password)) {
+        const got = await call<{ ok: boolean | null; text: string }>('clusters.check_login',
+          { cluster: c.id, username: login.user, password: login.password })
+        if (got.ok === false) {
+          setError(got.text)
+          setBusy(false)
+          return
+        }
+        if (got.ok === null) toast(got.text)
+      }
       await login.save()
       onNext()
     } catch (e) {
@@ -43,7 +57,7 @@ export function LoginStep({ cluster: c, onNext }: { cluster: Cluster; onNext: ()
       </div>
       {error && <p role="alert" className="px-5 font-semibold text-bad">{error}</p>}
       <Footer onSkip={ready || (!keys && login.saved?.ssh.password) ? undefined : skip}>
-        <MainButton type="submit" disabled={!ready || busy}>{copy.continue}</MainButton>
+        <MainButton type="submit" disabled={!ready || busy}>{busy ? 'Checking…' : copy.continue}</MainButton>
       </Footer>
       {portal && <KeySetupDialog cluster={c} onClose={() => setPortal(false)}
         onDone={() => { setPortal(false); onNext() }} />}

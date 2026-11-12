@@ -229,3 +229,17 @@ def test_forget_can_keep_the_username(monkeypatch):
     assert saved == {(cfg.id, "ssh"): credentials.Login("jdoe", ""), (cfg.id, "vpn"): credentials.Login("jdoe", "")}
     m.forget_logins(cfg.id)
     assert saved == {}
+
+
+def test_check_login_cleans_the_username_and_uses_the_saved_password(hub, keyring, monkeypatch):
+    from hpc_hub.connect import login_check
+    asked = []
+    monkeypatch.setattr(login_check, "check", lambda cfg, askpass, user, password: asked.append((user, password))
+                        or {"ok": True, "text": ""})
+    keyring["wulver", "ssh"] = Login("ab123", "saved")
+    hub.askpass = object()  # the real hub's askpass server; the check itself is the stand-in above
+    assert logins.check_login("wulver", "ab123@njit.edu", "typed")["ok"] is True
+    assert logins.check_login("wulver", "ab123", "") == {"ok": True, "text": ""}
+    assert asked == [("ab123", "typed"), ("ab123", "saved")]
+    with pytest.raises(ValueError):
+        logins.check_login("wulver", " ", "x")
