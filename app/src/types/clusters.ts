@@ -137,6 +137,10 @@ export type Limits = {
   mem_per_core_gb?: number | null  // each core comes with this much memory: asking more takes more cores
   gpu_caps?: Record<string, number>  // the priority's GPU caps: {"l40": 0} not allowed, {"": 1} at most one
   billing?: Billing | null  // what an hour costs in SUs; null where Slurm sets no weights
+  qos_refused?: string  // the priority asked for waits forever on this partition: why ("" when it can run)
+  qos_fix?: string  // and the one to use there instead ("" when none of yours is allowed)
+  qos_note?: string  // the partition takes only some of your priorities: which
+  asked?: string  // which partition, priority and group these are for (useLimits sets it)
 }
 
 /** chrome-window: answered "in-app" or null. web-login: the app's sign-in window, answered with JSON {token, error}. */

@@ -21,6 +21,14 @@ class NodesMixin:
         allows (Slurm would refuse it otherwise). Blocking; worker thread."""
         if not profile.account and self._account():
             profile = replace(profile, account=self._account())
+        refused = self.limits.refused_qos(profile.partition, profile.qos, profile.account) if self.limits else ""
+        if refused and not profile.qos:  # your default priority isn't allowed there: the one the partition takes
+            choices = self.limits.qos_choices(profile.partition, profile.account)
+            if choices:
+                self._log(f"{refused} Using priority {choices[0]}")
+                profile, refused = replace(profile, qos=choices[0]), ""
+        if refused:  # Slurm would take the job and keep it waiting forever
+            raise ValueError(f"{refused} Change it under Queue and priority.")
         fitted, note = self.limits.fit(profile) if self.limits else (profile, "")
         if note:
             self._log(note)

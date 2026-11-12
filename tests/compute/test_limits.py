@@ -92,3 +92,17 @@ def test_expanse_limits():
 
 def test_qos_is_asked_with_a_field_every_slurm_knows():
     assert "maxtres," in limits.FETCH and "maxtrespj" not in limits.FETCH  # Slurm 23 refuses the whole query for it
+
+
+def test_a_partition_that_takes_only_its_own_priority():
+    L = limits.parse(WULVER)
+    L.rules = {"debug": {"AllowQos": "debug"}, "general": {}}
+    assert L.qos_choices("debug") == ["debug"]
+    assert L.qos_choices("general") == ["debug", "low", "standard", "course"]
+    assert L.refused_qos("debug", "low") == "The debug queue takes priority debug, not low."
+    assert L.refused_qos("debug", "debug") == "" and L.refused_qos("general", "low") == ""
+    L.default_qos = "low"
+    assert L.refused_qos("debug", "") == "The debug queue takes priority debug, not low."  # your default counts
+    L.rules["gpu"] = {"AllowQos": "high_x"}
+    assert L.refused_qos("gpu", "low") == "Your account can't use the gpu queue."
+    assert limits.Limits().refused_qos("debug", "low") == ""  # nothing known yet: Slurm decides

@@ -10,6 +10,7 @@ export const fits = (p: Profile, limits: Limits | null, g: Gpu | null) =>
   inRange(p.cpus, coresFor(p.mem_gb, limits?.mem_per_core_gb), limits?.cores) && inRange(p.mem_gb, 1, limits?.memory_gb)
   && inRange(minutes(p.time) ?? 0, 1, limits?.longest) && (!g || inRange(p.gpus ?? 1, 1, g.max_per_job))
   && (!g || limits?.gpu_caps?.[g.type] !== 0)
+  && !limits?.qos_refused  // Slurm would take the job and keep it waiting forever
 
 export const sizeOf = (p: Profile, quick: Preset[], last?: string) =>
   (last && (last === 'gpu') === !!p.gpus ? last : null)

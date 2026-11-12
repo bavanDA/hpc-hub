@@ -385,6 +385,32 @@ def test_the_queue_you_pick_is_the_one_asked_for():
     assert not any("--test-only" in c for c in ran)
 
 
+def test_a_priority_the_partition_refuses_never_reaches_slurm():
+    import subprocess
+
+    import pytest
+
+    from hpc_hub.compute import limits
+    from hpc_hub.connect.session import ClusterSession
+    from hpc_hub.core import config
+    from tests.compute.test_limits import WULVER
+
+    class Ssh:
+        def run(self, cmd, timeout=60):
+            return subprocess.CompletedProcess(cmd, 0, "mygroup\n" if "defaultaccount" in cmd else "", "")
+        on_login = run
+    s = object.__new__(ClusterSession)
+    s.cfg, s.ssh, s.default_account = config.default_clusters()[0], Ssh(), None
+    s._log = lambda line: None
+    s.limits = limits.parse(WULVER)
+    s.limits.rules, s.limits.default_qos = {"debug": {"AllowQos": "debug"}}, "low"
+    with pytest.raises(ValueError, match="debug queue takes priority debug, not low"):
+        s.fit(config.ComputeProfile(partition="debug", qos="low", time="01:00:00"))
+    # your default is the one it refuses, and you named none: the one it takes
+    assert s.fit(config.ComputeProfile(partition="debug", qos="", time="01:00:00")).qos == "debug"
+    assert s.fit(config.ComputeProfile(partition="general", qos="low", time="01:00:00")).qos == "low"
+
+
 def test_commands_follow_the_running_job():
     from hpc_hub.compute.slurm import Allocation
     from hpc_hub.connect.session import ClusterSession

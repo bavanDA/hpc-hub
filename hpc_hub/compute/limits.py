@@ -79,6 +79,23 @@ class Limits:
         allow, deny = rules.get("AllowQos", "ALL").split(","), rules.get("DenyQos", "").split(",")
         return [q for q in self.allowed_qos if ("ALL" in allow or q in allow) and q not in deny]
 
+    def qos_choices(self, partition: str, account: str = "") -> list[str]:
+        """The priorities to offer for a job here: your group's that this partition takes."""
+        mine = self.account_qos.get(account) or self.allowed_qos
+        usable = self.usable_qos(partition or self.default_partition)
+        return [q for q in mine if q in usable]
+
+    def refused_qos(self, partition: str, qos: str, account: str = "") -> str:
+        """Why a job with this priority (empty: your default) would wait forever on this partition, "" if it can run.
+        Unknown limits say nothing: Slurm decides."""
+        part, q = partition or self.default_partition, qos or self.default_qos
+        if not q or not self.allowed_qos or q in self.usable_qos(part):
+            return ""
+        choices = self.qos_choices(part, account)
+        if choices:
+            return f"The {part} queue takes priority {' or '.join(choices)}, not {q}."
+        return f"Your account can't use the {part} queue."
+
     def pick_qos(self, partition: str, qos: str = "") -> str:
         """The QoS to read limits from: the one named, else your default, or the first this partition takes when it
         refuses your default."""

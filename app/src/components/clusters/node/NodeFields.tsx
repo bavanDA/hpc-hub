@@ -16,7 +16,7 @@ import { GpuPart } from './GpuPart'
 import { keptFor, remember } from './kept'
 import { MaintenanceNote } from './MaintenanceNote'
 import { QueueWindow } from './QueueDialog'
-import { useLimits } from './useLimits'
+import { askedKey, useLimits } from './useLimits'
 
 /** onValid hears whether every number is allowed, so the window can turn its button off. extra: false where the
  *  extra options can't be kept (a request for a node now). now: this job goes to Slurm when the window closes, so
@@ -40,6 +40,13 @@ export function NodeFields({ cluster, value: p, onChange, onValid, extra = true,
   const fewest = coresFor(p.mem_gb, perCore)
   // a queue where memory sets the cores (picked just now): raise them to what the memory takes
   useEffect(() => { if (p.cpus < fewest) onChange({ ...p, cpus: fewest }) }, [p, fewest, onChange])
+  // a partition that takes only some priorities (debug takes debug): switch to one it takes; qos_note says why
+  const fix = limits?.asked === askedKey(p) ? limits.qos_fix : ''
+  useEffect(() => {
+    if (!fix || fix === p.qos) return
+    onChange({ ...p, qos: fix })
+  }, [fix, p, onChange])
+  const refused = limits?.asked === askedKey(p) && !limits.qos_fix ? limits.qos_refused : ''
   const queue = queueText(p.partition, p.qos)
   const su = limits?.billing ? suText(limits.billing, p, minutes(p.time) ?? 240, p.qos || limits.default_qos) : null
   // a CPU size leaves a GPU-only queue for the usual one
@@ -70,6 +77,8 @@ export function NodeFields({ cluster, value: p, onChange, onValid, extra = true,
           onChange={(m) => set({ time: slurmTime(Math.max(1, m)) })} />
         <Row label="Queue and priority" value={queue} opens onPress={() => setOpen(true)} />
       </List>
+      {refused && <p role="alert" className="px-5 pb-3 text-sm font-semibold text-bad">{refused} Pick another queue.</p>}
+      {!refused && limits?.qos_note && <p className="px-5 pb-3 text-sm text-dim">{limits.qos_note}</p>}
       {now && <MaintenanceNote cluster={cluster} asked={minutes(p.time) ?? 240}
         onShorten={(m) => set({ time: slurmTime(m) })} />}
       {!!p.gpus && gpus.length > 0 && <GpuPart gpus={gpus} limits={limits} value={p} onChange={change} />}

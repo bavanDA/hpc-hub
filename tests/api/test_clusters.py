@@ -164,6 +164,18 @@ def test_partitions_and_longest_time(hub):
     assert slurm_limits.partitions("wulver")["longest"] == 1440
 
 
+def test_the_priorities_offered_follow_the_partition(hub):
+    hub.sessions["wulver"].limits = Limits(partitions={"general": 4320, "debug": 480}, default_partition="general",
+                                           qos={"low": 1440, "debug": 480}, allowed_qos=["low", "debug"],
+                                           default_qos="low", rules={"debug": {"AllowQos": "debug"}})
+    got = slurm_limits.partitions("wulver", partition="debug", qos="low")
+    assert got["qos"] == ["debug"] and got["qos_fix"] == "debug"
+    assert got["qos_refused"] == "The debug queue takes priority debug, not low."
+    ok = slurm_limits.partitions("wulver", partition="general", qos="low")
+    assert ok["qos"] == ["low", "debug"] and ok["qos_fix"] == "" and ok["qos_refused"] == "" and ok["qos_note"] == ""
+    assert got["qos_note"] == "The debug queue takes priority debug only."
+
+
 def test_log_tail(hub, monkeypatch, tmp_path):
     monkeypatch.setattr(clusters, "log_dir", lambda: tmp_path)
     assert clusters.log("wulver") == []

@@ -30,15 +30,28 @@ def partitions(cluster: str, partition: str = "", qos: str = "", account: str = 
         return dict(UNKNOWN)
     partition, qos = partition.strip(), qos.strip()
     longest, why = lim.longest(partition, qos)
+    account = account.strip() or lim.default_account
+    choices = lim.qos_choices(partition, account)
+    refused = lim.refused_qos(partition, qos, account)
     part = partition or lim.default_partition
     cores, memory_gb = lim.biggest(part, qos)
     per_core = lim.mem_per_core_mb.get(part)
     return {"known": True, "partitions": list(lim.partitions), "default_partition": lim.default_partition,
-            "qos": lim.account_qos.get(account.strip() or lim.default_account) or lim.allowed_qos,
+            "qos": choices or lim.account_qos.get(account) or lim.allowed_qos,
+            # the priority asked for (or your default) waits forever here: say so, and which one to use instead
+            "qos_refused": refused, "qos_fix": choices[0] if refused and choices else "",
+            "qos_note": _only(part, choices, lim.account_qos.get(account) or lim.allowed_qos),
             "default_qos": lim.default_qos, "accounts": list(lim.account_qos), "default_account": lim.default_account,
             "longest": longest, "why": why, "cores": cores, "memory_gb": memory_gb,
             "mem_per_core_gb": round(per_core / 1024, 2) if per_core else None, "gpu_caps": lim.gpu_caps(qos),
             "billing": _billing(s.cfg, lim.billing_for(part, qos), part)}
+
+
+def _only(partition: str, choices: list[str], yours: list[str]) -> str:
+    """A partition that takes only some of your priorities says which, so the window can show why it switched."""
+    if not choices or set(choices) == set(yours):
+        return ""
+    return f"The {partition} queue takes priority {' or '.join(choices)} only."
 
 
 @method("clusters.limits")
