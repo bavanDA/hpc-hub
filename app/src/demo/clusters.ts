@@ -221,7 +221,8 @@ export const answers: Record<string, unknown> = {
   // the password "wrong" is refused, like the cluster asking for it again
   'clusters.check_login': ({ username, password }: { username: string; password: string }) =>
     new Promise((done) => setTimeout(() => done(password === 'wrong'
-      ? { ok: false, text: `Wulver (NJIT) didn't accept the password for ${username}. Type it again, or check your UCID.` }
+      ? { ok: false,
+        text: `Wulver (NJIT) didn't accept the password for ${username}. Type it again, or check your UCID.` }
       : { ok: true, text: '' }), 1200)),
   'clusters.forget_logins': () => null,
   'clusters.maintenance': (): Maintenance => ({ start: '2026-11-10T07:50:00', tz: 'EST', minutes_left: 2345, active: false }),
@@ -237,7 +238,8 @@ export const answers: Record<string, unknown> = {
     return { known: true, partitions: Object.keys(limits.partitions), default_partition: 'general',
       qos: part === 'debug' ? ['debug'] : Object.keys(limits.qos), default_qos: 'low', needs_gpu: part === 'gpu',
       qos_refused: refused ? `The debug queue takes priority debug, not ${qos || 'low'}.` : '',
-      qos_fix: refused ? 'debug' : '', qos_note: part === 'debug' ? 'The debug queue takes priority debug only.' : '', accounts: ['mygroup', 'abc123', 'dept_x'],
+      qos_fix: refused ? 'debug' : '', qos_note: part === 'debug' ? 'The debug queue takes priority debug only.' : '',
+      accounts: ['mygroup', 'abc123', 'dept_x'],
       default_account: 'mygroup', longest: top?.[0] ?? null, why: top?.[1] ?? '', cores, memory_gb,
       // like Wulver: the GPU queue gives each core 3.9 GB, and Standard leaves out the L40
       mem_per_core_gb: part === 'gpu' ? 3.92 : null, gpu_caps: (qos || 'low') === 'standard' ? { l40: 0 } : {},

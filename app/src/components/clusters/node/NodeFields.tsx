@@ -47,7 +47,7 @@ export function NodeFields({ cluster, value: p, onChange, onValid, extra = true,
     onChange({ ...p, qos: fix })
   }, [fix, p, onChange])
   const refused = limits?.asked === askedKey(p) && !limits.qos_fix ? limits.qos_refused : ''
-  // a queue of GPU nodes only (Wulver's gpu) refuses a job without a GPU: add one of the kind it has
+  // a queue of GPU nodes only refuses a job without a GPU: add one of the kind it has
   const gpuOnly = limits?.asked === askedKey(p) && !!limits.needs_gpu
   const queueGpu = gpus.find((x) => x.partitions.includes(p.partition)) ?? null
   useEffect(() => {
@@ -70,7 +70,8 @@ export function NodeFields({ cluster, value: p, onChange, onValid, extra = true,
   return (
     <>
       <div className="px-5 pb-4">
-        <Segments label="Size" value={p.gpus && quick.some((x) => x.id === 'gpu') ? 'gpu' : on} options={quick.map((x) => [x.id, x.label] as const)} onChange={pickSize} />
+        <Segments label="Size" value={p.gpus && quick.some((x) => x.id === 'gpu') ? 'gpu' : on}
+          options={quick.map((x) => [x.id, x.label] as const)} onChange={pickSize} />
       </div>
       <List>
         <NumberRow label="Cores" unit="cores" showUnit={false} value={p.cpus} min={fewest} max={limits?.cores}

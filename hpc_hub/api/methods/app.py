@@ -12,8 +12,7 @@ def cluster_json(c: ClusterConfig) -> dict:
     """A cluster as the app gets it: its settings, and what it does its own way (hpc_hub/clusters), so the app
     never names a cluster."""
     s = site(c.id)
-    return {**asdict(c), "help_email": s.help_email, "untyped_gpu": s.untyped_gpu[0] if s.untyped_gpu else "",
-            "code_sign_in": s.code_sign_in}
+    return {**asdict(c), "help_email": s.help_email, "code_sign_in": s.code_sign_in}
 
 
 @method("app.version")

@@ -64,8 +64,8 @@ export class HistoryView {
   private opening = false
   private checking = false
   private checkedAt = 0
-  private openedTotal = 0
-  private jumpedTo: number | null = null  // the line count when you started reading, for "+N new lines"
+  private openedTotal = 0  // the line count when you started reading, for "+N new lines"
+  private jumpedTo: number | null = null  // the prompt or mark you last jumped to: Up and Down step from it
   private subscribers = new Set<() => void>()
   private tick = 0
 

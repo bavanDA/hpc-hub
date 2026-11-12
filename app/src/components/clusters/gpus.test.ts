@@ -13,11 +13,11 @@ describe('names', () => {
   it('adds memory to a whole GPU', () => expect(gpuName(gpu({}))).toBe('A100, 80 GB'))
   it('keeps a slice as named', () => expect(gpuName(slice)).toBe('A100, 10 GB slice'))
   it.each([
-    [1, 'a100_10g', '', 'A100, 10 GB slice'],
-    [2, 'h100', '', '2 × H100'],
-    [2, '', 'V100', '2 × V100'],  // a cluster whose GPUs have no type names them
-    [1, 'new_card', '', '1 × NEW CARD'],
-  ])('gpuAmount(%s, %s, %s)', (n, type, untyped, want) => expect(gpuAmount(n, type, untyped)).toBe(want))
+    [1, 'a100_10g', 'A100, 10 GB slice'],
+    [2, 'h100', '2 × H100'],
+    [2, '', '2 × GPU'],
+    [1, 'new_card', '1 × NEW CARD'],
+  ])('gpuAmount(%s, %s)', (n, type, want) => expect(gpuAmount(n, type)).toBe(want))
   it('sums up a profile', () => {
     expect(gpuSummary({ ...size, gpus: 2, gpu_type: 'l40' }, [l40])).toBe('2 × L40')
     expect(gpuSummary(size, [l40])).toBe('')

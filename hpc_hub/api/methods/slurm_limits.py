@@ -36,7 +36,7 @@ def partitions(cluster: str, partition: str = "", qos: str = "", account: str = 
     part = partition or lim.default_partition
     cores, memory_gb = lim.biggest(part, qos)
     per_core = lim.mem_per_core_mb.get(part)
-    # only your queues: not other groups' (Wulver's course queues are for the courses group)
+    # only your queues: not ones kept for other groups (a course queue for a courses group)
     return {"known": True, "partitions": [p for p in lim.partitions if lim.yours(p)],
             "default_partition": lim.default_partition,
             "qos": choices or lim.account_qos.get(account) or lim.allowed_qos,

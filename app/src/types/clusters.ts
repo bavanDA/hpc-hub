@@ -68,7 +68,6 @@ export type Cluster = {
   password_too?: boolean  // with key_page: a password works as well
   code_setup?: string
   help_email?: string  // the help desk the cluster publishes (its file in hpc_hub/clusters)
-  untyped_gpu?: string  // the name of GPUs Slurm lists without a type (Expanse: V100)
   code_sign_in?: string  // how to sign in on its authenticator setup page
   request_node_on_connect?: boolean
   ask_node?: boolean  // with request_node_on_connect: show the node's settings first

@@ -45,8 +45,8 @@ def remote_source(*names: str) -> str:
 
 
 def job_profile(base: ComputeProfile, cluster_id: str, minutes: int = SCAN_MINUTES) -> ComputeProfile:
-    """1 core, 2 GB on the queue the cluster's node settings use, with what its file adds (Expanse: nodes that see
-    Lustre)."""
+    """1 core, 2 GB on the queue the cluster's node settings use, with what its file adds (scan_args, such as
+    nodes that see its scratch file system)."""
     extra, more = base.extra_args, clusters.site(cluster_id).scan_args
     if more and more not in extra:
         extra = f"{extra} {more}".strip()

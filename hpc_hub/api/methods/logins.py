@@ -93,7 +93,7 @@ def set_login(cluster: str, kind: str, username: str, password: str | None = Non
     cfg = hub().session(cluster).cfg
     if kind not in KINDS:
         raise ValueError(f"No login kind {kind}")
-    if kind == credentials.SSH:  # "ab123@njit.edu" for Wulver is ab123
+    if kind == credentials.SSH:  # a campus email typed for the cluster's own domain is the username
         username = credentials.cluster_username(cfg.host, username)
     if cfg.remember_password != remember:
         cfg.remember_password = remember

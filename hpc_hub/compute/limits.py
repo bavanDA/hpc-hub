@@ -81,8 +81,8 @@ class Limits:
         return [q for q in self.allowed_qos if ("ALL" in allow or q in allow) and q not in deny]
 
     def yours(self, partition: str) -> bool:
-        """Whether you can send jobs here: it has nodes, takes one of your QoS and one of your groups (Wulver's
-        course queues take only the courses group)."""
+        """Whether you can send jobs here: it has nodes, takes one of your QoS and one of your groups (a course
+        queue may take only a courses group)."""
         rules = self.rules.get(partition, {})
         groups = set(self.account_qos)
         allow, deny = rules.get("AllowAccounts", "ALL").split(","), rules.get("DenyAccounts", "").split(",")
@@ -91,7 +91,7 @@ class Limits:
         return not groups or (("ALL" in allow or bool(groups & set(allow))) and not groups <= set(deny))
 
     def needs_gpu(self, partition: str) -> bool:
-        """A queue of GPU nodes only (Wulver's gpu): a job there that asks for no GPU is refused."""
+        """A queue of GPU nodes only: a job there that asks for no GPU is refused."""
         return (partition or self.default_partition) in self.gpu_only
 
     def qos_choices(self, partition: str, account: str = "") -> list[str]:

@@ -55,7 +55,7 @@ export function CollectionPicker({ cluster, onClose, onPicked }:
         <label className="flex h-9 items-center gap-2 rounded-md bg-pill px-3 focus-within:ring-2
           focus-within:ring-accent">
           <Search size={16} className="text-dim" />
-          <input autoFocus value={query} spellCheck={false} placeholder="Search, e.g. Expanse, Wulver, Bouchet"
+          <input autoFocus value={query} spellCheck={false} placeholder="Search by name"
             onChange={(e) => setQuery(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && run(query.trim())}
             className="min-w-0 flex-1 bg-transparent outline-none placeholder:text-dim" />
           {loading && <Spinner size={14} />}

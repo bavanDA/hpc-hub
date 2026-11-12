@@ -21,9 +21,9 @@ const NAMES: Record<string, string> = {
   a5000: 'RTX A5000', rtx_5000_ada: 'RTX 5000 Ada', rtx_pro_6000_blackwell: 'RTX PRO 6000 Blackwell',
 }
 
-/** "A100, 10 GB slice", "2 × H100", "2 × V100" (untyped: the cluster's untyped_gpu): never a bare count. */
-export function gpuAmount(count: number, type = '', untyped = '') {
-  const name = NAMES[type] ?? (type ? type.replace(/_/g, ' ').toUpperCase() : untyped || 'GPU')
+/** "A100, 10 GB slice", "2 × H100", "2 × GPU": never a bare count. */
+export function gpuAmount(count: number, type = '') {
+  const name = NAMES[type] ?? (type ? type.replace(/_/g, ' ').toUpperCase() : 'GPU')
   return count === 1 && /slice/.test(name) ? name : `${count} × ${name}`
 }
 
@@ -64,7 +64,8 @@ export type Preset = { id: string; label: string; hint: string; apply: (p: Profi
  *  there is one). */
 export function presets(gpus: Gpu[]): Preset[] {
   const out: Preset[] = [
-    { id: 'small', label: '2 cores', hint: '2 cores · 8 GB', apply: (p) => withGpu({ ...p, cpus: 2, mem_gb: 8 }, null) },
+    { id: 'small', label: '2 cores', hint: '2 cores · 8 GB',
+      apply: (p) => withGpu({ ...p, cpus: 2, mem_gb: 8 }, null) },
     { id: 'medium', label: '8 cores', hint: '8 cores · 32 GB',
       apply: (p) => withGpu({ ...p, cpus: 8, mem_gb: 32 }, null) },
   ]

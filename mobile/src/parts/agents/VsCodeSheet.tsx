@@ -4,9 +4,8 @@ import { Globe } from 'lucide-react'
 import { useState } from 'react'
 
 import { shortName } from '@shared/components/clusters/loginCopy'
-import { human, minutes } from '@shared/components/clusters/time'
-import { memText } from '@shared/components/jobs/format'
 import { sendable } from '@shared/components/tools/format'
+import { inWords } from '@shared/components/tools/vscodeWords'
 import { startVscode } from '@shared/components/tools/run'
 import type { ToolSetup, VsFound } from '@shared/types/tools'
 import { MainButton, Section, Segments, Sheet, ToggleRow } from '../../ui'
@@ -14,14 +13,6 @@ import { FolderField } from './FolderField'
 import { useClusters } from '@shared/components/clusters/store'
 import { NodeFields } from '../NodeSheet'
 import { useToast } from '../../ui'
-
-/** "2 cores · 8G · 1:12:40 of 8:00:00" (squeue) in words: "2 cores · 8 GB · 1 h 13 min of 8 h". */
-function inWords(resources: string): string {
-  const m = /^(\d+) cores · (\S+) · (\S+) of (\S+)$/.exec(resources)
-  if (!m) return resources
-  const time = (t: string) => { const n = minutes(t); return n === null ? t : human(n) }
-  return `${m[1]} ${m[1] === '1' ? 'core' : 'cores'} · ${memText(m[2])} · ${time(m[3])} of ${time(m[4])}`
-}
 
 export function VsCodeSheet({ setup, found, folder: first = '', onClose }:
   { setup: ToolSetup; found: VsFound; folder?: string; onClose: () => void }) {

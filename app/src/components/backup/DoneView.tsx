@@ -17,6 +17,7 @@ export function DoneView({ cluster, result, onOpen, onWeekly, onAgain }: {
   cluster: string; result: CopyResult | null; onOpen: () => void; onWeekly: () => void; onAgain: () => void
 }) {
   const { clusters } = useClusters()
+  const helpEmail = clusters?.find((c) => c.id === cluster)?.help_email
   if (!result) return <div className="grid h-40 place-items-center"><Spinner size={20} /></div>
   const busy = result.busy.length
   const failed = result.failed.length
@@ -30,7 +31,7 @@ export function DoneView({ cluster, result, onOpen, onWeekly, onAgain }: {
           {bad ? copy.mismatch(result.mismatches)
             : partial ? copy.partial(result.copied_files, result.copied_files + busy + failed)
               : copy.title(result.copied_files)}</h2>
-        <p className="text-md text-dim">{bad ? copy.mismatchHelp(helpFor(clusters?.find((c) => c.id === cluster)?.help_email)) : copy.checked(result.verified)}</p>
+        <p className="text-md text-dim">{bad ? copy.mismatchHelp(helpFor(helpEmail)) : copy.checked(result.verified)}</p>
         {busy > 0 && <p className="text-md text-dim">{copy.busy(busy)}</p>}
         {failed > 0 && <p className="text-md text-dim">{copy.failed(failed)}</p>}
         <p className="text-sm text-dim tabular-nums">{count(result.copied_files)} files, {gb(result.bytes)}</p>
