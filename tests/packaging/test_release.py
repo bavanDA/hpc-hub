@@ -53,3 +53,12 @@ def test_a_missing_signature_for_a_platform_is_an_error_not_a_silent_gap(tmp_pat
         assert "no update signatures" in str(e)
     else:
         raise AssertionError("expected it to stop")
+
+
+def test_the_windows_one_line_installer_goes_into_the_release(tmp_path):
+    src = built(tmp_path / "in", ["nsis/HPC Hub_0.2.1_x64-setup.exe", "nsis/HPC Hub_0.2.1_x64-setup.exe.sig"])
+    out = tmp_path / "out"
+    release.collect(src, out, "0.2.1", "", "2026-11-12T20:00:00Z")
+    script = (out / "install.ps1").read_text()
+    assert "irm https://github.com/bavanDA/hpc-hub/releases/latest/download/install.ps1 | iex" in script
+    assert "install.ps1" not in (out / "SHA256SUMS.txt").read_text()  # the list is for the installers it checks
