@@ -4,7 +4,7 @@
 
 <h1 align="center">HPC Hub</h1>
 
-<p align="center">Every HPC cluster you use, in one simple app.</p>
+<p align="center"><b>Focus on your research, not on the cluster.</b><br>Every HPC cluster you use, in one simple app.</p>
 
 <p align="center">
   <a href="https://github.com/bavanDA/hpc-hub/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/bavanDA/hpc-hub?include_prereleases"></a>
@@ -24,11 +24,11 @@
 
 ## Why HPC Hub
 
-Working on an HPC cluster should be as simple as working on your laptop. Today it takes a VPN client, SSH, Duo,
-Slurm commands, a VS Code tunnel and tmux, and all of it again for every cluster you use.
+Researchers should spend their time on research, not on learning Open OnDemand, Slurm, VPN clients, SSH and Duo.
+Today a cluster asks for all of that, plus a VS Code tunnel and tmux, and all of it again for every cluster you use.
 
-HPC Hub makes cluster work simpler and faster, especially across several clusters at once: they stay connected side
-by side in one window, and your projects and files move between them.
+HPC Hub takes care of it, so cluster work is simpler and faster, especially across several clusters at once: they
+stay connected side by side in one window, and your projects and files move between them.
 
 | Without HPC Hub | With HPC Hub |
 | --- | --- |
