@@ -16,6 +16,7 @@ import time
 from pathlib import Path
 
 REPO = "bavanDA/hpc-hub"
+NEEDED = ("linux-x86_64", "windows-x86_64", "darwin-aarch64")  # the systems every release must update
 # (end of the built file's name, the release's name for it after the version, updater platform keys)
 KINDS = [
     (".AppImage", "linux_x86_64.AppImage", ["linux-x86_64"]),
@@ -45,6 +46,9 @@ def collect(src: Path, out: Path, version: str, notes: str, date: str) -> dict:
                 platforms[key] = {"url": f"{base}/{name}", "signature": sig.read_text().strip()}
     if not platforms:
         raise SystemExit("There are no update signatures: is the TAURI_SIGNING_PRIVATE_KEY secret set?")
+    missing = [p for p in NEEDED if p not in platforms]
+    if missing:  # a partial latest.json gives those users updater errors: every system, or no release
+        raise SystemExit(f"No signed update for {', '.join(missing)}: build every system before publishing.")
     latest = {"version": version, "notes": notes, "pub_date": date, "platforms": platforms}
     (out / "latest.json").write_text(json.dumps(latest, indent=2) + "\n")
     # the Windows one-liner: irm .../releases/latest/download/install.ps1 | iex (it checks the installers against

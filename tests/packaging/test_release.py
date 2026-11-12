@@ -4,6 +4,8 @@ import importlib.util
 import json
 from pathlib import Path
 
+import pytest
+
 # by its path: "packaging" is also the name of a library Python tools install
 SCRIPT = Path(__file__).resolve().parents[2] / "packaging" / "release.py"
 _spec = importlib.util.spec_from_file_location("release", SCRIPT)
@@ -45,18 +47,26 @@ def test_names_and_latest_json(tmp_path):
     assert json.loads((out / "latest.json").read_text()) == latest
 
 
-def test_a_missing_signature_for_a_platform_is_an_error_not_a_silent_gap(tmp_path):
+EVERY_SYSTEM = ["appimage/HPC Hub_0.2.1_amd64.AppImage", "appimage/HPC Hub_0.2.1_amd64.AppImage.sig",
+                "nsis/HPC Hub_0.2.1_x64-setup.exe", "nsis/HPC Hub_0.2.1_x64-setup.exe.sig",
+                "macos/HPC Hub.app.tar.gz", "macos/HPC Hub.app.tar.gz.sig"]
+
+
+def test_no_signatures_at_all_stops(tmp_path):
     src = built(tmp_path / "in", ["appimage/HPC Hub_0.2.1_amd64.AppImage"])
-    try:
+    with pytest.raises(SystemExit, match="TAURI_SIGNING_PRIVATE_KEY"):
         release.collect(src, tmp_path / "out", "0.2.1", "", "2026-11-12T20:00:00Z")
-    except SystemExit as e:
-        assert "no update signatures" in str(e)
-    else:
-        raise AssertionError("expected it to stop")
+
+
+def test_a_release_missing_a_system_stops_and_names_it(tmp_path):
+    """A partial latest.json would give those users updater errors: every system or no release."""
+    src = built(tmp_path / "in", EVERY_SYSTEM[:4])  # no macOS
+    with pytest.raises(SystemExit, match="darwin-aarch64"):
+        release.collect(src, tmp_path / "out", "0.2.1", "", "2026-11-12T20:00:00Z")
 
 
 def test_the_windows_one_line_installer_goes_into_the_release(tmp_path):
-    src = built(tmp_path / "in", ["nsis/HPC Hub_0.2.1_x64-setup.exe", "nsis/HPC Hub_0.2.1_x64-setup.exe.sig"])
+    src = built(tmp_path / "in", EVERY_SYSTEM)
     out = tmp_path / "out"
     release.collect(src, out, "0.2.1", "", "2026-11-12T20:00:00Z")
     script = (out / "install.ps1").read_text()

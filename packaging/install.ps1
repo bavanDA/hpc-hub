@@ -25,16 +25,26 @@ function Install-HpcHub {
     if (-not $setup -or -not $sums) { Write-Error "Release $version has no Windows installer. $byHand"; return }
 
     # what is installed: for everyone (the .msi) or just for you (the setup)
-    $machine = Get-ItemProperty 'HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*' -ErrorAction SilentlyContinue |
+    $uninstall = 'HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*'
+    $machine = Get-ItemProperty $uninstall -ErrorAction SilentlyContinue |
         Where-Object { $_.DisplayName -eq 'HPC Hub' -and $_.WindowsInstaller -eq 1 } | Select-Object -First 1
     $local = if ($env:HPCHUB_LOCALAPPDATA) { $env:HPCHUB_LOCALAPPDATA } else { $env:LOCALAPPDATA }
     $userExe = Join-Path $local 'HPC Hub\hpc-hub.exe'
     $installed = if ($machine) { $machine.DisplayVersion }
                  elseif (Test-Path $userExe) { (Get-Item $userExe).VersionInfo.ProductVersion }
-    $forEveryone = [bool]$machine -and [bool]$msi
-    if ($installed) { Write-Host "HPC Hub $installed is installed$(if ($machine) { ' for everyone' } else { ' for you' })." }
+    $forEveryone = [bool]$machine
+    if ($installed) {
+        $who = if ($machine) { 'for everyone' } else { 'for you' }
+        Write-Host "HPC Hub $installed is installed $who."
+    }
     if ($installed -and [version]$installed -ge [version]$version) {
         Write-Host "HPC Hub $installed is the newest version. Nothing to do."
+        return
+    }
+
+    # installed for everyone: only the .msi updates it (the setup would add a second copy, just for you)
+    if ($forEveryone -and -not $msi) {
+        Write-Error "HPC Hub is installed for everyone here, and release $version has no .msi to update it. $byHand"
         return
     }
 
@@ -49,7 +59,8 @@ function Install-HpcHub {
     } catch { Write-Error "The download failed: $($_.Exception.Message) $byHand"; return }
     $want = $null
     foreach ($line in $list -split "`n") {
-        if ($line -match "^\s*([0-9a-fA-F]{64})\s+\*?$([regex]::Escape($file.name))\s*$") { $want = $Matches[1].ToLower() }
+        $pattern = "^\s*([0-9a-fA-F]{64})\s+\*?$([regex]::Escape($file.name))\s*$"
+        if ($line -match $pattern) { $want = $Matches[1].ToLower() }
     }
     $got = (Get-FileHash -Algorithm SHA256 -Path $path).Hash.ToLower()
     if (-not $want -or $want -ne $got) {
@@ -62,7 +73,8 @@ function Install-HpcHub {
     $running = Get-Process -Name 'hpc-hub', 'hpc-hub-backend' -ErrorAction SilentlyContinue
     if ($env:HPCHUB_DRYRUN) {
         $how = if ($forEveryone) { 'the .msi, for everyone (asks for admin once)' } else { 'the setup, just for you' }
-        Write-Host "Dry run: would $(if ($running) { 'close HPC Hub, then ' })install $version with $how, then start it."
+        $close = if ($running) { 'close HPC Hub, then ' } else { '' }
+        Write-Host "Dry run: would ${close}install $version with $how, then start it."
         Write-Host "Downloaded to $path"
         return
     }
@@ -73,13 +85,26 @@ function Install-HpcHub {
     }
 
     Write-Host "Installing HPC Hub $version..."
-    if ($forEveryone) {
-        $p = Start-Process msiexec.exe -ArgumentList "/i `"$path`" /passive /norestart" -Verb RunAs -Wait -PassThru
-    } else {
-        $p = Start-Process $path -ArgumentList '/S' -Wait -PassThru
+    $noAdmin = 'Windows asked for permission to update HPC Hub for everyone, and it was not given, so nothing ' +
+               'changed. Run this again and click Yes.'
+    try {
+        if ($forEveryone) {
+            $msiArgs = "/i `"$path`" /passive /norestart"
+            $p = Start-Process msiexec.exe -ArgumentList $msiArgs -Verb RunAs -Wait -PassThru
+        } else {
+            $p = Start-Process $path -ArgumentList '/S' -Wait -PassThru
+        }
+    } catch {  # the admin prompt was declined (Win32 error 1223)
+        Remove-Item $path -Force -ErrorAction SilentlyContinue
+        Write-Error $noAdmin
+        return
     }
     Remove-Item $path -Force -ErrorAction SilentlyContinue
-    if ($p.ExitCode -ne 0) { Write-Error "The installer stopped with code $($p.ExitCode). $byHand"; return }
+    if ($p.ExitCode -in 1602, 1223) { Write-Error $noAdmin; return }  # cancelled
+    if ($p.ExitCode -notin 0, 3010) {  # 3010: installed, Windows wants a restart later
+        Write-Error "The installer stopped with code $($p.ExitCode). $byHand"
+        return
+    }
 
     $exe = $userExe
     if ($forEveryone) {

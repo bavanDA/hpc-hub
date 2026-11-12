@@ -80,6 +80,7 @@ export async function checkUpdates(): Promise<UpdateState> {
 export async function installUpdate(): Promise<void> {
   if (!found || state.kind !== 'available' && state.kind !== 'error') return
   const { version, body = '' } = found
+  let stopped = false  // the backend: once it's down, a failed install has to restart the app
   try {
     let total = 0, done = 0
     set({ kind: 'downloading', version, notes: body, done, total })
@@ -89,14 +90,16 @@ export async function installUpdate(): Promise<void> {
       set({ kind: 'downloading', version, notes: body, done, total })
     })
     set({ kind: 'installing', version, notes: body })
-    if (inTauri) await invoke('update_ready')  // the backend stops; nothing is lost on the cluster
+    if (inTauri) { await invoke('update_ready'); stopped = true }  // nothing is lost on the cluster
     await found.install()  // on Windows the installer takes over and the app closes here
     if (inTauri) {
       const { relaunch } = await import('@tauri-apps/plugin-process')
       await relaunch()
     }
   } catch (e) {
-    set({ kind: 'error', version, notes: body, text: `The update didn't install: ${message(e)}` })
+    const again = stopped ? ' HPC Hub restarts in a few seconds.' : ''
+    set({ kind: 'error', version, notes: body, text: `The update didn't install: ${message(e)}.${again}` })
+    if (stopped) setTimeout(() => { void import('@tauri-apps/plugin-process').then((p) => p.relaunch()) }, 5000)
   }
 }
 
