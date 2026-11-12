@@ -6,6 +6,7 @@ import { AppKeys } from './components/app/AppKeys'
 import { LinkPicker } from './components/app/LinkPicker'
 import { useSessionNotifications } from './components/app/notify'
 import { Onboarding } from './components/app/Onboarding'
+import { UpdateChecker } from './components/app/UpdateDialog'
 import { GROUPS, HOME, type Page } from './components/app/pages'
 import type { SetupStatus } from './components/app/setup'
 import { experimentsOf, NO_EXPERIMENTS, type Experiments, type Preferences } from './components/app/types'
@@ -167,6 +168,7 @@ export default function App() {
       <AppKeys settings={settings} onSettings={() => setSettings(true)} onClose={() => setSettings(false)}
         onExperimental={showExperimental} />
       <Questions />
+      <UpdateChecker />
       <LinkPicker />
       <ReportHost />
     </ToastProvider>

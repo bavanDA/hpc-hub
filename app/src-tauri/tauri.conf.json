@@ -36,5 +36,16 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ]
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDlDOEU3QkFCQzNGMDgxMzQKUldRMGdmRERxM3VPbkw2d3BJY2xpenRuVFFmZjNhZW9xbTdYb1BpYSsrR1BlalBxWVA5ZURsQncK",
+      "endpoints": [
+        "https://github.com/bavanDA/hpc-hub/releases/latest/download/latest.json"
+      ],
+      "windows": {
+        "installMode": "passive"
+      }
+    }
   }
 }

@@ -8,6 +8,13 @@ on:
       systems:
         description: 'Runners as JSON, e.g. ["ubuntu-22.04"] for Linux only'
         default: '["ubuntu-22.04","macos-15","windows-latest"]'
+      publish:
+        description: 'Publish a GitHub release of this version (the app offers it as an update). Needs all systems.'
+        type: boolean
+        default: false
+      notes:
+        description: "What's new, shown in the app's update window"
+        default: ''
 
 concurrency:
   group: build
@@ -25,7 +32,17 @@ jobs:
         os: ${{ fromJSON(inputs.systems) }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30  # a stuck macOS job costs at most 300 of the month's minutes
+    env:
+      # signs the update files (packaging/release.py puts the signatures in latest.json); the app only installs
+      # updates signed with this key, whose public half is in app/src-tauri/tauri.conf.json
+      TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+      TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
     steps:
+      - name: A release needs the update key
+        if: inputs.publish && env.TAURI_SIGNING_PRIVATE_KEY == ''
+        run: |
+          echo "::error::Set the TAURI_SIGNING_PRIVATE_KEY secret first (see docs/releasing.md)"
+          exit 1
       - uses: actions/checkout@v7
 
       - name: Tauri's Linux libraries
@@ -124,6 +141,12 @@ jobs:
 
       - run: npm ci
         working-directory: app
+      - name: Make update files too (when the key is set)
+        if: env.TAURI_SIGNING_PRIVATE_KEY != ''
+        shell: bash
+        run: |
+          node -e "const f='packaging/tauri.release.json', c=JSON.parse(require('fs').readFileSync(f));
+            c.bundle.createUpdaterArtifacts = true; require('fs').writeFileSync(f, JSON.stringify(c, null, 2))"
       - run: npm run tauri:release
         working-directory: app
 
@@ -139,3 +162,38 @@ jobs:
             app/src-tauri/target/release/bundle/dmg/*.dmg
             app/src-tauri/target/release/bundle/msi/*.msi
             app/src-tauri/target/release/bundle/nsis/*.exe
+            app/src-tauri/target/release/bundle/macos/*.app.tar.gz
+            app/src-tauri/target/release/bundle/*/*.sig
+
+  release:
+    # A normal release, not a pre-release: the app asks releases/latest for latest.json, which skips pre-releases
+    if: inputs.publish
+    needs: installers
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
+        with:
+          path: built
+      - name: Release files and latest.json
+        shell: bash
+        env:
+          NOTES: ${{ inputs.notes }}
+        run: |
+          V=$(node -p "require('./app/src-tauri/tauri.conf.json').version")
+          echo "V=$V" >> "$GITHUB_ENV"
+          printf '%s\n' "${NOTES:-HPC Hub $V}" > notes.txt
+          python3 packaging/release.py built out "$V" notes.txt
+          ls -la out
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "v$V" >/dev/null 2>&1; then
+            echo "::error::v$V is released already. Raise the version in app/src-tauri/tauri.conf.json first"
+            exit 1
+          fi
+          gh release create "v$V" out/* --title "HPC Hub $V" --notes-file notes.txt --target "$GITHUB_SHA" --latest
