@@ -33,7 +33,7 @@ def for_connect(cfg) -> tuple[Login, Login | None]:
     ssh = credentials.load(cfg.id, credentials.SSH)
     if not ssh or not ssh.username:
         raise ValueError(f"Add your {cfg.name} username in the cluster's settings first")
-    ssh = _unsaved(cfg, credentials.SSH, ssh)
+    ssh = _unsaved(cfg, credentials.SSH, Login(credentials.cluster_username(cfg.host, ssh.username), ssh.password))
     if not cfg.vpn.enabled:
         return ssh, None
     vpn = ssh if cfg.vpn.same_login_as_ssh else credentials.load(cfg.id, credentials.VPN)
@@ -90,6 +90,10 @@ def _save_with_password(cluster: str, kind: str, username: str, password: str | 
 def set_login(cluster: str, kind: str, username: str, password: str | None = None, remember: bool = True) -> None:
     """Save a login. remember False: the password is asked once per run and kept in memory."""
     cfg = hub().session(cluster).cfg
+    if kind not in KINDS:
+        raise ValueError(f"No login kind {kind}")
+    if kind == credentials.SSH:  # "ab123@njit.edu" for Wulver is ab123
+        username = credentials.cluster_username(cfg.host, username)
     if cfg.remember_password != remember:
         cfg.remember_password = remember
         hub().save_clusters()

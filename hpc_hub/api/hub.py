@@ -21,7 +21,8 @@ def session_json(s: ClusterSession) -> dict:
     a = s.allocation
     return {"id": s.cfg.id, "state": s.state.value, "detail": s.detail, "connected": s.connected,
             "node": a.node if a else "", "job": a.job_id if a else "", "owned": a.owned if a else False,
-            "pick_node": s.pick_node}
+            "pick_node": s.pick_node,
+            "wrong_password": s.wrong_password and s.state == State.ERROR}
 
 
 CONNECTED: list[Callable[[str], None]] = []  # run (on a thread of their own) when a cluster connects
@@ -54,7 +55,7 @@ class Hub:
         for s in self.sessions.values():
             try:  # a keyring hiccup on one cluster must not stop the others
                 login = credentials.load(s.cfg.id, credentials.SSH)
-                s.adopt(login.username if login else "")
+                s.adopt(credentials.cluster_username(s.cfg.host, login.username) if login else "")
             except Exception:  # noqa: BLE001 - a cluster we can't pick up stays disconnected
                 pass
 

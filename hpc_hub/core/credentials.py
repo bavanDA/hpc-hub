@@ -36,6 +36,17 @@ class Login:
     password: str
 
 
+def cluster_username(host: str, typed: str) -> str:
+    """The username as the cluster knows it. A campus email for this host's domain becomes its user part, so
+    "ab123@njit.edu" logs in to wulver.njit.edu as ab123. Anything else stays as typed."""
+    name = typed.strip()
+    user, at, domain = name.rpartition("@")
+    domain, host = domain.lower(), host.strip().lower()
+    if at and user and domain and (host == domain or host.endswith("." + domain)):
+        return user.lower()
+    return name
+
+
 def _attrs(cluster_id: str, kind: str) -> dict:
     return {"cluster": cluster_id, "kind": kind}
 

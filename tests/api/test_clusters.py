@@ -140,6 +140,20 @@ def test_logins_go_in_but_passwords_never_come_out(hub, keyring):
     assert not keyring
 
 
+def test_a_ucid_typed_as_an_email_is_saved_as_the_ucid(hub, keyring):
+    logins.set_login("wulver", "ssh", "ab123@njit.edu", "secret")
+    assert keyring["wulver", "ssh"] == Login("ab123", "secret")
+    logins.set_login("wulver", "ssh", "AB123@NJIT.EDU", None, remember=False)
+    assert keyring["wulver", "ssh"] == Login("ab123", "")
+    with pytest.raises(ValueError):
+        logins.set_login("wulver", "ftp", "ab123", "x", remember=False)
+
+
+def test_a_login_saved_as_an_email_connects_as_the_ucid(hub, keyring):
+    keyring["wulver", "ssh"] = Login("ab123@njit.edu", "secret")  # saved by an older version
+    assert logins.for_connect(hub.sessions["wulver"].cfg)[0].username == "ab123"
+
+
 def test_partitions_and_longest_time(hub):
     assert slurm_limits.partitions("wulver")["known"] is False
     hub.sessions["wulver"].limits = Limits(partitions={"general": 4320, "debug": 480}, default_partition="general",

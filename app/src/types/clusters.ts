@@ -104,6 +104,7 @@ export type Session = {
   job?: string
   owned?: boolean
   pick_node?: boolean  // connected, waiting for you to pick a node (ask_node)
+  wrong_password?: boolean  // the last sign-in failed because the cluster refused the password
 }
 
 /** Saved usernames; password only says whether one is saved, it never comes back. */

@@ -11,6 +11,7 @@ import { KeySetupDialog } from './clusters/KeySetupDialog'
 import { QuestionDialog } from './clusters/QuestionDialog'
 import { SettingsDialog } from './clusters/SettingsDialog'
 import { load, useClusters } from './clusters/store'
+import { WrongPasswordDialog } from './clusters/WrongPasswordDialog'
 import { useToast } from './useToast'
 
 // a plain browser (design work): ?question=chrome-window|web-login or ?show=settings|keysetup,
@@ -34,6 +35,9 @@ export function Questions() {
   const { clusters, sessions } = useClusters()
   const [questions, setQuestions] = useState<Question[]>(demoQuestions)
   const [shown, setShown] = useState(demo?.get('show') ?? '')
+  const [wrong, setWrong] = useState<{ id: string; detail: string } | null>(
+    demo?.get('show') === 'wrong-password' ? { id: demo.get('cluster') ?? 'wulver',
+      detail: "Wulver (NJIT) didn't accept the password for ab123. Type it again, or check your UCID." } : null)
   const asked = useRef<Question[]>([])
   useEffect(() => { asked.current = questions })
   useEffect(load, [])
@@ -65,8 +69,10 @@ export function Questions() {
   // "Send a new push": cancel the waiting login, then connect again once it has stopped
   const again = useRef('')
   useEvent<Session>('session', (s) => {
-    if (s.state === 'Error' && s.detail && again.current !== s.id) {
-      toast(`${clusters?.find((c) => c.id === s.id)?.name ?? s.id}: ${s.detail}`)
+    if (s.state === 'Error' && s.wrong_password && again.current !== s.id) {
+      setWrong({ id: s.id, detail: s.detail ?? 'The password was not accepted.' })  // a window, not a passing note
+    } else if (s.state === 'Error' && s.detail && again.current !== s.id) {
+      toast(`${clusters?.find((c) => c.id === s.id)?.name ?? s.id}: ${s.detail}`, { kind: 'error' })
     }
     if (again.current === s.id && (s.state === 'Disconnected' || s.state === 'Error')) {
       again.current = ''
@@ -89,6 +95,8 @@ export function Questions() {
         onRetry={() => retry(duo.id)} />}
       {q && <QuestionDialog key={q.id} q={q} cluster={clusters?.find((c) => c.id === q.cluster)}
         onAnswer={(a) => answer(q, a)} />}
+      {wrong && clusters?.find((c) => c.id === wrong.id) && <WrongPasswordDialog key={wrong.id}
+        cluster={clusters.find((c) => c.id === wrong.id)!} detail={wrong.detail} onClose={() => setWrong(null)} />}
       {shown === 'settings' && demoCluster && <SettingsDialog cluster={demoCluster} onClose={() => setShown('')}
         start={demo?.get('tab') ?? ''} advanced={demo?.has('advanced')} hint={demo?.get('hint') ?? undefined} />}
       {shown === 'keysetup' && demoCluster && <KeySetupDialog cluster={demoCluster} onClose={() => setShown('')}

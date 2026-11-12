@@ -16,7 +16,7 @@ from ..core.paths import log_dir
 from ..core.ssh import SshError, SshMaster, new_master
 from . import chrome_window, prompts, vpn_helper, vpn_sso
 from .askpass_server import AskpassServer
-from .messages import CANCELLED, plain
+from .messages import CANCELLED, plain, wrong_password
 from .network import link_works, network_name, reachable, route_device
 from .nodes import NodesMixin
 from .state import State
@@ -58,6 +58,7 @@ class ClusterSession(NodesMixin):
         self.limits = limits.cached(cfg.id)  # longest time per partition and QoS
         self.default_account: str | None = None  # looked up once per login
         self.pick_node = False  # connected and waiting for you to pick a node (cfg.ask_node)
+        self.wrong_password = False  # the last sign-in failed because the password was refused
 
     @property
     def allocation(self) -> Allocation | None:
@@ -190,6 +191,7 @@ class ClusterSession(NodesMixin):
     def _connect(self, ssh_login: Login, vpn_login: Login | None) -> None:
         handler_state = {prompts.PASSWORD: 0, prompts.DUO: 0}
         asked = []
+        self.wrong_password = False
 
         def on_prompt(prompt: str) -> str | None:
             asked.append(prompt)
@@ -207,6 +209,8 @@ class ClusterSession(NodesMixin):
                 handler_state[kind] += 1
                 if handler_state[kind] > 1:
                     self._log(f"{kind} asked again; stopping to avoid lockout")
+                    if kind == prompts.PASSWORD and ssh_login.password:
+                        self.wrong_password = True
                     return None
                 if kind == prompts.PASSWORD:
                     if not ssh_login.password:
@@ -255,7 +259,10 @@ class ClusterSession(NodesMixin):
             self.ssh.start(cancelled=self._cancel.is_set)
             self._log("SSH session ready")
         except (VpnError, SshError, OSError) as e:
-            self._fail(plain(self._no_code_hint(str(e), asked), self.cfg))
+            if self.wrong_password and not self._cancel.is_set():
+                self._fail(wrong_password(self.cfg, ssh_login.username))
+            else:
+                self._fail(plain(self._no_code_hint(str(e), asked), self.cfg))
             return
         finally:
             self.askpass.unregister(token)

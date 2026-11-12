@@ -7,6 +7,12 @@ CANCELLED = "You cancelled the sign-in."
 STOPPED_WAITING = "You stopped waiting for a node."
 
 
+def wrong_password(cfg: ClusterConfig, username: str) -> str:
+    """The cluster asked for the password a second time: the one we sent was refused."""
+    label = cfg.username_label or "username"
+    return f"{cfg.name} didn't accept the password for {username}. Type it again, or check your {label}."
+
+
 def plain(err: str, cfg: ClusterConfig) -> str:
     """A sentence for the card. Unknown errors pass through as they are."""
     low = err.lower()

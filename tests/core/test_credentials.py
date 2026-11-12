@@ -57,3 +57,14 @@ def test_android_keeps_logins_in_the_encrypted_file(monkeypatch, tmp_path):
     credentials.clear("wulver", credentials.SSH)
     credentials.clear("wulver", credentials.SSH)  # nothing saved: fine
     assert credentials.load("wulver", credentials.SSH) is None
+
+
+def test_cluster_username_drops_the_campus_email_domain():
+    from hpc_hub.core.credentials import cluster_username
+    assert cluster_username("wulver.njit.edu", "ab123@njit.edu") == "ab123"
+    assert cluster_username("wulver.njit.edu", " AB123@NJIT.edu ") == "ab123"  # an email's case doesn't matter
+    assert cluster_username("bouchet.ycrc.yale.edu", "jd23@yale.edu") == "jd23"
+    assert cluster_username("wulver.njit.edu", "ab123") == "ab123"
+    assert cluster_username("wulver.njit.edu", "AB123") == "AB123"  # no email: left as typed
+    assert cluster_username("login.expanse.sdsc.edu", "jd@gmail.com") == "jd@gmail.com"  # another domain: kept
+    assert cluster_username("wulver.njit.edu", "ab123@notnjit.edu") == "ab123@notnjit.edu"

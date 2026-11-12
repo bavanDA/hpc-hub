@@ -18,6 +18,11 @@ def test_refused_login_names_the_cluster_and_its_label():
     assert messages.plain("Permission denied (publickey)", YALE) == "Permission denied (publickey)"  # key flow says
 
 
+def test_wrong_password_names_the_username():
+    assert messages.wrong_password(WULVER, "ab123") == (
+        "Wulver (NJIT) didn't accept the password for ab123. Type it again, or check your UCID.")
+
+
 def test_unreachable_and_unknown():
     assert messages.plain("ssh: connect to host x port 22: Connection timed out", WULVER).endswith("Is the VPN on?")
     assert messages.plain("something new", WULVER) == "something new"
