@@ -4,7 +4,7 @@
 
 <h1 align="center">HPC Hub</h1>
 
-<p align="center">VPN, SSH, and Duo from one Connect button. Then a compute node.</p>
+<p align="center">Every HPC cluster you use, in one simple app.</p>
 
 <p align="center">
   <a href="https://github.com/bavanDA/hpc-hub/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/bavanDA/hpc-hub?include_prereleases"></a>
@@ -24,13 +24,18 @@
 
 ## Why HPC Hub
 
-To work on a university HPC cluster you juggle a VPN client, SSH, Duo or an authenticator code, Slurm commands to get a compute node, a VS Code tunnel, and tmux so the work survives closing the laptop.
+Working on an HPC cluster should be as simple as working on your laptop. Today it takes a VPN client, SSH, Duo,
+Slurm commands, a VS Code tunnel and tmux, and all of it again for every cluster you use.
 
-| Before | After |
+HPC Hub makes cluster work simpler and faster, especially across several clusters at once: they stay connected side
+by side in one window, and your projects and files move between them.
+
+| Without HPC Hub | With HPC Hub |
 | --- | --- |
-| VPN, SSH, Duo, Slurm, a tunnel, and tmux | Connect, then pick a node size |
-| Write Slurm to get a machine | Light CPU, Heavy CPU, or GPU |
-| tmux, so closing the laptop is safe | The session keeps running until the job's time runs out |
+| A VPN, SSH and Duo for each cluster | One Connect button per cluster, all connected at once |
+| Slurm commands to get a compute node | Pick Light CPU, Heavy CPU or GPU |
+| tmux so work survives closing the laptop | Sessions keep running until the job's time runs out |
+| Copying files between clusters by hand | Copy files and projects between clusters, or with Globus |
 
 ## Features
 
