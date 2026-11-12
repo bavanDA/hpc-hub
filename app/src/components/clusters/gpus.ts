@@ -60,11 +60,12 @@ export function fitting(need: number, gpus: Gpu[], caps: Record<string, number> 
 
 export type Preset = { id: string; label: string; hint: string; apply: (p: Profile) => Profile }
 
-/** Quick sizes: Small CPU, Medium CPU, and GPU (the smallest one the cluster has: a slice where there is one). */
+/** Quick sizes, named by what you get: 2 cores, 8 cores, and GPU (the smallest one the cluster has: a slice where
+ *  there is one). */
 export function presets(gpus: Gpu[]): Preset[] {
   const out: Preset[] = [
-    { id: 'small', label: 'Small CPU', hint: '2 cores · 8 GB', apply: (p) => withGpu({ ...p, cpus: 2, mem_gb: 8 }, null) },
-    { id: 'medium', label: 'Medium CPU', hint: '8 cores · 32 GB',
+    { id: 'small', label: '2 cores', hint: '2 cores · 8 GB', apply: (p) => withGpu({ ...p, cpus: 2, mem_gb: 8 }, null) },
+    { id: 'medium', label: '8 cores', hint: '8 cores · 32 GB',
       apply: (p) => withGpu({ ...p, cpus: 8, mem_gb: 32 }, null) },
   ]
   const g = gpus[0]
