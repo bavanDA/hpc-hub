@@ -1,14 +1,20 @@
 # HPC Hub
 
 Work on HPC clusters from Linux, Windows and macOS. One click connects you (VPN, SSH, Duo), gets you a compute node
-and opens VS Code, Claude or a terminal there. Set up for NJIT Wulver, Yale Bouchet and SDSC Expanse; add others in
-Settings.
+and opens VS Code, Claude or a terminal there.
+
+Guides and help: **[hpchub.staylazy.app](https://hpchub.staylazy.app)**
 
 ![Clusters](docs/screenshots/clusters.png)
 
 | Projects | Jobs |
 |---|---|
 | ![Projects](docs/screenshots/projects.png) | ![Jobs](docs/screenshots/jobs.png) |
+
+## Clusters
+
+Ready to use with **SDSC Expanse**, **NJIT Wulver** and **Yale Bouchet**. Another cluster can be added in Settings.
+Want it built in for everyone at your school? Contributions are welcome: see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## What it does
 
@@ -26,7 +32,8 @@ Settings.
 
 Get the file for your system from [Releases](../../releases). The app isn't signed yet, so the first start warns you.
 
-- **Windows**: run the `-setup.exe`. On "Windows protected your PC", click **More info**, then **Run anyway**.
+- **Windows**: in PowerShell, run `irm https://github.com/bavanDA/hpc-hub/releases/latest/download/install.ps1 | iex`.
+  Or run the `-setup.exe`; on "Windows protected your PC", click **More info**, then **Run anyway**.
 - **macOS** (Apple silicon): drag HPC Hub from the `.dmg` to Applications. On first start, go to **System Settings,
   Privacy & Security** and click **Open Anyway**.
 - **Linux**: `chmod +x HPC-Hub_*.AppImage` and run it, or install the `.deb` / `.rpm`. The VPN needs `openconnect`;

@@ -1,5 +1,16 @@
 # Contributing to HPC Hub
 
+## Add your cluster
+
+Each built-in cluster is one file in `hpc_hub/clusters/` (`wulver.py`, `yale.py`, `sdsc.py`):
+
+1. Copy the one closest to yours (same sign-in: password and Duo, SSH key, or an authenticator code).
+2. Change `cluster()`: its name, login host, VPN, and the node sizes to start with.
+3. Fill in `SITE` only for what your cluster does its own way (see `site.py`); leave the rest out.
+4. Add it to `ALL` in `hpc_hub/clusters/__init__.py`, run the tests, and open a pull request.
+
+Nothing else in the code names a cluster, so that's all.
+
 ## Code layout
 
     app/          desktop app: Tauri (src-tauri, Rust) and React (src)
