@@ -18,7 +18,7 @@ def default_clusters() -> list[ClusterConfig]:
 
 
 def site(cluster_id: str) -> Site:
-    """The cluster's own ways; empty for one you added in Settings."""
+    """The cluster's own ways; empty for an id that isn't one of these files."""
     return _SITES.get(cluster_id, Site())
 
 

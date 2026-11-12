@@ -10,7 +10,7 @@ Connect to a cluster, get a compute node and run VS Code, Claude or a terminal o
 ## Supported clusters
 
 Built in: **SDSC Expanse**, **NJIT Wulver** and **Yale Bouchet**.
-Others can be added in Settings, and contributions to build them in are welcome.
+Want your cluster built in? Contributions are welcome.
 
 ## Features
 
