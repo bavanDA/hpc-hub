@@ -86,3 +86,11 @@ def test_api_lists_gpus_and_checks_slices(hub):
         clusters._profile(base, {"gpus": 2, "gpu_type": "a100_10g"})
     assert clusters._profile(base, {"gpus": 0, "gpu_type": "a100_10g"}).gpu_type == ""
     assert clusters._profile(base, {"gpus": 2, "gpu_type": "a100"}).gpus == 2
+
+
+def test_a_queue_whose_nodes_all_have_gpus_needs_one():
+    lim = limits.parse(WULVER)
+    assert lim.gpu_only == ["gpu", "debug_gpu"]
+    assert lim.needs_gpu("gpu") and lim.needs_gpu("debug_gpu") and not lim.needs_gpu("general")
+    mixed = limits.parse("general*|infinite\n@GRES\nmix|gpu:l40:2\nmix|(null)\n")
+    assert not mixed.needs_gpu("mix")  # some nodes have none: a CPU job can run there

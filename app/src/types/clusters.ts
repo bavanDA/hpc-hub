@@ -140,6 +140,7 @@ export type Limits = {
   qos_refused?: string  // the priority asked for waits forever on this partition: why ("" when it can run)
   qos_fix?: string  // and the one to use there instead ("" when none of yours is allowed)
   qos_note?: string  // the partition takes only some of your priorities: which
+  needs_gpu?: boolean  // a queue of GPU nodes only: a job there must ask for a GPU
   asked?: string  // which partition, priority and group these are for (useLimits sets it)
 }
 

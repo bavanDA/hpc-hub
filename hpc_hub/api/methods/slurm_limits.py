@@ -41,6 +41,7 @@ def partitions(cluster: str, partition: str = "", qos: str = "", account: str = 
             # the priority asked for (or your default) waits forever here: say so, and which one to use instead
             "qos_refused": refused, "qos_fix": choices[0] if refused and choices else "",
             "qos_note": _only(part, choices, lim.account_qos.get(account) or lim.allowed_qos),
+            "needs_gpu": lim.needs_gpu(part),  # a GPU-only queue: the window adds a GPU
             "default_qos": lim.default_qos, "accounts": list(lim.account_qos), "default_account": lim.default_account,
             "longest": longest, "why": why, "cores": cores, "memory_gb": memory_gb,
             "mem_per_core_gb": round(per_core / 1024, 2) if per_core else None, "gpu_caps": lim.gpu_caps(qos),

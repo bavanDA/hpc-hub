@@ -18,7 +18,8 @@ class NodesMixin:
 
     def fit(self, profile: ComputeProfile) -> ComputeProfile:
         """The profile with your default account named when none is set, and its time cut to what its queue
-        allows (Slurm would refuse it otherwise). Blocking; worker thread."""
+        allows (Slurm would refuse it otherwise). A priority the queue refuses, or a GPU queue without a GPU, stops
+        here with what to change. Blocking; worker thread."""
         if not profile.account and self._account():
             profile = replace(profile, account=self._account())
         refused = self.limits.refused_qos(profile.partition, profile.qos, profile.account) if self.limits else ""
@@ -29,6 +30,10 @@ class NodesMixin:
                 profile, refused = replace(profile, qos=choices[0]), ""
         if refused:  # Slurm would take the job and keep it waiting forever
             raise ValueError(f"{refused} Change it under Queue and priority.")
+        if self.limits and self.limits.needs_gpu(profile.partition) and not profile.gpus:  # Slurm would refuse it
+            part = profile.partition or self.limits.default_partition
+            raise ValueError(f"The {part} queue is for GPU jobs, and this asks for no GPU. Pick the GPU size, or "
+                             "another queue.")
         fitted, note = self.limits.fit(profile) if self.limits else (profile, "")
         if note:
             self._log(note)

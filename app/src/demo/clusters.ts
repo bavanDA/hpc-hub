@@ -227,8 +227,12 @@ export const answers: Record<string, unknown> = {
     if (qos && limits.qos[qos]) caps.push([limits.qos[qos], `QoS ${qos}`])
     const top = caps.sort((a, b) => a[0] - b[0])[0]
     const [cores, memory_gb] = limits.nodes[part] ?? [null, null]
+    // like Wulver: debug takes only the debug priority, and gpu is GPU nodes only
+    const refused = part === 'debug' && (qos || 'low') !== 'debug'
     return { known: true, partitions: Object.keys(limits.partitions), default_partition: 'general',
-      qos: Object.keys(limits.qos), default_qos: 'low', accounts: ['mygroup', 'abc123', 'dept_x'],
+      qos: part === 'debug' ? ['debug'] : Object.keys(limits.qos), default_qos: 'low', needs_gpu: part === 'gpu',
+      qos_refused: refused ? `The debug queue takes priority debug, not ${qos || 'low'}.` : '',
+      qos_fix: refused ? 'debug' : '', qos_note: part === 'debug' ? 'The debug queue takes priority debug only.' : '', accounts: ['mygroup', 'abc123', 'dept_x'],
       default_account: 'mygroup', longest: top?.[0] ?? null, why: top?.[1] ?? '', cores, memory_gb,
       // like Wulver: the GPU queue gives each core 3.9 GB, and Standard leaves out the L40
       mem_per_core_gb: part === 'gpu' ? 3.92 : null, gpu_caps: (qos || 'low') === 'standard' ? { l40: 0 } : {},

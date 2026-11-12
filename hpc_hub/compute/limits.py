@@ -61,6 +61,7 @@ class Limits:
     account_qos: dict[str, list[str]] = field(default_factory=dict)  # each group you may bill -> its QoS
     default_account: str = ""
     gres: dict[str, list[str]] = field(default_factory=dict)  # partition -> GPU gres ("gpu:a100_10g:2")
+    gpu_only: list[str] = field(default_factory=list)  # partitions whose nodes all have GPUs: a job there needs one
     cores: dict[str, int] = field(default_factory=dict)  # partition -> cores of its biggest node
     memory_gb: dict[str, int] = field(default_factory=dict)  # partition -> memory of its biggest node
     mem_per_core_mb: dict[str, int] = field(default_factory=dict)  # partition -> MaxMemPerCPU: more memory, more cores
@@ -78,6 +79,10 @@ class Limits:
         rules = self.rules.get(partition, {})
         allow, deny = rules.get("AllowQos", "ALL").split(","), rules.get("DenyQos", "").split(",")
         return [q for q in self.allowed_qos if ("ALL" in allow or q in allow) and q not in deny]
+
+    def needs_gpu(self, partition: str) -> bool:
+        """A queue of GPU nodes only (Wulver's gpu): a job there that asks for no GPU is refused."""
+        return (partition or self.default_partition) in self.gpu_only
 
     def qos_choices(self, partition: str, account: str = "") -> list[str]:
         """The priorities to offer for a job here: your group's that this partition takes."""
@@ -271,6 +276,7 @@ def parse(text: str) -> Limits:
         elif section == "user" and cells[0]:
             out.default_account = cells[0]
     out.gres = gpus.parse("\n".join(gres_lines))
+    out.gpu_only = _gpu_only(gres_lines)
     return out
 
 
@@ -290,3 +296,14 @@ def cached(cluster_id: str) -> Limits | None:
         return Limits(**json.loads(_file(cluster_id).read_text()))
     except (OSError, ValueError, TypeError):
         return None
+
+
+def _gpu_only(gres_lines: list[str]) -> list[str]:
+    """Partitions where every kind of node has a GPU ("%P|%G" lines; "(null)" is a node without)."""
+    every: dict[str, bool] = {}
+    for line in gres_lines:
+        part, _, gres = line.strip().partition("|")
+        if part:
+            name = part.rstrip("*")
+            every[name] = every.get(name, True) and "gpu" in gres and "(null)" not in gres
+    return [p for p, yes in every.items() if yes]

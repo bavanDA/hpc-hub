@@ -39,6 +39,12 @@ describe('fits', () => {
     expect(fits(profile({ time: '09:00:00' }), limits(), null)).toBe(false)
   })
 
+  it('a GPU-only queue needs a GPU, and a refused priority never fits', () => {
+    expect(fits(profile({ gpus: 0 }), limits({ needs_gpu: true }), null)).toBe(false)
+    expect(fits(profile({ gpus: 0 }), limits({ qos_refused: 'The debug queue takes priority debug, not low.' }), null))
+      .toBe(false)
+  })
+
   it('needs enough cores for the memory', () => {
     expect(fits(profile({ cpus: 1, mem_gb: 16 }), limits({ mem_per_core_gb: 4 }), null)).toBe(false)
     expect(fits(profile({ cpus: 4, mem_gb: 16 }), limits({ mem_per_core_gb: 4 }), null)).toBe(true)
@@ -53,7 +59,7 @@ describe('fits', () => {
 
 describe('sizeOf', () => {
   const quick: Preset[] = [
-    { id: 'small', label: 'Small CPU', hint: '', apply: (p) => ({ ...p, cpus: 2, mem_gb: 8, gpus: 0, gpu_type: '' }) },
+    { id: 'small', label: '2 cores', hint: '', apply: (p) => ({ ...p, cpus: 2, mem_gb: 8, gpus: 0, gpu_type: '' }) },
   ]
 
   it('keeps the last size when it still matches CPU or GPU', () => {

@@ -174,6 +174,9 @@ def test_the_priorities_offered_follow_the_partition(hub):
     ok = slurm_limits.partitions("wulver", partition="general", qos="low")
     assert ok["qos"] == ["low", "debug"] and ok["qos_fix"] == "" and ok["qos_refused"] == "" and ok["qos_note"] == ""
     assert got["qos_note"] == "The debug queue takes priority debug only."
+    hub.sessions["wulver"].limits.gpu_only = ["gpu"]
+    assert slurm_limits.partitions("wulver", partition="gpu")["needs_gpu"] is True
+    assert slurm_limits.partitions("wulver", partition="general")["needs_gpu"] is False
 
 
 def test_log_tail(hub, monkeypatch, tmp_path):

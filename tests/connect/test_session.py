@@ -409,6 +409,10 @@ def test_a_priority_the_partition_refuses_never_reaches_slurm():
     # your default is the one it refuses, and you named none: the one it takes
     assert s.fit(config.ComputeProfile(partition="debug", qos="", time="01:00:00")).qos == "debug"
     assert s.fit(config.ComputeProfile(partition="general", qos="low", time="01:00:00")).qos == "low"
+    s.limits.gpu_only = ["gpu"]
+    with pytest.raises(ValueError, match="gpu queue is for GPU jobs"):
+        s.fit(config.ComputeProfile(partition="gpu", qos="low", time="01:00:00"))
+    assert s.fit(config.ComputeProfile(partition="gpu", qos="low", gpus=1, time="01:00:00")).gpus == 1
 
 
 def test_commands_follow_the_running_job():
