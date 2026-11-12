@@ -135,3 +135,38 @@ describe('new output while reading', () => {
     }
   })
 })
+
+describe('jumping between prompts', () => {
+  it('goes up and back down one prompt at a time, then down to live', () => {
+    const v = new HistoryView(tab)
+    v.total = 1000
+    v.visibleRows = 30
+    v.prompts = [100, 200, 300]
+    expect(v.jumpPrompt(-1)).toBe(300)
+    expect(v.jumpPrompt(-1)).toBe(200)
+    expect(v.jumpPrompt(1)).toBe(300)  // down again: the next one, not the one it is on
+    expect(v.reading).toBe(true)
+    expect(v.jumpPrompt(1)).toBeUndefined()  // none below: back to the live terminal
+    expect(v.reading).toBe(false)
+  })
+
+  it('steps from a prompt near the end even when the view could not scroll that far', () => {
+    const v = new HistoryView(tab)
+    v.total = 1000
+    v.visibleRows = 30
+    v.prompts = [500, 990, 995]
+    expect(v.jumpPrompt(-1)).toBe(995)
+    expect(v.jumpPrompt(-1)).toBe(990)
+    expect(v.jumpPrompt(1)).toBe(995)
+  })
+
+  it('marks step the same way, both directions', () => {
+    const v = new HistoryView(tab)
+    v.total = 1000
+    v.visibleRows = 30
+    v.marks = [{ id: 'a', name: 'a', line: 100, rows: 1, live: true }, { id: 'b', name: 'b', line: 400, rows: 1, live: true }] as never
+    expect(v.jumpMark(-1)?.id).toBe('b')
+    expect(v.jumpMark(-1)?.id).toBe('a')
+    expect(v.jumpMark(1)?.id).toBe('b')
+  })
+})

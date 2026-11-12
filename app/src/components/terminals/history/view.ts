@@ -64,7 +64,8 @@ export class HistoryView {
   private opening = false
   private checking = false
   private checkedAt = 0
-  private openedTotal = 0  // the line count when you started reading, for "+N new lines"
+  private openedTotal = 0
+  private jumpedTo: number | null = null  // the line count when you started reading, for "+N new lines"
   private subscribers = new Set<() => void>()
   private tick = 0
 
@@ -244,6 +245,7 @@ export class HistoryView {
   scrolled(top: number) {
     if (top === this.top) return
     this.top = top
+    this.jumpedTo = null  // you moved: Up and Down go from what you see now
     this.ensure()
     this.changed()
   }
@@ -282,19 +284,28 @@ export class HistoryView {
     this.reading = false
     this.newLines = 0
     this.flash = null
+    this.jumpedTo = null
     this.changed()
     this.tab.term.focus()
   }
 
   // -- jumping and marking
 
-  /** Top row of what you are looking at. */
-  reference() { return this.reading ? this.top : this.total }
+  /** Where Up and Down step from: the prompt or mark you last jumped to (it sits a few lines below the top, or lower
+   * near the end, so the top row would find it again), else the top row while reading, else the end. */
+  reference() { return this.jumpedTo ?? (this.reading ? this.top : this.total) }
 
+  private jumpTo(row: number) {
+    this.openAt(Math.max(row - 2, 0), false)
+    this.jumpedTo = row
+    this.flash = { row, at: Date.now() }
+  }
+
+  /** The prompt above or below. Below the last one: back to the live terminal. */
   jumpPrompt(dir: 1 | -1): number | undefined {
     const row = stepFrom(this.prompts, this.reference(), dir)
-    if (row !== undefined) this.openAt(Math.max(row - 2, 0), false)
-    if (row !== undefined) this.flash = { row, at: Date.now() }
+    if (row !== undefined) this.jumpTo(row)
+    else if (dir > 0) this.back()
     return row
   }
 
@@ -302,15 +313,14 @@ export class HistoryView {
 
   jumpMark(dir: 1 | -1): Mark | undefined {
     const live = this.liveMarks()
-    const row = stepFrom(live.map((m) => m.line), this.reference() + 1, dir)
+    const row = stepFrom(live.map((m) => m.line), this.reference(), dir)
     const mark = live.find((m) => m.line === row)
     if (mark) this.goToMark(mark)
     return mark
   }
 
   goToMark(mark: Mark) {
-    this.openAt(Math.max(mark.line - 2, 0), false)
-    this.flash = { row: mark.line, at: Date.now() }
+    this.jumpTo(mark.line)
     this.changed()
   }
 
