@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Compute nodes and queues · HPC Hub wiki</title>
-<meta name="description" content="A compute node is a machine you borrow for a set time. HPC Hub gets one for you, tells you what each queue allows and costs, warns you about maintenance, and counts down the time left.">
+<meta name="description" content="A compute node is a computer you use for a set time. HPC Hub asks Slurm for one with the size you choose and shows the time left.">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="assets/wiki.css">
@@ -25,23 +25,25 @@
 <div class="results" id="results" hidden></div>
 </div>
 <nav class="nav" aria-label="Pages">
-<div class="nav-group">Start</div>
+<div class="nav-group">Start here</div>
 <a href="index.html">Home</a>
-<a href="install.html">Install</a>
+<a href="install.html">Install and update</a>
 <a href="first-sign-in.html">First sign-in</a>
-<div class="nav-group">Work on a cluster</div>
+<div class="nav-group">Run your work</div>
 <a href="compute-nodes.html" aria-current="page">Compute nodes and queues</a>
 <a href="terminals.html">Terminals</a>
-<a href="agents.html">AI agents</a>
+<a href="vscode.html">VS Code</a>
 <a href="jobs.html">Jobs</a>
+<div class="nav-group">Manage your work</div>
+<a href="files.html">Files and transfers</a>
+<a href="projects.html">Projects</a>
+<a href="backup.html">Back up scratch</a>
 <a href="usage.html">Usage and SUs</a>
-<div class="nav-group">Your data</div>
-<a href="files.html">Files, transfers and Globus</a>
-<a href="projects.html">Projects and moving between clusters</a>
-<a href="backup.html">Backup of scratch</a>
-<div class="nav-group">More</div>
-<a href="phone.html">Phone app</a>
-<a href="experimental.html">Experimental</a>
+<div class="nav-group">Optional tools</div>
+<a href="agents.html">AI agents</a>
+<a href="phone.html">Android app</a>
+<a href="experimental.html">Experimental features</a>
+<div class="nav-group">Get help</div>
 <a href="troubleshooting.html">Troubleshooting</a>
 <a href="report-a-problem.html">Report a problem</a>
 <a href="faq.html">FAQ</a>
@@ -50,97 +52,62 @@
 <main id="main">
 <article class="content">
 <h1>Compute nodes and queues</h1>
-<p class="lead">A compute node is a machine you borrow for a set time. HPC Hub gets one for you, tells you what each queue allows and costs, warns you about maintenance, and counts down the time left.</p>
-<h2 id="getting-a-node">Getting a node<a class="anchor" href="#getting-a-node" aria-label="Link to this part">#</a></h2>
-<p>If you turned on <strong>Get a compute node when I connect</strong>, a node comes with every connect. If not,
-the card says <strong>No compute node</strong> with a <strong>Get one</strong> link. Either way you can open
-<strong>Compute node</strong> from the card's <strong>&#8942;</strong> menu.</p>
-<p>The window <strong>Get a node on Wulver</strong> has:</p>
+<p class="lead">A compute node is a computer you use for a set time. HPC Hub asks Slurm for one with the size you choose and shows the time left.</p>
+<h2 id="get-a-node">Get a node<a class="anchor" href="#get-a-node" aria-label="Link to this part">#</a></h2>
+<p>With <strong>Get a compute node when I connect</strong> on, a node comes with every connect. Otherwise select
+<strong>Get one</strong> on the cluster card, or <strong>Compute node</strong> in its <strong>&#8942;</strong>
+menu. The window has:</p>
 <ul>
-<li><strong>Size</strong>: quick sizes to start from.</li>
-<li><strong>Cores</strong>, <strong>Memory</strong> and <strong>Time</strong>. The most you can ask for comes from
-the queue you picked.</li>
-<li><strong>Queue and priority</strong>: see <a href="#queues-priorities-and-groups">below</a>.</li>
-<li><strong>Cost</strong>: what the node costs in SUs, when the cluster bills for it.</li>
-<li><strong>Use this size next time</strong> and <strong>Ask before each request</strong>.</li>
+<li><strong>Size</strong>: <strong>Light CPU</strong> (2 cores, 8 GB), <strong>Heavy CPU</strong> (8 cores,
+32 GB) or <strong>GPU</strong>, as a starting point.</li>
+<li><strong>Cores</strong>, <strong>Memory</strong> and <strong>Time</strong>, up to what the queue allows.</li>
+<li><strong>Queue and priority</strong>: see <a href="#queues-and-priorities">below</a>.</li>
+<li><strong>Cost</strong>: the SUs it costs, where the cluster bills.</li>
 </ul>
-<p>Press <strong>Get node</strong>. The node is a Slurm job like any other, so it shows on the
-<a href="jobs.html">Jobs</a> page too.</p>
+<p>Select <strong>Get node</strong>. The node is a Slurm job, so it also shows on <a href="jobs.html">Jobs</a>.
+It may wait in the queue before it starts.</p>
+
+<h2 id="queues-and-priorities">Queues and priorities<a class="anchor" href="#queues-and-priorities" aria-label="Link to this part">#</a></h2>
+<p><strong>Queue and priority</strong> has three choices, read from Slurm after you connect:</p>
+<ul>
+<li><strong>Queue</strong>: which nodes and time limits the job uses. Queues of GPU nodes are listed with the
+<strong>GPU</strong> size, not the CPU sizes. Queues only for other groups are hidden.</li>
+<li><strong>Priority</strong>: how the job is billed and how soon it starts.</li>
+<li><strong>Group to bill</strong>: the account the hours go to. Empty means your default group.</li>
+</ul>
+<p>HPC Hub keeps the choices consistent:</p>
+<ul>
+<li>A queue that takes only its own priority (a debug queue, for example) switches the priority to it and says
+so.</li>
+<li>A queue of GPU nodes adds a GPU to the request and switches the size to <strong>GPU</strong>.</li>
+<li>A combination Slurm would never start can't be sent.</li>
+</ul>
+<p><strong>Learn about queues</strong>, at the top of the queue list, opens the
+<a href="usage.html#limits">Limits</a> table.</p>
+<h3 id="whole-node-queues">Whole-node queues<a class="anchor" href="#whole-node-queues" aria-label="Link to this part">#</a></h3>
+<p>On some queues you always get whole nodes. The queue's line says <strong>You always get whole nodes, even if you
+ask for fewer cores</strong>, and the cost is counted per node. Pick such a queue when you can use the whole
+machine. Some queues also say <strong>Other jobs can stop yours</strong>: save often there.</p>
 
 <h2 id="time-left">Time left<a class="anchor" href="#time-left" aria-label="Link to this part">#</a></h2>
-<p>When connected, the card shows your node and how long it has, for example
-<strong>On node n0123</strong> · job 123456 · 3 h 20 min left. The time counts down while you watch.</p>
-<p>About 15 minutes before the end, HPC Hub sends a notification: <strong>Save your work. The node ends when its
-time is up.</strong> When the time is up, Slurm ends the job, and everything running on that node stops,
-including terminals you opened there.</p>
-<p>If the card says <strong>started elsewhere</strong>, the node came from another job you already had, for
-example one an agent or VS Code got earlier (the <strong>Reuse a node you already have</strong> setting).</p>
-<h3 id="giving-a-node-back">Giving a node back<a class="anchor" href="#giving-a-node-back" aria-label="Link to this part">#</a></h3>
-<p>When you are done early, open the card's <strong>&#8942;</strong> menu and choose <strong>Release
-node</strong>. The app asks first: anything running on it stops, but you stay connected and your files stay
-where they are. <strong>Disconnect</strong> releases the node too.</p>
-<p>Quitting the app does not release your node; it keeps running until its time is up. To release everything as
-you leave, use <strong>Settings</strong>, <strong>Disconnect all and quit</strong>.</p>
+<p>The card shows your node and its time left, for example <strong>On node n0123</strong> · job 123456 · 3 h
+20 min left. About 15 minutes before the end, HPC Hub sends a notification. When the time is up, Slurm ends the
+job, and everything on that node stops, including its terminals.</p>
+<p><strong>started elsewhere</strong> means the node came from another job you already had (the <strong>Reuse a
+node you already have</strong> setting).</p>
 
-<h2 id="queues-priorities-and-groups">Queues, priorities and groups<a class="anchor" href="#queues-priorities-and-groups" aria-label="Link to this part">#</a></h2>
-<p><strong>Queue and priority</strong> opens three choices. The lists come from Slurm, so they show only what
-your account can use:</p>
-<ul>
-<li><strong>Queue</strong>: which group of nodes and time limits the job uses. Each queue has a line saying what
-one job can get there, for example <em>Up to 3 days · up to 128 cores · up to 500 GB memory</em>, and what is
-easy to miss about it.</li>
-<li><strong>Priority</strong>: how the job is billed and how soon it starts.</li>
-<li><strong>Group to bill</strong>: the account the hours go to, for example <code>mygroup</code>. Empty means
-your default group.</li>
-</ul>
-<p><strong>Learn about queues</strong>, at the top of the queue list, opens the full table of limits.</p>
-
-<h3 id="what-a-whole-node-queue-means">What a whole-node queue means<a class="anchor" href="#what-a-whole-node-queue-means" aria-label="Link to this part">#</a></h3>
-<p>On some queues you always get whole nodes, even if you ask for fewer cores. The app says so in the queue's
-line: <strong>You always get whole nodes, even if you ask for fewer cores</strong>. On those queues the cost is
-counted per node, <em>however little of it you use</em>. Asking for 2 cores on a whole-node queue costs the same
-as asking for all of them, so pick such a queue when you can use the whole machine.</p>
-<p>Some queues also say <strong>Other jobs can stop yours</strong>. Work there can be stopped to make room for
-other jobs, so save often or pick another queue for long runs.</p>
-
-<h2 id="the-limits-tab">The Limits tab<a class="anchor" href="#the-limits-tab" aria-label="Link to this part">#</a></h2>
-<p><strong>Usage</strong>, <strong>Limits</strong> (also opened by <strong>Learn about queues</strong>) shows the
-most one job can ask for on each queue you can use, read from Slurm just now. Nothing is typed in by hand, so
-it matches what the cluster will accept.</p>
-<div class="table-wrap"><table>
-<tr><th>Column</th><th>What it says</th></tr>
-<tr><td>Queue</td><td>The name, whether it is the default, how many nodes it has, <em>whole nodes only</em> and
-<em>other jobs can stop yours</em> where they apply. A queue that is down says so.</td></tr>
-<tr><td>Longest time</td><td>The longest a job may run, and the time you get if you don't ask.</td></tr>
-<tr><td>Nodes</td><td>The most nodes one job may use.</td></tr>
-<tr><td>Cores</td><td>The most cores one job may use, and how many each node has.</td></tr>
-<tr><td>Memory per node</td><td>The memory limit, and the memory per core where the queue sets one.</td></tr>
-<tr><td>GPUs per node</td><td>Shown when the cluster has GPUs: how many and of which kind.</td></tr>
-<tr><td>Cost an hour</td><td>In SUs per core, per GPU or per node, or <em>Free</em>.</td></tr>
-</table></div>
-<p>If some queues need a group or priority you don't have, the note above the table says how many. Under it,
-<strong>Priorities</strong> lists each priority with its longest time, its caps for <strong>One job</strong> and
-for <strong>All your jobs together</strong>, and what it does to the SUs (<em>Free</em>, <em>Normal</em> or, for
-example, <em>2x</em>). A job runs under one priority, which can set a shorter time or a lower cap than its
-queue.</p>
+<h2 id="give-a-node-back">Give a node back<a class="anchor" href="#give-a-node-back" aria-label="Link to this part">#</a></h2>
+<p><strong>Release node</strong> in the card's <strong>&#8942;</strong> menu ends the job early. It asks first:
+anything running on it stops, but you stay connected. <strong>Disconnect</strong> releases the node too. Quitting
+the app does not; use <strong>Settings</strong>, <strong>Disconnect all and quit</strong> for that.</p>
 
 <h2 id="the-maintenance-warning">The maintenance warning<a class="anchor" href="#the-maintenance-warning" aria-label="Link to this part">#</a></h2>
-<p>Clusters book maintenance ahead of time. Slurm won't start a job that would still be running when maintenance
-begins, so a long job asked for the day before maintenance just waits.</p>
-<p>When you ask for a node, HPC Hub reads the booked maintenance from Slurm. If the time you asked for runs into
-it, the node window says so before you send the request, for example:</p>
+<p>Slurm won't start a job that would still run when booked maintenance begins. If the time you ask for runs into
+maintenance, the window says so before you send the request:</p>
 <div class="warn"><p><strong>Maintenance starts Tue, Nov 10 at 7:50 AM EST.</strong> A 12 h job can't finish
 before then, so it would wait until maintenance is over. Shortened, it can start now.</p></div>
-<p>You choose:</p>
-<ul>
-<li><strong>Shorten to</strong> a time that ends before maintenance, with a few minutes to spare, or</li>
-<li><strong>Keep</strong> your time <strong>and wait</strong>.</li>
-</ul>
-<p>Nothing changes unless you press Shorten. While maintenance is under way, the window says <strong>Maintenance
-is under way. New jobs wait until it is over.</strong> Only maintenance of the whole cluster counts; a few nodes
-taken out for repairs don't hold up your job.</p>
-<p>On the <a href="jobs.html">Jobs</a> page, a job held back this way shows <strong>Waiting: maintenance has to
-finish first</strong>.</p>
+<p>Choose <strong>Shorten to</strong> a time that ends before it, or <strong>Keep</strong> your time
+<strong>and wait</strong>. Nothing changes unless you shorten it.</p>
 <nav class="pager" aria-label="Next and previous"><a class="prev" href="first-sign-in.html"><small>Previous</small><b>First sign-in</b></a><a class="next" href="terminals.html"><small>Next</small><b>Terminals</b></a></nav>
 <p class="foot">HPC Hub is open source. The code and the releases are on
 <a href="https://github.com/bavanDA/hpc-hub">GitHub</a>.</p>

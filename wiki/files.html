@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Files, transfers and Globus · HPC Hub wiki</title>
-<meta name="description" content="Browse your folders on every cluster, preview and edit files, upload and download, and copy between clusters through your laptop or with Globus.">
+<title>Files and transfers · HPC Hub wiki</title>
+<meta name="description" content="Browse your folders on each cluster, preview and edit files, upload and download, and copy between clusters.">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="assets/wiki.css">
@@ -25,23 +25,25 @@
 <div class="results" id="results" hidden></div>
 </div>
 <nav class="nav" aria-label="Pages">
-<div class="nav-group">Start</div>
+<div class="nav-group">Start here</div>
 <a href="index.html">Home</a>
-<a href="install.html">Install</a>
+<a href="install.html">Install and update</a>
 <a href="first-sign-in.html">First sign-in</a>
-<div class="nav-group">Work on a cluster</div>
+<div class="nav-group">Run your work</div>
 <a href="compute-nodes.html">Compute nodes and queues</a>
 <a href="terminals.html">Terminals</a>
-<a href="agents.html">AI agents</a>
+<a href="vscode.html">VS Code</a>
 <a href="jobs.html">Jobs</a>
+<div class="nav-group">Manage your work</div>
+<a href="files.html" aria-current="page">Files and transfers</a>
+<a href="projects.html">Projects</a>
+<a href="backup.html">Back up scratch</a>
 <a href="usage.html">Usage and SUs</a>
-<div class="nav-group">Your data</div>
-<a href="files.html" aria-current="page">Files, transfers and Globus</a>
-<a href="projects.html">Projects and moving between clusters</a>
-<a href="backup.html">Backup of scratch</a>
-<div class="nav-group">More</div>
-<a href="phone.html">Phone app</a>
-<a href="experimental.html">Experimental</a>
+<div class="nav-group">Optional tools</div>
+<a href="agents.html">AI agents</a>
+<a href="phone.html">Android app</a>
+<a href="experimental.html">Experimental features</a>
+<div class="nav-group">Get help</div>
 <a href="troubleshooting.html">Troubleshooting</a>
 <a href="report-a-problem.html">Report a problem</a>
 <a href="faq.html">FAQ</a>
@@ -49,60 +51,53 @@
 </aside>
 <main id="main">
 <article class="content">
-<h1>Files, transfers and Globus</h1>
-<p class="lead">Browse your folders on every cluster, preview and edit files, upload and download, and copy between clusters through your laptop or with Globus.</p>
+<h1>Files and transfers</h1>
+<p class="lead">Browse your folders on each cluster, preview and edit files, upload and download, and copy between clusters.</p>
 <h2 id="browse">Browse<a class="anchor" href="#browse" aria-label="Link to this part">#</a></h2>
-<p>The <strong>Browse</strong> tab of <strong>Files</strong> shows one cluster at a time. On the left are your
-places (home and the cluster's other storage); at the top, the path, which you can type into. Click a file to
-preview it: PDFs, images and text show next to the list.</p>
-<p>Right-click a file or folder (or use its menu) for:</p>
-<ul>
-<li><strong>Open</strong>, and <strong>Edit in Code</strong> for text files.</li>
-<li><strong>Download</strong>, <strong>Rename</strong>, <strong>Copy path</strong>.</li>
-<li><strong>Make a zip</strong>, or <strong>Extract here</strong> for an archive. Both run on the cluster.</li>
-<li><strong>Copy, then paste on any cluster</strong>.</li>
-<li><strong>Delete</strong>, which asks first. It deletes for good on the cluster; there is no trash.</li>
-</ul>
-<p>Right-click empty space for <strong>New folder</strong>, <strong>Upload files here</strong>, <strong>Paste
-here</strong>, <strong>Open this folder in Code</strong> and <strong>Copy path</strong>.</p>
-<p>The PDF viewer can search the text, zoom, look words up in a dictionary and read the text aloud.</p>
+<p>The <strong>Browse</strong> tab of <strong>Files</strong> shows one cluster at a time: your places on the left,
+the path at the top. Select a file to preview it; PDFs, images and text show next to the list. The PDF viewer can
+search, zoom, look words up and read aloud.</p>
+<p>Right-click a file or folder for <strong>Open</strong>, <strong>Edit in Code</strong>,
+<strong>Download</strong>, <strong>Rename</strong>, <strong>Copy path</strong>, <strong>Make a zip</strong> or
+<strong>Extract here</strong>, and <strong>Delete</strong>. Delete asks first and is permanent: there is no
+trash.</p>
+
+<h2 id="upload-and-download">Upload and download<a class="anchor" href="#upload-and-download" aria-label="Link to this part">#</a></h2>
+<p>Right-click empty space for <strong>Upload files here</strong> and <strong>New folder</strong>. Use
+<strong>Download</strong> on a file or folder to save it on your computer.</p>
 
 <h2 id="copy-between-clusters">Copy between clusters<a class="anchor" href="#copy-between-clusters" aria-label="Link to this part">#</a></h2>
 <ol>
 <li>Choose <strong>Copy, then paste on any cluster</strong> on a file or folder.</li>
-<li>Go to the other cluster and the folder you want, and choose <strong>Paste here</strong>.</li>
+<li>Go to the other cluster's folder and choose <strong>Paste here</strong>.</li>
 <li>Pick <strong>How</strong>:
 <ul>
-<li><strong>Through this laptop</strong>: keep HPC Hub open and this computer awake until it is done. Simple,
-fine for smaller copies.</li>
-<li><strong>Globus</strong>: cluster to cluster, keeps going with the app closed. Much faster for big
-folders.</li>
+<li><strong>Through this laptop</strong>: keep HPC Hub open and the computer awake until it's done.</li>
+<li><strong>Globus</strong>: cluster to cluster. It keeps going after HPC Hub closes.</li>
 </ul></li>
 </ol>
-<p>Both clusters have to be connected. The app measures the size first, and tells you when a copy is done.</p>
+<p>Both clusters have to be connected. On a computer only one university VPN runs at a time, so two clusters that
+both need a VPN can't be connected together; use Globus between them.</p>
 
-<h2 id="transfers">Transfers<a class="anchor" href="#transfers" aria-label="Link to this part">#</a></h2>
-<p>The <strong>Transfers</strong> tab lists copies through this laptop at the top, with Globus below it: two
-panes, one per cluster, and <strong>Recent transfers</strong> with progress. Select something in one pane and send
-it to the other. <strong>Cancel transfer</strong> and <strong>Open in Globus</strong> are on each transfer.</p>
+<h2 id="follow-a-transfer">Follow a transfer<a class="anchor" href="#follow-a-transfer" aria-label="Link to this part">#</a></h2>
+<p>The <strong>Transfers</strong> tab lists copies through this laptop and Globus transfers, with progress,
+<strong>Cancel transfer</strong> and <strong>Open in Globus</strong>.</p>
 
 <h2 id="set-up-globus">Set up Globus<a class="anchor" href="#set-up-globus" aria-label="Link to this part">#</a></h2>
-<p>Globus moves big folders between clusters on its own, even with the app closed. It needs a one-time setup.</p>
+<p>Globus needs a one-time setup:</p>
 <ol>
-<li><strong>Make a free Globus app id.</strong> At app.globus.org go to Settings, Developers, and register an app.
-Choose the one for native applications that are distributed to users, name it HPC Hub, and add the redirect
+<li><strong>Make a free Globus app id.</strong> At app.globus.org, go to Settings, Developers, and register an
+app for native applications distributed to users. Name it HPC Hub and add the redirect
 <code>https://auth.globus.org/v2/web/auth-code</code>. Paste its Client ID under <strong>Set up Globus</strong> and
-press <strong>Save</strong>.</li>
-<li><strong>Sign in to Globus</strong> with your university login. It opens in your browser. If Globus shows a
-code, paste it back into the app.</li>
-<li><strong>Collections.</strong> HPC Hub finds each cluster's Globus collection by itself. If it can't, pick it
-from the list.</li>
-<li><strong>Permissions.</strong> When a collection needs your OK, the app shows <strong>Globus needs your
-permission</strong>. Press <strong>Allow</strong>; it asks only for what Globus needs.</li>
+select <strong>Save</strong>.</li>
+<li><strong>Sign in to Globus</strong> with your university login, in your browser. If Globus shows a code, paste
+it into the app.</li>
+<li>HPC Hub finds each cluster's Globus collection. If it can't, pick it from the list.</li>
+<li>When a collection needs your consent, select <strong>Allow</strong>.</li>
 </ol>
-<p>On some clusters your Globus collection only works while Globus Connect runs there. If it isn't running, the
-app says so and offers to start it on the login node.</p>
-<nav class="pager" aria-label="Next and previous"><a class="prev" href="usage.html"><small>Previous</small><b>Usage and SUs</b></a><a class="next" href="projects.html"><small>Next</small><b>Projects and moving between clusters</b></a></nav>
+<p>On some clusters the collection only works while Globus Connect runs there. HPC Hub says so and offers to start
+it on the login node.</p>
+<nav class="pager" aria-label="Next and previous"><a class="prev" href="jobs.html"><small>Previous</small><b>Jobs</b></a><a class="next" href="projects.html"><small>Next</small><b>Projects</b></a></nav>
 <p class="foot">HPC Hub is open source. The code and the releases are on
 <a href="https://github.com/bavanDA/hpc-hub">GitHub</a>.</p>
 </article>

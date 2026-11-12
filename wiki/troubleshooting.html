@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Troubleshooting · HPC Hub wiki</title>
-<meta name="description" content="What to do when a cluster won&#x27;t connect, a terminal closes, Duo times out or the phone drops the connection.">
+<meta name="description" content="What to do when a cluster won&#x27;t connect, a password is refused, VS Code doesn&#x27;t open, or a terminal closes.">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="assets/wiki.css">
@@ -25,23 +25,25 @@
 <div class="results" id="results" hidden></div>
 </div>
 <nav class="nav" aria-label="Pages">
-<div class="nav-group">Start</div>
+<div class="nav-group">Start here</div>
 <a href="index.html">Home</a>
-<a href="install.html">Install</a>
+<a href="install.html">Install and update</a>
 <a href="first-sign-in.html">First sign-in</a>
-<div class="nav-group">Work on a cluster</div>
+<div class="nav-group">Run your work</div>
 <a href="compute-nodes.html">Compute nodes and queues</a>
 <a href="terminals.html">Terminals</a>
-<a href="agents.html">AI agents</a>
+<a href="vscode.html">VS Code</a>
 <a href="jobs.html">Jobs</a>
+<div class="nav-group">Manage your work</div>
+<a href="files.html">Files and transfers</a>
+<a href="projects.html">Projects</a>
+<a href="backup.html">Back up scratch</a>
 <a href="usage.html">Usage and SUs</a>
-<div class="nav-group">Your data</div>
-<a href="files.html">Files, transfers and Globus</a>
-<a href="projects.html">Projects and moving between clusters</a>
-<a href="backup.html">Backup of scratch</a>
-<div class="nav-group">More</div>
-<a href="phone.html">Phone app</a>
-<a href="experimental.html">Experimental</a>
+<div class="nav-group">Optional tools</div>
+<a href="agents.html">AI agents</a>
+<a href="phone.html">Android app</a>
+<a href="experimental.html">Experimental features</a>
+<div class="nav-group">Get help</div>
 <a href="troubleshooting.html" aria-current="page">Troubleshooting</a>
 <a href="report-a-problem.html">Report a problem</a>
 <a href="faq.html">FAQ</a>
@@ -50,82 +52,66 @@
 <main id="main">
 <article class="content">
 <h1>Troubleshooting</h1>
-<p class="lead">What to do when a cluster won't connect, a terminal closes, Duo times out or the phone drops the connection.</p>
+<p class="lead">What to do when a cluster won't connect, a password is refused, VS Code doesn't open, or a terminal closes.</p>
 <h2 id="can-t-reach-the-vpn-or-the-cluster-on-some-networks">Can't reach the VPN or the cluster on some networks<a class="anchor" href="#can-t-reach-the-vpn-or-the-cluster-on-some-networks" aria-label="Link to this part">#</a></h2>
-<p>The card says something like <strong>Can't reach Wulver from this network. Is the VPN on?</strong> or
-<strong>Can't get through to Yale from this network.</strong>, but the same thing worked at home.</p>
-<p>Some networks block VPN connections or SSH: guest Wi-Fi, eduroam on some campuses, hotels and conference
-networks. There is nothing to fix in the app. Try another network, or your phone's mobile data (a hotspot works
-for the laptop too), then press <strong>Try again</strong>.</p>
+<p>The card says something like <strong>Can't reach Wulver from this network. Is the VPN on?</strong> Some
+networks block VPN or SSH connections, such as guest Wi-Fi, hotels or conference networks. Try another network or
+your phone's hotspot, then <strong>Try again</strong>.</p>
 
-<h2 id="a-pasted-script-closed-my-terminal">A pasted script closed my terminal<a class="anchor" href="#a-pasted-script-closed-my-terminal" aria-label="Link to this part">#</a></h2>
-<p>You pasted a script into a terminal, a command in it failed, and the session ended (<strong>This session has
-ended.</strong>).</p>
-<p>The script most likely has <code>set -e</code> near the top. It tells the shell to quit as soon as a command
-fails. In a script, that stops the script. Pasted into a terminal, it stops the terminal's own shell, and the
-session ends with it.</p>
-<p>Save the script to a file and run it with bash, in a new terminal:</p>
-<pre><code>nano setup.sh      # paste the script, save
-bash setup.sh</code></pre>
-<p>It runs in its own shell, so when it stops, your terminal stays.</p>
+<h2 id="the-cluster-refuses-my-password">The cluster refuses my password<a class="anchor" href="#the-cluster-refuses-my-password" aria-label="Link to this part">#</a></h2>
+<p>A <strong>Wrong password</strong> window opens with the username it tried. Check the username, type the
+password again and select <strong>Try again</strong>. On Expanse, also check the code from your authenticator
+app.</p>
 
 <h2 id="duo-timed-out">Duo timed out<a class="anchor" href="#duo-timed-out" aria-label="Link to this part">#</a></h2>
-<p>The card says <strong>Duo wasn't approved in time. Click Try again and approve the push on your
-phone.</strong></p>
-<ul>
-<li>Duo pushes expire after about a minute. While the app waits it shows a timer; after a while it offers
-<strong>Send a new push</strong>.</li>
-<li>Check that the Duo app on your phone can receive pushes: open it once, and make sure its notifications are
-on.</li>
-<li>The HPC Hub phone app can tell you when Duo is waiting (Settings, Notifications).</li>
-<li>Then press <strong>Try again</strong> on the card.</li>
-</ul>
+<p>Duo pushes expire after about a minute. Make sure the Duo app on your phone can receive notifications, then
+select <strong>Try again</strong> or <strong>Send a new push</strong>.</p>
 
-<h2 id="the-phone-app-drops-the-connection-in-the-background">The phone app drops the connection in the background<a class="anchor" href="#the-phone-app-drops-the-connection-in-the-background" aria-label="Link to this part">#</a></h2>
-<p>Android closes connections of apps in the background to save battery. In the phone app, open
-<strong>Settings</strong>, <strong>On the phone</strong>, and turn on both:</p>
+<h2 id="vs-code-doesn-t-open">VS Code doesn't open<a class="anchor" href="#vs-code-doesn-t-open" aria-label="Link to this part">#</a></h2>
 <ul>
-<li><strong>Stay connected in the background</strong></li>
-<li><strong>Run without battery limits</strong></li>
+<li>The VS Code window shows where it is. If it waits for a node, the reason is there; see
+<a href="#waiting-a-long-time-for-a-node">below</a>.</li>
+<li>The first time, sign in to GitHub with the code the window shows.</li>
+<li>The first open installs VS Code's server on the node. That takes a minute or two.</li>
+<li><strong>Show log</strong> shows everything the job printed. If the job can't start,
+<strong>Stop and change</strong> lets you pick another queue or priority.</li>
 </ul>
-<p>Some phones have extra battery savers of their own. If it still drops, look for HPC Hub in the phone's battery
-settings and allow it to run in the background. Your terminal sessions keep running on the cluster either way;
-they reattach when the phone connects again.</p>
+<p>More on the <a href="vscode.html">VS Code</a> page.</p>
 
 <h2 id="waiting-a-long-time-for-a-node">Waiting a long time for a node<a class="anchor" href="#waiting-a-long-time-for-a-node" aria-label="Link to this part">#</a></h2>
-<p><strong>Waiting for a free node</strong> usually takes under a minute, longer when the cluster is busy. A
-smaller node, a shorter time or another queue often starts sooner; <strong>Usage</strong>,
-<strong>Queues</strong> shows how busy each one is. Also check for the
+<p>A smaller node, a shorter time or another queue often starts sooner. <strong>Usage</strong>,
+<strong>Queues</strong> shows how busy each queue is. Also check for the
 <a href="compute-nodes.html#the-maintenance-warning">maintenance warning</a>.</p>
 
+<h2 id="a-pasted-script-closed-my-terminal">A pasted script closed my terminal<a class="anchor" href="#a-pasted-script-closed-my-terminal" aria-label="Link to this part">#</a></h2>
+<p>The script most likely has <code>set -e</code>. Pasted into a terminal, it ends the terminal's own shell when a
+command fails. Save it to a file and run it with bash, in a new terminal:</p>
+<pre><code>nano setup.sh      # paste the script, save
+bash setup.sh</code></pre>
+
 <h2 id="yale-hasn-t-picked-up-my-key">Yale hasn't picked up my key<a class="anchor" href="#yale-hasn-t-picked-up-my-key" aria-label="Link to this part">#</a></h2>
-<p><strong>Yale hasn't picked up your key yet. It can take up to 10 minutes.</strong> Wait a few minutes and press
-<strong>Try again</strong>. Yale's key page only loads on campus or on the VPN; use <strong>Connect VPN
-only</strong> from the card's <strong>&#8942;</strong> menu to open it from elsewhere.</p>
+<p>It can take up to 10 minutes. Wait and select <strong>Try again</strong>. Yale's key page only loads on campus
+or on the VPN; use <strong>Connect VPN only</strong> from the card's <strong>&#8942;</strong> menu.</p>
 
 <h2 id="the-server-looks-different-from-last-time">"The server looks different from last time"<a class="anchor" href="#the-server-looks-different-from-last-time" aria-label="Link to this part">#</a></h2>
-<p>This means the cluster's server identity changed since you last connected. It can be a planned change, but
-check with the cluster's HPC team before you connect.</p>
-
-<h2 id="the-cluster-says-my-password-is-wrong">The cluster says my password is wrong<a class="anchor" href="#the-cluster-says-my-password-is-wrong" aria-label="Link to this part">#</a></h2>
-<p>For example <strong>Wulver didn't accept your UCID or password. Check them in Settings, then try
-again.</strong> Open the gear on the cluster card, then <strong>Sign-in</strong>, and type the password again. On
-Expanse, check the code from your authenticator app as well.</p>
+<p>The cluster's server identity changed since you last connected. Check with the cluster's HPC team before you
+connect.</p>
 
 <h2 id="the-vpn-won-t-start-on-windows-or-macos">The VPN won't start on Windows or macOS<a class="anchor" href="#the-vpn-won-t-start-on-windows-or-macos" aria-label="Link to this part">#</a></h2>
-<p>The first VPN connect needs the VPN helper, which asks for permission once (the Windows prompt, or your Mac
-password). If you declined it, connect again and approve it.</p>
+<p>The first VPN connect asks for permission once, for the VPN helper. If you declined, connect again and approve
+it.</p>
+
+<h2 id="the-phone-drops-the-connection-in-the-background">The phone drops the connection in the background<a class="anchor" href="#the-phone-drops-the-connection-in-the-background" aria-label="Link to this part">#</a></h2>
+<p>Turn on both settings in <strong>Settings</strong>, <strong>On the phone</strong>, and allow HPC Hub in the
+phone's own battery settings. Terminal sessions keep running on the cluster either way.</p>
 
 <h2 id="globus-copies-don-t-start">Globus copies don't start<a class="anchor" href="#globus-copies-don-t-start" aria-label="Link to this part">#</a></h2>
-<ul>
-<li>Globus needs the one-time setup in <a href="files.html#set-up-globus">Files, Transfers</a>.</li>
-<li><strong>Globus Connect is not running</strong> on a cluster: let the app start it on the login node.</li>
-<li><strong>Globus needs your permission</strong>: press <strong>Allow</strong>.</li>
-</ul>
+<p>Check the one-time <a href="files.html#set-up-globus">Globus setup</a>, let HPC Hub start Globus Connect when it
+asks, and select <strong>Allow</strong> when Globus needs your consent.</p>
 
 <h2 id="still-stuck">Still stuck?<a class="anchor" href="#still-stuck" aria-label="Link to this part">#</a></h2>
 <p><a href="report-a-problem.html">Report a problem</a> from the app.</p>
-<nav class="pager" aria-label="Next and previous"><a class="prev" href="experimental.html"><small>Previous</small><b>Experimental</b></a><a class="next" href="report-a-problem.html"><small>Next</small><b>Report a problem</b></a></nav>
+<nav class="pager" aria-label="Next and previous"><a class="prev" href="experimental.html"><small>Previous</small><b>Experimental features</b></a><a class="next" href="report-a-problem.html"><small>Next</small><b>Report a problem</b></a></nav>
 <p class="foot">HPC Hub is open source. The code and the releases are on
 <a href="https://github.com/bavanDA/hpc-hub">GitHub</a>.</p>
 </article>

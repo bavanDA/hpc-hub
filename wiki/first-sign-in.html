@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>First sign-in · HPC Hub wiki</title>
-<meta name="description" content="The first start asks which clusters you use, then walks you through signing in to each one and the size of the compute node you want. After that, connecting is one button.">
+<meta name="description" content="Choose your clusters, set up your login, and choose the resources to ask for when you connect.">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="assets/wiki.css">
@@ -25,23 +25,25 @@
 <div class="results" id="results" hidden></div>
 </div>
 <nav class="nav" aria-label="Pages">
-<div class="nav-group">Start</div>
+<div class="nav-group">Start here</div>
 <a href="index.html">Home</a>
-<a href="install.html">Install</a>
+<a href="install.html">Install and update</a>
 <a href="first-sign-in.html" aria-current="page">First sign-in</a>
-<div class="nav-group">Work on a cluster</div>
+<div class="nav-group">Run your work</div>
 <a href="compute-nodes.html">Compute nodes and queues</a>
 <a href="terminals.html">Terminals</a>
-<a href="agents.html">AI agents</a>
+<a href="vscode.html">VS Code</a>
 <a href="jobs.html">Jobs</a>
+<div class="nav-group">Manage your work</div>
+<a href="files.html">Files and transfers</a>
+<a href="projects.html">Projects</a>
+<a href="backup.html">Back up scratch</a>
 <a href="usage.html">Usage and SUs</a>
-<div class="nav-group">Your data</div>
-<a href="files.html">Files, transfers and Globus</a>
-<a href="projects.html">Projects and moving between clusters</a>
-<a href="backup.html">Backup of scratch</a>
-<div class="nav-group">More</div>
-<a href="phone.html">Phone app</a>
-<a href="experimental.html">Experimental</a>
+<div class="nav-group">Optional tools</div>
+<a href="agents.html">AI agents</a>
+<a href="phone.html">Android app</a>
+<a href="experimental.html">Experimental features</a>
+<div class="nav-group">Get help</div>
 <a href="troubleshooting.html">Troubleshooting</a>
 <a href="report-a-problem.html">Report a problem</a>
 <a href="faq.html">FAQ</a>
@@ -50,101 +52,70 @@
 <main id="main">
 <article class="content">
 <h1>First sign-in</h1>
-<p class="lead">The first start asks which clusters you use, then walks you through signing in to each one and the size of the compute node you want. After that, connecting is one button.</p>
-<h2 id="pick-your-clusters">Pick your clusters<a class="anchor" href="#pick-your-clusters" aria-label="Link to this part">#</a></h2>
-<p>The first screen is <strong>Welcome to HPC Hub</strong>, with the question <strong>Which clusters do you
-use?</strong> Click each cluster you have an account on, then <strong>Continue</strong>.</p>
-<p>HPC Hub knows Wulver (NJIT), Bouchet (Yale) and Expanse (SDSC). To show or hide one later, open
-<strong>Settings</strong> at the bottom of the sidebar and use the switches under <strong>Clusters</strong>. A
-hidden cluster keeps its settings.</p>
+<p class="lead">Choose your clusters, set up your login, and choose the resources to ask for when you connect.</p>
+<h2 id="choose-your-clusters">Choose your clusters<a class="anchor" href="#choose-your-clusters" aria-label="Link to this part">#</a></h2>
+<p>On <strong>Welcome to HPC Hub</strong>, select each cluster where you have an account, then
+<strong>Continue</strong>. You can show or hide them later in <strong>Settings</strong>, under
+<strong>Clusters</strong>.</p>
 
-<h2 id="sign-in-to-each-cluster">Sign in to each cluster<a class="anchor" href="#sign-in-to-each-cluster" aria-label="Link to this part">#</a></h2>
-<p>For each cluster you picked there are two short steps: the sign-in, then the compute node. The sign-in is
-different on each cluster, because each university decides how its people log in. The app shows only what your
-cluster needs.</p>
-<h3 id="wulver-njit">Wulver (NJIT)<a class="anchor" href="#wulver-njit" aria-label="Link to this part">#</a></h3>
-<p>Type your UCID and password. When you connect, NJIT asks for a Duo push on your phone.</p>
-<h3 id="yale-bouchet">Yale Bouchet<a class="anchor" href="#yale-bouchet" aria-label="Link to this part">#</a></h3>
-<p>Yale uses an SSH key instead of a password. HPC Hub walks you through it:</p>
+<h2 id="set-up-your-login">Set up your login<a class="anchor" href="#set-up-your-login" aria-label="Link to this part">#</a></h2>
+<h3 id="wulver-at-njit">Wulver at NJIT<a class="anchor" href="#wulver-at-njit" aria-label="Link to this part">#</a></h3>
+<p>Enter your UCID and password. If you type an NJIT email such as <code>ab123@njit.edu</code>, HPC Hub uses
+<code>ab123</code>.</p>
+<h3 id="bouchet-at-yale">Bouchet at Yale<a class="anchor" href="#bouchet-at-yale" aria-label="Link to this part">#</a></h3>
+<p>Enter your NetID. Yale uses an SSH key instead of a password:</p>
 <ol>
-<li><strong>Make a key</strong>: click <strong>Create key</strong>, or <strong>Use a key I already have</strong>
-and pick your private key file.</li>
-<li><strong>Send it to Yale</strong>: click <strong>Copy</strong>, then <strong>Open key page</strong>, paste the
-key there and click <strong>I pasted it</strong>. Yale's key page only loads on campus or on the VPN.</li>
-<li><strong>Try it</strong>. If Yale hasn't picked up the key yet, the app says so. It can take up to 10
-minutes.</li>
+<li>Select <strong>Create key</strong>, or <strong>Use a key I already have</strong>.</li>
+<li>Select <strong>Copy</strong>, then <strong>Open key page</strong>. Paste the key on Yale's page, then select
+<strong>I pasted it</strong>.</li>
+<li>Test the key. Yale can take up to 10 minutes to accept a new one.</li>
 </ol>
-<p>Yale's VPN has a login of its own, through Yale's Microsoft sign-in page. You can set it under
-<strong>Server and VPN</strong> in Yale's settings (see <a href="#change-a-saved-login-later">below</a>).</p>
-<h3 id="sdsc-expanse">SDSC Expanse<a class="anchor" href="#sdsc-expanse" aria-label="Link to this part">#</a></h3>
-<p>Expanse uses your ACCESS username. You have two ways in:</p>
-<ul>
-<li><strong>Sign in with the portal</strong>, which is the recommended way. No password is stored.</li>
-<li>Your username and password, plus a code from your authenticator app at every sign-in. <strong>Set up your
-authenticator app</strong> shows how to get one.</li>
-</ul>
-<h3 id="remember-password">Remember password<a class="anchor" href="#remember-password" aria-label="Link to this part">#</a></h3>
-<p>With <strong>Remember password</strong> on, the password is kept on this computer in the system keyring
-(see <a href="faq.html#where-are-my-passwords-kept">where passwords are kept</a>). Turn it off and you'll type it
-each time you open HPC Hub.</p>
-<p>If you are not ready, <strong>Do this later</strong> skips the step. You'll be asked when you connect.</p>
+<p>Yale's key page only loads on campus or on the VPN. <strong>Connect VPN only</strong> in the cluster card's
+<strong>&#8942;</strong> menu gets you there from elsewhere. Yale's VPN has its own Microsoft sign-in, set under
+<strong>Server and VPN</strong> in the cluster's settings.</p>
+<h3 id="expanse-at-sdsc">Expanse at SDSC<a class="anchor" href="#expanse-at-sdsc" aria-label="Link to this part">#</a></h3>
+<p>Use your ACCESS username. <strong>Sign in with the portal</strong> sets up access without storing a password.
+You can also use your ACCESS password. Expanse asks for a code from your authenticator app when you connect;
+<strong>Set up your authenticator app</strong> shows how.</p>
 
-<h2 id="choose-a-compute-node-size">Choose a compute node size<a class="anchor" href="#choose-a-compute-node-size" aria-label="Link to this part">#</a></h2>
-<p>The second step is <strong>Compute node on Wulver</strong> (or your cluster). Your terminals and agents run on
-a compute node, not on the busy login node.</p>
-<ul>
-<li><strong>Get a compute node when I connect</strong>: on, and a node is ready as soon as you sign in. Off, and
-you can still get one from the cluster card.</li>
-<li>The size: <strong>Cores</strong>, <strong>Memory</strong>, <strong>Time</strong>, and <strong>Queue and
-priority</strong>. The app checks these against what the cluster allows. See
-<a href="compute-nodes.html">Compute nodes and queues</a>.</li>
-<li><strong>Ask before each request</strong>: shows the node window each time you connect, so you can change the
-size first.</li>
-</ul>
-<p>Press <strong>Continue</strong> (or <strong>Done</strong> on the last cluster) and you land on the
-<strong>Clusters</strong> page.</p>
+<h3 id="the-login-check">The login check<a class="anchor" href="#the-login-check" aria-label="Link to this part">#</a></h3>
+<p>When you select <strong>Continue</strong> with a password, HPC Hub checks it with the cluster before going on.
+This does not send a Duo push. If the password is wrong, the step says so and you can type it again.</p>
+<p>If the cluster can't be reached from your network yet, for example before the VPN is up, the step says so and
+lets you go on. Your login is then checked when you connect.</p>
+<p><strong>Remember password</strong> keeps the password in your computer's keyring. Turn it off to type it each
+time you open HPC Hub. <strong>Do this later</strong> skips the step until you connect.</p>
 
-<h2 id="connecting">Connecting<a class="anchor" href="#connecting" aria-label="Link to this part">#</a></h2>
-<p>Each cluster has a card on the <strong>Clusters</strong> page. Press <strong>Connect</strong>. The card shows
-each step as it happens, and a short log under it:</p>
+<h2 id="choose-your-compute-resources">Choose your compute resources<a class="anchor" href="#choose-your-compute-resources" aria-label="Link to this part">#</a></h2>
+<ul>
+<li><strong>Get a compute node when I connect</strong>: on, HPC Hub asks for a node each time you connect. Off,
+you get one later from the cluster card.</li>
+<li>The size: <strong>Light CPU</strong>, <strong>Heavy CPU</strong> or <strong>GPU</strong>, then
+<strong>Cores</strong>, <strong>Memory</strong> and <strong>Time</strong>.</li>
+<li><strong>Ask before each request</strong>: shows these choices each time, so you can change them.</li>
+</ul>
+<p>See <a href="compute-nodes.html">Compute nodes and queues</a> for queues, priorities and cost. Select
+<strong>Continue</strong>, or <strong>Done</strong> for the last cluster.</p>
+
+<h2 id="connect">Connect<a class="anchor" href="#connect" aria-label="Link to this part">#</a></h2>
 <ol>
-<li><strong>VPN</strong>, for clusters behind one (Wulver, Yale). On Windows and macOS, the first time, you are
-asked to set up the VPN helper.</li>
-<li><strong>Sign-in</strong> with your saved login. A sign-in page that needs you (a university web login) opens
-in a window of the app.</li>
-<li><strong>Duo</strong>, where the cluster uses it: <strong>Approve Duo on your phone</strong>, with a timer. If
-nothing happens, the app says <strong>No answer from Duo yet. Pushes expire after about a minute.</strong> and
-offers <strong>Send a new push</strong>.</li>
-<li><strong>The compute node</strong>, if you asked for one: <strong>Waiting for a free node. Usually under a
-minute, longer when the cluster is busy.</strong></li>
+<li>On <strong>Clusters</strong>, select <strong>Connect</strong> on the cluster card.</li>
+<li>Complete any VPN setup or web sign-in that opens.</li>
+<li>Approve Duo, or enter the code from your authenticator app, if the cluster asks.</li>
+<li>If you asked for a compute node, wait for Slurm to give you one. The card shows each step.</li>
 </ol>
-<p>Once connected, the card shows your node and buttons for <strong>Terminal</strong>, <strong>VS Code</strong>,
-<strong>Files</strong> and <strong>Agents</strong>. <strong>Stop signing in</strong> or <strong>Stop
-waiting</strong> cancels at any point. If something fails, the card says what went wrong in a sentence and the
-button turns into <strong>Try again</strong>.</p>
-
-<h3 id="one-vpn-at-a-time">One VPN at a time<a class="anchor" href="#one-vpn-at-a-time" aria-label="Link to this part">#</a></h3>
-<p>On a computer, only one university VPN can run at a time. If you connect Yale while Wulver is up, HPC Hub
-asks first: <strong>Only one VPN can run at a time. Wulver disconnects and its node is released.</strong> The
-phone app doesn't have this limit.</p>
-<h3 id="vpn-only">VPN only<a class="anchor" href="#vpn-only" aria-label="Link to this part">#</a></h3>
-<p>The <strong>&#8942;</strong> menu on a card has <strong>Connect VPN only</strong>, for when you need the
-university network but not the cluster (for example, to open Yale's key page).</p>
+<p>If the cluster refuses your password, a <strong>Wrong password</strong> window opens with the username it
+tried. Type the password again and select <strong>Try again</strong>. HPC Hub stops after one try, so your account
+isn't locked.</p>
+<p>On a computer, only one university VPN can run at a time. HPC Hub asks before switching to another one.</p>
 
 <h2 id="change-a-saved-login-later">Change a saved login later<a class="anchor" href="#change-a-saved-login-later" aria-label="Link to this part">#</a></h2>
-<p>Click the gear on a cluster card (<strong>Wulver settings</strong>, for example). It has:</p>
-<ul>
-<li><strong>Sign-in</strong>: your username, and <strong>Forget password</strong> to remove the saved one. You'll
-type it next time you connect.</li>
-<li><strong>Authenticator app</strong>, on clusters that ask for a code.</li>
-<li><strong>Compute node</strong>: the size to ask for, and whether to get one when you connect.</li>
-<li>Under <strong>Advanced</strong>: <strong>Server and VPN</strong> (the login host, the VPN gateway, a separate
-VPN login), <strong>VS Code job</strong> and <strong>Agents</strong>. Changes apply the next time you
-connect.</li>
-</ul>
-<div class="note"><p>Your saved VPN password is only typed into the sign-in pages of your university's own site or
-a known sign-in provider, over https.</p></div>
-<nav class="pager" aria-label="Next and previous"><a class="prev" href="install.html"><small>Previous</small><b>Install</b></a><a class="next" href="compute-nodes.html"><small>Next</small><b>Compute nodes and queues</b></a></nav>
+<p>Select the gear on the cluster card. <strong>Sign-in</strong> changes your login or forgets a saved password.
+<strong>Compute node</strong> changes the resources to ask for. <strong>Advanced</strong> has <strong>Server and
+VPN</strong>, <strong>VS Code job</strong> and <strong>Agents</strong>.</p>
+<div class="note"><p>Your saved VPN password is only typed into your university's own sign-in pages or a known
+sign-in provider, over https.</p></div>
+<nav class="pager" aria-label="Next and previous"><a class="prev" href="install.html"><small>Previous</small><b>Install and update</b></a><a class="next" href="compute-nodes.html"><small>Next</small><b>Compute nodes and queues</b></a></nav>
 <p class="foot">HPC Hub is open source. The code and the releases are on
 <a href="https://github.com/bavanDA/hpc-hub">GitHub</a>.</p>
 </article>

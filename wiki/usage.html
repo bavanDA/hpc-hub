@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Usage and SUs · HPC Hub wiki</title>
-<meta name="description" content="How many SUs your group has left, how fast they are going, who used them, how full your storage is, and how busy the queues are.">
+<meta name="description" content="Your group&#x27;s SUs, who used them, your storage, how busy the queues are, and what each queue allows.">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="assets/wiki.css">
@@ -25,23 +25,25 @@
 <div class="results" id="results" hidden></div>
 </div>
 <nav class="nav" aria-label="Pages">
-<div class="nav-group">Start</div>
+<div class="nav-group">Start here</div>
 <a href="index.html">Home</a>
-<a href="install.html">Install</a>
+<a href="install.html">Install and update</a>
 <a href="first-sign-in.html">First sign-in</a>
-<div class="nav-group">Work on a cluster</div>
+<div class="nav-group">Run your work</div>
 <a href="compute-nodes.html">Compute nodes and queues</a>
 <a href="terminals.html">Terminals</a>
-<a href="agents.html">AI agents</a>
+<a href="vscode.html">VS Code</a>
 <a href="jobs.html">Jobs</a>
+<div class="nav-group">Manage your work</div>
+<a href="files.html">Files and transfers</a>
+<a href="projects.html">Projects</a>
+<a href="backup.html">Back up scratch</a>
 <a href="usage.html" aria-current="page">Usage and SUs</a>
-<div class="nav-group">Your data</div>
-<a href="files.html">Files, transfers and Globus</a>
-<a href="projects.html">Projects and moving between clusters</a>
-<a href="backup.html">Backup of scratch</a>
-<div class="nav-group">More</div>
-<a href="phone.html">Phone app</a>
-<a href="experimental.html">Experimental</a>
+<div class="nav-group">Optional tools</div>
+<a href="agents.html">AI agents</a>
+<a href="phone.html">Android app</a>
+<a href="experimental.html">Experimental features</a>
+<div class="nav-group">Get help</div>
 <a href="troubleshooting.html">Troubleshooting</a>
 <a href="report-a-problem.html">Report a problem</a>
 <a href="faq.html">FAQ</a>
@@ -50,46 +52,44 @@
 <main id="main">
 <article class="content">
 <h1>Usage and SUs</h1>
-<p class="lead">How many SUs your group has left, how fast they are going, who used them, how full your storage is, and how busy the queues are.</p>
+<p class="lead">Your group's SUs, who used them, your storage, how busy the queues are, and what each queue allows.</p>
 <h2 id="what-an-su-is">What an SU is<a class="anchor" href="#what-an-su-is" aria-label="Link to this part">#</a></h2>
-<p>An SU (service unit) is the cluster's currency. One SU is roughly one core for one hour; GPUs, memory and
-some queues count differently. Your group (your lab's allocation) gets a number of SUs, and every job billed to
-it uses some. Free queues still count core hours, but cost 0 SU.</p>
-<p>Each queue's price is on the <a href="compute-nodes.html#the-limits-tab">Limits</a> tab, and the node window
-shows the <strong>Cost</strong> before you ask for a node.</p>
+<p>An SU (service unit) is the unit your cluster charges for work. Rates depend on the cluster, the queue and the
+resources. Your group (your lab's allocation) has a number of SUs, and jobs billed to it use them.</p>
 
 <h2 id="the-tabs">The tabs<a class="anchor" href="#the-tabs" aria-label="Link to this part">#</a></h2>
-<p>Pick the cluster at the top of the window, then a tab:</p>
+<p>Pick the cluster at the top, then a tab.</p>
 <h3 id="overview">Overview<a class="anchor" href="#overview" aria-label="Link to this part">#</a></h3>
-<p>One card per group you belong to, on every connected cluster. Each card has:</p>
-<ul>
-<li>The big number: <strong>SUs left</strong>, or SUs used when the group has no limit.</li>
-<li>A bar of what is used, with your part in it.</li>
-<li>A line about the pace, such as <em>About 20 days left at the pace of the last month</em> or <em>Plenty for
-the year at this pace</em>.</li>
-<li>SUs per week for the last 12 weeks, where the cluster keeps them.</li>
-<li>At the bottom, how much you used, and when the allocation ends.</li>
-</ul>
-<p>A red tag says <strong>Near the limit</strong> or <strong>Used up</strong>. Click a card to see who used it.</p>
+<p>One card per group: <strong>SUs left</strong>, a bar of what is used with your part in it, and an estimate of
+how long the SUs last at the pace of past use. A red tag says <strong>Near the limit</strong> or <strong>Used
+up</strong>. Select a card to see who used it.</p>
 <h3 id="hours">Hours<a class="anchor" href="#hours" aria-label="Link to this part">#</a></h3>
-<p>For one group (<strong>Group to bill</strong>) and a period (the last 7, 30 or 90 days, or the last year):
-the hours left or used, and <strong>Who used it</strong>, one row per person. Click a person to see their jobs on
-the Jobs page.</p>
+<p>For a group and a period: the hours used and <strong>Who used it</strong>. Select a person to see their jobs.</p>
 <h3 id="storage">Storage<a class="anchor" href="#storage" aria-label="Link to this part">#</a></h3>
-<p>Your quotas: home, project, scratch and so on, how full each is, and how much of it is yours. Click a row to see
-who uses a shared space. Scratch rows say when files are deleted, with <strong>See what is at risk</strong>, which
-opens <a href="backup.html">Backup</a>.</p>
+<p>Your quotas and how full each one is. Scratch rows say when files are deleted, with <strong>See what is at
+risk</strong> (<a href="backup.html">Back up scratch</a>).</p>
 <h3 id="queues">Queues<a class="anchor" href="#queues" aria-label="Link to this part">#</a></h3>
-<p>How busy each queue is right now: how many CPUs are busy, how many jobs run and how many wait.</p>
-<h3 id="limits">Limits<a class="anchor" href="#limits" aria-label="Link to this part">#</a></h3>
-<p>The most one job can ask for on each queue, and what it costs. See
-<a href="compute-nodes.html#the-limits-tab">The Limits tab</a>.</p>
+<p>How busy each queue is now: busy CPUs, running jobs and waiting jobs. This doesn't promise a start time.</p>
+
+<h2 id="limits">Limits<a class="anchor" href="#limits" aria-label="Link to this part">#</a></h2>
+<p>The most one job can ask for on each queue you can use, read from Slurm. <strong>Learn about queues</strong> in
+the node window opens this too.</p>
+<div class="table-wrap"><table>
+<tr><th>Column</th><th>What it says</th></tr>
+<tr><td>Queue</td><td>The name, whether it is the default, its nodes, and <em>whole nodes only</em> or <em>other jobs
+can stop yours</em> where they apply.</td></tr>
+<tr><td>Longest time</td><td>The longest a job may run, and the time you get if you don't ask.</td></tr>
+<tr><td>Nodes, Cores</td><td>The most one job may use.</td></tr>
+<tr><td>Memory per node</td><td>The memory limit, and memory per core where the queue sets one.</td></tr>
+<tr><td>GPUs per node</td><td>How many and which kind, on clusters with GPUs.</td></tr>
+<tr><td>Cost an hour</td><td>In SUs per core, GPU or node, or <em>Free</em>.</td></tr>
+</table></div>
+<p><strong>Priorities</strong>, under the table, lists each priority's longest time and caps. A job's priority can
+set a shorter time or a lower cap than its queue.</p>
 
 <h2 id="when-numbers-are-missing">When numbers are missing<a class="anchor" href="#when-numbers-are-missing" aria-label="Link to this part">#</a></h2>
-<p>Clusters don't all keep the same records. Where a cluster doesn't say, the app says so instead of guessing,
-for example <em>SUs per week are not available on this cluster</em> or <em>The pace is not known on this
-cluster</em>.</p>
-<nav class="pager" aria-label="Next and previous"><a class="prev" href="jobs.html"><small>Previous</small><b>Jobs</b></a><a class="next" href="files.html"><small>Next</small><b>Files, transfers and Globus</b></a></nav>
+<p>Clusters keep different records. Where a cluster doesn't say, HPC Hub says so instead of guessing.</p>
+<nav class="pager" aria-label="Next and previous"><a class="prev" href="backup.html"><small>Previous</small><b>Back up scratch</b></a><a class="next" href="agents.html"><small>Next</small><b>AI agents</b></a></nav>
 <p class="foot">HPC Hub is open source. The code and the releases are on
 <a href="https://github.com/bavanDA/hpc-hub">GitHub</a>.</p>
 </article>

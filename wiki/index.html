@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>HPC Hub wiki</title>
-<meta name="description" content="One app for the computing clusters you use for research. Sign in once, get a compute node, and keep your terminals, jobs, files and AI agents in one window, on your computer or your Android phone.">
+<meta name="description" content="HPC Hub connects your computer to research computing clusters. Use it to get a compute node, open tools on it, manage files and check jobs.">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="assets/wiki.css">
@@ -25,23 +25,25 @@
 <div class="results" id="results" hidden></div>
 </div>
 <nav class="nav" aria-label="Pages">
-<div class="nav-group">Start</div>
+<div class="nav-group">Start here</div>
 <a href="index.html" aria-current="page">Home</a>
-<a href="install.html">Install</a>
+<a href="install.html">Install and update</a>
 <a href="first-sign-in.html">First sign-in</a>
-<div class="nav-group">Work on a cluster</div>
+<div class="nav-group">Run your work</div>
 <a href="compute-nodes.html">Compute nodes and queues</a>
 <a href="terminals.html">Terminals</a>
-<a href="agents.html">AI agents</a>
+<a href="vscode.html">VS Code</a>
 <a href="jobs.html">Jobs</a>
+<div class="nav-group">Manage your work</div>
+<a href="files.html">Files and transfers</a>
+<a href="projects.html">Projects</a>
+<a href="backup.html">Back up scratch</a>
 <a href="usage.html">Usage and SUs</a>
-<div class="nav-group">Your data</div>
-<a href="files.html">Files, transfers and Globus</a>
-<a href="projects.html">Projects and moving between clusters</a>
-<a href="backup.html">Backup of scratch</a>
-<div class="nav-group">More</div>
-<a href="phone.html">Phone app</a>
-<a href="experimental.html">Experimental</a>
+<div class="nav-group">Optional tools</div>
+<a href="agents.html">AI agents</a>
+<a href="phone.html">Android app</a>
+<a href="experimental.html">Experimental features</a>
+<div class="nav-group">Get help</div>
 <a href="troubleshooting.html">Troubleshooting</a>
 <a href="report-a-problem.html">Report a problem</a>
 <a href="faq.html">FAQ</a>
@@ -50,80 +52,51 @@
 <main id="main">
 <article class="content">
 <h1>HPC Hub</h1>
-<p class="lead">One app for the computing clusters you use for research. Sign in once, get a compute node, and keep your terminals, jobs, files and AI agents in one window, on your computer or your Android phone.</p>
-<h2 id="what-it-is">What it is<a class="anchor" href="#what-it-is" aria-label="Link to this part">#</a></h2>
-<p>A cluster (or HPC system, for high performance computing) is a large group of computers that a university
-shares among its researchers. Using one usually means a VPN, an SSH client, a Duo approval, a few Slurm commands
-to get a machine to work on, and a separate tool to move files. HPC Hub puts all of that behind one
-<strong>Connect</strong> button.</p>
-<p>Once you are connected you can open a terminal, start VS Code or an AI coding agent on your own compute node,
-look at your jobs and your group's hours, browse and copy files, and back up scratch before the cluster deletes
-it. Terminals and agents keep running on the cluster when you close the laptop.</p>
-<p>HPC Hub runs on Linux, Windows and macOS. There is also an Android app that does the same things on a
-phone.</p>
+<p class="lead">HPC Hub connects your computer to research computing clusters. Use it to get a compute node, open tools on it, manage files and check jobs.</p>
+<h2 id="start-here">Start here<a class="anchor" href="#start-here" aria-label="Link to this part">#</a></h2>
+<p>You need an account on a supported cluster before you can connect.</p>
+<ol>
+<li><a href="install.html">Install HPC Hub</a> on your computer.</li>
+<li>Follow <a href="first-sign-in.html">First sign-in</a> to choose your clusters and set up your login.</li>
+<li>Read <a href="compute-nodes.html">Compute nodes and queues</a> to choose resources for your work.</li>
+<li>Open a <a href="terminals.html">terminal</a> or <a href="vscode.html">VS Code</a> on your cluster card.</li>
+</ol>
+<p>If setup fails, see <a href="troubleshooting.html">Troubleshooting</a>.</p>
 
-<h2 id="clusters-it-knows">Clusters it knows<a class="anchor" href="#clusters-it-knows" aria-label="Link to this part">#</a></h2>
-<p>HPC Hub comes set up for three clusters:</p>
+<h2 id="supported-clusters">Supported clusters<a class="anchor" href="#supported-clusters" aria-label="Link to this part">#</a></h2>
 <ul>
 <li><strong>Wulver</strong> at NJIT</li>
 <li><strong>Bouchet</strong> at Yale</li>
 <li><strong>Expanse</strong> at SDSC</li>
 </ul>
-<p>On the first start you pick the ones you use. You can change that later in <strong>Settings</strong>.</p>
+<p>Choose the ones you use on the first start. You can show or hide them later in <strong>Settings</strong>. To
+add another cluster to HPC Hub, see <a href="faq.html#can-i-use-a-cluster-that-isn-t-listed">this question</a>.</p>
+<p>HPC Hub runs on Windows, macOS and Linux. See <a href="phone.html">Android app</a> for the phone.</p>
 
-<h2 id="new-to-hpc-a-few-words-first">New to HPC? A few words first<a class="anchor" href="#new-to-hpc-a-few-words-first" aria-label="Link to this part">#</a></h2>
-<p>These words come up all over the app and this wiki.</p>
+<h2 id="four-terms-to-know">Four terms to know<a class="anchor" href="#four-terms-to-know" aria-label="Link to this part">#</a></h2>
 <dl class="terms">
+<dt>Cluster</dt>
+<dd>A group of computers shared by researchers. HPC means high performance computing.</dd>
 <dt>Login node</dt>
-<dd>The shared computer you land on when you sign in. Fine for editing files and submitting jobs. Heavy work
-does not belong here, since everyone on the cluster shares it.</dd>
+<dd>The shared computer you reach when you sign in. Use it to edit files and submit jobs. Run demanding work on
+a compute node.</dd>
 <dt>Compute node</dt>
-<dd>One computer in the cluster that runs your work. You borrow it for a set time, with the cores and memory you
-asked for. HPC Hub can get one for you every time you connect.</dd>
+<dd>A computer that runs your work with the resources given to your job.</dd>
 <dt>Job</dt>
-<dd>One request for cluster time. Your compute node, VS Code and agents each run as a job.</dd>
-<dt>Slurm</dt>
-<dd>The program most clusters use to hand out compute nodes and run jobs. HPC Hub talks to it for you.</dd>
-<dt>Queue</dt>
-<dd>Which group of nodes and time limits your job uses. Slurm calls it a partition.</dd>
-<dt>Priority</dt>
-<dd>How your job is billed and how soon it starts. Slurm calls it QoS.</dd>
-<dt>Group</dt>
-<dd>The account your hours are billed to, usually your lab or your advisor's allocation.</dd>
-<dt>SU</dt>
-<dd>Service units, the cluster's currency. 1 SU is roughly 1 core for 1 hour.</dd>
-<dt>Scratch</dt>
-<dd>Fast storage for working files. Most clusters delete old files there after a set number of days.</dd>
-<dt>Session</dt>
-<dd>A terminal or agent that keeps running on the cluster, even when the app is closed.</dd>
+<dd>A request for resources for a set time. Slurm, the cluster's scheduler, decides when it starts.</dd>
 </dl>
+<p>Work on a compute node stops when its job ends. Closing HPC Hub does not stop your jobs.</p>
 
-<h2 id="where-to-start">Where to start<a class="anchor" href="#where-to-start" aria-label="Link to this part">#</a></h2>
-<div class="cards">
-<a class="card" href="install.html"><b>Install</b><span>Get the app for Linux, Windows, macOS or Android.</span></a>
-<a class="card" href="first-sign-in.html"><b>First sign-in</b><span>Pick your clusters, sign in once, VPN and Duo.</span></a>
-<a class="card" href="compute-nodes.html"><b>Compute nodes</b><span>Get a node, pick a queue, see the time left.</span></a>
-<a class="card" href="terminals.html"><b>Terminals</b><span>Sessions that survive disconnects, and the timeline.</span></a>
-<a class="card" href="agents.html"><b>AI agents</b><span>Claude, ChatGPT, Antigravity and Cursor on a node.</span></a>
-<a class="card" href="troubleshooting.html"><b>Troubleshooting</b><span>When something doesn't connect or stops.</span></a>
-</div>
-
-<h2 id="the-pages-in-the-app">The pages in the app<a class="anchor" href="#the-pages-in-the-app" aria-label="Link to this part">#</a></h2>
-<p>The sidebar on the left of the app (the menu at the top left on a phone) has these pages:</p>
-<div class="table-wrap"><table>
-<tr><th>Page</th><th>What it is for</th></tr>
-<tr><td><strong>Clusters</strong></td><td>Connect, get a compute node, open a terminal, VS Code, Files or an agent.</td></tr>
-<tr><td><strong>Projects</strong></td><td>Named folders on your clusters, opened in one click, copied between clusters.</td></tr>
-<tr><td><strong>Terminals</strong></td><td>Terminal sessions in tmux, with the timeline and marks.</td></tr>
-<tr><td><strong>Code</strong></td><td>A light editor for files on the cluster. Text files you open from Files land here.</td></tr>
-<tr><td><strong>Agents</strong></td><td>Running agents, Backup of scratch, and what agents may run without asking.</td></tr>
-<tr><td><strong>Papers</strong></td><td>LaTeX papers. <a href="experimental.html">Experimental</a>, hidden until you turn it on.</td></tr>
-<tr><td><strong>Jobs</strong></td><td>Your jobs, your group's jobs and your history, with details and cancel.</td></tr>
-<tr><td><strong>Usage</strong></td><td>SUs left, storage, how busy the queues are, and queue limits.</td></tr>
-<tr><td><strong>Files</strong></td><td>Browse, preview, edit, upload and download, and copy between clusters, also with Globus.</td></tr>
-</table></div>
-<p><strong>Settings</strong> is at the bottom of the sidebar.</p>
-<nav class="pager" aria-label="Next and previous"><a class="next" href="install.html"><small>Next</small><b>Install</b></a></nav>
+<h2 id="after-you-connect">After you connect<a class="anchor" href="#after-you-connect" aria-label="Link to this part">#</a></h2>
+<ul>
+<li><a href="jobs.html">Jobs</a>: check progress, see output paths and cancel jobs.</li>
+<li><a href="files.html">Files and transfers</a>: browse, edit, upload, download and copy between clusters.</li>
+<li><a href="projects.html">Projects</a>: save folders and reopen them in your tools.</li>
+<li><a href="backup.html">Back up scratch</a>: find files that may be deleted and copy the ones you need.</li>
+<li><a href="usage.html">Usage and SUs</a>: check your group's allocation and storage.</li>
+<li><a href="agents.html">AI agents</a>: run Claude, ChatGPT, Antigravity or Cursor on a compute node.</li>
+</ul>
+<nav class="pager" aria-label="Next and previous"><a class="next" href="install.html"><small>Next</small><b>Install and update</b></a></nav>
 <p class="foot">HPC Hub is open source. The code and the releases are on
 <a href="https://github.com/bavanDA/hpc-hub">GitHub</a>.</p>
 </article>

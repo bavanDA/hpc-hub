@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Backup of scratch · HPC Hub wiki</title>
-<meta name="description" content="Scratch is fast, but most clusters delete old files there. The backup agent finds what is at risk and copies the work that matters to your project folder before it goes.">
+<title>Back up scratch · HPC Hub wiki</title>
+<meta name="description" content="Check which scratch files may be deleted, review a plan, and copy what you need to your project folder.">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="assets/wiki.css">
@@ -25,23 +25,25 @@
 <div class="results" id="results" hidden></div>
 </div>
 <nav class="nav" aria-label="Pages">
-<div class="nav-group">Start</div>
+<div class="nav-group">Start here</div>
 <a href="index.html">Home</a>
-<a href="install.html">Install</a>
+<a href="install.html">Install and update</a>
 <a href="first-sign-in.html">First sign-in</a>
-<div class="nav-group">Work on a cluster</div>
+<div class="nav-group">Run your work</div>
 <a href="compute-nodes.html">Compute nodes and queues</a>
 <a href="terminals.html">Terminals</a>
-<a href="agents.html">AI agents</a>
+<a href="vscode.html">VS Code</a>
 <a href="jobs.html">Jobs</a>
+<div class="nav-group">Manage your work</div>
+<a href="files.html">Files and transfers</a>
+<a href="projects.html">Projects</a>
+<a href="backup.html" aria-current="page">Back up scratch</a>
 <a href="usage.html">Usage and SUs</a>
-<div class="nav-group">Your data</div>
-<a href="files.html">Files, transfers and Globus</a>
-<a href="projects.html">Projects and moving between clusters</a>
-<a href="backup.html" aria-current="page">Backup of scratch</a>
-<div class="nav-group">More</div>
-<a href="phone.html">Phone app</a>
-<a href="experimental.html">Experimental</a>
+<div class="nav-group">Optional tools</div>
+<a href="agents.html">AI agents</a>
+<a href="phone.html">Android app</a>
+<a href="experimental.html">Experimental features</a>
+<div class="nav-group">Get help</div>
 <a href="troubleshooting.html">Troubleshooting</a>
 <a href="report-a-problem.html">Report a problem</a>
 <a href="faq.html">FAQ</a>
@@ -49,56 +51,39 @@
 </aside>
 <main id="main">
 <article class="content">
-<h1>Backup of scratch</h1>
-<p class="lead">Scratch is fast, but most clusters delete old files there. The backup agent finds what is at risk and copies the work that matters to your project folder before it goes.</p>
-<h2 id="why-scratch-needs-a-backup">Why scratch needs a backup<a class="anchor" href="#why-scratch-needs-a-backup" aria-label="Link to this part">#</a></h2>
-<p>Each cluster has its own rule for how long files may stay in scratch before they are deleted (purged). When the app was written, the clusters' own docs said:</p>
-<ul>
-<li>Wulver deletes scratch files after 30 days, and may delete sooner when scratch is very full.</li>
-<li>Yale deletes scratch files after 30 days. The app reads the number from the cluster when it can.</li>
-<li>Expanse deletes scratch files 90 days after they were made.</li>
-</ul>
-<p>If a cluster states a different number, the app uses the cluster's. HPC Hub never touches files to make them
-look newer; the clusters don't allow that.</p>
+<h1>Back up scratch</h1>
+<p class="lead">Check which scratch files may be deleted, review a plan, and copy what you need to your project folder.</p>
+<h2 id="why">Why<a class="anchor" href="#why" aria-label="Link to this part">#</a></h2>
+<p>Most clusters delete old files in scratch. HPC Hub shows the rule for your cluster, from its docs, and uses the
+number the cluster reports when it reports one. HPC Hub never touches files to make them look newer.</p>
 
 <h2 id="where-to-find-it">Where to find it<a class="anchor" href="#where-to-find-it" aria-label="Link to this part">#</a></h2>
 <ul>
 <li><strong>Agents</strong>, the <strong>Backup</strong> tab.</li>
 <li><strong>Usage</strong>, <strong>Storage</strong>: <strong>See what is at risk</strong> on a scratch row.</li>
-<li>A note when scratch files are close to deletion, like <em>Some scratch files go in 5 days</em> (with the date), with
-<strong>See the plan</strong>. You also get a notification.</li>
+<li>A note and a notification when files are close to deletion, with <strong>See the plan</strong>.</li>
 </ul>
 
 <h2 id="the-steps">The steps<a class="anchor" href="#the-steps" aria-label="Link to this part">#</a></h2>
-<p>The backup goes through five steps, shown at the top: Check, At risk, Plan, Space and Copy.</p>
-<h3 id="check">Check<a class="anchor" href="#check" aria-label="Link to this part">#</a></h3>
-<p><strong>Check my scratch</strong> looks at every file. It takes about 20 minutes, and you can close the app
-meanwhile. <strong>Let Claude sort unclear folders</strong> lets Claude help decide what a folder is; Claude only
-looks, and can't change or run anything.</p>
-<h3 id="at-risk">At risk<a class="anchor" href="#at-risk" aria-label="Link to this part">#</a></h3>
-<p>How many files go in the coming days, how big they are and in which folders, grouped into <em>Could be deleted
-any day now</em>, <em>Within a week</em>, <em>Within 2 weeks</em> and <em>Later</em>.</p>
-<h3 id="plan">Plan<a class="anchor" href="#plan" aria-label="Link to this part">#</a></h3>
-<p>Each folder is marked <strong>Keep</strong> or <strong>Leave out</strong>, and you can change any of them.
-Options: <strong>Copy whole folders so each one stays complete</strong> (git repositories are always copied
-whole), and <strong>Only files deleted in the next 14 days</strong>.</p>
-<h3 id="space">Space<a class="anchor" href="#space" aria-label="Link to this part">#</a></h3>
-<p>How much of your project folder the copy uses, and how full it will be after. If it doesn't fit,
-<strong>Leave out the biggest ones that can be made again</strong> or <strong>Put code in home</strong>.
-<strong>Try it first</strong> makes the list of files and checks the space without copying anything.</p>
-<h3 id="copy">Copy<a class="anchor" href="#copy" aria-label="Link to this part">#</a></h3>
-<p>The copy runs on the cluster, so you can close the app. <strong>Stop copy</strong> keeps what was copied so
-far; start again later and it goes on from there. At the end, every file is checked against the one in
-scratch.</p>
-<p>Nothing in scratch is changed or deleted. If a file in project is older than the one in scratch, it is
-replaced and the old one is kept in <code>.hpc-hub-replaced</code>. Files a job is still writing are left for
-next time, and the app says how many.</p>
+<ol>
+<li><strong>Check</strong>: <strong>Check my scratch</strong> looks at every file. The time depends on how many
+files you have and how busy the cluster is; you can close the app meanwhile.</li>
+<li><strong>At risk</strong>: how many files go soon, how big they are and where.</li>
+<li><strong>Plan</strong>: each folder is <strong>Keep</strong> or <strong>Leave out</strong>; change any of
+them.</li>
+<li><strong>Space</strong>: how much of your project folder the copy uses. <strong>Try it first</strong> checks
+without copying.</li>
+<li><strong>Copy</strong>: runs on the cluster, so you can close the app. <strong>Stop copy</strong> keeps what was
+copied; starting again goes on from there.</li>
+</ol>
+<p>At the end, the copy is compared with scratch: by checksum for smaller backups, and by size and time for larger
+ones. Nothing in scratch is changed or deleted. A newer file replacing an older one in project keeps the old one in
+<code>.hpc-hub-replaced</code>.</p>
 
 <h2 id="weekly-check">Weekly check<a class="anchor" href="#weekly-check" aria-label="Link to this part">#</a></h2>
-<p><strong>Reminders</strong> can run <strong>Check scratch every week</strong> on a day and time you choose. It
-runs on the cluster, even with your laptop off. You also choose how early to hear about it, like <em>Tell me when
-files are 14 days from deletion</em>.</p>
-<nav class="pager" aria-label="Next and previous"><a class="prev" href="projects.html"><small>Previous</small><b>Projects and moving between clusters</b></a><a class="next" href="phone.html"><small>Next</small><b>Phone app</b></a></nav>
+<p><strong>Reminders</strong> can <strong>Check scratch every week</strong> at a time you choose. It runs on the
+cluster and tells you what is at risk. It doesn't copy anything by itself.</p>
+<nav class="pager" aria-label="Next and previous"><a class="prev" href="projects.html"><small>Previous</small><b>Projects</b></a><a class="next" href="usage.html"><small>Next</small><b>Usage and SUs</b></a></nav>
 <p class="foot">HPC Hub is open source. The code and the releases are on
 <a href="https://github.com/bavanDA/hpc-hub">GitHub</a>.</p>
 </article>
