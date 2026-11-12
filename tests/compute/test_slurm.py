@@ -51,14 +51,14 @@ def test_follow_log_is_valid_shell():
 def test_tunnel_link(tmp_path):
     import subprocess
     log = tmp_path / "vs.out"
-    log.write_text("x\n  Open:  https://vscode.dev/tunnel/n0018/mmfs1/home/jdoe\nmore\n")
+    log.write_text("x\n  Open:  https://vscode.dev/tunnel/n0042/mmfs1/home/jdoe\nmore\n")
 
     class Ssh:
         def run(self, cmd, timeout=60):
             cmd = cmd.replace(job_log.log_path("7"), f"echo {log}")
             return subprocess.run(["bash", "-c", cmd], capture_output=True, text=True)
         on_login = run
-    assert job_log.tunnel_link(Ssh(), "7") == "https://vscode.dev/tunnel/n0018/mmfs1/home/jdoe"
+    assert job_log.tunnel_link(Ssh(), "7") == "https://vscode.dev/tunnel/n0042/mmfs1/home/jdoe"
 
 
 def test_submit_a_script_from_its_folder(tmp_path, monkeypatch):
