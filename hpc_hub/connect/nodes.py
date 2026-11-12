@@ -23,16 +23,17 @@ class NodesMixin:
         if not profile.account and self._account():
             profile = replace(profile, account=self._account())
         refused = self.limits.refused_qos(profile.partition, profile.qos, profile.account) if self.limits else ""
-        if refused and not profile.qos:  # your default priority isn't allowed there: the one the partition takes
+        if refused and not profile.qos:  # your default priority isn't allowed there: the one the queue takes
             choices = self.limits.qos_choices(profile.partition, profile.account)
             if choices:
                 self._log(f"{refused} Using priority {choices[0]}")
                 profile, refused = replace(profile, qos=choices[0]), ""
+        # SlurmError, so every caller reports it like a refusal from Slurm (the card, an agent waiting for a node)
         if refused:  # Slurm would take the job and keep it waiting forever
-            raise ValueError(f"{refused} Change it under Queue and priority.")
+            raise SlurmError(f"{refused} Change it under Queue and priority.")
         if self.limits and self.limits.needs_gpu(profile.partition) and not profile.gpus:  # Slurm would refuse it
             part = profile.partition or self.limits.default_partition
-            raise ValueError(f"The {part} queue is for GPU jobs, and this asks for no GPU. Pick the GPU size, or "
+            raise SlurmError(f"The {part} queue is for GPU jobs, and this asks for no GPU. Pick the GPU size, or "
                              "another queue.")
         fitted, note = self.limits.fit(profile) if self.limits else (profile, "")
         if note:

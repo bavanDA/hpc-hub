@@ -391,6 +391,7 @@ def test_a_priority_the_partition_refuses_never_reaches_slurm():
     import pytest
 
     from hpc_hub.compute import limits
+    from hpc_hub.compute.slurm import SlurmError
     from hpc_hub.connect.session import ClusterSession
     from hpc_hub.core import config
     from tests.compute.test_limits import WULVER
@@ -404,15 +405,50 @@ def test_a_priority_the_partition_refuses_never_reaches_slurm():
     s._log = lambda line: None
     s.limits = limits.parse(WULVER)
     s.limits.rules, s.limits.default_qos = {"debug": {"AllowQos": "debug"}}, "low"
-    with pytest.raises(ValueError, match="debug queue takes priority debug, not low"):
+    with pytest.raises(SlurmError, match="debug queue takes priority debug, not low"):
         s.fit(config.ComputeProfile(partition="debug", qos="low", time="01:00:00"))
     # your default is the one it refuses, and you named none: the one it takes
     assert s.fit(config.ComputeProfile(partition="debug", qos="", time="01:00:00")).qos == "debug"
     assert s.fit(config.ComputeProfile(partition="general", qos="low", time="01:00:00")).qos == "low"
     s.limits.gpu_only = ["gpu"]
-    with pytest.raises(ValueError, match="gpu queue is for GPU jobs"):
+    with pytest.raises(SlurmError, match="gpu queue is for GPU jobs"):
         s.fit(config.ComputeProfile(partition="gpu", qos="low", time="01:00:00"))
     assert s.fit(config.ComputeProfile(partition="gpu", qos="low", gpus=1, time="01:00:00")).gpus == 1
+
+
+def test_a_refused_node_request_says_why_on_every_path():
+    """The queue checks in fit() must reach the card and the agent waiting for a node, never hang them."""
+    import subprocess
+    import threading
+
+    from hpc_hub.compute import limits
+    from hpc_hub.connect.session import ClusterSession
+    from hpc_hub.connect.state import State
+    from hpc_hub.core import config
+    from tests.compute.test_limits import WULVER
+
+    class Ssh:
+        def run(self, cmd, timeout=60):
+            return subprocess.CompletedProcess(cmd, 0, "mygroup\n" if "defaultaccount" in cmd else "", "")
+        on_login = run
+    s = object.__new__(ClusterSession)
+    s.cfg, s.ssh, s.default_account, s.allocation = config.default_clusters()[0], Ssh(), None, None
+    s._cancel = threading.Event()
+    s.limits = limits.parse(WULVER)
+    s.limits.gpu_only = ["gpu"]
+    states, logged = [], []
+    s._set = lambda state, detail="": states.append((state, detail))
+    s._log = logged.append
+    s._reuse_running_job = lambda quiet=False: False
+    s._allocate_safely(config.ComputeProfile(partition="gpu", time="01:00:00"))
+    assert states[-1][0] == State.CONNECTED and "gpu queue is for GPU jobs" in states[-1][1]  # said on the card
+
+    done = threading.Event()
+    got = []
+    s.extra_node("hpc-hub-claude", lambda a, err: (got.append((a, err)), done.set()),
+                 config.ComputeProfile(partition="gpu", time="01:00:00"))
+    assert done.wait(5), "the agent waiting for a node would hang"
+    assert got[0][0] is None and "gpu queue is for GPU jobs" in got[0][1]
 
 
 def test_commands_follow_the_running_job():
