@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react'
 
 import { readFile } from './load'
 import { ReadablePdf } from './ReadAloud'
+import { OnTop } from '../ui/OnTop'
 
 /** A PDF from a cluster over the whole window. */
 export function PdfDialog({ cluster, path, subtitle, onClose }:
@@ -29,24 +30,26 @@ export function PdfDialog({ cluster, path, subtitle, onClose }:
   }, [onClose])
 
   return (
-    <div className="fixed inset-0 z-40 bg-black/40 p-3" onMouseDown={onClose}>
-      <div onMouseDown={(e) => e.stopPropagation()}
-        className="mx-auto flex h-full max-w-[1200px] flex-col overflow-hidden rounded-2xl bg-window shadow-2xl">
-        <div className={`flex h-12 shrink-0 items-center gap-2 px-2 ${focused ? 'hidden' : ''}`}>
-          <div className="w-9" />
-          <div className="min-w-0 flex-1 text-center">
-            <div className="truncate text-md font-semibold">{name}</div>
-            {subtitle && <div className="truncate text-xs text-dim">{subtitle}</div>}
+    <OnTop>
+      <div className="fixed inset-0 z-40 bg-black/40 p-3" onMouseDown={onClose}>
+        <div onMouseDown={(e) => e.stopPropagation()}
+          className="mx-auto flex h-full max-w-[1200px] flex-col overflow-hidden rounded-2xl bg-window shadow-2xl">
+          <div className={`flex h-12 shrink-0 items-center gap-2 px-2 ${focused ? 'hidden' : ''}`}>
+            <div className="w-9" />
+            <div className="min-w-0 flex-1 text-center">
+              <div className="truncate text-md font-semibold">{name}</div>
+              {subtitle && <div className="truncate text-xs text-dim">{subtitle}</div>}
+            </div>
+            <button aria-label="Close" title="Close" onClick={onClose}
+              className="grid size-9 place-items-center rounded-full hover:bg-hover"><X size={16} /></button>
           </div>
-          <button aria-label="Close" title="Close" onClick={onClose}
-            className="grid size-9 place-items-center rounded-full hover:bg-hover"><X size={16} /></button>
-        </div>
-        <div className={`min-h-0 flex-1 ${focused ? '' : 'border-t border-line'}`}>
-          <ReadablePdf data={data} source={source} zoom="auto" memory={`${cluster}:${path}`} loading={!data} progress={progress}
-            focus={focused} onFocus={setFocused}
-            message={error ? <p className="text-bad">Could not read the PDF: {error}</p> : undefined} />
+          <div className={`min-h-0 flex-1 ${focused ? '' : 'border-t border-line'}`}>
+            <ReadablePdf data={data} source={source} zoom="auto" memory={`${cluster}:${path}`} loading={!data} progress={progress}
+              focus={focused} onFocus={setFocused}
+              message={error ? <p className="text-bad">Could not read the PDF: {error}</p> : undefined} />
+          </div>
         </div>
       </div>
-    </div>
+    </OnTop>
   )
 }

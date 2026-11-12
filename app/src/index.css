@@ -124,6 +124,7 @@ body {
   font-size: var(--text-base);
   line-height: var(--text-base--line-height);
   -webkit-font-smoothing: antialiased;
+  text-wrap: pretty;  /* no lone word on a paragraph's last line ("1 SU per / core") */
   user-select: none;
   cursor: default;
 }
