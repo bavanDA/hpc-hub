@@ -72,3 +72,6 @@ def test_the_windows_one_line_installer_goes_into_the_release(tmp_path):
     script = (out / "install.ps1").read_text()
     assert "irm https://github.com/bavanDA/hpc-hub/releases/latest/download/install.ps1 | iex" in script
     assert "install.ps1" not in (out / "SHA256SUMS.txt").read_text()  # the list is for the installers it checks
+    unix = (out / "install.sh").read_text()
+    assert "curl -fsSL https://github.com/bavanDA/hpc-hub/releases/latest/download/install.sh | sh" in unix
+    assert "install.sh" not in (out / "SHA256SUMS.txt").read_text()

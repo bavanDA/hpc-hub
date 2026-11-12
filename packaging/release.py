@@ -5,8 +5,8 @@
 
 Each installer gets a plain name (HPC-Hub_<version>_<system>_<arch>.<ext>). An installer with a .sig next to it
 (the update signature, made with the TAURI_SIGNING_PRIVATE_KEY secret) is offered as an update for its platform; its
-signature goes into latest.json, not into the release. SHA256SUMS.txt lists them all. install.ps1, the Windows
-one-line installer, goes along."""
+signature goes into latest.json, not into the release. SHA256SUMS.txt lists them all. The one-line installers
+go along: install.ps1 for Windows, install.sh for macOS and Linux."""
 
 import hashlib
 import json
@@ -51,9 +51,10 @@ def collect(src: Path, out: Path, version: str, notes: str, date: str) -> dict:
         raise SystemExit(f"No signed update for {', '.join(missing)}: build every system before publishing.")
     latest = {"version": version, "notes": notes, "pub_date": date, "platforms": platforms}
     (out / "latest.json").write_text(json.dumps(latest, indent=2) + "\n")
-    # the Windows one-liner: irm .../releases/latest/download/install.ps1 | iex (it checks the installers against
-    # SHA256SUMS.txt, so it isn't in that list itself)
-    shutil.copyfile(Path(__file__).with_name("install.ps1"), out / "install.ps1")
+    # the one-line installers: irm .../install.ps1 | iex on Windows, curl -fsSL .../install.sh | sh on macOS and
+    # Linux (they check the installers against SHA256SUMS.txt, so they aren't in that list themselves)
+    for script in ("install.ps1", "install.sh"):
+        shutil.copyfile(Path(__file__).with_name(script), out / script)
     (out / "SHA256SUMS.txt").write_text("\n".join(sums) + "\n")
     return latest
 
