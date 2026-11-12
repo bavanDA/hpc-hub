@@ -13,6 +13,7 @@ from collections.abc import Callable
 from pathlib import Path
 from urllib.parse import urlsplit
 
+from ..clusters import vpn_gateways
 from ..core.config import ClusterConfig
 from ..core.paths import WINDOWS, resources_dir
 from .vpn import Vpn, VpnError, nm_secrets, split_errors
@@ -21,7 +22,9 @@ VERSION = "1"  # the protocol this app speaks; an older helper is installed agai
 PIPE = r"\\.\pipe\hpc-hub-vpn"
 SOCKET = "/var/run/hpc-hub-vpn.sock"
 UP_TIMEOUT = 90  # seconds from "up" to the tunnel being there
-KNOWN_GATEWAYS = ("vpn.njit.edu", "access.yale.edu")  # always allowed, so adding Yale later needs no new prompt
+# the built-in clusters' gateways (never ones from your settings) are always allowed, so adding one later needs no
+# new prompt
+KNOWN_GATEWAYS = vpn_gateways()
 
 
 class HelperMissing(VpnError):

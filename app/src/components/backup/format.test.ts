@@ -24,7 +24,7 @@ describe('words', () => {
     expect(when(d)).toBe(want))
   it('names the day further out', () => expect(when(5)).toMatch(/^in 5 days, on \w+day, \w{3} \d+$/))
   it('names the help desk', () => {
-    expect(helpFor('wulver')).toBe('hpc@njit.edu')
-    expect(helpFor('yale')).toBe("your cluster's help desk")
+    expect(helpFor('help@example.edu')).toBe('help@example.edu')
+    expect(helpFor('')).toBe("your cluster's help desk")
   })
 })

@@ -19,7 +19,7 @@ export function AboutDialog({ onClose }: { onClose: () => void }) {
         </div>
         <h2 className="mt-2 text-xl font-semibold">HPC Hub</h2>
         {version && <span className="text-sm text-dim tabular-nums">Version {version}</span>}
-        <p className="text-dim">Wulver, Yale and SDSC in one place.</p>
+        <p className="text-dim">Your HPC clusters in one place.</p>
         <UpdateLine onUpdate={() => { onClose(); openUpdateDialog() }} />
       </div>
     </Dialog>

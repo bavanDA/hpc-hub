@@ -1,9 +1,10 @@
 """The GPUs a cluster offers (sinfo's gres column), with names people know: "A100, 10 GB slice" for
-a100_10g. DOCS stands in before the first login. Sources: hpc.njit.edu/MIG/job-submission-and-su-charges,
-docs.ycrc.yale.edu/clusters/bouchet, the SDSC Expanse user guide (V100 32 GB, untyped --gpus=N)."""
+a100_10g. Before the first login, each cluster's file in hpc_hub/clusters lists its GPUs (gpu_docs) from its docs."""
 
 import re
 from dataclasses import asdict, dataclass, field
+
+from .. import clusters
 
 # gres type -> (name, memory in GB). A slice (MIG) is a part of one GPU.
 KNOWN: dict[str, tuple[str, int]] = {
@@ -17,14 +18,6 @@ KNOWN: dict[str, tuple[str, int]] = {
 SLICE = re.compile(r"_(\d+)g(b)?$")  # a100_10g: a MIG slice of 10 GB
 GRES = re.compile(r"gpu(?::([A-Za-z0-9_.-]+))?:(\d+)")
 
-# What the docs list, used until the first login reads the real thing (cluster id -> [(type, partition)])
-DOCS: dict[str, list[tuple[str, str]]] = {
-    "wulver": [("a100_10g", "gpu"), ("a100_20g", "gpu"), ("a100_40g", "gpu"), ("a100", "gpu"), ("l40", "gpu")],
-    "yale": [("rtx_5000_ada", "gpu"), ("a5000", "gpu"), ("a40", "gpu"), ("l40s", "gpu"), ("h100", "gpu_h100"),
-             ("h200", "gpu_h200"), ("b200", "gpu_b200"), ("rtx_pro_6000_blackwell", "gpu_rtx6000")],
-    "sdsc": [("", "gpu-shared"), ("", "gpu"), ("", "gpu-debug")],
-}
-UNTYPED_NAME = {"sdsc": ("V100", 32)}
 
 
 @dataclass
@@ -77,7 +70,7 @@ def options(gres: dict[str, list[str]], cluster_id: str = "") -> list[Gpu]:
             if not m:
                 continue
             gtype, count = m.group(1) or "", int(m.group(2))
-            label, mem, is_slice = describe(gtype, UNTYPED_NAME.get(cluster_id))
+            label, mem, is_slice = describe(gtype, clusters.site(cluster_id).untyped_gpu)
             g = found.setdefault(gtype, Gpu(gtype, label, mem, is_slice))
             if part not in g.partitions:
                 g.partitions.append(part)
@@ -87,7 +80,7 @@ def options(gres: dict[str, list[str]], cluster_id: str = "") -> list[Gpu]:
 
 def from_docs(cluster_id: str) -> list[Gpu]:
     gres: dict[str, list[str]] = {}
-    for gtype, part in DOCS.get(cluster_id, []):
+    for gtype, part in clusters.site(cluster_id).gpu_docs:
         gres.setdefault(part, []).append(f"gpu:{gtype}:4" if gtype else "gpu:4")
     return options(gres, cluster_id)
 
@@ -99,7 +92,7 @@ def amount(tres: str, cluster_id: str = "") -> str:
     found = [(t, int(n)) for t, n in typed] or [("", int(n)) for n in plain]
     out = []
     for gtype, n in found:
-        name, _, is_slice = describe(gtype, UNTYPED_NAME.get(cluster_id))
+        name, _, is_slice = describe(gtype, clusters.site(cluster_id).untyped_gpu)
         out.append(name if n == 1 and is_slice else f"{n} × {name}")
     return ", ".join(out)
 

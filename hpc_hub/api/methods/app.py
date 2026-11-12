@@ -3,7 +3,17 @@
 from dataclasses import asdict
 
 from ... import __version__
+from ...clusters import site
+from ...core.config import ClusterConfig
 from ..server import method
+
+
+def cluster_json(c: ClusterConfig) -> dict:
+    """A cluster as the app gets it: its settings, and what it does its own way (hpc_hub/clusters), so the app
+    never names a cluster."""
+    s = site(c.id)
+    return {**asdict(c), "help_email": s.help_email, "untyped_gpu": s.untyped_gpu[0] if s.untyped_gpu else "",
+            "code_sign_in": s.code_sign_in}
 
 
 @method("app.version")
@@ -15,7 +25,7 @@ def version() -> dict:
 def clusters() -> list[dict]:
     """The clusters you use (setup.choose) and their settings (no secrets live there)."""
     from ..hub import hub
-    return [asdict(c) for c in hub().clusters]
+    return [cluster_json(c) for c in hub().clusters]
 
 
 @method("app.status")

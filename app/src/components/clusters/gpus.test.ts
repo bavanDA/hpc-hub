@@ -15,9 +15,9 @@ describe('names', () => {
   it.each([
     [1, 'a100_10g', '', 'A100, 10 GB slice'],
     [2, 'h100', '', '2 × H100'],
-    [2, '', 'sdsc', '2 × V100'],
+    [2, '', 'V100', '2 × V100'],  // a cluster whose GPUs have no type names them
     [1, 'new_card', '', '1 × NEW CARD'],
-  ])('gpuAmount(%s, %s, %s)', (n, type, cluster, want) => expect(gpuAmount(n, type, cluster)).toBe(want))
+  ])('gpuAmount(%s, %s, %s)', (n, type, untyped, want) => expect(gpuAmount(n, type, untyped)).toBe(want))
   it('sums up a profile', () => {
     expect(gpuSummary({ ...size, gpus: 2, gpu_type: 'l40' }, [l40])).toBe('2 × L40')
     expect(gpuSummary(size, [l40])).toBe('')

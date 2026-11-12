@@ -5,6 +5,7 @@ import tomllib
 from dataclasses import asdict
 from pathlib import Path
 
+from ..clusters import default_clusters
 from .app_settings import APPEARANCES, EXPERIMENTS, AppSettings
 from .cluster_settings import (
     CHROME_WINDOW,
@@ -20,7 +21,6 @@ from .cluster_settings import (
     VsCodeSettings,
     short_time,
 )
-from .default_clusters import default_clusters
 from .toml_file import merge, table, toml_value, write_atomic
 
 __all__ = [

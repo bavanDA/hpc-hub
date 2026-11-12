@@ -243,3 +243,11 @@ def test_check_login_cleans_the_username_and_uses_the_saved_password(hub, keyrin
     assert asked == [("ab123", "typed"), ("ab123", "saved")]
     with pytest.raises(ValueError):
         logins.check_login("wulver", " ", "x")
+
+
+def test_the_app_gets_each_clusters_own_ways_as_data(hub):
+    from hpc_hub.api.methods import app
+    got = {c["id"]: c for c in app.clusters()}
+    assert got["wulver"]["help_email"] == "hpc@njit.edu" and got["wulver"]["untyped_gpu"] == ""
+    assert got["sdsc"]["untyped_gpu"] == "V100" and "ACCESS" in got["sdsc"]["code_sign_in"]
+    assert clusters.update("yale", {"ask_node": True})["help_email"] == ""  # every answer that sends a cluster

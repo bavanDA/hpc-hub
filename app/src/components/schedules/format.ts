@@ -24,9 +24,9 @@ export function status(st: ScheduleStatus): { kind: Kind; label: string; note: s
   return { kind: 'warn', label: 'Not queued', note: 'Edit it and save to queue it' }
 }
 
-export function computeText(c: Compute, cluster = ''): string {
+export function computeText(c: Compute, untyped = ''): string {
   return [c.cpus ? cores(c.cpus) : '', c.mem_gb ? `${c.mem_gb} GB` : '',
-    c.gpus ? gpuAmount(c.gpus, c.gpu_type, cluster) : ''].filter(Boolean).join(' · ')
+    c.gpus ? gpuAmount(c.gpus, c.gpu_type, untyped) : ''].filter(Boolean).join(' · ')
 }
 
 // the backup agent's weekly check is edited on the Backup page, not here

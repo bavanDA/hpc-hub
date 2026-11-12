@@ -1,6 +1,6 @@
 """Connect, disconnect and compute nodes per cluster, the settings the Clusters page may change, and its log."""
 
-from dataclasses import asdict, fields, replace
+from dataclasses import fields, replace
 
 from ...compute import gpus as gpu_list
 from ...compute import slurm_args
@@ -9,6 +9,7 @@ from ...core.config import ComputeProfile
 from ...core.paths import log_dir
 from ..hub import hub
 from ..server import method
+from .app import cluster_json
 from .logins import for_connect
 
 # extra_args stays out: free text that ends up on a command line
@@ -114,7 +115,7 @@ def update(cluster: str, changes: dict) -> dict:
         cfg.vpn.same_login_as_ssh = bool(vpn["same_login_as_ssh"])
     cfg.profile = profile
     hub().save_clusters()
-    return asdict(cfg)
+    return cluster_json(cfg)
 
 
 @method("clusters.log")

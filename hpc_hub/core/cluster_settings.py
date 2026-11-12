@@ -52,6 +52,8 @@ class ComputeProfile:
 
 
 TUNNEL = "code tunnel --accept-server-license-terms"
+# keep the GitHub sign-in in $HOME, so a tunnel on a new node does not ask again
+FILE_KEYCHAIN = "export VSCODE_CLI_USE_FILE_KEYCHAIN=1 VSCODE_CLI_DISABLE_KEYCHAIN_ENCRYPT=1"
 
 
 def _vscode_compute() -> ComputeProfile:

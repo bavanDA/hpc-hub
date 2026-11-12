@@ -4,7 +4,7 @@ error saves nothing."""
 import copy
 import re
 import shlex
-from dataclasses import asdict, fields, replace
+from dataclasses import fields, replace
 
 from ...agents.catalog import AGENTS, BY_ID
 from ...compute import slurm_args
@@ -13,6 +13,7 @@ from ...connect.vpn import split_errors
 from ...core.config import VPN_PROTOCOLS, ComputeProfile
 from ..hub import hub
 from ..server import method
+from .app import cluster_json
 
 FACTORS = ("duo", "code")
 TARGETS = ("desktop", "browser")
@@ -188,7 +189,7 @@ def get(cluster: str) -> dict:
     """The cluster's settings, whether our Chrome window is there to sign in with, and each agent's options (no
     secrets)."""
     cfg = hub().session(cluster).cfg
-    return {"cluster": asdict(cfg), "protocols": VPN_PROTOCOLS,
+    return {"cluster": cluster_json(cfg), "protocols": VPN_PROTOCOLS,
             "chrome_window": {"value": chrome_window.CHOICE, "offered": chrome_window.available()},
             "agents": [{"id": a.id, "name": a.name, "remote_label": a.remote_label, "remote_hint": a.remote_hint,
                         "options": [{"key": o.key, "label": o.label, "choices": [list(c) for c in o.choices]}
@@ -203,4 +204,4 @@ def save(cluster: str, changes: dict) -> dict:
     for f in fields(cfg):  # the session keeps this same object
         setattr(cfg, f.name, getattr(new, f.name))
     hub().save_clusters()
-    return asdict(cfg)
+    return cluster_json(cfg)

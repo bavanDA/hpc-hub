@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 
 import { useEvent } from '../hooks'
 import { call } from '../rpc'
+import { DEMO_CLUSTER, demoQuestions } from '../demo/questions'
 import { DUO, type Question, type Session } from '../types/clusters'
 import { inTauri } from './app/platform'
 import { DuoDialog } from './clusters/DuoDialog'
@@ -19,25 +20,12 @@ import { useToast } from './useToast'
 // demo data
 const demo = inTauri ? null : new URLSearchParams(location.search)
 
-const DEMO_NAMES: Record<string, string> = { wulver: 'Wulver (NJIT)', yale: 'Yale Bouchet', sdsc: 'SDSC Expanse' }
-
-function demoQuestions(): Question[] {
-  const kind = demo?.get('question') as Question['kind'] | undefined
-  const cluster = demo?.get('cluster') ?? 'wulver'
-  const confirm = kind === 'confirm' ? { title: 'Let HPC Hub start the VPN',
-    prompt: 'Your computer asks for your permission once. After that, Connect starts the VPN by itself.' } : {}
-  return kind ? [{ id: 'demo', kind, cluster, name: DEMO_NAMES[cluster] ?? cluster, default: '',
-    fill: { socket: '', token: '' }, ...confirm }] : []
-}
-
 export function Questions() {
   const toast = useToast()
   const { clusters, sessions } = useClusters()
-  const [questions, setQuestions] = useState<Question[]>(demoQuestions)
+  const [questions, setQuestions] = useState<Question[]>(() => demoQuestions(demo))
   const [shown, setShown] = useState(demo?.get('show') ?? '')
-  const [wrong, setWrong] = useState<{ id: string; detail: string } | null>(
-    demo?.get('show') === 'wrong-password' ? { id: demo.get('cluster') ?? 'wulver',
-      detail: "Wulver (NJIT) didn't accept the password for ab123. Type it again, or check your UCID." } : null)
+  const [wrong, setWrong] = useState<{ id: string; detail: string } | null>(null)
   const asked = useRef<Question[]>([])
   useEffect(() => { asked.current = questions })
   useEffect(load, [])
@@ -84,7 +72,7 @@ export function Questions() {
     call('clusters.cancel', { cluster: id }).catch((e: Error) => toast(e.message))
   }
 
-  const demoCluster = clusters?.find((c) => c.id === (demo?.get('cluster') ?? 'wulver'))
+  const demoCluster = clusters?.find((c) => c.id === (demo?.get('cluster') ?? DEMO_CLUSTER))
 
   const duo = Object.values(sessions).find((s) => s.state === DUO)
   const q = questions[0]
@@ -95,6 +83,9 @@ export function Questions() {
         onRetry={() => retry(duo.id)} />}
       {q && <QuestionDialog key={q.id} q={q} cluster={clusters?.find((c) => c.id === q.cluster)}
         onAnswer={(a) => answer(q, a)} />}
+      {!wrong && shown === 'wrong-password' && demoCluster && <WrongPasswordDialog cluster={demoCluster}
+        detail={`${demoCluster.name} didn't accept the password for jdoe. Type it again, or check your ${
+          demoCluster.username_label ?? 'username'}.`} onClose={() => setShown('')} />}
       {wrong && clusters?.find((c) => c.id === wrong.id) && <WrongPasswordDialog key={wrong.id}
         cluster={clusters.find((c) => c.id === wrong.id)!} detail={wrong.detail} onClose={() => setWrong(null)} />}
       {shown === 'settings' && demoCluster && <SettingsDialog cluster={demoCluster} onClose={() => setShown('')}

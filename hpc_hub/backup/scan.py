@@ -9,6 +9,7 @@ import time
 from dataclasses import replace
 from pathlib import Path
 
+from .. import clusters
 from ..compute import limits, slurm_args
 from ..core.config import ComputeProfile
 from .model import Purge
@@ -44,10 +45,11 @@ def remote_source(*names: str) -> str:
 
 
 def job_profile(base: ComputeProfile, cluster_id: str, minutes: int = SCAN_MINUTES) -> ComputeProfile:
-    """1 core, 2 GB on the queue the cluster's node settings use; Expanse needs nodes that see Lustre."""
-    extra = base.extra_args
-    if cluster_id == "sdsc" and "lustre" not in extra:
-        extra = (extra + " --constraint=lustre").strip()
+    """1 core, 2 GB on the queue the cluster's node settings use, with what its file adds (Expanse: nodes that see
+    Lustre)."""
+    extra, more = base.extra_args, clusters.site(cluster_id).scan_args
+    if more and more not in extra:
+        extra = f"{extra} {more}".strip()
     return replace(base, cpus=1, mem_gb=2, gpus=0, time=limits.slurm_time(minutes), extra_args=extra)
 
 

@@ -19,9 +19,7 @@ export function AuthenticatorHelp({ cluster: c, onClose }: { cluster: Cluster; o
   const url = c.code_setup ?? ''
   const site = host(url)
   const short = shortName(c)
-  const signIn = site.endsWith('sdsc.edu')
-    ? 'Choose Log In Using Globus, then ACCESS CI, and sign in with your ACCESS login.'
-    : `Sign in with the account you use for ${short}.`
+  const signIn = c.code_sign_in || `Sign in with the account you use for ${short}.`
   const steps: [string, string][] = [
     ['Install Google Authenticator on your phone',
       'From the App Store or Google Play. Microsoft Authenticator or Authy work too.'],

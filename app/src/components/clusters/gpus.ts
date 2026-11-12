@@ -21,9 +21,9 @@ const NAMES: Record<string, string> = {
   a5000: 'RTX A5000', rtx_5000_ada: 'RTX 5000 Ada', rtx_pro_6000_blackwell: 'RTX PRO 6000 Blackwell',
 }
 
-/** "A100, 10 GB slice", "2 × H100", "2 × V100" (SDSC names none): never a bare count. */
-export function gpuAmount(count: number, type = '', cluster = '') {
-  const name = NAMES[type] ?? (type ? type.replace(/_/g, ' ').toUpperCase() : cluster === 'sdsc' ? 'V100' : 'GPU')
+/** "A100, 10 GB slice", "2 × H100", "2 × V100" (untyped: the cluster's untyped_gpu): never a bare count. */
+export function gpuAmount(count: number, type = '', untyped = '') {
+  const name = NAMES[type] ?? (type ? type.replace(/_/g, ' ').toUpperCase() : untyped || 'GPU')
   return count === 1 && /slice/.test(name) ? name : `${count} × ${name}`
 }
 
