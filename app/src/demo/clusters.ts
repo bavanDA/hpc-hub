@@ -236,7 +236,7 @@ export const answers: Record<string, unknown> = {
     // like Wulver: debug takes only the debug priority, and gpu is GPU nodes only
     const refused = part === 'debug' && (qos || 'low') !== 'debug'
     return { known: true, partitions: Object.keys(limits.partitions), default_partition: 'general',
-      qos: part === 'debug' ? ['debug'] : Object.keys(limits.qos), default_qos: 'low', needs_gpu: part === 'gpu',
+      qos: part === 'debug' ? ['debug'] : Object.keys(limits.qos), default_qos: 'low', needs_gpu: part === 'gpu', gpu_queues: ['gpu'],
       qos_refused: refused ? `The debug queue takes priority debug, not ${qos || 'low'}.` : '',
       qos_fix: refused ? 'debug' : '', qos_note: part === 'debug' ? 'The debug queue takes priority debug only.' : '',
       accounts: ['mygroup', 'abc123', 'dept_x'],

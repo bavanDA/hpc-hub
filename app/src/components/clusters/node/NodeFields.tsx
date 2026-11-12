@@ -95,7 +95,8 @@ export function NodeFields({ cluster, value: p, onChange, onValid, extra = true,
       {!!p.gpus && gpus.length > 0 && <GpuPart gpus={gpus} limits={limits} value={p} onChange={change} />}
       {su && <List><Row label="Cost" sub={su.sub} value={su.value} /></List>}
       {open && <Queue cluster={cluster} limits={limits} value={p} onChange={change} extra={extra}
-        only={p.gpus ? gpuQueues : undefined} onClose={() => setOpen(false)} />}
+        only={p.gpus ? gpuQueues : undefined} hide={p.gpus ? undefined : limits?.gpu_queues}
+        onClose={() => setOpen(false)} />}
     </>
   )
 }

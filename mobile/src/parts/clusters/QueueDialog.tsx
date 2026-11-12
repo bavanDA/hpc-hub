@@ -14,7 +14,7 @@ import { QueueGuide } from './QueueGuide'
 const choices = (list: string[] | undefined, current: string) =>
   list?.length ? [...(current && !list.includes(current) ? [current] : []), ...list] : []
 
-export function QueueDialog({ cluster, limits, value: p, onChange, onClose, extra, only }:
+export function QueueDialog({ cluster, limits, value: p, onChange, onClose, extra, only, hide }:
   ComponentProps<typeof DesktopQueueDialog>) {
   const set = (change: Partial<typeof p>) => onChange({ ...p, ...change })
   const [pick, setPick] = useState<'' | 'queue' | 'priority' | 'group'>('')
@@ -33,7 +33,8 @@ export function QueueDialog({ cluster, limits, value: p, onChange, onClose, extr
   const account = p.account ?? ''
   const qos = p.qos ?? ''
   const groups = choices(limits?.accounts, account)
-  const listed = only?.length ? limits?.partitions?.filter((q) => only.includes(q)) : limits?.partitions
+  const listed = (only?.length ? limits?.partitions?.filter((q) => only.includes(q)) : limits?.partitions)
+    ?.filter((q) => !hide?.includes(q))  // a CPU size: no GPU-only queues
   const queues = choices(listed, p.partition)
   const levels = choices(limits?.qos, qos)
   const shownQueue = p.partition || limits?.default_partition || ''

@@ -59,7 +59,7 @@ describe('fits', () => {
 
 describe('sizeOf', () => {
   const quick: Preset[] = [
-    { id: 'small', label: '2 cores', hint: '', apply: (p) => ({ ...p, cpus: 2, mem_gb: 8, gpus: 0, gpu_type: '' }) },
+    { id: 'small', label: 'Light CPU', hint: '', apply: (p) => ({ ...p, cpus: 2, mem_gb: 8, gpus: 0, gpu_type: '' }) },
   ]
 
   it('keeps the last size when it still matches CPU or GPU', () => {

@@ -18,12 +18,14 @@ const choices = (list: string[] | undefined, current: string) =>
   list?.length ? [...(current && !list.includes(current) ? [current] : []), ...list] : []
 
 /** A Queue row and a Priority row, each opening the cluster's list; text fields while the lists aren't known. */
-export function QueuePickers({ cluster, limits, queue, qos, onQueue, onQos, autoFocus, account, onAccount, only }: {
+export function QueuePickers({ cluster, limits, queue, qos, onQueue, onQos, autoFocus, account, onAccount, only,
+  hide }: {
   cluster?: string  // with it, each queue says what it allows, read from Slurm
   limits: Limits | null; queue: string; qos: string; onQueue: (q: string) => void; onQos: (q: string) => void
   autoFocus?: boolean
   account?: string; onAccount?: (a: string) => void  // with these, a Group to bill row too
   only?: string[]  // just these queues (a GPU size: the GPU queues)
+  hide?: string[]  // never these (a CPU size: the GPU-only queues)
 }) {
   const [pick, setPick] = useState<'' | 'queue' | 'priority' | 'group'>('')
   const [guide, setGuide] = useState<Guide | null>(null)
@@ -39,7 +41,8 @@ export function QueuePickers({ cluster, limits, queue, qos, onQueue, onQos, auto
   }
   const groups = onAccount ? choices(limits?.accounts, account ?? '') : []
   const def = limits?.default_account ?? ''
-  const listed = only?.length ? limits?.partitions?.filter((q) => only.includes(q)) : limits?.partitions
+  const listed = (only?.length ? limits?.partitions?.filter((q) => only.includes(q)) : limits?.partitions)
+    ?.filter((q) => !hide?.includes(q))
   const queues = choices(listed, queue)
   const levels = choices(limits?.qos, qos)
   const shownQueue = queue || limits?.default_partition || ''

@@ -177,6 +177,8 @@ def test_the_priorities_offered_follow_the_partition(hub):
     hub.sessions["wulver"].limits.gpu_only = ["gpu"]
     assert slurm_limits.partitions("wulver", partition="gpu")["needs_gpu"] is True
     assert slurm_limits.partitions("wulver", partition="general")["needs_gpu"] is False
+    hub.sessions["wulver"].limits.partitions["gpu"] = 4320
+    assert slurm_limits.partitions("wulver")["gpu_queues"] == ["gpu"]  # a CPU size leaves these out of the list
 
 
 def test_queues_for_other_groups_are_not_offered(hub):
