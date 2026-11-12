@@ -31,8 +31,9 @@ export function useStart() {
       if (kind === 'vscode' && found) {
         const v = setup.vscode
         if (v.ask === false) {  // Ask every time is off: the saved choices, a running job if there is one
-          startVscode(cluster, { folder: folder || v.workdir || '~', target: 'browser', job: found.job?.id ?? '',
-            replace_job: false, profile: null, remember: false, remember_folder: false }, true, go)
+          startVscode(cluster, name, { folder: folder || v.workdir || '~', target: 'browser', job: found.job?.id ?? '',
+            replace_job: false, profile: null, remember: false, remember_folder: false }, true)
+            .catch((e: Error) => toast(`VS Code didn't start: ${e.message}`, { kind: 'error' }))
           return
         }
         setSheet(<VsCodeSheet setup={setup} found={found} folder={folder} onClose={close} />)

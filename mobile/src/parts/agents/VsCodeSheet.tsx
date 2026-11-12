@@ -8,12 +8,12 @@ import { human, minutes } from '@shared/components/clusters/time'
 import { memText } from '@shared/components/jobs/format'
 import { sendable } from '@shared/components/tools/format'
 import { startVscode } from '@shared/components/tools/run'
-import { useGo } from '@shared/nav'
 import type { ToolSetup, VsFound } from '@shared/types/tools'
 import { MainButton, Section, Segments, Sheet, ToggleRow } from '../../ui'
 import { FolderField } from './FolderField'
 import { useClusters } from '@shared/components/clusters/store'
 import { NodeFields } from '../NodeSheet'
+import { useToast } from '../../ui'
 
 /** "2 cores · 8G · 1:12:40 of 8:00:00" (squeue) in words: "2 cores · 8 GB · 1 h 13 min of 8 h". */
 function inWords(resources: string): string {
@@ -25,7 +25,7 @@ function inWords(resources: string): string {
 
 export function VsCodeSheet({ setup, found, folder: first = '', onClose }:
   { setup: ToolSetup; found: VsFound; folder?: string; onClose: () => void }) {
-  const go = useGo()
+  const toast = useToast()
   const v = setup.vscode
   const job = found.job
   const [keep, setKeep] = useState(Boolean(job))
@@ -39,9 +39,10 @@ export function VsCodeSheet({ setup, found, folder: first = '', onClose }:
   const open = () => {
     onClose()
     // links (the tunnel, a GitHub sign-in, VS Code web on a forwarded port) open in the browser as they show up
-    startVscode(setup.id, { folder: folder.trim() || '~', target: 'browser', job: job?.id ?? '',
+    startVscode(setup.id, setup.name, { folder: folder.trim() || '~', target: 'browser', job: job?.id ?? '',
       replace_job: Boolean(job) && !keep, profile: keep ? null : sendable(profile), remember,
-      remember_folder: !first, ask }, true, go)
+      remember_folder: !first, ask }, true)
+      .catch((e: Error) => toast(`VS Code didn't start: ${e.message}`, { kind: 'error' }))
   }
 
   return (
