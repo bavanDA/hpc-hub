@@ -2,7 +2,7 @@ import { ArrowUp, Eye, EyeOff, Folder, FolderPlus, HardDrive, House, Pencil } fr
 import { useCallback, useEffect, useState } from 'react'
 
 import { call } from '../../rpc'
-import type { Folder as FolderList, Place, Places, ProjectCluster } from '../../types/projects'
+import type { Folder as FolderList, Place, Places, Project, ProjectCluster } from '../../types/projects'
 import { shortName } from '../clusters/loginCopy'
 import { EButton } from '../e/EButton'
 import { EDialog } from '../e/EDialog'
@@ -22,9 +22,12 @@ function short(path: string, home: string) {
 const INPUT = 'h-9 min-w-0 flex-1 rounded-lg border border-line-strong bg-window px-3 outline-none '
   + 'placeholder:text-faint focus:border-accent focus:ring-1 focus:ring-accent'
 
-export function FolderPicker({ cluster, start, onPick, onClose, projects = [] }:
+/** projects: the saved projects to list; without them, your saved projects on this cluster. */
+export function FolderPicker({ cluster, start, onPick, onClose, projects: given }:
   { cluster: ProjectCluster; start: string; onPick: (path: string) => void; onClose: () => void;
     projects?: Place[] }) {
+  const [saved, setSaved] = useState<Place[]>([])
+  const projects = given ?? saved
   const [places, setPlaces] = useState<Place[]>([{ label: 'Home', path: '~' }])
   const [at, setAt] = useState<FolderList | null>(null)
   const [loading, setLoading] = useState(true)
@@ -48,6 +51,13 @@ export function FolderPicker({ cluster, start, onPick, onClose, projects = [] }:
     load(start || '~')
     call<Places>('projects.places', { cluster: cluster.id }).then((p) => setPlaces(p.places)).catch(() => {})
   }, [cluster.id, start, load])
+  useEffect(() => {  // one click to a project's folder (VS Code, agents...): the list is optional, so no error shown
+    if (given) return
+    call<{ projects: Project[] }>('projects.list')
+      .then((r) => setSaved(r.projects.filter((x) => x.cluster === cluster.id)
+        .map((x) => ({ label: x.name, path: x.path }))))
+      .catch(() => {})
+  }, [cluster.id, given])
 
   const newFolder = () => {
     const name = naming?.trim()
