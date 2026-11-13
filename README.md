@@ -88,7 +88,13 @@ We welcome contributions of every size. You can:
 
 ## Safety
 
-Passwords stay in the system keyring. In-app updates are signature-checked. Installers are not code-signed yet.
+- **Your passwords stay on your device**, in its own secure store: Credential Manager on Windows, Keychain on macOS,
+  the system keyring on Linux (such as GNOME Keyring), and an encrypted file locked by the Android Keystore on Android.
+- **No HPC Hub account and no tracking.** The app talks only to your clusters, GitHub (for updates) and services you
+  choose, such as Globus.
+- **Updates are signed**: the app checks every in-app update's signature before installing it.
+- **Installers are not code-signed yet**, so Windows and macOS may warn the first time you open HPC Hub. The
+  [install guide](https://hpchub.staylazy.app/install.html) shows what to click.
 
 ## License
 
