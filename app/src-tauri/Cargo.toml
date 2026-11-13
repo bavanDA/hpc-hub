@@ -1,6 +1,6 @@
 [package]
 name = "hpc-hub"
-version = "0.2.2"
+version = "0.2.3"
 description = "HPC Hub: work on your HPC clusters"
 authors = ["HPC Hub contributors"]
 license = "MIT"
