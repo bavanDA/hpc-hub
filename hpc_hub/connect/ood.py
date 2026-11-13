@@ -13,6 +13,7 @@ import warnings
 from collections.abc import Callable
 from dataclasses import replace
 
+from ..core.hostenv import CA_BUNDLES
 from .vpn_sso import SsoStart
 
 SESSION = "mod_auth_openidc_session"  # set once you are signed in; the sign-in window waits for it
@@ -48,9 +49,6 @@ def with_key(current: str, key: str) -> str | None:
     return current + ("" if not current or current.endswith("\n") else "\n") + key.strip() + "\n"
 
 
-# Where Linux distributions keep the trusted certificate authorities (Fedora/RHEL, Debian/Ubuntu/Arch, others)
-CA_BUNDLES = ("/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem", "/etc/ssl/certs/ca-certificates.crt",
-              "/etc/ssl/cert.pem", "/etc/pki/tls/cert.pem")
 
 
 def system_roots() -> list:

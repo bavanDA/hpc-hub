@@ -2,8 +2,12 @@
 
 import sys
 
-from . import health, hub, methods
-from .server import Server
+from ..core import hostenv
+
+hostenv.apply()  # before anything starts a program or opens TLS: as on this computer, not as in the bundle
+
+from . import health, hub, methods  # noqa: E402
+from .server import Server  # noqa: E402
 
 protocol = sys.stdout
 sys.stdout = sys.stderr  # a stray print must never land in the protocol stream
