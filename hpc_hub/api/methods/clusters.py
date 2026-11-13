@@ -4,6 +4,7 @@ from dataclasses import fields, replace
 
 from ...compute import gpus as gpu_list
 from ...compute import slurm_args
+from ...connect import vpn_helper
 from ...connect.state import State
 from ...core.config import ComputeProfile
 from ...core.paths import log_dir
@@ -19,12 +20,15 @@ LOG_TAIL = 200_000  # bytes read from the end of a log file
 
 
 def _blocker(session):
-    """Another VPN that can't run beside this one (a full tunnel takes over all traffic)."""
+    """Another VPN that can't run beside this one: a full tunnel takes over all traffic, and on Windows and macOS
+    the VPN helper runs one tunnel, so starting this one would end the other's (its cluster would just drop)."""
     cfg = session.cfg
+    one_tunnel = vpn_helper.needs_helper()
     for s in hub().sessions.values():
         if (s is not session and s.cfg.vpn.enabled and cfg.vpn.enabled
-                and not (s.cfg.vpn.split_tunnel and cfg.vpn.split_tunnel)
-                and s.state not in (State.DISCONNECTED, State.ERROR)):
+                and s.state not in (State.DISCONNECTED, State.ERROR)
+                and (not (s.cfg.vpn.split_tunnel and cfg.vpn.split_tunnel)
+                     or (one_tunnel and getattr(s, "vpn_used", True)))):
             return s
     return None
 

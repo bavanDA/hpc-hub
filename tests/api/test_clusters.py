@@ -91,6 +91,20 @@ def test_full_tunnel_asks_before_switching(hub, keyring):
     assert hub.sessions["wulver"].calls == [("disconnect",)] and hub.sessions["yale"].calls[0][0] == "connect"
 
 
+def test_windows_and_macos_run_one_vpn_so_they_ask_first(hub, keyring, monkeypatch):
+    from hpc_hub.connect import vpn_helper
+    keyring["yale", "ssh"] = keyring["yale", "vpn"] = keyring["wulver", "ssh"] = Login("jdoe", "pw")
+    hub.sessions["wulver"].state = State.CONNECTED  # both VPNs split tunnel, the default
+    hub.sessions["wulver"].vpn_used = True
+    monkeypatch.setattr(vpn_helper, "needs_helper", lambda: True)  # one tunnel: Yale's would end Wulver's
+    assert clusters.connect("yale") == {"switch": {"id": "wulver", "name": "Wulver (NJIT)"}}
+    hub.sessions["wulver"].vpn_used = False  # Wulver reached without its VPN (on campus): nothing in the way
+    assert clusters.connect("yale") is None
+    hub.sessions["wulver"].vpn_used = True
+    monkeypatch.setattr(vpn_helper, "needs_helper", lambda: False)  # Linux: a tunnel for each, side by side
+    assert clusters.connect("yale") is None
+
+
 def test_disconnect_cancel_and_nodes(hub):
     s = hub.sessions["sdsc"]
     clusters.disconnect("sdsc")
