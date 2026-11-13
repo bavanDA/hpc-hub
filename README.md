@@ -8,7 +8,7 @@
 
 <p align="center">
   <a href="https://github.com/bavanDA/hpc-hub/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/bavanDA/hpc-hub?include_prereleases"></a>
-  <a href="https://hpchub.staylazy.app/install.html"><img alt="Windows, macOS, and Linux" src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-blue"></a>
+  <a href="https://hpchub.staylazy.app/install.html"><img alt="Windows, macOS, Linux and Android" src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux%20%7C%20Android-blue"></a>
   <a href="LICENSE"><img alt="MIT license" src="https://img.shields.io/github/license/bavanDA/hpc-hub"></a>
 </p>
 
@@ -49,7 +49,7 @@ stay connected side by side in one window, and your projects and files move betw
 
 ## Install
 
-Free and open source, for Windows, macOS (Apple silicon), and Linux.
+Free and open source, for Windows, macOS (Apple silicon), Linux and Android.
 
 **Windows** (PowerShell)
 
@@ -64,6 +64,9 @@ curl -fsSL https://github.com/bavanDA/hpc-hub/releases/latest/download/install.s
 ```
 
 Or download from [Releases](https://github.com/bavanDA/hpc-hub/releases). Guide: [hpchub.staylazy.app/install.html](https://hpchub.staylazy.app/install.html).
+
+**Android** (preview): the same pages, made for your phone. Sign in by scanning a QR code from the desktop app, and approve
+Duo on the phone. It isn't in a store yet: see the [Android guide](https://hpchub.staylazy.app/phone.html).
 
 ## Supported clusters
 
