@@ -24,11 +24,15 @@
 
 ## Why HPC Hub
 
-Researchers should spend their time on research, not on learning Open OnDemand, Slurm, VPN clients, SSH and Duo.
-Today a cluster asks for all of that, plus a VS Code tunnel and tmux, and all of it again for every cluster you use.
+You got cluster access to run your research. Then, before the first job, you learn a VPN client, SSH keys, Duo
+prompts, Slurm options, Open OnDemand, VS Code tunnels and tmux. Get access to a second cluster, and it all works a
+little differently there.
 
-HPC Hub takes care of it, so cluster work is simpler and faster, especially when you use several clusters: they sit
-side by side in one window, and your projects and files move between them.
+HPC Hub turns that into one button. Press **Connect**, pick a size, and you are in VS Code, a terminal or an AI agent
+on a compute node. Every cluster you use stays connected in the same window, and your projects and files move
+between them.
+
+**Less time on the cluster. More time on your research.**
 
 ## Features
 
