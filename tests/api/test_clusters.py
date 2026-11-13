@@ -91,17 +91,24 @@ def test_full_tunnel_asks_before_switching(hub, keyring):
     assert hub.sessions["wulver"].calls == [("disconnect",)] and hub.sessions["yale"].calls[0][0] == "connect"
 
 
-def test_windows_and_macos_run_one_vpn_so_they_ask_first(hub, keyring, monkeypatch):
+@pytest.mark.parametrize("helper", [False, True], ids=["linux", "windows-macos"])
+def test_split_vpns_run_side_by_side(hub, keyring, monkeypatch, helper):
     from hpc_hub.connect import vpn_helper
     keyring["yale", "ssh"] = keyring["yale", "vpn"] = keyring["wulver", "ssh"] = Login("jdoe", "pw")
-    hub.sessions["wulver"].state = State.CONNECTED  # both VPNs split tunnel, the default
-    hub.sessions["wulver"].vpn_used = True
-    monkeypatch.setattr(vpn_helper, "needs_helper", lambda: True)  # one tunnel: Yale's would end Wulver's
-    assert clusters.connect("yale") == {"switch": {"id": "wulver", "name": "Wulver (NJIT)"}}
-    hub.sessions["wulver"].vpn_used = False  # Wulver reached without its VPN (on campus): nothing in the way
+    monkeypatch.setattr(vpn_helper, "needs_helper", lambda: helper)
+    hub.sessions["wulver"].state = State.CONNECTED  # both split tunnel with routes and domains, the default
     assert clusters.connect("yale") is None
-    hub.sessions["wulver"].vpn_used = True
-    monkeypatch.setattr(vpn_helper, "needs_helper", lambda: False)  # Linux: a tunnel for each, side by side
+    assert hub.sessions["wulver"].calls == [] and hub.sessions["yale"].calls[0][0] == "connect"
+
+
+def test_a_vpn_without_split_dns_asks_first_where_the_helper_runs_it(hub, keyring, monkeypatch):
+    from hpc_hub.connect import vpn_helper
+    keyring["yale", "ssh"] = keyring["yale", "vpn"] = keyring["wulver", "ssh"] = Login("jdoe", "pw")
+    hub.clusters[0].vpn.domains = ""  # Wulver's DNS would take over every name
+    hub.sessions["wulver"].state = State.CONNECTED
+    monkeypatch.setattr(vpn_helper, "needs_helper", lambda: True)
+    assert clusters.connect("yale") == {"switch": {"id": "wulver", "name": "Wulver (NJIT)"}}
+    monkeypatch.setattr(vpn_helper, "needs_helper", lambda: False)  # Linux: NetworkManager keeps DNS per tunnel
     assert clusters.connect("yale") is None
 
 

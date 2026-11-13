@@ -106,7 +106,7 @@ fn service_main(_args: Vec<OsString>) {
     });
     let _ = stop_rx.recv();
     set(ServiceState::StopPending, ServiceControlAccept::empty(), 0);
-    server.tunnel.down();
+    server.tunnels.down_all();
     let code = if failed.is_finished() && failed.join().unwrap_or(true) { 1 } else { 0 };
     set(ServiceState::Stopped, ServiceControlAccept::empty(), code);
 }

@@ -20,15 +20,13 @@ LOG_TAIL = 200_000  # bytes read from the end of a log file
 
 
 def _blocker(session):
-    """Another VPN that can't run beside this one: a full tunnel takes over all traffic, and on Windows and macOS
-    the VPN helper runs one tunnel, so starting this one would end the other's (its cluster would just drop)."""
+    """Another VPN that can't run beside this one: one of them sends all traffic or all DNS through itself
+    (vpn_helper.side_by_side), so starting this one would take the other's cluster away."""
     cfg = session.cfg
-    one_tunnel = vpn_helper.needs_helper()
     for s in hub().sessions.values():
         if (s is not session and s.cfg.vpn.enabled and cfg.vpn.enabled
                 and s.state not in (State.DISCONNECTED, State.ERROR)
-                and (not (s.cfg.vpn.split_tunnel and cfg.vpn.split_tunnel)
-                     or (one_tunnel and getattr(s, "vpn_used", True)))):
+                and not (vpn_helper.side_by_side(s.cfg) and vpn_helper.side_by_side(cfg))):
             return s
     return None
 

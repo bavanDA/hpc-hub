@@ -4,6 +4,7 @@ tunnel."""
 import ipaddress
 import json
 import os
+import re
 import shlex
 import socket
 import subprocess
@@ -18,7 +19,7 @@ from ..core.config import ClusterConfig
 from ..core.paths import WINDOWS, resources_dir
 from .vpn import Vpn, VpnError, nm_secrets, split_errors
 
-VERSION = "1"  # the protocol this app speaks; an older helper is installed again
+VERSION = "2"  # the protocol this app speaks (2: a named tunnel per cluster); an older helper is installed again
 PIPE = r"\\.\pipe\hpc-hub-vpn"
 SOCKET = "/var/run/hpc-hub-vpn.sock"
 UP_TIMEOUT = 90  # seconds from "up" to the tunnel being there
@@ -166,6 +167,19 @@ def _run_as_admin_windows(program: Path, args: list[str]) -> int:
 
 # -- the tunnel -----------------------------------------------------------------------------------------
 
+def tunnel_name(cluster_id: str) -> str:
+    """The helper's name for a cluster's tunnel: 1 to 32 of a-z, 0-9 and -."""
+    name = re.sub(r"[^a-z0-9-]+", "-", cluster_id.lower()).strip("-")[:32].strip("-")
+    return name or "vpn"
+
+
+def side_by_side(cfg: ClusterConfig) -> bool:
+    """Can this cluster's VPN run beside another one? Its traffic and its DNS must both stay to itself: split
+    tunnel with routes, and (where the helper runs it) the domains its DNS servers answer for."""
+    v = cfg.vpn
+    return v.split_tunnel and bool(v.routes.split()) and (not needs_helper() or bool(v.domains.split()))
+
+
 def up_request(cfg: ClusterConfig, auth: dict[str, str]) -> dict:
     """What the helper gets for "up": the gateway, the sign-in's cookie and certificate pin, the split routes."""
     v = cfg.vpn
@@ -173,8 +187,9 @@ def up_request(cfg: ClusterConfig, auth: dict[str, str]) -> dict:
     url = secrets["gateway"] if "://" in secrets["gateway"] else f"https://{secrets['gateway']}"
     routes = [str(ipaddress.ip_network(n, strict=False)) for n in v.routes.split()] if v.split_tunnel else []
     domains = [d.lstrip("~") for d in v.domains.split()] if v.split_tunnel else []
-    return {"op": "up", "url": url, "cookie": secrets["cookie"], "servercert": secrets["gwcert"],
-            "useragent": v.useragent, "protocol": v.protocol, "resolve": secrets["resolve"],
+    return {"op": "up", "name": tunnel_name(cfg.id), "url": url, "cookie": secrets["cookie"],
+            "servercert": secrets["gwcert"], "useragent": v.useragent, "protocol": v.protocol,
+            "resolve": secrets["resolve"],
             "routes": routes, "domains": domains}
 
 
@@ -211,7 +226,7 @@ class HelperVpn(Vpn):
         self.log("VPN helper installed")
 
     def _status(self) -> dict:
-        return _checked(request({"op": "status"}, address=self.address))
+        return _checked(request({"op": "status", "name": tunnel_name(self.cfg.id)}, address=self.address))
 
     def is_active(self) -> bool:
         try:
@@ -236,7 +251,7 @@ class HelperVpn(Vpn):
 
     def down(self) -> None:
         try:
-            _checked(request({"op": "down"}, timeout=30, address=self.address))
+            _checked(request({"op": "down", "name": tunnel_name(self.cfg.id)}, timeout=30, address=self.address))
         except HelperMissing:
             pass
 

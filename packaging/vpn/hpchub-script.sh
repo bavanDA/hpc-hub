@@ -1,8 +1,11 @@
 #!/bin/sh
 # HPC Hub's wrapper around vpnc-script (macOS), from docs/design/vpn-helper.md.
-# openconnect runs it with HPCHUB_ROUTES="cidr cidr..." and HPCHUB_DOMAINS="d d...". When HPCHUB_ROUTES
-# has routes, only they go through the tunnel, not the ones the server pushes. Then the real vpnc-script
-# (next to this file) runs with the same environment.
+# openconnect runs it with HPCHUB_ROUTES="cidr cidr...", HPCHUB_DOMAINS="d d..." and HPCHUB_TAG (the
+# tunnel's name). When HPCHUB_ROUTES has routes, only they go through the tunnel, not the ones the server
+# pushes. When HPCHUB_DOMAINS has domains, only names in them go to the VPN's DNS servers, through
+# /etc/resolver/<domain> files marked "# hpc-hub <tag>" (the helper removes them when the tunnel ends), and
+# vpnc-script leaves the system's DNS alone: so several VPNs can be up side by side. Then the real
+# vpnc-script (next to this file) runs with the same environment.
 
 set -eu
 
@@ -93,6 +96,31 @@ for domain in ${HPCHUB_DOMAINS:-}; do
 done
 if [ -n "$dns" ]; then
 	export CISCO_SPLIT_DNS="$dns"
+	tag=${HPCHUB_TAG:-}
+	case $tag in '' | -* | *[!a-z0-9-]*) die "not a tunnel name: $tag" ;; esac
+	if [ "${reason:-}" = connect ]; then
+		servers=''
+		for server in ${INTERNAL_IP4_DNS:-} ${INTERNAL_IP6_DNS:-}; do
+			case $server in *[!0-9A-Fa-f:.]*) die "not a DNS server: $server" ;; esac
+			servers="$servers
+nameserver $server"
+		done
+		resolver=${HPCHUB_RESOLVER_DIR:-/etc/resolver} # tests only: the helper never sets it
+		if [ -n "$servers" ]; then
+			mkdir -p "$resolver"
+			for domain in ${HPCHUB_DOMAINS:-}; do
+				case $domain in .* | *. | *..*) die "not a DNS domain: $domain" ;; esac
+				file=$resolver/$domain
+				if [ -L "$file" ] || { [ -e "$file" ] && ! head -n 1 "$file" | grep -q '^# hpc-hub '; }; then
+					echo "hpchub-script: $file is not HPC Hub's, so it is left as it is" >&2
+					continue
+				fi
+				printf '# hpc-hub %s%s\n' "$tag" "$servers" >"$file.hpchub"
+				mv -f "$file.hpchub" "$file"
+			done
+		fi
+	fi
+	unset INTERNAL_IP4_DNS INTERNAL_IP6_DNS CISCO_DEF_DOMAIN
 fi
 set +f
 

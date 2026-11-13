@@ -23,7 +23,7 @@ export async function whenConnected(cluster: string, name: string): Promise<void
   const all = await call<Session[]>('sessions.list')
   if (all.find((s) => s.id === cluster)?.connected) return
   const r = await call<{ switch?: { name: string } } | null>('clusters.connect', { cluster })
-  if (r?.switch) throw new Error(`Disconnect ${r.switch.name} first, only one VPN can run`)
+  if (r?.switch) throw new Error(`Disconnect ${r.switch.name} first: its VPN can't run beside this one`)
   notify(`Connecting to ${name}…`)
   await new Promise<void>((resolve, reject) => {
     const off = on('session', (d) => {

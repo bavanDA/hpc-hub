@@ -11,13 +11,14 @@ from hpc_hub.core import config
 
 
 class FakeHelper:
-    """Speaks the helper's protocol (docs/design/vpn-helper.md) on a Unix socket; the tunnel comes up after
+    """Speaks the helper's protocol (docs/design/vpn-helper.md) on a Unix socket; each named tunnel comes up after
     `delay` status calls, or fails with `fail`."""
 
     def __init__(self, path: Path, delay: int = 1, fail: str = ""):
         self.path, self.delay, self.fail = str(path), delay, fail
         self.requests: list[dict] = []
-        self.state, self.polls = "down", 0
+        self.states: dict[str, str] = {}
+        self.polls: dict[str, int] = {}
         self.server = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         self.server.bind(self.path)
         self.server.listen()
@@ -38,18 +39,22 @@ class FakeHelper:
         op = req.get("op")
         if op == "version":
             return {"ok": True, "version": vpn_helper.VERSION}
+        name = req.get("name")
+        if op in ("up", "status", "down") and not name:
+            return {"ok": False, "error": "Bad request"}
         if op == "up":
             if "evil" in req["url"]:
                 return {"ok": False, "error": "gateway not allowed"}
-            self.state, self.polls = "connecting", 0
+            self.states[name], self.polls[name] = "connecting", 0
             return {"ok": True}
         if op == "status":
-            self.polls += 1
-            if self.state == "connecting" and self.polls >= self.delay:
-                self.state = "down" if self.fail else "up"
-            return {"ok": True, "state": self.state, "error": self.fail, "log": [self.fail] if self.fail else []}
+            self.polls[name] = self.polls.get(name, 0) + 1
+            if self.states.get(name) == "connecting" and self.polls[name] >= self.delay:
+                self.states[name] = "down" if self.fail else "up"
+            return {"ok": True, "state": self.states.get(name, "down"), "error": self.fail,
+                    "log": [self.fail] if self.fail else []}
         if op == "down":
-            self.state = "down"
+            self.states[name] = "down"
             return {"ok": True}
         return {"ok": False, "error": "unknown op"}
 
@@ -79,6 +84,7 @@ def test_up_and_down_through_the_helper(tmp_path, wulver, monkeypatch):
               "RESOLVE": "vpn.njit.edu:192.0.2.7"})
         assert v.is_active()
         up = next(r for r in helper.requests if r["op"] == "up")
+        assert up["name"] == "wulver"
         assert up["url"] == "https://vpn.njit.edu" and up["cookie"] == "webvpn=abc"
         assert up["servercert"] == "pin-sha256:xyz" and up["resolve"] == "vpn.njit.edu:192.0.2.7"
         assert up["routes"] == ["128.235.0.0/16"] and up["domains"] == ["njit.edu"]  # Wulver's split tunnel
@@ -139,3 +145,40 @@ def test_sign_in_uses_the_shipped_openconnect_without_the_linux_browser(tmp_path
     args = (exe.parent / "args").read_text()
     assert auth["COOKIE"] == "abc" and f"--cafile {exe.parent / 'cert.pem'}" in args
     assert "--external-browser" not in args
+
+
+def test_two_clusters_have_two_tunnels(tmp_path, monkeypatch):
+    monkeypatch.setattr(vpn_helper, "UP_TIMEOUT", 5)
+    wulver, yale = config.default_clusters()[0], next(c for c in config.default_clusters() if c.id == "yale")
+    helper = FakeHelper(tmp_path / "h.sock")
+    try:
+        w, _ = make(wulver, helper.path)
+        y, _ = make(yale, helper.path)
+        auth = {"COOKIE": "c", "HOST": "vpn.njit.edu", "RESOLVE": "x:1"}
+        w.up(auth)
+        y.up({**auth, "HOST": "access.yale.edu"})
+        assert w.is_active() and y.is_active()
+        w.down()
+        assert not w.is_active() and y.is_active(), "one going down leaves the other"
+        assert {r["name"] for r in helper.requests if r["op"] != "version"} == {"wulver", "yale"}
+    finally:
+        helper.close()
+
+
+@pytest.mark.parametrize("cluster_id,name", [("wulver", "wulver"), ("My Cluster_2", "my-cluster-2"),
+                                             ("--x--", "x"), ("", "vpn"), ("é", "vpn"), ("a" * 40, "a" * 32)])
+def test_tunnel_names(cluster_id, name):
+    assert vpn_helper.tunnel_name(cluster_id) == name
+
+
+def test_side_by_side_needs_split_routes_and_dns_where_the_helper_runs(wulver, monkeypatch):
+    monkeypatch.setattr(vpn_helper, "needs_helper", lambda: True)
+    assert vpn_helper.side_by_side(wulver)
+    wulver.vpn.domains = ""
+    assert not vpn_helper.side_by_side(wulver)
+    monkeypatch.setattr(vpn_helper, "needs_helper", lambda: False)
+    assert vpn_helper.side_by_side(wulver), "Linux: NetworkManager keeps each tunnel's DNS to itself"
+    wulver.vpn.routes = ""
+    assert not vpn_helper.side_by_side(wulver)
+    wulver.vpn.routes, wulver.vpn.split_tunnel = "128.235.0.0/16", False
+    assert not vpn_helper.side_by_side(wulver)

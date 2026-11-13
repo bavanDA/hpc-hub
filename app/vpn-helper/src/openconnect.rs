@@ -61,9 +61,10 @@ pub fn args(up: &Up, script: &str) -> Vec<String> {
     a
 }
 
-/// HPCHUB_ROUTES and HPCHUB_DOMAINS, space separated, maybe empty. openconnect passes them on to the script.
-pub fn env(up: &Up) -> [(&'static str, String); 2] {
-    [("HPCHUB_ROUTES", up.routes.join(" ")), ("HPCHUB_DOMAINS", up.domains.join(" "))]
+/// HPCHUB_ROUTES and HPCHUB_DOMAINS, space separated, maybe empty, and HPCHUB_TAG, the tunnel's name (the
+/// script marks the split DNS it adds with it). openconnect passes them on to the script.
+pub fn env(up: &Up) -> [(&'static str, String); 3] {
+    [("HPCHUB_ROUTES", up.routes.join(" ")), ("HPCHUB_DOMAINS", up.domains.join(" ")), ("HPCHUB_TAG", up.name.clone())]
 }
 
 #[cfg(test)]
@@ -72,6 +73,7 @@ mod tests {
 
     fn up() -> Up {
         Up {
+            name: "wulver".into(),
             url: "https://vpn.example.edu/group".into(),
             cookie: "webvpn=secret".into(),
             servercert: "pin-sha256:abc=".into(),
@@ -111,10 +113,11 @@ mod tests {
         let e = env(&up());
         assert_eq!(e[0], ("HPCHUB_ROUTES", "10.0.0.0/8 192.0.2.0/24".to_string()));
         assert_eq!(e[1], ("HPCHUB_DOMAINS", "example.edu cs.example.edu".to_string()));
+        assert_eq!(e[2], ("HPCHUB_TAG", "wulver".to_string()));
         let mut u = up();
         u.routes.clear();
         u.domains.clear();
-        assert_eq!(env(&u), [("HPCHUB_ROUTES", String::new()), ("HPCHUB_DOMAINS", String::new())]);
+        assert_eq!(env(&u)[..2], [("HPCHUB_ROUTES", String::new()), ("HPCHUB_DOMAINS", String::new())]);
     }
 
     #[test]

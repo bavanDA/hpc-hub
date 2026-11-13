@@ -3,10 +3,11 @@
 use serde::Deserialize;
 use serde_json::{Value, json};
 
-use crate::validate::{check_resolve, check_str, check_url, is_cidr, is_domain, is_protocol};
+use crate::validate::{check_resolve, check_str, check_url, is_cidr, is_domain, is_protocol, is_tunnel_name};
 
 /// The protocol version `{"op": "version"}` answers; the app installs the helper again when it differs.
-pub const VERSION: &str = "1";
+/// 2: several tunnels side by side, each with a name (up, status and down carry it).
+pub const VERSION: &str = "2";
 
 /// Longest request line the helper reads, in bytes.
 pub const MAX_LINE: u64 = 256 * 1024;
@@ -15,14 +16,26 @@ pub const MAX_LINE: u64 = 256 * 1024;
 #[serde(tag = "op", rename_all = "lowercase")]
 pub enum Request {
     Version,
-    Status,
+    Status(Named),
     Up(Up),
-    Down,
+    Down(Named),
+}
+
+/// `status` and `down`: which tunnel.
+#[derive(Deserialize)]
+pub struct Named {
+    pub name: String,
+}
+
+/// The tunnel's name, checked.
+pub fn check_name(name: &str) -> Result<(), String> {
+    if is_tunnel_name(name) { Ok(()) } else { Err("Not a tunnel name".into()) }
 }
 
 /// What `up` carries. No Debug: it holds the cookie.
 #[derive(Deserialize, Clone, PartialEq)]
 pub struct Up {
+    pub name: String,
     pub url: String,
     pub cookie: String,
     pub servercert: String,
@@ -42,6 +55,7 @@ pub fn parse(line: &str) -> Result<Request, String> {
 
 /// Everything `up` carries checked against the spec. Returns the gateway host.
 pub fn check_up(up: &Up, gateways: &[String]) -> Result<String, String> {
+    check_name(&up.name)?;
     for (name, s) in [
         ("cookie", &up.cookie),
         ("servercert", &up.servercert),
@@ -91,7 +105,7 @@ mod tests {
     }
 
     fn up_line() -> &'static str {
-        r#"{"op": "up", "url": "https://vpn.example.edu", "cookie": "webvpn=abc", "servercert": "pin-sha256:xyz=",
+        r#"{"op": "up", "name": "wulver", "url": "https://vpn.example.edu", "cookie": "webvpn=abc", "servercert": "pin-sha256:xyz=",
             "useragent": "AnyConnect Linux_64 4.10", "protocol": "anyconnect", "resolve": "vpn.example.edu:192.0.2.7",
             "routes": ["10.0.0.0/8"], "domains": ["example.edu"]}"#
     }
@@ -106,13 +120,17 @@ mod tests {
     #[test]
     fn parses_simple_ops() {
         assert!(matches!(parse(r#"{"op": "version"}"#), Ok(Request::Version)));
-        assert!(matches!(parse("{\"op\": \"status\"}\n"), Ok(Request::Status)));
-        assert!(matches!(parse(r#"{"op": "down", "extra": 1}"#), Ok(Request::Down)));
+        assert!(matches!(parse("{\"op\": \"status\", \"name\": \"yale\"}\n"), Ok(Request::Status(n)) if n.name == "yale"));
+        assert!(matches!(parse(r#"{"op": "down", "name": "wulver", "extra": 1}"#), Ok(Request::Down(n)) if n.name == "wulver"));
+        assert!(parse(r#"{"op": "status"}"#).is_err(), "a name is needed");
+        assert!(parse(r#"{"op": "down"}"#).is_err(), "a name is needed");
+        assert!(check_name("wulver").is_ok() && check_name("../x").is_err());
     }
 
     #[test]
     fn parses_up() {
         let u = up();
+        assert_eq!(u.name, "wulver");
         assert_eq!(u.url, "https://vpn.example.edu");
         assert_eq!(u.cookie, "webvpn=abc");
         assert_eq!(u.protocol, "anyconnect");
@@ -123,7 +141,7 @@ mod tests {
 
     #[test]
     fn up_defaults() {
-        let line = r#"{"op":"up","url":"https://vpn.example.edu","cookie":"c","servercert":"","useragent":"","protocol":"gp"}"#;
+        let line = r#"{"op":"up","name":"x","url":"https://vpn.example.edu","cookie":"c","servercert":"","useragent":"","protocol":"gp"}"#;
         let Ok(Request::Up(u)) = parse(line) else { panic!("not up") };
         assert!(u.resolve.is_empty() && u.routes.is_empty() && u.domains.is_empty());
         assert!(check_up(&u, &gws()).is_ok());
@@ -168,6 +186,9 @@ mod tests {
         assert!(check_up(&u, &gw).is_err());
         let mut u = up();
         u.resolve = "evil.example.com:192.0.2.7".into();
+        assert!(check_up(&u, &gw).is_err());
+        let mut u = up();
+        u.name = "Bad Name".into();
         assert!(check_up(&u, &gw).is_err());
     }
 }

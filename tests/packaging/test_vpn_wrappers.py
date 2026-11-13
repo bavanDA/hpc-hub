@@ -70,7 +70,8 @@ def run_sh(request, tmp_path):
     dump = tmp_path / "env.txt"
 
     def run(routes=None, domains=None, *args, **extra):
-        env = {"PATH": os.environ["PATH"], "HPCHUB_TEST_DUMP": str(dump), "reason": "connect", **extra}
+        env = {"PATH": os.environ["PATH"], "HPCHUB_TEST_DUMP": str(dump), "reason": "connect", "HPCHUB_TAG": "wulver",
+               "HPCHUB_RESOLVER_DIR": str(tmp_path / "resolver"), **extra}
         if routes is not None:
             env["HPCHUB_ROUTES"] = routes
         if domains is not None:
@@ -85,6 +86,7 @@ def run_sh(request, tmp_path):
             seen["args:"] = next(line[5:] for line in lines if line.startswith("args:"))
         return proc, seen
 
+    run.resolver = tmp_path / "resolver"
     return run
 
 
@@ -146,6 +148,62 @@ def test_sh_refuses_bad_input(run_sh, routes, domains):
     assert "hpchub-script:" in proc.stderr
 
 
+@posix_only
+def test_sh_split_dns_files(run_sh):
+    """Only the VPN's domains go to its DNS servers, through marked /etc/resolver files; vpnc-script then sees no DNS
+    servers, so it leaves the system's DNS alone."""
+    proc, seen = run_sh("10.0.0.0/8", "njit.edu cs.njit.edu", INTERNAL_IP4_DNS="10.0.0.1 10.0.0.2",
+                        INTERNAL_IP6_DNS="fd00::53", CISCO_DEF_DOMAIN="njit.edu")
+    assert proc.returncode == 0, proc.stderr
+    files = {f.name: f.read_text() for f in run_sh.resolver.iterdir()}
+    want = "# hpc-hub wulver\nnameserver 10.0.0.1\nnameserver 10.0.0.2\nnameserver fd00::53\n"
+    assert files == {"njit.edu": want, "cs.njit.edu": want}
+    assert not {"INTERNAL_IP4_DNS", "INTERNAL_IP6_DNS", "CISCO_DEF_DOMAIN"} & seen.keys()
+    assert seen["CISCO_SPLIT_DNS"] == "njit.edu,cs.njit.edu"
+
+
+@posix_only
+def test_sh_split_dns_leaves_other_files(run_sh):
+    run_sh.resolver.mkdir()
+    (run_sh.resolver / "njit.edu").write_text("nameserver 192.0.2.53\n")  # the user's own
+    (run_sh.resolver / "yale.edu").write_text("# hpc-hub old\nnameserver 10.9.9.9\n")  # ours, from before
+    proc, _ = run_sh("", "njit.edu yale.edu", INTERNAL_IP4_DNS="10.0.0.1")
+    assert proc.returncode == 0, proc.stderr
+    assert "is not HPC Hub's" in proc.stderr
+    assert (run_sh.resolver / "njit.edu").read_text() == "nameserver 192.0.2.53\n"
+    assert (run_sh.resolver / "yale.edu").read_text() == "# hpc-hub wulver\nnameserver 10.0.0.1\n"
+
+
+@posix_only
+def test_sh_split_dns_only_on_connect(run_sh):
+    for reason in ("disconnect", "pre-init", "reconnect"):
+        proc, seen = run_sh("", "njit.edu", INTERNAL_IP4_DNS="10.0.0.1", reason=reason)
+        assert proc.returncode == 0, proc.stderr
+        assert "INTERNAL_IP4_DNS" not in seen, "vpnc-script must not restore DNS it never set"
+    assert not run_sh.resolver.exists()
+    proc, seen = run_sh("", "njit.edu")  # no DNS servers pushed: nothing to write
+    assert proc.returncode == 0 and not run_sh.resolver.exists()
+    proc, seen = run_sh("10.0.0.0/8", "", INTERNAL_IP4_DNS="10.0.0.1")  # no domains: vpnc-script as before
+    assert seen["INTERNAL_IP4_DNS"] == "10.0.0.1"
+
+
+@posix_only
+@pytest.mark.parametrize("extra", [{"HPCHUB_TAG": ""}, {"HPCHUB_TAG": "a/b"}, {"HPCHUB_TAG": "-x"},
+                                   {"HPCHUB_TAG": "Wulver"}, {"INTERNAL_IP4_DNS": "10.0.0.1;reboot"},
+                                   {"INTERNAL_IP4_DNS": "$(id)"}])
+def test_sh_split_dns_refuses_bad_input(run_sh, extra):
+    proc, seen = run_sh("", "njit.edu", **{"INTERNAL_IP4_DNS": "10.0.0.1", **extra})
+    assert proc.returncode == 2 and seen is None, proc.stderr
+    assert not run_sh.resolver.exists()
+
+
+@posix_only
+@pytest.mark.parametrize("domain", ["..", ".njit.edu", "njit.edu.", "a..b"])
+def test_sh_split_dns_refuses_odd_domains(run_sh, domain):
+    proc, seen = run_sh("", domain, INTERNAL_IP4_DNS="10.0.0.1")
+    assert proc.returncode == 2 and seen is None
+
+
 # -- hpchub-script.js (JScript; its pure parts under node) ------------------------------------------------
 
 def split_vars_js(cases: list[tuple[str, str]]) -> list[dict]:
@@ -185,3 +243,41 @@ def test_js_is_plain_jscript():
     for pattern in (r"\blet\b", r"\bconst\b", "=>", "`", r"\.trim\(", r"\.forEach\(", r"\.map\(", r"\.filter\(",
                     r"Array\.isArray", r"Object\.keys", r"JSON\."):
         assert not re.search(pattern, code), pattern
+
+
+def dns_command_js(cases: list[list[str]]) -> list[dict]:
+    code = """
+const h = require(process.argv[1]);
+const cases = JSON.parse(require("fs").readFileSync(0, "utf8"));
+console.log(JSON.stringify(cases.map((c) => {
+    try { return {command: h.dnsCommand(...c)}; } catch (e) { return {error: e.message}; }
+})));
+"""
+    out = subprocess.run([NODE, "-e", code, str(VPN / "hpchub-script.js")], input=json.dumps(cases),
+                         capture_output=True, text=True, timeout=30, check=True).stdout
+    return json.loads(out)
+
+
+@needs_node
+def test_js_split_dns_rule():
+    ps = r"C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe"
+    connect, disconnect, no_domains, no_servers = dns_command_js([
+        ["njit.edu cs.njit.edu", "wulver", "10.0.0.1 fd00::53", "connect", "C:\\Windows"],
+        ["njit.edu", "wulver", "10.0.0.1", "disconnect", "C:\\Windows"],
+        ["", "wulver", "10.0.0.1", "connect", "C:\\Windows"],
+        ["njit.edu", "wulver", "", "connect", "C:\\Windows"],
+    ])
+    assert connect == {"command": f"{ps} -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command "
+                                  "\"Add-DnsClientNrptRule -Namespace '.njit.edu','njit.edu',"
+                                  "'.cs.njit.edu','cs.njit.edu' "
+                                  "-NameServers '10.0.0.1','fd00::53' -Comment 'hpc-hub wulver'\""}
+    assert disconnect == no_domains == no_servers == {"command": ""}
+
+
+@needs_node
+def test_js_split_dns_refuses_bad_input():
+    bad = [["njit.edu", "", "10.0.0.1"], ["njit.edu", "Wulver", "10.0.0.1"], ["njit.edu", "a'b", "10.0.0.1"],
+           ["njit.edu", "x", "10.0.0.1';reboot"], ["njit'.edu", "x", "10.0.0.1"], ["..", "x", "10.0.0.1"],
+           ["njit.edu.", "x", "10.0.0.1"], ["njit.edu", "x", "$(id)"]]
+    for case, result in zip(bad, dns_command_js([[*c, "connect", "C:\\Windows"] for c in bad])):
+        assert "error" in result, case

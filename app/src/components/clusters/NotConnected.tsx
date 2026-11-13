@@ -62,7 +62,7 @@ export function NotConnected({ cluster, session, what, compact }:
         <AlertDialog title={`Disconnect ${shortName(swap)}?`} keep={`Stay on ${shortName(swap)}`}
           act={`Switch to ${shortName(cluster)}`} onClose={() => setSwap(null)}
           onAct={() => { setSwap(null); connect(true) }}>
-          <p>Only one VPN can run at a time. {shortName(swap)} disconnects and its node is released.</p>
+          <p>These two VPNs can't run at once: one of them carries all your traffic or all your DNS. {shortName(swap)} disconnects and its node is released.</p>
         </AlertDialog>
       )}
     </>

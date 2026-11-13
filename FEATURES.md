@@ -15,8 +15,8 @@ One **Connect** button runs your cluster's VPN, sign-in and Duo or authenticator
 - Sign in with your cluster's username: a UCID, a NetID or an ACCESS username. Typing `ab123@njit.edu` works too.
 - The first start checks your password before going on, without sending a Duo push.
 - A wrong password opens a window to type it again, and HPC Hub stops after one try so your account isn't locked.
-- Several clusters sit side by side. Linux and Android run several VPNs at once; Windows and macOS run one VPN at a
-  time and ask before switching.
+- Several clusters connected at once, each through its own VPN: only that cluster's traffic and names go through
+  it, and the rest of your internet stays as it is.
 
 <p align="center"><img src="docs/screenshots/clusters.png" alt="Cluster cards" width="720"></p>
 

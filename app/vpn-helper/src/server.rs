@@ -5,12 +5,12 @@ use std::io::{BufRead, BufReader, Read, Write};
 use serde_json::{Value, json};
 
 use crate::config::Config;
-use crate::protocol::{self, MAX_LINE, Request, VERSION, ok, refuse};
-use crate::tunnel::Tunnel;
+use crate::protocol::{self, MAX_LINE, Request, VERSION, check_name, ok, refuse};
+use crate::tunnel::Tunnels;
 
 pub struct Server {
     pub config: Config,
-    pub tunnel: Tunnel,
+    pub tunnels: Tunnels,
 }
 
 impl Server {
@@ -25,19 +25,25 @@ impl Server {
         };
         match request {
             Request::Version => json!({"ok": true, "version": VERSION}),
-            Request::Status => {
-                let s = self.tunnel.status();
+            Request::Status(n) => {
+                if let Err(e) = check_name(&n.name) {
+                    return refuse(e);
+                }
+                let s = self.tunnels.status(&n.name);
                 json!({"ok": true, "state": s.state.name(), "gateway": s.gateway, "error": s.error, "log": s.log})
             }
             Request::Up(up) => match protocol::check_up(&up, &self.config.gateways) {
-                Ok(host) => match self.tunnel.up(&up, host) {
+                Ok(host) => match self.tunnels.up(&up.name, &up, host) {
                     Ok(()) => ok(),
                     Err(e) => refuse(e),
                 },
                 Err(e) => refuse(e),
             },
-            Request::Down => {
-                self.tunnel.down();
+            Request::Down(n) => {
+                if let Err(e) = check_name(&n.name) {
+                    return refuse(e);
+                }
+                self.tunnels.down(&n.name);
                 ok()
             }
         }

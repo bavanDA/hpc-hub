@@ -1,6 +1,7 @@
-//! The one tunnel: openconnect as a child process, its state (down/connecting/up) and its last 30 lines.
+//! The tunnels: each one openconnect as a child process, with its state (down/connecting/up) and its last 30
+//! lines. Several run side by side, one per name (the app uses the cluster's id).
 
-use std::collections::VecDeque;
+use std::collections::{BTreeMap, VecDeque};
 use std::io::{BufRead, BufReader, Read, Write};
 use std::path::PathBuf;
 use std::process::{Child, Command, Stdio};
@@ -9,12 +10,14 @@ use std::sync::{Arc, Mutex, MutexGuard};
 use std::thread;
 use std::time::{Duration, Instant};
 
+use crate::dns;
 use crate::openconnect;
 use crate::protocol::Up;
 
 const LOG_LINES: usize = 30;
 const LINE_MAX: usize = 500; // chars kept of one output line
 const POLITE: Duration = Duration::from_secs(5); // from the polite stop to the kill
+pub const MAX_TUNNELS: usize = 8; // running at once
 
 #[derive(Clone, Copy, PartialEq, Debug, Default)]
 pub enum State {
@@ -61,6 +64,7 @@ struct Inner {
 
 pub struct Tunnel {
     dir: PathBuf,
+    name: String,
     inner: Arc<Mutex<Inner>>,
     ops: Mutex<()>, // one up/down at a time
 }
@@ -70,9 +74,9 @@ fn lock(m: &Mutex<Inner>) -> MutexGuard<'_, Inner> {
 }
 
 impl Tunnel {
-    /// `dir` is the install folder; openconnect runs from `<dir>/openconnect`.
-    pub fn new(dir: PathBuf) -> Self {
-        Tunnel { dir, inner: Arc::default(), ops: Mutex::new(()) }
+    /// `dir` is the install folder; openconnect runs from `<dir>/openconnect`. `name` is checked by the caller.
+    pub fn new(dir: PathBuf, name: String) -> Self {
+        Tunnel { dir, name, inner: Arc::default(), ops: Mutex::new(()) }
     }
 
     pub fn status(&self) -> Status {
@@ -131,8 +135,8 @@ impl Tunnel {
             }
         }
         drop(done);
-        let inner = self.inner.clone();
-        thread::spawn(move || watch(&inner, id, readers));
+        let (inner, name) = (self.inner.clone(), self.name.clone());
+        thread::spawn(move || watch(&inner, id, readers, &name));
         Ok(())
     }
 
@@ -225,7 +229,8 @@ fn read_lines(inner: &Mutex<Inner>, id: u64, stream: Box<dyn Read + Send>, is_er
 }
 
 /// Waits for openconnect to exit, then marks the tunnel down (with its last error line unless we stopped it).
-fn watch(inner: &Mutex<Inner>, id: u64, readers: mpsc::Receiver<()>) {
+/// Its split DNS goes first, so a new `up` (which waits for this) never has its fresh rules removed.
+fn watch(inner: &Mutex<Inner>, id: u64, readers: mpsc::Receiver<()>, name: &str) {
     let how = loop {
         thread::sleep(Duration::from_millis(100));
         let mut i = lock(inner);
@@ -245,6 +250,7 @@ fn watch(inner: &Mutex<Inner>, id: u64, readers: mpsc::Receiver<()>) {
     // The readers end at EOF; wait a little for them so the last lines are in.
     let end = Instant::now() + Duration::from_secs(3);
     while readers.recv_timeout(end.saturating_duration_since(Instant::now())).is_ok() {}
+    dns::forget(Some(name));
     let mut i = lock(inner);
     let Some(run) = i.run.take_if(|r| r.id == id) else { return };
     i.state = State::Down;
@@ -255,6 +261,66 @@ fn watch(inner: &Mutex<Inner>, id: u64, readers: mpsc::Receiver<()>) {
     } else {
         i.log.back().cloned().unwrap_or_else(|| format!("openconnect stopped ({how})"))
     };
+}
+
+/// Every tunnel by name. A name's tunnel stays after it stops, so `status` still tells why; stopped ones make
+/// room when a new name would go over MAX_TUNNELS.
+pub struct Tunnels {
+    dir: PathBuf,
+    all: Mutex<BTreeMap<String, Arc<Tunnel>>>,
+}
+
+impl Tunnels {
+    pub fn new(dir: PathBuf) -> Self {
+        Tunnels { dir, all: Mutex::default() }
+    }
+
+    fn get(&self, name: &str) -> Option<Arc<Tunnel>> {
+        self.all.lock().unwrap_or_else(|e| e.into_inner()).get(name).cloned()
+    }
+
+    /// The named tunnel's status; one never started is down.
+    pub fn status(&self, name: &str) -> Status {
+        match self.get(name) {
+            Some(t) => t.status(),
+            None => Status { state: State::Down, gateway: String::new(), error: String::new(), log: Vec::new() },
+        }
+    }
+
+    /// Start (or restart) the named tunnel, beside the others.
+    pub fn up(&self, name: &str, up: &Up, host: String) -> Result<(), String> {
+        let tunnel = {
+            let mut all = self.all.lock().unwrap_or_else(|e| e.into_inner());
+            if !all.contains_key(name) {
+                if all.len() >= MAX_TUNNELS {
+                    all.retain(|_, t| t.status().state != State::Down);
+                }
+                if all.len() >= MAX_TUNNELS {
+                    return Err(format!("{MAX_TUNNELS} VPNs are already on: disconnect one first"));
+                }
+                all.insert(name.to_string(), Arc::new(Tunnel::new(self.dir.clone(), name.to_string())));
+            }
+            all[name].clone()
+        };
+        tunnel.up(up, host)
+    }
+
+    /// Stop the named tunnel, if any. Returns once its openconnect has exited.
+    pub fn down(&self, name: &str) {
+        if let Some(t) = self.get(name) {
+            t.down();
+        }
+    }
+
+    /// Stop them all, side by side (the helper is stopping).
+    pub fn down_all(&self) {
+        let all: Vec<Arc<Tunnel>> = self.all.lock().unwrap_or_else(|e| e.into_inner()).values().cloned().collect();
+        thread::scope(|s| {
+            for t in &all {
+                s.spawn(|| t.down());
+            }
+        });
+    }
 }
 
 #[cfg(unix)]

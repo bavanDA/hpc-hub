@@ -165,7 +165,7 @@ export function ClusterCard({ cluster: c, session: s, log, primary = false }:
       {open && typeof open === 'object' && (
         <ConfirmDialog title={`Disconnect ${shortName(open.switch)}?`} danger keep={`Stay on ${shortName(open.switch)}`}
           confirm={`Switch to ${short}`} onClose={close} onConfirm={() => connect(open.vpnOnly, true)}
-          text={`Only one VPN can run at a time. ${shortName(open.switch)} disconnects and its node is released.`} />
+          text={`These two VPNs can't run at once: one of them carries all your traffic or all your DNS. ${shortName(open.switch)} disconnects and its node is released.`} />
       )}
     </section>
   )

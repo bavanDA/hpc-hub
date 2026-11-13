@@ -53,7 +53,7 @@ fn stop_on_signal(server: Arc<Server>, socket: PathBuf) {
     thread::spawn(move || {
         let mut sig = 0;
         unsafe { libc::sigwait(&set, &mut sig) };
-        server.tunnel.down();
+        server.tunnels.down_all();
         let _ = fs::remove_file(&socket);
         std::process::exit(0);
     });

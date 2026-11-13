@@ -1,7 +1,10 @@
 // HPC Hub's wrapper around vpnc-script-win.js, from docs/design/vpn-helper.md.
-// openconnect runs it with cscript and HPCHUB_ROUTES="cidr cidr..." and HPCHUB_DOMAINS="d d...". When
-// HPCHUB_ROUTES has routes, only they go through the tunnel, not the ones the server pushes. Then the real
-// vpnc-script-win.js (next to this file) runs in this same process, so it sees what we set.
+// openconnect runs it with cscript and HPCHUB_ROUTES="cidr cidr...", HPCHUB_DOMAINS="d d..." and HPCHUB_TAG
+// (the tunnel's name). When HPCHUB_ROUTES has routes, only they go through the tunnel, not the ones the server
+// pushes. When HPCHUB_DOMAINS has domains, only names in them go to the VPN's DNS servers, through NRPT rules
+// with the comment "hpc-hub <tag>" (the helper removes them when the tunnel ends), and the tunnel adapter gets
+// no DNS servers of its own: so several VPNs can be up side by side. Then the real vpnc-script-win.js (next to
+// this file) runs in this same process, so it sees what we set.
 // JScript is ECMAScript 3: no let, const, arrow functions, trim, map or forEach.
 
 var HPCHUB = (function () {
@@ -80,14 +83,44 @@ var HPCHUB = (function () {
         return vars;
     }
 
-    // Sets the variables in this process and returns the real script's text.
+    // Split DNS: the PowerShell that adds the NRPT rule for these domains (each one and everything under it),
+    // or "" when there is nothing to add. Throws on a bad name, domain or server.
+    function dnsCommand(domainsText, tag, serversText, reason, systemRoot) {
+        var domains = words(domainsText), servers = words(serversText), names = [], quoted = [], i;
+        if (!domains.length) return "";
+        if (!/^[a-z0-9][a-z0-9-]{0,31}$/.test(tag)) throw new Error("not a tunnel name: " + tag);
+        if (reason !== "connect") return "";
+        for (i = 0; i < domains.length; i++) {
+            if (!/^[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)*$/.test(domains[i])) throw new Error("not a DNS domain: " + domains[i]);
+            names.push("'." + domains[i] + "'", "'" + domains[i] + "'");
+        }
+        for (i = 0; i < servers.length; i++) {
+            if (!/^[0-9A-Fa-f:.]+$/.test(servers[i])) throw new Error("not a DNS server: " + servers[i]);
+            quoted.push("'" + servers[i] + "'");
+        }
+        if (!quoted.length) return "";
+        return systemRoot + "\\System32\\WindowsPowerShell\\v1.0\\powershell.exe -NoProfile -NonInteractive " +
+            "-ExecutionPolicy Bypass -Command \"Add-DnsClientNrptRule -Namespace " + names.join(",") +
+            " -NameServers " + quoted.join(",") + " -Comment 'hpc-hub " + tag + "'\"";
+    }
+
+    // Sets the variables in this process, adds the split DNS, and returns the real script's text.
     function prepare() {
         var shell = WScript.CreateObject("WScript.Shell");
         var env = shell.Environment("Process");
-        var vars = splitVars(env("HPCHUB_ROUTES"), env("HPCHUB_DOMAINS")), i;
+        var vars = splitVars(env("HPCHUB_ROUTES"), env("HPCHUB_DOMAINS")), i, command, code;
         for (i = 0; i < vars.length; i++) {
             env(vars[i][0]) = vars[i][1];  // JScript's way to set a COM property with an argument
             if (String(env(vars[i][0])) !== vars[i][1]) throw new Error("could not set " + vars[i][0]);
+        }
+        if (words(env("HPCHUB_DOMAINS")).length) {
+            command = dnsCommand(env("HPCHUB_DOMAINS"), String(env("HPCHUB_TAG")), env("INTERNAL_IP4_DNS"),
+                                 String(env("reason")), shell.ExpandEnvironmentStrings("%SystemRoot%"));
+            if (command) {
+                code = shell.Run(command, 0, true);  // 0: no window; true: wait
+                if (code !== 0) throw new Error("could not add the VPN's DNS rules (PowerShell said " + code + ")");
+            }
+            env("INTERNAL_IP4_DNS") = "";  // so the real script gives the adapter no DNS servers
         }
         var fso = WScript.CreateObject("Scripting.FileSystemObject");
         var path = fso.BuildPath(fso.GetParentFolderName(WScript.ScriptFullName), "vpnc-script-win.js");
@@ -99,7 +132,7 @@ var HPCHUB = (function () {
         }
     }
 
-    return {mask4: mask4, splitVars: splitVars, prepare: prepare};
+    return {mask4: mask4, splitVars: splitVars, dnsCommand: dnsCommand, prepare: prepare};
 })();
 
 if (typeof module !== "undefined" && module.exports) {

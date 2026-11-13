@@ -77,6 +77,14 @@ pub fn is_domain(s: &str) -> bool {
     !s.is_empty() && s.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'.' || b == b'-')
 }
 
+/// A tunnel's name (the app uses the cluster's id): 1 to 32 of `a-z 0-9 -`, starting with a letter or digit. It
+/// goes into DNS rule names and file contents, so nothing else.
+pub fn is_tunnel_name(s: &str) -> bool {
+    (1..=32).contains(&s.len())
+        && !s.starts_with('-')
+        && s.bytes().all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'-')
+}
+
 pub fn is_protocol(s: &str) -> bool {
     PROTOCOLS.contains(&s)
 }
@@ -114,6 +122,16 @@ pub fn is_user_id(s: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn tunnel_names() {
+        for good in ["wulver", "yale", "a", "my-cluster-2", &"x".repeat(32)] {
+            assert!(is_tunnel_name(good), "{good}");
+        }
+        for bad in ["", "-x", "Wulver", "a b", "a/b", "a.b", "a'b", "é", &"x".repeat(33)] {
+            assert!(!is_tunnel_name(bad), "{bad}");
+        }
+    }
 
     fn gws() -> Vec<String> {
         vec!["vpn.example.edu".into(), "access.example.org".into()]

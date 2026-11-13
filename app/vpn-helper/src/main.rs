@@ -2,6 +2,7 @@
 //! installed for. See docs/design/vpn-helper.md.
 
 mod config;
+mod dns;
 mod install;
 mod openconnect;
 mod protocol;
@@ -18,7 +19,7 @@ use std::process::ExitCode;
 
 use config::Config;
 use server::Server;
-use tunnel::Tunnel;
+use tunnel::Tunnels;
 
 /// Where things go on this platform (Linux has no install; tests pass --socket, --config and --dir).
 pub mod paths {
@@ -92,7 +93,8 @@ fn serve(args: &[String]) -> Result<(), String> {
     let dir = dir.unwrap_or_else(|| PathBuf::from(paths::DIR));
     let config = Config::load(&config.unwrap_or_else(|| dir.join(paths::CONFIG)))?;
     let endpoint = socket.unwrap_or_else(|| paths::ENDPOINT.to_string());
-    let server = Server { config, tunnel: Tunnel::new(dir) };
+    dns::forget(None); // left by a helper that didn't stop cleanly: no tunnel is running yet
+    let server = Server { config, tunnels: Tunnels::new(dir) };
     #[cfg(unix)]
     return unix::serve(std::sync::Arc::new(server), std::path::Path::new(&endpoint));
     #[cfg(windows)]
