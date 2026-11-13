@@ -23,6 +23,7 @@ SECRET = "hunter2-not-real"
 
 class FakeAskpass:
     path = Path("/run/user/1000/hpc-hub/askpass-app.sock")
+    address = str(path)  # where the sign-in window connects (a "tcp:127.0.0.1:<port>" on Windows)
 
     def __init__(self):
         self.handlers = {}

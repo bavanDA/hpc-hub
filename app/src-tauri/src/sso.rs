@@ -4,9 +4,10 @@
 //! token cookie and reports back to the main window ("sso-result"), which answers the backend's question.
 //!
 //! The password never passes through the UI: the backend hands the UI a one-time askpass token, and this module
-//! asks the backend's askpass socket for the login with it. The page gets no IPC (no capability names it).
+//! asks the backend's askpass socket for the login with it (on Windows a port of 127.0.0.1, "tcp:127.0.0.1:<port>",
+//! since there is no Unix socket). The page gets no IPC (no capability names it).
 
-use std::io::{BufRead, BufReader, Write};
+use std::io::{BufRead, BufReader, Read, Write};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
@@ -176,21 +177,34 @@ fn label(id: &str) -> String {
     format!("sso-{id}")
 }
 
-#[cfg(unix)]
+/// The saved login from the backend's askpass server: one JSON line each way, with the one-time token.
 fn ask(fill: &Fill, prompt: &str) -> Option<String> {
-    let mut sock = std::os::unix::net::UnixStream::connect(&fill.socket).ok()?;
-    sock.set_read_timeout(Some(Duration::from_secs(10))).ok()?;
     let line = serde_json::json!({"token": fill.token, "prompt": prompt}).to_string();
+    if let Some(addr) = fill.socket.strip_prefix("tcp:") {
+        let addr: std::net::SocketAddr = addr.parse().ok()?;
+        if !addr.ip().is_loopback() {
+            return None; // the token only ever goes to this computer
+        }
+        let sock = std::net::TcpStream::connect_timeout(&addr, Duration::from_secs(5)).ok()?;
+        sock.set_read_timeout(Some(Duration::from_secs(10))).ok()?;
+        return talk(sock, &line);
+    }
+    #[cfg(unix)]
+    {
+        let sock = std::os::unix::net::UnixStream::connect(&fill.socket).ok()?;
+        sock.set_read_timeout(Some(Duration::from_secs(10))).ok()?;
+        talk(sock, &line)
+    }
+    #[cfg(not(unix))]
+    None
+}
+
+fn talk(mut sock: impl Read + Write, line: &str) -> Option<String> {
     sock.write_all(format!("{line}\n").as_bytes()).ok()?;
     let mut reply = String::new();
     BufReader::new(sock).read_line(&mut reply).ok()?;
     let v: serde_json::Value = serde_json::from_str(&reply).ok()?;
     if v["ok"].as_bool()? { v["answer"].as_str().map(String::from) } else { None }
-}
-
-#[cfg(not(unix))]
-fn ask(_fill: &Fill, _prompt: &str) -> Option<String> {
-    None // no askpass socket here yet: you type your login
 }
 
 fn status(app: &AppHandle, run: &Shared, text: &str) {
@@ -438,6 +452,36 @@ pub fn sso_close(app: AppHandle, webview: tauri::Webview, id: String) -> Result<
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// A stand-in for the backend's askpass server on 127.0.0.1 (Windows): answers one line, if the token fits.
+    fn askpass_on_loopback(token: &'static str, answer: &'static str) -> String {
+        let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        let port = listener.local_addr().unwrap().port();
+        std::thread::spawn(move || {
+            for conn in listener.incoming().take(3) {
+                let mut conn = conn.unwrap();
+                let mut line = String::new();
+                BufReader::new(conn.try_clone().unwrap()).read_line(&mut line).unwrap();
+                let req: serde_json::Value = serde_json::from_str(&line).unwrap();
+                let ok = req["token"] == token;
+                let reply = serde_json::json!({"ok": ok, "answer": if ok { answer } else { "" }});
+                conn.write_all(format!("{reply}\n").as_bytes()).unwrap();
+            }
+        });
+        format!("tcp:127.0.0.1:{port}")
+    }
+
+    #[test]
+    fn asks_over_loopback() {
+        let socket = askpass_on_loopback("t0", "s3cret");
+        let fill = |token: &str| Fill { socket: socket.clone(), token: token.into() };
+        assert_eq!(ask(&fill("t0"), SSO_PASS).as_deref(), Some("s3cret"));
+        assert_eq!(ask(&fill("guess"), SSO_PASS), None);
+        let away = Fill { socket: "tcp:192.0.2.1:9".into(), token: "t0".into() };
+        assert_eq!(ask(&away, SSO_PASS), None, "never sends the token off this computer");
+        let junk = Fill { socket: "tcp:not-an-address".into(), token: "t0".into() };
+        assert_eq!(ask(&junk, SSO_PASS), None);
+    }
 
     #[test]
     fn password_only_goes_to_the_sign_in_site() {

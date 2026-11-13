@@ -157,7 +157,7 @@ class Hub:
             answer = self.question("web-login", {
                 **data, "login_url": start.login_url, "final_url": start.final_url,
                 "token_cookie": start.token_cookie, "error_cookie": start.error_cookie,
-                "fill": {"socket": str(self.askpass.path), "token": key} if login.password else None})
+                "fill": {"socket": self.askpass.address, "token": key} if login.password else None})
         finally:
             self.askpass.unregister(key)
         try:

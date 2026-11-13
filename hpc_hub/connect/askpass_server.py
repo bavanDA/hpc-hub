@@ -1,7 +1,10 @@
 """Unix socket that answers askpass requests on behalf of a connecting session.
 
 Windows has no such socket (nor an askpass helper ssh could run): there SSH is asyncssh, which calls the
-session's handler directly, so only the handlers are kept."""
+session's handler directly. The app's sign-in window (app/src-tauri/src/sso.rs) still needs the saved login, so on
+Windows the server listens on a port of 127.0.0.1 instead, and the one-time token is what lets a caller in: the
+address is "tcp:127.0.0.1:<port>". The app's web page can't use it (a browser only speaks HTTP to a port, and a
+request that isn't one JSON line gets no answer), and another program would need the token."""
 
 import hmac
 import json
@@ -32,10 +35,18 @@ class AskpassServer:
         self.path = runtime_dir() / name
         self._handlers: dict[str, Handler] = {}
         self._lock = threading.Lock()
+        self._tcp = False
         self._sock: socket.socket | None = None
+        self.address = str(self.path)  # where a caller connects: the socket's path, or "tcp:127.0.0.1:<port>"
 
-    def start(self) -> None:
-        if WINDOWS:
+    def start(self, tcp: bool = WINDOWS) -> None:
+        if tcp:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.bind(("127.0.0.1", 0))
+            sock.listen(8)
+            self._sock, self._tcp = sock, True
+            self.address = f"tcp:127.0.0.1:{sock.getsockname()[1]}"
+            threading.Thread(target=self._accept_loop, daemon=True).start()
             return
         self.path.unlink(missing_ok=True)
         sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
@@ -49,7 +60,7 @@ class AskpassServer:
         if self._sock:
             self._sock.close()
             self._sock = None
-        if not WINDOWS:
+        if not WINDOWS and not self._tcp:
             self.path.unlink(missing_ok=True)
 
     def register(self, handler: Handler) -> str:
@@ -93,11 +104,17 @@ class AskpassServer:
 
     def _serve(self, conn: socket.socket) -> None:
         with conn:
-            if peer_uid(conn) != os.getuid():
+            if not self._tcp and peer_uid(conn) != os.getuid():
                 return
+            conn.settimeout(10)
             try:
-                req = json.loads(conn.makefile("rb").readline() or b"{}")
-            except ValueError:
+                line = conn.makefile("rb").readline(8192)
+                if not line.startswith(b"{"):
+                    return  # an HTTP request or anything else: no answer
+                req = json.loads(line)
+            except (ValueError, OSError):
+                return
+            if not isinstance(req, dict):
                 return
             handler = self._find(str(req.get("token", "")))
             answer = handler(str(req.get("prompt", ""))) if handler else None
