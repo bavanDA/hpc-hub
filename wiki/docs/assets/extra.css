@@ -1,4 +1,7 @@
-/* HPC Hub's blue for links and accents, as in its icon; the bar stays black like the app's buttons. */
+/* HPC Hub's blue for links and accents; the bar stays black like the app's buttons. */
 :root, [data-md-color-scheme="default"] { --md-accent-fg-color: #1c71d8; --md-typeset-a-color: #1c71d8; }
 [data-md-color-scheme="slate"] { --md-typeset-a-color: #78aeed; --md-accent-fg-color: #78aeed; }
 .md-header, .md-tabs { background-color: #0a0a0a; }
+
+/* the logo is detailed: a little bigger than the default 1.2rem */
+.md-header__button.md-logo img { height: 1.9rem; }

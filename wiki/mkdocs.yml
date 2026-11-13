@@ -10,8 +10,8 @@ use_directory_urls: false  # install.html, as the old site had: links from the a
 
 theme:
   name: material
-  logo: assets/icon.svg
-  favicon: assets/icon.svg
+  logo: assets/icon.png
+  favicon: assets/favicon.png
   icon:
     repo: fontawesome/brands/github
   features:
