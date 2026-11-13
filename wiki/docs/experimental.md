@@ -1,23 +1,25 @@
-# Experimental features Experimental
+# Experimental features
 
-Parts of HPC Hub that are still taking shape. They are off by default.
+Use this page to turn on features that are still in progress, and to see what each one does. They are off by default.
 
-!!! info "Experimental"
+!!! warning
 
-    Turn them on in **Settings**, under **Experimental**. They may change or
-    break.
+    These features may change or break. Turn them on in **Settings**, under **Experimental**.
 
 ## Papers (LaTeX)
 
-An editor for LaTeX papers in a project on the cluster, built there with latexmk, with git and a history of
-changes. Turn on **Papers**, then open a project made as a **LaTeX paper**.
+Papers is an editor for a LaTeX paper in a project on the cluster. The cluster builds the paper with latexmk, and git keeps a history of your changes.
+
+1. Turn on **Papers**.
+2. Open a project made as a **LaTeX paper**.
 
 ## Skills
 
-A skill is a set of instructions for an agent. The **Skills** tab of **Agents** adds
-them to the agents on each cluster, from HPC Hub's own set or a git repository.
+A skill is a set of instructions for an agent. You add skills so the agents on each cluster follow them.
+
+1. Open the **Skills** tab of **Agents**.
+2. Add a skill from HPC Hub's own set, or from a git repository.
 
 ## Scheduled agents
 
-An agent runs a task at set times, for example every night at 02:00. Each run is a Slurm job, so it runs with
-your laptop off and uses your allocation like any other job.
+A scheduled agent runs a task at set times, for example every night at 02:00. Each run is a Slurm job, so the task runs while your laptop is off and uses your allocation like any other job.

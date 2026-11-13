@@ -1,31 +1,46 @@
 # Report a problem
 
-HPC Hub can send a problem report for you. You read it before it goes.
+Send a problem report from the app. Read the report before it is sent.
 
-## Where to find it
+## Open a report
 
-- **Settings**, then **Report a problem**.
-- **Report** next to an error, on a cluster card, an error message or a page that couldn't load.
-  The report then starts with that error.
+You can start from Settings, or from the error itself.
+
+- Open **Settings**, then select **Report a problem**.
+- Select **Report** next to an error. You will find it on a cluster card, on an error message, or on a page that could not load. The report starts with that error.
 
 ## Send a report
 
-1. Write what you did, what you expected and what happened under **What went wrong?**
-2. Add your email if you'd like an answer. It is optional and sent as you type it.
-3. Tick **Add a screenshot of the window** if it helps. Look at it first: its contents are not
-   changed.
-4. Read **Everything that will be sent**, then select **Send report**.
+Write what happened, then check the report and send it.
 
-The window then says **Report sent** with a number to use if you write about it later.
+1. Under **What went wrong?**, write what you did, what you expected, and what happened.
+2. Add your email if you want an answer. This is optional. HPC Hub sends the address exactly as you type it.
+3. Tick **Add a screenshot of the window** if it helps. Look at the screenshot first. The picture is included unchanged.
+4. Read **Everything that will be sent**.
+5. Select **Send report**.
+
+The window then says **Report sent**, with a number you can use if you write about the problem later.
 
 ## What is sent
 
-Nothing is sent until you select Send. The report holds the app's version, your system, the page, the error,
-your note, your email if given, and the app's recent log. HPC Hub replaces known sensitive text, such as names,
-folders, tokens and keys, with placeholders like `<user>` and `<hidden>`. Review
-the report before sending.
+The report is sent only when you select **Send report**.
 
-## Other ways
+The report includes:
 
-You can also open an issue on [GitHub](https://github.com/bavanDA/hpc-hub/issues). Issues are public,
-so leave out usernames, group names and paths.
+- The app's version
+- Your system
+- The page
+- The error
+- Your note
+- Your email, if you added one
+- The app's recent log
+
+HPC Hub replaces known sensitive text, such as names, folders, tokens, and keys, with placeholders like `<user>` and `<hidden>`. Review the report before you send it.
+
+## Open an issue on GitHub
+
+You can also open an issue on [GitHub](https://github.com/bavanDA/hpc-hub/issues).
+
+!!! warning
+
+    Issues are public. Leave out usernames, group names, and paths.
