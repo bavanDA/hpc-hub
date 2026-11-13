@@ -43,7 +43,7 @@ persistent sessions you can leave and return to. Less setup and switching betwee
     <td width="50%" valign="top"><b>Projects.</b> One click opens a folder in VS Code, Claude, or Files. Copy a project to another cluster.<br><br><b>Files.</b> Browse, preview PDFs and images, edit, upload, download, copy between clusters, and Globus transfers.</td>
   </tr>
   <tr>
-    <td width="50%" valign="top"><b>Jobs and usage.</b> Your jobs, history, service units, and storage.<br><br><b>Updates.</b> One-click updates in the app, from version 0.2.1.</td>
+    <td width="50%" valign="top"><b>Jobs and usage.</b> Your jobs, history, service units, and storage.<br><br><b>Updates.</b> One-click updates in the app.</td>
     <td width="50%" valign="top"><img src="docs/screenshots/jobs.png" alt="Jobs, history, service units, and storage" width="100%"></td>
   </tr>
 </table>

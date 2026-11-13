@@ -126,7 +126,7 @@ curl -fsSL https://github.com/bavanDA/hpc-hub/releases/latest/download/install.s
 ```
 
 - The command checks the download against the release's checksums. Running it again updates HPC Hub.
-- From version 0.2.1, new versions install from the app with one click: **Update** in the sidebar, or **Check for
+- New versions install from the app with one click: **Update** in the sidebar, or **Check for
   updates** in Settings. Your work on the clusters keeps running while it restarts.
 
 ## Safety and privacy
