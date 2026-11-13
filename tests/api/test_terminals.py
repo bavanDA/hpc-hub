@@ -145,3 +145,57 @@ def test_marks_store_under_the_clusters_home(monkeypatch):
     got = terminal_history.mark_add("wulver", "hpchub-term-1", "Table", 4, 2, "| a |\n| b |")
     assert got["name"] == "Table" and got["text"] == "| a |\n| b |"
     assert any("hpc-hub/marks" in c for c in ssh.ran if isinstance(c, str))
+
+
+# -- pasting an image ------------------------------------------------------------------------------------
+
+PNG = b"\x89PNG\r\n\x1a\n" + b"\0" * 32
+
+
+@pytest.fixture
+def home(monkeypatch, tmp_path):
+    from tests.helpers import LocalShell
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.setattr(terminals, "hub", lambda: FakeHub(FakeSession(LocalShell())))
+    return tmp_path
+
+
+def test_a_pasted_image_lands_in_a_private_folder_and_gives_its_path(home):
+    import base64
+    import stat
+    path = terminals.paste_image("wulver", base64.b64encode(PNG).decode(), "image/png")
+    folder = home / ".hpc-hub" / "pastes"
+    assert path.startswith(str(folder) + "/") and path.endswith(".png") and " " not in path
+    saved = folder / path.rsplit("/", 1)[1]
+    assert saved.read_bytes() == PNG
+    assert stat.S_IMODE(folder.stat().st_mode) == 0o700 and stat.S_IMODE(saved.stat().st_mode) == 0o600
+    second = terminals.paste_image("wulver", base64.b64encode(PNG).decode(), "image/jpeg")
+    assert second != path and second.endswith(".jpg")
+
+
+def test_old_pastes_are_cleaned_up(home):
+    import base64
+    import os
+    folder = home / ".hpc-hub" / "pastes"
+    folder.mkdir(parents=True)
+    old, mine = folder / "old.png", home / "keep.png"
+    old.write_bytes(PNG)
+    mine.write_bytes(PNG)
+    os.utime(old, (0, 0))
+    terminals.paste_image("wulver", base64.b64encode(PNG).decode(), "image/png")
+    assert not old.exists() and mine.exists()
+
+
+@pytest.mark.parametrize("data,kind,why", [("", "image/png", "Nothing"), ("not base64!", "image/png", "image"),
+                                           ("aGk=", "text/html", "Not an image"),
+                                           ("aGk=", "image/svg+xml", "Not an image")])
+def test_paste_image_refuses(home, data, kind, why):
+    with pytest.raises(ValueError, match=why):
+        terminals.paste_image("wulver", data, kind)
+
+
+def test_paste_image_refuses_huge(home, monkeypatch):
+    import base64
+    monkeypatch.setattr(terminals, "PASTE_MAX", 10)
+    with pytest.raises(ValueError, match="too big"):
+        terminals.paste_image("wulver", base64.b64encode(PNG).decode(), "image/png")

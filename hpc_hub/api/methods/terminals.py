@@ -13,6 +13,7 @@ from dataclasses import asdict
 
 from ...core import remote
 from ...core.ssh import CHANNEL
+from ...files import remote_fs
 from ...terminals import links, tmux
 from ..hub import hub
 from ..server import method
@@ -79,6 +80,41 @@ def send(cluster: str, session: str, text: str, node: str = "", enter: bool = Tr
     if not text.strip():
         raise ValueError("Nothing to send")
     tmux.run(hub().connected(cluster).ssh, tmux.send_text(_target(session, node).name, text, node, enter))
+
+
+PASTE_MAX = 20 * 1024 * 1024  # bytes of one pasted image
+PASTE_TYPES = {"image/png": "png", "image/jpeg": "jpg", "image/gif": "gif", "image/webp": "webp"}
+# Saves stdin as a new file in ~/.hpc-hub/pastes (only you can read it), forgets pastes over 7 days old, prints its path
+PASTE_SH = r"""
+set -e
+dir="$HOME/.hpc-hub/pastes"
+mkdir -p -- "$dir"
+chmod 700 -- "$dir"
+find "$dir" -maxdepth 1 -type f -mtime +7 -delete 2>/dev/null || true
+umask 077
+file=$(mktemp -- "$dir/paste-$(date +%Y%m%d-%H%M%S)-XXXXXX")
+cat > "$file"
+mv -f -- "$file" "$file.$1"
+printf '%s' "$file.$1"
+"""
+
+
+@method("terminals.paste_image")
+def paste_image(cluster: str, data: str, kind: str) -> str:
+    """An image pasted into a terminal: agents on the cluster can't see your clipboard, so it goes into a file on
+    the cluster and the terminal gets the file's path (Claude and Codex attach an image from its path)."""
+    ext = PASTE_TYPES.get(kind)
+    if not ext:
+        raise ValueError("Not an image HPC Hub can paste (PNG, JPEG, GIF or WebP)")
+    if not data:
+        raise ValueError("Nothing to paste")
+    try:
+        raw = base64.b64decode(data, validate=True)
+    except ValueError as e:
+        raise ValueError("The pasted image could not be read") from e
+    if len(raw) > PASTE_MAX:
+        raise ValueError(f"The image is too big to paste (over {PASTE_MAX // 1024 // 1024} MB)")
+    return remote_fs.pipe(hub().connected(cluster).ssh, PASTE_SH, [ext], raw, timeout=120)
 
 
 @method("terminals.buffer")

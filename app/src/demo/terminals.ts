@@ -61,5 +61,6 @@ export const answers: Record<string, unknown> = {
   'terminals.command': command,
   'terminals.links': scan,
   'terminals.buffer': '',
+  'terminals.paste_image': '/home/jdoe/.hpc-hub/pastes/paste-20260101-120000-ab12cd.png',
   'terminals.rename': null, 'terminals.stop': null,
 }

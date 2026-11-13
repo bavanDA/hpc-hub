@@ -1,8 +1,10 @@
 import type { ITheme } from '@xterm/xterm'
 
 import { call } from '../../rpc'
-import { copyText as appCopy } from '../app/clipboard'
+import { copyText as appCopy, readImage } from '../app/clipboard'
 import { isDark } from '../../theme'
+import { imageIn } from './imageData'
+import { pasteImage } from './pasteImage'
 import type { Tab } from './tabs'
 
 export function theme(): ITheme {
@@ -41,7 +43,9 @@ export function copy(tab: Tab, notify: (text: string) => void) {
   }
 }
 
-export function paste(tab: Tab, notify: (text: string) => void) {
+export async function paste(tab: Tab, notify: (text: string) => void) {
+  const image = await readImage()
+  if (image) return pasteImage(tab, image, notify)
   navigator.clipboard.readText()
     .then((text) => text && tab.term.paste(text))
     .catch(() => notify('Could not read the clipboard'))
@@ -71,8 +75,25 @@ export function clipboardKeys(tab: Tab, notify: (text: string) => void) {
       paste(tab, notify)
       return false
     }
+    if (key === 'v' && tab.session) {
+      // Ctrl+V: agents paste an image with it, but they look at the cluster's clipboard. So an image on this
+      // computer's clipboard goes up as a file; anything else, Ctrl+V goes on to the program as before.
+      e.preventDefault()
+      void readImage().then((image) => image ? pasteImage(tab, image, notify) : term.input('\x16', true))
+      return false
+    }
     return true
   })
+  // Ctrl+V or the system's paste with an image on the clipboard: before xterm, which only takes text
+  tab.el.addEventListener('paste', (e) => {
+    const items = [...(e.clipboardData?.items ?? [])].filter((i) => i.kind === 'file')
+    const at = imageIn(items)
+    const blob = at >= 0 ? items[at].getAsFile() : null
+    if (!blob) return
+    e.preventDefault()
+    e.stopPropagation()
+    void pasteImage(tab, blob, notify)
+  }, true)
   let pending: number | undefined
   term.onSelectionChange(() => {
     clearTimeout(pending)

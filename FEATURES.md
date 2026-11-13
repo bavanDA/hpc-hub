@@ -53,6 +53,7 @@ ends.
 - A timeline of the whole session: jump between your prompts, and mark places to come back to.
 - Run Claude, ChatGPT (Codex), Antigravity or Cursor on a compute node, continue an earlier chat, or ask several
   agents the same question.
+- Paste a screenshot into a terminal: HPC Hub puts it on the cluster, so Claude or Codex can see it.
 - Decide what Claude may do on each cluster: edit without asking, keep deleted files for 7 days, always ask before
   cancelling jobs or force pushing.
 

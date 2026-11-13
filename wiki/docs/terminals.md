@@ -59,6 +59,17 @@ A mark is a named place in the history. Add one while you are reading earlier ou
 
 In **Settings**, under **Terminals**, use **Select to copy** and the **Monitoring bar**. The **Monitoring bar** shows CPU, memory, and network under each terminal.
 
+## Pasting an image
+
+Agents such as Claude and Codex run on the cluster, so they can't see your computer's clipboard. When you paste an
+image into a terminal, HPC Hub saves it on the cluster and types its path, and the agent attaches it.
+
+1. Copy an image or take a screenshot.
+2. In the terminal, press **Ctrl+V** or **Ctrl+Shift+V**, or right-click and select **Paste**.
+
+The image is saved in `~/.hpc-hub/pastes` on the cluster, where only you can read it. Images older than 7 days are
+deleted the next time you paste one. PNG, JPEG, GIF and WebP work, up to 20 MB.
+
 ## Pasting scripts
 
 When a script contains `set -e`, save it to a file and run it with bash. Pasting it ends the terminal's shell when a command fails.
