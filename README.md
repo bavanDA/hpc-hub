@@ -27,8 +27,8 @@
 Researchers should spend their time on research, not on learning Open OnDemand, Slurm, VPN clients, SSH and Duo.
 Today a cluster asks for all of that, plus a VS Code tunnel and tmux, and all of it again for every cluster you use.
 
-HPC Hub takes care of it, so cluster work is simpler and faster, especially across several clusters at once: they
-stay connected side by side in one window, and your projects and files move between them.
+HPC Hub takes care of it, so cluster work is simpler and faster, especially when you use several clusters: they sit
+side by side in one window, and your projects and files move between them.
 
 ## Features
 
@@ -46,6 +46,8 @@ stay connected side by side in one window, and your projects and files move betw
     <td width="50%" valign="top"><img src="docs/screenshots/jobs.png" alt="Jobs, history, service units, and storage" width="100%"></td>
   </tr>
 </table>
+
+<p align="center"><a href="FEATURES.md"><b>See all features</b></a></p>
 
 ## Install
 
