@@ -30,6 +30,7 @@ def test_askpass_keeps_handlers_without_a_socket(tmp_path, monkeypatch):
     server.start()
     try:
         assert not server.path.exists()
+        assert server.address.startswith("tcp:127.0.0.1:"), "the sign-in window asks over loopback"
         token = server.register(lambda prompt: "answer")
         env = server.env(token)
         assert env["HPC_HUB_ASKPASS_TOKEN"] == token and "SSH_ASKPASS" not in env

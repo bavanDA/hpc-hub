@@ -39,8 +39,9 @@ class AskpassServer:
         self._sock: socket.socket | None = None
         self.address = str(self.path)  # where a caller connects: the socket's path, or "tcp:127.0.0.1:<port>"
 
-    def start(self, tcp: bool = WINDOWS) -> None:
-        if tcp:
+    def start(self, tcp: bool | None = None) -> None:
+        """tcp: listen on 127.0.0.1 instead of a Unix socket; the default is to on Windows only."""
+        if WINDOWS if tcp is None else tcp:
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             sock.bind(("127.0.0.1", 0))
             sock.listen(8)
