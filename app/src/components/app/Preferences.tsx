@@ -12,6 +12,7 @@ import { openReport } from '../report/open'
 import { Spinner } from '../ui/Spinner'
 import { useToast } from '../useToast'
 import { AboutDialog } from './About'
+import { UpdateRow } from './UpdateRow'
 import { AppearanceGroup } from './Appearance'
 import { forgetProfiles, getProfiles } from './openLink'
 import { PairPhoneDialog } from './PairPhoneDialog'
@@ -88,6 +89,7 @@ export function PreferencesDialog({ onClose, onExperimental, onDisconnectAndQuit
         {prefs.experimental_papers && <PaperAgent />}
         <Section title="HPC Hub">
           <Row label="Set up the phone app" opens onPress={() => setInner('phone')} />
+          <UpdateRow onOpen={onClose} />
           <Row label="About HPC Hub" opens onPress={() => setInner('about')} />
           <Row label="Report a problem" opens onPress={() => { onClose(); openReport({ kind: 'user' }) }} />
           <Row label="Disconnect all and quit" danger onPress={onDisconnectAndQuit} />
