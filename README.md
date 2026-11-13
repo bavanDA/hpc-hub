@@ -75,7 +75,7 @@ We welcome contributions of every size. You can:
 
 - **Fix an issue**: pick one from [Issues](https://github.com/bavanDA/hpc-hub/issues) or report a bug you found.
 - **Add a feature**: open an issue first so we can agree on the idea, then send a pull request.
-- **Add your cluster**: one file makes it built in for everyone at your school.
+- **Add your cluster**: one file makes it built in for everyone who uses it, at a university, a lab or a company.
 - **Improve the docs**: the guides at [hpchub.staylazy.app](https://hpchub.staylazy.app) live in `wiki/docs`.
 
 [CONTRIBUTING.md](CONTRIBUTING.md) shows how to set up, test and send your change.
