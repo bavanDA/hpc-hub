@@ -21,6 +21,20 @@ The key has no password, so nothing else is needed: the workflow passes an empty
 `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` secret doesn't exist. (Set that secret only if you make a key with a password;
 `gh secret set` asks for the value when `--body ""` is empty.)
 
+## Once: the Mac signing certificate
+
+The Mac app is signed with HPC Hub's own code-signing certificate, made once with openssl ("HPC Hub Self Signed",
+valid until 2046). It is not Apple's, so macOS still warns on the first open, but every build is then the same app to
+macOS: the Keychain asks once ("Always Allow") instead of after every update. The certificate and key are in
+`~/.tauri/hpc-hub-macos-signing.p12`, its password in `~/.tauri/hpc-hub-macos-signing.password` (never in the
+repository; back them up with the update key). GitHub Actions has them as two secrets:
+
+    base64 -w0 ~/.tauri/hpc-hub-macos-signing.p12 | gh secret set MACOS_SIGN_P12 -R bavanDA/hpc-hub
+    gh secret set MACOS_SIGN_P12_PASSWORD -R bavanDA/hpc-hub < ~/.tauri/hpc-hub-macos-signing.password
+
+Without them the Mac build is not signed (as before). Losing the certificate means one more Keychain question per
+saved password after the next update, nothing worse. An Apple Developer ID ($99 a year) would replace it later.
+
 ## Each release
 
 1. Raise the version in the files the last `chore(release)` commit changed (`app/src-tauri/tauri.conf.json`,

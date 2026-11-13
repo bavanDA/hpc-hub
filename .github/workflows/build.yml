@@ -37,6 +37,10 @@ jobs:
       # updates signed with this key, whose public half is in app/src-tauri/tauri.conf.json
       TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
       TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+      # macOS: HPC Hub's own code-signing certificate (self-made, not Apple's), so every build is the same app to
+      # macOS and the Keychain stops asking after one "Always Allow" (docs/releasing.md)
+      MACOS_SIGN_P12: ${{ secrets.MACOS_SIGN_P12 }}
+      MACOS_SIGN_P12_PASSWORD: ${{ secrets.MACOS_SIGN_P12_PASSWORD }}
     steps:
       - name: A release needs the update key
         if: inputs.publish && env.TAURI_SIGNING_PRIVATE_KEY == ''
@@ -141,6 +145,26 @@ jobs:
 
       - run: npm ci
         working-directory: app
+      - name: Sign the Mac app with HPC Hub's own certificate (when it is set)
+        if: runner.os == 'macOS' && env.MACOS_SIGN_P12 != ''
+        shell: bash
+        run: |
+          # A keychain of this run's own, in the search list (codesign looks there), with codesign allowed to use
+          # the key without asking. macOS doesn't trust a self-made certificate, so it is named by its SHA-1:
+          # codesign signs with it anyway, and the signature names it, which is what makes builds the same app.
+          kc="$RUNNER_TEMP/hpc-hub-signing.keychain-db"; kpw=$(uuidgen)
+          security create-keychain -p "$kpw" "$kc"
+          security set-keychain-settings -lut 21600 "$kc"
+          security unlock-keychain -p "$kpw" "$kc"
+          echo "$MACOS_SIGN_P12" | base64 --decode > "$RUNNER_TEMP/signing.p12"
+          security import "$RUNNER_TEMP/signing.p12" -k "$kc" -P "$MACOS_SIGN_P12_PASSWORD" -A -t agg -f pkcs12
+          rm -f "$RUNNER_TEMP/signing.p12"
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$kpw" "$kc" > /dev/null
+          security list-keychains -d user -s "$kc" $(security list-keychains -d user | tr -d '"')
+          id=$(security find-identity -p codesigning "$kc" | awk '/"HPC Hub Self Signed"/ {print $2; exit}')
+          test -n "$id"
+          echo "APPLE_SIGNING_IDENTITY=$id" >> "$GITHUB_ENV"
+
       - name: Make update files too (when the key is set)
         if: env.TAURI_SIGNING_PRIVATE_KEY != ''
         shell: bash
@@ -149,6 +173,16 @@ jobs:
             c.bundle.createUpdaterArtifacts = true; require('fs').writeFileSync(f, JSON.stringify(c, null, 2))"
       - run: npm run tauri:release
         working-directory: app
+      - name: The Mac app is signed with HPC Hub's certificate
+        if: runner.os == 'macOS' && env.MACOS_SIGN_P12 != ''
+        shell: bash
+        run: |
+          app=$(ls -d app/src-tauri/target/release/bundle/macos/*.app)
+          for bin in "$app/Contents/MacOS/"*; do
+            req=$(codesign -dr - "$bin" 2>&1 | tail -1)
+            echo "$(basename "$bin"): $req"
+            echo "$req" | grep -q 'certificate root = H"'
+          done
 
       - uses: actions/upload-artifact@v7
         with:
