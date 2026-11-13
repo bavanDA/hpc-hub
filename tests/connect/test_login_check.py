@@ -72,6 +72,7 @@ def test_off_campus_without_the_vpn_it_says_it_will_check_later(monkeypatch):
     monkeypatch.setattr(login_check, "reachable", lambda host, port: False)
     got = login_check.check(WULVER, Askpass(), "ab123", "secret")
     assert got["ok"] is None and "checked when you connect" in got["text"]
+    assert "can only be reached through its VPN" in got["text"]
 
 
 def test_other_failures_cant_tell_so_the_step_goes_on(online, monkeypatch):

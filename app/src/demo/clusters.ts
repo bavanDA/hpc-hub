@@ -223,7 +223,10 @@ export const answers: Record<string, unknown> = {
     new Promise((done) => setTimeout(() => done(password === 'wrong'
       ? { ok: false,
         text: `Wulver (NJIT) didn't accept the password for ${username}. Type it again, or check your UCID.` }
-      : { ok: true, text: '' }), 1200)),
+      : password === 'offvpn'  // the demo's stand-in for a cluster behind a VPN that isn't on yet
+        ? { ok: null, text: "HPC Hub can't check this password yet: Wulver (NJIT) can only be reached through its VPN, "
+            + "which isn't on yet. It's checked when you connect, and if it's wrong you can type it again then." }
+        : { ok: true, text: '' }), 1200)),
   'clusters.forget_logins': () => null,
   'clusters.maintenance': (): Maintenance => ({ start: '2026-11-10T07:50:00', tz: 'EST', minutes_left: 2345, active: false }),
   'clusters.partitions': ({ partition, qos }: { partition?: string; qos?: string }): Limits => {

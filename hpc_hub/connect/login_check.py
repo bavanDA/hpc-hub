@@ -21,9 +21,10 @@ def check(cfg: ClusterConfig, askpass, username: str, password: str) -> dict:
     if not password:
         return {"ok": None, "text": "No password to check yet, so your login is checked when you connect."}
     if not reachable(cfg.host, cfg.port or 22):
-        how = " without the VPN" if cfg.vpn.enabled else ""
-        return {"ok": None, "text": f"Can't reach {cfg.name} from this network{how}, so your login is checked when "
-                                    "you connect."}
+        where = (f"{cfg.name} can only be reached through its VPN, which isn't on yet" if cfg.vpn.enabled
+                 else f"{cfg.name} can't be reached from this network")
+        return {"ok": None, "text": f"HPC Hub can't check this password yet: {where}. It's checked when you connect, "
+                                    "and if it's wrong you can type it again then."}
     seen = {"passwords": 0, "past": False}
 
     def on_prompt(prompt: str) -> str | None:

@@ -51,7 +51,7 @@ When you select **Continue** with a password, HPC Hub checks it with the cluster
 
 If the password is wrong, the step says so and you can type it again.
 
-If HPC Hub can't reach the cluster yet, for example before the VPN is up, the step says so and lets you go on. HPC Hub checks your sign-in when you connect.
+If HPC Hub can't reach the cluster yet, for example because it's only reachable through its VPN and the VPN isn't on, it can't check the password. The step says so and stays. Select **Continue without checking** to go on: the password is checked when you connect, and if it's wrong you type it again then.
 
 **Remember password** keeps the password in your computer's keyring. Turn it off to type the password each time you open HPC Hub.
 
