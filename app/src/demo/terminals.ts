@@ -42,6 +42,8 @@ function scan({ text }: { text: string }): Link[] {
   const device = text.match(/https:\/\/github\.com\/login\/device/)
   const code = text.match(/\b[A-Z0-9]{4}-[A-Z0-9]{4}\b/)
   if (device) out.push({ kind: 'device-login', url: device[0], code: code?.[0] ?? '', host: '', port: 0 })
+  const web = text.match(/http:\/\/(localhost|127\.0\.0\.1):(\d+)\S*/)
+  if (web) out.push({ kind: 'local-web', url: web[0], code: '', host: web[1], port: Number(web[2]) })
   return out
 }
 

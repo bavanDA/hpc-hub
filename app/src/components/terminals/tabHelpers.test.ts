@@ -49,5 +49,8 @@ describe('linkBanner', () => {
   it('copies a pairing code', () => expect(linkBanner(link({ kind: 'pair', code: '42' }), false))
     .toMatchObject({ button: 'Copy code', copy: true }))
   it('opens remote control', () => expect(linkBanner(link({ kind: 'remote' }), false)?.button).toBe('Open'))
-  it('shows nothing for a local web page', () => expect(linkBanner(link({ kind: 'local-web' }), false)).toBeNull())
+  it('offers to open a page on the cluster here', () => {
+    const b = linkBanner(link({ kind: 'local-web', port: 8888 }), false, 'n0042')
+    expect(b).toMatchObject({ text: 'A web page is running on n0042:8888', button: 'Open on this computer', forward: true })
+  })
 })

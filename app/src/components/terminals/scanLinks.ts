@@ -7,6 +7,19 @@ import { tabNotify } from './tabNotify'
 import type { Tab } from './tabs'
 import { copyText } from './xterm'
 
+/** A page on the cluster opens in this computer's browser: its port comes here over the connection (once per
+ * page and tab; the link keeps its path and token). */
+function openHere(tab: Tab, url: string) {
+  const known = forwarded.get(tab.key + url)
+  if (known) return openLink(known)
+  tabNotify('Opening it on this computer…')
+  call<string>('tools.forward', { cluster: tab.cluster, url, node: tab.node })
+    .then((here) => { forwarded.set(tab.key + url, here); openLink(here) })
+    .catch((e: Error) => tabNotify(`Could not open it: ${e.message}`))
+}
+
+const forwarded = new Map<string, string>()
+
 /** Links the terminal printed (VS Code tunnel, device sign-in...) become banners, once each. */
 export async function scanLinks(tab: Tab, text: string) {
   if (!mayHaveLinks(text)) return
@@ -21,10 +34,11 @@ export async function scanLinks(tab: Tab, text: string) {
     if (tab.seen.has(id)) continue
     tab.seen.add(id)
     const copied = link.kind === 'device-login' && link.code ? await copyText(link.code) : false
-    const b = linkBanner(link, copied)
+    const b = linkBanner(link, copied, tab.node || 'the login node')
     if (b) {
       banner(tab, b.text, b.button, b.copy
         ? () => copyText(link.code).then((ok) => tabNotify(ok ? 'Code copied' : 'Could not copy'))
+        : b.forward ? () => openHere(tab, link.url)
         : () => openLink(link.url))
     }
     tab.onLink?.(link)

@@ -105,3 +105,6 @@ def test_forward_a_node_web_server(env):
     assert env.s.ssh.forwarded == ("n0042", 8000)
     with pytest.raises(ValueError):
         vscode.forward("wulver", "https://example.com")
+    # a page on the login node (a terminal there): its own localhost, through the connection
+    assert vscode.forward("wulver", "http://127.0.0.1:8888/lab?token=abc") == "http://127.0.0.1:50123/lab?token=abc"
+    assert env.s.ssh.forwarded == ("localhost", 8888)

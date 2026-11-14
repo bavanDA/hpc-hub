@@ -144,14 +144,14 @@ def vscode_open(tunnel: str, folder: str = "", target: str = "desktop") -> dict:
 
 @method("tools.forward")
 def forward(cluster: str, url: str, job: str = "", node: str = "") -> str:
-    """A web server the VS Code job printed (code serve-web): forward its port here, answer the local link."""
+    """A web server printed in a terminal or by the VS Code job (Jupyter, TensorBoard, a website's dev server...):
+    forward its port to this computer, answer the local link (path and token kept). On the login node when there is
+    no node. The forward listens on 127.0.0.1 here only, and lasts while the cluster is connected."""
     s = hub().connected(cluster)
     link = links.classify(url, node=node)
     if link.kind != links.LOCAL_WEB:
-        raise ValueError("Not a link on the node")
+        raise ValueError("Not a link on the cluster")
     if not node and job.isdigit():
         node = slurm.node_of(s.ssh, job)
-    host = node if link.host in links.LOCAL_HOSTS else link.host
-    if not host:
-        raise RuntimeError("No node for that link")
+    host = (node or "localhost") if link.host in links.LOCAL_HOSTS else link.host
     return links.local_url(link, s.ssh.forward(host, link.port))
