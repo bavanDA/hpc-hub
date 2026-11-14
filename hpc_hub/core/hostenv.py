@@ -63,9 +63,9 @@ def ca_file(environ: dict[str, str], exists=os.path.isfile) -> str:
 
 
 def apply() -> None:
-    """At the backend's start: when frozen or in the AppImage, the clean environment for everything it starts; on Linux and macOS,
-    TLS that verifies (the .rpm and the macOS app carry an OpenSSL built elsewhere too). Windows' Python reads the
-    system's own certificate store, so nothing to do there."""
+    """At the backend's start: when frozen or in the AppImage, the clean environment for everything it starts;
+    on Linux and macOS, TLS that verifies (the .rpm and the macOS app carry an OpenSSL built elsewhere too).
+    Windows' Python reads the system's own certificate store, so nothing to do there."""
     unpacked = getattr(sys, "_MEIPASS", "")
     if os.environ.get("APPDIR") or unpacked:
         clean = host(dict(os.environ), unpacked)

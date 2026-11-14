@@ -31,8 +31,7 @@ jobs:
       - run: python -m pytest -q
 
   python-windows:
-    # Pull requests and by hand only: Windows minutes count twice
-    if: github.event_name != 'push'
+    # on every push too: the repository is public, so GitHub's Windows runners cost nothing
     runs-on: windows-latest
     timeout-minutes: 20
     steps:
