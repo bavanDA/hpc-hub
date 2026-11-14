@@ -78,7 +78,8 @@ if [ "$os" = mac ]; then
 fi
 
 # Linux: the AppImage, which updates itself from the app later
-mkdir -p "$appdir" "$HOME/.local/share/applications" "$HOME/.local/share/icons"
+themed="$HOME/.local/share/icons/hicolor/128x128/apps"
+mkdir -p "$appdir" "$HOME/.local/share/applications" "$themed"
 mv "$tmp/$name" "$app.new" && chmod +x "$app.new"
 if pgrep -f -x "$app" >/dev/null 2>&1; then  # only when this AppImage is the one running
   say "Closing HPC Hub to update it. Work on the clusters keeps running."
@@ -86,11 +87,12 @@ if pgrep -f -x "$app" >/dev/null 2>&1; then  # only when this AppImage is the on
 fi
 mv "$app.new" "$app"
 printf '%s\n' "$version" > "$appdir/.hpc-hub-version"
-# the app menu entry, with the icon from inside the AppImage (a missing icon never stops the install)
-icon=hpc-hub
+# the app menu entry, with the icon from inside the AppImage in your icon theme, by name: the desktop notices
+# when a theme icon changes (the app puts each version's icon there), not when a file it already showed does.
+# A missing icon never stops the install.
 inside=usr/share/icons/hicolor/128x128/apps/hpc-hub.png
 if (cd "$tmp" && "$app" --appimage-extract "$inside" >/dev/null 2>&1) && [ -f "$tmp/squashfs-root/$inside" ]; then
-  cp "$tmp/squashfs-root/$inside" "$HOME/.local/share/icons/hpc-hub.png" && icon="$HOME/.local/share/icons/hpc-hub.png"
+  cp "$tmp/squashfs-root/$inside" "$themed/hpc-hub.png" && touch "$HOME/.local/share/icons/hicolor"
 fi
 cat > "$HOME/.local/share/applications/hpc-hub.desktop" <<EOF
 [Desktop Entry]
@@ -98,7 +100,8 @@ Type=Application
 Name=HPC Hub
 Comment=Work on HPC clusters
 Exec="$app"
-Icon=$icon
+Icon=hpc-hub
+StartupWMClass=hpc-hub
 Categories=Development;Network;
 Terminal=false
 EOF
