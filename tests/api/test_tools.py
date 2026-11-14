@@ -7,6 +7,7 @@ from hpc_hub.agents import catalog
 from hpc_hub.api.methods import tools
 from hpc_hub.compute.slurm import Allocation
 from hpc_hub.core.config import ClusterConfig
+from tests.helpers import on_linux_cluster
 
 
 class FakeSsh:
@@ -183,6 +184,7 @@ def test_install_opens_the_official_installer_on_the_login_node(env):
         tools.agent_install("wulver", "nope")
 
 
+@on_linux_cluster  # the script runs on the cluster: a real bash, not Windows' WSL stub
 @pytest.mark.parametrize("found_after", [True, False])
 def test_the_install_script_installs_then_puts_local_bin_on_path(tmp_path, found_after):
     """The real script, with curl standing in for the installer: it writes ~/.local/bin/claude. When a new shell
@@ -204,6 +206,7 @@ def test_the_install_script_installs_then_puts_local_bin_on_path(tmp_path, found
     assert (tools.PATH_LINE in rc) is (not found_after)
 
 
+@on_linux_cluster  # the script runs on the cluster: a real bash, not Windows' WSL stub
 def test_an_install_that_fails_says_so(tmp_path):
     home, fake = tmp_path / "home", tmp_path / "bin"
     home.mkdir()

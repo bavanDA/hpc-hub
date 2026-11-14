@@ -92,6 +92,7 @@ def test_windows_paths_take_the_clusters_slashes():
 def test_a_whole_home_folder_is_refused(tmp_path, monkeypatch):
     from hpc_hub.api.methods import projects_local
     monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.setenv("USERPROFILE", str(tmp_path))  # Windows' home folder
     with pytest.raises(ValueError, match="not your whole home folder"):
         projects_local._folder(str(tmp_path))
     with pytest.raises(ValueError, match="Pick a folder"):
