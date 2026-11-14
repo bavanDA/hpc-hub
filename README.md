@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="wiki/docs/assets/icon.png" alt="HPC Hub" width="112">
+  <img src="wiki/docs/assets/logo.png" alt="HPC Hub" width="112">
 </p>
 
 <h1 align="center">HPC Hub</h1>
