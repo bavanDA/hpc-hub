@@ -65,7 +65,10 @@ class Server:
                 message = str(e) or type(e).__name__
                 # ref: the UI keeps it with the error it shows, so a bug report can send this traceback
                 ref = recent.note(name, message, trace)
-                reply = {"error": {"code": -32000, "message": message, "data": {"ref": ref}}}
+                data = {"ref": ref}
+                if isinstance(getattr(e, "kind", None), str):  # what kind of failure, for the UI to act on
+                    data["kind"] = e.kind
+                reply = {"error": {"code": -32000, "message": message, "data": data}}
         if rid is not None:  # no id: a notification, no answer wanted
             self.send({"jsonrpc": "2.0", "id": rid, **reply})
 

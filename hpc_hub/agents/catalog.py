@@ -65,6 +65,20 @@ CURSOR = Agent("cursor", "Cursor", "", "", (
 AGENTS = [CLAUDE, CODEX, AGY, CURSOR]
 BY_ID = {a.id: a for a in AGENTS}
 
+# Each agent's own installer, as its maker documents it: one user, no root, no Node.js, into ~/.local/bin
+INSTALL = {
+    "claude": "curl -fsSL https://claude.ai/install.sh | bash",  # code.claude.com/docs/en/setup
+    "codex": "curl -fsSL https://chatgpt.com/codex/install.sh | sh",  # learn.chatgpt.com/docs/codex/cli
+    "agy": "curl -fsSL https://antigravity.google/cli/install.sh | bash",  # antigravity.google/docs/install
+    "cursor": "curl -fsS https://cursor.com/install | bash",  # cursor.com/docs/cli/installation
+}
+
+
+class NotInstalled(RuntimeError):
+    """The agent's command isn't on the cluster; the app offers to install it (kind goes to the UI)."""
+    kind = "not-installed"
+
+
 PAIR_NOTE = "Pairing code below. In the ChatGPT app open Codex, then connect a machine and enter it."
 
 

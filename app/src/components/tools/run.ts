@@ -1,6 +1,6 @@
 // Outside React, so a VS Code job keeps opening its folder while another page is shown.
 import type { Go } from '../../nav'
-import { call, on } from '../../rpc'
+import { call, on, type CallError } from '../../rpc'
 import type { Session } from '../../types/clusters'
 import type { Follow, Opened, Started, Target, VsStarted, VsStatus } from '../../types/tools'
 import { openLink } from '../app/openLink'
@@ -47,6 +47,17 @@ export function startAgent(cluster: string, run: AgentRun, go: Go) {
   const { name, ...params } = run
   notify(`Starting ${name}…`)
   call<Started>('tools.agent_start', { cluster, ...params })
+    .then((c) => { openTmux(cluster, c); go('terminals') })
+    .catch((e: CallError) => e.kind === 'not-installed'
+      ? notify(`${e.message}.`, { stay: true, report: false,
+        action: { label: `Install ${name}`, run: () => installAgent(cluster, run.agent, name, go) } })
+      : failed(e))
+}
+
+/** The agent's own installer in a terminal on the login node: you watch it, then start the agent again. */
+export function installAgent(cluster: string, agent: string, name: string, go: Go) {
+  notify(`Installing ${name}…`)
+  call<Started>('tools.agent_install', { cluster, agent })
     .then((c) => { openTmux(cluster, c); go('terminals') })
     .catch(failed)
 }

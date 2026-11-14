@@ -3,6 +3,7 @@ import subprocess
 
 import pytest
 
+from hpc_hub.agents import catalog
 from hpc_hub.api.methods import tools
 from hpc_hub.compute.slurm import Allocation
 from hpc_hub.core.config import ClusterConfig
@@ -144,8 +145,13 @@ def test_agent_checks_what_you_send(env):
     with pytest.raises(ValueError):
         tools.agent_start("wulver", "claude", profile={"cpus": 0})
     env.s.ssh.answers["type -t"] = ""
-    with pytest.raises(RuntimeError, match="not found"):
+    with pytest.raises(catalog.NotInstalled, match="Claude isn't installed on") as missing:
         tools.agent_start("wulver", "claude")
+    assert missing.value.kind == "not-installed"  # the app offers Install
+    env.s.cfg.claude.command = "my-claude"  # a command of your own: HPC Hub can't install that one
+    with pytest.raises(RuntimeError, match="not found") as custom:
+        tools.agent_start("wulver", "claude")
+    assert not isinstance(custom.value, catalog.NotInstalled)
 
 
 def test_agent_without_a_node_says_so(env, monkeypatch):
@@ -166,3 +172,46 @@ def test_ask_all_asks_for_a_node_with_your_choice(env):
         tools.ask_start("wulver", "~", "~/a", "  ", ["claude"])
     with pytest.raises(ValueError):
         tools.ask_start("wulver", "~", "~/a", "hi", [])
+
+
+def test_install_opens_the_official_installer_on_the_login_node(env):
+    got = tools.agent_install("wulver", "codex")
+    line = got["argv"][-1]
+    assert got["title"] == "Install ChatGPT" and got["node"] == "" and got["name"].startswith("hpchub-install-codex-")
+    assert "chatgpt.com/codex/install.sh" in line and "srun" not in line  # the login node: no job needed
+    with pytest.raises(ValueError):
+        tools.agent_install("wulver", "nope")
+
+
+@pytest.mark.parametrize("found_after", [True, False])
+def test_the_install_script_installs_then_puts_local_bin_on_path(tmp_path, found_after):
+    """The real script, with curl standing in for the installer: it writes ~/.local/bin/claude. When a new shell
+    can't find it, ~/.local/bin goes on PATH in ~/.bashrc, once."""
+    home, fake = tmp_path / "home", tmp_path / "bin"
+    home.mkdir()
+    fake.mkdir()
+    (fake / "curl").write_text("#!/bin/sh\necho 'mkdir -p ~/.local/bin; printf \"#!/bin/sh\\n\" > "
+                               "~/.local/bin/claude; chmod +x ~/.local/bin/claude; echo installed'\n")
+    (fake / "curl").chmod(0o755)
+    path = f"{fake}:/usr/bin:/bin" + (f":{home}/.local/bin" if found_after else "")
+    (home / ".bashrc").write_text(f"export PATH={path}\n")
+    script = tools.install_script(catalog.BY_ID["claude"]).replace("exec bash -l", "true")
+    run = subprocess.run(["bash", "-c", script], env={"HOME": str(home), "PATH": path}, capture_output=True,
+                         text=True, timeout=30)
+    assert "Claude is installed" in run.stdout, run.stdout + run.stderr
+    assert (home / ".local/bin/claude").exists()
+    rc = (home / ".bashrc").read_text()
+    assert (tools.PATH_LINE in rc) is (not found_after)
+
+
+def test_an_install_that_fails_says_so(tmp_path):
+    home, fake = tmp_path / "home", tmp_path / "bin"
+    home.mkdir()
+    fake.mkdir()
+    (fake / "curl").write_text("#!/bin/sh\necho 'curl: (6) Could not resolve host' >&2; exit 6\n")
+    (fake / "curl").chmod(0o755)
+    script = tools.install_script(catalog.BY_ID["agy"]).replace("exec bash -l", "true")
+    run = subprocess.run(["bash", "-c", script], env={"HOME": str(home), "PATH": f"{fake}:/usr/bin:/bin"},
+                         capture_output=True, text=True, timeout=30)
+    assert "Antigravity did not install" in run.stdout and "installed." not in run.stdout
+    assert not (home / ".bashrc").exists()

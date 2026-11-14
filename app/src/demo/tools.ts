@@ -1,4 +1,5 @@
 // Demo data for VS Code, the agents and Ask all: made-up chats, a VS Code job, pretend command lines.
+import { failure } from '../rpc'
 import type { Profile } from '../types/clusters'
 import { demoCluster } from './clusters'
 import type { AgentInfo, Chat, Chats, Opened, Started, ToolSetup, VsFound, VsStarted, VsStatus } from '../types/tools'
@@ -114,10 +115,13 @@ export const answers: Record<string, unknown> = {
   'tools.forward': 'http://127.0.0.1:50123/',
   'tools.agent_start': ({ agent, folder, label }: { agent: string; folder: string; label?: string }) => {
     const a = AGENTS.find((x) => x.id === agent)!
+    if (agent === 'agy') throw failure("Antigravity isn't installed on Wulver (NJIT)", 'not-installed')
     const colors: Record<string, string> = { claude: '#d97757', codex: '#10a37f', agy: '#4285f4', cursor: '#8b8b8b' }
     return started(`hpchub-${agent}-123456-${now}`, `${a.name} · ${label || folder.split('/').pop() || folder}`,
       colors[agent])
   },
+  'tools.agent_install': ({ agent }: { agent: string }) =>
+    started(`hpchub-install-${agent}-${now}`, `Install ${AGENTS.find((x) => x.id === agent)!.name}`, '#4285f4'),
   'tools.ask_start': ({ prompt, out }: { prompt: string; out: string }) =>
     started(`hpchub-ask-123456-${now}`, `Ask all · ${prompt.split('\n')[0].slice(0, 40)}`, '#9141ac', out),
 }

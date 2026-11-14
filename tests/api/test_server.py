@@ -17,6 +17,12 @@ def _fail():
     raise ValueError("nope")
 
 
+@method("test.missing")
+def _missing():
+    from hpc_hub.agents.catalog import NotInstalled
+    raise NotInstalled("Claude isn't installed on Wulver")
+
+
 def _run(lines: list[str]) -> list[dict]:
     out = io.StringIO()
     Server(out=out).serve(iter(lines))
@@ -33,6 +39,13 @@ def test_calls_errors_and_notifications():
     assert by_id[1]["result"] == 5
     assert by_id[2]["error"]["message"] == "nope" and by_id[3]["error"]["code"] == -32601
     assert by_id[None]["error"]["code"] == -32700 and len(got) == 4
+
+
+def test_an_error_says_its_kind_so_the_app_can_act():
+    got = _run(['{"jsonrpc":"2.0","id":1,"method":"test.missing"}\n',
+                '{"jsonrpc":"2.0","id":2,"method":"test.fail"}\n'])
+    assert got[0]["error"]["data"]["kind"] == "not-installed" and "ref" in got[0]["error"]["data"]
+    assert "kind" not in got[1]["error"]["data"]  # an ordinary error has none
 
 
 def test_events_and_lines_stay_whole():

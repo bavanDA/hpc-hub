@@ -8,7 +8,7 @@ import { demoCall } from './demo/index'
 
 
 type Waiting = { resolve: (v: unknown) => void; reject: (e: Error) => void; method: string }
-type Message = { id?: number | null; result?: unknown; error?: { message: string; data?: { ref?: number } };
+type Message = { id?: number | null; result?: unknown; error?: { message: string; data?: { ref?: number; kind?: string } };
   method?: string; params?: { name: string; data: unknown } }
 
 let next = 1
@@ -24,11 +24,18 @@ const ready = inTauri ? listen<string>('rpc', (e) => {
     waiting.delete(m.id)
     if (m.error) {
       noteFailure(w.method, m.error.message, m.error.data?.ref)  // a bug report about it sends its traceback
-      w.reject(new Error(m.error.message))
+      w.reject(failure(m.error.message, m.error.data?.kind))
     } else w.resolve(m.result)
   }
 }) : Promise.resolve()
 if (!inTauri) onDemoEvent((name, data) => listeners.get(name)?.forEach((fn) => fn(data)))
+
+/** An error from the backend; kind says what kind of failure it is, for the UI to act on ("not-installed"). */
+export type CallError = Error & { kind?: string }
+
+export function failure(message: string, kind?: string): CallError {
+  return Object.assign(new Error(message), kind ? { kind } : {})
+}
 
 export async function call<T>(method: string, params: Record<string, unknown> = {}): Promise<T> {
   if (!inTauri) {

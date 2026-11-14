@@ -173,6 +173,8 @@ def agent_start(cluster: str, agent: str, folder: str = "", chat_id: str = "", l
 
     progress(cluster, f"Checking {a.name} on {s.cfg.name}…")
     if not remote.command_type(s.ssh, c.command or a.id):
+        if (c.command or a.id) == _default_command(a) and a.id in catalog.INSTALL:
+            raise catalog.NotInstalled(f"{a.name} isn't installed on {s.cfg.name}")
         raise RuntimeError(f"{a.name} not found: '{c.command}' is not on PATH or in ~/.bashrc on {s.cfg.name}")
     if c.new_node:
         progress(cluster, f"Requesting a new node for {a.name} ({(picked or s.cfg.profile).summary()})…")
@@ -189,6 +191,51 @@ def agent_start(cluster: str, agent: str, folder: str = "", chat_id: str = "", l
     line = catalog.command(a, c, chat_id, task)
     return _tab(s, node, f"hpchub-{a.id}-{node.job_id}-{tag}", line, folder, title,
                 tmux.AGENT_COLORS.get(a.id, ""))
+
+
+def _default_command(a: catalog.Agent) -> str:
+    from ...core.cluster_settings import ClusterConfig
+    return getattr(ClusterConfig(id="x", name="x"), a.id).command or a.id
+
+
+# ~/.local/bin, where the installers put the agents, on the PATH of interactive shells when it isn't yet
+PATH_LINE = 'export PATH="$HOME/.local/bin:$PATH"  # added by HPC Hub for its agents'
+
+
+def install_script(a: catalog.Agent) -> str:
+    """What the install terminal runs: the installer, then ~/.local/bin on PATH if a new shell can't find the
+    agent, then what to do next. Ends in a shell, so the terminal stays open to read."""
+    how, cmd = catalog.INSTALL[a.id], _default_command(a)
+    done = f"{a.name} is installed. Start it again from HPC Hub: the first start asks you to sign in to {a.name}."
+    return "; ".join([
+        "set -o pipefail",  # a download that fails is a failed install, not bash happily running nothing
+        f"echo {shlex.quote(f'Installing {a.name} with its official installer, in your home folder:')}",
+        f"echo {shlex.quote('  ' + how)}", "echo",
+        f"if {how}; then "
+        f"if ! bash -ic {shlex.quote(f'type -t {cmd}')} >/dev/null 2>&1 </dev/null; then "
+        f"printf '\\n%s\\n' {shlex.quote(PATH_LINE)} >> ~/.bashrc && "
+        "echo && echo 'Added ~/.local/bin to your PATH in ~/.bashrc.'; fi; "
+        f"echo; echo {shlex.quote(done)}; "
+        f"else echo; echo {shlex.quote(f'{a.name} did not install. The lines above say why.')}; fi",
+        "exec bash -l",
+    ])
+
+
+@method("tools.agent_install")
+def agent_install(cluster: str, agent: str) -> dict:
+    """Install the agent with its maker's own installer, in a terminal on the login node, so you watch it. Only
+    in your home folder (~/.local/bin): no root. Then ~/.local/bin goes on your PATH in ~/.bashrc if it isn't."""
+    s = hub().connected(cluster)
+    a = _agent(agent)
+    how = catalog.INSTALL.get(a.id)
+    if not how:
+        raise ValueError(f"HPC Hub doesn't know how to install {a.name}")
+    script = install_script(a)
+    name = f"hpchub-install-{a.id}-{time.strftime('%H%M%S')}"
+    title = f"Install {a.name}"
+    color = tmux.AGENT_COLORS.get(a.id, "")
+    line = tmux.open_line(name, f"bash -c {shlex.quote(script)}", title, color)
+    return {"argv": s.ssh.argv(line, tty=True), "name": name, "node": "", "title": title, "color": color}
 
 
 @method("tools.ask_start")
