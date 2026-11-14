@@ -73,6 +73,23 @@ def node_of(ssh: SshMaster, job_id: str) -> str:
     raise SlurmError(f"Job {job_id} has no node")
 
 
+@dataclass
+class Waiting:
+    job_id: str
+    reason: str  # Slurm's: Priority, Resources...
+
+
+def waiting_job(ssh: SshMaster, name: str = MAIN_JOB) -> Waiting | None:
+    """Your newest job of this name still waiting in the queue: a node asked for earlier, maybe over a connection
+    that dropped since (salloc on the login node doesn't notice while it waits, so the job stays queued)."""
+    res = ssh.run(f'squeue -h -u "$USER" -t PENDING -n {shlex.quote(name)} -o "%i|%r"')
+    if res.returncode != 0:
+        raise subprocess.CalledProcessError(res.returncode, "squeue", res.stdout, res.stderr)
+    found = [Waiting(*parts) for line in res.stdout.splitlines()
+             if len(parts := line.strip().split("|")) == 2 and parts[0].isdigit()]
+    return max(found, key=lambda w: int(w.job_id), default=None)
+
+
 def running_jobs(ssh: SshMaster) -> list[Job]:
     res = ssh.run(f'squeue -h -u "$USER" -t RUNNING -o {shlex.quote(JOBS_FORMAT)}')
     if res.returncode != 0:  # an empty answer must mean "no jobs", not "squeue failed"

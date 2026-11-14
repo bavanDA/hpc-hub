@@ -201,6 +201,8 @@ export const answers: Record<string, unknown> = {
       'Node n0311 (job 123777)']])
     return null
   },
+  'clusters.waiting_node': null,
+  'clusters.cancel_waiting': null,
   'clusters.release_node': ({ cluster }: { cluster: string }) => {
     const s = find(sessions, cluster)
     log(cluster, s.owned ? `Released job ${s.job}` : `Stopped using your job ${s.job}, it keeps running`)

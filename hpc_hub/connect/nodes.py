@@ -160,6 +160,15 @@ class NodesMixin:
         if self._reuse_running_job():
             self._set(State.CONNECTED)
             return
+        try:
+            waiting = slurm.waiting_job(self.ssh)
+        except (OSError, subprocess.SubprocessError):
+            waiting = None
+        if waiting:  # asked for earlier (the connection may have dropped since): never a second one in the queue
+            got = self._follow_waiting(waiting.job_id)
+            if got != "gone":
+                self._set(State.CONNECTED, STOPPED_WAITING if got == "stopped" else "")
+                return
         self._set(State.ALLOCATING, profile.summary())
         try:
             self.allocation = salloc.allocate(
@@ -172,6 +181,32 @@ class NodesMixin:
             self._set(State.CONNECTED, STOPPED_WAITING if self._cancel.is_set() else f"No compute node: {e}")
             return
         self._set(State.CONNECTED)
+
+    def _follow_waiting(self, job_id: str) -> str:
+        """Wait for a node asked for earlier instead of asking again. "granted" (self.allocation is it), "stopped"
+        (you stopped waiting: the job is cancelled, like a request of this session), "lost" (the connection went)
+        or "gone" (the job ended without a node, so asking again is right)."""
+        self._log(f"Job {job_id} asked for a node earlier and is still in the queue. Waiting for it")
+        self._set(State.ALLOCATING, f"Job {job_id} waiting in queue")
+        while True:
+            if self._cancel.is_set():
+                self._release(job_id)
+                return "stopped"
+            if self.ssh is None or self.state != State.ALLOCATING:  # disconnected, or the connection went
+                return "lost"
+            res = self.ssh.run(f"squeue -h -j {int(job_id)} -o %T")
+            state = res.stdout.strip()
+            if res.returncode == 0 and state == "RUNNING":
+                try:
+                    self.allocation = Allocation(job_id, slurm.node_of(self.ssh, job_id), owned=True)
+                except SlurmError:
+                    return "gone"
+                self._log(f"Job {job_id} got node {self.allocation.node}")
+                return "granted"
+            if res.returncode == 0 and state not in ("PENDING", "CONFIGURING"):
+                self._log(f"Job {job_id} left the queue without a node" + (f" ({state})" if state else ""))
+                return "gone"
+            self._cancel.wait(5)
 
     def _release(self, job_id: str) -> None:
         """scancel a node the app asked for. Blocking."""

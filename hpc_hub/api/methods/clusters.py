@@ -3,7 +3,7 @@
 from dataclasses import fields, replace
 
 from ...compute import gpus as gpu_list
-from ...compute import slurm_args
+from ...compute import slurm, slurm_args
 from ...connect import vpn_helper
 from ...connect.state import State
 from ...core.config import ComputeProfile
@@ -82,10 +82,40 @@ def _profile(base: ComputeProfile, changes: dict) -> ComputeProfile:
     return p
 
 
-@method("clusters.request_node")
-def request_node(cluster: str, profile: dict | None = None, remember: bool = False) -> None:
-    """Ask Slurm for a node (profile: what you picked, else the saved one); remember saves it as the default."""
+class AlreadyWaiting(RuntimeError):
+    """A node asked for earlier is still in the queue; the UI asks: keep waiting for it, or cancel it."""
+    kind = "already-waiting"
+
+
+@method("clusters.waiting_node")
+def waiting_node(cluster: str) -> dict | None:
+    """The app's node request still in the queue, if any: {job, reason}."""
+    w = slurm.waiting_job(hub().connected(cluster).ssh)
+    return {"job": w.job_id, "reason": "" if w.reason in ("", "None") else w.reason} if w else None
+
+
+@method("clusters.cancel_waiting")
+def cancel_waiting(cluster: str, job: str) -> None:
+    """Cancel the app's node request that is still in the queue (only that: a waiting job named hpc-hub)."""
     s = hub().connected(cluster)
+    w = slurm.waiting_job(s.ssh)
+    if not w or w.job_id != job:
+        raise RuntimeError(f"Job {job} isn't waiting in the queue anymore")
+    s.cancel()  # in case this session is the one waiting for it
+    slurm.cancel(s.ssh, job)
+    s._log(f"Cancelled job {job}, which was waiting for a node")
+
+
+@method("clusters.request_node")
+def request_node(cluster: str, profile: dict | None = None, remember: bool = False,
+                 keep_waiting: bool = False) -> None:
+    """Ask Slurm for a node (profile: what you picked, else the saved one); remember saves it as the default.
+    With a request of the app still in the queue (asked before a connection dropped, say), never a second one:
+    AlreadyWaiting, unless keep_waiting, which waits for that one."""
+    s = hub().connected(cluster)
+    if not keep_waiting and (w := slurm.waiting_job(s.ssh)):
+        raise AlreadyWaiting(f"You already asked for a node on {s.cfg.short_name}: job {w.job_id} is still "
+                             "waiting in the queue")
     picked = _profile(s.cfg.profile, profile) if profile else None
     if picked and remember:
         s.cfg.profile = picked

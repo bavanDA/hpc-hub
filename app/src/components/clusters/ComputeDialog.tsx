@@ -1,7 +1,8 @@
 import { useState } from 'react'
 
-import { call } from '../../rpc'
+import { call, type CallError } from '../../rpc'
 import { summary, type Cluster, type Profile } from '../../types/clusters'
+import { ConfirmDialog } from '../e/ConfirmDialog'
 import { EDialog } from '../e/EDialog'
 import { MainButton } from '../e/MainButton'
 import { ToggleRow } from '../e/ToggleRow'
@@ -9,6 +10,8 @@ import { useToast } from '../useToast'
 import { shortName } from './loginCopy'
 import { NodeFields } from './node/NodeFields'
 import { putCluster } from './store'
+
+type Waiting = { job: string; reason: string }
 
 export const ASK = 'Ask before each request'
 const ASK_SUB = 'Shows this window when you connect.'
@@ -20,6 +23,7 @@ export function ComputeDialog({ cluster: c, onClose }: { cluster: Cluster; onClo
   const [remember, setRemember] = useState(true)
   const [sending, setSending] = useState(false)
   const [ok, setOk] = useState(true)
+  const [waiting, setWaiting] = useState<Waiting | null>(null)  // a request still in the queue: keep it or cancel
 
   async function go() {
     const profile: Profile = { cpus: p.cpus, mem_gb: p.mem_gb, gpus: p.gpus ?? 0, gpu_type: p.gpu_type ?? '',
@@ -33,9 +37,27 @@ export function ComputeDialog({ cluster: c, onClose }: { cluster: Cluster; onClo
       if (remember) putCluster({ ...c, profile: { ...c.profile, ...profile }, ask_node: ask })
       onClose()
     } catch (e) {
+      if ((e as CallError).kind === 'already-waiting') {
+        const w = await call<Waiting | null>('clusters.waiting_node', { cluster: c.id }).catch(() => null)
+        if (w) { setWaiting(w); setSending(false); return }
+      }
       toast((e as Error).message)
       setSending(false)
     }
+  }
+
+  async function keepWaiting() {
+    try {
+      await call('clusters.request_node', { cluster: c.id, keep_waiting: true })
+      onClose()
+    } catch (e) { toast((e as Error).message) }
+  }
+
+  async function cancelWaiting(job: string) {
+    try {
+      await call('clusters.cancel_waiting', { cluster: c.id, job })
+      toast(`Cancelled job ${job}. You can ask for a node again.`)
+    } catch (e) { toast((e as Error).message) }
   }
 
   return (
@@ -46,6 +68,12 @@ export function ComputeDialog({ cluster: c, onClose }: { cluster: Cluster; onClo
       <ToggleRow label="Use this size next time" checked={remember}
         sub={remember ? undefined : `Next time: ${summary(c.profile)}`} onChange={setRemember} />
       <ToggleRow label={ASK} sub={ASK_SUB} checked={ask} onChange={setAsk} />
+      {waiting && <ConfirmDialog title={`You already asked for a node on ${shortName(c)}`}
+        text={<><p>Job {waiting.job} is still waiting in the queue
+          {waiting.reason ? ` (Slurm says: ${waiting.reason})` : ''}. Asking again would put a second job in the
+          queue.</p><p>Keep waiting for it, or cancel it and ask again.</p></>}
+        keep="Keep waiting" confirm="Cancel it" danger onKeep={keepWaiting}
+        onConfirm={() => void cancelWaiting(waiting.job)} onClose={() => setWaiting(null)} />}
     </EDialog>
   )
 }

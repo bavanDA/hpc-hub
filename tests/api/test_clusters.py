@@ -14,6 +14,7 @@ class FakeSession:
 
     def __init__(self, cfg, state=State.DISCONNECTED):
         self.cfg, self.state, self.limits, self.calls = cfg, state, None, []
+        self.ssh = None
 
     @property
     def connected(self):
@@ -42,6 +43,7 @@ def hub(monkeypatch):
     h = Hub.__new__(Hub)  # no askpass socket, no config from disk
     h.clusters = config.default_clusters()
     h.sessions = {c.id: FakeSession(c) for c in h.clusters}
+    monkeypatch.setattr(clusters.slurm, "waiting_job", lambda ssh: None)  # no node request waiting
     h.saved = 0
 
     def save():
@@ -127,6 +129,29 @@ def test_disconnect_cancel_and_nodes(hub):
     assert s.cfg.profile.cpus == 8 and s.cfg.profile.mem_gb == 16 and hub.saved == 1
     with pytest.raises(ValueError, match="No cluster"):
         clusters.cancel("nope")
+
+
+def test_a_second_node_request_while_one_waits_is_refused(hub, monkeypatch):
+    from hpc_hub.compute import slurm
+    s = hub.sessions["sdsc"]
+    s.state, s.ssh, s._log = State.CONNECTED, object(), lambda line: s.calls.append(("log", line))
+    waiting = [slurm.Waiting("55735758", "Priority")]
+    cancelled = []
+    monkeypatch.setattr(slurm, "waiting_job", lambda ssh: waiting[0] if waiting else None)
+    monkeypatch.setattr(slurm, "cancel", lambda ssh, job: cancelled.append(job))
+    with pytest.raises(clusters.AlreadyWaiting, match="job 55735758 is still waiting") as e:
+        clusters.request_node("sdsc")
+    assert e.value.kind == "already-waiting" and not any(c[0] == "request_node" for c in s.calls)
+    assert clusters.waiting_node("sdsc") == {"job": "55735758", "reason": "Priority"}
+    clusters.request_node("sdsc", keep_waiting=True)  # keep waiting: the session follows that one
+    assert ("request_node", None) in s.calls
+    with pytest.raises(RuntimeError, match="isn't waiting"):
+        clusters.cancel_waiting("sdsc", "123")  # only the waiting request itself
+    clusters.cancel_waiting("sdsc", "55735758")
+    assert cancelled == ["55735758"] and ("cancel",) in s.calls
+    waiting.clear()
+    assert clusters.waiting_node("sdsc") is None
+    clusters.request_node("sdsc")
 
 
 def test_update_saves_only_safe_settings(hub):

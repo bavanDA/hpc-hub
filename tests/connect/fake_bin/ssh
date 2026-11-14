@@ -38,6 +38,8 @@ if log:
 if cmd.startswith("salloc"):
     print("salloc: Pending job allocation 42")
     print("salloc: Granted job allocation 42")
+elif "%i|%r" in cmd:  # node requests still waiting in the queue
+    print(os.environ.get("FAKE_WAITING", "").replace(";", "\n"))
 elif "%i|%j" in cmd:
     print(os.environ.get("FAKE_JOBS", "").replace(";", "\n"))
 elif "%N" in cmd:

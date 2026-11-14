@@ -310,6 +310,19 @@ def test_reuses_agent_node_but_not_strangers(env, monkeypatch):
     assert rec.done.wait(20)
 
 
+def test_waits_for_the_node_asked_for_earlier_instead_of_asking_again(env, monkeypatch):
+    server, tmp = env
+    monkeypatch.setenv("FAKE_WAITING", "77|Priority")  # asked for before the connection dropped
+    s, rec = _connect_with_jobs(server, monkeypatch, "")
+    a = s.allocation
+    assert a and (a.job_id, a.node, a.owned) == ("77", "n0001", True), "\n".join(rec.lines)
+    assert "salloc" not in (tmp / "cmds.log").read_text(), "never a second request in the queue"
+    assert any("Job 77 asked for a node earlier" in line for line in rec.lines)
+    rec.done.clear()
+    s.disconnect()
+    assert rec.done.wait(20)
+
+
 def test_switches_when_node_ends(env, monkeypatch):
     server, tmp = env
     s, rec = _connect_with_jobs(server, monkeypatch, "55|hpc-hub|n0055|general;70|hpc-hub-codex|n0070|general")
