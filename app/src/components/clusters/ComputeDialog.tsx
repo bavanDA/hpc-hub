@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 import { call, type CallError } from '../../rpc'
 import { summary, type Cluster, type Profile } from '../../types/clusters'
@@ -6,6 +6,7 @@ import { ConfirmDialog } from '../e/ConfirmDialog'
 import { EDialog } from '../e/EDialog'
 import { MainButton } from '../e/MainButton'
 import { ToggleRow } from '../e/ToggleRow'
+import { Spinner } from '../ui/Spinner'
 import { useToast } from '../useToast'
 import { shortName } from './loginCopy'
 import { NodeFields } from './node/NodeFields'
@@ -24,6 +25,16 @@ export function ComputeDialog({ cluster: c, onClose }: { cluster: Cluster; onClo
   const [sending, setSending] = useState(false)
   const [ok, setOk] = useState(true)
   const [waiting, setWaiting] = useState<Waiting | null>(null)  // a request still in the queue: keep it or cancel
+  const [checking, setChecking] = useState(true)  // asks first whether one waits: never a second request
+
+  useEffect(() => {
+    let live = true
+    call<Waiting | null>('clusters.waiting_node', { cluster: c.id })
+      .then((w) => { if (live && w) setWaiting(w) })
+      .catch(() => {})  // can't tell: the form, and Get node checks again
+      .finally(() => live && setChecking(false))
+    return () => { live = false }
+  }, [c.id])
 
   async function go() {
     const profile: Profile = { cpus: p.cpus, mem_gb: p.mem_gb, gpus: p.gpus ?? 0, gpu_type: p.gpu_type ?? '',
@@ -60,6 +71,21 @@ export function ComputeDialog({ cluster: c, onClose }: { cluster: Cluster; onClo
     } catch (e) { toast((e as Error).message) }
   }
 
+  const question = waiting && <ConfirmDialog title={`You already asked for a node on ${shortName(c)}`}
+    text={<><p>Job {waiting.job} is still waiting in the queue
+      {waiting.reason ? ` (Slurm says: ${waiting.reason})` : ''}. Asking again would put a second job in the
+      queue.</p><p>Keep waiting for it, or cancel it and ask again.</p></>}
+    keep="Keep waiting" confirm="Cancel it" danger onKeep={keepWaiting}
+    onConfirm={() => void cancelWaiting(waiting.job)} onClose={() => setWaiting(null)} />
+
+  if (checking || (waiting && !sending)) {  // the question comes first, alone; Cancel it leads to the form
+    return checking
+      ? <EDialog title={`Get a node on ${shortName(c)}`} onClose={onClose}>
+          <div className="flex items-center gap-3 px-5 pb-6 text-dim"><Spinner />Looking at the queue…</div>
+        </EDialog>
+      : <>{question}</>
+  }
+
   return (
     <EDialog title={`Get a node on ${shortName(c)}`} onClose={onClose}
       actions={<MainButton disabled={sending || !ok} onClick={go}>Get node</MainButton>}>
@@ -68,12 +94,6 @@ export function ComputeDialog({ cluster: c, onClose }: { cluster: Cluster; onClo
       <ToggleRow label="Use this size next time" checked={remember}
         sub={remember ? undefined : `Next time: ${summary(c.profile)}`} onChange={setRemember} />
       <ToggleRow label={ASK} sub={ASK_SUB} checked={ask} onChange={setAsk} />
-      {waiting && <ConfirmDialog title={`You already asked for a node on ${shortName(c)}`}
-        text={<><p>Job {waiting.job} is still waiting in the queue
-          {waiting.reason ? ` (Slurm says: ${waiting.reason})` : ''}. Asking again would put a second job in the
-          queue.</p><p>Keep waiting for it, or cancel it and ask again.</p></>}
-        keep="Keep waiting" confirm="Cancel it" danger onKeep={keepWaiting}
-        onConfirm={() => void cancelWaiting(waiting.job)} onClose={() => setWaiting(null)} />}
     </EDialog>
   )
 }

@@ -190,6 +190,23 @@ def test_adopt_after_restart(env, monkeypatch):
     assert rec.done.wait(20)
 
 
+def test_after_a_restart_the_request_still_in_the_queue_shows_on_the_card(env, monkeypatch):
+    server, _ = env
+    monkeypatch.setenv("FAKE_JOBS", "")
+    first, rec = connect(server, "pw")  # asks for a node: job 42
+    first.allocation = None
+    monkeypatch.setenv("FAKE_WAITING", "77|Priority")  # 77 waits since before the app restarted
+    rec2 = Recorder()
+    again = ClusterSession(first.cfg, server, rec2)
+    again.adopt("u")
+    again._thread.join(10)
+    assert State.ALLOCATING in rec2.states, "the card shows it waiting, with Stop waiting"
+    assert again.allocation and again.allocation.job_id == "77", "\n".join(rec2.lines)
+    rec.done.clear()
+    first.disconnect()
+    assert rec.done.wait(20)
+
+
 def test_unexpected_error_shows(env, monkeypatch):
     server, _ = env
     rec = Recorder()

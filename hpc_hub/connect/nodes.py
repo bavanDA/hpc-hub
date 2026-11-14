@@ -185,6 +185,21 @@ class NodesMixin:
             return
         self._set(State.CONNECTED)
 
+    def _wait_for_earlier_request(self) -> bool:
+        """Blocking. A node request of the app still in the queue (asked before the app restarted or the
+        connection dropped): wait for it on the card, Stop waiting cancels it. False when there is none."""
+        try:
+            waiting = slurm.waiting_job(self.ssh)
+        except (OSError, subprocess.SubprocessError):
+            return False
+        if not waiting:
+            return False
+        self._cancel.clear()
+        self._follow_waiting(waiting.job_id)
+        if self.state == State.ALLOCATING:
+            self._set(State.CONNECTED)
+        return True
+
     def _follow_waiting(self, job_id: str) -> str:
         """Wait for a node asked for earlier instead of asking again. "granted" (self.allocation is it), "stopped"
         (you stopped waiting: the job is cancelled, like a request of this session), "lost" (the connection went)

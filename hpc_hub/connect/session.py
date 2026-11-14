@@ -150,6 +150,10 @@ class ClusterSession(NodesMixin):
             self._read_limits()  # a newer app may read more of them
         self._log("Picked up running " + ("SSH session" if alive else "VPN"))
         self._set(State.CONNECTED, "" if alive else "VPN only")
+        if alive and not self.allocation:  # a node request still in the queue shows on the card again
+            self._thread = threading.Thread(target=self._guarded, args=(self._wait_for_earlier_request,),
+                                            daemon=True)
+            self._thread.start()
 
     def cancel(self) -> None:
         self._cancel.set()
@@ -287,6 +291,8 @@ class ClusterSession(NodesMixin):
             self._set(State.CONNECTED)
         elif self._reuse_running_job():
             self._set(State.CONNECTED)
+        elif self._wait_for_earlier_request():  # never a second request while one waits
+            pass
         elif self.cfg.request_node_on_connect and self.cfg.ask_node:
             self.allocation = None
             self.pick_node = True  # the UI shows the node's settings; request_node goes on from there
