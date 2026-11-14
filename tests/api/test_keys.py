@@ -65,7 +65,8 @@ def test_use_a_picked_copy_keeps_it(home):
     got = keys.use("yale", str(picked), temporary=True)
     kept = home / ".ssh" / "lab_ed25519"
     assert got["file"] == "lab_ed25519" and h.sessions["yale"].cfg.ssh_key == str(kept) and not picked.exists()
-    assert stat.S_IMODE(kept.stat().st_mode) == 0o600
+    if sys.platform != "win32":  # Windows has no mode bits: a file in your profile is already only yours
+        assert stat.S_IMODE(kept.stat().st_mode) == 0o600
     picked.write_text(kept.read_text())
     assert keys.use("yale", str(picked), temporary=True)["file"] == "lab_ed25519-1"  # never over another file
     junk = home / "cache" / "notes.txt"

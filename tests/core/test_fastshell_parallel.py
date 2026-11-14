@@ -1,4 +1,5 @@
 import subprocess
+import sys
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
@@ -6,6 +7,10 @@ from concurrent.futures import ThreadPoolExecutor
 import pytest
 
 from hpc_hub.core.fastshell import SLOTS, FastShell, FastShellError
+
+# FastShell waits on a local ssh's pipes with selectors, which Windows only has for sockets; Windows signs in with
+# asyncssh instead (core/ssh_async.py), whose shells reuse only fastshell's protocol, tested on its own.
+pytestmark = pytest.mark.skipif(sys.platform == "win32", reason="FastShell runs a local ssh; Windows uses asyncssh")
 
 
 @pytest.fixture
