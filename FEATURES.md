@@ -65,6 +65,7 @@ A project is a saved name for a folder on a cluster, one click from every tool.
 
 - Open a project in VS Code, an agent, Files, a terminal or the code editor.
 - Start new projects empty, as Python or as a LaTeX paper, optionally as a git repository.
+- Bring a project from your computer to a cluster, with its Claude chats, and continue where you left off.
 - Copy or sync a project to another cluster, with Globus for large ones, and take your Claude chats along.
 - Every folder picker lists your projects.
 

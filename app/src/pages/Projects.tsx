@@ -8,6 +8,7 @@ import { copyPath } from '../components/projects/copyPath'
 import { ALL, filterProjects } from '../components/projects/filter'
 import type { Sort } from '../components/projects/format'
 import { useLive } from '../components/projects/live'
+import { FromLaptopDialog } from '../components/projects/FromLaptopDialog'
 import { NoProjects } from '../components/projects/NoProjects'
 import { ProjectDialog, type Mode } from '../components/projects/ProjectDialog'
 import { ProjectTable, type RowActions } from '../components/projects/ProjectTable'
@@ -22,6 +23,7 @@ import { call } from '../rpc'
 import type { Project, ProjectList } from '../types/projects'
 
 type Open = { kind: 'edit'; mode: Mode; p?: Project } | { kind: 'copy' | 'remove' | 'open'; p: Project }
+  | { kind: 'laptop' }
 
 export function Projects() {
   const { data, error, loading, reload, setData } = useCall<ProjectList>('projects.list')
@@ -61,14 +63,16 @@ export function Projects() {
   const { places, at, groups, inGroup, shown } = filterProjects(data, { query, where, group, sort })
   const add = () => setOpen({ kind: 'edit', mode: 'add' })
   const create = () => setOpen({ kind: 'edit', mode: 'new' })
+  const fromLaptop = () => setOpen({ kind: 'laptop' })
 
   return (
     <>
-      {data.projects.length === 0 ? <NoProjects onAdd={add} onCreate={create} /> : (
+      {data.projects.length === 0 ? <NoProjects onAdd={add} onCreate={create} onFromLaptop={fromLaptop} /> : (
         <div className="@container h-full overflow-auto scheme-light-dark">
           <div className="px-6 pt-5 pb-10">
             <Toolbar places={places} at={at} onWhere={setWhere} groups={groups} inGroup={inGroup}
-              onGroup={setGroup} query={query} onQuery={setQuery} onAdd={add} onCreate={create} />
+              onGroup={setGroup} query={query} onQuery={setQuery} onAdd={add} onCreate={create}
+              onFromLaptop={fromLaptop} />
             {shown.length
               ? <ProjectTable projects={shown} sort={sort} onSort={setSort} live={live} act={act} />
               : <p className="border-t border-line py-10 text-center text-dim">
@@ -82,6 +86,10 @@ export function Projects() {
         <ProjectDialog mode={open.mode} project={open.p} clusters={data.clusters} projects={data.projects}
           onClose={() => setOpen(null)}
           onSaved={(p, created) => { setOpen(null); toast(`${created ? 'Created' : 'Saved'} ${p.name}`); reload() }} />
+      )}
+      {open?.kind === 'laptop' && (
+        <FromLaptopDialog clusters={data.clusters} onClose={() => setOpen(null)}
+          onStarted={(ids, text) => { expectCopies(ids, text); toast(text); reload() }} />
       )}
       {open?.kind === 'copy' && (
         <CopyDialog p={open.p} onClose={() => setOpen(null)}

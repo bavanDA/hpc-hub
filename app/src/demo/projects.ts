@@ -120,6 +120,19 @@ export const answers: Record<string, unknown> = {
       21_400_000_000)
     return { id: tid, chats: '' }
   },
+  'projects.local_plan': ({ folder }: { folder: string }) => new Promise((done) => setTimeout(() => done({
+    name: folder.split('/').pop(), folder,
+    parts: [{ name: 'data', size: 2_400_000_000, keep: true }, { name: '.venv', size: 640_000_000, keep: true },
+      { name: 'src', size: 3_100_000, keep: true }, { name: 'notes.md', size: 8_200, keep: true }],
+    chats: [{ id: 'l1', name: 'Plan the experiments', size: 1_200_000 },
+      { id: 'l2', name: 'Fix the loader test', size: 340_000 }],
+    parts_error: '', chats_error: '' }), 500)),
+  'projects.local_copy': ({ folder, to }: { folder: string; to: string }) => {
+    const tid = `project-demo-${Date.now()}`
+    const name0 = folder.split('/').pop()
+    copying(tid, `${name0}: this computer → ${name(to).split(' ')[0]}:/home/jdoe/${name0}`, 3_043_300_000)
+    return { id: tid, chats: '' }
+  },
   'projects.status': ({ cluster }: { cluster: string }) => git[cluster] ?? {},
   'projects.cancel_copy': null,
 }

@@ -20,6 +20,25 @@ A project is a saved name for a folder on a cluster. You can open that folder in
 
     Scratch gets cleaned up. Keep work you need in your project space. See [Back up scratch](backup.md).
 
+## Bring a project from this computer
+
+Move a project you started on your computer to a cluster, with the Claude chats you had in it, so you can keep
+working on the cluster where you left off.
+
+1. On the **Projects** page, select **From this computer**.
+2. Choose the project folder on your computer.
+3. Choose the cluster and the folder it goes into.
+4. Untick what you can make again on the cluster, such as outputs or environments.
+5. Tick the Claude chats to take along, then select **Copy**.
+
+The copy shows under **Transfers**, and the project joins your list when it is done. The chats are filed under the
+project's new folder, so `claude --resume` there finds them.
+
+!!! note
+
+    HPC Hub reads only the folder you choose and the Claude chats started in it. It never looks at other folders or
+    other chats, and nothing is copied until you select **Copy**.
+
 ## Edit, copy the path, or remove a project
 
 The **⋮** menu on a project has **Edit**, **Copy path**, and **Remove from the list**.

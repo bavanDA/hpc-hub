@@ -1,4 +1,4 @@
-import { FolderOpen, Plus } from 'lucide-react'
+import { FolderOpen, Laptop, Plus } from 'lucide-react'
 
 import type { ProjectCluster } from '../../types/projects'
 import { shortName } from '../clusters/loginCopy'
@@ -8,10 +8,11 @@ import { Segments } from '../e/Segments'
 import { Select } from '../jobs/Select'
 import { ALL, YOURS } from './filter'
 
-export function Toolbar({ places, at, onWhere, groups, inGroup, onGroup, query, onQuery, onAdd, onCreate }: {
+export function Toolbar({ places, at, onWhere, groups, inGroup, onGroup, query, onQuery, onAdd, onCreate, onFromLaptop }: {
   places: ProjectCluster[]; at: string; onWhere: (id: string) => void
   groups: string[]; inGroup: string; onGroup: (g: string) => void
   query: string; onQuery: (q: string) => void; onAdd: () => void; onCreate: () => void
+  onFromLaptop: () => void
 }) {
   return (
     <div className="flex flex-wrap items-center gap-2.5 pb-4">
@@ -25,6 +26,9 @@ export function Toolbar({ places, at, onWhere, groups, inGroup, onGroup, query, 
       <EButton icon={FolderOpen} onClick={onAdd} title="Use a folder that is already on a cluster"
         aria-label="Add folder" className="@max-[860px]:px-3">
         <span className="@max-[860px]:hidden">Add folder</span></EButton>
+      <EButton icon={Laptop} onClick={onFromLaptop} title="Copy a project from this computer to a cluster, with its
+        Claude chats" aria-label="From this computer" className="@max-[860px]:px-3">
+        <span className="@max-[860px]:hidden">From this computer</span></EButton>
       <EButton kind="primary" icon={Plus} onClick={onCreate}>New project</EButton>
     </div>
   )
