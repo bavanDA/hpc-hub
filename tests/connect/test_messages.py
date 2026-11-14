@@ -29,7 +29,7 @@ def test_unreachable_and_unknown():
 
 
 def test_messages_follow_the_house_rules():
-    said = [messages.CANCELLED, messages.STOPPED_WAITING]
+    said = [messages.CANCELLED]
     for c in (WULVER, YALE, SDSC):
         for err in ("SSH login timed out", "VPN login timed out", "Permission denied", "Connection timed out"):
             said.append(messages.plain(err, c))

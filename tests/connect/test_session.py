@@ -503,3 +503,35 @@ def test_tunnel_wait_gives_up_and_lets_ssh_say_why(env, monkeypatch):
     s = ClusterSession(ClusterConfig(id="t", name="Test", host="login.example.edu"), server, rec)
     s._wait_for_tunnel()
     assert any("doesn't answer through the VPN yet" in line for line in rec.lines)
+
+
+def test_stop_waiting_goes_straight_back_to_get_one(monkeypatch):
+    """Stop waiting leaves nothing on the card: no compute node, Get one; the log says what happened."""
+    import subprocess
+    import threading
+
+    from hpc_hub.compute import salloc
+    from hpc_hub.compute.slurm import SlurmError
+    from hpc_hub.connect.session import ClusterSession
+    from hpc_hub.connect.state import State
+    from hpc_hub.core import config
+
+    class Ssh:
+        def run(self, cmd, timeout=60):
+            return subprocess.CompletedProcess(cmd, 0, "", "")
+        on_login = run
+    s = object.__new__(ClusterSession)
+    s.cfg, s.ssh, s.default_account, s.allocation, s.limits = config.default_clusters()[0], Ssh(), "", None, None
+    s._cancel = threading.Event()
+    states, logged = [], []
+    s._set = lambda state, detail="": states.append((state, detail))
+    s._log = logged.append
+    s._reuse_running_job = lambda quiet=False: False
+
+    def stopped(*a, **kw):
+        s._cancel.set()  # you pressed Stop waiting while salloc waited
+        raise SlurmError("Cancelled")
+    monkeypatch.setattr(salloc, "allocate", stopped)
+    s._allocate_safely(config.ComputeProfile(time="01:00:00"))
+    assert states[-1] == (State.CONNECTED, "") and s.allocation is None
+    assert "You stopped waiting for a node" in logged

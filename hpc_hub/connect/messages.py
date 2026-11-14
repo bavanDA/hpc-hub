@@ -4,7 +4,6 @@ person can act on."""
 from ..core.config import ClusterConfig
 
 CANCELLED = "You cancelled the sign-in."
-STOPPED_WAITING = "You stopped waiting for a node."
 
 
 def wrong_password(cfg: ClusterConfig, username: str) -> str:

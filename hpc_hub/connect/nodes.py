@@ -8,7 +8,6 @@ from ..compute import limits, salloc, slurm
 from ..compute.slurm import Allocation, SlurmError
 from ..core.config import ComputeProfile
 from ..core.ssh import SshError
-from .messages import STOPPED_WAITING
 from .state import State
 
 
@@ -167,7 +166,7 @@ class NodesMixin:
         if waiting:  # asked for earlier (the connection may have dropped since): never a second one in the queue
             got = self._follow_waiting(waiting.job_id)
             if got != "gone":
-                self._set(State.CONNECTED, STOPPED_WAITING if got == "stopped" else "")
+                self._set(State.CONNECTED)  # stopped: back to Get one, nothing more to say
                 return
         self._set(State.ALLOCATING, profile.summary())
         try:
@@ -177,8 +176,12 @@ class NodesMixin:
                 cancelled=self._cancel.is_set,
             )
         except (SlurmError, OSError, subprocess.SubprocessError) as e:
+            if self._cancel.is_set():  # you stopped waiting: the card is back to Get one
+                self._log("You stopped waiting for a node")
+                self._set(State.CONNECTED)
+                return
             self._log(f"Node request failed: {e}")
-            self._set(State.CONNECTED, STOPPED_WAITING if self._cancel.is_set() else f"No compute node: {e}")
+            self._set(State.CONNECTED, f"No compute node: {e}")
             return
         self._set(State.CONNECTED)
 
