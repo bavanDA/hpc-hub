@@ -1,6 +1,7 @@
 //! HPC Hub's window. The Python backend runs as a child process (backend.rs) and talks JSON-RPC with the UI;
 //! terminals run in PTYs (pty.rs). See docs/design/tauri.md.
 
+mod hostenv;
 mod backend;
 mod pty;
 mod sso;

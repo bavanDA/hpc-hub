@@ -46,6 +46,13 @@ impl Ptys {
         let pair = native_pty_system().openpty(size(cols, rows)).map_err(|e| e.to_string())?;
         let mut cmd = CommandBuilder::new(program);
         cmd.args(args);
+        // this computer's libraries, not the AppImage's (ssh with the AppImage's OpenSSL refuses to start)
+        if let Some(env) = crate::hostenv::host(&std::env::vars().collect::<Vec<_>>()) {
+            cmd.env_clear();
+            for (key, value) in env {
+                cmd.env(key, value);
+            }
+        }
         cmd.env("TERM", "xterm-256color");
         cmd.env("COLORTERM", "truecolor");
         let mut child = pair.slave.spawn_command(cmd).map_err(|e| e.to_string())?;
