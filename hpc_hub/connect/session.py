@@ -23,6 +23,8 @@ from .state import State
 from .vpn import NeedsWebLogin, Vpn, VpnError
 from .vpn_android import AndroidVpn
 
+VPN_ROUTE_WAIT = 30  # seconds for the login node to answer once the VPN is up (_wait_for_tunnel)
+
 
 class Listener(Protocol):
     """Called from worker threads; the UI must hop to its main loop."""
@@ -320,6 +322,24 @@ class ClusterSession(NodesMixin):
         self._set(State.VPN, "Starting tunnel")
         vpn.up(auth)
         self._log("VPN connected")
+        if not self.vpn_only:
+            self._wait_for_tunnel()
+
+    def _wait_for_tunnel(self) -> None:
+        """Windows and macOS put the tunnel's routes in place a moment after the VPN reports up. An SSH started at
+        once leaves through the normal network, where the cluster turns it away, and hangs about 20 s before it
+        fails, so the first Connect failed and the second worked. So: short tries until the login node answers
+        (through the tunnel by then), at most VPN_ROUTE_WAIT; after that SSH goes ahead and says what is wrong."""
+        if not self.cfg.host:
+            return
+        deadline = time.monotonic() + VPN_ROUTE_WAIT
+        while not self._cancel.is_set():
+            if reachable(self.cfg.host, self.cfg.port or 22, timeout=2):
+                return
+            if time.monotonic() >= deadline:
+                self._log(f"{self.cfg.host} doesn't answer through the VPN yet; trying anyway")
+                return
+            time.sleep(0.5)
 
     def _web_vpn_login(self, login: Login) -> dict[str, str]:
         ua = self.cfg.vpn.useragent or "AnyConnect Linux_64 4.10.07061"

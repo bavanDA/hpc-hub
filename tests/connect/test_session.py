@@ -463,3 +463,30 @@ def test_commands_follow_the_running_job():
     s.allocation = None
     assert s.ssh.work_node == ""
 
+
+
+def test_ssh_waits_for_the_tunnel_to_reach_the_login_node(env, monkeypatch):
+    """Windows and macOS route through the tunnel a moment after it is up: SSH waits until the login node answers,
+    instead of a first try that leaves through the normal network and hangs."""
+    from hpc_hub.connect import session as session_mod
+    server, _ = env
+    tries = []
+    monkeypatch.setattr(session_mod, "reachable",
+                        lambda host, port, timeout=3: tries.append((host, port)) or len(tries) > 2)
+    monkeypatch.setattr(session_mod.time, "sleep", lambda s: None)
+    s = ClusterSession(ClusterConfig(id="t", name="Test", host="login.example.edu"), server, Recorder())
+    s._wait_for_tunnel()
+    assert tries == [("login.example.edu", 22)] * 3
+
+
+def test_tunnel_wait_gives_up_and_lets_ssh_say_why(env, monkeypatch):
+    from hpc_hub.connect import session as session_mod
+    server, _ = env
+    clock = iter(range(0, 1000, 10))
+    monkeypatch.setattr(session_mod, "reachable", lambda *a, **k: False)
+    monkeypatch.setattr(session_mod.time, "sleep", lambda s: None)
+    monkeypatch.setattr(session_mod.time, "monotonic", lambda: next(clock))
+    rec = Recorder()
+    s = ClusterSession(ClusterConfig(id="t", name="Test", host="login.example.edu"), server, rec)
+    s._wait_for_tunnel()
+    assert any("doesn't answer through the VPN yet" in line for line in rec.lines)
