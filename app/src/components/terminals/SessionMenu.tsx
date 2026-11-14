@@ -50,7 +50,8 @@ export function SessionMenu({ target, onChanged }: { target: Target; onChanged: 
       )}
       {dialog === 'rename' && (
         <RenameDialog target={target} onClose={() => setDialog(null)}
-          onRename={(label) => run('terminals.rename', { label, kind: target.kind }, () => update(key, { title: label }))} />
+          onRename={(label, chat) => run('terminals.rename', { label, kind: target.kind, chat },
+            () => update(key, { title: label }))} />
       )}
       {dialog === 'stop' && (
         <AlertDialog title={`Stop ${target.title}?`} keep="Keep it running" act="Stop session"

@@ -61,11 +61,21 @@ def command(cluster: str, session: str | None = None, node: str = "", kind: str 
     return {"argv": s.ssh.argv(line, tty=True), "name": name, "node": where, "title": label, "color": color}
 
 
+CHAT_RENAME = {"claude": "/rename"}  # agents whose chat takes a new name from inside, even while it works
+
+
 @method("terminals.rename")
-def rename(cluster: str, session: str, label: str, node: str = "", kind: str = "tmux") -> None:
-    if not label.strip():
+def rename(cluster: str, session: str, label: str, node: str = "", kind: str = "tmux", chat: bool = False) -> None:
+    """The session's name in HPC Hub. chat: also the agent's own name for the chat in it (Claude's /rename, which
+    its resume list shows), typed into the session."""
+    label = " ".join(label.split())  # one line: it is typed into the agent too
+    if not label:
         raise ValueError("Give it a name")
-    tmux.run(hub().connected(cluster).ssh, tmux.set_label(_target(session, node, kind), label.strip()))
+    ssh = hub().connected(cluster).ssh
+    t = _target(session, node, kind)
+    tmux.run(ssh, tmux.set_label(t, label))
+    if chat and (command := CHAT_RENAME.get(t.agent)) and kind == "tmux":
+        tmux.run(ssh, tmux.send_text(t.name, f"{command} {label}", node))
 
 
 @method("terminals.stop")

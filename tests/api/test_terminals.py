@@ -103,6 +103,28 @@ def test_rename_and_stop_run_tmux(ssh):
     assert len(ssh.ran) == 2
 
 
+def test_rename_can_rename_the_claude_chat_too(ssh):
+    import base64
+    terminals.rename("wulver", "hpchub-claude-1234-a1b2c3d4", "Thesis\nfigures", node="n0042", chat=True)
+    label, typed = ssh.ran
+    assert "=hpchub-claude-1234-a1b2c3d4:" in typed and "send-keys" in typed and "Enter" in typed
+    sent = next(base64.b64decode(w).decode() for w in typed.split() if _b64(w))
+    assert sent == "/rename Thesis figures"  # one line
+    ssh.ran.clear()
+    terminals.rename("wulver", "hpchub-term-1114-101010", "Build", chat=True)  # a plain terminal has no chat
+    terminals.rename("wulver", "hpchub-claude-1234-a1b2c3d4", "Build")  # not asked
+    assert len(ssh.ran) == 2 and not any("send-keys" in r for r in ssh.ran)
+
+
+def _b64(word: str) -> bool:
+    import base64
+    import binascii
+    try:
+        return base64.b64decode(word, validate=True).decode().startswith("/rename")
+    except (binascii.Error, UnicodeDecodeError, ValueError):
+        return False
+
+
 def test_tmux_buffer(ssh):
     ssh.out = "copied text\n"
     assert terminals.buffer("wulver") == "copied text" and "save-buffer" in ssh.ran[0]
