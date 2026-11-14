@@ -31,15 +31,25 @@ def allocate(
     checked(profile)
     proc = ssh.popen(salloc_command(profile, job_name), stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
 
+    job_id, granted, last = "", False, ""
+    stopped = threading.Event()
+
+    def stop() -> None:
+        """Cancel the job itself: stopping the local ssh isn't enough. Over a shared OpenSSH connection salloc
+        keeps running on the login node, its job stays in the queue and its output never ends."""
+        if job_id and not stopped.is_set():
+            stopped.set()
+            cancel(ssh, job_id)
+        proc.terminate()
+
     def watch():
         while proc.poll() is None:
             if cancelled():
-                proc.terminate()
+                stop()
                 return
             time.sleep(0.5)
 
     threading.Thread(target=watch, daemon=True).start()
-    job_id, granted, last = "", False, ""
     for line in proc.stdout:
         line = line.strip()
         if not line:
@@ -50,12 +60,14 @@ def allocate(
         if m:
             job_id = m.group(2)
             granted = granted or m.group(1) == "Granted"
-            if not granted:
+            if cancelled():  # stopped before Slurm named the job
+                stop()
+            elif not granted:
                 on_pending(job_id)
     code = proc.wait()
 
     if cancelled() or code != 0 or not granted:
-        if job_id:
+        if job_id and not stopped.is_set():
             cancel(ssh, job_id)
         if cancelled():
             raise SlurmError("Cancelled")

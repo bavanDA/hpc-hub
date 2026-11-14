@@ -106,3 +106,43 @@ def test_default_account_and_find_job():
     ssh = Ssh([], answers={"PENDING,RUNNING": "8|vscode|n3|gpu\n9|hpc-hub-vscode||gpu\n"})
     assert slurm.find_job(ssh, ["vscode", "hpc-hub-vscode"]).job_id == "9"
     assert slurm.find_job(Ssh([]), ["vscode"]) is None
+
+
+class SharedConnectionSsh(Ssh):
+    """Like OpenSSH sharing one connection: stopping the local ssh leaves salloc running on the login node, and its
+    output keeps coming until the job itself is cancelled there."""
+
+    def __init__(self):
+        import queue
+        super().__init__([])
+        self.lines = queue.Queue()
+        self.lines.put("salloc: Pending job allocation 81\n")
+        proc = self.proc
+
+        def stream():
+            while (line := self.lines.get()) is not None:
+                yield line
+        proc.stdout, proc.code = stream(), None
+        proc.poll = lambda: proc.code
+        proc.wait = lambda: 1
+
+    def run(self, command, timeout=60):
+        if command.startswith("scancel"):  # salloc sees its job go, says so and ends
+            self.lines.put("salloc: Job allocation 81 has been revoked.\n")
+            self.lines.put(None)
+        return super().run(command, timeout)
+    on_login = run
+
+
+def test_stop_waiting_cancels_the_job_even_over_a_shared_connection():
+    import threading
+    ssh, stop = SharedConnectionSsh(), threading.Event()
+    threading.Timer(0.3, stop.set).start()
+    done = []
+    t = threading.Thread(target=lambda: done.append(
+        pytest.raises(slurm.SlurmError, salloc.allocate, ssh, ComputeProfile(), lambda line: None,
+                      cancelled=stop.is_set)), daemon=True)
+    t.start()
+    t.join(5)
+    assert done, "still waiting after Stop waiting"
+    assert "Cancelled" in str(done[0].value) and "scancel 81" in ssh.ran
