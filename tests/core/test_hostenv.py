@@ -80,3 +80,25 @@ def test_openconnect_starts_with_the_clean_environment(tmp_path):
     broken = subprocess.run(["/usr/bin/openconnect", "--version"], env=env, capture_output=True, text=True)
     fixed = subprocess.run(["/usr/bin/openconnect", "--version"], env=hostenv.host(env), capture_output=True, text=True)
     assert broken.returncode != 0 and fixed.returncode == 0, (broken.stderr[-200:], fixed.stderr[-200:])
+
+
+def test_the_frozen_backends_own_libraries_come_out():
+    """The process that runs the backend has PyInstaller's unpacked folder first on the library path (an OpenSSL
+    older than Fedora's): openconnect loaded it and failed. That folder and PyInstaller's own variables go."""
+    mei = "/tmp/_MEI000fe7eeAbCdEf"
+    env = {**appimage_env(), "LD_LIBRARY_PATH": f"{mei}:{APP}/usr/lib/", "LD_LIBRARY_PATH_ORIG": f"{APP}/usr/lib/",
+           "_PYI_APPLICATION_HOME_DIR": mei, "_PYI_ARCHIVE_FILE": f"{APP}/usr/bin/hpc-hub-backend",
+           "_PYI_PARENT_PROCESS_LEVEL": "0"}
+    got = hostenv.host(env)
+    assert "LD_LIBRARY_PATH" not in got and "LD_LIBRARY_PATH_ORIG" not in got
+    assert not [k for k in got if k.startswith("_PYI_")]
+
+
+def test_a_deb_or_rpm_install_is_cleaned_too():
+    """No AppImage, but still the frozen backend's unpacked folder (the .deb and .rpm run the same backend)."""
+    mei = "/tmp/_MEI1234abcd"
+    env = {"PATH": "/usr/bin", "LD_LIBRARY_PATH": f"{mei}:/opt/cuda/lib64", "HOME": "/home/jdoe"}
+    assert hostenv.host(env, unpacked=mei) == {"PATH": "/usr/bin", "LD_LIBRARY_PATH": "/opt/cuda/lib64",
+                                               "HOME": "/home/jdoe"}
+    assert hostenv.host(env) == {"PATH": "/usr/bin", "LD_LIBRARY_PATH": f"{mei}:/opt/cuda/lib64",
+                                 "HOME": "/home/jdoe"}, "not frozen (from the repository): left as it is"

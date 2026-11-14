@@ -16,22 +16,30 @@ import sys
 # Where Linux distributions keep the trusted certificate authorities (Fedora/RHEL, Debian/Ubuntu/Arch, others)
 CA_BUNDLES = ("/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem", "/etc/ssl/certs/ca-certificates.crt",
               "/etc/ssl/cert.pem", "/etc/pki/tls/cert.pem")
-_MOUNT = re.compile(r"^/tmp/\.mount_[^/]+(/|$)")  # an AppImage mount, this one's or the one that started it
+# An AppImage mount (this one's or the one that started it), or where the frozen backend unpacks its own Python and
+# libraries (PyInstaller's _MEI folder: an OpenSSL older than Fedora's, which openconnect must never load)
+_BUNDLE = re.compile(r"^/tmp/(\.mount_|_MEI)[^/]+(/|$)")
 _KEEP = {"APPDIR", "APPIMAGE", "ARGV0", "OWD", "HPC_HUB_RESOURCES"}  # where the app is: still needed
 
 
-def host(environ: dict[str, str]) -> dict[str, str]:
-    """environ without the AppImage's folders. A path list loses its AppImage entries (PATH keeps them, last, so the
-    app's own programs are still found); a variable left empty goes."""
+def host(environ: dict[str, str], unpacked: str = "") -> dict[str, str]:
+    """environ without the app's bundles: the AppImage's folders and the frozen backend's unpacked libraries
+    (unpacked: that folder, sys._MEIPASS). A path list loses those entries (PATH keeps them, last, so the app's own
+    programs are still found); a variable left empty goes. PyInstaller's own variables go too: they would tell a
+    program it is one of its parts."""
     appdir = environ.get("APPDIR", "")
-    if not appdir:
+    unpacked = unpacked or environ.get("_PYI_APPLICATION_HOME_DIR", "")
+    if not appdir and not unpacked:
         return dict(environ)
+    roots = [r for r in (appdir, unpacked) if r]
 
     def bundled(part: str) -> bool:
-        return part.startswith(appdir) or bool(_MOUNT.match(part))
+        return any(part.startswith(r) for r in roots) or bool(_BUNDLE.match(part))
 
     env = {}
     for key, value in environ.items():
+        if key.startswith("_PYI_") or key == "LD_LIBRARY_PATH_ORIG":
+            continue
         if key in _KEEP or not any(bundled(p) for p in value.split(":")):
             env[key] = value
             continue
@@ -55,11 +63,12 @@ def ca_file(environ: dict[str, str], exists=os.path.isfile) -> str:
 
 
 def apply() -> None:
-    """At the backend's start: in the AppImage, the clean environment for everything it starts; on Linux and macOS,
+    """At the backend's start: when frozen or in the AppImage, the clean environment for everything it starts; on Linux and macOS,
     TLS that verifies (the .rpm and the macOS app carry an OpenSSL built elsewhere too). Windows' Python reads the
     system's own certificate store, so nothing to do there."""
-    if os.environ.get("APPDIR"):
-        clean = host(dict(os.environ))
+    unpacked = getattr(sys, "_MEIPASS", "")
+    if os.environ.get("APPDIR") or unpacked:
+        clean = host(dict(os.environ), unpacked)
         for key in [k for k in os.environ if k not in clean]:
             del os.environ[key]
         os.environ.update(clean)
