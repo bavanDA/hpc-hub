@@ -123,8 +123,12 @@ class FakeMaster:
 def test_no_ssh_program_checks_through_asyncssh(home, monkeypatch, prompts, ends, reason):
     class SshError(Exception):
         pass
-    monkeypatch.setitem(sys.modules, "hpc_hub.core.ssh_async",
-                        types.SimpleNamespace(AsyncSshMaster=FakeMaster, SshError=SshError))
+    fake = types.SimpleNamespace(AsyncSshMaster=FakeMaster, SshError=SshError)
+    # both places: "from . import ssh_async" takes the package's attribute when the real module was loaded before
+    # (asyncssh installed, as on GitHub), and sys.modules only when it wasn't
+    import hpc_hub.core
+    monkeypatch.setitem(sys.modules, "hpc_hub.core.ssh_async", fake)
+    monkeypatch.setattr(hpc_hub.core, "ssh_async", fake, raising=False)
     monkeypatch.setattr(FakeMaster, "prompts", prompts)
     monkeypatch.setattr(FakeMaster, "ends", SshError(ends) if ends else None)
     monkeypatch.setattr(my_key.subprocess, "run", lambda *a, **k: (_ for _ in ()).throw(FileNotFoundError()))
