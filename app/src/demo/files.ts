@@ -177,6 +177,7 @@ export const answers: Record<string, unknown> = {
   'files.list': list, 'files.places': places, 'files.read': read, 'files.copy_plan': plan,
   'files.real_path': ({ path }: { path: string }) => path,
   'files.transfers': transfers, 'files.copy': { id: 'demo3' }, 'files.mkdir': null,
-  'files.rename': null, 'files.delete': null, 'files.move': [], 'files.copied_here': [], 'files.zip': null, 'files.extract': null,
+  'files.rename': null, 'files.delete': null, 'files.move': [], 'files.copied_here': [], 'files.open_here': null,
+  'files.here_folder': '/home/jdoe/Downloads/HPC Hub/wulver', 'files.zip': null, 'files.extract': null,
   'files.cancel_transfer': null,
 }

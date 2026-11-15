@@ -8,6 +8,7 @@ import subprocess
 import time
 from pathlib import Path
 
+from ...core import downloads
 from ...files import local_clipboard, remote_fs, transfer
 from ...files.status import size_text
 from ..hub import hub
@@ -79,6 +80,18 @@ def _scp(t: Transfer, argv: list[str], measure, every: float, base: int = 0) -> 
     err = proc.stderr.read() if proc.stderr else ""
     if proc.returncode:
         raise remote_fs.FsError(err.strip() or "Copy failed")
+
+
+@method("files.here_folder")
+def here_folder(cluster: str) -> str:
+    """Downloads/HPC Hub/<cluster>: where files land to be opened here."""
+    return str(downloads.cluster_folder(cluster))
+
+
+@method("files.open_here")
+def open_here(path: str) -> None:
+    """Open a file saved under Downloads/HPC Hub with this computer's app for it."""
+    downloads.open_here(path)
 
 
 @method("files.copied_here")

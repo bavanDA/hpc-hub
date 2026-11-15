@@ -11,7 +11,7 @@ import threading
 import time
 from dataclasses import asdict
 
-from ...core import remote
+from ...core import downloads, remote
 from ...core.ssh import CHANNEL
 from ...files import remote_fs
 from ...terminals import links, pages, tmux
@@ -146,7 +146,7 @@ def links_in(text: str, node: str = "") -> list[dict]:
 
 
 @method("terminals.page")
-def page(cluster: str, path: str, local_dir: str, session: str = "", node: str = "") -> str:
+def page(cluster: str, path: str, local_dir: str = "", session: str = "", node: str = "") -> str:
     """A web page a terminal made: path as the terminal printed it (relative ones are in the session's folder). It and
     the files it uses from its folder come to local_dir; answers the page's path here, to open in the browser."""
     ssh = hub().connected(cluster).ssh
@@ -158,7 +158,7 @@ def page(cluster: str, path: str, local_dir: str, session: str = "", node: str =
             raise pages.PageError(err.splitlines()[-1] if err else f"Could not get {path}")
         return res.stdout
 
-    return str(pages.fetch(run, path, local_dir, session=session))
+    return str(pages.fetch(run, path, local_dir or str(downloads.cluster_folder(cluster) / "pages"), session=session))
 
 
 # terminals the backend runs itself (Windows)

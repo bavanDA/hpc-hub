@@ -2,7 +2,7 @@ import { call } from '../../rpc'
 import type { Link } from '../../types/terminals'
 import { openLink } from '../app/openLink'
 import { inTauri } from '../app/platform'
-import { openFolder } from '../files/local'
+import { openHere } from '../files/local'
 import { banner } from './banners'
 import { linkBanner, mayHaveLinks } from './linkBanner'
 import { tabNotify } from './tabNotify'
@@ -27,12 +27,9 @@ const forwarded = new Map<string, string>()
 async function openPage(tab: Tab, path: string) {
   tabNotify('Opening it on this computer…')
   try {
-    const dir = `${await openFolder(tab.cluster)}/pages`
-    const here = await call<string>('terminals.page',
-      { cluster: tab.cluster, path, local_dir: dir, session: tab.session, node: tab.node })
+    const here = await call<string>('terminals.page', { cluster: tab.cluster, path, session: tab.session, node: tab.node })
     if (!inTauri) return tabNotify(`Saved to ${here}`)
-    const { openPath } = await import('@tauri-apps/plugin-opener')
-    await openPath(here)
+    await openHere(here)
   } catch (e) {
     tabNotify(`Could not open it: ${(e as Error).message ?? e}`)
   }

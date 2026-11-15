@@ -27,9 +27,11 @@ async function pickFolder(title: string): Promise<string | null> {
 /** Downloads/HPC Hub/<cluster>: where files come to be opened. */
 export async function openFolder(cluster: string): Promise<string> {
   if (!inTauri) return `/home/jdoe/Downloads/HPC Hub/${cluster}`
-  const { downloadDir, join } = await import('@tauri-apps/api/path')
-  return join(await downloadDir(), 'HPC Hub', cluster)
+  return call<string>('files.here_folder', { cluster })  // the backend: Tauri finds none when Downloads is home
 }
+
+/** Open a file saved under Downloads/HPC Hub with this computer's app for it (a page: the browser). */
+export const openHere = (path: string) => call('files.open_here', { path })
 
 const base = (p: string) => p.replace(/[\\/]+$/, '').split(/[\\/]/).pop() || p
 
@@ -43,7 +45,7 @@ export function useLocalFiles(cluster: string, clusterName: string) {
     } else if (m.kind === 'upload') {
       toast(`Uploaded ${t.title.split(':')[0]}`)
     } else if (m.open && m.path && inTauri) {
-      import('@tauri-apps/plugin-opener').then(({ openPath }) => openPath(m.path!))
+      openHere(m.path)
         .catch((e: Error) => toast(`Saved to ${m.path}. Could not open it: ${e.message ?? e}`))
     } else {
       toast(`Saved to ${m.path}`)
