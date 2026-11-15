@@ -1,7 +1,7 @@
 import type { ITheme } from '@xterm/xterm'
 
 import { call } from '../../rpc'
-import { copyText as appCopy, readImage } from '../app/clipboard'
+import { copyText as appCopy, readClipboard, readImage } from '../app/clipboard'
 import { isDark } from '../../theme'
 import { imageIn } from './imageData'
 import { pasteImage } from './pasteImage'
@@ -46,9 +46,9 @@ export function copy(tab: Tab, notify: (text: string) => void) {
 export async function paste(tab: Tab, notify: (text: string) => void) {
   const image = await readImage()
   if (image) return pasteImage(tab, image, notify)
-  navigator.clipboard.readText()
-    .then((text) => text && tab.term.paste(text))
-    .catch(() => notify('Could not read the clipboard'))
+  const text = await readClipboard()
+  if (text === null) notify('Could not read the clipboard. Report a bug to send why.')
+  else if (text) tab.term.paste(text)
 }
 
 /** A drag inside tmux (mouse on) selects in tmux, not here: its copy buffer has the text. */

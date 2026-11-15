@@ -61,6 +61,29 @@ def _linux() -> list[str]:
     raise Unreadable("To paste files copied on this computer, install wl-clipboard (or xclip on X11)")
 
 
+MAX_TEXT = 4 * 1024 * 1024
+TEXT_TYPES = ("text/plain;charset=utf-8", "UTF8_STRING", "text/plain", "STRING", "TEXT")
+
+
+def copied_text(platform: str = sys.platform) -> str:
+    """The text on this computer's clipboard, read with the system's own tools: for when the window can't (some
+    Linux desktops refuse it). "" when it holds no text; Unreadable when there is no tool to ask."""
+    if platform == "darwin":
+        return _run(["pbpaste"])[:MAX_TEXT]
+    if platform == "win32":
+        return _run(["powershell", "-NoProfile", "-NonInteractive", "-Command",
+                     "[Console]::OutputEncoding = [Text.Encoding]::UTF8; Get-Clipboard -Raw"], timeout=10)[:MAX_TEXT]
+    if os.environ.get("WAYLAND_DISPLAY") and shutil.which("wl-paste"):
+        types = _run(["wl-paste", "--list-types"]).split("\n")
+        kind = next((t for t in TEXT_TYPES if t in types), "")
+        return _run(["wl-paste", "--no-newline", "--type", kind])[:MAX_TEXT] if kind else ""
+    if os.environ.get("DISPLAY") and shutil.which("xclip"):
+        return _run(["xclip", "-selection", "clipboard", "-o"])[:MAX_TEXT]
+    if os.environ.get("DISPLAY") and shutil.which("xsel"):
+        return _run(["xsel", "--clipboard", "--output"])[:MAX_TEXT]
+    raise Unreadable("No way to read the clipboard here: install wl-clipboard (or xclip)")
+
+
 def copied_files(platform: str = sys.platform) -> list[str]:
     """Paths of the files and folders copied on this computer that are there; [] when what is copied isn't files."""
     if platform == "darwin":

@@ -1,3 +1,5 @@
+import { call } from '../../rpc'
+import { noteCaught } from '../report/recent'
 import { inTauri } from './platform'
 
 export async function copyText(text: string): Promise<void> {
@@ -15,6 +17,32 @@ export async function readText(): Promise<string> {
   } catch {
     return ''
   }
+}
+
+const why = (e: unknown) => (e instanceof Error ? e.message : String(e)) || 'refused'
+
+/** The clipboard's text for a paste, tried three ways: the app's clipboard reader, the window's own (some Linux
+ * webviews refuse it, which left a paste with nothing), then the system's tools through the backend (wl-paste, xclip,
+ * pbpaste, PowerShell). null when none could read it; then why each failed goes in the app's log, so a bug report
+ * shows it. */
+export async function readClipboard(): Promise<string | null> {
+  const failed: string[] = []
+  const app: [string, () => Promise<string>][] = inTauri
+    ? [['app', async () => (await import('@tauri-apps/plugin-clipboard-manager')).readText()]] : []
+  const ways: [string, () => Promise<string>][] = [
+    ...app,
+    ['window', () => navigator.clipboard.readText()],
+    ...(inTauri ? [['system', () => call<string>('files.clipboard_text')]] as [string, () => Promise<string>][] : []),
+  ]
+  for (const [name, read] of ways) {
+    try {
+      return await read()
+    } catch (e) {
+      failed.push(`${name}: ${why(e)}`)
+    }
+  }
+  noteCaught(`Could not read the clipboard (${failed.join('; ')})`)
+  return null
 }
 
 /** The clipboard's image as a PNG, or null when it holds none or can't be read. In the app this goes through

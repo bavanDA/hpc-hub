@@ -94,6 +94,12 @@ def open_here(path: str) -> None:
     downloads.open_here(path)
 
 
+@method("files.clipboard_text")
+def clipboard_text() -> str:
+    """The text on this computer's clipboard, for a paste the window could not read itself."""
+    return local_clipboard.copied_text()
+
+
 @method("files.copied_here")
 def copied_here() -> list[str]:
     """Files and folders copied on this computer (in its file manager), to paste into a cluster folder."""
