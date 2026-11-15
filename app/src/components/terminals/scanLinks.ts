@@ -2,7 +2,7 @@ import { call } from '../../rpc'
 import type { Link } from '../../types/terminals'
 import { openLink } from '../app/openLink'
 import { inTauri } from '../app/platform'
-import { openHere } from '../files/local'
+import { openHere as openSaved } from '../files/local'
 import { banner } from './banners'
 import { linkBanner, mayHaveLinks } from './linkBanner'
 import { tabNotify } from './tabNotify'
@@ -29,7 +29,7 @@ async function openPage(tab: Tab, path: string) {
   try {
     const here = await call<string>('terminals.page', { cluster: tab.cluster, path, session: tab.session, node: tab.node })
     if (!inTauri) return tabNotify(`Saved to ${here}`)
-    await openHere(here)
+    await openSaved(here)
   } catch (e) {
     tabNotify(`Could not open it: ${(e as Error).message ?? e}`)
   }
