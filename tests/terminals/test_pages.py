@@ -3,6 +3,7 @@ import subprocess
 import pytest
 
 from hpc_hub.terminals import links, pages
+from tests.helpers import on_linux_cluster
 
 
 def sh(line: str) -> str:
@@ -28,6 +29,7 @@ def test_references():
     assert pages.references("url(../img/a.png) url(../../out.png)", of="css/main.css") == ["img/a.png"]
 
 
+@on_linux_cluster
 def test_fetch(tmp_path):
     site = tmp_path / "remote" / "design"
     (site / "img").mkdir(parents=True)
@@ -48,6 +50,7 @@ def test_fetch(tmp_path):
         pages.fetch(sh, "design/nothing.html", str(here), cwd=str(tmp_path / "remote"))
 
 
+@on_linux_cluster
 def test_fetch_follows_links(tmp_path):
     site = tmp_path / "site"
     (site / "css").mkdir(parents=True)
@@ -65,6 +68,7 @@ def test_fetch_follows_links(tmp_path):
     assert names == ["about.html", "css/main.css", "docs/guide.html", "img/bg.png", "index.html"]
 
 
+@on_linux_cluster
 def test_same_folder_names_kept_apart(tmp_path):
     for d in ("a/design", "b/design"):
         (tmp_path / d).mkdir(parents=True)

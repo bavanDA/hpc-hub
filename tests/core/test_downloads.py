@@ -29,6 +29,7 @@ def test_cluster_folder_and_open_guard(tmp_path, monkeypatch):
     assert downloads.inside_app_folder(folder / "a.html", **kw)
     assert not downloads.inside_app_folder(tmp_path / "a.html", **kw)
     monkeypatch.setattr(downloads, "downloads", lambda **_: tmp_path / "Downloads")
+    monkeypatch.setattr(downloads.sys, "platform", "linux")  # xdg-open; Windows opens with os.startfile
     opened = []
     monkeypatch.setattr(downloads.subprocess, "Popen", lambda argv, **_: opened.append(argv))
     page = folder / "a.html"

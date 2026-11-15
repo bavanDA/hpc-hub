@@ -1,3 +1,5 @@
+import sys
+
 import pytest
 
 from hpc_hub.files import local_clipboard
@@ -10,6 +12,7 @@ def test_from_uris():
                                      "file://otherhost/z\n") == ["/tmp/x"]
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="file URIs of a Linux desktop")
 def test_wayland(tmp_path, monkeypatch):
     f = tmp_path / "a b.txt"
     f.write_text("hi")
