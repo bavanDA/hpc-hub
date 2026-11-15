@@ -1,6 +1,8 @@
 import { call } from '../../rpc'
 import type { Link } from '../../types/terminals'
 import { openLink } from '../app/openLink'
+import { inTauri } from '../app/platform'
+import { openFolder } from '../files/local'
 import { banner } from './banners'
 import { linkBanner, mayHaveLinks } from './linkBanner'
 import { tabNotify } from './tabNotify'
@@ -19,6 +21,22 @@ function openHere(tab: Tab, url: string) {
 }
 
 const forwarded = new Map<string, string>()
+
+/** An .html file the terminal named comes here with the files it uses (Downloads/HPC Hub/<cluster>/pages), fresh
+ * each time, and opens in this computer's browser. A relative path is in the session's folder. */
+async function openPage(tab: Tab, path: string) {
+  tabNotify('Opening it on this computer…')
+  try {
+    const dir = `${await openFolder(tab.cluster)}/pages`
+    const here = await call<string>('terminals.page',
+      { cluster: tab.cluster, path, local_dir: dir, session: tab.session, node: tab.node })
+    if (!inTauri) return tabNotify(`Saved to ${here}`)
+    const { openPath } = await import('@tauri-apps/plugin-opener')
+    await openPath(here)
+  } catch (e) {
+    tabNotify(`Could not open it: ${(e as Error).message ?? e}`)
+  }
+}
 
 /** Links the terminal printed (VS Code tunnel, device sign-in...) become banners, once each. */
 export async function scanLinks(tab: Tab, text: string) {
@@ -39,6 +57,7 @@ export async function scanLinks(tab: Tab, text: string) {
       banner(tab, b.text, b.button, b.copy
         ? () => copyText(link.code).then((ok) => tabNotify(ok ? 'Code copied' : 'Could not copy'))
         : b.forward ? () => openHere(tab, link.url)
+        : b.file ? () => openPage(tab, link.url)
         : () => openLink(link.url))
     }
     tab.onLink?.(link)

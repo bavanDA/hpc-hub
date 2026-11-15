@@ -25,6 +25,13 @@ def test_parse():
                                                                      ("678.work", "screen", 1)]
 
 
+def test_parse_home():
+    first = tmux.SEP.join(["login02", "/home/jdoe", "/mmfs1/home/jdoe"])
+    got = tmux.parse(f"{first}\nTMUX_OK\nSCREEN_LIST\n")
+    assert (got.host, got.homes, got.has_tmux) == ("login02", ["/home/jdoe", "/mmfs1/home/jdoe"], True)
+    assert tmux.parse(tmux.SEP.join(["login02", "/home/jdoe", "/home/jdoe"]) + "\n").homes == ["/home/jdoe"]
+
+
 def test_parse_escaped_separator():
     """tmux 3.4 prints the field separator as the four characters \\037."""
     row = "\\037".join(["work", "1792430282", "0", "work", "", "bash", "1", "/h"])
@@ -56,7 +63,9 @@ def test_real_tmux(tmp_path, monkeypatch):
 
     sh(tmux.create("hpchub-term-1", "sleep 60", label="My shell", color="#e01b24", cwd=str(tmp_path)))
     sh(tmux.create("hpchub-term-1", "sleep 60", label="ignored"))  # already there: untouched
-    s = tmux.parse(sh(tmux.LIST)).sessions
+    got = tmux.parse(sh(tmux.LIST))
+    assert got.host and got.homes[0] == os.environ["HOME"]
+    s = got.sessions
     assert [(x.name, x.label, x.color, x.path) for x in s] == [("hpchub-term-1", "My shell", "#e01b24",
                                                                  str(tmp_path))]
     sh(tmux.set_label(s[0], "renamed"))

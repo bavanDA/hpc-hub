@@ -8,6 +8,20 @@ export function ago(ts: number, now = Date.now() / 1000): string {
   return m < 60 ? `${m} min` : m < 48 * 60 ? `${Math.floor(m / 60)} h` : `${Math.floor(m / 1440)} days`
 }
 
+/** The folder a session works in, with your home as ~ ("~/thesis"); a long one keeps its last folders. */
+export function folderText(path: string, homes: string[] = [], max = 28): string {
+  if (!path) return ''
+  const home = homes.find((h) => h && (path === h || path.startsWith(`${h}/`)))
+  const short = home ? `~${path.slice(home.length)}` : path
+  if (short.length <= max) return short
+  const parts = short.split('/')
+  for (let n = parts.length - 1; n > 1; n--) {
+    const tail = `…/${parts.slice(-n).join('/')}`
+    if (tail.length <= max) return tail
+  }
+  return `…/${parts[parts.length - 1]}`
+}
+
 /** The cluster's sessions, with ones just opened here in front until tmux lists them. */
 export function withOpened(sessions: TmuxSession[], tabs: Tab[], cluster: string): TmuxSession[] {
   const items = [...sessions]

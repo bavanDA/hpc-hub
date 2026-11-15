@@ -12,7 +12,7 @@ function session(name: string, fields: Partial<TmuxSession>): TmuxSession {
 
 const listings: Record<string, Listing> = {
   wulver: {
-    host: 'login01', has_tmux: true, nodes: { 123456: 'n0042' },
+    host: 'login01', has_tmux: true, homes: ['/home/jdoe'], nodes: { 123456: 'n0042' },
     sessions: [
       session('hpchub-claude-123456-0912', { label: 'Claude · thesis', color: '#d97757', agent: 'claude',
         job: '123456', node: 'n0042', command: 'claude', created: now - 2400, attached: 1,
@@ -29,7 +29,7 @@ const listings: Record<string, Listing> = {
       session('4321.notes', { kind: 'screen', label: 'notes', command: '', created: 0 }),
     ],
   },
-  yale: { host: 'bouchet1', has_tmux: true, nodes: {}, sessions: [
+  yale: { host: 'bouchet1', has_tmux: true, homes: ['/home/jdoe'], nodes: {}, sessions: [
     session('hpchub-codex-0930', { label: 'ChatGPT · climate-model', agent: 'codex', command: 'codex',
       created: now - 1800, path: '/home/jdoe/project/climate-model' }),
   ] },
@@ -44,6 +44,8 @@ function scan({ text }: { text: string }): Link[] {
   if (device) out.push({ kind: 'device-login', url: device[0], code: code?.[0] ?? '', host: '', port: 0 })
   const web = text.match(/http:\/\/(localhost|127\.0\.0\.1):(\d+)\S*/)
   if (web) out.push({ kind: 'local-web', url: web[0], code: '', host: web[1], port: Number(web[2]) })
+  const page = text.replace(/https?:\/\/\S+/g, ' ').match(/[\w~./-]+\.html\b/)
+  if (page) out.push({ kind: 'page', url: page[0], code: '', host: '', port: 0 })
   return out
 }
 
@@ -63,6 +65,7 @@ export const answers: Record<string, unknown> = {
   'terminals.command': command,
   'terminals.links': scan,
   'terminals.buffer': '',
+  'terminals.page': '/home/jdoe/Downloads/HPC Hub/wulver/pages/design/index.html',
   'terminals.paste_image': '/home/jdoe/.hpc-hub/pastes/paste-20260101-120000-ab12cd.png',
   'terminals.rename': null, 'terminals.stop': null,
 }

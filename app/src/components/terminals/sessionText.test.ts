@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import type { TmuxSession } from '../../types/terminals'
-import { ago, sessionLines, withOpened } from './sessionText'
+import { ago, folderText, sessionLines, withOpened } from './sessionText'
 import type { Tab } from './tabs'
 
 const NOW = 1_800_000_000
@@ -30,6 +30,20 @@ describe('sessionLines', () => {
     expect(sessionLines(session({ job: '42' }), false, { 42: 'n0101' }, NOW).sub).toBe('Terminal · n0101 · 5 min · running')
     expect(sessionLines(session({ job: '42' }), false, {}, NOW).sub).toBe('Terminal · node released · 5 min')
   })
+})
+
+describe('folderText', () => {
+  const homes = ['/home/jdoe', '/mmfs1/home/jdoe']
+  it('writes your home as ~', () => {
+    expect(folderText('/home/jdoe', homes)).toBe('~')
+    expect(folderText('/mmfs1/home/jdoe/thesis/src', homes)).toBe('~/thesis/src')
+    expect(folderText('/home/jdoe2/x', homes)).toBe('/home/jdoe2/x')
+    expect(folderText('/scratch/jdoe/run', homes)).toBe('/scratch/jdoe/run')
+  })
+  it('keeps the last folders of a long one', () =>
+    expect(folderText('/project/ab123/jdoe/experiments/2026/graph-search/results', homes, 30))
+      .toBe('…/2026/graph-search/results'))
+  it('is empty when not known', () => expect(folderText('', homes)).toBe(''))
 })
 
 describe('withOpened', () => {

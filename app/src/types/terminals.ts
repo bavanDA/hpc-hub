@@ -20,6 +20,7 @@ export type Listing = {
   host: string
   has_tmux: boolean
   nodes: Record<string, string> | null  // running job id -> node
+  homes?: string[]  // your home folder, as $HOME and as on disk
   sessions: TmuxSession[]
 }
 
@@ -47,7 +48,7 @@ export type MonitorStats = {
 }
 
 export type Link = {
-  kind: 'tunnel' | 'device-login' | 'local-web' | 'remote' | 'pair'
+  kind: 'tunnel' | 'device-login' | 'local-web' | 'remote' | 'pair' | 'page'  // page: an .html file's path
   url: string
   code: string
   host: string

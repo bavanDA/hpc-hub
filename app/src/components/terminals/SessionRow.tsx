@@ -1,18 +1,22 @@
+import { Folder } from 'lucide-react'
+import { Fragment } from 'react'
+
 import type { TmuxSession } from '../../types/terminals'
 import { openLink } from '../app/openLink'
 import { useToast } from '../useToast'
 import { SessionIcon } from './SessionIcon'
 import { SessionMenu } from './SessionMenu'
-import { sessionLines } from './sessionText'
+import { folderText, sessionLines } from './sessionText'
 import { openSession } from './tabs'
 import { copyText } from './xterm'
 
-export function SessionRow({ cluster, s, nodes, open, selected, onRefresh }: {
-  cluster: string; s: TmuxSession; nodes: Record<string, string> | null; open: boolean; selected: boolean
-  onRefresh: () => void
+export function SessionRow({ cluster, s, nodes, homes, open, selected, onRefresh }: {
+  cluster: string; s: TmuxSession; nodes: Record<string, string> | null; homes?: string[]; open: boolean
+  selected: boolean; onRefresh: () => void
 }) {
   const toast = useToast()
   const { title, sub } = sessionLines(s, open, nodes)
+  const folder = folderText(s.path, homes)
   const code = s.remote.startsWith('code:')
   const remoteAction = () => {
     if (!code) return openLink(s.remote)
@@ -27,6 +31,10 @@ export function SessionRow({ cluster, s, nodes, open, selected, onRefresh }: {
       <div className="min-w-0 flex-1">
         <div className="break-words">{title}</div>
         <div className="text-sm break-words text-dim">{sub}</div>
+        {folder && <div className="flex min-w-0 items-start gap-1 text-dim">
+          <Folder size={13} className="mt-0.5 shrink-0" /><span className="min-w-0 font-mono text-xs break-words">
+            {folder.split('/').map((part, i) => <Fragment key={i}>{i ? <>/<wbr /></> : ''}{part}</Fragment>)}</span>
+        </div>}
       </div>
       {(code || s.remote.startsWith('http')) && (
         <button onClick={(e) => { e.stopPropagation(); remoteAction() }}

@@ -24,7 +24,8 @@ async function pickFolder(title: string): Promise<string | null> {
   return open({ title, directory: true, defaultPath: await downloadDir().catch(() => undefined) })
 }
 
-async function openFolder(cluster: string): Promise<string> {
+/** Downloads/HPC Hub/<cluster>: where files come to be opened. */
+export async function openFolder(cluster: string): Promise<string> {
   if (!inTauri) return `/home/jdoe/Downloads/HPC Hub/${cluster}`
   const { downloadDir, join } = await import('@tauri-apps/api/path')
   return join(await downloadDir(), 'HPC Hub', cluster)

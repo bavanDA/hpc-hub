@@ -21,7 +21,7 @@ export function ClusterSessions({ cluster, listed, tabs, current, onRefresh }:
       {listing && !listing.has_tmux && !items.length && <ListNote>tmux is not installed here.</ListNote>}
       {listing && listing.has_tmux && !items.length && <ListNote>No sessions yet.</ListNote>}
       {items.map((s) => (
-        <SessionRow key={s.name} cluster={cluster.id} s={s} nodes={listing?.nodes ?? null}
+        <SessionRow key={s.name} cluster={cluster.id} s={s} nodes={listing?.nodes ?? null} homes={listing?.homes}
           open={tabs.some((t) => t.key === tabKey(cluster.id, s.name))}
           selected={current === tabKey(cluster.id, s.name)} onRefresh={onRefresh} />
       ))}

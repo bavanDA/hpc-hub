@@ -6,7 +6,7 @@ import base64
 import re
 import secrets
 import shlex
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from ..core.ssh import SshMaster
 
@@ -16,7 +16,10 @@ FIELDS = ["session_name", "session_created", "session_attached", "@hpchub_label"
 NODE_SSH = "ssh -o BatchMode=yes -o ConnectTimeout=10 -o LogLevel=ERROR"
 NODE_MARK = "@@NODE "
 _LS = f"tmux list-sessions -F {shlex.quote(SEP.join('#{' + f + '}' for f in FIELDS))} 2>/dev/null"
-LIST = ("hostname; command -v tmux >/dev/null && echo TMUX_OK; "
+# First line: the host, then home as $HOME has it and as the disk does (tmux gives a pane's folder the disk's way,
+# /mmfs1/home/... where $HOME says /home/...), so a session's folder can read ~/...
+LIST = ("printf '%s\\037%s\\037%s\\n' \"$(hostname)\" \"$HOME\" \"$(cd && pwd -P)\"; "
+        "command -v tmux >/dev/null && echo TMUX_OK; "
         f"{_LS}; "
         "echo SCREEN_LIST; screen -ls 2>/dev/null; "
         'echo JOB_LIST; squeue -h -u "$USER" -t RUNNING -o "%i %N" 2>/dev/null; '
@@ -64,6 +67,7 @@ class Listing:
     has_tmux: bool
     sessions: list[Session]
     nodes: dict[str, str] | None = None  # running job id -> node; None if squeue gave nothing
+    homes: list[str] = field(default_factory=list)  # your home folder, as $HOME and as on disk
 
 
 def _session(line: str, node: str = "") -> Session:
@@ -75,7 +79,9 @@ def parse(text: str) -> Listing:
     text = text.replace("\\037", SEP)  # tmux 3.4 prints the separator as the text \037
     text, _, node_part = text.partition("NODE_LIST\n")
     lines = text.splitlines()
-    host = lines[0].strip() if lines else ""
+    first = lines[0].split(SEP) if lines else [""]
+    host = first[0].strip()
+    homes = list(dict.fromkeys(h.strip() for h in first[1:] if h.strip()))
     has_tmux = "TMUX_OK" in lines[:3]
     out: list[Session] = []
     in_screen = False
@@ -98,7 +104,7 @@ def parse(text: str) -> Listing:
         out.append(Session(f"{m.group(1)}.{m.group(2)}", "screen", attached=int(m.group(3) == "Attached"),
                            label=m.group(2)))
     out.sort(key=lambda s: (s.kind != "tmux", -s.created, s.name))
-    return Listing(host, has_tmux, out, nodes)
+    return Listing(host, has_tmux, out, nodes, homes)
 
 
 def _int(v: str) -> int:

@@ -14,7 +14,7 @@ from dataclasses import asdict
 from ...core import remote
 from ...core.ssh import CHANNEL
 from ...files import remote_fs
-from ...terminals import links, tmux
+from ...terminals import links, pages, tmux
 from ..hub import hub
 from ..server import method
 
@@ -37,7 +37,7 @@ def sessions(cluster: str) -> dict:
     s = hub().connected(cluster)
     listing = tmux.list_sessions(s.ssh, s.allocation.node if s.allocation else "")
     return {"host": listing.host, "has_tmux": listing.has_tmux, "nodes": listing.nodes,
-            "sessions": [_session_json(t) for t in listing.sessions]}
+            "homes": listing.homes, "sessions": [_session_json(t) for t in listing.sessions]}
 
 
 @method("terminals.command")
@@ -135,7 +135,7 @@ def buffer(cluster: str, node: str = "") -> str:
 
 @method("terminals.links")
 def links_in(text: str, node: str = "") -> list[dict]:
-    """Useful links in terminal output: VS Code tunnels, device sign-ins, remote control, pairing codes."""
+    """Useful links in terminal output: VS Code tunnels, device sign-ins, remote control, pairing codes, pages."""
     out = []
     for link in links.find_links(text, node):
         item = asdict(link)
@@ -143,6 +143,22 @@ def links_in(text: str, node: str = "") -> list[dict]:
             item["tunnel"] = links.tunnel_name(link.url)
         out.append(item)
     return out
+
+
+@method("terminals.page")
+def page(cluster: str, path: str, local_dir: str, session: str = "", node: str = "") -> str:
+    """A web page a terminal made: path as the terminal printed it (relative ones are in the session's folder). It and
+    the files it uses from its folder come to local_dir; answers the page's path here, to open in the browser."""
+    ssh = hub().connected(cluster).ssh
+
+    def run(line: str) -> str:
+        res = ssh.on_login(tmux.on(node, line), timeout=120)
+        if res.returncode != 0 and not res.stdout:
+            err = res.stderr.strip()
+            raise pages.PageError(err.splitlines()[-1] if err else f"Could not get {path}")
+        return res.stdout
+
+    return str(pages.fetch(run, path, local_dir, session=session))
 
 
 # terminals the backend runs itself (Windows)

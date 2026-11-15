@@ -1,4 +1,5 @@
-"""Useful links in terminal output: VS Code tunnels, device sign-ins, remote control, local web servers."""
+"""Useful links in terminal output: VS Code tunnels, device sign-ins, remote control, local web servers, and web
+pages (.html files) made on the cluster."""
 
 import re
 from dataclasses import dataclass
@@ -8,8 +9,11 @@ URL_RE = re.compile(r"https?://[^\s'\"<>()\x1b]+")
 CODE_RE = re.compile(r"\b([A-Z0-9]{4}-[A-Z0-9]{4})\b")
 LOCAL_HOSTS = {"localhost", "127.0.0.1", "0.0.0.0", "::1"}
 
-TUNNEL, DEVICE_LOGIN, LOCAL_WEB, REMOTE, PAIR, OTHER = (
-    "tunnel", "device-login", "local-web", "remote", "pair", "other")
+TUNNEL, DEVICE_LOGIN, LOCAL_WEB, REMOTE, PAIR, PAGE, OTHER = (
+    "tunnel", "device-login", "local-web", "remote", "pair", "page", "other")
+# A file path ending in .html: index.html, site/index.html, ~/x/a.htm, /home/you/a.html, ./a.html; not in a web address
+PAGE_RE = re.compile(r"(?<![\w/.~+@%-])((?:~/|\.{1,2}/|/)?(?:[\w.+@-]+/)*[\w+@-][\w.+@-]*\.html?)"
+                     r"(?![\w/-])(?!\.\w)", re.I)
 PAIR_RE = re.compile(r"(?:manualPairingCode\W+|pairing code\W+)([A-Z0-9]{4}-[A-Z0-9]{4})", re.I)
 # Device sign-in pages opened for you (VS Code's GitHub or Microsoft login); a look-alike on another host is not
 DEVICE_HOSTS = ("github.com", "microsoft.com", "www.microsoft.com", "login.microsoft.com", "login.microsoftonline.com")
@@ -72,6 +76,10 @@ def find_links(text: str, node: str = "") -> list[Link]:
         if link.url not in seen and link.kind != OTHER:
             seen.add(link.url)
             out.append(link)
+    for m in PAGE_RE.finditer(URL_RE.sub(" ", text)):
+        if m.group(1) not in seen:
+            seen.add(m.group(1))
+            out.append(Link(PAGE, m.group(1)))
     return out
 
 
