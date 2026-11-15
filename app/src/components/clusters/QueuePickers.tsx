@@ -28,6 +28,8 @@ export function QueuePickers({ cluster, limits, queue, qos, onQueue, onQos, auto
   hide?: string[]  // never these (a CPU size: the GPU-only queues)
 }) {
   const [pick, setPick] = useState<'' | 'queue' | 'priority' | 'group'>('')
+  const [hidNow, setHidNow] = useState<string[] | null>(null)  // after Hide or Show here, before limits reload
+  const [showHidden, setShowHidden] = useState(false)
   const [guide, setGuide] = useState<Guide | null>(null)
   const [guideError, setGuideError] = useState('')
   const [learn, setLearn] = useState(false)
@@ -39,8 +41,18 @@ export function QueuePickers({ cluster, limits, queue, qos, onQueue, onQos, auto
     const found = guide?.queues.find((x) => x.name === q)
     return found && queueHint(found)
   }
-  const groups = onAccount ? choices(limits?.accounts, account ?? '') : []
+  const hid = hidNow ?? limits?.hidden_accounts ?? []
+  const known = [...(limits?.accounts ?? []), ...(limits?.hidden_accounts ?? [])]
+  const listedGroups = known.filter((a, i) => known.indexOf(a) === i && (showHidden || !hid.includes(a)))
+  const groups = onAccount ? choices(listedGroups, account ?? '') : []
   const def = limits?.default_account ?? ''
+  const note = (a: string) => limits?.account_notes?.[a]
+  const ended = account ? note(account) : undefined
+  const setHidden = (a: string, hide: boolean) => {
+    if (!cluster) return
+    call<string[]>('clusters.hide_group', { cluster, account: a, hide }).then(setHidNow).catch(() => {})
+    if (hide && a === account) onAccount?.('')  // back to your default group
+  }
   const listed = (only?.length ? limits?.partitions?.filter((q) => only.includes(q)) : limits?.partitions)
     ?.filter((q) => !hide?.includes(q))
   const queues = choices(listed, queue)
@@ -57,6 +69,11 @@ export function QueuePickers({ cluster, limits, queue, qos, onQueue, onQos, auto
         {groups.length > 0 && <Row label="Group to bill" value={groupName(account, def)} opens
           onPress={() => setPick('group')} />}
       </List>}
+      {ended && account && <div className="flex items-center gap-3 px-5 pt-2 text-sm text-dim">
+        <p className="min-w-0 flex-1">{`This course group's term is over (${ended.replace(/^Ended \(|\)$/g, '')}), `
+          + 'so Slurm may refuse jobs billed to it.'}</p>
+        {cluster && <EButton small onClick={() => setHidden(account, true)}>Hide this group</EButton>}
+      </div>}
       {onAccount && !groups.length && <div className="px-5 pt-1">
         <Field label="Group to bill" value={account ?? ''} placeholder="Your default group"
           onChange={(e) => onAccount(e.target.value.trim())} />
@@ -76,8 +93,11 @@ export function QueuePickers({ cluster, limits, queue, qos, onQueue, onQos, auto
         <LimitsTab guide={guide} error={guideError} />
       </EDialog>}
       {pick === 'group' && onAccount && <PickDialog title="Group to bill" value={account || def}
-        options={groups.map((a) => ({ value: a, label: groupName(a, def) }))}
-        onPick={onAccount}
+        top={hid.length ? <EButton small onClick={() => setShowHidden(!showHidden)}>
+          {showHidden ? 'Leave out hidden groups' : `Show hidden groups (${hid.length})`}</EButton> : undefined}
+        options={groups.map((a) => ({ value: a, label: groupName(a, def),
+          hint: [note(a), hid.includes(a) ? 'Hidden' : ''].filter(Boolean).join(' · ') || undefined }))}
+        onPick={(a) => { if (hid.includes(a)) setHidden(a, false); onAccount(a) }}  // picking a hidden one shows it again
         onClose={() => setPick('')} />}
       {pick === 'priority' && <PickDialog title="Priority" value={shownQos}
         options={levels.map((q) => ({ value: q, label: priorityName(q) }))} onPick={onQos}

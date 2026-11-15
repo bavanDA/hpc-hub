@@ -4,7 +4,7 @@ import subprocess
 import threading
 from dataclasses import replace
 
-from ..compute import limits, salloc, slurm
+from ..compute import groups, limits, salloc, slurm
 from ..compute.slurm import Allocation, SlurmError
 from ..core.config import ComputeProfile
 from ..core.ssh import SshError
@@ -32,7 +32,8 @@ class NodesMixin:
             profile = replace(profile, account=self._account())
         refused = self.limits.refused_qos(profile.partition, profile.qos, profile.account) if self.limits else ""
         if refused and not profile.qos:  # your default priority isn't allowed there: the one the queue takes
-            choices = self.limits.qos_choices(profile.partition, profile.account)
+            choices = [c for c in self.limits.qos_choices(profile.partition, profile.account)
+                       if c not in limits.NEVER_PICKED]
             if choices:
                 self._log(f"{refused} Using priority {choices[0]}")
                 profile, refused = replace(profile, qos=choices[0]), ""
@@ -52,6 +53,14 @@ class NodesMixin:
             self._log(note)
         self._log("Asking Slurm for " + asked(fitted))
         return fitted
+
+    def _why(self, e: Exception, profile: ComputeProfile | None) -> str:
+        """Slurm's refusal, plus what it means when the group billed is a course one (its term may be over)."""
+        account = (profile.account if profile else "") or self.default_account or ""
+        qos = self.limits.account_qos.get(account) if self.limits else None
+        if isinstance(e, SlurmError) and account and groups.is_course(account, qos):
+            return f"{e} {groups.refused_text(account)}"
+        return str(e)
 
     def _account(self) -> str:
         if self.default_account is None and self.ssh:
@@ -118,8 +127,9 @@ class NodesMixin:
                 self._log(f"Extra node {a.node} (job {a.job_id}) for {job_name}")
                 on_done(a, "")
             except (SlurmError, OSError, subprocess.SubprocessError) as e:
-                self._log(f"Node request for {job_name} failed: {e}")
-                on_done(None, str(e))
+                why = self._why(e, profile or self.cfg.profile)
+                self._log(f"Node request for {job_name} failed: {why}")
+                on_done(None, why)
 
         threading.Thread(target=run, daemon=True).start()
 
@@ -194,8 +204,9 @@ class NodesMixin:
                 self._log("You stopped waiting for a node")
                 self._set(State.CONNECTED)
                 return
-            self._log(f"Node request failed: {e}")
-            self._set(State.CONNECTED, f"No compute node: {e}")
+            why = self._why(e, profile)
+            self._log(f"Node request failed: {why}")
+            self._set(State.CONNECTED, f"No compute node: {why}")
             return
         self._set(State.CONNECTED)
 

@@ -243,7 +243,8 @@ export const answers: Record<string, unknown> = {
       qos: part === 'debug' ? ['debug'] : Object.keys(limits.qos), default_qos: 'low', needs_gpu: part === 'gpu', gpu_queues: ['gpu'],
       qos_refused: refused ? `The debug queue takes priority debug, not ${qos || 'low'}.` : '',
       qos_fix: refused ? 'debug' : '', qos_note: part === 'debug' ? 'The debug queue takes priority debug only.' : '',
-      accounts: ['mygroup', 'abc123', 'dept_x'],
+      accounts: ['mygroup', 'abc123', 'dept_x', '2025-fall-cs-100-jdoe'], hidden_accounts: [],
+      account_notes: { '2025-fall-cs-100-jdoe': 'Ended (fall 2025)' },
       default_account: 'mygroup', longest: top?.[0] ?? null, why: top?.[1] ?? '', cores, memory_gb,
       // like Wulver: the GPU queue gives each core 3.9 GB, and Standard leaves out the L40
       mem_per_core_gb: part === 'gpu' ? 3.92 : null, gpu_caps: (qos || 'low') === 'standard' ? { l40: 0 } : {},
@@ -252,6 +253,7 @@ export const answers: Record<string, unknown> = {
   },
   // Slurm's gres column on each cluster
   'clusters.gpus': ({ cluster }: { cluster: string }) => ({ known: cluster !== 'sdsc', gpus: DEMO_GPUS[cluster] ?? [] }),
+  'clusters.hide_group': ({ account, hide }: { account: string; hide?: boolean }) => (hide === false ? [] : [account]),
   'question.answer': () => null,
   'cluster_settings.get': ({ cluster }: { cluster: string }): SettingsInfo => ({
     cluster: structuredClone(find(clusters, cluster)), agents: agentInfo,

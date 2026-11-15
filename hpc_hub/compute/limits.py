@@ -17,7 +17,7 @@ FETCH = ("sinfo -h -o '%P|%l|%c|%m'; echo @QOS; "
          "echo @FLAGS; scontrol show config 2>/dev/null | grep -i '^PriorityFlags'; true")
 RULES = ("AllowQos", "DenyQos", "AllowAccounts", "DenyAccounts", "QoS", "MaxNodes", "DefaultTime", "DefMemPerCPU",
          "OverSubscribe", "PreemptMode", "TotalNodes", "State")  # kept from scontrol show partition
-NEVER_QOS = {"course"}  # the owner's rule: HPC Hub never offers or picks these
+NEVER_PICKED = {"course"}  # HPC Hub never picks these on its own; you may pick one yourself
 PREFERRED_QOS = ("standard", "normal")  # what to name when your group has no default, in this order
 SLURM_TIME = re.compile(r"^(?:(\d+)-)?(\d+)(?::(\d+))?(?::(\d+))?$")
 
@@ -100,7 +100,7 @@ class Limits:
         """The priorities to offer for a job here: your group's that this partition takes."""
         mine = self.account_qos.get(account) or self.allowed_qos
         usable = self.usable_qos(partition or self.default_partition)
-        return [q for q in mine if q in usable and q not in NEVER_QOS]
+        return [q for q in mine if q in usable]
 
     def refused_qos(self, partition: str, qos: str, account: str = "") -> str:
         """Why a job with this priority (empty: your default) would wait forever on this partition, "" if it can run.
@@ -118,8 +118,9 @@ class Limits:
     def qos_to_name(self, partition: str, account: str = "") -> str:
         """The priority to name for a job that names none, when your group has no default this queue takes: Slurm
         would then guess "normal" and refuse the job ("Invalid qos specification") if your group lacks it. Standard
-        first, then normal, then one that isn't free or for tests. "" when your default does, or nothing is known."""
-        choices = self.qos_choices(partition, account)
+        first, then normal, then one that isn't free or for tests; never course. "" when your default does, or nothing
+        is known."""
+        choices = [c for c in self.qos_choices(partition, account) if c not in NEVER_PICKED]
         if not choices or self.default_qos in choices:
             return ""
         for q in (*PREFERRED_QOS, *[c for c in choices if c not in ("low", "debug")], *choices):

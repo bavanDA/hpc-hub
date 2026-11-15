@@ -236,13 +236,21 @@ def test_queues_for_other_groups_are_not_offered(hub):
     assert got["partitions"] == ["general"] and got["default_partition"] == "general"  # course: the courses group
 
 
-def test_course_is_never_offered(hub):
+def test_course_groups_are_yours_to_pick_and_hide(hub, monkeypatch, tmp_path):
+    from hpc_hub.core import config
+    monkeypatch.setattr(config, "APP_FILE", tmp_path / "app.toml")
     hub.sessions["wulver"].limits = Limits(partitions={"general": 4320}, default_partition="general",
                                            allowed_qos=["low", "standard", "course"],
-                                           account_qos={"lab": ["low", "standard"], "class2026": ["course"]})
+                                           account_qos={"lab": ["low", "standard"],
+                                                        "2020-spring-cs-100-jdoe": ["course"]})
     got = slurm_limits.partitions("wulver", account="lab")
-    assert got["accounts"] == ["lab"] and "course" not in got["qos"] and got["qos_note"] == ""
-    assert "course" not in slurm_limits.partitions("wulver", account="class2026")["qos"]
+    assert got["accounts"] == ["lab", "2020-spring-cs-100-jdoe"]
+    assert got["account_notes"] == {"2020-spring-cs-100-jdoe": "Ended (spring 2020)"}
+    assert slurm_limits.hide_group("wulver", "2020-spring-cs-100-jdoe") == ["2020-spring-cs-100-jdoe"]
+    got = slurm_limits.partitions("wulver", account="lab")
+    assert got["accounts"] == ["lab"] and got["hidden_accounts"] == ["2020-spring-cs-100-jdoe"]
+    assert slurm_limits.hide_group("wulver", "2020-spring-cs-100-jdoe", hide=False) == []
+    assert slurm_limits.partitions("wulver")["accounts"] == ["lab", "2020-spring-cs-100-jdoe"]
 
 
 def test_log_tail(hub, monkeypatch, tmp_path):

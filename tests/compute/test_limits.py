@@ -98,7 +98,7 @@ def test_a_partition_that_takes_only_its_own_priority():
     L = limits.parse(WULVER)
     L.rules = {"debug": {"AllowQos": "debug"}, "general": {}}
     assert L.qos_choices("debug") == ["debug"]
-    assert L.qos_choices("general") == ["debug", "low", "standard"]  # never course
+    assert L.qos_choices("general") == ["debug", "low", "standard", "course"]  # yours to pick, never picked for you
     assert L.refused_qos("debug", "low") == "The debug queue takes priority debug, not low."
     assert L.refused_qos("debug", "debug") == "" and L.refused_qos("general", "low") == ""
     L.default_qos = "low"
@@ -110,7 +110,7 @@ def test_a_partition_that_takes_only_its_own_priority():
 
 def test_qos_to_name():
     L = limits.parse(WULVER)
-    L.rules = {"general": {"DenyQos": "debug"}}
+    L.rules = {"general": {"DenyQos": "debug,course"}}  # as on Wulver
     L.account_qos = {"lab": ["debug", "low", "standard"], "dept": ["debug", "high_dept", "normal"],
                      "free": ["low", "debug"], "class": ["course"]}
     L.allowed_qos = ["debug", "low", "standard", "high_dept", "normal", "course"]

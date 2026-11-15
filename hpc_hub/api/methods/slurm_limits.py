@@ -3,7 +3,8 @@
 from dataclasses import asdict
 
 from ...compute import gpus as gpu_list
-from ...compute import guide, limits, maintenance
+from ...compute import groups, guide, limits, maintenance
+from ...core import config
 from ..hub import hub
 from ..server import method
 
@@ -31,6 +32,7 @@ def partitions(cluster: str, partition: str = "", qos: str = "", account: str = 
     partition, qos = partition.strip(), qos.strip()
     longest, why = lim.longest(partition, qos)
     account = account.strip() or lim.default_account
+    hid = groups.hidden(config.load_app(config.APP_FILE).hidden_groups, cluster)
     choices = lim.qos_choices(partition, account)
     refused = lim.refused_qos(partition, qos, account)
     part = partition or lim.default_partition
@@ -39,22 +41,29 @@ def partitions(cluster: str, partition: str = "", qos: str = "", account: str = 
     # only your queues: not ones kept for other groups (a course queue for a courses group)
     return {"known": True, "partitions": [p for p in lim.partitions if lim.yours(p)],
             "default_partition": lim.default_partition,
-            "qos": choices or _offered(lim.account_qos.get(account) or lim.allowed_qos),
+            "qos": choices or lim.account_qos.get(account) or lim.allowed_qos,
             # the priority asked for (or your default) waits forever here: say so, and which one to use instead
             "qos_refused": refused, "qos_fix": choices[0] if refused and choices else "",
-            "qos_note": _only(part, choices, _offered(lim.account_qos.get(account) or lim.allowed_qos)),
+            "qos_note": _only(part, choices, lim.account_qos.get(account) or lim.allowed_qos),
             "needs_gpu": lim.needs_gpu(part),  # a GPU-only queue: the window adds a GPU
             "gpu_queues": [p for p in lim.gpu_only if lim.yours(p)],  # only offered with the GPU size
             "default_qos": lim.default_qos, "default_account": lim.default_account,
-            # never a course group (the owner's rule): one whose priorities are all ones HPC Hub never uses
-            "accounts": [a for a, qs in lim.account_qos.items() if _offered(qs) or not qs],
+            # the groups you hid (Hide this group) stay out, unless it is the one asked about
+            "accounts": [a for a in lim.account_qos if a not in hid or a == account], "hidden_accounts": hid,
+            # a course group whose term is over: "Ended (spring 2026)"
+            "account_notes": {a: f"Ended ({groups.ended(a)})" for a in lim.account_qos if groups.ended(a)},
             "longest": longest, "why": why, "cores": cores, "memory_gb": memory_gb,
             "mem_per_core_gb": round(per_core / 1024, 2) if per_core else None, "gpu_caps": lim.gpu_caps(qos),
             "billing": _billing(s.cfg, lim.billing_for(part, qos), part)}
 
 
-def _offered(qos: list[str]) -> list[str]:
-    return [q for q in qos if q not in limits.NEVER_QOS]
+@method("clusters.hide_group")
+def hide_group(cluster: str, account: str, hide: bool = True) -> list[str]:
+    """Leave a group to bill out of Get one (an ended course group), or bring it back. Answers the hidden ones."""
+    app = config.load_app(config.APP_FILE)
+    app.hidden_groups = groups.set_hidden(app.hidden_groups, cluster, account.strip(), hide)
+    config.save_app(app, config.APP_FILE)
+    return groups.hidden(app.hidden_groups, cluster)
 
 
 def _only(partition: str, choices: list[str], yours: list[str]) -> str:

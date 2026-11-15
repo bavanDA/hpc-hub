@@ -130,7 +130,9 @@ export type Limits = {
   default_partition: string
   qos: string[]
   default_qos: string
-  accounts?: string[]  // the groups you may bill (Slurm accounts)
+  accounts?: string[]  // the groups you may bill (Slurm accounts), less the ones you hid
+  hidden_accounts?: string[]  // the ones you hid (Hide this group)
+  account_notes?: Record<string, string>  // a course group whose term is over: "Ended (spring 2026)"
   default_account?: string
   longest: number | null
   why: string

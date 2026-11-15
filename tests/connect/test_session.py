@@ -476,6 +476,23 @@ def test_a_group_with_no_default_priority_names_one_and_the_log_says_what_was_as
     s.limits.account_qos = {"lab": ["course"]}
     p = s.fit(config.ComputeProfile(cpus=4, mem_gb=16, time="01:00:00"))
     assert p.qos == "" and p.partition == ""  # never course, never another queue: Slurm says why
+    # you pick course yourself: yours to use
+    s.limits.account_qos = {"lab": ["low", "course"]}
+    s.limits.rules["course"] = {"AllowQos": "course"}
+    p = s.fit(config.ComputeProfile(cpus=4, mem_gb=16, time="01:00:00", partition="course", qos="course"))
+    assert (p.partition, p.qos) == ("course", "course")
+
+
+def test_a_refused_course_group_says_it_may_have_ended():
+    from hpc_hub.compute.slurm import SlurmError
+    from hpc_hub.connect.session import ClusterSession
+    from hpc_hub.core import config
+    s = object.__new__(ClusterSession)
+    s.limits, s.default_account = None, "2020-spring-cs-100-jdoe"
+    why = s._why(SlurmError("salloc: error: Invalid account"), config.ComputeProfile())
+    assert why.startswith("salloc: error: Invalid account Your course group 2020-spring-cs-100-jdoe can't run jobs: "
+                          "its term (spring 2020) is over.")
+    assert s._why(SlurmError("x"), config.ComputeProfile(account="lab")) == "x"
 
 
 def test_a_refused_node_request_says_why_on_every_path():
