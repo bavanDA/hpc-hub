@@ -2,6 +2,7 @@
 files it uses from its own folder (styles, scripts, pictures) come here, to the folder the app opens downloads in."""
 
 import base64
+import hashlib
 import io
 import posixpath
 import re
@@ -43,18 +44,20 @@ def pack(folder: str, names: list[str]) -> str:
             f"| tar --null -T - -cf - | head -c {MAX_PAGE + 1} | base64 -w0")
 
 
-def references(html: str) -> list[str]:
-    """Files in the page's folder (or below) that the page uses; web addresses and outside files are not."""
+def references(text: str, of: str = "") -> list[str]:
+    """Files in the page's folder (or below) that a page or style sheet uses, as paths from that folder; of is the
+    file's own path in it (a style sheet in css/ says url(../img/a.png)). Web addresses and outside files are not."""
+    here = posixpath.dirname(of)
     out: list[str] = []
-    for m in REF_RE.finditer(html):
+    for m in REF_RE.finditer(text):
         ref = m.group(1).strip()
         if not ref or re.match(r"^[a-z][a-z0-9+.-]*:", ref, re.I) or ref.startswith(("/", "\\")):
             continue
-        norm = posixpath.normpath(ref)
+        norm = posixpath.normpath(posixpath.join(here, ref))
         if norm.startswith("..") or norm in (".", "") or norm in out:
             continue
         out.append(norm)
-    return out[:MAX_FILES]
+    return out
 
 
 def unpack(data: str, into: Path) -> list[str]:
@@ -80,20 +83,37 @@ def unpack(data: str, into: Path) -> list[str]:
     return got
 
 
+def _readable(name: str) -> bool:
+    return name.lower().endswith((".html", ".htm", ".css", ".svg"))  # what can name more files
+
+
 def fetch(run: Callable[[str], str], path: str, local_dir: str, session: str = "", cwd: str = "") -> Path:
-    """Brings the page and its files to local_dir/<the page's folder name>/ and answers the page's local path.
+    """Brings the page here with what it uses from its folder: its pictures and styles, the other pages it links to
+    and what those use in turn (up to MAX_FILES and MAX_PAGE). They land in local_dir/<folder name>-<tag>/, the tag
+    telling apart folders of the same name; answers the page's local path.
     run: runs a shell line where the terminal runs and answers its output (raises if it fails)."""
     full = run(where(path, cwd, session)).strip().splitlines()
     if not full or not full[-1].startswith("/"):
         raise PageError(f"Could not find {path}")
     full_path = full[-1]
     folder, name = posixpath.split(full_path)
-    into = Path(local_dir) / (posixpath.basename(folder) or "page")
+    tag = hashlib.sha1(folder.encode()).hexdigest()[:6]
+    into = Path(local_dir) / f"{posixpath.basename(folder) or 'page'}-{tag}"
     into.mkdir(parents=True, exist_ok=True)
-    if name not in unpack(run(pack(folder, [name])), into):
+    got = unpack(run(pack(folder, [name])), into)
+    if name not in got:
         raise PageError(f"Could not read {full_path}")
-    page = into / name
-    refs = [r for r in references(page.read_text(errors="replace")) if r != name]
-    if refs:
-        unpack(run(pack(folder, refs)), into)
-    return page
+    asked = {name}
+    while got:
+        todo = []
+        for f in got:
+            if not _readable(f):
+                continue
+            for ref in references((into / f).read_text(errors="replace"), of=f):
+                if ref not in asked and len(asked) < MAX_FILES:
+                    asked.add(ref)
+                    todo.append(ref)
+        if not todo or sum(p.stat().st_size for p in into.rglob("*") if p.is_file()) > MAX_PAGE:
+            break
+        got = unpack(run(pack(folder, todo)), into)
+    return into / name
