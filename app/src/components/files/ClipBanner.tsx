@@ -1,20 +1,25 @@
 import { ClipboardPaste, X } from 'lucide-react'
 
-import type { Clip } from '../../types/files'
+import type { Held } from '../../types/files'
 
-export function ClipBanner({ clip, canPaste, onPaste, onDrop }:
-  { clip: Clip; canPaste: boolean; onPaste: () => void; onDrop: () => void }) {
+export function ClipBanner({ held, canPaste, onPaste, onDrop }:
+  { held: Held; canPaste: boolean; onPaste: () => void; onDrop: () => void }) {
+  const { items, move } = held
+  const what = items.length === 1 ? <b>{items[0].name}</b> : <><b>{items.length} items</b></>
   return (
     <div className="flex min-h-12 shrink-0 items-center gap-3 border-b border-line bg-soft px-4 py-1.5">
       <p className="min-w-0 flex-1 text-base">
-        Copied <b>{clip.name}</b> from {clip.clusterName}. Open any folder on any cluster, then paste.
+        {move ? <>Moving {what}. Open the folder on {items[0].clusterName} to move {items.length === 1 ? 'it' : 'them'}
+          {' '}to, then paste.</>
+          : <>Copied {what} from {items[0].clusterName}. Open any folder on any cluster, then paste.</>}
       </p>
       <button onClick={onPaste} disabled={!canPaste}
         className="flex h-9 shrink-0 items-center gap-2 rounded-lg bg-accent px-3.5 font-semibold text-on-accent
           hover:bg-accent-hover disabled:opacity-40">
-        <ClipboardPaste size={16} /> Paste here
+        <ClipboardPaste size={16} /> {move ? 'Move here' : 'Paste here'}
       </button>
-      <button onClick={onDrop} aria-label="Forget the copy" title="Forget the copy"
+      <button onClick={onDrop} aria-label={move ? 'Cancel the move' : 'Forget the copy'}
+        title={move ? 'Cancel the move' : 'Forget the copy'}
         className="grid size-8 shrink-0 place-items-center rounded-md text-dim hover:bg-hover hover:text-text">
         <X size={16} /></button>
     </div>

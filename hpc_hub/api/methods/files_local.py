@@ -8,7 +8,7 @@ import subprocess
 import time
 from pathlib import Path
 
-from ...files import remote_fs, transfer
+from ...files import local_clipboard, remote_fs, transfer
 from ...files.status import size_text
 from ..hub import hub
 from ..server import method
@@ -79,6 +79,12 @@ def _scp(t: Transfer, argv: list[str], measure, every: float, base: int = 0) -> 
     err = proc.stderr.read() if proc.stderr else ""
     if proc.returncode:
         raise remote_fs.FsError(err.strip() or "Copy failed")
+
+
+@method("files.copied_here")
+def copied_here() -> list[str]:
+    """Files and folders copied on this computer (in its file manager), to paste into a cluster folder."""
+    return local_clipboard.copied_files()
 
 
 @method("files.upload")

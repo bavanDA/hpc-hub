@@ -23,7 +23,14 @@ export function useCopies({ cluster, here, path, connected, refresh }: {
     const into = { cluster, dir: path }
     local.upload(path).then((id) => id && dests.current.set(id, into))
   }
-  const download = (e: Entry) => local.download(join(path, e.name))
+  /** Files of this computer (pasted or dropped) into the open folder. */
+  const uploadPaths = (paths: string[]) => {
+    if (!connected || !path) return
+    const into = { cluster, dir: path }
+    local.uploadPaths(path, paths).then((id) => id && dests.current.set(id, into))
+  }
+  const download = (es: Entry[]) => (es.length === 1 ? local.download(join(path, es[0].name))
+    : local.downloadAll(es.map((e) => join(path, e.name))))
 
   const transfers = useTransfers((t: Transfer) => {
     if (!local.finished(t)) toast(finishedMessage(t))
@@ -39,5 +46,5 @@ export function useCopies({ cluster, here, path, connected, refresh }: {
       .catch((e: Error) => toast(`Could not start: ${e.message}`))
   }
 
-  return { local, upload, download, transfers, start }
+  return { local, upload, uploadPaths, download, transfers, start }
 }

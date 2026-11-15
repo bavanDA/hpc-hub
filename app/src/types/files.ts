@@ -33,6 +33,8 @@ export type Transfer = {
 
 /** What Copy put aside, to paste on any cluster. */
 export type Clip = { cluster: string; clusterName: string; path: string; name: string; folder: boolean }
+/** What Copy or Move put aside: one or more entries of one folder. */
+export type Held = { items: Clip[]; move: boolean }
 
 export type SortKey = 'name' | 'size' | 'mtime'
 export type Sort = { key: SortKey; desc: boolean }

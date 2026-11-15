@@ -193,6 +193,33 @@ def rename(ssh: SshMaster, src: str, dst: str) -> None:
     _run(ssh, f"test ! -e {q(dst)} && mv -- {q(src)} {q(dst)} || {{ echo 'Name already exists' >&2; exit 1; }}")
 
 
+# Shell: move each argument after the first into the folder $1; one whose name is taken there stays put and is
+# printed as "taken <name>", one that is the folder itself or holds it as "inside <name>"
+MOVE_SH = r"""
+dst=$1; shift
+[ -d "$dst" ] || { echo "$dst is not a folder" >&2; exit 1; }
+real=$(cd -- "$dst" && pwd -P)
+for src in "$@"; do
+  name=$(basename -- "$src")
+  s=$(cd -- "$(dirname -- "$src")" && pwd -P)/$name
+  case "$real/" in "$s"/*) echo "inside $name"; continue;; esac
+  [ "$(dirname -- "$s")" = "$real" ] && continue
+  if [ -e "$dst/$name" ] || [ -L "$dst/$name" ]; then echo "taken $name"; continue; fi
+  mv -- "$src" "$dst/$name" || exit 1
+done
+"""
+
+
+def move(ssh: SshMaster, paths: list[str], folder: str) -> list[str]:
+    """Moves files and folders into folder, never over something there. Answers why any stayed put."""
+    if not paths:
+        return []
+    out = _run(ssh, f"bash -c {q(MOVE_SH)} move {q(folder)} {' '.join(q(p) for p in paths)}", timeout=600)
+    why = {"taken": "is already there", "inside": "can't go inside itself"}
+    return [f"{line.split(' ', 1)[1]} {why[line.split(' ', 1)[0]]}" for line in out.splitlines()
+            if line.split(" ", 1)[0] in why and " " in line]
+
+
 def remove(ssh: SshMaster, path: str) -> None:
     if len([part for part in path.split("/") if part not in ("", ".", "~")]) < 2:
         raise FsError("Refusing to delete that")

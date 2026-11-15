@@ -56,9 +56,8 @@ export function useLocalFiles(cluster: string, clusterName: string) {
     if (t) { early.delete(id); report(t, m) }
   }, [report])
 
-  /** Ask for files and upload them into dir; answers the transfer's id. */
-  const upload = useCallback(async (dir: string): Promise<string | null> => {
-    const paths = await pickFiles(`Upload to ${clusterName}:${dir}`)
+  /** Upload these files or folders of this computer into dir; answers the transfer's id. */
+  const uploadPaths = useCallback(async (dir: string, paths: string[]): Promise<string | null> => {
     if (!paths.length) return null
     try {
       const { id } = await call<{ id: string }>('files.upload', { cluster, local_paths: paths, remote_dir: dir })
@@ -69,7 +68,11 @@ export function useLocalFiles(cluster: string, clusterName: string) {
       toast(`Could not upload: ${(e as Error).message}`)
       return null
     }
-  }, [cluster, clusterName, started, toast])
+  }, [cluster, started, toast])
+
+  /** Ask for files and upload them into dir; answers the transfer's id. */
+  const upload = useCallback(async (dir: string): Promise<string | null> =>
+    uploadPaths(dir, await pickFiles(`Upload to ${clusterName}:${dir}`)), [clusterName, uploadPaths])
 
   /** Download to a folder you pick, or with open: to Downloads/HPC Hub/<cluster>, then open it. */
   const download = useCallback(async (path: string, open = false) => {
@@ -86,6 +89,22 @@ export function useLocalFiles(cluster: string, clusterName: string) {
     }
   }, [cluster, started, toast])
 
+  /** Download several to one folder you pick. */
+  const downloadAll = useCallback(async (paths: string[]) => {
+    const dir = await pickFolder(`Download ${paths.length} items to`)
+    if (!dir) return
+    for (const path of paths) {
+      try {
+        const got = await call<{ id: string; path: string }>('files.download',
+          { cluster, remote_path: path, local_dir: dir })
+        started(got.id, { kind: 'download', path: got.path })
+      } catch (e) {
+        toast(`Could not download ${base(path)}: ${(e as Error).message}`)
+      }
+    }
+    toast(`Downloading ${paths.length} items. Progress is below`)
+  }, [cluster, started, toast])
+
   /** For the page's onFinished: true when it was an upload or download (and said so). */
   const finished = useCallback((t: Transfer) => {
     if (!t.title.includes(HERE)) return false
@@ -94,5 +113,5 @@ export function useLocalFiles(cluster: string, clusterName: string) {
     return true
   }, [report])
 
-  return { upload, download, finished }
+  return { upload, uploadPaths, download, downloadAll, finished }
 }

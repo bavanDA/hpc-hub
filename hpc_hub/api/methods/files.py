@@ -77,6 +77,13 @@ def rename(cluster: str, path: str, name: str) -> str:
     return target
 
 
+@method("files.move")
+def move(cluster: str, paths: list[str], folder: str) -> list[str]:
+    """Move files and folders into folder on the same cluster; answers why any stayed put ("a.txt is already
+    there")."""
+    return remote_fs.move(hub().connected(cluster).ssh, paths, folder)
+
+
 @method("files.delete")
 def delete(cluster: str, path: str) -> None:
     remote_fs.remove(hub().connected(cluster).ssh, path)

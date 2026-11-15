@@ -110,3 +110,23 @@ def test_long_work_stays_on_the_login_node_so_it_outlasts_the_job():
     remote_fs.mkdir(ssh, "/scratch/jdoe/new")
     assert len(ssh.node) == 1
 
+
+
+def test_move(tmp_path):
+    sh = LocalShell()
+    (tmp_path / "into" / "b.txt").parent.mkdir()
+    (tmp_path / "into" / "b.txt").write_text("old")
+    for name in ("a b.txt", "b.txt"):
+        (tmp_path / name).write_text("new")
+    (tmp_path / "sub" / "deep").mkdir(parents=True)
+    why = remote_fs.move(sh, [str(tmp_path / "a b.txt"), str(tmp_path / "b.txt"), str(tmp_path / "sub")],
+                         str(tmp_path / "into"))
+    assert why == ["b.txt is already there"]
+    assert (tmp_path / "into" / "a b.txt").read_text() == "new" and not (tmp_path / "a b.txt").exists()
+    assert (tmp_path / "into" / "b.txt").read_text() == "old" and (tmp_path / "b.txt").exists()
+    assert (tmp_path / "into" / "sub" / "deep").is_dir()
+    sub = tmp_path / "into" / "sub"
+    assert remote_fs.move(sh, [str(sub)], str(sub / "deep")) == ["sub can't go inside itself"]
+    assert remote_fs.move(sh, [str(sub)], str(sub)) == ["sub can't go inside itself"]
+    assert remote_fs.move(sh, [str(sub)], str(tmp_path / "into")) == []  # already there: nothing to do
+    assert sub.is_dir()
