@@ -1,0 +1,465 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HPC Hub Video Scripts</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@600;700&display=swap">
+<style>
+/* Layout: a two column AV script (VIDEO left, AUDIO right), the way documentary scripts are written, with a reel list beside it */
+:root {
+  --bg: #f3f4f6;
+  --sheet: #ffffff;
+  --ink: #1b1f27;
+  --dim: #5b6372;
+  --rule: #d9dde4;
+  --accent: #1f5fbf;
+  --accent-soft: #e3ecfa;
+  --mine: #0f7a55;
+  --mine-soft: #e2f3ec;
+  --warn: #a8530b;
+  --warn-soft: #fbeedd;
+  --chip: #eceff3;
+  --font-display: "IBM Plex Sans Condensed", "Arial Narrow", system-ui, sans-serif;
+  --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-script: "Courier Prime", "Courier New", ui-monospace, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #12151b; --sheet: #1a1e26; --ink: #e7eaf0; --dim: #9aa3b2; --rule: #2c323d;
+    --accent: #7aa8f0; --accent-soft: #1f2a3d; --mine: #5cc79c; --mine-soft: #16302a;
+    --warn: #f0a85c; --warn-soft: #36271a; --chip: #252b35; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #12151b; --sheet: #1a1e26; --ink: #e7eaf0; --dim: #9aa3b2; --rule: #2c323d;
+  --accent: #7aa8f0; --accent-soft: #1f2a3d; --mine: #5cc79c; --mine-soft: #16302a;
+  --warn: #f0a85c; --warn-soft: #36271a; --chip: #252b35; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.55 var(--font-body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 20px 48px; }
+.wrap { max-width: 1240px; margin: 0 auto; display: grid; grid-template-columns: 250px minmax(0, 1fr); gap: 28px; align-items: start; }
+@media (max-width: 860px) { .wrap { grid-template-columns: minmax(0, 1fr); } }
+h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; margin: 0; letter-spacing: .01em; }
+button { font: inherit; cursor: pointer; }
+button:focus-visible, textarea:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* reel list */
+nav { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 16px); display: flex; flex-direction: column; gap: 14px; }
+.brand { display: flex; flex-direction: column; gap: 2px; }
+.brand h1 { font-size: 22px; }
+.brand p { margin: 0; color: var(--dim); font-size: 13px; }
+.reels { display: flex; flex-direction: column; gap: 2px; }
+.reel { display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 8px; align-items: start; text-align: left;
+  background: none; border: 0; border-radius: 8px; padding: 8px; color: var(--ink); }
+.reel:hover { background: var(--chip); }
+.reel[aria-current="true"] { background: var(--accent-soft); }
+.reel .no { font: 700 12px/1 var(--font-script); color: var(--accent); padding-top: 4px; }
+.reel .t { display: block; font-weight: 600; font-size: 14px; line-height: 1.3; }
+.reel .m { display: block; color: var(--dim); font-size: 12px; font-variant-numeric: tabular-nums; }
+.store { font-size: 12px; color: var(--dim); border-top: 1px solid var(--rule); padding-top: 10px; }
+.store b { color: var(--ink); font-weight: 600; }
+.files { display: flex; flex-wrap: wrap; gap: 8px; }
+@media (max-width: 860px) {
+  nav { position: static; }
+  .reels { flex-direction: row; overflow-x: auto; padding-bottom: 4px; }
+  .reel { min-width: 190px; }
+}
+
+/* the script */
+main { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+.slate { background: var(--sheet); border: 1px solid var(--rule); border-radius: 10px; padding: 20px 22px; display: flex; flex-direction: column; gap: 12px; }
+.slate .kind { font: 700 11px/1 var(--font-body); letter-spacing: .12em; text-transform: uppercase; color: var(--accent); }
+.slate h2 { font-size: 30px; line-height: 1.1; }
+.slate .goal { margin: 0; max-width: 68ch; }
+.facts { display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: 13px; color: var(--dim); font-variant-numeric: tabular-nums; }
+.facts b { color: var(--ink); font-weight: 600; }
+.setup { margin: 0; padding: 10px 12px; background: var(--chip); border-radius: 8px; font-size: 13.5px; max-width: 80ch; }
+.tools { display: flex; flex-wrap: wrap; gap: 8px; }
+.btn { border: 1px solid var(--rule); background: var(--sheet); color: var(--ink); border-radius: 7px; padding: 6px 12px; font-size: 13.5px; font-weight: 500; }
+.btn:hover { border-color: var(--dim); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--sheet); }
+.btn.save { background: var(--mine); border-color: var(--mine); color: var(--sheet); }
+.btn:disabled { opacity: .45; cursor: default; }
+
+.cols { display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); gap: 0; font: 700 11px/1 var(--font-body);
+  letter-spacing: .14em; text-transform: uppercase; color: var(--dim); padding: 0 22px; }
+.cols span + span { padding-left: 22px; }
+.scene { background: var(--sheet); border: 1px solid var(--rule); border-radius: 10px; display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); }
+.scene > div { padding: 16px 22px; min-width: 0; display: flex; flex-direction: column; gap: 10px; }
+.scene .video { border-right: 1px solid var(--rule); }
+@media (max-width: 700px) {
+  .cols { display: none; }
+  .scene { grid-template-columns: minmax(0, 1fr); }
+  .scene .video { border-right: 0; border-bottom: 1px solid var(--rule); }
+}
+.head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.head .n { font: 700 13px/1 var(--font-script); color: var(--accent); }
+.head h3 { font-size: 16px; }
+.type { font-size: 11.5px; font-weight: 600; padding: 3px 8px; border-radius: 999px; background: var(--chip); color: var(--dim); }
+.type.anim { background: var(--accent-soft); color: var(--accent); }
+.type.flow { background: var(--warn-soft); color: var(--warn); }
+.shot { margin: 0; font-size: 14px; }
+.prompt { font-size: 13px; background: var(--chip); border-radius: 8px; padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; }
+.prompt .lbl { font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--warn); }
+.prompt p { margin: 0; font-family: var(--font-script); font-size: 13.5px; line-height: 1.5; }
+.prompt .btn { align-self: flex-start; padding: 3px 10px; font-size: 12.5px; }
+.say { margin: 0; font-family: var(--font-script); font-size: 15.5px; line-height: 1.6; white-space: pre-wrap; }
+.say.old { color: var(--dim); text-decoration: line-through; text-decoration-color: var(--rule); font-size: 14px; }
+.audio .meta { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; color: var(--dim); font-variant-numeric: tabular-nums; }
+.mine { display: flex; flex-direction: column; gap: 8px; border-top: 1px dashed var(--rule); padding-top: 10px; }
+.mine label { font-size: 12px; font-weight: 600; color: var(--mine); letter-spacing: .04em; }
+textarea { width: 100%; min-height: 96px; resize: vertical; border: 1px solid var(--rule); border-radius: 8px; padding: 10px 12px;
+  background: var(--bg); color: var(--ink); font: 15px/1.6 var(--font-script); }
+textarea.saved { border-color: var(--mine); background: var(--mine-soft); }
+.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.status { font-size: 12.5px; color: var(--dim); }
+.status.ok { color: var(--mine); }
+.status.warn { color: var(--warn); }
+.notes { background: var(--sheet); border: 1px solid var(--rule); border-radius: 10px; padding: 16px 22px; display: flex; flex-direction: column; gap: 8px; }
+.notes h3 { font-size: 16px; }
+.notes p { margin: 0; color: var(--dim); font-size: 13.5px; }
+.toast { position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%);
+  background: var(--ink); color: var(--sheet); padding: 8px 14px; border-radius: 8px; font-size: 13.5px; }
+@media (prefers-reduced-motion: no-preference) { .reel, .btn { transition: background-color .15s, border-color .15s; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav aria-label="Videos">
+    <div class="brand"><h1>HPC Hub videos</h1><p>Scripts to read, change and record</p></div>
+    <div class="reels" id="reels"></div>
+    <div class="store" id="store"></div>
+    <div class="files">
+      <button class="btn primary" id="export" type="button">Download my versions</button>
+      <button class="btn" id="import" type="button">Open a saved file</button>
+      <input id="pick" type="file" accept=".json,application/json" hidden>
+    </div>
+  </nav>
+  <main id="main"></main>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+const WPM = 150  // a calm narration pace: words per minute
+
+// type: app (recorded from the HPC Hub demo, made up data only), anim (an animation I build as a page to record),
+// flow (a clip made in Google Flow from the prompt)
+const VIDEOS = [
+{ id: 'marketing', no: 'M', kind: 'Marketing', title: 'HPC Hub in 90 seconds',
+  goal: 'Make a researcher want to try HPC Hub: the cluster stops being in the way of the research.',
+  setup: 'Fast cuts with music. App shots come from the demo build, with a made up user (jdoe) and made up nodes, so none of your data shows. The opening and closing shots are Google Flow clips.',
+  scenes: [
+  { id: 'm1', name: 'The problem', type: 'flow', shot: 'A researcher late at night, lit by a laptop full of terminal text. Quick flashes of error messages: VPN, Duo, a Slurm queue.',
+    prompt: 'Cinematic close up of a tired young researcher at a desk at night, face lit by a laptop screen full of scrolling terminal text, cool blue light, shallow depth of field, slow push in, 8 seconds',
+    say: 'You came to do research. Somehow you ended up learning VPN clients, SSH, Slurm commands, and how to wait in a queue.' },
+  { id: 'm2', name: 'One click', type: 'app', shot: 'HPC Hub opens on Clusters. Click Connect on Wulver: VPN, sign in, the Duo step, then the card turns green.',
+    say: 'HPC Hub is a free app that takes you from your laptop to your cluster in one click. It connects the VPN, signs you in, and waits for your Duo push. That is it.' },
+  { id: 'm3', name: 'A compute node', type: 'app', shot: 'Get one, pick a ready size, the card shows waiting, then "On node n0042, 3 h left".',
+    say: 'Need a compute node? Pick a size, and HPC Hub asks Slurm for you. It shows where you are in the queue, and how much time your node has left.' },
+  { id: 'm4', name: 'Work that keeps running', type: 'app', shot: 'A terminal running a training loop. Close the laptop lid (real shot), open it again: the same terminal, still running.',
+    say: 'Your terminals live on the cluster. Close the laptop, catch your train, open it again, and your work is right where you left it.' },
+  { id: 'm5', name: 'Code and files', type: 'app', shot: 'VS Code open on the node, then Files with a results folder, then a notebook opening in the browser.',
+    say: 'Open VS Code on the compute node, browse your files, or open a notebook from the cluster in your own browser.' },
+  { id: 'm6', name: 'AI next to your data', type: 'app', shot: 'Agents: Claude working in a project folder on the cluster.',
+    say: 'Run AI agents like Claude and Codex on the cluster itself, right next to your data and your GPUs.' },
+  { id: 'm7', name: 'Every cluster, one window', type: 'app', shot: 'Clusters page with Wulver, Expanse and Bouchet cards, then the app on Windows, macOS, Linux and an Android phone.',
+    say: 'Use several clusters at once, from one window, on Windows, macOS, Linux and Android.' },
+  { id: 'm8', name: 'Close', type: 'flow', shot: 'Back to the researcher, now relaxed, reading results. Then the HPC Hub logo and the address.',
+    prompt: 'The same researcher in daylight, relaxed, smiling at charts of results on a laptop, warm natural light, calm slow camera move, 6 seconds',
+    say: 'HPC Hub. Spend your time on research, not on the cluster. Free and open source, at hpchub dot staylazy dot app.' },
+  ] },
+{ id: 'hpc-and-slurm', no: '1', kind: 'Tutorial 1', title: 'What is HPC, and what is Slurm?',
+  goal: 'Explain the ideas a new researcher needs before touching a cluster: nodes, the login node, compute nodes, jobs, the queue, time limits and SUs.',
+  setup: 'Mostly animations. I build each one as a page you can click through while you record the screen, so you control the pace. The last scene shows the app from the demo build.',
+  scenes: [
+  { id: 't1s1', name: 'Why a laptop is not enough', type: 'anim', shot: 'A laptop with a progress bar crawling toward "3 weeks". Next to it a cluster finishes the same work in "4 hours".',
+    say: 'Your laptop is great for writing a paper. But what about training a model on a million images, or running a simulation ten thousand times? On a laptop, that could take weeks.' },
+  { id: 't1s2', name: 'What HPC means', type: 'flow', shot: 'From one computer, zoom out to rows of racks in a data center, linked together.',
+    prompt: 'Slow aerial camera move over long rows of server racks in a clean university data center, blinking status lights, cool blue and white tones, no people, 8 seconds',
+    say: 'High performance computing, or HPC, means using many powerful computers together. A cluster is a group of these computers, called nodes, linked by a very fast network and sharing the same storage. Universities run clusters so their researchers can use them.' },
+  { id: 't1s3', name: 'Login node and compute nodes', type: 'anim', shot: 'A diagram: you, then the login node (the front desk), then rows of compute nodes behind it. Click a node to see its cores, memory and GPUs.',
+    say: 'When you connect, you land on the login node. Think of it as the front desk. Everyone shares it, so it is only for small things: editing files, moving data, and asking for resources. The heavy work runs on compute nodes, the machines in the back with many cores, lots of memory, and sometimes GPUs.' },
+  { id: 't1s4', name: 'Why a scheduler', type: 'anim', shot: 'Many small figures arrive at once and crowd the nodes. The picture freezes on the chaos.',
+    say: 'Hundreds of people share the same cluster. If everyone just grabbed machines, it would be chaos. So the cluster has a scheduler that decides whose work runs where, and when.' },
+  { id: 't1s5', name: 'Slurm and jobs', type: 'anim', shot: 'A request card: 4 cores, 16 GB, 2 hours. It joins a queue of other cards, then slides onto a node with room, like fitting blocks.',
+    say: 'On most clusters, that scheduler is Slurm. You tell Slurm what you need: how many cores, how much memory, maybe a GPU, and for how long. Slurm puts your request, called a job, in the queue, and starts it as soon as a node with enough room is free.' },
+  { id: 't1s6', name: 'Waiting is normal', type: 'anim', shot: 'The queue again, with reasons on the cards: Priority, Resources. A small job jumps ahead into a gap.',
+    say: 'Waiting is normal. Slurm gives a reason: Priority means others are ahead of you, and Resources means no node is free enough yet. Smaller and shorter jobs often start sooner, so ask only for what you really need.' },
+  { id: 't1s7', name: 'Time limits and SUs', type: 'anim', shot: 'A clock counting down on a running job, next to a meter of service units going down.',
+    say: 'Every job has a time limit. When the time is up, Slurm stops the job, so save your work as you go. Many clusters also count what you use in service units, or SUs, which come from your group\'s allocation. A node you keep but do not use still counts, until you give it back.' },
+  { id: 't1s8', name: 'Interactive or batch', type: 'anim', shot: 'Two lanes. Interactive: a person typing on a node. Batch: a script dropped into the queue, the person walks away, results appear later.',
+    say: 'There are two ways to use a compute node. Interactive: you get a node and work on it yourself, typing as you go. Batch: you write a script, submit it, and Slurm runs it while you do something else.' },
+  { id: 't1s9', name: 'Where HPC Hub fits', type: 'app', shot: 'The Get a node window: cores, memory, time. Then the card waiting in the queue, then on a node with time left.',
+    say: 'Normally you would type commands like salloc and sbatch with the right options. HPC Hub does that part for you. You choose a size in a simple window, it asks Slurm, shows you the queue, and keeps track of your time. In the next video, we connect to a cluster for the first time.' },
+  ] },
+{ id: 'connect', no: '2', kind: 'Tutorial 2', title: 'Connect to your cluster',
+  goal: 'From download to a green card: install, pick a cluster, sign in, VPN and Duo.',
+  setup: 'Recorded from the demo build, which walks through the same steps with a made up account. If you want a real Duo moment on camera, film your own phone with the notification, or tell me and we record a real sign in together while you approve Duo.',
+  scenes: [
+  { id: 't2s1', name: 'Install', type: 'app', shot: 'The download page, then the app opening for the first time on each system.',
+    say: 'Download HPC Hub for your computer. On Windows and macOS it installs like any other app. On Linux it is a single file you can run.' },
+  { id: 't2s2', name: 'Pick your cluster', type: 'app', shot: 'The first start: a list of clusters. Choose Wulver.',
+    say: 'The first time it opens, pick your cluster. HPC Hub already knows the settings for clusters like Wulver at NJIT, Expanse at SDSC, and Bouchet at Yale.' },
+  { id: 't2s3', name: 'Sign in', type: 'app', shot: 'Username and password fields, with the made up user jdoe.',
+    say: 'Type your username and password. HPC Hub keeps your password in your computer\'s own secure password storage, and uses it only to sign you in to your cluster.' },
+  { id: 't2s4', name: 'VPN and Duo', type: 'app', shot: 'The card steps through VPN, then the Duo step. Cut to a phone getting the push (your own phone, filmed, or a Flow clip).',
+    prompt: 'Close up of a hand holding a smartphone that lights up with a sign in approval notification, finger taps approve, soft office background, 4 seconds',
+    say: 'If your cluster needs a VPN, HPC Hub connects it for you. Then your phone gets a Duo push. Approve it, and you are in.' },
+  { id: 't2s5', name: 'Connected', type: 'app', shot: 'The card turns green. Open a terminal and a folder without any new Duo push.',
+    say: 'The card turns green: you are connected. HPC Hub keeps this connection open, so opening a terminal or a folder does not ask for Duo again.' },
+  { id: 't2s6', name: 'Next', type: 'app', shot: 'The card with Get one highlighted.',
+    say: 'Next, we get a compute node and open a terminal that keeps running, even when your laptop sleeps.' },
+  ] },
+{ id: 'nodes-and-terminals', no: '3', kind: 'Tutorial 3', title: 'Compute nodes and terminals',
+  goal: 'Get a node, follow it in the queue, use terminals that survive closing the laptop, and give the node back.',
+  setup: 'Demo build for the app. One real shot of closing and opening a laptop lid.',
+  scenes: [
+  { id: 't3s1', name: 'Get one', type: 'app', shot: 'Get one on the card, the window with ready sizes (Light CPU, Heavy CPU, GPU) and the fields for cores, memory and time.',
+    say: 'Press Get one on the cluster card. Pick a ready size, or set the cores, memory and time yourself. HPC Hub shows when your node is likely to start.' },
+  { id: 't3s2', name: 'In the queue', type: 'app', shot: 'The card waiting, with Stop waiting.',
+    say: 'While Slurm looks for a node, the card shows that you are waiting. Changed your mind? Press Stop waiting, and the request is cancelled on the cluster too.' },
+  { id: 't3s3', name: 'On the node', type: 'app', shot: 'The card: On node n0042, time left.',
+    say: 'When your node is ready, the card shows its name and how much time it has left.' },
+  { id: 't3s4', name: 'A terminal that keeps running', type: 'app', shot: 'Terminals, New terminal, start a long running command. Close the tab. Close the laptop lid (real shot).',
+    say: 'Open Terminals and start a new one. It runs on the cluster inside tmux, so it keeps going when you close the tab, lose your WiFi, or shut your laptop.' },
+  { id: 't3s5', name: 'Come back', type: 'app', shot: 'Open the laptop, open HPC Hub, attach to the same session: the command is still running.',
+    say: 'Later, open HPC Hub again, even on another computer, and attach to the same session. Your program kept running the whole time.' },
+  { id: 't3s6', name: 'Give it back', type: 'app', shot: 'The menu on the card: Release node.',
+    say: 'When you are done, release the node, so it stops counting against your group\'s SUs.' },
+  ] },
+{ id: 'code-and-files', no: '4', kind: 'Tutorial 4', title: 'Code, files and web pages',
+  goal: 'Work on the cluster as if it were your own computer: VS Code, files, notebooks, and bringing a project over.',
+  setup: 'Demo build. The VS Code shot needs the real VS Code window; I can set up a made up project for it.',
+  scenes: [
+  { id: 't4s1', name: 'VS Code on a node', type: 'app', shot: 'VS Code on the card, the window that follows the job, then VS Code open on the cluster folder.',
+    say: 'Press VS Code on the card. HPC Hub starts VS Code on a compute node as a job of its own, and opens it in the VS Code app or in your browser.' },
+  { id: 't4s2', name: 'First time sign in', type: 'app', shot: 'The step with a GitHub code to type.',
+    say: 'The first time, VS Code asks you to sign in with GitHub. HPC Hub shows you the code to type, so you never have to dig through a log.' },
+  { id: 't4s3', name: 'Files', type: 'app', shot: 'Files: home folder, drag a file in from the desktop, download a results folder.',
+    say: 'Files shows your folders on the cluster. Drag files in from your computer, download your results, rename, or zip them, all without any copy commands.' },
+  { id: 't4s4', name: 'Notebooks and web pages', type: 'app', shot: 'A terminal starts Jupyter, which prints a localhost link. A banner offers Open on this computer, and the notebook opens in the browser.',
+    say: 'Running Jupyter or TensorBoard in a terminal? When it prints its link, HPC Hub offers to open the page on this computer, through your existing connection, with no setup.' },
+  { id: 't4s5', name: 'Bring a project over', type: 'app', shot: 'Projects, From this computer, pick a folder, copy.',
+    say: 'Have a project on your laptop? From this computer copies it to the cluster, and can bring your Claude chats about that project along too.' },
+  ] },
+{ id: 'agents', no: '5', kind: 'Tutorial 5', title: 'AI agents on the cluster',
+  goal: 'Run coding agents where the data and GPUs are, keep them running, and find their chats again.',
+  setup: 'Demo build. An agent working for real is best filmed on a made up project; I can prepare one.',
+  scenes: [
+  { id: 't5s1', name: 'Why on the cluster', type: 'anim', shot: 'Data and GPUs on the cluster; an agent moving next to them instead of copying data down.',
+    say: 'AI coding agents work best next to your data. HPC Hub runs them on the cluster itself, so they can read your files and use the GPUs directly.' },
+  { id: 't5s2', name: 'Start an agent', type: 'app', shot: 'Agents menu on the card: Claude, Codex, Antigravity, Cursor. Pick Claude and a project folder.',
+    say: 'Open Agents on the card, pick Claude, Codex, Antigravity or Cursor, and choose a folder. HPC Hub starts the agent on a compute node, in a session that keeps running.' },
+  { id: 't5s3', name: 'Not installed yet', type: 'app', shot: 'The message with Install Claude.',
+    say: 'If the agent is not on the cluster yet, HPC Hub offers to install it in your home folder with its official installer.' },
+  { id: 't5s4', name: 'Name it', type: 'app', shot: 'Rename session, with Rename the Claude chat too switched on.',
+    say: 'Give the session a name, and HPC Hub can give the Claude chat the same name, so you can find it again later.' },
+  { id: 't5s5', name: 'Leave it working', type: 'app', shot: 'Close the window; later the session list shows the agent still running.',
+    say: 'Close the window and let it work. The agent keeps running on the cluster until you come back.' },
+  ] },
+{ id: 'many-clusters', no: '6', kind: 'Tutorial 6', title: 'Several clusters, one place',
+  goal: 'Show that HPC Hub makes using more than one cluster simple.',
+  setup: 'Demo build, which already has several made up clusters.',
+  scenes: [
+  { id: 't6s1', name: 'Side by side', type: 'app', shot: 'Clusters page with two connected cards, each with its own node.',
+    say: 'Connect to Wulver and Expanse at the same time. Each cluster gets its own card, its own node, and its own terminals.' },
+  { id: 't6s2', name: 'All your jobs', type: 'app', shot: 'The Jobs page with jobs from two clusters.',
+    say: 'Jobs lists your jobs on every cluster in one place, with what each one is waiting for.' },
+  { id: 't6s3', name: 'Your allocation', type: 'app', shot: 'The Usage page.',
+    say: 'Usage shows how much of your group\'s allocation is left, so there are no surprises at the end of the month.' },
+  { id: 't6s4', name: 'Close', type: 'app', shot: 'The Clusters page, then the logo.',
+    say: 'That is HPC Hub. Less time on the cluster, more time on your research.' },
+  ] },
+]
+
+const TYPE_LABEL = { app: 'App recording', anim: 'Animation to build', flow: 'Google Flow clip' }
+const KEY = 'hpchub.videoScripts'  // your saved versions, in this browser
+const state = { edits: {}, drafts: {}, video: VIDEOS[0].id }  // drafts: typed, not saved yet
+const $ = (s, el = document) => el.querySelector(s)
+const words = (t) => (t.trim().match(/\S+/g) || []).length
+const secs = (t) => Math.max(1, Math.round(words(t) / WPM * 60))
+const clock = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
+const DASH = /[-‐‑‒–—―−]/
+const textOf = (sc) => state.edits[sc.id]?.text?.trim() || sc.say
+
+function toast(msg) {
+  const t = $('#toast'); t.textContent = msg; t.hidden = false
+  clearTimeout(toast.timer); toast.timer = setTimeout(() => { t.hidden = true }, 2200)
+}
+
+async function copy(text, what) {
+  try { await navigator.clipboard.writeText(text); toast(`${what} copied`) }
+  catch { toast('Copy did not work here. Select the text and copy it yourself.') }
+}
+
+function renderReels() {
+  const box = $('#reels'); box.textContent = ''
+  for (const v of VIDEOS) {
+    const total = v.scenes.reduce((n, sc) => n + secs(textOf(sc)), 0)
+    const mine = v.scenes.filter((sc) => state.edits[sc.id]?.text?.trim()).length
+    const b = document.createElement('button')
+    b.className = 'reel'; b.setAttribute('aria-current', String(v.id === state.video))
+    b.innerHTML = '<span class="no"></span><span><span class="t"></span><span class="m"></span></span>'
+    $('.no', b).textContent = v.no
+    $('.t', b).textContent = v.title
+    $('.m', b).textContent = `${clock(total)} spoken · ${mine ? `${mine} of ${v.scenes.length} yours` : `${v.scenes.length} scenes`}`
+    b.onclick = () => { location.hash = v.id }
+    box.append(b)
+  }
+}
+
+function sceneEl(v, sc, i) {
+  const el = document.createElement('article'); el.className = 'scene'; el.id = sc.id
+  const saved = state.edits[sc.id]?.text?.trim() || ''
+  el.innerHTML = `
+    <div class="video">
+      <div class="head"><span class="n"></span><h3></h3></div>
+      <span class="type"></span>
+      <p class="shot"></p>
+    </div>
+    <div class="audio">
+      <div class="meta"><span class="who"></span><span class="len"></span></div>
+      <p class="say"></p>
+      <div class="mine">
+        <label></label>
+        <textarea rows="4"></textarea>
+        <div class="row">
+          <button class="btn save" type="button">Save my version</button>
+          <button class="btn fill" type="button">Start from the draft</button>
+          <button class="btn clear" type="button">Back to the draft</button>
+          <span class="status" aria-live="polite"></span>
+        </div>
+      </div>
+    </div>`
+  $('.n', el).textContent = `SCENE ${i + 1}`
+  $('h3', el).textContent = sc.name
+  const type = $('.type', el); type.textContent = TYPE_LABEL[sc.type]; type.classList.add(sc.type)
+  $('.shot', el).textContent = sc.shot
+  if (sc.prompt) {
+    const p = document.createElement('div'); p.className = 'prompt'
+    p.innerHTML = '<span class="lbl">Prompt for Google Flow</span><p></p><button class="btn" type="button">Copy prompt</button>'
+    $('p', p).textContent = sc.prompt
+    $('button', p).onclick = () => copy(sc.prompt, 'Prompt')
+    $('.video', el).append(p)
+  }
+  const say = $('.say', el); say.textContent = sc.say
+  if (saved) say.classList.add('old')
+  $('.who', el).textContent = saved ? 'My draft (replaced by yours)' : 'My draft'
+  const ta = $('textarea', el), status = $('.status', el), label = $('label', el)
+  ta.id = `mine-${sc.id}`; label.htmlFor = ta.id
+  label.textContent = 'YOUR VERSION'
+  ta.placeholder = 'Write how you would say it. Leave empty to keep my draft.'
+  ta.value = state.drafts[sc.id] ?? saved
+  ta.classList.toggle('saved', !!saved)
+  const len = $('.len', el)
+  const update = () => {
+    const now = ta.value.trim()
+    len.textContent = `about ${secs(now || sc.say)} s`
+    const dirty = now !== saved
+    $('.save', el).disabled = !dirty
+    $('.clear', el).disabled = !saved && !now
+    if (DASH.test(now)) { status.className = 'status warn'; status.textContent = 'This has a dash in it.' }
+    else if (dirty) { status.className = 'status'; status.textContent = 'Not saved yet' }
+    else if (saved) { status.className = 'status ok'; status.textContent = 'Saved' }
+    else { status.className = 'status'; status.textContent = '' }
+  }
+  ta.oninput = () => { state.drafts[sc.id] = ta.value; update() }
+  $('.fill', el).onclick = () => { ta.value = state.drafts[sc.id] = sc.say; ta.focus(); update() }
+  $('.save', el).onclick = () => save(sc.id, ta.value.trim(), status)
+  $('.clear', el).onclick = () => { ta.value = ''; delete state.drafts[sc.id]; if (saved) save(sc.id, '', status); else update() }
+  update()
+  return el
+}
+
+function keep() {
+  try { localStorage.setItem(KEY, JSON.stringify(state.edits)); return true } catch { return false }
+}
+
+function save(id, text, status) {
+  if (text) state.edits[id] = { text, updatedAt: Date.now() }
+  else delete state.edits[id]
+  delete state.drafts[id]
+  if (!keep()) {
+    status.className = 'status warn'
+    status.textContent = 'This browser would not keep it. Use Download my versions.'
+  }
+  toast(text ? 'Your version is saved' : 'Back to the draft')
+  render(false)
+}
+
+function renderVideo() {
+  const v = VIDEOS.find((x) => x.id === state.video) || VIDEOS[0]
+  const main = $('#main'); main.textContent = ''
+  const total = v.scenes.reduce((n, sc) => n + secs(textOf(sc)), 0)
+  const slate = document.createElement('section'); slate.className = 'slate'
+  slate.innerHTML = `<span class="kind"></span><h2></h2><p class="goal"></p>
+    <div class="facts"><span>Spoken length <b class="tl"></b></span><span>Scenes <b class="sc"></b></span><span>Yours <b class="ym"></b></span></div>
+    <p class="setup"></p>
+    <div class="tools"><button class="btn primary cp" type="button">Copy the whole script</button></div>`
+  $('.kind', slate).textContent = v.kind
+  $('h2', slate).textContent = v.title
+  $('.goal', slate).textContent = v.goal
+  $('.tl', slate).textContent = clock(total)
+  $('.sc', slate).textContent = v.scenes.length
+  $('.ym', slate).textContent = `${v.scenes.filter((sc) => state.edits[sc.id]?.text?.trim()).length} of ${v.scenes.length}`
+  $('.setup', slate).textContent = v.setup
+  $('.cp', slate).onclick = () => copy(v.scenes.map((sc, i) => `Scene ${i + 1}, ${sc.name}\n${textOf(sc)}`).join('\n\n'), 'Script')
+  main.append(slate)
+  const cols = document.createElement('div'); cols.className = 'cols'
+  cols.innerHTML = '<span>Video</span><span>Audio</span>'
+  main.append(cols)
+  v.scenes.forEach((sc, i) => main.append(sceneEl(v, sc, i)))
+}
+
+function render(keepFocus = true) {
+  const active = keepFocus && document.activeElement?.tagName === 'TEXTAREA' ? document.activeElement : null
+  if (active) { renderReels(); return }  // never rebuild under someone typing
+  renderReels(); renderVideo()
+}
+
+function route() {
+  const id = location.hash.slice(1)
+  state.video = VIDEOS.some((v) => v.id === id) ? id : VIDEOS[0].id
+  render(false)
+  window.scrollTo(0, 0)
+}
+
+window.addEventListener('hashchange', route)
+route()
+
+try { state.edits = JSON.parse(localStorage.getItem(KEY) || '{}') || {} } catch { state.edits = {} }
+render(false)
+$('#store').innerHTML = 'Saved versions stay in this browser. Press <b>Download my versions</b> and tell Claude: it reads the file from your Downloads folder.'
+
+$('#export').onclick = () => {
+  const out = { saved: new Date().toISOString(), videos: VIDEOS.map((v) => ({ id: v.id, title: v.title,
+    scenes: v.scenes.map((sc, i) => ({ id: sc.id, scene: i + 1, name: sc.name, draft: sc.say,
+      mine: state.edits[sc.id]?.text || '' })) })) }
+  const a = document.createElement('a')
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(out, null, 2)], { type: 'application/json' }))
+  a.download = 'hpc-hub-video-scripts-mine.json'
+  a.click()
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000)
+  toast('Downloaded hpc-hub-video-scripts-mine.json')
+}
+$('#import').onclick = () => $('#pick').click()
+$('#pick').onchange = async (e) => {
+  const file = e.target.files[0]
+  if (!file) return
+  try {
+    const got = JSON.parse(await file.text())
+    const edits = {}
+    for (const v of got.videos || []) for (const sc of v.scenes || []) if (sc.mine?.trim()) edits[sc.id] = { text: sc.mine.trim(), updatedAt: Date.now() }
+    state.edits = edits; keep(); render(false); toast('Opened your saved versions')
+  } catch { toast('That file is not a saved script file.') }
+  e.target.value = ''
+}
+</script>
+</body>
+</html>
