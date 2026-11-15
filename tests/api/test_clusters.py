@@ -236,6 +236,15 @@ def test_queues_for_other_groups_are_not_offered(hub):
     assert got["partitions"] == ["general"] and got["default_partition"] == "general"  # course: the courses group
 
 
+def test_course_is_never_offered(hub):
+    hub.sessions["wulver"].limits = Limits(partitions={"general": 4320}, default_partition="general",
+                                           allowed_qos=["low", "standard", "course"],
+                                           account_qos={"lab": ["low", "standard"], "class2026": ["course"]})
+    got = slurm_limits.partitions("wulver", account="lab")
+    assert got["accounts"] == ["lab"] and "course" not in got["qos"] and got["qos_note"] == ""
+    assert "course" not in slurm_limits.partitions("wulver", account="class2026")["qos"]
+
+
 def test_log_tail(hub, monkeypatch, tmp_path):
     monkeypatch.setattr(clusters, "log_dir", lambda: tmp_path)
     assert clusters.log("wulver") == []

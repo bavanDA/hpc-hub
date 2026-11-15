@@ -11,6 +11,15 @@ from ..core.ssh import SshError
 from .state import State
 
 
+def asked(p: ComputeProfile) -> str:
+    """What a request asks for, for the log: "4 cores, 16 GB, 04:00:00, queue general, account lab, priority low"."""
+    bits = [f"{p.cpus} cores", f"{p.mem_gb} GB", p.time]
+    if p.gpus:
+        bits.append(f"{p.gpus} GPU{'s' if p.gpus > 1 else ''}" + (f" ({p.gpu_type})" if p.gpu_type else ""))
+    bits += [f"{label} {v}" for label, v in (("queue", p.partition), ("account", p.account), ("priority", p.qos)) if v]
+    return ", ".join(bits)
+
+
 class NodesMixin:
     """ClusterSession's node handling. Uses self.ssh, self.cfg, self.limits, self.allocation, self.default_account,
     self._cancel, self._set and self._log."""
@@ -24,13 +33,9 @@ class NodesMixin:
         refused = self.limits.refused_qos(profile.partition, profile.qos, profile.account) if self.limits else ""
         if refused and not profile.qos:  # your default priority isn't allowed there: the one the queue takes
             choices = self.limits.qos_choices(profile.partition, profile.account)
-            other = None if choices or profile.partition else self.limits.queue_for(profile.account, profile.gpus)
             if choices:
                 self._log(f"{refused} Using priority {choices[0]}")
                 profile, refused = replace(profile, qos=choices[0]), ""
-            elif other:  # you named no queue: one your account can use (a course account: the course queue)
-                self._log(f"{refused} Using the {other[0]} queue" + (f", priority {other[1]}" if other[1] else ""))
-                profile, refused = replace(profile, partition=other[0], qos=other[1]), ""
         # SlurmError, so every caller reports it like a refusal from Slurm (the card, an agent waiting for a node)
         if refused:  # Slurm would take the job and keep it waiting forever
             raise SlurmError(f"{refused} Change it under Queue and priority.")
@@ -38,9 +43,14 @@ class NodesMixin:
             part = profile.partition or self.limits.default_partition
             raise SlurmError(f"The {part} queue is for GPU jobs, and this asks for no GPU. Pick the GPU size, or "
                              "another queue.")
+        if self.limits and not profile.qos:  # no default for your group: name one, never leave Slurm to guess
+            named = self.limits.qos_to_name(profile.partition, profile.account)
+            if named:
+                profile = replace(profile, qos=named)
         fitted, note = self.limits.fit(profile) if self.limits else (profile, "")
         if note:
             self._log(note)
+        self._log("Asking Slurm for " + asked(fitted))
         return fitted
 
     def _account(self) -> str:

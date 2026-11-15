@@ -98,7 +98,7 @@ def test_a_partition_that_takes_only_its_own_priority():
     L = limits.parse(WULVER)
     L.rules = {"debug": {"AllowQos": "debug"}, "general": {}}
     assert L.qos_choices("debug") == ["debug"]
-    assert L.qos_choices("general") == ["debug", "low", "standard", "course"]
+    assert L.qos_choices("general") == ["debug", "low", "standard"]  # never course
     assert L.refused_qos("debug", "low") == "The debug queue takes priority debug, not low."
     assert L.refused_qos("debug", "debug") == "" and L.refused_qos("general", "low") == ""
     L.default_qos = "low"
@@ -108,42 +108,15 @@ def test_a_partition_that_takes_only_its_own_priority():
     assert limits.Limits().refused_qos("debug", "low") == ""  # nothing known yet: Slurm decides
 
 
-# Wulver as a student sees it: a course group only, no default priority; general refuses course
-COURSE = """general*|infinite
-course|infinite
-course_gpu|infinite
-@QOS
-standard|3-00:00:00
-course|3-00:00:00
-@ASSOC
-2026-fall-cs-100-jdoe|course|
-@USER
-2026-fall-cs-100-jdoe
-@PARTS
-PartitionName=general DenyQos=debug,test,course QoS=N/A
-PartitionName=course AllowQos=course QoS=N/A
-PartitionName=course_gpu AllowQos=course QoS=N/A
-"""
-
-
-def test_a_course_account_gets_the_course_queue():
-    L = limits.parse(COURSE)
-    L.gpu_only = ["course_gpu"]
-    acct = "2026-fall-cs-100-jdoe"
-    assert L.refused_qos("general", "", acct) == f"Your account {acct} can't use the general queue."
-    assert L.refused_qos("course", "", acct) == "" and L.refused_qos("course", "course", acct) == ""
-    assert L.queue_for(acct) == ("course", "course")
-    assert L.queue_for(acct, gpus=1) == ("course", "course")
-    L.rules["course"]["AllowQos"] = "nobody"
-    assert L.queue_for(acct) is None and L.queue_for(acct, gpus=1) == ("course_gpu", "course")
-
-
-def test_the_account_counts():
+def test_qos_to_name():
     L = limits.parse(WULVER)
-    L.account_qos = {"lab": ["low", "standard"], "dept": ["high_dept", "normal"]}
-    L.allowed_qos = ["low", "standard", "high_dept", "normal"]
-    L.rules = {"general": {}}
-    assert L.refused_qos("general", "standard", "lab") == ""
-    assert L.refused_qos("general", "standard", "dept") == (
-        "The general queue takes priority high_dept or normal, not standard.")
-    assert L.queue_for("lab") == ("general", "low")
+    L.rules = {"general": {"DenyQos": "debug"}}
+    L.account_qos = {"lab": ["debug", "low", "standard"], "dept": ["debug", "high_dept", "normal"],
+                     "free": ["low", "debug"], "class": ["course"]}
+    L.allowed_qos = ["debug", "low", "standard", "high_dept", "normal", "course"]
+    assert [L.qos_to_name("general", a) for a in ("lab", "dept", "free", "class")] == ["standard", "normal", "low", ""]
+    L.default_qos = "low"
+    assert L.qos_to_name("general", "lab") == ""  # your default is fine there: Slurm takes it
+    assert L.refused_qos("general", "high_dept", "lab") == (
+        "The general queue takes priority low or standard, not high_dept.")
+    assert L.refused_qos("general", "course", "class") == "Your account can't use the general queue."

@@ -17,6 +17,8 @@ FETCH = ("sinfo -h -o '%P|%l|%c|%m'; echo @QOS; "
          "echo @FLAGS; scontrol show config 2>/dev/null | grep -i '^PriorityFlags'; true")
 RULES = ("AllowQos", "DenyQos", "AllowAccounts", "DenyAccounts", "QoS", "MaxNodes", "DefaultTime", "DefMemPerCPU",
          "OverSubscribe", "PreemptMode", "TotalNodes", "State")  # kept from scontrol show partition
+NEVER_QOS = {"course"}  # the owner's rule: HPC Hub never offers or picks these
+PREFERRED_QOS = ("standard", "normal")  # what to name when your group has no default, in this order
 SLURM_TIME = re.compile(r"^(?:(\d+)-)?(\d+)(?::(\d+))?(?::(\d+))?$")
 
 
@@ -98,36 +100,32 @@ class Limits:
         """The priorities to offer for a job here: your group's that this partition takes."""
         mine = self.account_qos.get(account) or self.allowed_qos
         usable = self.usable_qos(partition or self.default_partition)
-        return [q for q in mine if q in usable]
+        return [q for q in mine if q in usable and q not in NEVER_QOS]
 
     def refused_qos(self, partition: str, qos: str, account: str = "") -> str:
-        """Why a job with this priority (empty: your default) billed to account would be refused or wait forever on
-        this partition, "" if it can run. With no priority named and no default, Slurm takes one of the account's
-        that the partition takes, so none means refused (a course account on Wulver's general queue: "Invalid qos
-        specification"). Unknown limits say nothing: Slurm decides."""
+        """Why a job with this priority (empty: your default) would wait forever on this partition, "" if it can run.
+        Unknown limits say nothing: Slurm decides."""
         part, q = partition or self.default_partition, qos or self.default_qos
-        if not self.allowed_qos:
+        if not q or not self.allowed_qos:
             return ""
         choices = self.qos_choices(part, account)
-        if q in choices or (not q and choices):
+        if q in choices:
             return ""
         if choices:
             return f"The {part} queue takes priority {' or '.join(choices)}, not {q}."
-        return f"Your account {account} can't use the {part} queue." if account and account in self.account_qos \
-            else f"Your account can't use the {part} queue."
+        return f"Your account can't use the {part} queue."
 
-    def queue_for(self, account: str = "", gpus: int = 0) -> tuple[str, str] | None:
-        """A queue this account can use and the priority to ask there, for a job that names none: your default queue
-        if it takes the account, else the first that does (a course account: the course queue). GPU-only queues only
-        with a GPU. None if no queue takes it."""
-        queues = list(dict.fromkeys([self.default_partition, *self.partitions, *self.rules]))
-        for part in queues:
-            if not part or not self.yours(part) or (self.needs_gpu(part) and not gpus):
-                continue
-            choices = self.qos_choices(part, account)
-            if choices:  # named, unless it is your default: Slurm (or the site's own rules) may pick another
-                return part, "" if self.default_qos in choices else choices[0]
-        return None
+    def qos_to_name(self, partition: str, account: str = "") -> str:
+        """The priority to name for a job that names none, when your group has no default this queue takes: Slurm
+        would then guess "normal" and refuse the job ("Invalid qos specification") if your group lacks it. Standard
+        first, then normal, then one that isn't free or for tests. "" when your default does, or nothing is known."""
+        choices = self.qos_choices(partition, account)
+        if not choices or self.default_qos in choices:
+            return ""
+        for q in (*PREFERRED_QOS, *[c for c in choices if c not in ("low", "debug")], *choices):
+            if q in choices:
+                return q
+        return ""
 
     def pick_qos(self, partition: str, qos: str = "") -> str:
         """The QoS to read limits from: the one named, else your default, or the first this partition takes when it

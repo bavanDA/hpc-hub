@@ -38,18 +38,23 @@ def partitions(cluster: str, partition: str = "", qos: str = "", account: str = 
     per_core = lim.mem_per_core_mb.get(part)
     # only your queues: not ones kept for other groups (a course queue for a courses group)
     return {"known": True, "partitions": [p for p in lim.partitions if lim.yours(p)],
-            # the queue the window starts on: one this account can use (a course account: the course queue)
-            "default_partition": (lim.queue_for(account) or (lim.default_partition,))[0],
-            "qos": choices or lim.account_qos.get(account) or lim.allowed_qos,
+            "default_partition": lim.default_partition,
+            "qos": choices or _offered(lim.account_qos.get(account) or lim.allowed_qos),
             # the priority asked for (or your default) waits forever here: say so, and which one to use instead
             "qos_refused": refused, "qos_fix": choices[0] if refused and choices else "",
-            "qos_note": _only(part, choices, lim.account_qos.get(account) or lim.allowed_qos),
+            "qos_note": _only(part, choices, _offered(lim.account_qos.get(account) or lim.allowed_qos)),
             "needs_gpu": lim.needs_gpu(part),  # a GPU-only queue: the window adds a GPU
             "gpu_queues": [p for p in lim.gpu_only if lim.yours(p)],  # only offered with the GPU size
-            "default_qos": lim.default_qos, "accounts": list(lim.account_qos), "default_account": lim.default_account,
+            "default_qos": lim.default_qos, "default_account": lim.default_account,
+            # never a course group (the owner's rule): one whose priorities are all ones HPC Hub never uses
+            "accounts": [a for a, qs in lim.account_qos.items() if _offered(qs) or not qs],
             "longest": longest, "why": why, "cores": cores, "memory_gb": memory_gb,
             "mem_per_core_gb": round(per_core / 1024, 2) if per_core else None, "gpu_caps": lim.gpu_caps(qos),
             "billing": _billing(s.cfg, lim.billing_for(part, qos), part)}
+
+
+def _offered(qos: list[str]) -> list[str]:
+    return [q for q in qos if q not in limits.NEVER_QOS]
 
 
 def _only(partition: str, choices: list[str], yours: list[str]) -> str:
