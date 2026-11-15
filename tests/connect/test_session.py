@@ -446,6 +446,34 @@ def test_a_priority_the_partition_refuses_never_reaches_slurm():
     assert s.fit(config.ComputeProfile(partition="gpu", qos="low", gpus=1, time="01:00:00")).gpus == 1
 
 
+def test_a_course_account_asks_the_course_queue():
+    """A student's only group is a course: Wulver's general queue refuses it ("Invalid qos specification")."""
+    import subprocess
+
+    import pytest
+
+    from hpc_hub.compute import limits
+    from hpc_hub.compute.slurm import SlurmError
+    from hpc_hub.connect.session import ClusterSession
+    from hpc_hub.core import config
+    from tests.compute.test_limits import COURSE
+
+    class Ssh:
+        def run(self, cmd, timeout=60):
+            return subprocess.CompletedProcess(cmd, 0, "2026-fall-cs-100-jdoe\n" if "defaultaccount" in cmd else "", "")
+        on_login = run
+    s = object.__new__(ClusterSession)
+    s.cfg, s.ssh, s.default_account = config.default_clusters()[0], Ssh(), None
+    logged = []
+    s._log = logged.append
+    s.limits = limits.parse(COURSE)
+    p = s.fit(config.ComputeProfile(cpus=4, mem_gb=16, time="01:00:00"))
+    assert (p.partition, p.qos, p.account) == ("course", "course", "2026-fall-cs-100-jdoe")
+    assert "Using the course queue, priority course" in logged[-1]
+    with pytest.raises(SlurmError, match="can't use the general queue"):  # you picked it: say so, never switch
+        s.fit(config.ComputeProfile(partition="general", time="01:00:00"))
+
+
 def test_a_refused_node_request_says_why_on_every_path():
     """The queue checks in fit() must reach the card and the agent waiting for a node, never hang them."""
     import subprocess

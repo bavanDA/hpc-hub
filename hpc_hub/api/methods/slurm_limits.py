@@ -38,7 +38,8 @@ def partitions(cluster: str, partition: str = "", qos: str = "", account: str = 
     per_core = lim.mem_per_core_mb.get(part)
     # only your queues: not ones kept for other groups (a course queue for a courses group)
     return {"known": True, "partitions": [p for p in lim.partitions if lim.yours(p)],
-            "default_partition": lim.default_partition,
+            # the queue the window starts on: one this account can use (a course account: the course queue)
+            "default_partition": (lim.queue_for(account) or (lim.default_partition,))[0],
             "qos": choices or lim.account_qos.get(account) or lim.allowed_qos,
             # the priority asked for (or your default) waits forever here: say so, and which one to use instead
             "qos_refused": refused, "qos_fix": choices[0] if refused and choices else "",

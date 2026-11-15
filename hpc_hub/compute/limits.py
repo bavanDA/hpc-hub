@@ -101,15 +101,33 @@ class Limits:
         return [q for q in mine if q in usable]
 
     def refused_qos(self, partition: str, qos: str, account: str = "") -> str:
-        """Why a job with this priority (empty: your default) would wait forever on this partition, "" if it can run.
-        Unknown limits say nothing: Slurm decides."""
+        """Why a job with this priority (empty: your default) billed to account would be refused or wait forever on
+        this partition, "" if it can run. With no priority named and no default, Slurm takes one of the account's
+        that the partition takes, so none means refused (a course account on Wulver's general queue: "Invalid qos
+        specification"). Unknown limits say nothing: Slurm decides."""
         part, q = partition or self.default_partition, qos or self.default_qos
-        if not q or not self.allowed_qos or q in self.usable_qos(part):
+        if not self.allowed_qos:
             return ""
         choices = self.qos_choices(part, account)
+        if q in choices or (not q and choices):
+            return ""
         if choices:
             return f"The {part} queue takes priority {' or '.join(choices)}, not {q}."
-        return f"Your account can't use the {part} queue."
+        return f"Your account {account} can't use the {part} queue." if account and account in self.account_qos \
+            else f"Your account can't use the {part} queue."
+
+    def queue_for(self, account: str = "", gpus: int = 0) -> tuple[str, str] | None:
+        """A queue this account can use and the priority to ask there, for a job that names none: your default queue
+        if it takes the account, else the first that does (a course account: the course queue). GPU-only queues only
+        with a GPU. None if no queue takes it."""
+        queues = list(dict.fromkeys([self.default_partition, *self.partitions, *self.rules]))
+        for part in queues:
+            if not part or not self.yours(part) or (self.needs_gpu(part) and not gpus):
+                continue
+            choices = self.qos_choices(part, account)
+            if choices:  # named, unless it is your default: Slurm (or the site's own rules) may pick another
+                return part, "" if self.default_qos in choices else choices[0]
+        return None
 
     def pick_qos(self, partition: str, qos: str = "") -> str:
         """The QoS to read limits from: the one named, else your default, or the first this partition takes when it
