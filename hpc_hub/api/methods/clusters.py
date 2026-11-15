@@ -54,7 +54,10 @@ def disconnect(cluster: str) -> None:
 
 @method("clusters.cancel")
 def cancel(cluster: str) -> None:
-    hub().session(cluster).cancel()
+    """Stop signing in, or stop waiting for a node: also ends a wait for the sign-in window or a code."""
+    h = hub()
+    h.session(cluster).cancel()
+    h.drop_questions(cluster)
 
 
 def _profile(base: ComputeProfile, changes: dict) -> ComputeProfile:

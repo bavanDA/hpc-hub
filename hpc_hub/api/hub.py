@@ -97,6 +97,7 @@ class Hub:
         qid = secrets.token_hex(8)
         future = Future() if future is None else future
         self._questions[qid] = future
+        future.cluster = data.get("cluster", "")  # what it is about, for drop_questions
         self.emit("question", {"id": qid, "kind": kind, **data})
         try:
             return future.result(QUESTION_SECONDS)
@@ -105,6 +106,13 @@ class Hub:
         finally:
             self._questions.pop(qid, None)
             self.emit("question-done", {"id": qid})
+
+    def drop_questions(self, cluster: str) -> None:
+        """Stop waiting for every open question about this cluster (Stop signing in): the sign-in window, a code,
+        Duo. The waits answer None, as if cancelled, instead of holding the connect for up to QUESTION_SECONDS."""
+        for qid, future in list(self._questions.items()):
+            if getattr(future, "cluster", "") == cluster:
+                self.answer(qid, None)
 
     def answer(self, qid: str, answer: str | None) -> None:
         future = self._questions.get(qid)

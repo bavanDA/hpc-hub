@@ -19,6 +19,26 @@ def test_question_waits_for_the_answer():
     h.answer(data["id"], "late")  # answering twice, or too late, is harmless
 
 
+def test_stop_signing_in_ends_the_wait_for_the_sign_in_window():
+    events = []
+    h = Hub(lambda name, data: events.append((name, data)))
+    got = {}
+    asks = [threading.Thread(target=lambda c=c: got.update({c: h.question("web-login", {"cluster": c})}))
+            for c in ("wulver", "yale")]
+    for t in asks:
+        t.start()
+    while len([e for e in events if e[0] == "question"]) < 2:
+        pass
+    h.drop_questions("wulver")
+    asks[0].join(5)
+    assert not asks[0].is_alive() and got["wulver"] is None, "Stop ends the wait at once"
+    assert asks[1].is_alive(), "another cluster's sign-in goes on"
+    yale = next(d["id"] for n, d in events if n == "question" and d["cluster"] == "yale")
+    h.answer(yale, "ok")
+    asks[1].join(5)
+    assert got["yale"] == "ok"
+
+
 def test_second_app_leaves_the_clusters_alone(monkeypatch):
     from hpc_hub.core import single
     monkeypatch.setattr(single, "take", lambda: False)

@@ -45,6 +45,7 @@ def hub(monkeypatch):
     h.sessions = {c.id: FakeSession(c) for c in h.clusters}
     monkeypatch.setattr(clusters.slurm, "waiting_job", lambda ssh: None)  # no node request waiting
     h.saved = 0
+    h._questions = {}  # no sign-in waiting
 
     def save():
         h.saved += 1
