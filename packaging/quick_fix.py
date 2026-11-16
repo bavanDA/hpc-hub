@@ -54,6 +54,7 @@ def pack(zip_path: Path, dist: Path, package: Path, version: str) -> int:
 def sign(path: Path) -> str:
     """The base64 minisign signature `tauri signer sign` writes next to the file."""
     npx = "npx.cmd" if sys.platform == "win32" else "npx"
+    path = path.resolve()  # tauri runs in app/
     subprocess.run([npx, "tauri", "signer", "sign", str(path)], cwd=ROOT / "app", check=True,
                    stdout=subprocess.DEVNULL)
     sig = path.with_name(path.name + ".sig")
