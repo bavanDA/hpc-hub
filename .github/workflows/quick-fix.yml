@@ -1,0 +1,58 @@
+name: Quick fix
+
+# A fix for the current beta in about a minute, without a new build: the window's files and the Python, for apps on
+# exactly that beta with Beta updates on (they look every minute). packaging/quick_fix.py refuses a change that
+# needs a new build (Rust, packaging, the backend's libraries): run Build with beta ticked for those.
+on:
+  workflow_dispatch:
+    inputs:
+      notes:
+        description: "What it fixes, shown in the app's update window"
+        default: ''
+
+# after a beta that is still being published, never at the same time
+concurrency:
+  group: build-release
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  quick-fix:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+      TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0  # to compare with the beta's commit
+      - name: The beta it fixes
+        run: |
+          gh release download beta --pattern latest.json --output beta.json
+          V=$(node -p "require('./beta.json').version")
+          C=$(git rev-list -n 1 beta)
+          echo "Beta $V from $C"
+          echo "V=$V" >> "$GITHUB_ENV"
+          echo "C=$C" >> "$GITHUB_ENV"
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      - run: npm ci --no-audit --no-fund
+        working-directory: app
+      - name: Pack and sign
+        env:
+          NOTES: ${{ inputs.notes }}
+        run: |
+          printf '%s\n' "$NOTES" > notes.txt
+          python3 packaging/quick_fix.py out "$V" "${{ github.run_number }}" notes.txt --check "$C"
+      - name: Publish next to the beta
+        run: |
+          gh release upload beta out/quick-fix-*.zip --clobber
+          gh release upload beta out/quick-fix.json --clobber
+          echo "Quick fix ${{ github.run_number }} for $V is out"

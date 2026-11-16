@@ -14,7 +14,8 @@ const SOURCE = 'https://github.com/bavanDA/hpc-hub'
 export function AboutDialog({ onClose }: { onClose: () => void }) {
   const [version, setVersion] = useState('')
   useEffect(() => {
-    call<{ version: string }>('app.version').then((v) => setVersion(v.version)).catch(() => {})
+    call<{ version: string; fix?: number | null }>('app.version')
+      .then((v) => setVersion(v.fix ? `${v.version}, quick fix ${v.fix}` : v.version)).catch(() => {})
   }, [])
   const link = (label: string, icon: typeof BookOpen, run: () => void) => (
     <EButton kind="plain" small icon={icon} onClick={run}>{label}</EButton>

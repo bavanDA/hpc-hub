@@ -2,7 +2,6 @@
 
 from dataclasses import asdict
 
-from ... import __version__
 from ...clusters import site
 from ...core.config import ClusterConfig
 from ..server import method
@@ -17,7 +16,10 @@ def cluster_json(c: ClusterConfig) -> dict:
 
 @method("app.version")
 def version() -> dict:
-    return {"version": __version__}
+    """The installed version (a quick fix's own package keeps the version it was made for, so the window's wins), and
+    the quick fix this start runs with."""
+    from ...core.quickfix import app_version, running
+    return {"version": app_version(), "fix": running()}
 
 
 @method("clusters.list")

@@ -54,6 +54,12 @@ pub fn start(app: &AppHandle) -> std::io::Result<Backend> {
     if let Ok(dir) = app.path().resource_dir() {
         cmd.env("HPC_HUB_RESOURCES", dir);
     }
+    // quick fixes: where they're kept, and the one in use (quickfix.rs)
+    if let Some(fix) = app.try_state::<Option<crate::quickfix::QuickFix>>() {
+        for (key, value) in fix.inner().iter().flat_map(|f| f.backend_env()) {
+            cmd.env(key, value);
+        }
+    }
     let mut child = cmd.stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::inherit()).spawn()?;
     let stdout = child.stdout.take().expect("piped stdout");
     let stdin = child.stdin.take().expect("piped stdin");

@@ -65,3 +65,20 @@ rolling `beta` pre-release. Apps with Beta updates on check it as well as the re
 the next release reaches them too. A system the beta wasn't built for simply sees no beta.
 
 Versions released before 0.2.1 have no updater, so their users install 0.2.1 once by hand.
+
+### Quick fixes (about a minute)
+
+A fix to the window (app/src) or the Python (hpc_hub) doesn't need a build: run **Quick fix**, and apps on the
+current beta with Beta updates on offer it within a minute (they look every minute) as "<beta> fix <n>":
+
+    gh workflow run quick-fix.yml -R bavanDA/hpc-hub --ref <branch> -f notes="Paste works on Ubuntu"
+
+It builds the window, zips it with the hpc_hub package, signs the zip with the update key and puts it next to the
+beta's installers (`quick-fix-<n>.zip`, `quick-fix.json`). Installing downloads it, checks the signature and
+restarts the app; the window then serves its files from the fix and the frozen backend imports the fix's hpc_hub
+first (hpc_hub/core/quickfix.py, app/src-tauri/src/quickfix.rs, packaging/backend.py). Every system takes the same
+fix, and the next beta or release replaces it.
+
+The workflow refuses a change since the beta that needs a build (Rust, packaging, the backend's libraries): make a
+beta for those. If a fix's Python doesn't import, the backend runs its own; if the window never comes up with a fix,
+the next start drops it and never offers it again.

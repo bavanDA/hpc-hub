@@ -1597,6 +1597,7 @@ name = "hpc-hub"
 version = "0.2.5"
 dependencies = [
  "base64 0.23.1",
+ "dirs",
  "portable-pty",
  "serde",
  "serde_json",

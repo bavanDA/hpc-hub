@@ -4,6 +4,7 @@
 mod hostenv;
 mod backend;
 mod pty;
+mod quickfix;
 mod sso;
 
 use tauri::{Manager, RunEvent};
@@ -39,6 +40,8 @@ async fn check_beta_update(webview: tauri::Webview) -> Result<Option<serde_json:
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    let mut context = tauri::generate_context!();
+    let fix = quickfix::apply(&mut context);
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
@@ -47,6 +50,7 @@ pub fn run() {
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
         .manage(pty::Ptys::default())
+        .manage(fix)
         .setup(|app| {
             let backend = backend::start(app.handle())?;
             app.manage(backend);
@@ -62,9 +66,10 @@ pub fn run() {
             sso::sso_show,
             sso::sso_close,
             update_ready,
-            check_beta_update
+            check_beta_update,
+            quickfix::quick_fix_started
         ])
-        .build(tauri::generate_context!())
+        .build(context)
         .expect("error while building HPC Hub")
         .run(|app, event| {
             if let RunEvent::Exit = event {

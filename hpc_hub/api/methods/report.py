@@ -13,8 +13,7 @@ import urllib.request
 from dataclasses import asdict
 from pathlib import Path
 
-from ... import __version__
-from ...core import config, credentials, scrub
+from ...core import config, credentials, quickfix, scrub
 from ...projects import store
 from .. import recent
 from ..server import method
@@ -188,7 +187,7 @@ def preview(kind: str = "error", error: str = "", ref: int | None = None, cluste
     out = {"kind": kind, "error": _cut(scrub.scrub(_error(error, ref), k), LIMITS["error"], "both"),
            "log": _cut(scrub.scrub(_log(cluster, lines or []), k), LIMITS["log"], "end"),
            "page": _cut(scrub.scrub(page, k), LIMITS["page"]),
-           "app": __version__, "platform": _platform(), "os": _cut(_os(), LIMITS["os"])}
+           "app": quickfix.label(), "platform": _platform(), "os": _cut(_os(), LIMITS["os"])}
     if kind == "user":
         out["error"] = ""
     return out
@@ -230,7 +229,7 @@ def send(report: dict, screenshot: str = "") -> dict:
     if report.get("kind") not in KINDS:
         raise ValueError("No report kind")
     k = known()
-    body = {"kind": report["kind"], "app": __version__, "platform": _platform(), "os": _cut(_os(), LIMITS["os"])}
+    body = {"kind": report["kind"], "app": quickfix.label(), "platform": _platform(), "os": _cut(_os(), LIMITS["os"])}
     for field in ("text", "error", "log", "page"):
         value = report.get(field)
         if isinstance(value, str) and value.strip():
@@ -241,7 +240,7 @@ def send(report: dict, screenshot: str = "") -> dict:
     if shot := _shot(screenshot):
         body["screenshot"] = shot
     req = urllib.request.Request(URL, data=json.dumps(body).encode(), method="POST", headers={
-        "Content-Type": "application/json", "User-Agent": f"HPC Hub/{__version__}"})
+        "Content-Type": "application/json", "User-Agent": f"HPC Hub/{quickfix.app_version()}"})
     try:
         with urllib.request.urlopen(req, timeout=TIMEOUT) as r:
             answer = json.loads(r.read() or b"{}")

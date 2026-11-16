@@ -1,6 +1,7 @@
 // New versions of HPC Hub, from the GitHub release the app was signed for (tauri-plugin-updater, the key's public
 // half is in tauri.conf.json). Checked a little after the start and twice a day; installing is one click: download,
 // stop the backend (Windows can't replace a running program), install, restart. Work on the cluster keeps running.
+// With Beta updates on, quick fixes too (quickFix below): checked every minute, installed the same way.
 // In a plain browser (design work), ?update=0.9.0 pretends that version is out.
 import { invoke } from '@tauri-apps/api/core'
 import { useSyncExternalStore } from 'react'
@@ -19,10 +20,11 @@ export type UpdateState =
 export const RELEASES = 'https://github.com/bavanDA/hpc-hub/releases/latest'
 const FIRST_CHECK_MS = 20_000
 const EVERY_MS = 12 * 3600_000
+const QUICK_FIX_MS = 60_000
 
 type Found = { version: string; body?: string
   download: (onEvent: (e: DownloadEvent) => void) => Promise<void>
-  install: () => Promise<void> }
+  install: () => Promise<void>; close?: () => Promise<void> }
 type DownloadEvent = { event: 'Started'; data: { contentLength?: number } } | { event: 'Progress'; data: { chunkLength: number } }
   | { event: 'Finished' }
 
@@ -76,18 +78,39 @@ export async function checkUpdates(): Promise<UpdateState> {
 }
 
 /** The normal release, and with Beta updates on the beta too: whichever is newer. A beta that can't be read (none
- * yet, or none for this system) is no update; the normal check's errors are the ones shown. */
+ * yet, or none for this system) is no update; the normal check's errors are the ones shown. With neither, a quick
+ * fix for this very version (Beta updates on only). */
 async function newest(): Promise<Found | null> {
   const { check, Update } = await import('@tauri-apps/plugin-updater')
   const beta = await call<{ beta_updates: boolean }>('preferences.get').then((p) => p.beta_updates).catch(() => false)
-  const [normal, ahead] = await Promise.all([
+  const [normal, ahead, fix] = await Promise.all([
     check(),
     beta ? invoke<ConstructorParameters<typeof Update>[0] | null>('check_beta_update')
       .then((m) => (m ? new Update(m) : null)).catch(() => null) : Promise.resolve(null),
+    beta ? quickFix().catch(() => null) : Promise.resolve(null),
   ])
   const pick = !ahead ? normal : !normal ? ahead : newer(ahead.version, normal.version) ? ahead : normal
   for (const other of [normal, ahead]) if (other && other !== pick) void other.close().catch(() => {})
-  return pick as unknown as Found | null
+  return (pick as unknown as Found | null) ?? fix
+}
+
+type QuickFixState = { version: string; running: number | null; offered: { number: number; notes: string } | null }
+
+/** Quick fixes (hpc_hub/core/quickfix.py): the screens and the backend's Python for this version, about a minute
+ * after a fix is made. Installing downloads it; the restart puts it to use. */
+async function quickFix(): Promise<Found | null> {
+  const q = await call<QuickFixState>('updates.quick_fix')
+  if (!q.offered) return null
+  return {
+    version: `${q.version} fix ${q.offered.number}`, body: q.offered.notes,
+    download: async (onEvent) => {
+      onEvent({ event: 'Started', data: {} })
+      await call('updates.quick_fix_install')
+      onEvent({ event: 'Finished' })
+    },
+    install: async () => {},
+    close: async () => {},
+  }
 }
 
 /** Download, then stop the backend, install and restart. Progress and errors go to the state. */
@@ -133,4 +156,12 @@ export function startUpdateChecks(found: (version: string) => void) {
   })
   setTimeout(look, demoVersion() ? 1500 : FIRST_CHECK_MS)
   setInterval(look, EVERY_MS)
+  if (!inTauri) return
+  // the window is up: a quick fix in use is good enough to keep (quickfix.rs drops one whose start never got here)
+  void call('app.version').then(() => invoke('quick_fix_started')).catch(() => {})
+  // with Beta updates on, quick fixes are looked for every minute: one small file
+  setInterval(() => {
+    if (!(state.kind === 'idle' || state.kind === 'none' || state.kind === 'error' && !state.version)) return
+    void quickFix().then((f) => { if (f) void look() }).catch(() => {})
+  }, QUICK_FIX_MS)
 }
