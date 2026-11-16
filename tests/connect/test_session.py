@@ -601,3 +601,36 @@ def test_stop_waiting_goes_straight_back_to_get_one(monkeypatch):
     s._allocate_safely(config.ComputeProfile(time="01:00:00"))
     assert states[-1] == (State.CONNECTED, "") and s.allocation is None
     assert "You stopped waiting for a node" in logged
+
+
+def test_closing_the_code_window_stops_the_sign_in(env, monkeypatch):
+    """ssh asks for the code again after an empty answer: that must not open the window again and again."""
+    from hpc_hub.connect import session as session_mod
+    from hpc_hub.core.ssh import SshError
+
+    server, _ = env
+    answers = []
+
+    class Master:
+        def __init__(self, *a, ask=None, **k):
+            self.ask = ask
+
+        def start(self, cancelled=lambda: False):
+            for _ in range(3):  # NumberOfPasswordPrompts
+                answers.append(self.ask("Verification code:"))
+            raise SshError("Permission denied (keyboard-interactive)")
+
+        def stop(self):
+            pass
+
+    monkeypatch.setattr(session_mod, "new_master", lambda *a, **k: Master(*a, **k))
+    monkeypatch.setattr(session_mod, "link_works", lambda ssh: False)
+    rec = Recorder()
+    asked = []
+    rec.code = lambda s, prompt: asked.append(prompt)  # the window closed: None
+    s = ClusterSession(ClusterConfig(id="t", name="Test", host="fake", second_factor="code"), server, rec)
+    s.connect(Login("u", ""), None)
+    assert rec.done.wait(20)
+    assert asked == ["Verification code:"], "one window, not one per ssh retry"
+    assert answers == [None, None, None]
+    assert s.state != State.CONNECTED

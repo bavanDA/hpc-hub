@@ -199,8 +199,18 @@ class ClusterSession(NodesMixin):
         asked = []
         self.wrong_password = False
 
+        stopped = []  # you closed a question (Stop signing in): ssh asks again, and gets no answer, not a new window
+
+        def asking(answer: str | None) -> str | None:
+            if answer is None:
+                stopped.append(True)
+                self._cancel.set()
+            return answer
+
         def on_prompt(prompt: str) -> str | None:
             asked.append(prompt)
+            if stopped or self._cancel.is_set():
+                return None
             if prompt == SSO_USER:
                 return vpn_login.username if vpn_login else None
             if prompt == SSO_PASS:
@@ -210,7 +220,7 @@ class ClusterSession(NodesMixin):
             code_login = self.cfg.second_factor == "code"  # then any other question is the code
             if kind == prompts.CODE or (code_login and kind in (prompts.DUO, prompts.UNKNOWN)):
                 self._set(State.SIGNING_IN, "Type the code from your authenticator app")
-                return self.listener.code(self, prompt)
+                return asking(self.listener.code(self, prompt))
             if kind in handler_state:
                 handler_state[kind] += 1
                 if handler_state[kind] > 1:
@@ -224,7 +234,7 @@ class ClusterSession(NodesMixin):
                     return ssh_login.password or None
                 self._set(State.DUO, "Approve the Duo push on your phone")
                 return prompts.duo_reply(prompt, self.cfg.duo_answer)
-            return self.listener.ask(self, prompt)
+            return asking(self.listener.ask(self, prompt))
 
         if not self.vpn_only and self.cfg.host and ssh_login.username:
             live = self.ssh or new_master(self.cfg, ssh_login.username, {}, self._log)
