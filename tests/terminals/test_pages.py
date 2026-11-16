@@ -96,3 +96,21 @@ def test_where_uses_the_session_folder():
     assert "pane_current_path" in pages.where("a.html", session="hpchub-claude-1-2")
     assert "pane_current_path" not in pages.where("/x/a.html", session="hpchub-claude-1-2")
     assert pages.where("~/a b.html").endswith("\"$HOME\"/'a b.html'")
+
+
+def test_a_relative_page_not_in_the_session_folder_is_found_below_it(tmp_path):
+    """Claude names docs/r.html from its worktree; the session's folder is the project above it."""
+    import subprocess
+    page = tmp_path / ".claude" / "worktrees" / "w" / "docs" / "r.html"
+    page.parent.mkdir(parents=True)
+    page.write_text("<html>")
+    (tmp_path / "other.html").write_text("<html>")
+
+    def run(path):
+        return subprocess.run(["bash", "-c", pages.where(path, cwd=str(tmp_path))], capture_output=True, text=True)
+
+    assert run("docs/r.html").stdout.strip() == str(page)
+    assert run("./docs/r.html").stdout.strip() == str(page)
+    assert run("other.html").stdout.strip() == str(tmp_path / "other.html")
+    missing = run("docs/none.html")
+    assert missing.returncode != 0 and "No such file: docs/none.html" in missing.stderr

@@ -4,7 +4,7 @@ import { openLink } from '../app/openLink'
 import { inTauri } from '../app/platform'
 import { openHere as openSaved } from '../files/local'
 import { banner } from './banners'
-import { linkBanner, mayHaveLinks } from './linkBanner'
+import { betterPagePath, linkBanner, mayHaveLinks, pageName } from './linkBanner'
 import { tabNotify } from './tabNotify'
 import type { Tab } from './tabs'
 import { copyText } from './xterm'
@@ -35,6 +35,13 @@ async function openPage(tab: Tab, path: string) {
   }
 }
 
+const pages = new WeakMap<Tab, Map<string, string>>()  // a tab's pages: file name -> the best path to it
+function pagesOf(tab: Tab) {
+  let known = pages.get(tab)
+  if (!known) pages.set(tab, (known = new Map()))
+  return known
+}
+
 /** Links the terminal printed (VS Code tunnel, device sign-in...) become banners, once each. */
 export async function scanLinks(tab: Tab, text: string) {
   if (!mayHaveLinks(text)) return
@@ -45,6 +52,13 @@ export async function scanLinks(tab: Tab, text: string) {
     return
   }
   for (const link of found) {
+    if (link.kind === 'page') {  // one banner a page, whichever ways it is named
+      const known = pagesOf(tab)
+      const name = pageName(link.url)
+      const path = known.get(name)
+      known.set(name, path ? betterPagePath(path, link.url) : link.url)
+      if (path) continue
+    }
     const id = link.url + link.code
     if (tab.seen.has(id)) continue
     tab.seen.add(id)
@@ -54,7 +68,7 @@ export async function scanLinks(tab: Tab, text: string) {
       banner(tab, b.text, b.button, b.copy
         ? () => copyText(link.code).then((ok) => tabNotify(ok ? 'Code copied' : 'Could not copy'))
         : b.forward ? () => openHere(tab, link.url)
-        : b.file ? () => openPage(tab, link.url)
+        : b.file ? () => openPage(tab, pagesOf(tab).get(pageName(link.url)) ?? link.url)
         : () => openLink(link.url))
     }
     tab.onLink?.(link)

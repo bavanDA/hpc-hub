@@ -18,7 +18,17 @@ export function linkBanner(link: Link, copied: boolean, where = ''): LinkBanner 
     case 'pair': return {
       text: `ChatGPT pairing code ${link.code}. In the ChatGPT app: Codex, connect a machine, enter the code.`,
       button: 'Copy code', copy: true }
-    case 'page': return { text: `Web page ${link.url.split('/').pop()}`, button: 'Open in browser', file: true }
+    case 'page': return { text: `Web page ${pageName(link.url)}`, button: 'Open in browser', file: true }
     default: return null
   }
 }
+
+/** The same page named twice (docs/r.html, then /scratch/me/proj/docs/r.html) is one banner. It opens the path that
+ * says the most: a full one over a relative one, then the longer. */
+export function betterPagePath(known: string, next: string): string {
+  const rank = (p: string) => (p.startsWith('/') || p.startsWith('~/') ? 2 : 1)
+  if (rank(next) !== rank(known)) return rank(next) > rank(known) ? next : known
+  return next.length > known.length ? next : known
+}
+
+export const pageName = (path: string) => path.split('/').pop() ?? path

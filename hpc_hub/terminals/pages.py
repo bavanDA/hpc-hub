@@ -21,8 +21,14 @@ class PageError(Exception):
     pass
 
 
+SEARCH_DEPTH = 6  # folders below the session's where a relative page may be (an agent's worktree, say)
+SEARCH_SECONDS = 10
+
+
 def where(path: str, cwd: str = "", session: str = "") -> str:
-    """Shell line printing the page's full path: a relative one is read from the session's folder (tmux's), or cwd."""
+    """Shell line printing the page's full path: a relative one is read from the session's folder (tmux's), or cwd.
+    Not there, a relative one is looked for below it: an agent names files from its own folder (a worktree under
+    the project, for one), which isn't always the session's."""
     if path.startswith("~/"):
         target = '"$HOME"/' + shlex.quote(path[2:])
     else:
@@ -34,7 +40,13 @@ def where(path: str, cwd: str = "", session: str = "") -> str:
             go = f'd=$({here}); [ -n "$d" ] && cd -- "$d" 2>/dev/null; '
         elif cwd:
             go = f"cd -- {shlex.quote(cwd)} 2>/dev/null; "
-    return f"{go}realpath -e -- {target}"
+    if not go:
+        return f"{go}realpath -e -- {target}"
+    pattern = shlex.quote("*/" + re.sub(r"([][*?\\])", r"\\\1", path.removeprefix("./")))
+    search = (f"timeout {SEARCH_SECONDS} find . -maxdepth {SEARCH_DEPTH} -path {pattern} -type f -print 2>/dev/null"
+              " | head -n 1")
+    return (f"{go}realpath -e -- {target} 2>/dev/null || {{ f=$({search}); "
+            f'[ -n "$f" ] && realpath -e -- "$f" || {{ echo {shlex.quote("No such file: " + path)} >&2; exit 1; }}; }}')
 
 
 def pack(folder: str, names: list[str]) -> str:
