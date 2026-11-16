@@ -124,8 +124,13 @@ def _opt(name: str) -> str:
 
 def _mouse(name: str) -> str:
     """For the app's own sessions: with tmux's mouse off the wheel sends arrow keys, which an agent's input box takes
-    as going through its history. Only that session changes, never your own settings."""
-    return f"tmux set-option -t {_opt(name)} mouse on 2>/dev/null; " if name.startswith("hpchub-") else ""
+    as going through its history; and clearing the screen no longer copies it into the history (tmux 3.3 and later),
+    so an agent's redraw doesn't leave its answer there twice. Only that session changes, never your own settings."""
+    if not name.startswith("hpchub-"):
+        return ""
+    # tmux 3.3 and later: an agent's redraw (it clears the screen) doesn't copy the old screen into the history
+    return (f"tmux set-option -t {_opt(name)} mouse on 2>/dev/null; "
+            f"tmux set-option -w -t {_opt(name)} scroll-on-clear off 2>/dev/null; ")
 
 
 def on(node: str, line: str, tty: bool = False) -> str:

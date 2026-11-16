@@ -176,6 +176,7 @@ def test_the_wheel_scrolls_in_the_apps_sessions():
     for line in (tmux.attach(tmux.Session("hpchub-claude-1-x", "tmux")),
                  tmux.open_line("hpchub-claude-1-x", "claude", "Claude")):
         assert "set-option -t =hpchub-claude-1-x: mouse on" in line
+        assert "set-option -w -t =hpchub-claude-1-x: scroll-on-clear off" in line
         assert subprocess.run(["bash", "-n", "-c", line]).returncode == 0
 
 

@@ -151,6 +151,23 @@ on('session', (d) => {
   }
 })
 
+/** The size goes to the session only once it has settled: every change makes an agent (Claude, Codex) redraw its
+ * screen, and the tmux on many clusters (3.2) keeps each redrawn screen in the history, so dragging the window's edge
+ * left the same answer there over and over at different widths. */
+const SETTLE_MS = 300
+const sizing = new WeakMap<Tab, { timer?: ReturnType<typeof setTimeout>; sent: string }>()
+function sendSize(tab: Tab, cols: number, rows: number) {
+  const s = sizing.get(tab) ?? { sent: '' }
+  sizing.set(tab, s)
+  clearTimeout(s.timer)
+  s.timer = setTimeout(() => {
+    const size = `${cols}x${rows}`
+    if (tab.pty === null || size === s.sent) return
+    s.sent = size
+    ptyResize(tab.pty, cols, rows).catch(() => {})
+  }, SETTLE_MS)
+}
+
 /** Runs the command once the tab is on screen (so its size is known). */
 export function start(tab: Tab) {
   if (!tab.argv || tab.pty !== null || !tab.el.isConnected || tab.ended) return
@@ -185,7 +202,7 @@ export function start(tab: Tab) {
     tab.pty = id
     tab.input = [
       term.onData((d) => { if (tab.pty !== null) ptyWrite(tab.pty, d).catch(() => {}) }),
-      term.onResize(({ cols, rows }) => { if (tab.pty !== null) ptyResize(tab.pty, cols, rows).catch(() => {}) }),
+      term.onResize(({ cols, rows }) => sendSize(tab, cols, rows)),
     ]
     changed()
   }).catch((e) => fail(tab, `Could not start the terminal: ${e}`))
