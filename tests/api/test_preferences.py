@@ -15,12 +15,14 @@ OFF = {"experimental_papers": False, "experimental_skills": False, "experimental
 
 def test_defaults(app_file):
     assert preferences.get() == {"browser_profile": "", **OFF, "select_to_copy": True,
-                                 "monitor_bar": True, "appearance": "system"}
+                                 "monitor_bar": True, "appearance": "system",
+                                 "beta_updates": False}
 
 
 def test_set_saves_and_keeps_the_rest(app_file):
     config.save_app(config.AppSettings(globus_client_id="abc123"), app_file)
-    on = {**OFF, "experimental_papers": True, "select_to_copy": True, "monitor_bar": True, "appearance": "system"}
+    on = {**OFF, "experimental_papers": True, "select_to_copy": True, "monitor_bar": True, "appearance": "system",
+          "beta_updates": False}
     assert preferences.set_(experimental_papers=True) == {"browser_profile": "", **on}
     assert preferences.set_(browser_profile=" Uni ") == {"browser_profile": "Uni", **on}
     saved = config.load_app(app_file)
@@ -38,7 +40,8 @@ def test_the_old_single_switch_turns_all_three_on(app_file):
     app_file.parent.mkdir(parents=True)
     app_file.write_text("[app]\nexperimental = true\nappearance = \"dark\"\n")
     assert preferences.get() == {"browser_profile": "", **{k: True for k in OFF}, "select_to_copy": True,
-                                 "monitor_bar": True, "appearance": "dark"}
+                                 "monitor_bar": True, "appearance": "dark",
+                                 "beta_updates": False}
     preferences.set_(experimental_skills=False)  # saved in the new keys; the old one is gone
     text = app_file.read_text()
     assert "experimental = " not in text and "experimental_skills = false" in text
@@ -51,7 +54,8 @@ def test_back_to_the_system_browser(app_file):
     preferences.set_(browser_profile="Uni")
     preferences.set_(browser_profile="", experimental_papers=False)
     assert preferences.get() == {"browser_profile": "", **OFF, "select_to_copy": True,
-                                 "monitor_bar": True, "appearance": "system"}
+                                 "monitor_bar": True, "appearance": "system",
+                                 "beta_updates": False}
 
 
 def test_select_to_copy(app_file):
@@ -73,3 +77,8 @@ def test_appearance(app_file):
     with pytest.raises(ValueError, match="Appearance"):
         preferences.set_(appearance="purple")
     assert preferences.get()["appearance"] == "dark"
+
+
+def test_beta_updates(app_file):
+    assert preferences.set_(beta_updates=True)["beta_updates"] is True
+    assert config.load_app(app_file).beta_updates

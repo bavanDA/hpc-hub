@@ -1,7 +1,10 @@
 """The files of a GitHub release from what the Build workflow made, and latest.json, which the app's updater reads
 (github.com/<repo>/releases/latest/download/latest.json, see app/src-tauri/tauri.conf.json).
 
-    python packaging/release.py <folder with the build's files> <out folder> <version> [notes file]
+    python packaging/release.py <folder with the build's files> <out folder> <version> [notes file] [--beta]
+
+A beta (--beta) goes to the rolling "beta" pre-release, read only by apps with Beta updates on; it may cover some
+systems only, so the others simply see no beta.
 
 Each installer gets a plain name (HPC-Hub_<version>_<system>_<arch>.<ext>). An installer with a .sig next to it
 (the update signature, made with the TAURI_SIGNING_PRIVATE_KEY secret) is offered as an update for its platform; its
@@ -29,9 +32,9 @@ KINDS = [
 ]
 
 
-def collect(src: Path, out: Path, version: str, notes: str, date: str) -> dict:
+def collect(src: Path, out: Path, version: str, notes: str, date: str, beta: bool = False) -> dict:
     out.mkdir(parents=True, exist_ok=True)
-    base = f"https://github.com/{REPO}/releases/download/v{version}"
+    base = f"https://github.com/{REPO}/releases/download/{'beta' if beta else f'v{version}'}"
     platforms, sums = {}, []
     for f in sorted(p for p in Path(src).rglob("*") if p.is_file() and not p.name.endswith(".sig")):
         kind = next((k for k in KINDS if f.name.endswith(k[0])), None)
@@ -47,7 +50,7 @@ def collect(src: Path, out: Path, version: str, notes: str, date: str) -> dict:
     if not platforms:
         raise SystemExit("There are no update signatures: is the TAURI_SIGNING_PRIVATE_KEY secret set?")
     missing = [p for p in NEEDED if p not in platforms]
-    if missing:  # a partial latest.json gives those users updater errors: every system, or no release
+    if missing and not beta:  # a partial latest.json gives those users updater errors: every system, or no release
         raise SystemExit(f"No signed update for {', '.join(missing)}: build every system before publishing.")
     latest = {"version": version, "notes": notes, "pub_date": date, "platforms": platforms}
     (out / "latest.json").write_text(json.dumps(latest, indent=2) + "\n")
@@ -60,6 +63,8 @@ def collect(src: Path, out: Path, version: str, notes: str, date: str) -> dict:
 
 
 if __name__ == "__main__":
-    src, out, version = Path(sys.argv[1]), Path(sys.argv[2]), sys.argv[3]
-    notes = Path(sys.argv[4]).read_text().strip() if len(sys.argv) > 4 else ""
-    collect(src, out, version, notes, time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()))
+    beta = "--beta" in sys.argv
+    args = [a for a in sys.argv[1:] if a != "--beta"]
+    src, out, version = Path(args[0]), Path(args[1]), args[2]
+    notes = Path(args[3]).read_text().strip() if len(args) > 3 else ""
+    collect(src, out, version, notes, time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), beta=beta)

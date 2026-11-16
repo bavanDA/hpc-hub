@@ -15,6 +15,28 @@ fn update_ready(app: tauri::AppHandle) {
     backend::stop(&app);
 }
 
+/// The beta channel's update file: a rolling pre-release, which the normal check (releases/latest) never sees.
+const BETA_UPDATES: &str = "https://github.com/bavanDA/hpc-hub/releases/download/beta/latest.json";
+
+/// With Beta updates on, the newest beta, if newer than this version. Answers what the updater plugin's own check
+/// answers (the update kept in the resources table under rid), so the window downloads and installs it the same way.
+#[tauri::command]
+async fn check_beta_update(webview: tauri::Webview) -> Result<Option<serde_json::Value>, String> {
+    use tauri_plugin_updater::UpdaterExt;
+    let url = tauri::Url::parse(BETA_UPDATES).map_err(|e| e.to_string())?;
+    let updater = webview.updater_builder().endpoints(vec![url]).map_err(|e| e.to_string())?
+        .build().map_err(|e| e.to_string())?;
+    let Some(update) = updater.check().await.map_err(|e| e.to_string())? else { return Ok(None) };
+    let found = serde_json::json!({
+        "currentVersion": update.current_version, "version": update.version, "date": null,
+        "body": update.body, "rawJson": update.raw_json,
+    });
+    let rid = webview.resources_table().add(update);
+    let mut found = found;
+    found["rid"] = rid.into();
+    Ok(Some(found))
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -39,7 +61,8 @@ pub fn run() {
             sso::sso_open,
             sso::sso_show,
             sso::sso_close,
-            update_ready
+            update_ready,
+            check_beta_update
         ])
         .build(tauri::generate_context!())
         .expect("error while building HPC Hub")

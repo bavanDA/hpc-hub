@@ -75,3 +75,14 @@ def test_the_windows_one_line_installer_goes_into_the_release(tmp_path):
     unix = (out / "install.sh").read_text()
     assert "curl -fsSL https://github.com/bavanDA/hpc-hub/releases/latest/download/install.sh | sh" in unix
     assert "install.sh" not in (out / "SHA256SUMS.txt").read_text()
+
+
+def test_a_beta_goes_to_the_beta_release_and_may_be_one_system(tmp_path):
+    src = built(tmp_path / "in", ["appimage/HPC Hub_0.2.6-beta.12_amd64.AppImage",
+                                  "appimage/HPC Hub_0.2.6-beta.12_amd64.AppImage.sig"])
+    latest = release.collect(src, tmp_path / "out", "0.2.6-beta.12", "A fix", "2026-11-15T20:00:00Z", beta=True)
+    assert latest["platforms"]["linux-x86_64"]["url"] == (
+        "https://github.com/bavanDA/hpc-hub/releases/download/beta/HPC-Hub_0.2.6-beta.12_linux_x86_64.AppImage")
+    assert list(latest["platforms"]) == ["linux-x86_64"]
+    with pytest.raises(SystemExit, match="build every system"):  # a release still needs all three
+        release.collect(src, tmp_path / "out2", "0.2.6", "", "2026-11-15T20:00:00Z")

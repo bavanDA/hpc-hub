@@ -21,13 +21,17 @@ on:
         description: 'Publish a GitHub release of this version (the app offers it as an update). Needs all three.'
         type: boolean
         default: false
+      beta:
+        description: 'Publish as a beta (next version, -beta.<build>): apps with Beta updates on get it. Any systems.'
+        type: boolean
+        default: false
       notes:
         description: "What's new, shown in the app's update window"
         default: ''
 
 # Releases one at a time; a test build never waits behind another build
 concurrency:
-  group: build-${{ inputs.publish && 'release' || github.run_id }}
+  group: build-${{ (inputs.publish || inputs.beta) && 'release' || github.run_id }}
   cancel-in-progress: false
 
 permissions:
@@ -60,12 +64,30 @@ jobs:
         run: |
           echo "::error::Set the TAURI_SIGNING_PRIVATE_KEY secret first (see docs/releasing.md)"
           exit 1
+      - name: A release or a beta, not both
+        if: inputs.publish && inputs.beta
+        run: |
+          echo "::error::Tick publish for a release or beta for a beta, not both"
+          exit 1
       - name: A release needs all three systems
         if: inputs.publish && !(inputs.linux && inputs.windows && inputs.macos)
         run: |
           echo "::error::Tick Linux, Windows and macOS to publish: the update file names all three"
           exit 1
       - uses: actions/checkout@v7
+      # A beta is the next version with this build's number: 0.2.5 released, so 0.2.6-beta.<run>. Newer than the
+      # release, older than 0.2.6 itself. Set here only, so every system's build of this run has the same one.
+      - name: A beta's version
+        if: inputs.beta
+        shell: bash
+        run: |
+          V=$(node -p "require('./app/src-tauri/tauri.conf.json').version")
+          IFS=. read -r a b c <<< "$V"
+          B="$a.$b.$((c + 1))-beta.${{ github.run_number }}"
+          node -e "const f='app/src-tauri/tauri.conf.json', c=JSON.parse(require('fs').readFileSync(f));
+            c.version='$B'; require('fs').writeFileSync(f, JSON.stringify(c, null, 2))"
+          sed -i.bak "s/^__version__ = .*/__version__ = \"$B\"/" hpc_hub/__init__.py && rm hpc_hub/__init__.py.bak
+          echo "Beta $B"
 
       - name: Tauri's Linux libraries
         if: runner.os == 'Linux'
@@ -209,7 +231,9 @@ jobs:
         run: |
           node -e "const f='packaging/tauri.release.json', c=JSON.parse(require('fs').readFileSync(f));
             c.bundle.createUpdaterArtifacts = true; require('fs').writeFileSync(f, JSON.stringify(c, null, 2))"
-      - run: npm run tauri:release
+      # A beta makes only what the updater installs (the MSI and the rpm don't take a version like 0.2.6-beta.12)
+      - run: npm run tauri:release -- ${{ inputs.beta && (runner.os == 'Linux' && '--bundles appimage'
+          || runner.os == 'Windows' && '--bundles nsis' || '--bundles app') || '' }}
         working-directory: app
       - name: The Mac app is signed with HPC Hub's certificate
         if: runner.os == 'macOS' && env.MACOS_SIGN_P12 != ''
@@ -238,8 +262,9 @@ jobs:
             app/src-tauri/target/release/bundle/*/*.sig
 
   release:
-    # A normal release, not a pre-release: the app asks releases/latest for latest.json, which skips pre-releases
-    if: inputs.publish
+    # A normal release, not a pre-release: the app asks releases/latest for latest.json, which skips pre-releases.
+    # A beta replaces the rolling "beta" pre-release, which only apps with Beta updates on read.
+    if: inputs.publish || inputs.beta
     needs: installers
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -256,11 +281,23 @@ jobs:
           NOTES: ${{ inputs.notes }}
         run: |
           V=$(node -p "require('./app/src-tauri/tauri.conf.json').version")
+          if [ "${{ inputs.beta }}" = true ]; then
+            IFS=. read -r a b c <<< "$V"; V="$a.$b.$((c + 1))-beta.${{ github.run_number }}"
+          fi
           echo "V=$V" >> "$GITHUB_ENV"
           printf '%s\n' "${NOTES:-HPC Hub $V}" > notes.txt
-          python3 packaging/release.py built out "$V" notes.txt
+          python3 packaging/release.py built out "$V" notes.txt ${{ inputs.beta && '--beta' || '' }}
           ls -la out
+      - name: Publish the beta
+        if: inputs.beta
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete beta --yes --cleanup-tag 2>/dev/null || true
+          gh release create beta out/* --prerelease --title "HPC Hub $V (beta)" --notes-file notes.txt \
+            --target "$GITHUB_SHA"
       - name: Publish
+        if: inputs.publish
         env:
           GH_TOKEN: ${{ github.token }}
         run: |

@@ -20,6 +20,7 @@ class AppSettings:
     paper_model: str = "haiku"
     paper_effort: str = "low"
     paper_split: bool = True  # Write message may suggest several commits
+    beta_updates: bool = False  # updates from the beta channel too: fixes within minutes, less tested
     hidden_groups: str = ""  # groups to bill left out of Get one: "wulver/2026-spring-...,sdsc/abc123"
 
 

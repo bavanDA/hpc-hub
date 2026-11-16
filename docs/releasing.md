@@ -52,4 +52,16 @@ apps would never see it. Everyone running an earlier version gets the Update but
 A test build (no publish) ticks only the systems it needs: Linux alone is the default and takes about 4 minutes. Test
 builds never wait for each other, and reuse the frozen backend when no Python changed.
 
+## Betas
+
+A fix can reach people who turned on **Beta updates** (Settings, HPC Hub) within minutes, without a release: run
+**Build** with **beta** ticked and only the systems that need it (Linux alone takes about 4 minutes):
+
+    gh workflow run build.yml -R bavanDA/hpc-hub --ref <branch> -f beta=true -f linux=true -f notes="Paste works on Ubuntu"
+
+Nothing in the repository changes. The build is the next version with the build's number (0.2.5 released, so
+0.2.6-beta.<run>), makes only what the updater installs (AppImage, the Windows setup, the Mac app), and replaces the
+rolling `beta` pre-release. Apps with Beta updates on check it as well as the release and take whichever is newer, so
+the next release reaches them too. A system the beta wasn't built for simply sees no beta.
+
 Versions released before 0.2.1 have no updater, so their users install 0.2.1 once by hand.

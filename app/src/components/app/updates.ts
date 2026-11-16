@@ -5,7 +5,9 @@
 import { invoke } from '@tauri-apps/api/core'
 import { useSyncExternalStore } from 'react'
 
+import { call } from '../../rpc'
 import { inTauri } from './platform'
+import { newer } from './versions'
 
 export type UpdateState =
   | { kind: 'idle' | 'checking' | 'none' }
@@ -65,15 +67,27 @@ export async function checkUpdates(): Promise<UpdateState> {
     const demo = demoVersion()
     if (demo) found = demoUpdate(demo)
     else if (!inTauri) found = null
-    else {
-      const { check } = await import('@tauri-apps/plugin-updater')
-      found = await check() as unknown as Found | null
-    }
+    else found = await newest()
     set(found ? { kind: 'available', version: found.version, notes: found.body ?? '' } : { kind: 'none' })
   } catch (e) {
     set({ kind: 'error', text: `Could not check for updates: ${message(e)}` })
   }
   return state
+}
+
+/** The normal release, and with Beta updates on the beta too: whichever is newer. A beta that can't be read (none
+ * yet, or none for this system) is no update; the normal check's errors are the ones shown. */
+async function newest(): Promise<Found | null> {
+  const { check, Update } = await import('@tauri-apps/plugin-updater')
+  const beta = await call<{ beta_updates: boolean }>('preferences.get').then((p) => p.beta_updates).catch(() => false)
+  const [normal, ahead] = await Promise.all([
+    check(),
+    beta ? invoke<ConstructorParameters<typeof Update>[0] | null>('check_beta_update')
+      .then((m) => (m ? new Update(m) : null)).catch(() => null) : Promise.resolve(null),
+  ])
+  const pick = !ahead ? normal : !normal ? ahead : newer(ahead.version, normal.version) ? ahead : normal
+  for (const other of [normal, ahead]) if (other && other !== pick) void other.close().catch(() => {})
+  return pick as unknown as Found | null
 }
 
 /** Download, then stop the backend, install and restart. Progress and errors go to the state. */
