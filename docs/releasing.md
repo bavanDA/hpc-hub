@@ -39,12 +39,17 @@ saved password after the next update, nothing worse. An Apple Developer ID ($99 
 
 1. Raise the version in the files the last `chore(release)` commit changed (`app/src-tauri/tauri.conf.json`,
    `app/src-tauri/Cargo.toml`, `app/package.json`, `hpc_hub/__init__.py`, and the `mobile/` ones), commit and push.
-2. Run the **Build** workflow on that branch with **publish** ticked, all three systems, and a line in **notes**:
+2. Run the **Build** workflow on that branch with **publish**, **Linux**, **Windows** and **macOS** ticked, and a
+   line in **notes**:
 
-       gh workflow run build.yml -R bavanDA/hpc-hub --ref <branch> -f publish=true -f notes="Fixes for VS Code"
+       gh workflow run build.yml -R bavanDA/hpc-hub --ref <branch> -f publish=true -f linux=true -f windows=true \
+         -f macos=true -f notes="Fixes for VS Code"
 
 The `release` job then makes a normal GitHub release `v<version>` with the installers, `SHA256SUMS.txt` and
 `latest.json` (made by `packaging/release.py`). It must not be a pre-release: `releases/latest` skips those, so the
 apps would never see it. Everyone running an earlier version gets the Update button within half a day.
+
+A test build (no publish) ticks only the systems it needs: Linux alone is the default and takes about 4 minutes. Test
+builds never wait for each other, and reuse the frozen backend when no Python changed.
 
 Versions released before 0.2.1 have no updater, so their users install 0.2.1 once by hand.

@@ -1,23 +1,33 @@
 name: Build
 
 # By hand only, so it never spends minutes by surprise (GitHub Pro: 3000 a month; macOS counts 10x, Windows 2x).
-# A full build is about 110 counted minutes; pick fewer systems to spend less.
+# A full build is about 110 counted minutes; tick fewer systems to spend less (Linux alone: about 9).
 on:
   workflow_dispatch:
     inputs:
-      systems:
-        description: 'Runners as JSON, e.g. ["ubuntu-22.04"] for Linux only'
-        default: '["ubuntu-22.04","macos-15","windows-latest"]'
+      linux:
+        description: 'Linux (AppImage, deb, rpm)'
+        type: boolean
+        default: true
+      windows:
+        description: 'Windows (exe, msi; minutes count 2x)'
+        type: boolean
+        default: false
+      macos:
+        description: 'macOS (dmg; minutes count 10x)'
+        type: boolean
+        default: false
       publish:
-        description: 'Publish a GitHub release of this version (the app offers it as an update). Needs all systems.'
+        description: 'Publish a GitHub release of this version (the app offers it as an update). Needs all three.'
         type: boolean
         default: false
       notes:
         description: "What's new, shown in the app's update window"
         default: ''
 
+# Releases one at a time; a test build never waits behind another build
 concurrency:
-  group: build
+  group: build-${{ inputs.publish && 'release' || github.run_id }}
   cancel-in-progress: false
 
 permissions:
@@ -29,7 +39,10 @@ jobs:
       fail-fast: false
       matrix:
         # ubuntu-22.04: the oldest glibc we build on is the oldest the installers run on
-        os: ${{ fromJSON(inputs.systems) }}
+        os: ${{ fromJSON(format('["{0}","{1}","{2}"]', inputs.linux && 'ubuntu-22.04' || 'skip',
+          inputs.windows && 'windows-latest' || 'skip', inputs.macos && 'macos-15' || 'skip')) }}
+        exclude:
+          - os: skip
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30  # a stuck macOS job costs at most 300 of the month's minutes
     env:
@@ -46,6 +59,11 @@ jobs:
         if: inputs.publish && env.TAURI_SIGNING_PRIVATE_KEY == ''
         run: |
           echo "::error::Set the TAURI_SIGNING_PRIVATE_KEY secret first (see docs/releasing.md)"
+          exit 1
+      - name: A release needs all three systems
+        if: inputs.publish && !(inputs.linux && inputs.windows && inputs.macos)
+        run: |
+          echo "::error::Tick Linux, Windows and macOS to publish: the update file names all three"
           exit 1
       - uses: actions/checkout@v7
 
@@ -73,7 +91,18 @@ jobs:
             app/src-tauri
             app/vpn-helper
 
+      # The frozen backend changes only with the Python: a test build reuses the last one made from the same files.
+      # A release always makes its own.
+      - name: Frozen backend from an earlier build
+        id: backend
+        if: ${{ !inputs.publish }}
+        uses: actions/cache@v6
+        with:
+          path: app/src-tauri/binaries
+          key: backend-${{ runner.os }}-${{ hashFiles('hpc_hub/**', 'bin/**', 'packaging/backend*',
+            'packaging/build_backend.py', 'packaging/requirements-backend.txt') }}
       - name: Frozen backend
+        if: steps.backend.outputs.cache-hit != 'true'
         run: |
           pip install -r packaging/requirements-backend.txt
           python packaging/build_backend.py
@@ -142,6 +171,15 @@ jobs:
             openconnect/openconnect --version
             ./hpc-hub-vpn-helper --version
           fi
+
+      # The AppImage tools Tauri downloads (linuxdeploy and its GTK and GStreamer plugins), kept between builds
+      - name: AppImage tools from an earlier build
+        if: runner.os == 'Linux'
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/tauri
+          key: tauri-tools-${{ runner.os }}-${{ hashFiles('app/src-tauri/Cargo.lock') }}
+          restore-keys: tauri-tools-${{ runner.os }}-
 
       - run: npm ci
         working-directory: app

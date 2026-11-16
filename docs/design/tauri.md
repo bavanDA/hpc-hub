@@ -72,7 +72,7 @@ GitHub Actions:
 - `test.yml`, on every push and pull request: pytest and ruff, the web build, `cargo check`.
 - `build.yml`, by hand only (Actions, Build, Run workflow, or `gh workflow run build.yml`): installers for Linux
   (`.AppImage`, `.deb`, `.rpm`, built on Ubuntu 22.04), macOS on Apple Silicon (`.dmg`) and Windows (`.msi`,
-  `.exe`). The `systems` input picks runners, e.g. `-f systems='["ubuntu-22.04"]'` for Linux only. Download them
+  `.exe`). The **Linux**, **Windows** and **macOS** checkboxes pick the systems (`-f linux=true -f windows=false`; Linux alone is the default). Download them
   from the run's page, under Artifacts (kept 14 days). Not signed yet, so macOS and Windows warn when you open them.
 - **Minutes:** GitHub Pro gives 3000 a month; macOS counts 10x and Windows 2x. A test run is about 2 minutes, a
   full installer build about 110. Keep the account's Actions budget at $0 (Settings, Billing) so going over stops
