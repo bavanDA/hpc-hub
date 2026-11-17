@@ -144,3 +144,14 @@ def test_older_fixes_are_tidied_but_not_the_running_one(app, monkeypatch):
 def test_a_build_without_quick_fixes_offers_none(monkeypatch):
     monkeypatch.delenv("HPC_HUB_QUICKFIX_DIR", raising=False)
     assert quickfix.check(lambda url, limit: pytest.fail("no download")) is None
+
+
+def test_a_quick_fix_uses_the_bundles_helpers(tmp_path):
+    """ssh starts bin/hpc-hub-askpass by path; a quick fix has no bin/, so the frozen bundle's is used."""
+    from hpc_hub.core import paths
+    fix, bundle = tmp_path / "quick-fix" / "4" / "py", tmp_path / "_MEI123"
+    (bundle / "bin").mkdir(parents=True)
+    (bundle / "bin" / "hpc-hub-askpass").write_text("#!/bin/sh\n")
+    assert paths.helper("hpc-hub-askpass", fix, str(bundle)) == bundle / "bin" / "hpc-hub-askpass"
+    assert paths.helper("hpc-hub-askpass", ROOT, str(bundle)) == ROOT / "bin" / "hpc-hub-askpass"  # its own first
+    assert paths.helper("hpc-hub-askpass", ROOT, "") == ROOT / "bin" / "hpc-hub-askpass"  # not frozen

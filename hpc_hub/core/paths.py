@@ -4,8 +4,18 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-ASKPASS_BIN = ROOT / "bin" / "hpc-hub-askpass"
-SSO_BIN = ROOT / "bin" / "hpc-hub-sso"
+
+
+def helper(name: str, root: Path = ROOT, bundle: str | None = None) -> Path:
+    """A program in bin/ that ssh and openconnect start by path. A quick fix (core/quickfix.py) carries only the
+    hpc_hub package, so there they are the frozen bundle's own."""
+    own = root / "bin" / name
+    bundle = getattr(sys, "_MEIPASS", "") if bundle is None else bundle
+    return Path(bundle) / "bin" / name if bundle and not own.exists() else own
+
+
+ASKPASS_BIN = helper("hpc-hub-askpass")
+SSO_BIN = helper("hpc-hub-sso")
 WINDOWS = sys.platform == "win32"
 
 
