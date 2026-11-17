@@ -48,8 +48,8 @@ const agentInfo: SettingsInfo['agents'] = [
   { id: 'claude', name: 'Claude', remote_label: 'Remote control',
     remote_hint: 'Use this session from claude.ai/code or the Claude app', options: [
       { key: 'model', label: 'Model', choices: [DEFAULT, ['opus', 'Opus'], ['sonnet', 'Sonnet'], ['haiku', 'Haiku']] },
-      { key: 'mode', label: 'Permission mode', choices: [DEFAULT, ['acceptEdits', 'Accept edits'], ['plan', 'Plan only'],
-        ['auto', 'Auto'], ['dontAsk', "Don't ask"]] },
+      { key: 'mode', label: 'Permission mode', choices: [['', 'Auto'], ['manual', 'Ask before changes'], ['acceptEdits', 'Accept edits'],
+        ['plan', 'Plan only'], ['dontAsk', "Don't ask"]] },
       { key: 'effort', label: 'Effort', choices: EFFORT }] },
   { id: 'codex', name: 'ChatGPT', remote_label: 'ChatGPT remote',
     remote_hint: 'Use this session from the ChatGPT app, one session at a time', options: [

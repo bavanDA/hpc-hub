@@ -115,6 +115,8 @@ def _agent(a, agent_id: str, changes) -> None:
             setattr(a, k, _bool(x, f"{agent.name} {k}"))
         elif k == "workdir":
             a.workdir = _text(x, f"{agent.name} folder") or "~"
+        elif x and x == options[k].blank:  # "auto": the first choice, kept as ""
+            setattr(a, k, "")
         elif x not in [value for value, _ in options[k].choices]:
             raise ValueError(f"{agent.name}: {options[k].label} can't be {x}")
         else:

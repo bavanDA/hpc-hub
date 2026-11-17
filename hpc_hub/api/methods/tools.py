@@ -142,6 +142,7 @@ def _set_options(a: catalog.Agent, c, options: dict) -> None:
     for o in a.options:
         if o.key in options:
             value = str(options[o.key])
+            value = "" if value == o.blank else value  # e.g. "auto", the first choice, kept as ""
             if value not in {v for v, _ in o.choices}:
                 raise ValueError(f"{a.name} has no {o.label} {value}")
             setattr(c, o.key, value)

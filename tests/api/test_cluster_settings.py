@@ -101,3 +101,11 @@ def test_chrome_window_is_a_choice_where_chrome_is(hub, monkeypatch):
     assert cs.get("wulver")["chrome_window"]["offered"] is False
     with pytest.raises(ValueError):
         cs.save("wulver", {"vpn": {"browser": chrome_window.CHOICE}})
+
+
+def test_auto_is_kept_as_the_first_choice(tmp_path):
+    """An older config saved "auto"; it is the list's first choice now, ""."""
+    from hpc_hub.core import config
+    path = tmp_path / "clusters.toml"
+    path.write_text('[clusters.wulver.claude]\nmode = "auto"\n')
+    assert next(c for c in config.load(path) if c.id == "wulver").claude.mode == ""

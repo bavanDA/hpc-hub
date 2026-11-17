@@ -6,9 +6,10 @@ C = agents.claude_start("claude")  # classic screen, its program read in one go 
 
 def test_claude():
     s = AgentSettings(command="claude")
-    assert agents.command(agents.CLAUDE, s) == C + "claude"
+    assert agents.command(agents.CLAUDE, s) == C + "claude --permission-mode auto"
     s.remote = True
-    assert agents.command(agents.CLAUDE, s, "abc") == C + "claude --resume abc"  # remote control is a setting
+    # remote control is a setting, not a flag
+    assert agents.command(agents.CLAUDE, s, "abc") == C + "claude --permission-mode auto --resume abc"
 
 
 def test_codex():
@@ -65,7 +66,8 @@ def test_option_choices_are_known_values():
 
 def test_task_is_the_first_prompt():
     s = AgentSettings(command="")
-    assert agents.command(agents.CLAUDE, s, task="fix it's tests") == C + "claude 'fix it'\"'\"'s tests'"
+    assert agents.command(agents.CLAUDE, s, task="fix it's tests") == \
+        C + "claude --permission-mode auto 'fix it'\"'\"'s tests'"
     assert agents.command(agents.CODEX, s, "abc", task="go") == "codex resume --no-daemon abc go"
     assert agents.command(agents.AGY, s, task="go on") == "agy -i 'go on'"
     assert agents.command(agents.AGY, s, task="  ") == "agy"
@@ -74,7 +76,7 @@ def test_task_is_the_first_prompt():
 def test_claude_runs_with_its_classic_screen():
     """Its output goes to the terminal's scrollback and the mouse stays with the terminal; Claude only."""
     assert agents.command(agents.CLAUDE, AgentSettings(command="claude"), "abc") == \
-        C + "claude --resume abc"
+        C + "claude --permission-mode auto --resume abc"
     assert agents.command(agents.CODEX, AgentSettings(command="codex")) == "codex --no-daemon"
 
 
@@ -89,3 +91,13 @@ def test_claude_start_reads_its_program_first(tmp_path):
     assert out.stdout == "Starting Claude...\nstarted\n" and C.startswith(agents.CLAUDE_CLASSIC)
     gone = subprocess.run(["bash", "-c", agents.claude_start("nope") + "echo ran"], capture_output=True, text=True)
     assert gone.stdout.endswith("ran\n")  # not on PATH (an alias): it still starts
+
+
+def test_claude_starts_in_auto_mode_unless_you_pick_another():
+    """Auto is the first choice in the list and what nothing chosen means; Ask before changes is Claude's manual."""
+    mode = next(o for o in agents.CLAUDE.options if o.key == "mode")
+    assert mode.choices[0] == ("", "Auto")
+    assert agents.command(agents.CLAUDE, AgentSettings(command="claude")) == C + "claude --permission-mode auto"
+    s = AgentSettings(command="claude", mode="manual")
+    assert agents.command(agents.CLAUDE, s) == C + "claude --permission-mode manual"
+    assert agents.command(agents.AGY, AgentSettings(command="agy")) == "agy"  # other agents: their own default

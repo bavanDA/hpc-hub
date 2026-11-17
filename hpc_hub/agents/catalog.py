@@ -15,8 +15,10 @@ class Option:
     choices: tuple[tuple[str, str], ...]
     prefix: str = ""  # e.g. codex -c model_reasoning_effort=<value>
     switch: bool = False  # flag alone, no value
+    blank: str = ""  # what nothing chosen means: the first choice, given to the agent ("" = no flag)
 
     def args(self, value: str) -> list[str]:
+        value = value or self.blank
         if not value:
             return []
         return [self.flag] if self.switch else [self.flag, shlex.quote(self.prefix + value)]
@@ -39,9 +41,10 @@ class Agent:
 
 CLAUDE = Agent("claude", "Claude", "Remote control", "Use this session from claude.ai/code or the Claude app", (
     Option("model", "Model", "--model", (DEFAULT, ("opus", "Opus"), ("sonnet", "Sonnet"), ("haiku", "Haiku"))),
+    # auto unless you pick another: Claude checks each step itself and asks only when one looks risky
     Option("mode", "Permission mode", "--permission-mode",
-           (DEFAULT, ("acceptEdits", "Accept edits"), ("plan", "Plan only"), ("auto", "Auto"),
-            ("dontAsk", "Don't ask"))),
+           (("", "Auto"), ("manual", "Ask before changes"), ("acceptEdits", "Accept edits"), ("plan", "Plan only"),
+            ("dontAsk", "Don't ask")), blank="auto"),
     Option("effort", "Effort", "--effort", EFFORT)), remote_setting="remoteControlAtStartup")
 CODEX = Agent("codex", "ChatGPT", "ChatGPT remote", "Use this session from the ChatGPT app, one session at a time", (
     Option("sandbox", "Sandbox", "-s",

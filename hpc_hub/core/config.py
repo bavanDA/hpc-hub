@@ -51,6 +51,8 @@ def load(path: Path = CONFIG_FILE) -> list[ClusterConfig]:
 def _tidy(c: ClusterConfig, default: ClusterConfig) -> None:
     c.host = c.host.strip().rpartition("@")[2]  # user@ belongs in the login
     c.vscode.command = c.vscode.command or default.vscode.command  # old configs saved an empty alias
+    if c.claude.mode == "auto":  # saved before Auto was the first choice (""), so the list shows it
+        c.claude.mode = ""
     if c.vpn.browser not in ("", CHROME_WINDOW):  # a Chrome profile's name, from before: the app's window
         c.vpn.browser = ""
 

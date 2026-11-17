@@ -21,8 +21,8 @@ const AGENTS: AgentInfo[] = [
   agent('claude', 'Claude', 'claude', ['Remote control', 'Use this session from claude.ai/code or the Claude app'], [
     { key: 'model', label: 'Model',
       choices: [['', 'Default'], ['opus', 'Opus'], ['sonnet', 'Sonnet'], ['haiku', 'Haiku']] },
-    { key: 'mode', label: 'Permission mode', choices: [['', 'Default'], ['acceptEdits', 'Accept edits'],
-      ['plan', 'Plan only'], ['auto', 'Auto']] },
+    { key: 'mode', label: 'Permission mode', choices: [['', 'Auto'], ['manual', 'Ask before changes'], ['acceptEdits', 'Accept edits'],
+      ['plan', 'Plan only'], ['dontAsk', "Don't ask"]] },
     { key: 'effort', label: 'Effort', choices: EFFORT }]),
   agent('codex', 'ChatGPT', 'codex', ['ChatGPT remote', 'Use this session from the ChatGPT app, one session at a time'], [
     { key: 'sandbox', label: 'Sandbox', choices: [['', 'Default'], ['read-only', 'Read only'],
