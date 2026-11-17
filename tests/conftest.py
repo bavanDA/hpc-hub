@@ -29,6 +29,7 @@ POSIX = {
 # single posix tests in files that otherwise run on Windows
 POSIX_TESTS = {
     "agents/test_agents.py::test_claude_start_reads_its_program_first",  # runs bash
+    "terminals/test_pages.py::test_a_relative_page_not_in_the_session_folder_is_found_below_it",  # runs bash
     *(f"compute/test_usage_{m}.py::test_script_is_valid_bash" for m in ("accounts", "load", "people", "storage")),
     "compute/test_usage_weekly.py::test_weekly_script_is_valid_bash",
     "compute/test_usage_weekly.py::test_only_billed_partitions_count_where_the_cluster_says_so",
