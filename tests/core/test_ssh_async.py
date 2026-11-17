@@ -99,6 +99,23 @@ def test_a_picked_key_that_is_gone_does_not_stop_the_login(sshd, tmp_path):
         m.stop()
 
 
+def test_a_key_your_ssh_config_names_but_is_gone_does_not_stop_the_login(sshd, tmp_path, monkeypatch):
+    """OpenSSH skips an IdentityFile that isn't there; asyncssh stopped the login (a report from Windows)."""
+    home = tmp_path / "home"
+    (home / ".ssh").mkdir(parents=True)
+    conf = home / ".ssh" / "config"
+    conf.write_text("Host *\n  IdentityFile ~/.ssh/id_rsa\n")
+    monkeypatch.setenv("HOME", str(home))
+    monkeypatch.setenv("USERPROFILE", str(home))
+    monkeypatch.setattr(ssh_async, "OPTIONS", {"agent_path": None, "config": [str(conf)]})
+    m = login(sshd, answers([]))
+    try:
+        assert m.alive()
+        assert any("name " in line and "id_rsa" in line and "isn't there" in line for line in m.lines)
+    finally:
+        m.stop()
+
+
 def test_changed_host_key_is_refused(sshd):
     other = asyncssh.generate_private_key("ssh-ed25519").export_public_key().decode().split()
     ssh_async.KNOWN_HOSTS.parent.mkdir(parents=True)

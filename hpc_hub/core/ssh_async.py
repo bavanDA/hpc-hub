@@ -8,6 +8,7 @@ argv(tty=True) is a marker, not a program. Every connection lives on one event l
 """
 
 import asyncio
+import errno
 import hmac
 import json
 import os
@@ -311,10 +312,23 @@ class AsyncSshMaster(SshMaster):
             keys = {}
         local = tunnels.local_port(self.cfg.host, self.cfg.port)
         via = {"tunnel": _LocalPort(local)} if local else {}
-        conn, _ = await asyncssh.create_connection(
-            lambda: _Client(self), self.cfg.host, self.cfg.port, username=self.username,
-            known_hosts=str(KNOWN_HOSTS), preferred_auth=AUTH, keepalive_interval=30, keepalive_count_max=3,
-            connect_timeout=30, login_timeout=timeout, **{**keys, **via, **OPTIONS})
+        options = {**keys, **via, **OPTIONS}
+
+        async def connect(**more):
+            return await asyncssh.create_connection(
+                lambda: _Client(self), self.cfg.host, self.cfg.port, username=self.username,
+                known_hosts=str(KNOWN_HOSTS), preferred_auth=AUTH, keepalive_interval=30, keepalive_count_max=3,
+                connect_timeout=30, login_timeout=timeout, **{**options, **more})
+        try:
+            conn, _ = await connect()
+        except OSError as e:
+            if e.errno != errno.ENOENT:  # a network error; ENOENT is always a file here, never the connection
+                raise
+            # your ~/.ssh/config names a key (IdentityFile) or program (ProxyCommand) that isn't there: OpenSSH
+            # skips a missing key, asyncssh gives up. So sign in again without that file, as ssh would.
+            self.log(f"ssh: Your SSH settings (.ssh/config) name {e.filename or 'a file'}, which isn't there. "
+                     "Signing in without them.")
+            conn, _ = await connect(config=[])
         try:
             self._bridge = await asyncio.start_server(self._serve_bridge, "127.0.0.1", 0)
         except OSError:
