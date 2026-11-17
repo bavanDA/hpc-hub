@@ -292,10 +292,23 @@ jobs:
         if: inputs.beta
         env:
           GH_TOKEN: ${{ github.token }}
+        # updated in place, never deleted first: a refusal halfway used to leave no beta at all
         run: |
-          gh release delete beta --yes --cleanup-tag 2>/dev/null || true
-          gh release create beta out/* --prerelease --title "HPC Hub $V (beta)" --notes-file notes.txt \
-            --target "$GITHUB_SHA"
+          if ! gh release view beta >/dev/null 2>&1; then
+            gh release create beta out/* --prerelease --title "HPC Hub $V (beta)" --notes-file notes.txt \
+              --target "$GITHUB_SHA"
+            exit 0
+          fi
+          gh release upload beta out/* --clobber
+          for old in $(gh release view beta --json assets -q '.assets[].name'); do
+            [ -e "out/$old" ] || case "$old" in quick-fix*) ;; *) gh release delete-asset beta "$old" --yes ;; esac
+          done
+          gh release edit beta --prerelease --title "HPC Hub $V (beta)" --notes-file notes.txt
+          # the tag marks the beta's commit (the Quick fix workflow compares with it). GitHub refuses this token a
+          # tag on a commit whose workflow files differ from main's: then it stays where it was, which only makes
+          # quick fixes stricter
+          gh api -X PATCH "repos/${{ github.repository }}/git/refs/tags/beta" -f sha="$GITHUB_SHA" -F force=true \
+            >/dev/null || echo "::warning::The beta tag stays on its old commit"
       - name: Publish
         if: inputs.publish
         env:
