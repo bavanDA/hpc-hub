@@ -1,4 +1,4 @@
-"""Quick fixes for the beta channel (hpc_hub/core/quickfix.py): which one is in use, whether a newer one is out, and
+"""Quick fixes (hpc_hub/core/quickfix.py): which one is in use, whether a newer one is out, and
 installing it. The window restarts the app afterwards."""
 
 from ...core import quickfix
@@ -7,14 +7,12 @@ from ..server import method
 
 @method("updates.quick_fix")
 def quick_fix() -> dict:
-    """current: the fix installed; running: the one this start uses; offered: a newer one for this version (only
-    with Beta updates on)."""
-    from ...core import config
-
+    """current: the fix installed; running: the one this start uses; offered: a newer one for this version (a beta's
+    or a release's, Beta updates on or not)."""
     root = quickfix.folder()
     cur = quickfix.current(root) if root else None
     offered = None
-    if root and config.load_app(config.APP_FILE).beta_updates:
+    if root:
         fix = quickfix.check()
         offered = {"number": fix["number"], "notes": fix["notes"]} if fix else None
     return {"current": cur, "running": quickfix.running(), "offered": offered, "version": quickfix.app_version()}

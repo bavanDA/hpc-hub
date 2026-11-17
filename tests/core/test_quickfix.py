@@ -155,3 +155,14 @@ def test_a_quick_fix_uses_the_bundles_helpers(tmp_path):
     assert paths.helper("hpc-hub-askpass", fix, str(bundle)) == bundle / "bin" / "hpc-hub-askpass"
     assert paths.helper("hpc-hub-askpass", ROOT, str(bundle)) == ROOT / "bin" / "hpc-hub-askpass"  # its own first
     assert paths.helper("hpc-hub-askpass", ROOT, "") == ROOT / "bin" / "hpc-hub-askpass"  # not frozen
+
+
+def test_a_release_reads_the_releases_fixes(app, monkeypatch):
+    """A beta and a release each have their own feed, so a fix for either is out in a minute."""
+    assert quickfix.feed_url() == quickfix.FEED  # 1.0.0-beta.1
+    monkeypatch.setenv("HPC_HUB_APP_VERSION", "1.0.0")
+    assert quickfix.feed_url() == quickfix.RELEASE_FEED
+    feed = {"base": "1.0.0", "number": 9, "url": "u", "signature": "s", "notes": ""}
+    asked = []
+    assert quickfix.check(lambda url, limit: asked.append(url) or json.dumps(feed).encode())["number"] == 9
+    assert asked == [quickfix.RELEASE_FEED]

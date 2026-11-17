@@ -1,7 +1,7 @@
 // New versions of HPC Hub, from the GitHub release the app was signed for (tauri-plugin-updater, the key's public
 // half is in tauri.conf.json). Checked a little after the start and twice a day (every minute with Beta updates on); installing is one click: download,
 // stop the backend (Windows can't replace a running program), install, restart. Work on the cluster keeps running.
-// With Beta updates on, betas and quick fixes too (quickFix below), all checked every minute, installed the same way.
+// Quick fixes for this very version (quickFix below) every minute; with Beta updates on, betas too. Installed the same way.
 // In a plain browser (design work), ?update=0.9.0 pretends that version is out.
 import { invoke } from '@tauri-apps/api/core'
 import { useSyncExternalStore } from 'react'
@@ -79,7 +79,7 @@ export async function checkUpdates(): Promise<UpdateState> {
 
 /** The normal release, and with Beta updates on the beta too: whichever is newer. A beta that can't be read (none
  * yet, or none for this system) is no update; the normal check's errors are the ones shown. With neither, a quick
- * fix for this very version (Beta updates on only). */
+ * fix for this very version (a beta or a release). */
 async function newest(): Promise<Found | null> {
   const { check, Update } = await import('@tauri-apps/plugin-updater')
   const beta = await betaOn()
@@ -87,7 +87,7 @@ async function newest(): Promise<Found | null> {
     check(),
     beta ? invoke<ConstructorParameters<typeof Update>[0] | null>('check_beta_update')
       .then((m) => (m ? new Update(m) : null)).catch(() => null) : Promise.resolve(null),
-    beta ? quickFix().catch(() => null) : Promise.resolve(null),
+    quickFix().catch(() => null),  // a beta's or a release's, Beta updates on or not
   ])
   const pick = !ahead ? normal : !normal ? ahead : newer(ahead.version, normal.version) ? ahead : normal
   for (const other of [normal, ahead]) if (other && other !== pick) void other.close().catch(() => {})
@@ -159,13 +159,12 @@ export function startUpdateChecks(found: (version: string) => void) {
   if (!inTauri) return
   // the window is up: a quick fix in use is good enough to keep (quickfix.rs drops one whose start never got here)
   void call('app.version').then(() => invoke('quick_fix_started')).catch(() => {})
-  // with Beta updates on, everything is looked for every minute (a new beta, a quick fix, a release): three small
-  // files, quietly (no "Checking…"); an update already offered or installing is left alone
+  // every minute, quietly: a quick fix for this version; with Beta updates on also a new beta and a release (three
+  // small files) (no "Checking…"); an update already offered or installing is left alone
   setInterval(() => {
     if (!(state.kind === 'idle' || state.kind === 'none' || state.kind === 'error' && !state.version)) return
     void betaOn().then(async (on) => {
-      if (!on) return
-      const f = await newest()
+      const f = on ? await newest() : await quickFix()  // Beta updates off: only a quick fix, one small file
       if (!f || !(state.kind === 'idle' || state.kind === 'none' || state.kind === 'error' && !state.version)) {
         void f?.close?.().catch(() => {})
         return

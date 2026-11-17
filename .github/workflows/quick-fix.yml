@@ -1,7 +1,7 @@
 name: Quick fix
 
-# A fix for the current beta in about a minute, without a new build: the window's files and the Python, for apps on
-# exactly that beta with Beta updates on (they look every minute). packaging/quick_fix.py refuses a change that
+# A fix in about a minute, without a new build: the window's files and the Python, for apps on exactly the current
+# beta, or with "release" ticked the latest release (they look every minute). packaging/quick_fix.py refuses a change that
 # needs a new build (Rust, packaging, the backend's libraries): run Build with beta ticked for those.
 on:
   workflow_dispatch:
@@ -9,6 +9,10 @@ on:
       notes:
         description: "What it fixes, shown in the app's update window"
         default: ''
+      release:
+        description: "For the latest release (everyone on it), not the beta"
+        type: boolean
+        default: false
 
 # after a beta that is still being published, never at the same time
 concurrency:
@@ -30,12 +34,23 @@ jobs:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0  # to compare with the beta's commit
-      - name: The beta it fixes
+      - name: The version it fixes
+        env:
+          RELEASE: ${{ inputs.release }}
         run: |
-          gh release download beta --pattern latest.json --output beta.json
-          V=$(node -p "require('./beta.json').version")
-          C=$(git rev-list -n 1 beta)
-          echo "Beta $V from $C"
+          if [ "$RELEASE" = "true" ]; then
+            T=$(gh api "repos/${{ github.repository }}/releases/latest" -q .tag_name)
+            V=${T#v}
+            FEED=quick-fix-release.json
+          else
+            gh release download beta --pattern latest.json --output beta.json
+            V=$(node -p "require('./beta.json').version")
+            T=beta
+            FEED=quick-fix.json
+          fi
+          C=$(git rev-list -n 1 "$T")
+          echo "$V from $C"
+          echo "FEED=$FEED" >> "$GITHUB_ENV"
           echo "V=$V" >> "$GITHUB_ENV"
           echo "C=$C" >> "$GITHUB_ENV"
       - uses: actions/setup-node@v7
@@ -54,5 +69,6 @@ jobs:
       - name: Publish next to the beta
         run: |
           gh release upload beta out/quick-fix-*.zip --clobber
-          gh release upload beta out/quick-fix.json --clobber
+          [ "$FEED" = quick-fix.json ] || mv out/quick-fix.json "out/$FEED"
+          gh release upload beta "out/$FEED" --clobber
           echo "Quick fix ${{ github.run_number }} for $V is out"

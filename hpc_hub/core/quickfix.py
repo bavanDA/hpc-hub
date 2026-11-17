@@ -1,6 +1,7 @@
-"""Quick fixes: with Beta updates on, a fix to the app's screens or its Python reaches it in about a minute, without
-a new build. One is a zip next to the beta's installers (packaging/quick_fix.py) with ui/ (the window's files) and
-py/hpc_hub/ (this package), for exactly one beta version, signed with the update key like every update.
+"""Quick fixes: a fix to the app's screens or its Python reaches it in about a minute, without a new build. One is a
+zip next to the beta's installers (packaging/quick_fix.py) with ui/ (the window's files) and py/hpc_hub/ (this
+package), for exactly one version, signed with the update key like every update. A beta reads quick-fix.json, a
+release quick-fix-release.json, so each kind of version has its own.
 
 Kept in HPC_HUB_QUICKFIX_DIR (the app's data folder, set by the window, release builds only): <number>/ui, <number>/py
 and current.json naming the one in use. The window serves ui/ (app/src-tauri/src/quickfix.rs) and starts the
@@ -21,6 +22,7 @@ from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 
 FEED = "https://github.com/bavanDA/hpc-hub/releases/download/beta/quick-fix.json"
+RELEASE_FEED = "https://github.com/bavanDA/hpc-hub/releases/download/beta/quick-fix-release.json"
 # the update key's public half, the same as plugins.updater.pubkey in app/src-tauri/tauri.conf.json
 PUBKEY = ("dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDlDOEU3QkFCQzNGMDgxMzQKUldRMGdmRERxM3VPbkw2d3BJY2xpenRu"
           "VFFmZjNhZW9xbTdYb1BpYSsrR1BlalBxWVA5ZURsQncK")
@@ -137,15 +139,20 @@ def offered(feed: dict, root: Path) -> dict | None:
             "signature": feed["signature"], "base": feed["base"]}
 
 
+def feed_url() -> str:
+    """A beta (1.2.3-beta.4) reads the beta's fixes, a release (1.2.3) the release's."""
+    return FEED if "-" in app_version() else RELEASE_FEED
+
+
 def check(fetch=_get) -> dict | None:
-    """The newer quick fix for this version, if there is one. None when there's none (or no beta at all)."""
+    """The newer quick fix for this version, if there is one. None when there's none (or no feed yet)."""
     root = folder()
     if root is None:
         return None
     try:
-        feed = json.loads(fetch(FEED, 256 * 1024))
+        feed = json.loads(fetch(feed_url(), 256 * 1024))
     except urllib.error.HTTPError as e:
-        if e.code == 404:  # a beta without quick fixes, or no beta
+        if e.code == 404:  # no quick fixes for this kind of version yet
             return None
         raise
     return offered(feed, root) if isinstance(feed, dict) else None
