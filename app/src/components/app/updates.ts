@@ -1,7 +1,7 @@
 // New versions of HPC Hub, from the GitHub release the app was signed for (tauri-plugin-updater, the key's public
-// half is in tauri.conf.json). Checked a little after the start and twice a day; installing is one click: download,
+// half is in tauri.conf.json). Checked a little after the start and twice a day (every minute with Beta updates on); installing is one click: download,
 // stop the backend (Windows can't replace a running program), install, restart. Work on the cluster keeps running.
-// With Beta updates on, quick fixes too (quickFix below): checked every minute, installed the same way.
+// With Beta updates on, betas and quick fixes too (quickFix below), all checked every minute, installed the same way.
 // In a plain browser (design work), ?update=0.9.0 pretends that version is out.
 import { invoke } from '@tauri-apps/api/core'
 import { useSyncExternalStore } from 'react'
@@ -20,7 +20,7 @@ export type UpdateState =
 export const RELEASES = 'https://github.com/bavanDA/hpc-hub/releases/latest'
 const FIRST_CHECK_MS = 20_000
 const EVERY_MS = 12 * 3600_000
-const QUICK_FIX_MS = 60_000
+const BETA_EVERY_MS = 60_000  // with Beta updates on
 
 type Found = { version: string; body?: string
   download: (onEvent: (e: DownloadEvent) => void) => Promise<void>
@@ -82,7 +82,7 @@ export async function checkUpdates(): Promise<UpdateState> {
  * fix for this very version (Beta updates on only). */
 async function newest(): Promise<Found | null> {
   const { check, Update } = await import('@tauri-apps/plugin-updater')
-  const beta = await call<{ beta_updates: boolean }>('preferences.get').then((p) => p.beta_updates).catch(() => false)
+  const beta = await betaOn()
   const [normal, ahead, fix] = await Promise.all([
     check(),
     beta ? invoke<ConstructorParameters<typeof Update>[0] | null>('check_beta_update')
@@ -159,9 +159,26 @@ export function startUpdateChecks(found: (version: string) => void) {
   if (!inTauri) return
   // the window is up: a quick fix in use is good enough to keep (quickfix.rs drops one whose start never got here)
   void call('app.version').then(() => invoke('quick_fix_started')).catch(() => {})
-  // with Beta updates on, quick fixes are looked for every minute: one small file
+  // with Beta updates on, everything is looked for every minute (a new beta, a quick fix, a release): three small
+  // files, quietly (no "Checking…"); an update already offered or installing is left alone
   setInterval(() => {
     if (!(state.kind === 'idle' || state.kind === 'none' || state.kind === 'error' && !state.version)) return
-    void quickFix().then((f) => { if (f) void look() }).catch(() => {})
-  }, QUICK_FIX_MS)
+    void betaOn().then(async (on) => {
+      if (!on) return
+      const f = await newest()
+      if (!f || !(state.kind === 'idle' || state.kind === 'none' || state.kind === 'error' && !state.version)) {
+        void f?.close?.().catch(() => {})
+        return
+      }
+      setFound(f)
+      if (f.version !== told) { told = f.version; found(f.version) }
+    }).catch(() => {})
+  }, BETA_EVERY_MS)
+}
+
+const betaOn = () => call<{ beta_updates: boolean }>('preferences.get').then((p) => p.beta_updates).catch(() => false)
+
+function setFound(f: Found) {
+  found = f
+  set({ kind: 'available', version: f.version, notes: f.body ?? '' })
 }
