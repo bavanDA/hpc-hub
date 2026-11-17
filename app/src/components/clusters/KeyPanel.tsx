@@ -1,14 +1,15 @@
-import { Check, Copy, ExternalLink, FolderOpen, Info, KeyRound } from 'lucide-react'
-import { useState } from 'react'
+import { Check, Copy, ExternalLink, FolderOpen, Info, KeyRound, ShieldCheck } from 'lucide-react'
+import { useEffect, useState } from 'react'
 
 import { call } from '../../rpc'
-import type { KeyTest } from '../../types/clusters'
+import { BUSY, type KeyTest } from '../../types/clusters'
 import { EButton } from '../e/EButton'
 import { Spinner } from '../ui/Spinner'
 import { KeyStep } from './KeyStep'
 import { KeyTestResult } from './KeyTestResult'
 import { copy, fill, who } from './loginCopy'
 import { S } from './loginStrings'
+import { useClusters } from './store'
 import { useKeySignIn, type PanelProps } from './useKeySignIn'
 
 const KEY = 0, ADD = 1, TEST = 2
@@ -29,6 +30,21 @@ export function KeyPanel(props: PanelProps) {
   const file = s.key?.file ?? ''
   const keyLine = fill(s.how === 'made' ? S.KEY_MADE : s.how === 'picked' ? S.KEY_PICKED : S.KEY_FOUND, { file })
   const toTest = () => { s.setAdded(true); setOpen(null) }
+  // the key page only opens on the cluster's VPN (Yale): connect that first, then open the page by itself
+  const session = useClusters().sessions[c.id]
+  const vpnUp = session?.state === 'Connected'
+  const vpnBusy = !!session && BUSY.includes(session.state)
+  const [campus, setCampus] = useState(false)
+  const [wantPage, setWantPage] = useState(false)
+  const needVpn = c.vpn.enabled && !vpnUp && !campus
+  const connectVpn = () => {
+    setWantPage(true)
+    call('clusters.connect', { cluster: c.id, vpn_only: true }).catch(() => setWantPage(false))
+  }
+  useEffect(() => {
+    if (wantPage && vpnUp) { setWantPage(false); s.openPage() }
+    if (wantPage && session?.state === 'Error') setWantPage(false)
+  }, [wantPage, vpnUp, session?.state]) // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="flex flex-col">
@@ -54,13 +70,26 @@ export function KeyPanel(props: PanelProps) {
             <EButton kind="quiet" icon={s.copied ? Check : Copy} onClick={s.copyKey} className="h-8 px-2.5 text-sm">
               {s.copied ? S.COPIED : S.COPY_KEY}</EButton>
           </div>
-          <p>{fill(S.PASTE_IT, { who: org })}</p>
-          <div className="flex flex-wrap items-center gap-2">
-            <EButton onClick={s.openPage}>{S.OPEN_PAGE}<ExternalLink size={16} /></EButton>
-            <EButton onClick={toTest}>{S.PASTED_IT}</EButton>
-          </div>
-          {c.key_page_note && <p className="flex gap-2 text-sm text-dim">
-            <Info size={14} className="mt-[3px] shrink-0" />{c.key_page_note}</p>}
+          {needVpn ? <>
+            <p>{fill(S.VPN_FIRST, { who: org })}</p>
+            <div className="flex flex-wrap items-center gap-2">
+              <EButton icon={vpnBusy ? undefined : ShieldCheck} onClick={connectVpn} disabled={vpnBusy}>
+                {vpnBusy && <Spinner />}{copy.connectVpn(c)}</EButton>
+              <EButton kind="quiet" onClick={() => { setCampus(true); s.openPage() }}>{S.ON_CAMPUS}</EButton>
+            </div>
+            {vpnBusy && session?.detail && <p className="text-sm text-dim">{session.detail}</p>}
+            {session?.state === 'Error' && session.detail && <p className="text-sm text-bad">{session.detail}</p>}
+          </> : <>
+            <p>{fill(S.PASTE_IT, { who: org })}</p>
+            <div className="flex flex-wrap items-center gap-2">
+              <EButton onClick={s.openPage}>{S.OPEN_PAGE}<ExternalLink size={16} /></EButton>
+              <EButton onClick={toTest}>{S.PASTED_IT}</EButton>
+            </div>
+            {c.vpn.enabled && vpnUp ? <p className="flex gap-2 text-sm text-dim">
+              <ShieldCheck size={14} className="mt-[3px] shrink-0" />{fill(S.VPN_UP, { who: org })}</p>
+              : c.key_page_note && <p className="flex gap-2 text-sm text-dim">
+                <Info size={14} className="mt-[3px] shrink-0" />{c.key_page_note}</p>}
+          </>}
         </>}
       </KeyStep>
       <KeyStep n={3} state={state(TEST)} title={S.STEP_TEST} done={fill(S.SIGNED_IN_AS, { user: user.trim() })}
