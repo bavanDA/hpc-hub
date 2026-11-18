@@ -3,13 +3,16 @@ import { useEffect, useState } from 'react'
 
 import { EButton } from '../e/EButton'
 import { Spinner } from '../ui/Spinner'
+import { duoWaiting, type DuoMethod } from './duo'
 import { copy } from './loginCopy'
 import { OnTop } from '../ui/OnTop'
 
 const demoLate = new URLSearchParams(location.search).get('duoafter')  // design work: ?duoafter=0 shows it at once
 const LATE = demoLate === null ? 60 : Number(demoLate)
 
-export function DuoDialog({ name, onCancel, onRetry }: { name: string; onCancel: () => void; onRetry: () => void }) {
+export function DuoDialog({ name, method = 'push', onCancel, onRetry }: { name: string; method?: DuoMethod
+  onCancel: () => void; onRetry: () => void }) {
+  const say = duoWaiting(method)
   const [start] = useState(() => Date.now())
   const [now, setNow] = useState(start)
   useEffect(() => {
@@ -24,11 +27,11 @@ export function DuoDialog({ name, onCancel, onRetry }: { name: string; onCancel:
         <div role="dialog" aria-label="Duo" className="dialog-in flex w-[440px] max-w-full flex-col items-center gap-3
           rounded-xl bg-window px-6 pt-8 pb-5 text-center shadow-[var(--shadow-dialog)]">
           <Smartphone size={40} strokeWidth={1.25} className="text-dim" />
-          <h2 className="mt-1 text-xl font-semibold">Approve Duo on your phone</h2>
+          <h2 className="mt-1 text-xl font-semibold">{say.title}</h2>
           {late
             ? <p className="text-dim">{copy.duoLate}</p>
             : <p className="text-dim"><b className="font-semibold text-text">{name}</b> is waiting.<br />
-                Open Duo Mobile and tap Approve.</p>}
+                {say.text}</p>}
           {!late && <div className="mt-2"><Spinner size={32} /></div>}
           <p className="text-sm text-dim tabular-nums">Waiting {Math.floor(s / 60)}:{String(s % 60).padStart(2, '0')}</p>
           <div className="mt-3 flex w-full gap-2">

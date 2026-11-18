@@ -158,7 +158,8 @@ export type Question = {
   title?: string  // confirm: answered "yes", or null for no; a sign-in that isn't the VPN's (a portal)
   prompt?: string
   default?: string
-  note?: string  // web-login: what to say under the waiting dialog, instead of the VPN's words
+  note?: string  // web-login: what to say under the waiting dialog; code: what to type (else the authenticator's code)
+  auto?: boolean  // code: 6 digits send it by themselves (false for Duo: its texted codes are 7 digits)
   login_url?: string
   final_url?: string
   token_cookie?: string

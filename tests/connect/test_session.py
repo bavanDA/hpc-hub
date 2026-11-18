@@ -4,6 +4,7 @@ from types import SimpleNamespace
 
 import pytest
 
+from hpc_hub.connect import prompts
 from hpc_hub.connect.askpass_server import AskpassServer
 from hpc_hub.connect.session import ClusterSession, State
 from hpc_hub.core.config import ClusterConfig
@@ -634,3 +635,117 @@ def test_closing_the_code_window_stops_the_sign_in(env, monkeypatch):
     assert asked == ["Verification code:"], "one window, not one per ssh retry"
     assert answers == [None, None, None]
     assert s.state != State.CONNECTED
+
+
+
+# -- Duo without a push: phone call, text message, passcode (2026-11-19: some users have no Duo Push) ---------
+
+class CodeRecorder(Recorder):
+    """Answers a code question with code, and keeps what it was asked."""
+    def __init__(self, code):
+        super().__init__()
+        self.answer, self.asked = code, []
+
+    def code(self, s, prompt, note="", auto=True):
+        self.asked.append((note, auto))
+        return self.answer
+
+
+CLOSED = object()  # the code question closed without an answer
+
+
+def duo_connect(server, method, code=None):
+    rec = CodeRecorder(None if code is CLOSED else code) if code is not None else Recorder()
+    s = ClusterSession(ClusterConfig(id="t", name="Test", host="fake", duo_answer=method), server, rec)
+    s.connect(Login("u", "pw"), None)
+    assert rec.done.wait(20)
+    return s, rec
+
+
+def duo_answers(tmp):
+    log = tmp / "cmds.log"
+    lines = log.read_text().splitlines() if log.exists() else []  # no log: ssh never got as far as an answer
+    return [line.split(" ", 1)[1] for line in lines if line.startswith("duo ")]
+
+
+def test_duo_push_picks_the_push_line(env, monkeypatch):
+    server, tmp = env
+    monkeypatch.setenv("FAKE_DUO_MENU", "1")
+    s, rec = duo_connect(server, "push")
+    assert s.state == State.CONNECTED and duo_answers(tmp) == ["1"] and State.DUO in rec.states
+
+
+def test_duo_phone_call_picks_the_call_line(env, monkeypatch):
+    server, tmp = env
+    monkeypatch.setenv("FAKE_DUO_MENU", "1")
+    s, rec = duo_connect(server, "phone")
+    assert s.state == State.CONNECTED and duo_answers(tmp) == ["2"]
+
+
+def test_duo_text_message_asks_for_the_texted_code(env, monkeypatch):
+    server, tmp = env
+    monkeypatch.setenv("FAKE_DUO_MENU", "1")
+    monkeypatch.setenv("FAKE_DUO_CODE", "1234567")  # Duo's texted codes are 7 digits
+    s, rec = duo_connect(server, "sms", code="1234567")
+    assert s.state == State.CONNECTED, "\n".join(rec.lines)
+    assert duo_answers(tmp) == ["3", "1234567"]
+    assert rec.asked == [(prompts.ASK_SMS, False)]  # no sending on 6 digits: the 7th would be lost
+
+
+def test_duo_passcode_is_typed_once(env, monkeypatch):
+    server, tmp = env
+    monkeypatch.setenv("FAKE_DUO_MENU", "1")
+    monkeypatch.setenv("FAKE_DUO_CODE", "246810")
+    s, rec = duo_connect(server, "passcode", code="246810")
+    assert s.state == State.CONNECTED and duo_answers(tmp) == ["246810"]
+    assert rec.asked == [(prompts.ASK_PASSCODE, False)] and State.DUO not in rec.states  # no push dialog
+
+
+def test_duo_passcode_closed_stops_signing_in(env, monkeypatch):
+    server, tmp = env
+    monkeypatch.setenv("FAKE_DUO_MENU", "1")
+    s, rec = duo_connect(server, "passcode", code=CLOSED)
+    assert s.state != State.CONNECTED
+    assert duo_answers(tmp) == [] and len(rec.asked) == 1  # asked once, nothing guessed for you
+
+
+def test_a_wrong_passcode_is_not_retried(env, monkeypatch):
+    server, tmp = env
+    monkeypatch.setenv("FAKE_DUO_MENU", "1")
+    monkeypatch.setenv("FAKE_DUO_CODE", "246810")
+    s, rec = duo_connect(server, "passcode", code="999999")
+    assert s.state == State.ERROR and duo_answers(tmp) == ["999999"]  # one try: no lockout
+
+
+def test_vpn_text_message_signs_in_again_with_the_texted_code(env, monkeypatch):
+    """A VPN gateway fails the sign-in on "sms" and texts the codes: the session asks for one and signs in again."""
+    from hpc_hub.connect import session as session_mod
+    from hpc_hub.connect.vpn import VpnError
+    server, tmp = env
+    calls = []
+
+    class Gateway:
+        sms_sent = False
+        def is_active(self): return False
+        def ensure_profile(self): pass
+        def up(self, auth): calls.append(("up", auth["COOKIE"]))
+        def authenticate(self, username, password, ask, on_duo, cancelled, env, duo):
+            reply = duo("Second Password:", 1)
+            calls.append(("duo", reply))
+            if reply == "sms":
+                self.sms_sent = True
+                raise VpnError("VPN login failed: Login failed.")
+            self.sms_sent = False
+            return {"COOKIE": "c-" + reply}
+
+    gw = Gateway()
+    monkeypatch.setattr(ClusterSession, "vpn", property(lambda self: gw))
+    monkeypatch.setattr(session_mod, "reachable", lambda *a, **k: True)
+    rec = CodeRecorder("7654321")
+    cfg = ClusterConfig(id="t", name="Test", host="", duo_answer="sms")
+    cfg.vpn.enabled, cfg.vpn.gateway = True, "vpn.example.edu"
+    s = ClusterSession(cfg, server, rec)
+    s.vpn_only = True
+    s._bring_up_vpn(Login("u", "pw"), server.register(lambda p: None))
+    assert calls == [("duo", "sms"), ("duo", "7654321"), ("up", "c-7654321")]
+    assert rec.asked == [(prompts.ASK_SMS, False)]  # "Duo texted you passcodes", not a general passcode question

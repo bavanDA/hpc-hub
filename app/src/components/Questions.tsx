@@ -8,6 +8,7 @@ import { DEMO_CLUSTER, demoQuestions } from '../demo/questions'
 import { DUO, type Question, type Session } from '../types/clusters'
 import { inTauri } from './app/platform'
 import { DuoDialog } from './clusters/DuoDialog'
+import { duoMethod } from './clusters/duo'
 import { KeySetupDialog } from './clusters/KeySetupDialog'
 import { QuestionDialog } from './clusters/QuestionDialog'
 import { SettingsDialog } from './clusters/SettingsDialog'
@@ -79,6 +80,7 @@ export function Questions() {
   return (
     <>
       {duo && <DuoDialog key={duo.id} name={clusters?.find((c) => c.id === duo.id)?.name ?? duo.id}
+        method={duoMethod(clusters?.find((c) => c.id === duo.id)?.duo_answer)}
         onCancel={() => call('clusters.cancel', { cluster: duo.id }).catch((e: Error) => toast(e.message))}
         onRetry={() => retry(duo.id)} />}
       {q && <QuestionDialog key={q.id} q={q} cluster={clusters?.find((c) => c.id === q.cluster)}

@@ -118,13 +118,15 @@ export function Questions() {
         <Button kind="primary" className="flex-1" disabled={code ? !digits(text) : !text} onClick={send}>Send</Button></>}>
         <form onSubmit={(e) => { e.preventDefault(); send() }}>
           {code
-            ? <p className="mb-4">Type the 6-digit code from your authenticator app.</p>
+            ? <p className="mb-4">{q.note || 'Type the 6-digit code from your authenticator app.'}</p>
             : prompt && !short && <p className="mb-2 whitespace-pre-wrap text-dim">{prompt}</p>}
           {code
-            ? <input autoFocus inputMode="numeric" maxLength={8} placeholder="123456" value={text} aria-label="Code"
+            ? <input autoFocus inputMode="numeric" maxLength={12} placeholder={q.auto === false ? '1234567' : '123456'}
+                value={text} aria-label="Code"
                 onChange={(e) => {
                   setText(e.target.value)
-                  if (/^\d{6}$/.test(digits(e.target.value))) answer(q, digits(e.target.value))
+                  // an authenticator's 6 digits send themselves; Duo's codes (texted ones are 7 digits) wait for Send
+                  if (q.auto !== false && /^\d{6}$/.test(digits(e.target.value))) answer(q, digits(e.target.value))
                 }}
                 className="h-16 w-full rounded-[10px] border border-line-strong bg-window text-center text-3xl
                   font-semibold tracking-[0.2em] tabular-nums outline-none placeholder:text-line-strong

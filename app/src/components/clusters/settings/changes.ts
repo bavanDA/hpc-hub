@@ -24,7 +24,7 @@ const pick = <T extends object, K extends keyof T>(o: T, keys: readonly K[]) =>
 /** What cluster_settings.save takes: only the fields this dialog edits. */
 export function changes(d: Cluster, agents: SettingsInfo['agents'] = []) {
   const out: Record<string, unknown> = {
-    host: d.host, port: d.port,
+    host: d.host, port: d.port, duo_answer: d.duo_answer,
     request_node_on_connect: d.request_node_on_connect, ask_node: d.ask_node, reuse_running_job: d.reuse_running_job,
     vpn: pick(d.vpn, VPN_KEYS),
     profile: pick(d.profile, PROFILE_KEYS),

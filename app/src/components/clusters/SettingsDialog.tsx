@@ -95,7 +95,7 @@ export function SettingsDialog({ cluster, hint, onClose, start = '', advanced = 
   const vpnLogin = { user: vpnUser, setUser: setVpnUser, password: vpnPassword, setPassword: setVpnPassword,
     saved: !!saved?.vpn.password }
   const pages: Record<Part, ReactNode> = {
-    '': <Overview d={d} info={info} user={user} open={setPart} onAuthenticator={() => setOpen('code')} />,
+    '': <Overview d={d} info={info} user={user} open={setPart} onAuthenticator={() => setOpen('code')} up={up} />,
     login: <LoginPart d={d} login={login} onPortal={() => setOpen('key')} onForget={() => setOpen('forget')}
       signedIn={!!session && (session.connected ?? session.state === 'Connected')} />,
     compute: <ComputePart d={d} up={up} />,

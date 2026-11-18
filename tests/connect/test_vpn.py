@@ -82,3 +82,73 @@ def test_nm_secrets_fill_resolve():
                    "resolve": "vpn.njit.edu:128.235.249.36"}
     sec = vpn.nm_secrets({"COOKIE": "c", "RESOLVE": "a:1.2.3.4"}, "a", lookup=lambda h: 1 / 0)
     assert sec["resolve"] == "a:1.2.3.4" and sec["gateway"] == "a"
+
+
+# -- Duo on the VPN: push, phone call, text message, passcode (2026-11-19: users without Duo Push) -------------
+
+# A Cisco gateway with Duo: password, then "Second Password:" takes push, phone, sms or a passcode. "sms" fails
+# the sign-in and texts the codes (that is how these gateways do it).
+ASA = textwrap.dedent("""
+    import os, sys
+    def ask(label):
+        sys.stderr.write(label); sys.stderr.flush()
+        return sys.stdin.readline().strip()
+    pw = ask("Password:")
+    duo = ask("Second Password:")
+    open(os.environ["FAKE_VPN_LOG"], "a").write(duo + "\\n")
+    if pw != "pw" or duo not in ("push", "phone", "7654321"):
+        sys.stderr.write("Login failed.\\n"); sys.exit(1)
+    print("COOKIE='abc=123'")
+    print("HOST='1.2.3.4'")
+""")
+
+
+@pytest.fixture
+def gateway(tmp_path, monkeypatch):
+    script = tmp_path / "asa.py"
+    script.write_text(ASA)
+    monkeypatch.setenv("FAKE_VPN_LOG", str(tmp_path / "duo.log"))
+    cfg = config.ClusterConfig(id="t", name="Test", host="fake")
+    cfg.vpn.gateway = "vpn.example.edu"
+    v = vpn.Vpn(cfg, lambda line: None)
+    v.external_browser = ""
+    wrapper = tmp_path / "openconnect"
+    wrapper.write_text(f"#!/bin/sh\nexec {sys.executable} {script}\n")
+    wrapper.chmod(0o755)
+    v.openconnect = str(wrapper)
+    return v, tmp_path / "duo.log"
+
+
+def sign_in(v, duo=None):
+    return v.authenticate("jdoe", "pw", ask=lambda p: None, on_duo=lambda: None, duo=duo)
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="a shell script stands in for openconnect")
+def test_vpn_duo_push_is_the_default(gateway):
+    v, log = gateway
+    assert sign_in(v)["COOKIE"] == "abc=123" and log.read_text() == "push\n" and not v.sms_sent
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="a shell script stands in for openconnect")
+def test_vpn_duo_follows_the_sessions_answer(gateway):
+    v, log = gateway
+    assert sign_in(v, duo=lambda prompt, times: "phone")["COOKIE"] == "abc=123"
+    assert log.read_text() == "phone\n"
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="a shell script stands in for openconnect")
+def test_vpn_duo_text_message_fails_once_then_a_texted_code_signs_in(gateway):
+    v, log = gateway
+    with pytest.raises(vpn.VpnError):
+        sign_in(v, duo=lambda prompt, times: "sms")
+    assert v.sms_sent  # the session signs in again, asking for a code
+    assert sign_in(v, duo=lambda prompt, times: "7654321")["COOKIE"] == "abc=123"
+    assert log.read_text() == "sms\n7654321\n" and not v.sms_sent
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="a shell script stands in for openconnect")
+def test_vpn_duo_closed_question_sends_nothing(gateway):
+    v, log = gateway
+    with pytest.raises(vpn.VpnError):
+        sign_in(v, duo=lambda prompt, times: None)
+    assert not v.sms_sent

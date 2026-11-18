@@ -33,7 +33,7 @@ class Listener(Protocol):
     def state_changed(self, session: "ClusterSession") -> None: ...
     def log(self, session: "ClusterSession", line: str) -> None: ...
     def ask(self, session: "ClusterSession", prompt: str) -> str | None: ...
-    def code(self, session: "ClusterSession", prompt: str) -> str | None: ...
+    def code(self, session: "ClusterSession", prompt: str, note: str = "", auto: bool = True) -> str | None: ...
     def web_login(self, session: "ClusterSession", start: vpn_sso.SsoStart, login: Login,
                   profile: str = "", title: str = "", note: str = "") -> tuple[str, str]: ...  # profile: "" or CHOICE
     def pick_browser(self, session: "ClusterSession") -> str: ...  # "" = app window, see vpn.browser
@@ -224,6 +224,9 @@ class ClusterSession(NodesMixin):
             if kind == prompts.CODE or (code_login and kind in (prompts.DUO, prompts.UNKNOWN)):
                 self._set(State.SIGNING_IN, "Type the code from your authenticator app")
                 return asking(self.listener.code(self, prompt))
+            if kind == prompts.DUO:
+                handler_state[kind] += 1
+                return self._duo(prompt, handler_state[kind], asking)
             if kind in handler_state:
                 handler_state[kind] += 1
                 if handler_state[kind] > 1:
@@ -231,12 +234,9 @@ class ClusterSession(NodesMixin):
                     if kind == prompts.PASSWORD and ssh_login.password:
                         self.wrong_password = True
                     return None
-                if kind == prompts.PASSWORD:
-                    if not ssh_login.password:
-                        self._log("The cluster asked for a password: your SSH key is not on it yet")
-                    return ssh_login.password or None
-                self._set(State.DUO, "Approve the Duo push on your phone")
-                return prompts.duo_reply(prompt, self.cfg.duo_answer)
+                if not ssh_login.password:
+                    self._log("The cluster asked for a password: your SSH key is not on it yet")
+                return ssh_login.password or None
             return asking(self.listener.ask(self, prompt))
 
         if not self.vpn_only and self.cfg.host and ssh_login.username:
@@ -317,6 +317,23 @@ class ClusterSession(NodesMixin):
             self.allocation = None
             self._set(State.CONNECTED)
 
+    def _duo(self, prompt: str, times: int, asking, duo: str = "") -> str | None:
+        """Duo asked (the n-th time): answer it the way Settings says (push, phone call, text message, passcode)."""
+        action, text = prompts.duo_action(prompt, duo or self.cfg.duo_answer, times)
+        if action == prompts.STOP:
+            self._log(f"{text}; stopping to avoid locking the account")
+            return None
+        if action == prompts.ASK:
+            self._set(State.SIGNING_IN, "Type your Duo passcode")
+            return asking(self.listener.code(self, prompt, note=text, auto=False))
+        method = prompts.duo_method(duo or self.cfg.duo_answer)
+        if method == "sms":
+            self._set(State.SIGNING_IN, "Duo is texting you passcodes")
+        else:
+            wait = "Answer the call from Duo" if method == "phone" else "Approve the Duo push on your phone"
+            self._set(State.DUO, wait)
+        return text
+
     def _bring_up_vpn(self, login: Login, token: str) -> None:
         vpn = self.vpn
         if vpn.is_active():
@@ -336,14 +353,26 @@ class ClusterSession(NodesMixin):
         if self.vpn_only and vpn_local.is_local(vpn):
             raise VpnError(vpn_local.ONLY_HPC_HUB)
         env = self.askpass.env(token)
-        try:
-            auth = vpn.authenticate(
+
+        def sign_in(duo: str = "") -> dict[str, str]:
+            return vpn.authenticate(
                 login.username, login.password,
                 ask=lambda prompt: self.listener.ask(self, prompt),
-                on_duo=lambda: self._set(State.DUO, "Approve the Duo push on your phone"),
+                on_duo=lambda: None,
                 cancelled=self._cancel.is_set,
                 env=env,
+                duo=lambda prompt, times: self._duo(prompt, times, lambda a: a, duo),
             )
+
+        try:
+            try:
+                auth = sign_in()
+            except VpnError:
+                if not vpn.sms_sent or self._cancel.is_set():
+                    raise
+                # a VPN without a menu fails on "sms" and texts the codes: sign in again with one of them
+                self._log("vpn: Duo texted passcodes; signing in again with one")
+                auth = sign_in(prompts.TEXTED)
         except NeedsWebLogin:
             auth = self._web_vpn_login(login)
         self._set(State.VPN, "Starting tunnel")

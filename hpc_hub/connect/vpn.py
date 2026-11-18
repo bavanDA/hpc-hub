@@ -185,6 +185,7 @@ class Vpn:
         self.openconnect = "openconnect"
         self.external_browser = str(SSO_BIN)  # SAML gateways: the sign-in window (bin/hpc-hub-sso)
         self.extra_args: list[str] = []
+        self.sms_sent = False  # the last sign-in answered Duo "sms" on a VPN without a menu (see authenticate)
 
     def _nmcli(self, *args: str, timeout: float = 60) -> subprocess.CompletedProcess:
         return subprocess.run(["nmcli", *args], capture_output=True, text=True, timeout=timeout, env=NM_ENV)
@@ -221,8 +222,10 @@ class Vpn:
         on_duo: Callable[[], None],
         cancelled: Callable[[], bool] = lambda: False,
         env: dict | None = None,
+        duo: Callable[[str, int], str | None] | None = None,
     ) -> dict[str, str]:
-        """Log in. Browser (SAML) gateways open the in-app sign-in window via env's askpass."""
+        """Log in. Browser (SAML) gateways open the in-app sign-in window via env's askpass. duo(prompt, times):
+        the answer to Duo's n-th question (the session's, from Settings' Duo method); without it, a push."""
         v = self.cfg.vpn
         argv = [self.openconnect, "--authenticate", "--protocol", v.protocol, "--user", username]
         if self.external_browser:
@@ -236,6 +239,7 @@ class Vpn:
         argv.append(v.gateway)
 
         asked = {prompts.PASSWORD: 0, prompts.DUO: 0}
+        self.sms_sent = False
 
         def answer(prompt: str) -> str | None:
             kind = prompts.classify(prompt)
@@ -243,14 +247,22 @@ class Vpn:
                 return username
             if kind == prompts.GROUP:
                 return prompts.group_choice(prompt, v.authgroup)
+            if kind == prompts.DUO:
+                asked[kind] += 1
+                on_duo()
+                if duo:
+                    reply = duo(prompt, asked[kind])
+                else:
+                    action, reply = prompts.duo_action(prompt, self.cfg.duo_answer, asked[kind])
+                    reply = reply if action == prompts.SEND else None
+                if reply and reply.lower() == "sms":
+                    self.sms_sent = True  # a VPN without a menu fails now, having texted the codes
+                return reply
             if kind in asked:
                 asked[kind] += 1
                 if asked[kind] > 1:
                     return None  # rejected once; don't hammer the account
-                if kind == prompts.PASSWORD:
-                    return password
-                on_duo()
-                return prompts.duo_reply(prompt, self.cfg.duo_answer)
+                return password
             return ask(prompt)
 
         code, out, err = run_interactive(argv, answer, self.log, timeout=300, cancelled=cancelled, env=env)

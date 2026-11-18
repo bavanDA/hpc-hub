@@ -132,8 +132,11 @@ class Hub:
     def ask(self, s: ClusterSession, prompt: str) -> str | None:
         return self.question("ask", {"cluster": s.cfg.id, "name": s.cfg.name, "prompt": prompt})
 
-    def code(self, s: ClusterSession, prompt: str) -> str | None:
-        return self.question("code", {"cluster": s.cfg.id, "name": s.cfg.name, "prompt": prompt})
+    def code(self, s: ClusterSession, prompt: str, note: str = "", auto: bool = True) -> str | None:
+        """A code to type. note: what to tell you (else: the authenticator app's 6 digits); auto: 6 digits send it by
+        themselves (not for Duo, whose texted codes are 7 digits)."""
+        return self.question("code", {"cluster": s.cfg.id, "name": s.cfg.name, "prompt": prompt,
+                                      **({"note": note} if note else {}), "auto": auto})
 
     def confirm(self, s: ClusterSession, title: str, text: str) -> bool:
         return self.question("confirm", {"cluster": s.cfg.id, "name": s.cfg.name, "title": title,

@@ -103,7 +103,8 @@ export function SettingsWindow({ cluster, hint, onClose, start = '' }:
   const vpnLogin = { user: vpnUser, setUser: setVpnUser, password: vpnPassword, setPassword: setVpnPassword,
     saved: !!saved?.vpn.password }
   const pages: Record<Part, ReactNode> = {
-    '': <Overview d={d} info={info} user={user} open={setPart} onAuthenticator={() => setOpen('code')} />,
+    '': <Overview d={d} info={info} user={user} open={setPart} onAuthenticator={() => setOpen('code')} up={up}
+      Choice={ChoiceRow} />,
     login: <LoginForm cluster={d} login={login} onScanned={onClose}
       signedIn={!!session && (session.connected ?? session.state === 'Connected')}>{forgetRow}</LoginForm>,
     compute: <ComputePart d={d} up={up} />,

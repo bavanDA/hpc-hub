@@ -109,3 +109,17 @@ def test_auto_is_kept_as_the_first_choice(tmp_path):
     path = tmp_path / "clusters.toml"
     path.write_text('[clusters.wulver.claude]\nmode = "auto"\n')
     assert next(c for c in config.load(path) if c.id == "wulver").claude.mode == ""
+
+
+# 2026-11-19: users without Duo Push choose phone call, text message or passcode in Settings
+@pytest.mark.parametrize("method", ["push", "phone", "sms", "passcode"])
+def test_each_duo_method_is_saved(hub, method):
+    cs.save("wulver", {"duo_answer": method})
+    assert hub.sessions["wulver"].cfg.duo_answer == method and hub.saved == 1
+
+
+@pytest.mark.parametrize("bad", ["sms; rm -rf ~", "push\n1", "x" * 40])
+def test_a_duo_method_with_odd_text_is_refused(hub, bad):
+    with pytest.raises(ValueError):
+        cs.save("wulver", {"duo_answer": bad})
+    assert hub.sessions["wulver"].cfg.duo_answer == "push" and hub.saved == 0

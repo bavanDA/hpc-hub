@@ -50,3 +50,48 @@ def duo_reply(prompt: str, answer: str) -> str:
     label = r"duo push" if kind == "push" else r"phone call"
     found = re.findall(rf"^\s*(\d+)\.\s*{label}", prompt, re.I | re.M)
     return found[nth - 1] if len(found) >= nth else answer
+
+
+# -- Duo: how you answer it (Settings, Duo method) ---------------------------------------------------------
+
+DUO_METHODS = ("push", "phone", "sms", "passcode")
+SEND, ASK, STOP = "send", "ask", "stop"
+ASK_PASSCODE = "Type a Duo passcode: from Duo Mobile (tap the key icon), a text from Duo, or your hardware token."
+ASK_SMS = "Duo texted you passcodes. Type one of them."
+TEXTED = "texted"  # a VPN without a menu fails on "sms" and texts the codes: the second sign-in asks for one
+
+
+def duo_method(answer: str) -> str:
+    """push, phone, sms or passcode, from the saved answer ("push2" is the second phone's push; a typed number,
+    once allowed as the answer itself, is a passcode)."""
+    a = answer.strip().lower()
+    for m in DUO_METHODS:
+        if a.startswith(m):
+            return m
+    return "passcode" if a.isdigit() else "push"
+
+
+def _sms_option(prompt: str) -> str:
+    m = re.search(r"^\s*(\d+)\.\s*SMS passcodes", prompt, re.I | re.M)
+    return m.group(1) if m else ""
+
+
+def duo_action(prompt: str, answer: str, times: int) -> tuple[str, str]:
+    """What to do the n-th time (from 1) Duo asks: (SEND, text), (ASK, what to tell you), or (STOP, why). Duo asks a
+    second time only after "send me texts"; any other second time means the first answer failed, and asking again
+    would lock the account."""
+    if answer == TEXTED:  # the VPN's second sign-in, after it texted the codes
+        return (ASK, ASK_SMS) if times == 1 else (STOP, "Duo didn't accept the passcode")
+    method = duo_method(answer)
+    if method == "passcode":
+        return (ASK, ASK_PASSCODE) if times == 1 else (STOP, "Duo didn't accept the passcode")
+    if method == "sms":
+        if times == 1:
+            option = _sms_option(prompt)
+            return (SEND, option) if option else (SEND, "sms")
+        if times == 2:
+            return (ASK, ASK_SMS)
+        return (STOP, "Duo didn't accept the passcode")
+    if times > 1:
+        return (STOP, f"Duo asked again after the {'call' if method == 'phone' else 'push'}")
+    return (SEND, duo_reply(prompt, answer if answer.strip() else "push"))

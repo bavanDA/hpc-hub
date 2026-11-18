@@ -34,9 +34,10 @@ export function QuestionDialog({ q, cluster, onAnswer }:
   }
 
   if (q.kind === 'code') {
+    const auto = q.auto !== false  // an authenticator's code is 6 digits: sent as soon as they are in
     const typed = (v: string) => {
       setText(v)
-      if (/^\d{6}$/.test(digits(v))) onAnswer(digits(v))  // sent as soon as 6 digits are in
+      if (auto && /^\d{6}$/.test(digits(v))) onAnswer(digits(v))
     }
     return (
       <>
@@ -45,14 +46,14 @@ export function QuestionDialog({ q, cluster, onAnswer }:
           <MainButton className="flex-1" disabled={!digits(text)} onClick={() => onAnswer(digits(text))}>Send
           </MainButton>
         </>}>
-          <p className="px-5 pb-3 text-dim">Open your authenticator app and type the 6-digit code.</p>
+          <p className="px-5 pb-3 text-dim">{q.note || 'Open your authenticator app and type the 6-digit code.'}</p>
           <form className="px-5 pb-4" onSubmit={(e) => { e.preventDefault(); if (digits(text)) onAnswer(digits(text)) }}>
-            <input autoFocus inputMode="numeric" maxLength={8} placeholder="123456" value={text}
+            <input autoFocus inputMode="numeric" maxLength={12} placeholder={auto ? '123456' : '1234567'} value={text}
               onChange={(e) => typed(e.target.value)} aria-label="Code"
               className="h-14 w-full rounded-lg border-[1.5px] border-accent bg-window text-center text-3xl font-semibold
                 tracking-[0.2em] tabular-nums outline-none placeholder:text-faint" />
           </form>
-          {cluster && <List><Row icon={ShieldCheck} label="No code yet? How to set it up" opens
+          {cluster && auto && <List><Row icon={ShieldCheck} label="No code yet? How to set it up" opens
             onPress={() => setHelp(true)} /></List>}
         </EDialog>
         {help && cluster && <AuthenticatorHelp cluster={cluster} onClose={() => setHelp(false)} />}
