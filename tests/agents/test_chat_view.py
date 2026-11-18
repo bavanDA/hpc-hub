@@ -5,6 +5,7 @@ import json
 import os
 import subprocess
 import sys
+from pathlib import Path
 
 import pytest
 
@@ -163,3 +164,42 @@ def test_only_known_keys_are_sent():
     assert "BTab" in chat_view.key_command("s", "mode")
     with pytest.raises(ValueError):
         chat_view.key_command("s", "C-c")
+
+
+# -- screens captured from a real Claude Code (v2.1), paths made up ----------------------------------------
+
+SCREENS = Path(__file__).parent / "screens"
+
+
+def test_a_real_permission_question_with_its_four_choices():
+    r = chat_view.parse_screen((SCREENS / "claude-ask.txt").read_text())
+    ask = r["ask"]
+    assert ask["question"] == "Do you want to proceed?" and ask["permission"]
+    assert [o["key"] for o in ask["options"]] == ["1", "2", "3", "4"]
+    assert ask["options"][0]["label"] == "Yes" and ask["options"][3]["label"] == "No"
+    assert ask["options"][1]["label"].endswith("from this project")  # a choice that wraps stays one choice
+    assert "printf 'hi" in ask["detail"] and "╌" not in ask["detail"]  # the command, not the dividers
+    assert r["mode"] == "ask" and not r["busy"]
+
+
+def test_a_real_auto_mode_footer():
+    r = chat_view.parse_screen((SCREENS / "claude-auto.txt").read_text())
+    assert r["mode"] == "auto" and r["ask"] is None  # your own message echoed with ❯ is no menu
+
+
+def test_a_real_menu_without_numbers_is_answered_with_arrows():
+    r = chat_view.parse_screen((SCREENS / "claude-trust.txt").read_text())
+    ask = r["ask"]
+    assert ask is not None and "trust" in ask["question"]
+    assert ask["options"] == [{"key": "move:+0", "label": "No, exit"},
+                              {"key": "move:+1", "label": "Yes, I trust this folder"}]
+    assert chat_view.key_command("hpchub-claude-1-3f2a9c1e", "move:+1").endswith("Down Enter")
+    assert chat_view.key_command("hpchub-claude-1-3f2a9c1e", "move:+0").endswith(" Enter")
+    with pytest.raises(ValueError):
+        chat_view.key_command("hpchub-claude-1-3f2a9c1e", "move:+12; rm")
+
+
+def test_a_real_model_switch_asks_first():
+    ask = chat_view.parse_screen((SCREENS / "claude-model.txt").read_text())["ask"]
+    assert ask["question"] == "Switch model?" and not ask["permission"]
+    assert [o["label"] for o in ask["options"]] == ["Yes, switch to Sonnet 5.5", "No, go back"]

@@ -197,7 +197,7 @@ export function ChatView({ tab, shown, switcher, toggle, onTerminal }: { tab: Ta
                 {ask.options.map((o) => (
                   <button key={o.key} onClick={() => key(o.key).catch(fail)}
                     className="rounded-lg border border-line-strong bg-window px-3 py-2 text-left text-sm hover:bg-hover">
-                    <span className="mr-2 text-dim">{o.key}</span>{o.label}</button>
+                    {/^\d$/.test(o.key) && <span className="mr-2 text-dim">{o.key}</span>}{o.label}</button>
                 ))}
               </div>
               <button onClick={onTerminal} className="self-start text-sm text-dim underline hover:text-text">Open in terminal</button>

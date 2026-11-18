@@ -180,6 +180,36 @@ def read(ssh: SshMaster, session: str, file: str = "", offset: int = -1, since: 
 # -- what waits on you, from the screen -----------------------------------------------------------------
 
 OPTION = re.compile(r"^[\s│|]*([❯›]\s*)?(\d)\.\s+(.+?)\s*[│|]?\s*$")
+BOX = " │|─╭╮╰╯╌┄┈"  # frames and dividers around Claude's questions, never part of what they say
+POINTED = re.compile(r"^(\s*)❯ (\S.*)$")
+
+
+def _arrow_menu(lines: list[str]) -> tuple[list[dict], int | None]:
+    """A menu without numbers ("❯ No, exit / Yes, I trust this folder"): its choices in a column, ❯ on the picked
+    one, and "Enter to confirm" under them. Each choice's key moves to it and presses Enter (move:+1, move:-2).
+    Your own message echoed in the history ("❯ fix the plot") has neither neighbours nor that line."""
+    bottom = lines[-40:]
+    start = len(lines) - len(bottom)
+    for i, ln in enumerate(bottom):
+        m = POINTED.match(ln)
+        if not m:
+            continue
+        indent = len(m.group(1)) + 2
+        top = i
+        while top > 0 and bottom[top - 1].startswith(" " * indent) and bottom[top - 1].strip() \
+                and not bottom[top - 1].startswith(" " * (indent + 1)):
+            top -= 1
+        end = i + 1
+        while end < len(bottom) and bottom[end].startswith(" " * indent) and bottom[end].strip() \
+                and not bottom[end].startswith(" " * (indent + 1)):
+            end += 1
+        below = " ".join(bottom[end:end + 3]).lower()
+        if end - top < 2 or "enter to confirm" not in below:
+            continue
+        options = [{"key": f"move:{j - i:+d}", "label": ("".join(bottom[j][indent:]) if j != i else m.group(2)).strip()}
+                   for j in range(top, end)]
+        return options, start + top
+    return [], None
 MODES = (("accept edits", "edits"), ("plan mode", "plan"), ("auto mode", "auto"), ("bypass permissions", "auto"),
          ("don't ask", "auto"))
 
@@ -212,12 +242,16 @@ def parse_screen(text: str) -> dict:
         elif options and ln.strip(" │|─╭╮╰╯"):  # a choice's text going on to the next line
             options[-1]["label"] += " " + ln.strip(" │|")
     # only a real menu: Claude marks the picked choice with ❯ (a numbered list in its answer has no mark)
-    if len(options) >= 2 and marked and first is not None:
-        above = [ln.strip(" │|─╭╮╰╯") for ln in lines[max(0, first - 12):first]]
+    if not (len(options) >= 2 and marked and first is not None):
+        options, first = _arrow_menu(lines)
+    if len(options) >= 2 and first is not None:
+        above = [ln.strip(BOX) for ln in lines[max(0, first - 12):first]]
         above = [ln for ln in above if ln]
         q = next((i for i in range(len(above) - 1, -1, -1) if above[i].endswith("?")), None)
+        if q is None:  # "Is this a project you trust? (Like your own code…)": the question sits inside the line
+            q = next((i for i in range(len(above) - 1, -1, -1) if "?" in above[i]), None)
         question = above[q] if q is not None else (above[-1] if above else "Claude is waiting for a choice")
-        detail = "\n".join(above[:q] if q is not None else above[:-1])[-1500:]
+        detail = "\n".join(ln for ln in (above[:q] if q is not None else above[:-1]) if ln.strip(BOX))[-1500:]
         ask = {"question": question, "detail": detail, "options": options,
                "permission": question.lower().startswith("do you want")}
     return {"busy": busy and not ask, "mode": mode, "ask": ask}
@@ -238,7 +272,17 @@ def screen(ssh: SshMaster, session: str, node: str = "") -> dict:
 KEYS = {**{str(n): str(n) for n in range(1, 10)}, "escape": "Escape", "enter": "Enter", "mode": "BTab"}
 
 
+MOVE = re.compile(r"^move:([+-]\d)$")
+
+
 def key_command(session: str, key: str, node: str = "") -> str:
-    if key not in KEYS:
+    """The keys for an answer: a number, Escape, Enter, Shift+Tab, or move:+N (down N choices, then Enter)."""
+    move = MOVE.match(key)
+    if move:
+        n = int(move.group(1))
+        keys = " ".join(["Down" if n > 0 else "Up"] * abs(n) + ["Enter"])
+    elif key in KEYS:
+        keys = KEYS[key]
+    else:
         raise ValueError(f"Not a key the chat sends: {key}")
-    return tmux.on(node, f"tmux send-keys -t {shlex.quote(session + ':')} {KEYS[key]}")
+    return tmux.on(node, f"tmux send-keys -t {shlex.quote(session + ':')} {keys}")

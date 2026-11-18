@@ -1,0 +1,48 @@
+
+ ▐▛███▛█   Claude Code v2.1.327
+▝▜██████▀  Haiku 5.5 with high effort · Claude Max
+ ▝▝   ▝▝   /home/jdoe/proj
+
+
+❯ Create a file named second.txt containing the word hi. Do nothing else.
+
+  Ran 1 shell command
+
+● I created second.txt in the working directory, at
+  /home/jdoe/proj/second.txt. It contains hi followed by a
+  newline.
+
+✻ Sautéed for 4s · done 3:06 PM
+
+❯ /effort high
+  ⎿  Set effort level to high (saved as your default for new sessions): Comprehensive implementation with extensive testing and documentation
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔
+  Switch model?
+  Your next response will be slower and use more tokens
+
+  This conversation is cached for the current model. Switching to Sonnet 5.5 means the full history gets re-read.
+
+  ❯ 1. Yes, switch to Sonnet 5.5
+    2. No, go back
+
+  Enter to confirm · Esc to cancel
