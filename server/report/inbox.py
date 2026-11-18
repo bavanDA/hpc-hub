@@ -2,8 +2,9 @@
 the owner can read them back, with the key in KEY_FILE. Standard library only. Reports are untrusted text: they are
 stored and listed, never run or rendered here.
 
-The bug board (/report/bugs, board.html and board.js beside this file) groups reports into bugs: each report gets
-one label, so two people describing the same bug differently count as one bug. For each it shows how many reports
+The bug board (/report/bugs, board.html and board.js beside this file) groups reports into bugs: reports get a bug's
+label, so two people describing the same bug differently count as one bug (one report telling of several bugs is
+under each). For each it shows how many reports
 and people, on which systems and HPC Hub versions, and whether it is fixed (in which version, by which test). The
 page itself holds nothing: its data comes from /report/board with the owner's key."""
 
@@ -78,13 +79,29 @@ def save_bug(con: sqlite3.Connection, body: dict) -> dict:
                 "ON CONFLICT(id) DO UPDATE SET title=excluded.title, status=excluded.status, "
                 "fixed_in=excluded.fixed_in, test=excluded.test, note=excluded.note",
                 (bug_id, bug["title"], bug["status"], bug["fixed_in"], bug["test"], bug["note"], int(time.time())))
-    con.execute("UPDATE reports SET done=? WHERE label=?", (int(bug["status"] != "open"), bug_id))
+    _refresh_done(con)
     con.commit()
     return {"id": bug_id, **bug}
 
 
+def labels_of(value: str | None) -> list[str]:
+    """A report's bugs: one report can tell of several (labels are kept space separated)."""
+    return (value or "").split()
+
+
+def _refresh_done(con: sqlite3.Connection, rids: list[str] | None = None) -> None:
+    """A report is done when every bug it is under is fixed or closed."""
+    open_bugs = {b for (b,) in con.execute("SELECT id FROM bugs WHERE status='open'")}
+    where = f" WHERE id IN ({','.join('?' * len(rids))})" if rids else ""
+    rows = con.execute("SELECT id, label FROM reports" + where, rids or []).fetchall()
+    for rid, value in rows:
+        mine = labels_of(value)
+        con.execute("UPDATE reports SET done=? WHERE id=?", (int(bool(mine) and not set(mine) & open_bugs), rid))
+
+
 def label(con: sqlite3.Connection, body: dict) -> dict:
-    """Put reports under a bug ("" takes them out). The bug must exist."""
+    """Put reports under a bug. add: under this one too (a report telling of several bugs); remove: out of this
+    one; neither: only this one ("" takes them out of all). The bug must exist."""
     reports, bug_id = body.get("reports"), body.get("bug", "")
     if isinstance(body.get("report"), str):
         reports = [body["report"]]
@@ -92,20 +109,28 @@ def label(con: sqlite3.Connection, body: dict) -> dict:
         raise ValueError("report: the report's id (or reports: a list of them)")
     if not isinstance(bug_id, str):
         raise ValueError("bug must be text")
-    status = "open"
-    if bug_id:
-        row = con.execute("SELECT status FROM bugs WHERE id=?", (bug_id,)).fetchone()
-        if not row:
-            raise ValueError(f"No bug labeled {bug_id}: make it first")
-        status = row[0]
-    found = 0
+    how = "add" if body.get("add") else "remove" if body.get("remove") else "set"
+    if bug_id and how != "remove" and not con.execute("SELECT 1 FROM bugs WHERE id=?", (bug_id,)).fetchone():
+        raise ValueError(f"No bug labeled {bug_id}: make it first")
+    found = []
     for rid in reports:
-        found += con.execute("UPDATE reports SET label=?, done=? WHERE id=?",
-                             (bug_id, int(bool(bug_id) and status != "open"), rid)).rowcount
-    con.commit()
+        row = con.execute("SELECT label FROM reports WHERE id=?", (rid,)).fetchone()
+        if not row:
+            continue
+        mine = labels_of(row[0])
+        if how == "add":
+            mine = mine + [bug_id] if bug_id not in mine else mine
+        elif how == "remove":
+            mine = [b for b in mine if b != bug_id]
+        else:
+            mine = [bug_id] if bug_id else []
+        con.execute("UPDATE reports SET label=? WHERE id=?", (" ".join(mine), rid))
+        found.append(rid)
     if not found:
         raise ValueError("No such report")
-    return {"labeled": found, "bug": bug_id}
+    _refresh_done(con, found)
+    con.commit()
+    return {"labeled": len(found), "bug": bug_id}
 
 
 def _counts(values) -> list[list]:
@@ -126,12 +151,13 @@ def board(con: sqlite3.Connection) -> dict:
     def brief(r: dict) -> dict:
         said = (r["text"] or r["error"] or "").strip()
         return {"id": r["id"], "received": r["received"], "kind": r["kind"], "said": said[:600], "page": r["page"],
-                "app": r["app"], "platform": r["platform"], "os": r["os"], "shot": r["shot"]}
+                "app": r["app"], "platform": r["platform"], "os": r["os"], "shot": r["shot"],
+                "bugs": labels_of(r["label"])}
 
     bugs = []
     for b in con.execute("SELECT id, title, status, fixed_in, test, note, created FROM bugs"):
         bug = dict(zip(["id", "title", "status", "fixed_in", "test", "note", "created"], b))
-        mine = [r for r in rows if r["label"] == bug["id"]]
+        mine = [r for r in rows if bug["id"] in labels_of(r["label"])]
         bug.update(reports=len(mine), people=len({r["who"] for r in mine}),
                    systems=_counts(r["os"] or r["platform"] for r in mine),
                    versions=_counts(r["app"] for r in mine),
@@ -140,7 +166,7 @@ def board(con: sqlite3.Connection) -> dict:
                    items=[brief(r) for r in mine])
         bugs.append(bug)
     bugs.sort(key=lambda b: (b["status"] != "open", -b["reports"], -(b["last"] or 0)))
-    loose = [brief(r) for r in rows if not r["label"]]
+    loose = [brief(r) for r in rows if not labels_of(r["label"])]
     return {"bugs": bugs, "unlabeled": loose, "reports": len(rows),
             "systems": _counts(r["os"] or r["platform"] for r in rows),
             "versions": _counts(r["app"] for r in rows)}

@@ -74,12 +74,19 @@ function item (r, labeling) {
 function labeler (r) {
   const pick = el('select')
   pick.setAttribute('aria-label', `Bug for report ${r.id}`)
-  pick.append(new Option(r.label ? 'Take it out' : 'Put under a bug…', ''))
-  for (const b of data.bugs) pick.append(new Option(`${b.title} (${b.id})`, b.id))
+  pick.append(new Option(r.label ? 'Also under another bug…' : 'Put under a bug…', ''))
+  if (r.label) pick.append(new Option('Take it out of this bug', '-'))
+  for (const b of data.bugs) if (!(r.bugs || []).includes(b.id)) pick.append(new Option(`${b.title} (${b.id})`, b.id))
   pick.append(new Option('New bug…', '+'))
   pick.onchange = async () => {
     let bug = pick.value
+    if (!bug) return
     try {
+      if (bug === '-') {
+        await api('label', { report: r.id, bug: r.label, remove: true })
+        await load()
+        return
+      }
       if (bug === '+') {
         const title = prompt('What is the bug, in a few words?')
         if (!title) { pick.value = ''; return }
@@ -89,7 +96,7 @@ function labeler (r) {
         await api('bugs', { id, title })
         bug = id
       }
-      await api('label', { report: r.id, bug })
+      await api('label', { report: r.id, bug, add: true })
       await load()
     } catch (e) { fail(e) }
   }

@@ -128,3 +128,22 @@ def test_an_older_inbox_gets_the_label_column(tmp_path, monkeypatch):
     spec.loader.exec_module(mod)
     board = mod.board(mod.db())
     assert [r["id"] for r in board["unlabeled"]] == ["20261101-abcdef"]
+
+
+def test_one_report_telling_of_two_bugs_counts_for_both(inbox):
+    base, mod = inbox
+    rid = report(base, "codex doesn't start, and minimize is far from close", "Ubuntu 26.04", "0.2.7-beta.51",
+                 "192.0.2.7")
+    for bug, title in (("codex-no-node", "Codex without Node.js"), ("report-minimize", "Minimize far from close")):
+        call(base, "/v1/bugs", {"id": bug, "title": title})
+        call(base, "/v1/label", {"report": rid, "bug": bug, "add": True})
+    board = call(base, "/v1/board")[1]
+    assert {b["id"]: b["reports"] for b in board["bugs"]} == {"codex-no-node": 1, "report-minimize": 1}
+    assert board["unlabeled"] == []
+    done = lambda: mod.Inbox.con.execute("SELECT done FROM reports WHERE id=?", (rid,)).fetchone()[0]  # noqa: E731
+    call(base, "/v1/bugs", {"id": "codex-no-node", "status": "fixed"})
+    assert done() == 0  # one of its bugs is still open
+    call(base, "/v1/bugs", {"id": "report-minimize", "status": "fixed"})
+    assert done() == 1
+    call(base, "/v1/label", {"report": rid, "bug": "codex-no-node", "remove": True})
+    assert [b["reports"] for b in call(base, "/v1/board")[1]["bugs"] if b["id"] == "codex-no-node"] == [0]
