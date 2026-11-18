@@ -138,6 +138,33 @@ def install(gateways: list[str]) -> None:
     raise VpnError("The VPN helper was installed but doesn't answer")
 
 
+def standard_user() -> bool:
+    """Windows: this account isn't an administrator, so its permission prompt asks for an administrator's name and
+    password, which most students don't have. (An administrator with UAC only clicks Yes.)"""
+    if not WINDOWS:
+        return False
+    import ctypes
+    from ctypes import wintypes
+    try:
+        token = wintypes.HANDLE()
+        if not ctypes.windll.advapi32.OpenProcessToken(ctypes.windll.kernel32.GetCurrentProcess(), 0x0008,  # QUERY
+                                                       ctypes.byref(token)):
+            return False
+        kind, size = ctypes.c_int(), wintypes.DWORD()
+        ok = ctypes.windll.advapi32.GetTokenInformation(token, 18, ctypes.byref(kind), ctypes.sizeof(kind),  # Type
+                                                         ctypes.byref(size))
+        ctypes.windll.kernel32.CloseHandle(token)
+        # 1 default (no split token): a standard account, unless this already runs as admin; 3 limited: an admin
+        return bool(ok) and kind.value == 1 and not ctypes.windll.shell32.IsUserAnAdmin()
+    except (AttributeError, OSError):
+        return False
+
+
+# Other ways in that need no administrator, said when this computer's account can't set up the helper
+NO_ADMIN = ("If you don't have one: connect with your university's own VPN app (the one IT installs), or use the "
+            "campus network. HPC Hub then signs in without its own VPN.")
+
+
 def _applescript(text: str) -> str:
     return text.replace("\\", "\\\\").replace('"', '\\"')
 
@@ -218,11 +245,18 @@ class HelperVpn(Vpn):
             return
         host = urlsplit(self.cfg.vpn.gateway if "//" in self.cfg.vpn.gateway else "//" + self.cfg.vpn.gateway)
         system = "Windows" if WINDOWS else "macOS"
-        if not self.confirm("Let HPC Hub start the VPN", (
-                f"{system} asks for your permission once. After that, Connect starts the VPN by itself.")):
-            raise VpnError("The VPN needs the helper. Connect again to set it up.")
+        standard = standard_user()
+        text = (("This Windows account isn't an administrator, so Windows asks for an administrator's name and "
+                 f"password, once. {NO_ADMIN}") if standard else
+                f"{system} asks for your permission once. After that, Connect starts the VPN by itself.")
+        if not self.confirm("Let HPC Hub start the VPN", text):
+            raise VpnError("The VPN needs the helper. Connect again to set it up."
+                           + (f" {NO_ADMIN}" if standard else ""))
         self.log("Installing the VPN helper")
-        install([host.hostname or self.cfg.vpn.gateway])
+        try:
+            install([host.hostname or self.cfg.vpn.gateway])
+        except VpnError as e:
+            raise VpnError(f"{e}. {NO_ADMIN}") if standard else e
         self.log("VPN helper installed")
 
     def _status(self) -> dict:

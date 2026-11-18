@@ -119,6 +119,25 @@ def test_no_helper_asks_before_installing(tmp_path, wulver, monkeypatch):
     assert not v.is_active()  # still no helper: just "not up"
 
 
+def test_a_standard_windows_account_is_told_what_works_without_an_admin(tmp_path, wulver, monkeypatch):
+    """Its permission prompt wants an administrator's password: say so first, and the ways that need none."""
+    asked = []
+    monkeypatch.setattr(vpn_helper, "standard_user", lambda: True)
+    monkeypatch.setattr(vpn_helper, "install", lambda g: (_ for _ in ()).throw(VpnError("not given")))
+    v, _ = make(wulver, str(tmp_path / "none.sock"), lambda title, text: asked.append(text) or False)
+    with pytest.raises(VpnError, match="university's own VPN app"):
+        v.ensure_profile()
+    assert "isn't an administrator" in asked[0] and "campus network" in asked[0]
+    v.confirm = lambda title, text: True
+    with pytest.raises(VpnError, match="not given. If you don't have one"):
+        v.ensure_profile()
+
+
+def test_not_windows_is_never_a_standard_account(monkeypatch):
+    monkeypatch.setattr(vpn_helper, "WINDOWS", False)
+    assert vpn_helper.standard_user() is False
+
+
 def test_install_args_always_allow_the_known_gateways():
     args = vpn_helper.install_args(["VPN.example.edu", "vpn.njit.edu"], "4242", Path("/opt/app/vpn"))
     assert args[:5] == ["install", "--user", "4242", "--from", "/opt/app/vpn"]
