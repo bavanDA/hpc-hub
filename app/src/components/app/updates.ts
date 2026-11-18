@@ -8,7 +8,7 @@ import { useSyncExternalStore } from 'react'
 
 import { call } from '../../rpc'
 import { inTauri } from './platform'
-import { newer } from './versions'
+import { gone, newer, replaces } from './versions'
 
 export type UpdateState =
   | { kind: 'idle' | 'checking' | 'none' }
@@ -113,19 +113,33 @@ async function quickFix(): Promise<Found | null> {
   }
 }
 
-/** Download, then stop the backend, install and restart. Progress and errors go to the state. */
+/** Download, then stop the backend, install and restart. Progress and errors go to the state. An offer whose files
+ * are gone is looked up again and the newest is installed instead. */
 export async function installUpdate(): Promise<void> {
   if (!found || state.kind !== 'available' && state.kind !== 'error') return
-  const { version, body = '' } = found
+  let { version, body = '' } = found
   let stopped = false  // the backend: once it's down, a failed install has to restart the app
   try {
-    let total = 0, done = 0
-    set({ kind: 'downloading', version, notes: body, done, total })
-    await found.download((e) => {
-      if (e.event === 'Started') total = e.data.contentLength ?? 0
-      else if (e.event === 'Progress') done += e.data.chunkLength
+    const get = async (f: Found) => {
+      let total = 0, done = 0
       set({ kind: 'downloading', version, notes: body, done, total })
-    })
+      await f.download((e) => {
+        if (e.event === 'Started') total = e.data.contentLength ?? 0
+        else if (e.event === 'Progress') done += e.data.chunkLength
+        set({ kind: 'downloading', version, notes: body, done, total })
+      })
+    }
+    try {
+      await get(found)
+    } catch (e) {
+      if (!gone(e) || !inTauri) throw e
+      const fresh = await newest()
+      if (!fresh || fresh.version === version) throw e
+      void found.close?.().catch(() => {})
+      found = fresh
+      ;({ version, body = '' } = fresh)
+      await get(fresh)
+    }
     set({ kind: 'installing', version, notes: body })
     if (inTauri) { await invoke('update_ready'); stopped = true }  // nothing is lost on the cluster
     await found.install()  // on Windows the installer takes over and the app closes here
@@ -161,11 +175,14 @@ export function startUpdateChecks(found: (version: string) => void) {
   void call('app.version').then(() => invoke('quick_fix_started')).catch(() => {})
   // every minute, quietly: a quick fix for this version; with Beta updates on also a new beta and a release (three
   // small files) (no "Checking…"); an update already offered or installing is left alone
+  // An offer is looked at again too: a newer beta replaces the files of the one offered, so that one can't install.
+  const quiet = () => state.kind === 'idle' || state.kind === 'none' || state.kind === 'available'
+    || state.kind === 'error' && !state.version
   setInterval(() => {
-    if (!(state.kind === 'idle' || state.kind === 'none' || state.kind === 'error' && !state.version)) return
+    if (!quiet()) return
     void betaOn().then(async (on) => {
       const f = on ? await newest() : await quickFix()  // Beta updates off: only a quick fix, one small file
-      if (!f || !(state.kind === 'idle' || state.kind === 'none' || state.kind === 'error' && !state.version)) {
+      if (!f || !quiet() || state.kind === 'available' && !replaces(f.version, state.version)) {
         void f?.close?.().catch(() => {})
         return
       }
@@ -178,6 +195,7 @@ export function startUpdateChecks(found: (version: string) => void) {
 const betaOn = () => call<{ beta_updates: boolean }>('preferences.get').then((p) => p.beta_updates).catch(() => false)
 
 function setFound(f: Found) {
+  if (found && found !== f) void found.close?.().catch(() => {})  // the offer it replaces
   found = f
   set({ kind: 'available', version: f.version, notes: f.body ?? '' })
 }
