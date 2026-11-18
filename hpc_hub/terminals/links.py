@@ -17,7 +17,9 @@ PAGE_RE = re.compile(r"(?<![\w/.~+@%-])((?:~/|\.{1,2}/|/)?(?:[\w.+@-]+/)*[\w+@-]
 PAIR_RE = re.compile(r"(?:manualPairingCode\W+|pairing code\W+)([A-Z0-9]{4}-[A-Z0-9]{4})", re.I)
 # Device sign-in pages opened for you (VS Code's GitHub or Microsoft login); a look-alike on another host is not
 DEVICE_HOSTS = ("github.com", "microsoft.com", "www.microsoft.com", "login.microsoft.com", "login.microsoftonline.com")
-REMOTE_HOSTS = ("claude.ai", "chatgpt.com", "antigravity.google", "antigravity.google.com")
+# A remote control link, by host: its path. Any other link there (sign-in, docs, tips) is not one, so a tab doesn't
+# show remote control on when it is off
+REMOTE_PATHS = {"claude.ai": "/code/session_", "antigravity.google.com": "/r/", "antigravity.google": "/r/"}
 
 
 @dataclass(frozen=True)
@@ -38,9 +40,8 @@ def classify(url: str, text: str = "", node: str = "") -> Link:
     if parts.scheme == "https" and host in DEVICE_HOSTS and parts.path.rstrip("/") in ("/login/device", "/devicelogin"):
         m = CODE_RE.search(text[text.find(url):] if url in text else text) or CODE_RE.search(text)
         return Link(DEVICE_LOGIN, url, code=m.group(1) if m else "")
-    if host in REMOTE_HOSTS or host.endswith(".antigravity.google"):
-        if host != "claude.ai" or parts.path.startswith("/code"):
-            return Link(REMOTE, url)
+    if host in REMOTE_PATHS and parts.path.startswith(REMOTE_PATHS[host]):
+        return Link(REMOTE, url)
     if parts.scheme == "http" and parts.port and (host in LOCAL_HOSTS or (node and host.startswith(node))):
         return Link(LOCAL_WEB, url, host=host, port=parts.port)
     return Link(OTHER, url)

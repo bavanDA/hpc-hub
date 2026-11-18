@@ -8,8 +8,8 @@ def test_claude():
     s = AgentSettings(command="claude")
     assert agents.command(agents.CLAUDE, s) == C + "claude --permission-mode auto"
     s.remote = True
-    # remote control is a setting, not a flag
-    assert agents.command(agents.CLAUDE, s, "abc") == C + "claude --permission-mode auto --resume abc"
+    # the flag too, not only its setting: with the setting alone Claude prints no link to open
+    assert agents.command(agents.CLAUDE, s, "abc") == C + "claude --permission-mode auto --remote-control --resume abc"
 
 
 def test_codex():

@@ -58,3 +58,12 @@ def test_device_login_only_on_real_sign_in_hosts():
     assert links.classify("https://microsoft.com/devicelogin").kind == links.DEVICE_LOGIN
     assert links.classify("https://evil.example/login/device").kind == links.OTHER
     assert links.classify("https://devicelogin.evil.example/").kind == links.OTHER
+
+
+def test_only_a_remote_control_link_counts_as_one():
+    """Sign-in pages, docs and tips on the agents' sites are not remote control: the tab would show it on."""
+    for url in ("https://antigravity.google/docs/install", "https://chatgpt.com/codex", "https://claude.ai/code",
+                "https://antigravity.google.com/signin", "https://claude.ai/settings"):
+        assert links.classify(url).kind != links.REMOTE, url
+    assert links.classify("https://claude.ai/code/session_01abc").kind == links.REMOTE
+    assert links.classify("https://antigravity.google.com/r/0a7a-v2").kind == links.REMOTE

@@ -36,7 +36,7 @@ class Agent:
     remote_hint: str
     options: tuple[Option, ...] = ()
     task_flag: str = ""  # how to give a first prompt in interactive mode ("" = as the last argument)
-    remote_setting: str = ""  # settings.json key that turns remote control on, used instead of --remote-control
+    remote_setting: str = ""  # settings.json key kept in step with remote control (also given --remote-control)
 
 
 CLAUDE = Agent("claude", "Claude", "Remote control", "Use this session from claude.ai/code or the Claude app", (
@@ -116,8 +116,8 @@ def command(agent: Agent, s: AgentSettings, chat_id: str = "", task: str = "") -
                     f"{base} remote-control pair --json; {line}")
         return line
     args = list(opts)
-    if s.remote and agent.remote_label and not agent.remote_setting:
-        args.append("--remote-control")
+    if s.remote and agent.remote_label:
+        args.append("--remote-control")  # Claude prints its link only when started with it, not by its setting
     if chat:
         args += ["--conversation", chat] if agent is AGY else ["--resume", chat]
     line = " ".join([base, *args, *_task(agent, task)])
