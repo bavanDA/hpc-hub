@@ -14,7 +14,7 @@ const listings: Record<string, Listing> = {
   wulver: {
     host: 'login01', has_tmux: true, homes: ['/home/jdoe'], nodes: { 123456: 'n0042' },
     sessions: [
-      session('hpchub-claude-123456-0912', { label: 'Claude · thesis', color: '#d97757', agent: 'claude',
+      session('hpchub-claude-123456-3f2a9c1e', { label: 'Claude · thesis', color: '#d97757', agent: 'claude',
         job: '123456', node: 'n0042', command: 'claude', created: now - 2400, attached: 1,
         remote: 'https://claude.ai/code/session_abc123', path: THESIS }),
       session('hpchub-vscode-123456-0900', { label: 'VS Code tunnel', color: '#3584e4', agent: 'vscode',

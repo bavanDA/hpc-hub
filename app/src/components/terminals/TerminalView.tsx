@@ -4,6 +4,10 @@ import { useEffect, useRef, useState } from 'react'
 import '@xterm/xterm/css/xterm.css'
 
 import { useGo } from '../../nav'
+import { ChatSwitcher } from '../chat/ChatSwitcher'
+import { ChatView } from '../chat/ChatView'
+import { isClaudeTab, lastView, rememberView } from '../chat/tabs'
+import { chatState } from '../chat/useChat'
 import { setActiveCluster } from '../clusters/active'
 import { Button } from '../ui/Button'
 import { IconButton } from '../ui/IconButton'
@@ -21,6 +25,14 @@ export function TerminalView({ tab, shown, rail = false }: { tab: Tab; shown: bo
   const toast = useToast()
   const go = useGo()
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null)
+  const claude = isClaudeTab(tab) && tab.cluster !== ''
+  const [view, setViewState] = useState<'chat' | 'terminal'>(() => claude ? lastView() : 'terminal')
+  const setView = (v: 'chat' | 'terminal') => {
+    rememberView(v)
+    setViewState(v)
+    if (v === 'terminal') requestAnimationFrame(() => { tab.fit.fit(); tab.term.focus() })
+  }
+  const chat = claude && view === 'chat'
 
   useEffect(() => {
     const box = host.current!
@@ -44,7 +56,18 @@ export function TerminalView({ tab, shown, rail = false }: { tab: Tab; shown: bo
     }
   }, [tab])
 
-  useEffect(() => { if (shown) tab.term.focus() }, [shown, tab])
+  useEffect(() => { if (shown && !chat) tab.term.focus() }, [shown, tab, chat])
+
+  const toggle = claude && (
+    <div role="group" aria-label="View" className="flex shrink-0 rounded-lg border border-line-strong p-0.5">
+      {(['chat', 'terminal'] as const).map((v) => (
+        <button key={v} aria-pressed={view === v} onClick={() => setView(v)}
+          className={`h-7 rounded-md px-3 text-sm ${view === v ? 'bg-selected font-semibold' : 'text-dim hover:bg-hover'}`}>
+          {v === 'chat' ? 'Chat' : 'Terminal'}</button>
+      ))}
+    </div>
+  )
+  const switcher = claude && <ChatSwitcher tab={tab} cwd={chatState(tab.key).cwd} />
 
   const terminal = <div ref={host} className="min-h-0 flex-1 bg-view py-1 pl-2"
     onContextMenu={(e) => {
@@ -62,7 +85,13 @@ export function TerminalView({ tab, shown, rail = false }: { tab: Tab; shown: bo
           <IconButton icon={X} label="Dismiss" size={14} onClick={() => dismiss(tab, b.id)} />
         </div>
       ))}
-      {rail ? <HistoryFrame tab={tab} shown={shown}>{terminal}</HistoryFrame> : terminal}
+      {claude && !chat && (
+        <div className="flex shrink-0 items-center gap-2 border-b border-line px-4 py-2">{toggle}{switcher}</div>
+      )}
+      <div className="relative flex min-h-0 flex-1 flex-col">
+        {rail ? <HistoryFrame tab={tab} shown={shown}>{terminal}</HistoryFrame> : terminal}
+        {chat && <ChatView tab={tab} shown={shown} switcher={switcher} toggle={toggle} onTerminal={() => setView('terminal')} />}
+      </div>
       {tab.session && tab.cluster && <MonitorBar cluster={tab.cluster} node={tab.node} shown={shown} />}
       {menu && (
         <Popover x={menu.x} y={menu.y} onClose={() => setMenu(null)}>

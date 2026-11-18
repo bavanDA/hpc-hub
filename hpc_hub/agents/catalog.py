@@ -97,8 +97,9 @@ def claude_start(base: str) -> str:
             f"{{ cat \"$(readlink -f \"$(type -P {exe})\")\" >/dev/null 2>&1 || true; }} && ")
 
 
-def command(agent: Agent, s: AgentSettings, chat_id: str = "", task: str = "") -> str:
-    """Shell line that starts (or resumes) the agent; task is a first prompt it starts working on.
+def command(agent: Agent, s: AgentSettings, chat_id: str = "", task: str = "", session_id: str = "") -> str:
+    """Shell line that starts (or resumes) the agent; task is a first prompt it starts working on. session_id: a
+    new Claude chat's id, chosen here so the Chat view finds its file (agents/chat_view.py).
     Claude runs with its classic screen: what it prints lands in the terminal's scrollback, and the mouse
     stays with the terminal (select, scroll, links), instead of its full-screen view."""
     base = s.command.strip() or agent.id
@@ -120,6 +121,8 @@ def command(agent: Agent, s: AgentSettings, chat_id: str = "", task: str = "") -
         args.append("--remote-control")  # Claude prints its link only when started with it, not by its setting
     if chat:
         args += ["--conversation", chat] if agent is AGY else ["--resume", chat]
+    elif session_id and agent is CLAUDE:
+        args += ["--session-id", shlex.quote(session_id)]
     line = " ".join([base, *args, *_task(agent, task)])
     return claude_start(base) + line if agent is CLAUDE else line
 

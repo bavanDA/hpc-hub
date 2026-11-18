@@ -6,6 +6,7 @@ import re
 import shlex
 import subprocess
 import time
+import uuid
 from concurrent.futures import Future
 from dataclasses import asdict, replace
 
@@ -198,9 +199,11 @@ def agent_start(cluster: str, agent: str, folder: str = "", chat_id: str = "", l
             permissions.set_remote(s.ssh, a.remote_setting, c.remote)
         except OSError as e:
             progress(cluster, f"Could not set remote control: {e}")
-    tag = chat_id[:8] if chat_id else time.strftime("%H%M%S")  # one tmux session per chat
+    # a new Claude chat gets its id now: the tmux name ends in its start, so the Chat view finds its file
+    session_id = str(uuid.uuid4()) if a is catalog.CLAUDE and not chat_id else ""
+    tag = (chat_id or session_id)[:8] or time.strftime("%H%M%S")  # one tmux session per chat
     title = f"{a.name} · {label.strip() or posixpath.basename(folder.rstrip('/')) or folder}"
-    line = catalog.command(a, run_as, chat_id, task)
+    line = catalog.command(a, run_as, chat_id, task, session_id)
     return _tab(s, node, f"hpchub-{a.id}-{node.job_id}-{tag}", line, folder, title,
                 tmux.AGENT_COLORS.get(a.id, ""))
 
