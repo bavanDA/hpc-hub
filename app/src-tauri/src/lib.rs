@@ -38,11 +38,23 @@ async fn check_beta_update(webview: tauri::Webview) -> Result<Option<serde_json:
     Ok(Some(found))
 }
 
+/// HPC Hub's window, back in front: not minimized, shown, focused. Opening HPC Hub again while it runs does this
+/// instead of starting a second copy (which could only say "already open": two would fight over the clusters).
+fn bring_back(app: &tauri::AppHandle) {
+    if let Some(w) = app.get_webview_window("main") {
+        let _ = w.unminimize();
+        let _ = w.show();
+        let _ = w.set_focus();
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let mut context = tauri::generate_context!();
     let fix = quickfix::apply(&mut context);
     tauri::Builder::default()
+        // first, so a second copy hands over to this one and quits before it starts anything of its own
+        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| bring_back(app)))
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_clipboard_manager::init())
@@ -71,9 +83,11 @@ pub fn run() {
         ])
         .build(context)
         .expect("error while building HPC Hub")
-        .run(|app, event| {
-            if let RunEvent::Exit = event {
-                backend::stop(app);
-            }
+        .run(|app, event| match event {
+            RunEvent::Exit => backend::stop(app),
+            // macOS: clicking the Dock icon of the running app
+            #[cfg(target_os = "macos")]
+            RunEvent::Reopen { .. } => bring_back(app),
+            _ => {}
         });
 }
