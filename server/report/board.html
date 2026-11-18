@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>HPC Hub bugs</title>
+<link rel="stylesheet" href="board.css">
+<script src="board.js" defer></script>
+</head>
+<body>
+<header>
+  <h1>HPC Hub bugs</h1>
+  <p id="summary" class="dim">Reports from the app, grouped into bugs.</p>
+</header>
+<main>
+  <form id="unlock" hidden>
+    <label for="key">Owner key</label>
+    <input id="key" type="password" autocomplete="current-password" spellcheck="false">
+    <button type="submit">Open</button>
+    <p class="dim">Kept in this browser only.</p>
+  </form>
+  <p id="error" class="error" hidden></p>
+  <section id="overview" hidden>
+    <div class="stats" id="stats"></div>
+    <div class="filters">
+      <button data-show="open" class="on">Open</button>
+      <button data-show="fixed">Fixed</button>
+      <button data-show="all">All</button>
+      <button id="lock" class="quiet">Forget key</button>
+    </div>
+  </section>
+  <section id="bugs"></section>
+  <section id="loose" hidden>
+    <h2>Not labeled yet</h2>
+    <p class="dim">Put each under the bug it is, or start a new one.</p>
+    <div id="loose-list"></div>
+  </section>
+</main>
+<template id="bug">
+  <article class="bug">
+    <div class="top">
+      <span class="status"></span>
+      <h3 class="title"></h3>
+      <code class="label"></code>
+    </div>
+    <p class="counts"></p>
+    <div class="chips systems"></div>
+    <div class="chips versions"></div>
+    <p class="meta dim"></p>
+    <details>
+      <summary>Reports</summary>
+      <div class="items"></div>
+    </details>
+  </article>
+</template>
+</body>
+</html>
