@@ -10,15 +10,32 @@ import { useChat } from './useChat'
 
 type Tool = Extract<Item, { kind: 'tool' }>
 
+/** **bold** and `code` in a line of text (always as text, never as HTML). */
+function Inline({ text }: { text: string }) {
+  return <>{inline(text).map((p, j) => p.kind === 'bold'
+    ? <b key={j}>{p.text}</b>
+    : p.kind === 'code' ? <code key={j} className="rounded bg-inset px-1 font-mono text-[13px]">{p.text}</code>
+      : <span key={j}>{p.text}</span>)}</>
+}
+
 function Prose({ text }: { text: string }) {
   return (
     <div className="flex flex-col gap-2 leading-[1.6]">
       {blocks(text).map((b, i) => b.code
         ? <pre key={i} className="overflow-x-auto rounded-lg bg-inset px-3 py-2 font-mono text-[13px]">{b.text}</pre>
-        : <p key={i} className="m-0 whitespace-pre-wrap">{inline(b.text).map((p, j) => p.kind === 'bold'
-          ? <b key={j}>{p.text}</b>
-          : p.kind === 'code' ? <code key={j} className="rounded bg-inset px-1 font-mono text-[13px]">{p.text}</code>
-            : <span key={j}>{p.text}</span>)}</p>)}
+        : b.table
+          ? <div key={i} className="overflow-x-auto rounded-lg border border-line">
+              <table className="w-full border-collapse text-sm">
+                <thead><tr>{b.table.head.map((c, j) => (
+                  <th key={j} className="border-b border-line bg-inset px-3 py-1.5 text-left font-semibold"><Inline text={c} /></th>))}</tr></thead>
+                <tbody>{b.table.rows.map((r, k) => (
+                  <tr key={k} className="border-b border-line last:border-b-0">{r.map((c, j) => (
+                    <td key={j} className="px-3 py-1.5 align-top"><Inline text={c} /></td>))}</tr>))}</tbody>
+              </table>
+            </div>
+          : b.heading
+            ? <div key={i} className={`font-semibold ${b.heading <= 2 ? 'text-base' : 'text-sm'} mt-1`}><Inline text={b.text} /></div>
+            : <p key={i} className="m-0 whitespace-pre-wrap"><Inline text={b.text} /></p>)}
     </div>
   )
 }

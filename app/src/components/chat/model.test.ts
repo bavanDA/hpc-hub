@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { blocks, describe as describeTool, diff, inline, items, needsTerminal, shortPath, type ChatEvent } from './model'
+import { blocks, cells, describe as describeTool, diff, inline, items, needsTerminal, shortPath, type ChatEvent } from './model'
 
 describe('the chat as items', () => {
   const events: ChatEvent[] = [
@@ -64,5 +64,24 @@ describe('commands', () => {
     expect(needsTerminal('/compact')).toBe(false)
     expect(needsTerminal('/agents')).toBe(true)
     expect(needsTerminal('fix the plot')).toBe(false)
+  })
+})
+
+describe('tables and headings in what Claude writes', () => {
+  // 2026-11-18: a status table showed as raw | pipes in the chat view (owner's screenshot)
+  it('a table becomes a header and rows, between its paragraphs', () => {
+    const text = 'Partly. Here is the state:\n\n| | status |\n|---|---|\n| **main agent** | paused, waiting |\n| Slurm jobs | only your `hpc-hub` job |\n\nSo nothing runs.'
+    const b = blocks(text)
+    expect(b.map((x) => x.table ? 'table' : x.text)).toEqual(['Partly. Here is the state:', 'table', 'So nothing runs.'])
+    expect(b[1].table).toEqual({ head: ['', 'status'],
+      rows: [['**main agent**', 'paused, waiting'], ['Slurm jobs', 'only your `hpc-hub` job']] })
+  })
+  it('a | inside code or escaped stays in its cell, and short rows are filled', () => {
+    expect(cells('| `a|b` | c \\| d |')).toEqual(['`a|b`', 'c | d'])
+    expect(blocks('| a | b | c |\n|:--|--:|---|\n| 1 |')[0].table?.rows).toEqual([['1', '', '']])
+  })
+  it('pipes without a rule line are just text, and headings are found', () => {
+    expect(blocks('a | b | c')[0].table).toBeUndefined()
+    expect(blocks('## Next steps\nRun it.')).toEqual([{ code: false, text: 'Next steps', heading: 2 }, { code: false, text: 'Run it.' }])
   })
 })

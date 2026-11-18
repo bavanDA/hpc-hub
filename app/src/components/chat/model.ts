@@ -96,11 +96,63 @@ export function items(events: ChatEvent[], cwd = ''): Item[] {
   return out
 }
 
-/** Text with ``` fences: plain parts and code blocks. */
-export function blocks(text: string): { code: boolean; text: string }[] {
-  const out: { code: boolean; text: string }[] = []
+export type Block = { code: boolean; text: string; table?: { head: string[]; rows: string[][] }; heading?: number }
+
+const ROW = /^\s*\|.*\|\s*$/
+const RULE = /^\s*\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*\|?\s*$/
+const HEADING = /^(#{1,4})\s+(.+?)\s*#*\s*$/
+
+/** A table row's cells: "| a | `b|c` |" is ["a", "`b|c`"] (a | inside code or written \| stays in its cell). */
+export function cells(line: string): string[] {
+  const s = line.trim().replace(/^\|/, '').replace(/\|$/, '')
+  const out: string[] = []
+  let cur = '', code = false
+  for (let i = 0; i < s.length; i++) {
+    const ch = s[i]
+    if (ch === '\\' && s[i + 1] === '|') { cur += '|'; i++ } else if (ch === '`') { code = !code; cur += ch } else if (ch === '|' && !code) { out.push(cur.trim()); cur = '' } else cur += ch
+  }
+  out.push(cur.trim())
+  return out
+}
+
+/** Plain text as paragraphs, headings (# to ####) and tables (a header row, a --- rule, then rows). */
+function prose(text: string): Block[] {
+  const out: Block[] = []
+  const lines = text.split('\n')
+  let para: string[] = []
+  const flush = () => { if (para.join('\n').trim()) out.push({ code: false, text: para.join('\n').replace(/^\n+|\n+$/g, '') }); para = [] }
+  for (let i = 0; i < lines.length; i++) {
+    const h = HEADING.exec(lines[i])
+    if (h) { flush(); out.push({ code: false, text: h[2], heading: h[1].length }); continue }
+    if (ROW.test(lines[i]) && RULE.test(lines[i + 1] ?? '') && lines[i + 1].includes('-')) {
+      flush()
+      const head = cells(lines[i])
+      const rows: string[][] = []
+      i += 2
+      while (i < lines.length && ROW.test(lines[i])) {
+        const r = cells(lines[i])
+        rows.push(head.map((_, k) => r[k] ?? ''))  // every row as wide as the header
+        i++
+      }
+      i--
+      out.push({ code: false, text: '', table: { head, rows } })
+      continue
+    }
+    para.push(lines[i])
+  }
+  flush()
+  return out
+}
+
+/** Text with ``` fences: code blocks, and the rest as paragraphs, headings and tables. */
+export function blocks(text: string): Block[] {
+  const out: Block[] = []
   const parts = text.split(/^```[^\n]*\n?/m)
-  parts.forEach((p, i) => { if (p.trim()) out.push({ code: i % 2 === 1, text: p.replace(/\n$/, '') }) })
+  parts.forEach((p, i) => {
+    if (!p.trim()) return
+    if (i % 2 === 1) out.push({ code: true, text: p.replace(/\n$/, '') })
+    else out.push(...prose(p))
+  })
   return out
 }
 

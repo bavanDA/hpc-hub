@@ -35,7 +35,7 @@ const ASK = { question: 'Do you want to proceed?', detail: 'Bash command\n\n  sb
 function read({ offset }: { offset: number }): ReadAnswer {
   const after: ChatEvent[] = answered === '3' ? [{ kind: 'result', id: 'r5', tool: 't5', error: true, text: 'You said no.' }]
     : answered ? [{ kind: 'result', id: 'r5', tool: 't5', error: false, text: 'Submitted batch job 1606417' },
-      { kind: 'text', id: 'a3', text: 'Submitted as job 1606417. I\'ll check on it once it starts.' }] : []
+      { kind: 'text', id: 'a3', text: 'Submitted. Where things stand:\n\n| | k | memory | state |\n|---|---|---|---|\n| **1591** | 60 | 18.7 of 32 GB | done |\n| **1606** | 80 | over 32 GB | out of memory |\n| **1606417** | 80 | asks `--mem=50G` | waiting |\n\nI\'ll check on it once it starts.' }] : []
   if (offset >= 0 && !after.length) return { file: FILE, offset, size: offset, trimmed: false, cwd: CWD, events: [] }
   return { file: FILE, offset: 9000 + after.length, size: 9000, trimmed: false, cwd: CWD, events: [...EVENTS, ...after] }
 }
