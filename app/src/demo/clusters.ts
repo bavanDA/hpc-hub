@@ -6,6 +6,8 @@ import {
 import type { Gpu } from '../components/clusters/gpus'
 
 const KEPT = ['Your SSH keys and known hosts (~/.ssh)', 'Your files and jobs on the clusters']
+const BACKUP = { made: 1795000000, version: '0.2.7', files: ['app.toml', 'clusters.toml', 'projects.toml'],
+  clusters: ['Wulver (NJIT)', 'Yale Bouchet'], logins: ['wulver (SSH)', 'wulver (VPN)'], globus: true }
 
 type Step = [number, Partial<Session> & { state: State }, string?]
 const summaryOf = (c: Cluster) => summary(c.profile)
@@ -175,6 +177,9 @@ function connect({ cluster, vpn_only }: { cluster: string; vpn_only?: boolean })
 
 export const answers: Record<string, unknown> = {
   'app.version': { version: 'demo' },
+  'backup_file.export': () => ({ path: '/home/jdoe/Documents/hpc-hub-backup-2026-11-18.hpchub', ...BACKUP }),
+  'backup_file.inspect': () => BACKUP,
+  'backup_file.restore': () => ({ files: 3, logins: 3, aside: '' }),
   'app.reset_info': { folders: ['~/.config/hpc-hub', '~/.cache/hpc-hub', '~/.local/share/hpc-hub'],
     clusters: ['Wulver (NJIT)', 'Yale Bouchet'], kept: KEPT },
   'clusters.list': () => clusters,

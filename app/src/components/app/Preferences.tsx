@@ -13,6 +13,7 @@ import { openReport } from '../report/open'
 import { Spinner } from '../ui/Spinner'
 import { useToast } from '../useToast'
 import { AboutDialog } from './About'
+import { ExportDialog, ImportDialog } from './BackupFileDialog'
 import { UpdateRow } from './UpdateRow'
 import { checkUpdates } from './updates'
 import { AppearanceGroup } from './Appearance'
@@ -28,7 +29,7 @@ const isMac = navigator.userAgent.includes('Mac OS')
 export function PreferencesDialog({ onClose, onExperimental, onDisconnectAndQuit, onReset }:
   { onClose: () => void; onExperimental: (e: Experiments) => void; onDisconnectAndQuit: () => void
     onReset?: (kind: 'reset' | 'uninstall') => void }) {
-  const [inner, setInner] = useState<'' | 'phone' | 'about'>('')
+  const [inner, setInner] = useState<'' | 'phone' | 'about' | 'export' | 'import'>('')
   const toast = useToast()
   const [prefs, setPrefs] = useState<Preferences | null>(null)
   const [found, setFound] = useState<Profiles | null>(null)
@@ -121,6 +122,10 @@ export function PreferencesDialog({ onClose, onExperimental, onDisconnectAndQuit
           <Row label="Report a problem" opens onPress={() => { onClose(); openReport({ kind: 'user' }) }} />
           <Row label="Disconnect all and quit" danger onPress={onDisconnectAndQuit} />
         </Section>
+        <Section title="Back up" note="Your settings and saved logins in one file, locked with a password.">
+          <Row label="Export settings and logins" opens onPress={() => setInner('export')} />
+          <Row label="Import from a backup" opens onPress={() => setInner('import')} />
+        </Section>
         {onReset && <Section title="Start over">
           <Row label="Reset HPC Hub" sub="Sign out and forget saved logins, settings and data, as if newly installed."
             opens danger onPress={() => onReset('reset')} />
@@ -131,6 +136,8 @@ export function PreferencesDialog({ onClose, onExperimental, onDisconnectAndQuit
       </>}
       {inner === 'phone' && <PairPhoneDialog onClose={() => setInner('')} />}
       {inner === 'about' && <AboutDialog onClose={() => setInner('')} />}
+      {inner === 'export' && <ExportDialog onClose={() => setInner('')} />}
+      {inner === 'import' && <ImportDialog onClose={() => setInner('')} />}
     </EDialog>
   )
 }

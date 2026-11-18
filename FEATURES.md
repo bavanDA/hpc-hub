@@ -140,6 +140,8 @@ curl -fsSL https://github.com/bavanDA/hpc-hub/releases/latest/download/install.s
 ## Safety and privacy
 
 - Passwords stay in your system's keyring (Keychain, Credential Manager, GNOME Keyring), never in plain text.
+- Back up HPC Hub's settings and saved logins to one file locked with a password you choose, and import it on
+  another computer (Settings, Back up). Without the password the file can't be opened.
 - No HPC Hub account and no tracking. HPC Hub connects only to your clusters, the services you choose (like Globus or
   an AI agent) and GitHub to check for updates.
 - In-app updates are checked for a valid signature before they install.
