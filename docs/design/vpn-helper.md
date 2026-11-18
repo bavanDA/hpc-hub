@@ -11,6 +11,26 @@ making a tunnel needs admin rights. So:
 3. **It is installed once**, the first time you connect a cluster with a VPN: the app asks, then Windows (UAC) or
    macOS (password) asks for permission once. An app update with a newer helper asks again.
 
+## Without administrator (Windows)
+
+An account that isn't an administrator can't install the helper: Windows asks for an administrator's name and
+password. So HPC Hub also has a VPN of its own, as on the phone (docs/design/android.md), used on such an account,
+after **Not now** at the helper's prompt, or with Settings > **VPN without administrator** (connect/vpn_local.py):
+
+- `openconnect --script-tun --script "hpc-hub-vpn-tunnel -L <port>:<cluster>:22 -k 30 --pid-file <file>"` runs
+  as you. Nothing is installed and the computer's network is untouched.
+- Upstream openconnect has `--script-tun` only on Linux and macOS.
+  `packaging/vpn/openconnect-windows-script-tun.patch` adds it on Windows: the script gets the tunnel as a
+  message-mode named pipe (its name in `VPNPIPE`), one IP packet per message. openconnect checks that the program
+  it started is the one that opened the pipe. When the pipe closes, openconnect logs out and exits, so HPC Hub
+  stops the tunnel by ending the forwarder.
+- `hpc-hub-vpn-tunnel` (app/vpn-helper/src/tunnel_proxy) is a TCP/IP stack of its own (smoltcp). It forwards
+  127.0.0.1:port to the cluster's SSH port, and looks names up with the VPN's DNS. HPC Hub's SSH dials that port
+  (core/tunnels.py), so terminals, files, jobs and agents all work. Other programs on the computer don't use the
+  VPN, and **VPN only** has nothing to do.
+- tests/connect/test_vpn_local.py runs it end to end against a make-believe AnyConnect server and cluster: on
+  Linux with the system's openconnect, and in the Windows build with the patched one.
+
 ## Files
 
 | | Windows | macOS |
