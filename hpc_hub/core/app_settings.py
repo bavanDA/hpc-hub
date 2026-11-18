@@ -13,6 +13,7 @@ class AppSettings:
     experimental_schedules: bool = False  # the Scheduled tab of Agents
     clusters: str = ""  # ids of the clusters you use, comma separated; empty = all of them
     select_to_copy: bool = True  # highlighting text in a terminal copies it
+    select_everywhere: bool = False  # highlighting text anywhere in the window copies it (not in text boxes)
     right_click_paste: bool = False  # right-clicking a terminal pastes, instead of opening its menu
     monitor_bar: bool = True  # CPU, memory and network of the host under each terminal
     appearance: str = "system"  # system (follows the computer), light, dark or a named one

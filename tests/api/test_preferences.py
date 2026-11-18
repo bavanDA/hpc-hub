@@ -15,7 +15,7 @@ OFF = {"experimental_papers": False, "experimental_skills": False, "experimental
 
 def test_defaults(app_file):
     assert preferences.get() == {"browser_profile": "", **OFF, "select_to_copy": True,
-                                 "right_click_paste": False,
+                                 "right_click_paste": False, "select_everywhere": False,
                                  "monitor_bar": True, "appearance": "system",
                                  "beta_updates": False}
 
@@ -23,6 +23,7 @@ def test_defaults(app_file):
 def test_set_saves_and_keeps_the_rest(app_file):
     config.save_app(config.AppSettings(globus_client_id="abc123"), app_file)
     on = {**OFF, "experimental_papers": True, "select_to_copy": True, "right_click_paste": False,
+          "select_everywhere": False,
           "monitor_bar": True, "appearance": "system",
           "beta_updates": False}
     assert preferences.set_(experimental_papers=True) == {"browser_profile": "", **on}
@@ -42,7 +43,7 @@ def test_the_old_single_switch_turns_all_three_on(app_file):
     app_file.parent.mkdir(parents=True)
     app_file.write_text("[app]\nexperimental = true\nappearance = \"dark\"\n")
     assert preferences.get() == {"browser_profile": "", **{k: True for k in OFF}, "select_to_copy": True,
-                                 "right_click_paste": False,
+                                 "right_click_paste": False, "select_everywhere": False,
                                  "monitor_bar": True, "appearance": "dark",
                                  "beta_updates": False}
     preferences.set_(experimental_skills=False)  # saved in the new keys; the old one is gone
@@ -57,7 +58,7 @@ def test_back_to_the_system_browser(app_file):
     preferences.set_(browser_profile="Uni")
     preferences.set_(browser_profile="", experimental_papers=False)
     assert preferences.get() == {"browser_profile": "", **OFF, "select_to_copy": True,
-                                 "right_click_paste": False,
+                                 "right_click_paste": False, "select_everywhere": False,
                                  "monitor_bar": True, "appearance": "system",
                                  "beta_updates": False}
 
@@ -92,3 +93,9 @@ def test_right_click_paste(app_file):
     assert preferences.get()["right_click_paste"] is False  # the menu, as before, unless you turn it on
     assert preferences.set_(right_click_paste=True)["right_click_paste"] is True
     assert config.load_app(app_file).right_click_paste
+
+
+def test_select_to_copy_everywhere(app_file):
+    assert preferences.get()["select_everywhere"] is False  # only terminals, unless you turn it on
+    assert preferences.set_(select_everywhere=True)["select_everywhere"] is True
+    assert config.load_app(app_file).select_everywhere

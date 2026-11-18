@@ -8,6 +8,7 @@ import { ToggleRow } from '../e/ToggleRow'
 import { Select } from '../jobs/Select'
 import { setMonitorBar } from '../terminals/monitorBarSetting'
 import { setRightClickPaste, setSelectToCopy } from '../terminals/xterm'
+import { setSelectEverywhere } from './selectCopy'
 import { openReport } from '../report/open'
 import { Spinner } from '../ui/Spinner'
 import { useToast } from '../useToast'
@@ -42,6 +43,7 @@ export function PreferencesDialog({ onClose, onExperimental, onDisconnectAndQuit
       if (Object.keys(changes).some((k) => k.startsWith('experimental_'))) onExperimental(experimentsOf(p))
       setSelectToCopy(p.select_to_copy)
       setRightClickPaste(p.right_click_paste)
+      setSelectEverywhere(p.select_everywhere)
       setMonitorBar(p.monitor_bar)
     }).catch((e: Error) => toast(`Could not save: ${e.message}`))
   }
@@ -72,13 +74,18 @@ export function PreferencesDialog({ onClose, onExperimental, onDisconnectAndQuit
               }} />
           ))}
         </Section>}
-        <Section title="Terminals">
-          <ToggleRow label="Select to copy"
-            sub="Highlight text with the mouse to copy it."
+        <Section title="Copy and paste">
+          <ToggleRow label="Select to copy in terminals"
+            sub="Highlight text in a terminal to copy it."
             checked={prefs.select_to_copy} onChange={(on) => save({ select_to_copy: on })} />
+          <ToggleRow label="Select to copy everywhere"
+            sub="Highlight text anywhere in HPC Hub to copy it. Text boxes are left out."
+            checked={prefs.select_everywhere} onChange={(on) => save({ select_everywhere: on })} />
           <ToggleRow label="Right-click to paste"
             sub="One click pastes. Ctrl+right-click opens the Copy and Paste menu."
             checked={prefs.right_click_paste} onChange={(on) => save({ right_click_paste: on })} />
+        </Section>
+        <Section title="Terminals">
           <ToggleRow label="Monitoring bar"
             sub="CPU, memory and network of the host, under each terminal."
             checked={prefs.monitor_bar} onChange={(on) => save({ monitor_bar: on })} />
