@@ -57,9 +57,12 @@ jobs:
           cache-dependency-path: app/package-lock.json
       - run: npm ci && npx tsc -b && npm test && npm run build
         working-directory: app
+      # kept between runs: some runners get a network that sends a package every few seconds, from every mirror
       - name: Tauri's Linux libraries
-        run: |
-          bash .github/apt-install.sh libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev libxdo-dev libssl-dev libayatana-appindicator3-dev
+        uses: awalsh128/cache-apt-pkgs-action@553a35bb8ebd9fcabcb1c9451aa4c98e1b4ca8a9  # v1.6.3
+        with:
+          packages: libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev libxdo-dev libssl-dev libayatana-appindicator3-dev
+          version: "1"
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
         with:
