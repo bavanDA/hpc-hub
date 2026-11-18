@@ -112,8 +112,8 @@ function Menu<T extends string>({ label, value, choices, onPick, note }: { label
   )
 }
 
-export function ChatView({ tab, shown, switcher, toggle, onTerminal }: { tab: Tab; shown: boolean
-  switcher: ReactNode; toggle: ReactNode; onTerminal: () => void }) {
+export function ChatView({ tab, shown, title, toggle, onTerminal }: { tab: Tab; shown: boolean
+  title: ReactNode; toggle: ReactNode; onTerminal: () => void }) {
   const toast = useToast()
   const { state, send, key, mode } = useChat(tab, shown)
   const [draft, setDraft] = useState('')
@@ -150,7 +150,7 @@ export function ChatView({ tab, shown, switcher, toggle, onTerminal }: { tab: Ta
     <div className="absolute inset-0 z-[6] flex flex-col bg-view">
       <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-line px-4 py-2">
         {toggle}
-        {switcher}
+        {title}
         <span className="flex-1" />
         <Menu label="Model" value={model} choices={MODELS} note="Sends /model to Claude."
           onPick={(v) => { setModel(v); send(`/model ${v}`).catch(fail) }} />

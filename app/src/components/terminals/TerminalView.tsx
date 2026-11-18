@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import '@xterm/xterm/css/xterm.css'
 
 import { useGo } from '../../nav'
-import { ChatSwitcher } from '../chat/ChatSwitcher'
+import { ChatTitle } from '../chat/ChatTitle'
 import { ChatView } from '../chat/ChatView'
 import { isClaudeTab, lastView, rememberView } from '../chat/tabs'
 import { chatState } from '../chat/useChat'
@@ -67,7 +67,7 @@ export function TerminalView({ tab, shown, rail = false }: { tab: Tab; shown: bo
       ))}
     </div>
   )
-  const switcher = claude && <ChatSwitcher tab={tab} cwd={chatState(tab.key).cwd} />
+  const title = claude && <ChatTitle tab={tab} cwd={chatState(tab.key).cwd} />
 
   const terminal = <div ref={host} className="min-h-0 flex-1 bg-view py-1 pl-2"
     onContextMenu={(e) => {
@@ -86,11 +86,11 @@ export function TerminalView({ tab, shown, rail = false }: { tab: Tab; shown: bo
         </div>
       ))}
       {claude && !chat && (
-        <div className="flex shrink-0 items-center gap-2 border-b border-line px-4 py-2">{toggle}{switcher}</div>
+        <div className="flex shrink-0 items-center gap-2 border-b border-line px-4 py-2">{toggle}{title}</div>
       )}
       <div className="relative flex min-h-0 flex-1 flex-col">
         {rail ? <HistoryFrame tab={tab} shown={shown}>{terminal}</HistoryFrame> : terminal}
-        {chat && <ChatView tab={tab} shown={shown} switcher={switcher} toggle={toggle} onTerminal={() => setView('terminal')} />}
+        {chat && <ChatView tab={tab} shown={shown} title={title} toggle={toggle} onTerminal={() => setView('terminal')} />}
       </div>
       {tab.session && tab.cluster && <MonitorBar cluster={tab.cluster} node={tab.node} shown={shown} />}
       {menu && (
