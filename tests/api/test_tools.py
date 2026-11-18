@@ -74,7 +74,7 @@ class FakeHub:
 
 @pytest.fixture
 def env(monkeypatch):
-    ssh = FakeSsh({"type -t": "file\n", 'printf %s "$HOME"': "/home/jdoe"})
+    ssh = FakeSsh({"type -t": "@t=file\n@node=/usr/bin/node\n", 'printf %s "$HOME"': "/home/jdoe"})
     s = FakeSession(ssh, Allocation("123", "n0042"))
     h = FakeHub(s)
     monkeypatch.setattr(tools, "hub", lambda: h)
@@ -153,6 +153,16 @@ def test_agent_checks_what_you_send(env):
     with pytest.raises(RuntimeError, match="not found") as custom:
         tools.agent_start("wulver", "claude")
     assert not isinstance(custom.value, catalog.NotInstalled)
+
+
+def test_an_npm_agent_without_node_runs_its_installed_copy_or_offers_one(env):
+    """codex from npm stops at "/usr/bin/env: 'node': No such file or directory" when Node.js isn't there."""
+    env.s.ssh.answers["type -t"] = "@t=file\n@l=#!/usr/bin/env node\n@node=\n@native=/home/jdoe/.local/bin/codex\n"
+    assert "/home/jdoe/.local/bin/codex --no-daemon" in tools.agent_start("wulver", "codex")["argv"][-1]
+    assert env.s.cfg.codex.command == "codex"  # only this start: nothing of yours is changed
+    env.s.ssh.answers["type -t"] = "@t=file\n@l=#!/usr/bin/env node\n@node=\n"
+    with pytest.raises(catalog.NotInstalled, match="Node.js version"):
+        tools.agent_start("wulver", "codex")
 
 
 def test_agent_without_a_node_says_so(env, monkeypatch):

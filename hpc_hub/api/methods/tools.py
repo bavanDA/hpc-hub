@@ -173,10 +173,20 @@ def agent_start(cluster: str, agent: str, folder: str = "", chat_id: str = "", l
     hub().save_clusters()
 
     progress(cluster, f"Checking {a.name} on {s.cfg.name}…")
-    if not remote.command_type(s.ssh, c.command or a.id):
-        if (c.command or a.id) == _default_command(a) and a.id in catalog.INSTALL:
+    found = remote.look(s.ssh, c.command or a.id)
+    ours = (c.command or a.id) == _default_command(a) and a.id in catalog.INSTALL
+    if not found.kind:
+        if ours:
             raise catalog.NotInstalled(f"{a.name} isn't installed on {s.cfg.name}")
         raise RuntimeError(f"{a.name} not found: '{c.command}' is not on PATH or in ~/.bashrc on {s.cfg.name}")
+    run_as = c
+    if found.needs and found.native:  # an old npm copy comes first on PATH: the installed one runs instead
+        run_as = replace(c, command=found.native)
+    elif found.needs and ours:
+        raise catalog.NotInstalled(f"{a.name} on {s.cfg.name} is the Node.js version, and Node.js isn't there. "
+                                   f"Install {a.name} on its own, which needs nothing else")
+    elif found.needs:
+        raise RuntimeError(f"'{c.command}' needs Node.js, which isn't on {s.cfg.name}: load it in ~/.bashrc")
     if c.new_node:
         progress(cluster, f"Requesting a new node for {a.name} ({(picked or s.cfg.profile).summary()})…")
     elif not s.allocation:
@@ -189,7 +199,7 @@ def agent_start(cluster: str, agent: str, folder: str = "", chat_id: str = "", l
             progress(cluster, f"Could not set remote control: {e}")
     tag = chat_id[:8] if chat_id else time.strftime("%H%M%S")  # one tmux session per chat
     title = f"{a.name} · {label.strip() or posixpath.basename(folder.rstrip('/')) or folder}"
-    line = catalog.command(a, c, chat_id, task)
+    line = catalog.command(a, run_as, chat_id, task)
     return _tab(s, node, f"hpchub-{a.id}-{node.job_id}-{tag}", line, folder, title,
                 tmux.AGENT_COLORS.get(a.id, ""))
 
