@@ -96,3 +96,33 @@ describe('finding in the chat', () => {
     expect(toolHolds({ result: null }, 'x')).toBe(false)  // still running: nothing yet
   })
 })
+
+describe('links in what Claude writes', () => {
+  // 2026-11-18: links in the chat view didn't open, and copying from it was hard (owner's report)
+  it('a bare link is a link, without the full stop after it', () => {
+    expect(inline('See https://example.edu/docs.')).toEqual([
+      { kind: 'plain', text: 'See ' }, { kind: 'link', text: 'https://example.edu/docs', url: 'https://example.edu/docs' },
+      { kind: 'plain', text: '.' }])
+  })
+  it('a Markdown link shows its words and opens its address', () => {
+    expect(inline('Read [the guide](https://example.edu/guide) first')).toEqual([
+      { kind: 'plain', text: 'Read ' }, { kind: 'link', text: 'the guide', url: 'https://example.edu/guide' },
+      { kind: 'plain', text: ' first' }])
+  })
+  it('a link in parentheses or with a query keeps exactly its address', () => {
+    expect(inline('(https://example.edu/a?x=1&y=2)')[1]).toEqual(
+      { kind: 'link', text: 'https://example.edu/a?x=1&y=2', url: 'https://example.edu/a?x=1&y=2' })
+  })
+  it('a link inside code stays code, and only http(s) links count', () => {
+    expect(inline('`curl https://example.edu`')).toEqual([{ kind: 'code', text: 'curl https://example.edu' }])
+    expect(inline('[x](javascript:alert(1)) file:///etc/passwd').every((p) => p.kind !== 'link')).toBe(true)
+  })
+  it('several links, bold and code in one line keep their order', () => {
+    expect(inline('**Job** `1606` at https://a.example and https://b.example').map((p) => p.kind))
+      .toEqual(['bold', 'plain', 'code', 'plain', 'link', 'plain', 'link'])
+  })
+  it('links work inside table cells and headings too', () => {
+    const b = blocks('| job | log |\n|---|---|\n| 1606 | https://example.edu/log |')
+    expect(inline(b[0].table!.rows[0][1])[0]).toMatchObject({ kind: 'link', url: 'https://example.edu/log' })
+  })
+})

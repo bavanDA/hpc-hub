@@ -156,18 +156,32 @@ export function blocks(text: string): Block[] {
   return out
 }
 
-/** **bold** and `code` inside a line, as pieces to draw. */
-export function inline(text: string): { kind: 'plain' | 'bold' | 'code'; text: string }[] {
-  const out: { kind: 'plain' | 'bold' | 'code'; text: string }[] = []
-  const re = /(\*\*[^*\n]+\*\*|`[^`\n]+`)/g
+export type Piece = { kind: 'plain' | 'bold' | 'code'; text: string } | { kind: 'link'; text: string; url: string }
+
+const TRAIL = /[.,;:!?'")\]}>]+$/  // sentence punctuation after a bare link is not part of it
+
+/** **bold**, `code`, [text](https://…) and bare https:// links inside a line, as pieces to draw. */
+export function inline(text: string): Piece[] {
+  const out: Piece[] = []
+  const re = /(\*\*[^*\n]+\*\*|`[^`\n]+`|\[[^\]\n]+\]\(https?:\/\/[^)\s]+\)|https?:\/\/[^\s<>`]+)/g
   let at = 0
+  const plain = (s: string) => { if (s) { const last = out.at(-1); if (last?.kind === 'plain') last.text += s; else out.push({ kind: 'plain', text: s }) } }
   for (const m of text.matchAll(re)) {
-    if (m.index! > at) out.push({ kind: 'plain', text: text.slice(at, m.index) })
+    plain(text.slice(at, m.index))
     const s = m[0]
-    out.push(s.startsWith('**') ? { kind: 'bold', text: s.slice(2, -2) } : { kind: 'code', text: s.slice(1, -1) })
+    if (s.startsWith('**')) out.push({ kind: 'bold', text: s.slice(2, -2) })
+    else if (s.startsWith('`')) out.push({ kind: 'code', text: s.slice(1, -1) })
+    else if (s.startsWith('[')) {
+      const cut = s.indexOf('](')
+      out.push({ kind: 'link', text: s.slice(1, cut), url: s.slice(cut + 2, -1) })
+    } else {
+      const url = s.replace(TRAIL, '')
+      out.push({ kind: 'link', text: url, url })
+      plain(s.slice(url.length))
+    }
     at = m.index! + s.length
   }
-  if (at < text.length) out.push({ kind: 'plain', text: text.slice(at) })
+  plain(text.slice(at))
   return out
 }
 

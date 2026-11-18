@@ -1,8 +1,10 @@
 // The Chat view of a Claude tab: the conversation, the tool cards, what Claude asks, and a box to write to it. The
 // terminal stays underneath, untouched; this only reads Claude's file and types into its session.
-import { Check, ChevronDown, FileText, ListTodo, Pencil, Search, SquareTerminal, Wrench } from 'lucide-react'
+import { Check, ChevronDown, Copy, FileText, ListTodo, Pencil, Search, SquareTerminal, Wrench } from 'lucide-react'
 import { createContext, useContext, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 
+import { copyText } from '../app/clipboard'
+import { openLink } from '../app/openLink'
 import { splitHits } from '../reader/hits'
 import { TextFind } from '../reader/TextFind'
 import { useToast } from '../useToast'
@@ -26,17 +28,37 @@ function Hl({ text }: { text: string }) {
 
 /** **bold** and `code` in a line of text (always as text, never as HTML). */
 function Inline({ text }: { text: string }) {
-  return <>{inline(text).map((p, j) => p.kind === 'bold'
+  return <>{inline(text).map((p, j) => p.kind === 'link'
+    ? <a key={j} href={p.url} title={p.url} onClick={(e) => { e.preventDefault(); void openLink(p.url) }}
+        className="text-accent-text underline decoration-1 underline-offset-2 hover:decoration-2 [overflow-wrap:anywhere]"><Hl text={p.text} /></a>
+    : p.kind === 'bold'
     ? <b key={j}><Hl text={p.text} /></b>
     : p.kind === 'code' ? <code key={j} className="rounded bg-inset px-1 font-mono text-[13px]"><Hl text={p.text} /></code>
       : <span key={j}><Hl text={p.text} /></span>)}</>
 }
 
+/** A small Copy button, shown when you point at what it copies. */
+function CopyButton({ text, label = 'Copy' }: { text: string; label?: string }) {
+  const toast = useToast()
+  return (
+    <button aria-label={label} title={label} onClick={() => copyText(text).then(() => toast('Copied')).catch((e: Error) => toast(e.message))}
+      className="absolute top-1.5 right-1.5 hidden items-center gap-1 rounded-md border border-line-strong bg-window px-2 py-0.5
+        text-xs text-dim group-hover:flex hover:text-text">
+      <Copy size={12} />Copy</button>
+  )
+}
+
 function Prose({ text }: { text: string }) {
   return (
-    <div className="flex flex-col gap-2 leading-[1.6]">
+    <div className="group relative flex flex-col gap-2 pr-16 leading-[1.6]">
+      <CopyButton text={text} label="Copy Claude's reply" />
       {blocks(text).map((b, i) => b.code
-        ? <pre key={i} className="overflow-x-auto rounded-lg bg-inset px-3 py-2 font-mono text-[13px]"><Hl text={b.text} /></pre>
+        ? <div key={i} className="group/code relative">
+            <pre className="m-0 overflow-x-auto rounded-lg bg-inset px-3 py-2 font-mono text-[13px]"><Hl text={b.text} /></pre>
+            <button aria-label="Copy the code" title="Copy the code" onClick={() => void copyText(b.text)}
+              className="absolute top-1.5 right-1.5 hidden rounded-md border border-line-strong bg-window px-2 py-0.5 text-xs text-dim
+                group-hover/code:block hover:text-text">Copy</button>
+          </div>
         : b.table
           ? <div key={i} className="overflow-x-auto rounded-lg border border-line">
               <table className="w-full border-collapse text-sm">
@@ -230,7 +252,7 @@ export function ChatView({ tab, shown, title, toggle, onTerminal }: { tab: Tab; 
 
       <div className="relative min-h-0 flex-1">
       {finding && <TextFind input={findBox} query={query} hit={hit} onQuery={setQuery} onStep={step} onClose={closeFind} />}
-      <div ref={list} className="h-full overflow-y-auto"
+      <div ref={list} className="h-full overflow-y-auto select-text"
         onScroll={(e) => { const el = e.currentTarget; atEnd.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80 }}>
         <div className="mx-auto flex w-full max-w-[820px] flex-col gap-3.5 px-6 pt-5 pb-3">
           {state.unknown && (
