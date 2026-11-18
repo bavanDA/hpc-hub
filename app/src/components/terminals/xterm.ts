@@ -104,6 +104,7 @@ export function clipboardKeys(tab: Tab, notify: (text: string) => void) {
     clearTimeout(pending)
     pending = setTimeout(() => selectToCopy && term.hasSelection() && copyText(term.getSelection()), 300)
   })
+  dragSelects(tab)
   let down: { x: number; y: number; shift: boolean } | null = null
   tab.el.addEventListener('mousedown', (e) => { down = e.button === 0 ? { x: e.x, y: e.y, shift: e.shiftKey } : null })
   tab.el.addEventListener('mouseup', (e) => {
@@ -113,4 +114,44 @@ export function clipboardKeys(tab: Tab, notify: (text: string) => void) {
       setTimeout(() => !term.hasSelection() && copyTmux(tab, notify), 250)
     }
   })
+}
+
+const MAC = navigator.userAgent.includes('Mac')
+
+/** A program that takes the mouse (tmux, an agent) gets clicks, but a drag selects here, as Shift+drag does, so it
+ *  copies like any other text. The press is held back until the mouse moves or comes up: moved, it goes to xterm
+ *  as a forced selection (Shift, or Option on a Mac); not moved, the program gets the click after all. */
+export function dragSelects(tab: Pick<Tab, 'term' | 'el'>) {
+  const { term, el } = tab
+  if (MAC) term.options.macOptionClickForcesSelection = true
+  let held: MouseEvent | null = null
+  const replay = (e: MouseEvent, force: boolean) => {
+    const again = new MouseEvent('mousedown', { bubbles: true, cancelable: true, composed: true, view: window,
+      clientX: e.clientX, clientY: e.clientY, screenX: e.screenX, screenY: e.screenY, button: e.button,
+      buttons: e.buttons || 1, detail: e.detail, ctrlKey: e.ctrlKey, metaKey: e.metaKey,
+      shiftKey: force ? !MAC || e.shiftKey : e.shiftKey, altKey: force ? MAC || e.altKey : e.altKey })
+    passing = true
+    e.target?.dispatchEvent(again)
+    passing = false
+  }
+  let passing = false
+  el.addEventListener('mousedown', (e) => {
+    if (passing || e.button !== 0 || e.shiftKey || e.altKey || term.modes.mouseTrackingMode === 'none') return
+    e.stopImmediatePropagation()
+    e.preventDefault()
+    held = e
+    term.focus()
+  }, true)
+  window.addEventListener('mousemove', (e) => {
+    if (!held || Math.abs(e.clientX - held.clientX) + Math.abs(e.clientY - held.clientY) < 5) return
+    const start = held
+    held = null
+    replay(start, true)
+  }, true)
+  window.addEventListener('mouseup', () => {
+    if (!held) return
+    const start = held
+    held = null
+    replay(start, false)  // a click: the program has it, and the mouseup follows as usual
+  }, true)
 }
