@@ -17,17 +17,11 @@ concurrency:
 jobs:
   python:
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 25  # room for apt-install.sh to try another mirror
     steps:
       - uses: actions/checkout@v7
       - run: |
-          # a slow mirror once held this step until the job's time limit: short tries, three times
-          for try in 1 2 3; do
-            timeout 300 sudo apt-get -o Acquire::Retries=3 -o Acquire::http::Timeout=30 update -q &&
-              timeout 600 sudo apt-get -o Acquire::Retries=3 -o Acquire::http::Timeout=30 install -y -q --no-install-recommends tmux && break
-            echo "apt try $try did not finish; trying again"; sleep 15
-          done
-          dpkg -s tmux > /dev/null
+          bash .github/apt-install.sh tmux
       - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
@@ -53,7 +47,7 @@ jobs:
 
   app:
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    timeout-minutes: 35  # room for apt-install.sh to try another mirror
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -65,14 +59,7 @@ jobs:
         working-directory: app
       - name: Tauri's Linux libraries
         run: |
-          # a slow mirror once held this step until the job's time limit: short tries, three times
-          for try in 1 2 3; do
-            timeout 300 sudo apt-get -o Acquire::Retries=3 -o Acquire::http::Timeout=30 update -q &&
-              timeout 600 sudo apt-get -o Acquire::Retries=3 -o Acquire::http::Timeout=30 install -y -q --no-install-recommends libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev \
-                libxdo-dev libssl-dev libayatana-appindicator3-dev && break
-            echo "apt try $try did not finish; trying again"; sleep 15
-          done
-          dpkg -s libwebkit2gtk-4.1-dev > /dev/null
+          bash .github/apt-install.sh libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev libxdo-dev libssl-dev libayatana-appindicator3-dev
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
         with:
