@@ -209,3 +209,10 @@ export function needsTerminal(text: string): boolean {
   if (!known) return true
   return !known.now && text.trim() === cmd  // /model alone opens its menu; /model opus does not
 }
+
+/** Ctrl+F: does a tool card hold what you look for in its folded part (so it opens by itself)? */
+export function toolHolds(t: { detail?: string | null; result: string | null; diff?: { text: string }[] | null }, q: string): boolean {
+  const low = q.trim().toLowerCase()
+  if (!low) return false
+  return [t.detail ?? '', t.result ?? '', ...(t.diff ?? []).map((d) => d.text)].some((x) => x.toLowerCase().includes(low))
+}

@@ -1,28 +1,42 @@
 // The Chat view of a Claude tab: the conversation, the tool cards, what Claude asks, and a box to write to it. The
 // terminal stays underneath, untouched; this only reads Claude's file and types into its session.
 import { Check, ChevronDown, FileText, ListTodo, Pencil, Search, SquareTerminal, Wrench } from 'lucide-react'
-import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
+import { createContext, useContext, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 
+import { splitHits } from '../reader/hits'
+import { TextFind } from '../reader/TextFind'
 import { useToast } from '../useToast'
 import type { Tab } from '../terminals/tabs'
-import { blocks, COMMANDS, EFFORTS, inline, items, MODELS, MODES, needsTerminal, type Item, type Mode } from './model'
+import { blocks, COMMANDS, EFFORTS, inline, items, MODELS, MODES, needsTerminal, toolHolds, type Item, type Mode } from './model'
 import { useChat } from './useChat'
 
 type Tool = Extract<Item, { kind: 'tool' }>
 
+// Ctrl+F: what you look for, marked wherever the chat draws text (never by changing the page afterwards)
+const Find = createContext('')
+
+/** Text with what you look for marked. */
+function Hl({ text }: { text: string }) {
+  const q = useContext(Find)
+  if (!q) return <>{text}</>
+  return <>{splitHits(text, q).map((part, k) => k % 2
+    ? <mark key={k} className="chat-hit rounded-[2px] bg-[rgb(229_165_10/0.4)] text-inherit data-[on]:bg-[rgb(230_97_0/0.6)]">{part}</mark>
+    : part)}</>
+}
+
 /** **bold** and `code` in a line of text (always as text, never as HTML). */
 function Inline({ text }: { text: string }) {
   return <>{inline(text).map((p, j) => p.kind === 'bold'
-    ? <b key={j}>{p.text}</b>
-    : p.kind === 'code' ? <code key={j} className="rounded bg-inset px-1 font-mono text-[13px]">{p.text}</code>
-      : <span key={j}>{p.text}</span>)}</>
+    ? <b key={j}><Hl text={p.text} /></b>
+    : p.kind === 'code' ? <code key={j} className="rounded bg-inset px-1 font-mono text-[13px]"><Hl text={p.text} /></code>
+      : <span key={j}><Hl text={p.text} /></span>)}</>
 }
 
 function Prose({ text }: { text: string }) {
   return (
     <div className="flex flex-col gap-2 leading-[1.6]">
       {blocks(text).map((b, i) => b.code
-        ? <pre key={i} className="overflow-x-auto rounded-lg bg-inset px-3 py-2 font-mono text-[13px]">{b.text}</pre>
+        ? <pre key={i} className="overflow-x-auto rounded-lg bg-inset px-3 py-2 font-mono text-[13px]"><Hl text={b.text} /></pre>
         : b.table
           ? <div key={i} className="overflow-x-auto rounded-lg border border-line">
               <table className="w-full border-collapse text-sm">
@@ -61,32 +75,34 @@ function ToolCard({ t }: { t: Tool }) {
     )
   }
   const body = t.diff || t.result !== null || t.detail
+  const q = useContext(Find)
+  const shown = open || (!!q && toolHolds(t, q))
   return (
     <div className={`overflow-hidden rounded-xl border bg-card ${t.error ? 'border-bad/50' : 'border-line'}`}>
-      <button onClick={() => setOpen(!open)} aria-expanded={open} disabled={!body}
+      <button onClick={() => setOpen(!shown)} aria-expanded={shown} disabled={!body}
         className="flex w-full items-center gap-2.5 px-3 py-2.5 text-left text-sm hover:bg-hover disabled:hover:bg-transparent">
         <Icon size={15} className="shrink-0 text-dim" />
         <b className="shrink-0 font-semibold">{t.verb}</b>
-        <span className="min-w-0 truncate font-mono text-[12.5px] text-dim">{t.target}</span>
+        <span className="min-w-0 truncate font-mono text-[12.5px] text-dim"><Hl text={t.target} /></span>
         <span className="flex-1" />
         {t.error && <span className="text-xs text-bad">failed</span>}
         {t.result === null && !t.error && <span className="text-xs text-dim">running</span>}
-        {body && <ChevronDown size={14} className={`shrink-0 text-dim transition-transform ${open ? 'rotate-180' : ''}`} />}
+        {body && <ChevronDown size={14} className={`shrink-0 text-dim transition-transform ${shown ? 'rotate-180' : ''}`} />}
       </button>
-      {open && (
+      {shown && (
         <div className="border-t border-line">
-          {t.detail && <div className="px-4 py-2 text-sm text-dim">{t.detail}</div>}
+          {t.detail && <div className="px-4 py-2 text-sm text-dim"><Hl text={t.detail} /></div>}
           {t.diff && (
             <div className="overflow-x-auto font-mono text-[12.5px] leading-5">
               {t.diff.map((d, i) => (
                 <div key={i} className={`px-4 whitespace-pre ${d.kind === 'del' ? 'bg-bad-bg text-bad'
                   : d.kind === 'add' ? 'bg-ok-bg text-ok' : 'text-dim'}`}>
-                  {d.kind === 'del' ? '− ' : d.kind === 'add' ? '+ ' : '  '}{d.text}</div>
+                  {d.kind === 'del' ? '− ' : d.kind === 'add' ? '+ ' : '  '}<Hl text={d.text} /></div>
               ))}
             </div>
           )}
           {t.result !== null && t.result.trim() && (
-            <pre className="m-0 max-h-80 overflow-auto px-4 py-2 font-mono text-[12.5px] leading-5 text-dim">{t.result}</pre>
+            <pre className="m-0 max-h-80 overflow-auto px-4 py-2 font-mono text-[12.5px] leading-5 text-dim"><Hl text={t.result} /></pre>
           )}
         </div>
       )}
@@ -139,9 +155,37 @@ export function ChatView({ tab, shown, title, toggle, onTerminal }: { tab: Tab; 
   const [effort, setEffort] = useState('')
   const list = useRef<HTMLDivElement>(null)
   const atEnd = useRef(true)
+  const [finding, setFinding] = useState(false)
+  const [query, setQuery] = useState('')
+  const [hit, setHit] = useState({ n: 0, total: 0 })
+  const findBox = useRef<HTMLInputElement>(null)
+  const q = finding ? query.trim() : ''
+  const openFind = () => { setFinding(true); requestAnimationFrame(() => { findBox.current?.focus(); findBox.current?.select() }) }
+  const closeFind = () => { setFinding(false); setQuery('') }
+  const step = (back: boolean) => setHit((h) => h.total ? { ...h, n: (h.n + (back ? h.total - 1 : 1)) % h.total } : h)
   const shownItems = items(state.events, state.cwd)
   const screen = state.screen
   const ask = screen?.ask ?? null
+
+  // Ctrl+F (⌘F on a Mac) while the chat shows: find in the conversation
+  useEffect(() => {
+    if (!shown) return
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && !e.altKey && e.key.toLowerCase() === 'f') { e.preventDefault(); openFind() }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [shown])
+  // the marks the chat drew: count them, mark the current one, bring it into view
+  useEffect(() => {
+    const marks = [...(list.current?.querySelectorAll<HTMLElement>('mark.chat-hit') ?? [])]
+    setHit((h) => (h.total === marks.length && h.n < Math.max(marks.length, 1)) ? h : { n: 0, total: marks.length })
+  }, [q, state.events.length])
+  useEffect(() => {
+    const marks = [...(list.current?.querySelectorAll<HTMLElement>('mark.chat-hit') ?? [])]
+    marks.forEach((m, k) => { if (k === hit.n) m.dataset.on = '1'; else delete m.dataset.on })
+    if (q && marks[hit.n]) { atEnd.current = false; marks[hit.n].scrollIntoView({ block: 'center' }) }
+  }, [hit, q])
 
   useLayoutEffect(() => {  // follow the end while you are at it
     const el = list.current
@@ -164,6 +208,7 @@ export function ChatView({ tab, shown, title, toggle, onTerminal }: { tab: Tab; 
   const command = (c: string) => { setSlash(false); if (c === '/model' || c === '/effort') setDraft(c + ' '); else submit(c) }
 
   return (
+    <Find.Provider value={q}>
     <div className="absolute inset-0 z-[6] flex flex-col bg-view">
       <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-line px-4 py-2">
         {toggle}
@@ -183,7 +228,9 @@ export function ChatView({ tab, shown, title, toggle, onTerminal }: { tab: Tab; 
         </div>
       </div>
 
-      <div ref={list} className="min-h-0 flex-1 overflow-y-auto"
+      <div className="relative min-h-0 flex-1">
+      {finding && <TextFind input={findBox} query={query} hit={hit} onQuery={setQuery} onStep={step} onClose={closeFind} />}
+      <div ref={list} className="h-full overflow-y-auto"
         onScroll={(e) => { const el = e.currentTarget; atEnd.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80 }}>
         <div className="mx-auto flex w-full max-w-[820px] flex-col gap-3.5 px-6 pt-5 pb-3">
           {state.unknown && (
@@ -198,12 +245,12 @@ export function ChatView({ tab, shown, title, toggle, onTerminal }: { tab: Tab; 
           {shownItems.map((it) => {
             if (it.kind === 'tool') return <ToolCard key={it.id} t={it} />
             if (it.kind === 'user') {
-              return <div key={it.id} className="max-w-[78%] self-end rounded-2xl bg-control px-4 py-2.5 whitespace-pre-wrap">{it.text}</div>
+              return <div key={it.id} className="max-w-[78%] self-end rounded-2xl bg-control px-4 py-2.5 whitespace-pre-wrap"><Hl text={it.text} /></div>
             }
             if (it.kind === 'command') {
-              return <div key={it.id} className="self-end font-mono text-sm text-dim">{it.text}</div>
+              return <div key={it.id} className="self-end font-mono text-sm text-dim"><Hl text={it.text} /></div>
             }
-            if (it.kind === 'note') return <div key={it.id} className="text-center text-xs whitespace-pre-wrap text-dim">{it.text}</div>
+            if (it.kind === 'note') return <div key={it.id} className="text-center text-xs whitespace-pre-wrap text-dim"><Hl text={it.text} /></div>
             return <Prose key={it.id} text={it.text} />
           })}
           {ask && (
@@ -228,6 +275,7 @@ export function ChatView({ tab, shown, title, toggle, onTerminal }: { tab: Tab; 
           )}
           {state.error && <div className="text-sm text-bad">{state.error}</div>}
         </div>
+      </div>
       </div>
 
       <div className="shrink-0 px-6 pb-4">
@@ -262,5 +310,6 @@ export function ChatView({ tab, shown, title, toggle, onTerminal }: { tab: Tab; 
         </div>
       </div>
     </div>
+    </Find.Provider>
   )
 }

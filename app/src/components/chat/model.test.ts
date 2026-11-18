@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { blocks, cells, describe as describeTool, diff, inline, items, needsTerminal, shortPath, type ChatEvent } from './model'
+import { blocks, cells, describe as describeTool, toolHolds, diff, inline, items, needsTerminal, shortPath, type ChatEvent } from './model'
 
 describe('the chat as items', () => {
   const events: ChatEvent[] = [
@@ -83,5 +83,16 @@ describe('tables and headings in what Claude writes', () => {
   it('pipes without a rule line are just text, and headings are found', () => {
     expect(blocks('a | b | c')[0].table).toBeUndefined()
     expect(blocks('## Next steps\nRun it.')).toEqual([{ code: false, text: 'Next steps', heading: 2 }, { code: false, text: 'Run it.' }])
+  })
+})
+
+describe('finding in the chat', () => {
+  it('a folded tool card opens when what you look for is inside it', () => {
+    const card = { detail: '', result: 'slurmstepd: error: Detected 1 oom_kill event', diff: [{ text: '#SBATCH --mem=32G' }] }
+    expect(toolHolds(card, 'OOM_KILL')).toBe(true)  // any case
+    expect(toolHolds(card, '--mem=32')).toBe(true)  // in the diff too
+    expect(toolHolds(card, 'gpu')).toBe(false)
+    expect(toolHolds(card, '  ')).toBe(false)
+    expect(toolHolds({ result: null }, 'x')).toBe(false)  // still running: nothing yet
   })
 })
