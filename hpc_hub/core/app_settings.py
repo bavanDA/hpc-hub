@@ -13,6 +13,7 @@ class AppSettings:
     experimental_schedules: bool = False  # the Scheduled tab of Agents
     clusters: str = ""  # ids of the clusters you use, comma separated; empty = all of them
     select_to_copy: bool = True  # highlighting text in a terminal copies it
+    right_click_paste: bool = False  # right-clicking a terminal pastes, instead of opening its menu
     monitor_bar: bool = True  # CPU, memory and network of the host under each terminal
     appearance: str = "system"  # system (follows the computer), light, dark or a named one
     # the agent for a paper's Write message, Ask and Check my list (latex/assist/), Claude Haiku, Low at first

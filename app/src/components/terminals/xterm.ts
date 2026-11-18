@@ -14,10 +14,15 @@ export function theme(): ITheme {
       yellow: '#9c6e03', brightYellow: '#b58300', white: '#77767b', brightWhite: '#5e5c64' }
 }
 
-// Settings: Select to copy. Read once, then kept up to date by the Settings dialog.
+// Settings: Select to copy and Right-click to paste. Read once, then kept up to date by the Settings dialog.
 let selectToCopy = true
-call<{ select_to_copy: boolean }>('preferences.get').then((p) => { selectToCopy = p.select_to_copy }).catch(() => {})
+let rightClickPaste = false
+call<{ select_to_copy: boolean; right_click_paste: boolean }>('preferences.get')
+  .then((p) => { selectToCopy = p.select_to_copy; rightClickPaste = !!p.right_click_paste }).catch(() => {})
 export const setSelectToCopy = (on: boolean) => { selectToCopy = on }
+export const setRightClickPaste = (on: boolean) => { rightClickPaste = on }
+/** A right-click pastes rather than opening the menu: Right-click to paste is on and Ctrl isn't held. */
+export const rightClickPastes = (e: { ctrlKey: boolean }) => rightClickPaste && !e.ctrlKey
 
 export async function copyText(text: string): Promise<boolean> {
   try {

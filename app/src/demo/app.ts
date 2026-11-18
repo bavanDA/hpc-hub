@@ -16,7 +16,7 @@ const asked = typeof location !== 'undefined' ? new URLSearchParams(location.sea
 const trying = (name: string) => asked !== null && (asked === '' || asked.split(',').includes(name))
 const prefs: Preferences = { browser_profile: 'Uni',
   experimental_papers: trying('papers'), experimental_skills: trying('skills'), experimental_schedules: trying('schedules'),
-  select_to_copy: true, monitor_bar: true, beta_updates: false,
+  select_to_copy: true, right_click_paste: false, monitor_bar: true, beta_updates: false,
   appearance: demoAppearance() }
 
 const profiles: Profiles = {

@@ -85,3 +85,32 @@ export async function captureWindow(skip: (el: Element) => boolean): Promise<str
   }
   throw new Error('The screenshot came out too big to send')
 }
+
+/** A picture you pasted (any image type) as a PNG data URL the report server takes: at most MAX_WIDTH wide, made
+ *  smaller until it fits. */
+export async function fitPicture(blob: Blob): Promise<string> {
+  const url = URL.createObjectURL(blob)
+  try {
+    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const i = new Image()
+      i.onload = () => resolve(i)
+      i.onerror = () => reject(new Error('That picture could not be read'))
+      i.src = url
+    })
+    let scale = Math.min(1, MAX_WIDTH / img.naturalWidth)
+    for (let tries = 0; tries < 6; tries++) {
+      const canvas = document.createElement('canvas')
+      canvas.width = Math.max(1, Math.round(img.naturalWidth * scale))
+      canvas.height = Math.max(1, Math.round(img.naturalHeight * scale))
+      const ctx = canvas.getContext('2d')
+      if (!ctx) throw new Error('No canvas here')
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+      const png = canvas.toDataURL('image/png')
+      if (shotBytes(png) <= SHOT_LIMIT) return png
+      scale *= 0.7
+    }
+    throw new Error('The picture is too big to send')
+  } finally {
+    URL.revokeObjectURL(url)
+  }
+}

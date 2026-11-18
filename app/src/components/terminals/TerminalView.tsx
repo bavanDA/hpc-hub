@@ -14,7 +14,7 @@ import { MenuItem } from './MenuItem'
 import { MonitorBar } from './MonitorBar'
 import { Popover } from './Popover'
 import { start, type Tab } from './tabs'
-import { copy, paste } from './xterm'
+import { copy, paste, rightClickPastes } from './xterm'
 
 export function TerminalView({ tab, shown, rail = false }: { tab: Tab; shown: boolean; rail?: boolean }) {
   const host = useRef<HTMLDivElement>(null)
@@ -47,7 +47,10 @@ export function TerminalView({ tab, shown, rail = false }: { tab: Tab; shown: bo
   useEffect(() => { if (shown) tab.term.focus() }, [shown, tab])
 
   const terminal = <div ref={host} className="min-h-0 flex-1 bg-view py-1 pl-2"
-    onContextMenu={(e) => { e.preventDefault(); setMenu({ x: e.clientX, y: e.clientY }) }} />
+    onContextMenu={(e) => {
+      e.preventDefault()
+      if (rightClickPastes(e)) { paste(tab, toast); tab.term.focus() } else setMenu({ x: e.clientX, y: e.clientY })
+    }} />
 
   return (
     <div className={`absolute inset-0 flex flex-col ${shown ? '' : 'invisible'}`}>
