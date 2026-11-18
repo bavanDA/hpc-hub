@@ -1,3 +1,7 @@
+import sys
+
+import pytest
+
 from hpc_hub.core import remote
 
 
@@ -19,6 +23,7 @@ def test_with_node_or_a_program_all_is_well():
     assert remote.parse_look("@t=\n@node=\n") == remote.Command("")
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="the look runs on the cluster's Linux, not in Windows' bash")
 def test_the_look_runs_in_bash(tmp_path, monkeypatch):
     """The script itself, on this computer: a node script with no node, and a program beside it in ~/.local/bin."""
     import subprocess

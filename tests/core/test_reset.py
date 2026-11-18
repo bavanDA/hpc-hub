@@ -28,7 +28,7 @@ def home(tmp_path, monkeypatch):
 
 
 def test_a_reset_removes_only_hpc_hubs_folders(home):
-    got = {reset.shown(p) for p in reset.places()}
+    got = {reset.shown(p).replace("\\", "/") for p in reset.places()}  # Windows shows ~\\.cache\\hpc-hub
     assert {"~/.config/hpc-hub", "~/.cache/hpc-hub", "~/.local/share/hpc-hub",
             "~/.local/share/local.hpchub.HpcHub"} <= got
     assert not any(".ssh" in g or "other-app" in g for g in got)
