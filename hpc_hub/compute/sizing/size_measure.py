@@ -5,6 +5,7 @@ Runs on the cluster's own python3, which may be 3.6: no dataclasses, walrus or c
 import json
 import math
 import os
+import posixpath
 import re
 import shlex
 import subprocess
@@ -123,6 +124,10 @@ def kind_of(script, args, workdir, wrap="", name=""):
 
 
 def script_path(script, workdir):
+    """The script's full path on the cluster. The app (maybe on Windows) reads the same sacct: there the path is
+    only joined, with the cluster's / and nothing resolved."""
+    if os.name != "posix":
+        return posixpath.normpath(posixpath.join(workdir or "/", script))
     return os.path.realpath(os.path.join(workdir or "/", os.path.expanduser(script)))
 
 

@@ -12,6 +12,8 @@ import pytest
 from hpc_hub.agents import notes
 from hpc_hub.compute import job_size
 
+pytestmark = pytest.mark.skipif(os.name != "posix", reason="a make-believe Linux cluster in bash")
+
 SIZING = Path(job_size.__file__).parent / "sizing"
 
 
