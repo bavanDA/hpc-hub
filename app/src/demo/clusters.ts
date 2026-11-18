@@ -5,6 +5,8 @@ import {
 } from '../types/clusters'
 import type { Gpu } from '../components/clusters/gpus'
 
+const KEPT = ['Your SSH keys and known hosts (~/.ssh)', 'Your files and jobs on the clusters']
+
 type Step = [number, Partial<Session> & { state: State }, string?]
 const summaryOf = (c: Cluster) => summary(c.profile)
 
@@ -173,6 +175,8 @@ function connect({ cluster, vpn_only }: { cluster: string; vpn_only?: boolean })
 
 export const answers: Record<string, unknown> = {
   'app.version': { version: 'demo' },
+  'app.reset_info': { folders: ['~/.config/hpc-hub', '~/.cache/hpc-hub', '~/.local/share/hpc-hub'],
+    clusters: ['Wulver (NJIT)', 'Yale Bouchet'], kept: KEPT },
   'clusters.list': () => clusters,
   'sessions.list': () => sessions.map((s) => ({ ...s })),
   'clusters.log': ({ cluster }: { cluster: string }) => logs[cluster] ?? [],

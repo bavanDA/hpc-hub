@@ -22,8 +22,9 @@ import { PaperAgent } from './PaperAgent'
 import { university, type SetupStatus } from './setup'
 import { experimentsOf, type Experiments, type Preferences, type Profiles } from './types'
 
-export function PreferencesDialog({ onClose, onExperimental, onDisconnectAndQuit }:
-  { onClose: () => void; onExperimental: (e: Experiments) => void; onDisconnectAndQuit: () => void }) {
+export function PreferencesDialog({ onClose, onExperimental, onDisconnectAndQuit, onReset }:
+  { onClose: () => void; onExperimental: (e: Experiments) => void; onDisconnectAndQuit: () => void
+    onReset?: (kind: 'reset' | 'uninstall') => void }) {
   const [inner, setInner] = useState<'' | 'phone' | 'about'>('')
   const toast = useToast()
   const [prefs, setPrefs] = useState<Preferences | null>(null)
@@ -112,6 +113,12 @@ export function PreferencesDialog({ onClose, onExperimental, onDisconnectAndQuit
           <Row label="Report a problem" opens onPress={() => { onClose(); openReport({ kind: 'user' }) }} />
           <Row label="Disconnect all and quit" danger onPress={onDisconnectAndQuit} />
         </Section>
+        {onReset && <Section title="Start over">
+          <Row label="Reset HPC Hub" sub="Sign out and forget saved logins, settings and data, as if newly installed."
+            opens danger onPress={() => onReset('reset')} />
+          <Row label="Uninstall HPC Hub" sub="Remove the app from this computer." opens danger
+            onPress={() => onReset('uninstall')} />
+        </Section>}
         <div className="h-3" />
       </>}
       {inner === 'phone' && <PairPhoneDialog onClose={() => setInner('')} />}

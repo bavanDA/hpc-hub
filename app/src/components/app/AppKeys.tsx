@@ -23,7 +23,8 @@ export function AppKeys({ settings, onSettings, onClose, onExperimental }: {
   return (
     <>
       {settings && <PreferencesDialog onClose={onClose} onExperimental={onExperimental}
-        onDisconnectAndQuit={() => { onClose(); quit.disconnectAndQuit() }} />}
+        onDisconnectAndQuit={() => { onClose(); quit.disconnectAndQuit() }}
+        onReset={(kind) => { onClose(); void quit.resetAndQuit(kind) }} />}
       {quit.dialog}
     </>
   )
