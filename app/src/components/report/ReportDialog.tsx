@@ -1,7 +1,7 @@
 // The report window: what will be sent, in full, as the backend scrubbed it (report.preview), an optional note and
 // email, and a screenshot only when ticked, taken now, pasted (Ctrl+V), or taken after Minimize (the report waits
 // in a small bar while you go to the screen that shows it). Send posts exactly what the window shows (report.send).
-import { Camera, CircleCheck, Minus } from 'lucide-react'
+import { Camera, CircleCheck } from 'lucide-react'
 import { useEffect, useRef, useState, type ClipboardEvent, type KeyboardEvent } from 'react'
 
 import { call } from '../../rpc'
@@ -158,7 +158,8 @@ export function ReportDialog({ start, onClose }: { start: ReportStart; onClose: 
 
   const ready = !!preview && scrubbed.of === note && (!withShot || !!shot) && (!user || !!note.trim())
   return (
-    <EDialog title={user ? 'Report a problem' : 'Report this problem'} width={600} onClose={onClose} actions={<>
+    <EDialog title={user ? 'Report a problem' : 'Report this problem'} width={600} onClose={onClose}
+      onMinimize={() => setSmall(true)} actions={<>
       <EButton className="flex-1" onClick={onClose}>Cancel</EButton>
       <EButton kind="primary" className="flex-1" disabled={!ready || sending} onClick={send}>
         {sending ? 'Sending…' : sendError ? 'Try again' : 'Send report'}</EButton>
@@ -177,10 +178,8 @@ export function ReportDialog({ start, onClose }: { start: ReportStart; onClose: 
         <CheckRow label={<span className="block break-normal">Add a screenshot of the window<span className="block
           text-sm text-dim">It shows whatever is on screen, so look at it below first.</span></span>}
           value={withShot && !shot ? <Spinner /> : undefined} checked={withShot} onChange={tick} />
-        <div className="flex flex-wrap items-center gap-2 px-5 pt-1 pb-2">
-          <EButton kind="quiet" icon={Minus} onClick={() => setSmall(true)}>Minimize</EButton>
-          <span className="text-sm text-dim">to take it of another screen, or paste a picture with Ctrl+V.</span>
-        </div>
+        <p className="px-5 pb-2 text-sm text-dim">Or paste a picture with Ctrl+V. For another screen, minimize this
+          window (– at the top) and take it there.</p>
       </div>
       {shotError && <p className="px-5 pt-2 text-sm text-dim">{shotError}</p>}
 

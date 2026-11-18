@@ -1,11 +1,13 @@
-import { ArrowLeft, X, type LucideIcon } from 'lucide-react'
+import { ArrowLeft, Minus, X, type LucideIcon } from 'lucide-react'
 import type { ReactNode } from 'react'
 
 import { useEscape } from '../ui/useEscape'
 import { OnTop } from '../ui/OnTop'
 
-export function EDialog({ title, icon: Icon, onClose, onBack, children, actions, width = 520 }: {
-  title: string; icon?: LucideIcon; onClose: () => void; onBack?: () => void; children: ReactNode; actions?: ReactNode
+/** onMinimize: a – beside the close button, as on a window (the report shrinks to a bar with it). */
+export function EDialog({ title, icon: Icon, onClose, onBack, onMinimize, children, actions, width = 520 }: {
+  title: string; icon?: LucideIcon; onClose: () => void; onBack?: () => void; onMinimize?: () => void
+  children: ReactNode; actions?: ReactNode
   width?: number
 }) {
   useEscape(onClose)
@@ -21,6 +23,9 @@ export function EDialog({ title, icon: Icon, onClose, onBack, children, actions,
               place-items-center rounded-md text-dim hover:bg-hover active:bg-pressed"><ArrowLeft size={18} /></button>}
             {Icon && <Icon size={20} className="shrink-0" />}
             <h2 className="min-w-0 flex-1 text-lg font-semibold">{title}</h2>
+            {onMinimize && <button type="button" aria-label="Minimize this window" title="Minimize this window" onClick={onMinimize}
+              className="grid size-9 place-items-center rounded-md text-dim hover:bg-hover active:bg-pressed">
+              <Minus size={18} /></button>}
             <button type="button" aria-label="Close" onClick={onClose} className="grid size-9 place-items-center
               rounded-md text-dim hover:bg-hover active:bg-pressed"><X size={18} /></button>
           </header>
