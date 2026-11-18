@@ -11,15 +11,21 @@ making a tunnel needs admin rights. So:
 3. **It is installed once**, the first time you connect a cluster with a VPN: the app asks, then Windows (UAC) or
    macOS (password) asks for permission once. An app update with a newer helper asks again.
 
-## Without administrator (Windows)
+## Without administrator (Windows and macOS)
 
-An account that isn't an administrator can't install the helper: Windows asks for an administrator's name and
-password. So HPC Hub also has a VPN of its own, as on the phone (docs/design/android.md), used on such an account,
-after **Not now** at the helper's prompt, or with Settings > **VPN without administrator** (connect/vpn_local.py):
+The helper needs an administrator once, and a Windows account that isn't one can't install it at all. So HPC Hub
+also has a VPN of its own, as on the phone (docs/design/android.md), used (connect/vpn_local.py):
+
+- on macOS by default, unless the helper is already set up (it asks nothing more then);
+- on Windows on an account that isn't an administrator;
+- after **Not now** at the helper's prompt, or with Settings > **VPN without administrator**.
+
+How it works:
 
 - `openconnect --script-tun --script "hpc-hub-vpn-tunnel -L <port>:<cluster>:22 -k 30 --pid-file <file>"` runs
   as you. Nothing is installed and the computer's network is untouched.
-- Upstream openconnect has `--script-tun` only on Linux and macOS.
+- macOS's openconnect has `--script-tun` as it is (the tunnel is a socket, `VPNFD`). Upstream has it only on Linux
+  and macOS.
   `packaging/vpn/openconnect-windows-script-tun.patch` adds it on Windows: the script gets the tunnel as a
   message-mode named pipe (its name in `VPNPIPE`), one IP packet per message. openconnect checks that the program
   it started is the one that opened the pipe. When the pipe closes, openconnect logs out and exits, so HPC Hub
@@ -29,7 +35,7 @@ after **Not now** at the helper's prompt, or with Settings > **VPN without admin
   (core/tunnels.py), so terminals, files, jobs and agents all work. Other programs on the computer don't use the
   VPN, and **VPN only** has nothing to do.
 - tests/connect/test_vpn_local.py runs it end to end against a make-believe AnyConnect server and cluster: on
-  Linux with the system's openconnect, and in the Windows build with the patched one.
+  Linux with the system's openconnect, and in the Windows and macOS builds with the shipped ones.
 
 ## Files
 

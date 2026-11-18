@@ -252,9 +252,9 @@ class HelperVpn(Vpn):
         standard = standard_user()
         own = self.own_vpn_available()
         if own:
-            text = ("Windows asks for your permission once, then the VPN works for every program on this computer. "
-                    "Not now: HPC Hub uses its own VPN, which needs no permission. Only HPC Hub's connections go "
-                    "through it. You can change this in Settings.")
+            text = (f"{system} asks for your permission once, then the VPN works for every program on this "
+                    "computer. Not now: HPC Hub uses its own VPN, which needs no permission. Only HPC Hub's "
+                    "connections go through it. You can change this in Settings.")
         elif standard:
             text = ("This Windows account isn't an administrator, so Windows asks for an administrator's name and "
                     f"password, once. {NO_ADMIN}")
@@ -273,9 +273,9 @@ class HelperVpn(Vpn):
         self.log("VPN helper installed")
 
     def own_vpn_available(self) -> bool:
-        """Windows, and this HPC Hub has its own VPN to offer instead (vpn_local)."""
+        """This HPC Hub has its own VPN to offer instead (vpn_local)."""
         from . import vpn_local
-        return WINDOWS and vpn_local.programs() is not None
+        return vpn_local.programs() is not None
 
     def _status(self) -> dict:
         return _checked(request({"op": "status", "name": tunnel_name(self.cfg.id)}, address=self.address))

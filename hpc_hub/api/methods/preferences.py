@@ -2,6 +2,7 @@
 
 import threading
 
+from ...connect import vpn_local
 from ...core import config
 from ..server import method
 
@@ -13,7 +14,7 @@ def _json(app: config.AppSettings) -> dict:
             "select_to_copy": app.select_to_copy, "right_click_paste": app.right_click_paste,
             "select_everywhere": app.select_everywhere,
             "monitor_bar": app.monitor_bar, "appearance": app.appearance,
-            "beta_updates": app.beta_updates, "own_vpn": app.own_vpn}
+            "beta_updates": app.beta_updates, "own_vpn": vpn_local.own_by_default(app.vpn_mode)}
 
 
 @method("preferences.get")
@@ -47,7 +48,7 @@ def set_(browser_profile: str | None = None, experimental_papers: bool | None = 
         if beta_updates is not None:
             app.beta_updates = bool(beta_updates)
         if own_vpn is not None:
-            app.own_vpn = bool(own_vpn)
+            app.vpn_mode = "own" if own_vpn else "helper"
         if appearance is not None:
             if appearance not in config.APPEARANCES:
                 raise ValueError(f"Appearance is one of {', '.join(config.APPEARANCES)}")

@@ -1,19 +1,22 @@
-"""The VPN without administrator (Windows), as on the phone (vpn_android): openconnect runs as you and hands the
-tunnel to hpc-hub-vpn-tunnel (app/vpn-helper/src/tunnel_proxy), which forwards a local port to the cluster's SSH
-port with a TCP/IP stack of its own. Nothing is installed and the computer's network is untouched, so only HPC
-Hub's own connections use the VPN.
+"""The VPN without administrator (Windows and macOS), as on the phone (vpn_android): openconnect runs as you and
+hands the tunnel to hpc-hub-vpn-tunnel (app/vpn-helper/src/tunnel_proxy), which forwards a local port to the
+cluster's SSH port with a TCP/IP stack of its own. Nothing is installed and the computer's network is untouched, so
+only HPC Hub's own connections use the VPN.
 
-Used when this Windows account isn't an administrator (the helper's prompt would ask for an administrator's
-password), or when you chose it: Settings > VPN without administrator, or Not now at the helper's prompt.
+Used on macOS unless you chose the VPN helper (Settings: VPN without administrator off) or it is already set up;
+on Windows when the account isn't an administrator (the helper's prompt would ask for an administrator's
+password), or when you chose it: Settings, or Not now at the helper's prompt.
 
-openconnect for Windows learned --script-tun from packaging/vpn/openconnect-windows-script-tun.patch: the tunnel
-is a named pipe (VPNPIPE). When the forwarder closes it, openconnect logs out of the VPN and exits, so that is
-how it is stopped."""
+macOS's openconnect has --script-tun (the tunnel is a socket, VPNFD); stopping it with SIGTERM logs out and hangs
+up on the forwarder. openconnect for Windows learned it from packaging/vpn/openconnect-windows-script-tun.patch:
+the tunnel is a named pipe (VPNPIPE), and when the forwarder closes it, openconnect logs out and exits, so that is
+how it is stopped there."""
 
 import os
 import shlex
 import signal
 import subprocess
+import sys
 import time
 from collections.abc import Callable
 from pathlib import Path
@@ -24,11 +27,14 @@ from ..core.paths import WINDOWS, runtime_dir
 from . import vpn_android, vpn_helper
 from .vpn import VpnError
 
+MAC = sys.platform == "darwin"
+
 TUNNEL = "hpc-hub-vpn-tunnel.exe" if WINDOWS else "hpc-hub-vpn-tunnel"
 OPENCONNECT = "openconnect.exe" if WINDOWS else "openconnect"
 NO_LOCAL = "This HPC Hub has no VPN without administrator yet. Update it, or set up the VPN helper."
 ONLY_HPC_HUB = ("HPC Hub's own VPN only carries HPC Hub's connections, so VPN only has nothing to do. For your "
-                "other programs, use the VPN helper (Settings: turn off VPN without administrator).")
+                "other programs, turn off VPN without administrator in Settings: HPC Hub then sets up its VPN "
+                "helper, which asks for permission once.")
 CREATE_NEW_PROCESS_GROUP = 0x0000_0200
 CREATE_NO_WINDOW = 0x0800_0000
 
@@ -47,35 +53,51 @@ def programs() -> tuple[Path, Path] | None:
     return (oc, tunnel) if oc.is_file() and tunnel.is_file() else None
 
 
-def chosen() -> bool:
-    """Settings > VPN without administrator."""
+def mode() -> str:
+    """Settings: "own", "helper", or "" (the system's default)."""
     try:
-        return config.load_app(config.APP_FILE).own_vpn
+        return config.load_app(config.APP_FILE).vpn_mode
     except (OSError, ValueError):
-        return False
+        return ""
 
 
 def choose() -> None:
     """You said Not now to the helper: HPC Hub's own VPN from now on (Settings turns it off again)."""
     app = config.load_app(config.APP_FILE)
-    app.own_vpn = True
+    app.vpn_mode = "own"
     config.save_app(app, config.APP_FILE)
 
 
-def used(cfg: ClusterConfig) -> bool:
-    """Is this the VPN for cfg? Windows only, when this HPC Hub has it, and when you chose it or the account
-    can't install the helper (and nobody installed it for you)."""
-    if not WINDOWS or not cfg.vpn.enabled or programs() is None:
+def own_by_default(chosen: str) -> bool:
+    """With this choice, does this computer use HPC Hub's own VPN? "" means: macOS always, unless the helper is
+    already set up (it asks nothing more then); Windows when the account isn't an administrator, unless someone
+    set the helper up for it."""
+    if not (WINDOWS or MAC) or programs() is None:
         return False
-    if chosen():
-        return True
-    return vpn_helper.standard_user() and vpn_helper.installed_version() != vpn_helper.VERSION
+    if chosen:
+        return chosen == "own"
+    helper_ready = vpn_helper.installed_version() == vpn_helper.VERSION
+    if MAC:
+        return not helper_ready
+    return vpn_helper.standard_user() and not helper_ready
+
+
+def used(cfg: ClusterConfig) -> bool:
+    """Is this the VPN for cfg?"""
+    return cfg.vpn.enabled and own_by_default(mode())
 
 
 # -- processes, on Windows by their program's name --------------------------------------------------------
 
 def image(pid: int) -> str:
     """The file name of the program running as pid ("" if none, or it ended)."""
+    if MAC:  # no /proc: ps names the program with its path
+        try:
+            out = subprocess.run(["ps", "-p", str(pid), "-o", "comm="], capture_output=True, text=True,
+                                 timeout=5).stdout.strip()
+        except (OSError, subprocess.SubprocessError):
+            return ""
+        return Path(out).name if out and "<defunct>" not in out else ""
     if not WINDOWS:
         try:
             return Path(os.readlink(f"/proc/{pid}/exe")).name
@@ -121,7 +143,9 @@ class LocalVpn(vpn_android.AndroidVpn):
         found = programs()
         self.openconnect, self.ocproxy = (str(found[0]), str(found[1])) if found else ("openconnect", TUNNEL)
         self.external_browser = ""
-        self.extra_args = []
+        cafile = Path(self.openconnect).with_name("cert.pem")
+        # macOS: the shipped openconnect knows no system certificates, so it gets a list (as with the helper)
+        self.extra_args = ["--cafile", str(cafile)] if cafile.is_file() else []
 
     def ensure_profile(self) -> None:
         if not self.cfg.vpn.gateway:
@@ -133,7 +157,7 @@ class LocalVpn(vpn_android.AndroidVpn):
         return runtime_dir() / f"vpn-{self.cfg.id}.tunnel.pid"
 
     def script(self, port: int) -> str:
-        """Windows: openconnect starts it as a program (no shell), so Windows quoting."""
+        """Windows: openconnect starts it as a program (no shell), so Windows quoting; elsewhere /bin/sh's."""
         argv = [self.ocproxy, *vpn_android.forward_args(self.cfg, port), "--pid-file", str(self._pid_file())]
         return subprocess.list2cmdline(argv) if WINDOWS else shlex.join(argv)
 

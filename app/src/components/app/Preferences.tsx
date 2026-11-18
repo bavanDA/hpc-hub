@@ -23,6 +23,7 @@ import { university, type SetupStatus } from './setup'
 import { experimentsOf, type Experiments, type Preferences, type Profiles } from './types'
 
 const isWindows = navigator.userAgent.includes('Windows')
+const isMac = navigator.userAgent.includes('Mac OS')
 
 export function PreferencesDialog({ onClose, onExperimental, onDisconnectAndQuit, onReset }:
   { onClose: () => void; onExperimental: (e: Experiments) => void; onDisconnectAndQuit: () => void
@@ -88,9 +89,9 @@ export function PreferencesDialog({ onClose, onExperimental, onDisconnectAndQuit
             sub="One click pastes. Ctrl+right-click opens the Copy and Paste menu."
             checked={prefs.right_click_paste} onChange={(on) => save({ right_click_paste: on })} />
         </Section>
-        {isWindows && <Section title="VPN">
+        {(isWindows || isMac) && <Section title="VPN">
           <ToggleRow label="VPN without administrator"
-            sub="HPC Hub's own VPN. Nothing is installed, and only HPC Hub's connections use it. An account that isn't an administrator always uses it."
+            sub="HPC Hub's own VPN: nothing is installed and nothing asks for permission. Only HPC Hub's connections use it."
             checked={prefs.own_vpn} onChange={(on) => save({ own_vpn: on })} />
         </Section>}
         <Section title="Terminals">

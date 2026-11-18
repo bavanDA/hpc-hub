@@ -182,7 +182,7 @@ class FakeVpnServer:
 @pytest.fixture
 def server(tmp_path, monkeypatch):
     folder = tmp_path / "vpn"
-    if sys.platform == "win32":  # openconnect.exe with its DLLs, and the tunnel beside it
+    if sys.platform in ("win32", "darwin"):  # the shipped openconnect with its libraries, and the tunnel beside it
         shutil.copytree(Path(OPENCONNECT).parent, folder)
         shutil.copy(TUNNEL, folder / vpn_local.TUNNEL)
     else:
@@ -244,6 +244,7 @@ def windows(tmp_path, monkeypatch):
     for name in ("openconnect.exe", "hpc-hub-vpn-tunnel.exe"):
         (folder / name).write_text("")
     monkeypatch.setattr(vpn_local, "WINDOWS", True)
+    monkeypatch.setattr(vpn_local, "MAC", False)
     monkeypatch.setattr(vpn_local, "OPENCONNECT", "openconnect.exe")
     monkeypatch.setattr(vpn_local, "TUNNEL", "hpc-hub-vpn-tunnel.exe")
     monkeypatch.setenv("HPC_HUB_VPN_DIR", str(folder))
@@ -265,7 +266,7 @@ def test_an_administrator_gets_it_after_saying_not_now(windows, monkeypatch):
     monkeypatch.setattr(vpn_helper, "standard_user", lambda: False)
     assert not vpn_local.used(cfg)
     vpn_local.choose()
-    assert vpn_local.used(cfg) and config.load_app(config.APP_FILE).own_vpn
+    assert vpn_local.used(cfg) and config.load_app(config.APP_FILE).vpn_mode == "own"
 
 
 def test_never_without_its_programs_or_off_windows(windows, monkeypatch):
@@ -298,3 +299,26 @@ def test_the_forwarder_is_quoted_for_windows(windows, tmp_path, monkeypatch):
     script = vpn.script(52011)
     assert script.startswith('"C:\\Users\\jdoe\\AppData\\Local\\HPC Hub\\vpn\\hpc-hub-vpn-tunnel.exe" -L '
                              "52011:login.example.edu:22 -k 30 --pid-file ")
+
+
+def test_a_mac_uses_hpc_hubs_own_vpn_unless_you_chose_the_helper(windows, monkeypatch):
+    monkeypatch.setattr(vpn_local, "WINDOWS", False)
+    monkeypatch.setattr(vpn_local, "MAC", True)
+    monkeypatch.setattr(vpn_helper, "standard_user", lambda: False)  # an administrator, even
+    cfg = cluster("vpn.example.edu")
+    assert vpn_local.used(cfg)  # nothing to install, so nothing asks for a password
+    monkeypatch.setattr(vpn_helper, "installed_version", lambda address=None: vpn_helper.VERSION)
+    assert not vpn_local.used(cfg)  # set up before: the full VPN, and it asks nothing more
+    monkeypatch.setattr(vpn_helper, "installed_version", lambda address=None: "1")
+    assert vpn_local.used(cfg)  # an older helper would ask again to update: not that
+    app = config.load_app(config.APP_FILE)
+    app.vpn_mode = "helper"
+    config.save_app(app, config.APP_FILE)
+    assert not vpn_local.used(cfg)  # you chose the helper in Settings
+
+
+def test_no_cluster_vpn_no_vpn(windows, monkeypatch):
+    monkeypatch.setattr(vpn_helper, "standard_user", lambda: True)
+    cfg = cluster("vpn.example.edu")
+    cfg.vpn.enabled = False
+    assert not vpn_local.used(cfg)

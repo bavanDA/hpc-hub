@@ -179,8 +179,8 @@ jobs:
           exe=""; if [ "$RUNNER_OS" = Windows ]; then exe=.exe; fi
           mkdir -p app/src-tauri/vpn
           cp "app/vpn-helper/target/release/hpc-hub-vpn-helper$exe" app/src-tauri/vpn/
-          # Windows: the VPN without administrator (hpc_hub/connect/vpn_local.py) too
-          if [ "$RUNNER_OS" = Windows ]; then cp app/vpn-helper/target/release/hpc-hub-vpn-tunnel.exe app/src-tauri/vpn/; fi
+          # the VPN without administrator (hpc_hub/connect/vpn_local.py) too
+          cp "app/vpn-helper/target/release/hpc-hub-vpn-tunnel$exe" app/src-tauri/vpn/
       - name: Bundled openconnect and VPN helper start
         if: runner.os != 'Linux'
         timeout-minutes: 2
@@ -195,18 +195,20 @@ jobs:
           else
             openconnect/openconnect --version
             ./hpc-hub-vpn-helper --version
+            ./hpc-hub-vpn-tunnel --version
           fi
 
-      # The VPN without administrator, end to end: the patched openconnect signs in to a make-believe VPN server
-      # and hands its tunnel to hpc-hub-vpn-tunnel (tests/connect/test_vpn_local.py)
+      # The VPN without administrator, end to end: the shipped openconnect (patched on Windows) signs in to a
+      # make-believe VPN server and hands its tunnel to hpc-hub-vpn-tunnel (tests/connect/test_vpn_local.py)
       - name: VPN without administrator works
-        if: runner.os == 'Windows'
+        if: runner.os != 'Linux'
         timeout-minutes: 8
         shell: bash
         run: |
           cargo build --release --manifest-path app/vpn-helper/Cargo.toml --example far_side
           pip install -q pytest -r packaging/requirements-backend.txt
-          HPC_HUB_TEST_OPENCONNECT="$PWD/app/src-tauri/vpn/openconnect/openconnect.exe" \
+          exe=""; if [ "$RUNNER_OS" = Windows ]; then exe=.exe; fi
+          HPC_HUB_TEST_OPENCONNECT="$PWD/app/src-tauri/vpn/openconnect/openconnect$exe" \
             python -m pytest -q -p no:cacheprovider tests/connect/test_vpn_local.py -rs
 
       # The AppImage tools Tauri downloads (linuxdeploy and its GTK and GStreamer plugins), kept between builds

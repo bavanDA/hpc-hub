@@ -95,9 +95,13 @@ def load_app(path: Path = APP_FILE) -> AppSettings:
             data = tomllib.load(fh).get("app", {})
         if "experimental" in data:  # one switch for all three before; saving drops it
             data = {**{k: data["experimental"] for k in EXPERIMENTS}, **data}
+        if data.get("own_vpn") is True and "vpn_mode" not in data:  # a switch before; saving drops it
+            data = {**data, "vpn_mode": "own"}
         merge(app, data)
     if app.appearance not in APPEARANCES:
         app.appearance = "system"
+    if app.vpn_mode not in ("", "own", "helper"):
+        app.vpn_mode = ""
     return app
 
 

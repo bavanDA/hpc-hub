@@ -17,8 +17,8 @@ One **Connect** button runs your cluster's VPN, sign-in and Duo or authenticator
 - A wrong password opens a window to type it again, and HPC Hub stops after one try so your account isn't locked.
 - Several clusters connected at once, each through its own VPN: only that cluster's traffic and names go through
   it, and the rest of your internet stays as it is.
-- On Windows, the VPN works without administrator rights too: HPC Hub runs its own VPN, which only its own
-  connections use, so a school or lab account that can't install anything still connects.
+- On Windows and macOS, the VPN works without administrator rights too: HPC Hub runs its own VPN, which only its
+  own connections use, so nothing asks for a password and a school or lab computer still connects.
 
 <p align="center"><img src="docs/screenshots/clusters.png" alt="Cluster cards" width="720"></p>
 

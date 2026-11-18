@@ -101,6 +101,16 @@ def test_select_to_copy_everywhere(app_file):
     assert config.load_app(app_file).select_everywhere
 
 
-def test_own_vpn_is_saved(app_file):
-    assert preferences.set_(own_vpn=True)["own_vpn"] is True
-    assert config.load_app(app_file).own_vpn is True
+def test_the_vpn_choice_is_saved(app_file):
+    preferences.set_(own_vpn=True)
+    assert config.load_app(app_file).vpn_mode == "own"
+    preferences.set_(own_vpn=False)
+    assert config.load_app(app_file).vpn_mode == "helper"
+
+
+def test_the_older_vpn_switch_still_counts(app_file):
+    app_file.parent.mkdir(parents=True, exist_ok=True)
+    app_file.write_text("[app]\nown_vpn = true\n")
+    assert config.load_app(app_file).vpn_mode == "own"
+    app_file.write_text("[app]\nown_vpn = false\n")  # every Settings save wrote it: false is no choice
+    assert config.load_app(app_file).vpn_mode == ""
