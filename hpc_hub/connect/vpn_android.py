@@ -26,6 +26,7 @@ KEEPALIVE = 30  # ocproxy's TCP keepalive, seconds
 NO_VPN = "This copy of HPC Hub has no VPN. Use campus Wi-Fi, then connect again."
 
 _started: dict[str, subprocess.Popen] = {}  # cluster id -> openconnect, started by this backend
+_stoppers: dict[str, Callable[[int, subprocess.Popen | None], None]] = {}  # cluster id -> how it stops
 _lock = threading.Lock()
 
 
@@ -71,14 +72,19 @@ def ssh_answers(port: int, timeout: float = 5) -> bool:
         return False
 
 
-def tunnel_argv(cfg: ClusterConfig, auth: dict[str, str], openconnect: str, ocproxy: str, port: int,
+def forward_args(cfg: ClusterConfig, port: int) -> list[str]:
+    """What the forwarder (ocproxy, or hpc-hub-vpn-tunnel on Windows) is told: 127.0.0.1:port leads to the
+    cluster's SSH port."""
+    return ["-L", f"{port}:{cfg.host}:{cfg.port}", "-k", str(KEEPALIVE)]
+
+
+def tunnel_argv(cfg: ClusterConfig, auth: dict[str, str], openconnect: str, script: str,
                 extra: list[str]) -> list[str]:
-    """openconnect with the sign-in's cookie (on stdin) and server pin, the tunnel going to ocproxy, which
-    forwards 127.0.0.1:port to the cluster's SSH port."""
+    """openconnect with the sign-in's cookie (on stdin) and server pin, the tunnel going to the forwarder that
+    script starts."""
     v = cfg.vpn
     secrets = nm_secrets(auth, v.gateway)
     url = secrets["gateway"] if "://" in secrets["gateway"] else f"https://{secrets['gateway']}"
-    script = shlex.join([ocproxy, "-L", f"{port}:{cfg.host}:{cfg.port}", "-k", str(KEEPALIVE)])
     argv = [openconnect, "--protocol", v.protocol, "--cookie-on-stdin", "--non-inter", "--script-tun",
             "--script", script, *extra]
     if secrets["gwcert"]:
@@ -107,9 +113,27 @@ class AndroidVpn(Vpn):
         if not (os.access(self.openconnect, os.X_OK) and os.access(self.ocproxy, os.X_OK)):
             raise VpnError(NO_VPN)
 
+    # -- what differs on Windows (vpn_local.LocalVpn) --
+
+    def script(self, port: int) -> str:
+        """--script: the forwarder's command line (openconnect runs it with /bin/sh)."""
+        return shlex.join([self.ocproxy, *forward_args(self.cfg, port)])
+
+    def _spawn(self, argv: list[str]) -> subprocess.Popen:
+        return subprocess.Popen(argv, stdin=subprocess.PIPE, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE,
+                                start_new_session=True)
+
+    def _running(self, pid: int) -> bool:
+        return _is_openconnect(pid)
+
+    def _stop(self, pid: int, proc: subprocess.Popen | None) -> None:
+        stop(pid, proc)
+
+    # --
+
     def is_active(self) -> bool:
         state = _read_state(self.cfg.id)
-        if state and _is_openconnect(state["pid"]):
+        if state and self._running(state["pid"]):
             tunnels.use(self.cfg.host, self.cfg.port, state["port"])
             return True
         tunnels.drop(self.cfg.host, self.cfg.port)
@@ -118,10 +142,9 @@ class AndroidVpn(Vpn):
     def up(self, auth: dict[str, str]) -> None:
         self.down()  # one left from before (a stale note, or a tunnel that lost its sign-in)
         port = free_port()
-        argv = tunnel_argv(self.cfg, auth, self.openconnect, self.ocproxy, port, self.extra_args)
+        argv = tunnel_argv(self.cfg, auth, self.openconnect, self.script(port), self.extra_args)
         try:
-            proc = subprocess.Popen(argv, stdin=subprocess.PIPE, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE,
-                                    start_new_session=True)
+            proc = self._spawn(argv)
         except OSError as e:
             raise VpnError(f"Could not start the VPN: {e}") from e
         last: list[str] = []
@@ -133,6 +156,7 @@ class AndroidVpn(Vpn):
             pass  # it stopped already; the wait below says why
         with _lock:
             _started[self.cfg.id] = proc
+            _stoppers[self.cfg.id] = self._stop
         _state_file(self.cfg.id).write_text(json.dumps({"pid": proc.pid, "port": port}))
         deadline = time.monotonic() + UP_TIMEOUT
         while time.monotonic() < deadline:
@@ -161,10 +185,11 @@ class AndroidVpn(Vpn):
         tunnels.drop(self.cfg.host, self.cfg.port)
         with _lock:
             proc = _started.pop(self.cfg.id, None)
+            _stoppers.pop(self.cfg.id, None)
         state = _read_state(self.cfg.id)
         pid = proc.pid if proc else state["pid"] if state else None
-        if pid and ((proc and proc.poll() is None) or _is_openconnect(pid)):
-            stop(pid, proc)
+        if pid and ((proc and proc.poll() is None) or self._running(pid)):
+            self._stop(pid, proc)
         try:
             _state_file(self.cfg.id).unlink()
         except OSError:
@@ -196,11 +221,12 @@ def stop(pid: int, proc: subprocess.Popen | None = None, timeout: float = 5) -> 
 def _stop_all() -> None:
     """The backend is quitting: the tunnels it started go with it."""
     with _lock:
-        procs = list(_started.items())
+        procs = [(cluster, proc, _stoppers.get(cluster)) for cluster, proc in _started.items()]
         _started.clear()
-    for cluster, proc in procs:
+        _stoppers.clear()
+    for cluster, proc, stopper in procs:
         if proc.poll() is None:
-            stop(proc.pid, proc, timeout=2)
+            (stopper or (lambda pid, p: stop(pid, p, timeout=2)))(proc.pid, proc)
         try:
             _state_file(cluster).unlink()
         except OSError:

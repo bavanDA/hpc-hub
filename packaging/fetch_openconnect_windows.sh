@@ -39,7 +39,7 @@ esac
 P=$MINGW_PACKAGE_PREFIX
 
 # -y: the package lists of a fresh MSYS2 can be older than its mirrors
-pacman -Sy --needed --noconfirm --noprogressbar make diffutils curl unzip \
+pacman -Sy --needed --noconfirm --noprogressbar make diffutils patch curl unzip \
 	"$P-gcc" "$P-binutils" "$P-pkgconf" "$P-gnutls" "$P-libxml2" "$P-zlib" "$P-lz4"
 
 rm -rf "$WORK" "$OUT"
@@ -53,6 +53,8 @@ SRC=$WORK/openconnect-$OC_VERSION
 # newer mingw-w64 dropped sec_api/stdlib_s.h; stdlib.h declares the same (errno_t, the _s functions)
 sed -i 's|#include <sec_api/stdlib_s.h>|#include <stdlib.h>|' "$SRC/compat.c"
 grep -q 'sec_api/stdlib_s.h' "$SRC/compat.c" && { echo "compat.c patch did not apply" >&2; exit 1; }
+# --script-tun on Windows (a named pipe for the tunnel): the VPN without administrator, hpc-hub-vpn-tunnel
+patch -d "$WORK" -p1 <"$ROOT/packaging/vpn/openconnect-windows-script-tun.patch" || die "the script-tun patch did not apply"
 (
 	cd "$SRC"
 	./configure --build="$MINGW_CHOST" --host="$MINGW_CHOST" \

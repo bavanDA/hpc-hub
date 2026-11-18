@@ -103,7 +103,8 @@ AUTH = {"COOKIE": COOKIE, "HOST": "vpn.example.edu", "FINGERPRINT": "pin-sha256:
 
 def test_argv_has_the_pin_and_ocproxy_but_never_the_cookie():
     cfg = cluster()
-    argv = vpn_android.tunnel_argv(cfg, AUTH, "/lib/libhpchub_openconnect.so", "/lib/libhpchub_ocproxy.so", 4242,
+    script = " ".join(["/lib/libhpchub_ocproxy.so", *vpn_android.forward_args(cfg, 4242)])
+    argv = vpn_android.tunnel_argv(cfg, AUTH, "/lib/libhpchub_openconnect.so", script,
                                    ["--cafile", "/data/cacerts.pem"])
     assert COOKIE not in " ".join(argv)
     assert argv[0] == "/lib/libhpchub_openconnect.so" and argv[-1] == "https://vpn.example.edu"

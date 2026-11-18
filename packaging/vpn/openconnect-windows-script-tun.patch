@@ -1,0 +1,175 @@
+# openconnect 9.21 for Windows: --script-tun, which upstream does only on Linux and macOS. The script gets the
+# tunnel as a message-mode named pipe (its name in VPNPIPE), one IP packet per message; when it closes the pipe,
+# openconnect logs out and exits. hpc-hub-vpn-tunnel (app/vpn-helper/src/tunnel_proxy) is that script: the VPN
+# without administrator (hpc_hub/connect/vpn_local.py). Applied by packaging/fetch_openconnect_windows.sh.
+diff -ru a/openconnect-9.21/mainloop.c b/openconnect-9.21/mainloop.c
+--- a/openconnect-9.21/mainloop.c	2026-01-25 17:40:45.000000000 -0500
++++ b/openconnect-9.21/mainloop.c	2026-11-18 09:13:42.750986955 -0500
+@@ -114,7 +114,6 @@
+ 			return 0;
+ 	}
+ 
+-#ifndef _WIN32
+ 	if (vpninfo->use_tun_script) {
+ 		ret = openconnect_setup_tun_script(vpninfo, vpninfo->vpnc_script);
+ 		if (ret) {
+@@ -122,7 +121,6 @@
+ 			return ret;
+ 		}
+ 	} else
+-#endif
+ 	ret = openconnect_setup_tun_device(vpninfo, vpninfo->vpnc_script, vpninfo->ifname);
+ 	if (ret) {
+ 		vpn_progress(vpninfo, PRG_ERR, _("Set up tun device failed\n"));
+diff -ru a/openconnect-9.21/script.c b/openconnect-9.21/script.c
+--- a/openconnect-9.21/script.c	2026-06-13 14:50:18.000000000 -0400
++++ b/openconnect-9.21/script.c	2026-11-18 09:29:14.733941516 -0500
+@@ -642,6 +642,118 @@
+ 	free(script_w);
+ 	return ret;
+ }
++
++/* --script-tun on Windows: the script gets the tunnel as a message-mode named pipe, whose name is in VPNPIPE
++ * (on POSIX it is a socketpair, VPNFD). Each message is one IP packet, as with a tun device. The script is
++ * started as a program (its command line as given, no shell or script host), with the usual environment.
++ * When it closes the pipe, openconnect logs out and exits. */
++int openconnect_setup_tun_script(struct openconnect_info *vpninfo,
++				 const char *tun_script)
++{
++	char name[96];
++	wchar_t *cmd_w = NULL, *env = NULL;
++	int nr_chars, ret = -EIO;
++	HANDLE pipe, connected = NULL, waits[2];
++	OVERLAPPED ov;
++	PROCESS_INFORMATION pi;
++	STARTUPINFOW si;
++	DWORD err, wait;
++
++	STRDUP(vpninfo->vpnc_script, tun_script);
++	vpninfo->script_tun = 1;
++	prepare_script_env(vpninfo);
++
++	snprintf(name, sizeof(name), "\\\\.\\pipe\\openconnect-tun-%lu-%lu",
++		 (unsigned long)GetCurrentProcessId(), (unsigned long)GetTickCount());
++	pipe = CreateNamedPipeA(name, PIPE_ACCESS_DUPLEX | FILE_FLAG_OVERLAPPED | FILE_FLAG_FIRST_PIPE_INSTANCE,
++				PIPE_TYPE_MESSAGE | PIPE_READMODE_MESSAGE | PIPE_WAIT | PIPE_REJECT_REMOTE_CLIENTS,
++				1, 65536, 65536, 0, NULL);
++	if (pipe == INVALID_HANDLE_VALUE) {
++		char *errstr = openconnect__win32_strerror(GetLastError());
++		vpn_progress(vpninfo, PRG_ERR, _("Failed to create the tunnel pipe: %s\n"), errstr);
++		free(errstr);
++		return -EIO;
++	}
++	script_setenv(vpninfo, "VPNPIPE", name, 0, 0);
++
++	nr_chars = MultiByteToWideChar(CP_UTF8, 0, tun_script, -1, NULL, 0);
++	cmd_w = malloc(nr_chars * sizeof(wchar_t));
++	env = create_script_env(vpninfo);
++	if (!cmd_w || !env) {
++		ret = -ENOMEM;
++		goto out;
++	}
++	MultiByteToWideChar(CP_UTF8, 0, tun_script, -1, cmd_w, nr_chars);
++
++	/* Its messages go where openconnect's go (stderr), so whoever started openconnect sees them */
++	memset(&si, 0, sizeof(si));
++	si.cb = sizeof(si);
++	si.dwFlags = STARTF_USESHOWWINDOW | STARTF_USESTDHANDLES;
++	si.wShowWindow = SW_HIDE;
++	si.hStdInput = INVALID_HANDLE_VALUE;
++	si.hStdOutput = si.hStdError = GetStdHandle(STD_ERROR_HANDLE);
++	if (!CreateProcessW(NULL, cmd_w, NULL, NULL, TRUE, CREATE_UNICODE_ENVIRONMENT | CREATE_NO_WINDOW,
++			    env, NULL, &si, &pi)) {
++		char *errstr = openconnect__win32_strerror(GetLastError());
++		vpn_progress(vpninfo, PRG_ERR, _("Failed to spawn script '%s': %s\n"), tun_script, errstr);
++		free(errstr);
++		goto out;
++	}
++	CloseHandle(pi.hThread);
++
++	/* Wait (up to 10 s) for it to open the pipe, or to stop */
++	memset(&ov, 0, sizeof(ov));
++	ov.hEvent = connected = CreateEvent(NULL, TRUE, FALSE, NULL);
++	if (ConnectNamedPipe(pipe, &ov))
++		err = ERROR_PIPE_CONNECTED;
++	else
++		err = GetLastError();
++	if (err == ERROR_IO_PENDING) {
++		waits[0] = connected;
++		waits[1] = pi.hProcess;
++		wait = WaitForMultipleObjects(2, waits, FALSE, 10000);
++		if (wait == WAIT_OBJECT_0) {
++			DWORD unused;
++			err = GetOverlappedResult(pipe, &ov, &unused, FALSE) ? ERROR_PIPE_CONNECTED : GetLastError();
++		} else {
++			CancelIo(pipe);
++			err = wait == WAIT_OBJECT_0 + 1 ? ERROR_BROKEN_PIPE : WAIT_TIMEOUT;
++		}
++	}
++	if (err == ERROR_PIPE_CONNECTED) {
++		/* Only the script itself may hold the other end (the pipe's name can be guessed) */
++		ULONG client = 0;
++		if (!GetNamedPipeClientProcessId(pipe, &client) || client != pi.dwProcessId) {
++			vpn_progress(vpninfo, PRG_ERR, _("Another program opened the tunnel pipe; not using it\n"));
++			TerminateProcess(pi.hProcess, 1);
++			CloseHandle(pi.hProcess);
++			goto out;
++		}
++	}
++	CloseHandle(pi.hProcess);
++	if (err != ERROR_PIPE_CONNECTED) {
++		vpn_progress(vpninfo, PRG_ERR, err == WAIT_TIMEOUT ?
++			     _("Script '%s' did not open the tunnel pipe within 10 seconds\n") :
++			     _("Script '%s' stopped before it opened the tunnel pipe\n"), tun_script);
++		goto out;
++	}
++
++	vpninfo->tun_fh = pipe;
++	pipe = INVALID_HANDLE_VALUE;
++	vpninfo->tun_rd_overlap.hEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
++	vpninfo->ifname = strdup(_("(script)"));
++	monitor_read_fd(vpninfo, tun);
++	ret = 0;
++
++ out:
++	if (connected)
++		CloseHandle(connected);
++	if (pipe != INVALID_HANDLE_VALUE)
++		CloseHandle(pipe);
++	free(cmd_w);
++	free(env);
++	return ret;
++}
+ #else
+ /* Must only be run after fork(). */
+ int apply_script_env(struct oc_vpn_option *envs)
+diff -ru a/openconnect-9.21/tun-win32.c b/openconnect-9.21/tun-win32.c
+--- a/openconnect-9.21/tun-win32.c	2026-06-14 03:58:18.000000000 -0400
++++ b/openconnect-9.21/tun-win32.c	2026-11-18 09:13:42.750871307 -0500
+@@ -888,7 +888,12 @@
+ 
+ 		if (err == ERROR_IO_PENDING)
+ 			vpninfo->tun_rd_pending = 1;
+-		else if (err == ERROR_OPERATION_ABORTED) {
++		else if (vpninfo->script_tun &&
++			 (err == ERROR_BROKEN_PIPE || err == ERROR_PIPE_NOT_CONNECTED || err == ERROR_NO_DATA)) {
++			vpninfo->quit_reason = "Tunnel script exited";
++			vpn_progress(vpninfo, PRG_ERR, _("The tunnel script closed its pipe. Disconnecting.\n"));
++			return -1;
++		} else if (err == ERROR_OPERATION_ABORTED) {
+ 			vpninfo->quit_reason = "TAP device aborted";
+ 			vpn_progress(vpninfo, PRG_ERR,
+ 				     _("TAP device aborted connectivity. Disconnecting.\n"));
+@@ -1010,12 +1015,4 @@
+ 	return 0;
+ }
+ 
+-int openconnect_setup_tun_script(struct openconnect_info *vpninfo,
+-				 const char *tun_script)
+-{
+-	vpn_progress(vpninfo, PRG_ERR,
+-		     _("Spawning tunnel scripts is not yet supported on Windows\n"));
+-	return -1;
+-}
+-
+ #endif /* __LIST_TAPS__ */

@@ -23,6 +23,7 @@ class AppSettings:
     paper_effort: str = "low"
     paper_split: bool = True  # Write message may suggest several commits
     beta_updates: bool = False  # updates from the beta channel too: fixes within minutes, less tested
+    own_vpn: bool = False  # Windows: HPC Hub's own VPN, which needs no administrator (connect/vpn_local.py)
     hidden_groups: str = ""  # groups to bill left out of Get one: "wulver/2026-spring-...,sdsc/abc123"
 
 

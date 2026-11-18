@@ -13,7 +13,7 @@ def _json(app: config.AppSettings) -> dict:
             "select_to_copy": app.select_to_copy, "right_click_paste": app.right_click_paste,
             "select_everywhere": app.select_everywhere,
             "monitor_bar": app.monitor_bar, "appearance": app.appearance,
-            "beta_updates": app.beta_updates}
+            "beta_updates": app.beta_updates, "own_vpn": app.own_vpn}
 
 
 @method("preferences.get")
@@ -26,7 +26,7 @@ def set_(browser_profile: str | None = None, experimental_papers: bool | None = 
          experimental_skills: bool | None = None, experimental_schedules: bool | None = None,
          select_to_copy: bool | None = None, right_click_paste: bool | None = None,
          select_everywhere: bool | None = None, monitor_bar: bool | None = None,
-         appearance: str | None = None, beta_updates: bool | None = None) -> dict:
+         appearance: str | None = None, beta_updates: bool | None = None, own_vpn: bool | None = None) -> dict:
     """Change what is given and save; returns all preferences."""
     with _lock:
         app = config.load_app(config.APP_FILE)
@@ -46,6 +46,8 @@ def set_(browser_profile: str | None = None, experimental_papers: bool | None = 
             app.monitor_bar = bool(monitor_bar)
         if beta_updates is not None:
             app.beta_updates = bool(beta_updates)
+        if own_vpn is not None:
+            app.own_vpn = bool(own_vpn)
         if appearance is not None:
             if appearance not in config.APPEARANCES:
                 raise ValueError(f"Appearance is one of {', '.join(config.APPEARANCES)}")

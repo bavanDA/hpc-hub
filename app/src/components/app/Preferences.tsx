@@ -22,6 +22,8 @@ import { PaperAgent } from './PaperAgent'
 import { university, type SetupStatus } from './setup'
 import { experimentsOf, type Experiments, type Preferences, type Profiles } from './types'
 
+const isWindows = navigator.userAgent.includes('Windows')
+
 export function PreferencesDialog({ onClose, onExperimental, onDisconnectAndQuit, onReset }:
   { onClose: () => void; onExperimental: (e: Experiments) => void; onDisconnectAndQuit: () => void
     onReset?: (kind: 'reset' | 'uninstall') => void }) {
@@ -86,6 +88,11 @@ export function PreferencesDialog({ onClose, onExperimental, onDisconnectAndQuit
             sub="One click pastes. Ctrl+right-click opens the Copy and Paste menu."
             checked={prefs.right_click_paste} onChange={(on) => save({ right_click_paste: on })} />
         </Section>
+        {isWindows && <Section title="VPN">
+          <ToggleRow label="VPN without administrator"
+            sub="HPC Hub's own VPN. Nothing is installed, and only HPC Hub's connections use it. An account that isn't an administrator always uses it."
+            checked={prefs.own_vpn} onChange={(on) => save({ own_vpn: on })} />
+        </Section>}
         <Section title="Terminals">
           <ToggleRow label="Monitoring bar"
             sub="CPU, memory and network of the host, under each terminal."

@@ -17,7 +17,7 @@ def test_defaults(app_file):
     assert preferences.get() == {"browser_profile": "", **OFF, "select_to_copy": True,
                                  "right_click_paste": False, "select_everywhere": False,
                                  "monitor_bar": True, "appearance": "system",
-                                 "beta_updates": False}
+                                 "beta_updates": False, "own_vpn": False}
 
 
 def test_set_saves_and_keeps_the_rest(app_file):
@@ -25,7 +25,7 @@ def test_set_saves_and_keeps_the_rest(app_file):
     on = {**OFF, "experimental_papers": True, "select_to_copy": True, "right_click_paste": False,
           "select_everywhere": False,
           "monitor_bar": True, "appearance": "system",
-          "beta_updates": False}
+          "beta_updates": False, "own_vpn": False}
     assert preferences.set_(experimental_papers=True) == {"browser_profile": "", **on}
     assert preferences.set_(browser_profile=" Uni ") == {"browser_profile": "Uni", **on}
     saved = config.load_app(app_file)
@@ -45,7 +45,7 @@ def test_the_old_single_switch_turns_all_three_on(app_file):
     assert preferences.get() == {"browser_profile": "", **{k: True for k in OFF}, "select_to_copy": True,
                                  "right_click_paste": False, "select_everywhere": False,
                                  "monitor_bar": True, "appearance": "dark",
-                                 "beta_updates": False}
+                                 "beta_updates": False, "own_vpn": False}
     preferences.set_(experimental_skills=False)  # saved in the new keys; the old one is gone
     text = app_file.read_text()
     assert "experimental = " not in text and "experimental_skills = false" in text
@@ -60,7 +60,7 @@ def test_back_to_the_system_browser(app_file):
     assert preferences.get() == {"browser_profile": "", **OFF, "select_to_copy": True,
                                  "right_click_paste": False, "select_everywhere": False,
                                  "monitor_bar": True, "appearance": "system",
-                                 "beta_updates": False}
+                                 "beta_updates": False, "own_vpn": False}
 
 
 def test_select_to_copy(app_file):
@@ -99,3 +99,8 @@ def test_select_to_copy_everywhere(app_file):
     assert preferences.get()["select_everywhere"] is False  # only terminals, unless you turn it on
     assert preferences.set_(select_everywhere=True)["select_everywhere"] is True
     assert config.load_app(app_file).select_everywhere
+
+
+def test_own_vpn_is_saved(app_file):
+    assert preferences.set_(own_vpn=True)["own_vpn"] is True
+    assert config.load_app(app_file).own_vpn is True

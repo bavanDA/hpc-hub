@@ -32,6 +32,10 @@ class HelperMissing(VpnError):
     """No helper, or one that speaks another version: it has to be installed (once)."""
 
 
+class UseOwnVpn(VpnError):
+    """You said Not now to the helper: HPC Hub's own VPN (vpn_local), which needs no administrator."""
+
+
 def request(message: dict, timeout: float = 15, address: str | None = None) -> dict:
     """One request, one answer (a JSON line each way)."""
     line = (json.dumps(message) + "\n").encode()
@@ -246,10 +250,19 @@ class HelperVpn(Vpn):
         host = urlsplit(self.cfg.vpn.gateway if "//" in self.cfg.vpn.gateway else "//" + self.cfg.vpn.gateway)
         system = "Windows" if WINDOWS else "macOS"
         standard = standard_user()
-        text = (("This Windows account isn't an administrator, so Windows asks for an administrator's name and "
-                 f"password, once. {NO_ADMIN}") if standard else
-                f"{system} asks for your permission once. After that, Connect starts the VPN by itself.")
+        own = self.own_vpn_available()
+        if own:
+            text = ("Windows asks for your permission once, then the VPN works for every program on this computer. "
+                    "Not now: HPC Hub uses its own VPN, which needs no permission. Only HPC Hub's connections go "
+                    "through it. You can change this in Settings.")
+        elif standard:
+            text = ("This Windows account isn't an administrator, so Windows asks for an administrator's name and "
+                    f"password, once. {NO_ADMIN}")
+        else:
+            text = f"{system} asks for your permission once. After that, Connect starts the VPN by itself."
         if not self.confirm("Let HPC Hub start the VPN", text):
+            if own:
+                raise UseOwnVpn("HPC Hub's own VPN from now on")
             raise VpnError("The VPN needs the helper. Connect again to set it up."
                            + (f" {NO_ADMIN}" if standard else ""))
         self.log("Installing the VPN helper")
@@ -258,6 +271,11 @@ class HelperVpn(Vpn):
         except VpnError as e:
             raise VpnError(f"{e}. {NO_ADMIN}") if standard else e
         self.log("VPN helper installed")
+
+    def own_vpn_available(self) -> bool:
+        """Windows, and this HPC Hub has its own VPN to offer instead (vpn_local)."""
+        from . import vpn_local
+        return WINDOWS and vpn_local.programs() is not None
 
     def _status(self) -> dict:
         return _checked(request({"op": "status", "name": tunnel_name(self.cfg.id)}, address=self.address))

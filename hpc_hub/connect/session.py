@@ -10,11 +10,12 @@ from urllib.parse import urlsplit
 
 from ..compute import limits
 from ..compute.slurm import Allocation
+from ..core import tunnels
 from ..core.config import ClusterConfig
 from ..core.credentials import Login
 from ..core.paths import log_dir
 from ..core.ssh import SshError, SshMaster, new_master
-from . import chrome_window, prompts, vpn_helper, vpn_sso
+from . import chrome_window, prompts, vpn_helper, vpn_local, vpn_sso
 from .askpass_server import AskpassServer
 from .messages import CANCELLED, plain, wrong_password
 from .network import link_works, network_name, reachable, route_device
@@ -109,6 +110,8 @@ class ClusterSession(NodesMixin):
     def vpn(self) -> Vpn:
         if sys.platform == "android":
             return AndroidVpn(self.cfg, self._log)
+        if vpn_local.used(self.cfg):  # Windows without administrator: HPC Hub's own VPN
+            return vpn_local.LocalVpn(self.cfg, self._log)
         if vpn_helper.needs_helper():  # Windows and macOS: the tunnel runs in the helper service
             return vpn_helper.HelperVpn(self.cfg, self._log, lambda title, text: self._confirm(title, text))
         return Vpn(self.cfg, self._log)
@@ -323,7 +326,15 @@ class ClusterSession(NodesMixin):
         gw = urlsplit(self.cfg.vpn.gateway if "//" in self.cfg.vpn.gateway else "//" + self.cfg.vpn.gateway)
         if gw.hostname and not reachable(gw.hostname, gw.port or 443, timeout=8):
             raise VpnError(f"Can't reach VPN server {gw.hostname} or {self.cfg.host}. Check your network.")
-        vpn.ensure_profile()
+        try:
+            vpn.ensure_profile()
+        except vpn_helper.UseOwnVpn:
+            vpn_local.choose()
+            self._log("Using HPC Hub's own VPN, which needs no administrator (Settings can change it)")
+            vpn = self.vpn
+            vpn.ensure_profile()
+        if self.vpn_only and vpn_local.is_local(vpn):
+            raise VpnError(vpn_local.ONLY_HPC_HUB)
         env = self.askpass.env(token)
         try:
             auth = vpn.authenticate(
@@ -346,8 +357,8 @@ class ClusterSession(NodesMixin):
         once leaves through the normal network, where the cluster turns it away, and hangs about 20 s before it
         fails, so the first Connect failed and the second worked. So: short tries until the login node answers
         (through the tunnel by then), at most VPN_ROUTE_WAIT; after that SSH goes ahead and says what is wrong."""
-        if not self.cfg.host:
-            return
+        if not self.cfg.host or tunnels.local_port(self.cfg.host, self.cfg.port or 22):
+            return  # no host, or a tunnel of HPC Hub's own (phone, Windows without admin): it already answered
         deadline = time.monotonic() + VPN_ROUTE_WAIT
         while not self._cancel.is_set():
             if reachable(self.cfg.host, self.cfg.port or 22, timeout=2):

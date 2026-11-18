@@ -5,7 +5,7 @@ export type Profiles = { profiles: ChromeProfile[]; default: string }
 
 export type Preferences = { browser_profile: string; experimental_papers: boolean; experimental_skills: boolean
   experimental_schedules: boolean; select_to_copy: boolean; right_click_paste: boolean; select_everywhere: boolean; monitor_bar: boolean
-  appearance: import('../../theme').Appearance; beta_updates: boolean }
+  appearance: import('../../theme').Appearance; beta_updates: boolean; own_vpn: boolean }
 
 /** The experimental parts, each turned on by itself in Settings: the Papers page, the Skills and the Scheduled tabs
  *  of Agents. */
