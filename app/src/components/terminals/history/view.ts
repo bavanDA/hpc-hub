@@ -58,6 +58,7 @@ export class HistoryView {
   jumps = 0  // counts jumps, so the reading copy knows to move (scrolling itself doesn't)
   private outlineAt = 0
   private rows = new Map<number, Row>()
+  private stale = new Set<number>()  // rows the screen may have redrawn: still shown, read again
   private pending = new Set<number>()
   private fetchTimer: ReturnType<typeof setTimeout> | undefined
   private passUntil = 0
@@ -123,10 +124,12 @@ export class HistoryView {
     this.ended = false
     if (w.history < this.history) {  // trimmed: every line moved up, marks too
       this.rows.clear()
+      this.stale.clear()
       this.outlineAt = 0
       void this.loadMarks()
     } else if (w.total !== this.total) {
       this.forgetFrom(this.total - this.height)  // the bottom of the screen changed
+      if (this.reading) this.ensure()  // read them again now, wherever you are (not only at the very end)
     }
     this.total = w.total
     this.history = w.history
@@ -135,8 +138,10 @@ export class HistoryView {
     this.width = w.width
   }
 
+  /** Rows from row on may have been redrawn: they stay on screen until their new text comes (dropping them left
+   * blank lines under what you were reading while an agent kept writing). */
   private forgetFrom(row: number) {
-    for (const y of [...this.rows.keys()]) if (y >= row) this.rows.delete(y)
+    for (const y of this.rows.keys()) if (y >= row) this.stale.add(y)
   }
 
   private gone() {
@@ -160,10 +165,10 @@ export class HistoryView {
 
   private store(w: HistoryWindow) {
     const palette = isDark() ? ANSI_DARK : ANSI_LIGHT
-    parseRows(w.rows, palette).forEach((row, i) => this.rows.set(w.start + i, row))
+    parseRows(w.rows, palette).forEach((row, i) => { this.rows.set(w.start + i, row); this.stale.delete(w.start + i) })
     if (this.rows.size > MAX_ROWS) {  // the ones furthest from where you are go first
       const far = [...this.rows.keys()].sort((a, b) => Math.abs(b - this.top) - Math.abs(a - this.top))
-      for (const y of far.slice(0, this.rows.size - MAX_ROWS)) this.rows.delete(y)
+      for (const y of far.slice(0, this.rows.size - MAX_ROWS)) { this.rows.delete(y); this.stale.delete(y) }
     }
   }
 
@@ -179,7 +184,8 @@ export class HistoryView {
     const first = Math.max(0, this.top - CHUNK), last = this.top + this.visibleRows + CHUNK
     for (let c = Math.floor(first / CHUNK) * CHUNK; c <= last; c += CHUNK) {
       if (c >= this.total && c > 0) break
-      if (!this.pending.has(c) && [...Array(CHUNK).keys()].some((i) => !this.rows.has(c + i) && c + i < this.total)) {
+      const missing = (y: number) => y < this.total && (!this.rows.has(y) || this.stale.has(y))
+      if (!this.pending.has(c) && [...Array(CHUNK).keys()].some((i) => missing(c + i))) {
         void this.fetchChunk(c)
       }
     }

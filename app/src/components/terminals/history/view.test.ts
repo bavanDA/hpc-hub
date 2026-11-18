@@ -169,4 +169,28 @@ describe('jumping between prompts', () => {
     expect(v.jumpMark(-1)?.id).toBe('a')
     expect(v.jumpMark(1)?.id).toBe('b')
   })
+
+  it('lines near the end stay on screen while an agent keeps writing, and are read again', async () => {
+    // 2026-11-18: scrolled a little up while Claude wrote (+13), the lines under a table went blank and stayed blank
+    vi.useFakeTimers()
+    try {
+      const v = new HistoryView(tab)
+      answer.window = win({ start: 800, rows: Array.from({ length: CHUNK }, (_, i) => `line ${800 + i}`) })
+      v.wheel(-120)
+      await vi.advanceTimersByTimeAsync(0)
+      v.scrolled(900)  // up from the end, not at the bottom: the table is at rows 960 to 980
+      await vi.advanceTimersByTimeAsync(200)
+      expect(v.rowAt(970)?.plain).toBe('line 970')
+
+      calls.length = 0
+      answer.window = win({ total: 1013, history: 973, start: 0, rows: ['x'] })  // 13 new lines
+      v.noteOutput()
+      await vi.advanceTimersByTimeAsync(2000)
+      expect(v.rowAt(970)?.plain).toBe('line 970')  // still shown, not blank
+      const reads = calls.filter((c) => c.method === 'terminals.history' && c.params.start !== null)
+      expect(reads.map((c) => c.params.start)).toContain(800)  // and read again
+    } finally {
+      vi.useRealTimers()
+    }
+  })
 })
