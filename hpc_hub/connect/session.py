@@ -298,6 +298,8 @@ class ClusterSession(NodesMixin):
 
     def _after_login(self) -> None:
         """Logged in: use a node that is already running before asking Slurm for a new one."""
+        if self.ssh:
+            self.ssh.find_slurm()  # Slurm only on a login shell's PATH: use that one
         self._read_limits()
         if self.allocation and self._job_running(self.allocation.job_id):
             self._log(f"Reusing job {self.allocation.job_id} on {self.allocation.node}")

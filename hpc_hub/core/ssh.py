@@ -29,6 +29,12 @@ CHANNEL = "hpc-hub-channel"  # argv(tty=True) of a login no local ssh can ride: 
 REFUSED = "Session open refused by peer"
 REFUSED_WAITS = (0.5, 1.5, 3)
 PLAIN_SESSIONS = 4  # plain ssh commands at once: with the fast shells and terminals, under the server's MaxSessions
+BASH = "exec bash --norc --noprofile"  # a kept shell's launcher
+# Commands over ssh run without a login shell, so they find Slurm only if your ~/.bashrc puts it on the PATH (a new or
+# edited one may not: every squeue failed with 127, and the node form fell back to text boxes). Then a login shell's
+# PATH, which has it, is used for HPC Hub's commands. Its output is marked: a login shell may print a banner first.
+FIND_SLURM = ("command -v sinfo >/dev/null 2>&1 && echo @ok || "
+              "bash -lc 'command -v sinfo >/dev/null 2>&1 && printf \"@path=%s\\n\" \"$PATH\"' </dev/null 2>/dev/null")
 
 
 class SshError(Exception):
@@ -53,6 +59,27 @@ class SshMaster:
         self.work_node = ""  # the running job's node: read() prefers it
         self._node_off: dict[str, float] = {}  # node -> no shell there until then
         self._node_shells: dict[str, tuple[FastShell | None, threading.Lock]] = {}  # job id or node -> shell
+        self.slurm_path = ""  # find_slurm: a login shell's PATH, when the plain one has no Slurm
+
+    def find_slurm(self) -> None:
+        """After signing in: is Slurm on the PATH commands get? If only a login shell has it, use that PATH."""
+        self.slurm_path = ""
+        try:
+            res = self._run_plain(FIND_SLURM, 30)
+        except (subprocess.SubprocessError, OSError):
+            return
+        for line in res.stdout.splitlines():
+            if line.startswith("@path=") and line[len("@path="):].strip():
+                self.slurm_path = line[len("@path="):].strip()
+        if self.slurm_path:
+            self.log("Slurm is on a login shell's PATH only (not your ~/.bashrc's): HPC Hub uses that PATH")
+
+    def wrap(self, command: str) -> str:
+        """command with the PATH that has Slurm, when find_slurm found one (never twice)."""
+        if not self.slurm_path:
+            return command
+        prefix = f"export PATH={shlex.quote(self.slurm_path)}; "
+        return command if command.startswith(prefix) else prefix + command
 
     def _target(self) -> list[str]:
         return ["-p", str(self.cfg.port), "-l", self.username, "-S", str(self.control_path), "--", self.cfg.host]
@@ -64,7 +91,7 @@ class SshMaster:
             argv.append("-tt")
         argv += self._target()
         if command:
-            argv.append(command)
+            argv.append(self.wrap(command))
         return argv
 
     def start(self, timeout: float = 180, cancelled: Callable[[], bool] = lambda: False) -> None:
@@ -112,6 +139,7 @@ class SshMaster:
 
     def run(self, command: str, timeout: float = 60, fast: bool | None = None) -> subprocess.CompletedProcess:
         """On the running job's node, with no job on the login node. A command that may have run isn't run twice."""
+        command = self.wrap(command)
         shell = self._shell_on(self.work_node) if self.work_node else None
         if shell:
             try:
@@ -124,6 +152,7 @@ class SshMaster:
     def on_login(self, command: str, timeout: float = 60, fast: bool | None = None) -> subprocess.CompletedProcess:
         """For what lives on the login node or must outlast the job. Quick commands (or fast=True) go through a
         shell kept open there; the rest through plain ssh."""
+        command = self.wrap(command)
         shell = self._take_shell() if (timeout <= 60 if fast is None else fast) else None
         if shell:
             try:
@@ -163,7 +192,11 @@ class SshMaster:
         return res
 
     def _new_shell(self, **kwargs) -> FastShell:
-        return FastShell(self.argv(), **kwargs)
+        return FastShell(self.argv(), **self._launch(kwargs))
+
+    def _launch(self, kwargs: dict) -> dict:
+        """A kept shell's launcher (bash, or srun / ssh to a node) with the PATH that has Slurm."""
+        return {**kwargs, "launcher": self.wrap(kwargs.get("launcher", BASH))}
 
     def _take_shell(self) -> FastShell | None:
         with self._shell_lock:
@@ -232,7 +265,7 @@ class SshMaster:
         if not shell:
             return None
         try:
-            return shell.run(command, timeout)
+            return shell.run(self.wrap(command), timeout)
         except (FastShellError, subprocess.TimeoutExpired):
             return None
 

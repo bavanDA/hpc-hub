@@ -388,21 +388,21 @@ class AsyncSshMaster(SshMaster):
         terminals.open_channel takes (no local program can ride this connection with a PTY)."""
         if tty:
             return [CHANNEL, self.cfg.id, command or ""]
-        return ssh_bridge.argv(self._port, "exec", command or "")
+        return ssh_bridge.argv(self._port, "exec", self.wrap(command) if command else "")
 
     def copy_argv(self, src: str, dst: str) -> list[str]:
         """Like scp -r src dst (remote paths written as ':path'), over SFTP on this connection."""
         return ssh_bridge.argv(self._port, "copy", src, dst)
 
     def _new_shell(self, **kwargs) -> _SyncShell:
-        return _SyncShell(self, **kwargs)
+        return _SyncShell(self, **self._launch(kwargs))
 
     def _run_plain(self, command: str, timeout: float) -> subprocess.CompletedProcess:
         conn = self._conn
         if conn is None or not self.alive():
             return subprocess.CompletedProcess(command, 255, "", "Not connected to the cluster")
         try:
-            rc, out, err = call(self._exec(conn, command, timeout), timeout + 10)
+            rc, out, err = call(self._exec(conn, self.wrap(command), timeout), timeout + 10)
         except TimeoutError:
             raise subprocess.TimeoutExpired(command, timeout)
         except (OSError, asyncssh.Error) as e:
