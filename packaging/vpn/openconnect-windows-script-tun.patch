@@ -2,6 +2,52 @@
 # tunnel as a message-mode named pipe (its name in VPNPIPE), one IP packet per message; when it closes the pipe,
 # openconnect logs out and exits. hpc-hub-vpn-tunnel (app/vpn-helper/src/tunnel_proxy) is that script: the VPN
 # without administrator (hpc_hub/connect/vpn_local.py). Applied by packaging/fetch_openconnect_windows.sh.
+diff -ru a/openconnect-9.21/main.c b/openconnect-9.21/main.c
+--- a/openconnect-9.21/main.c	2026-01-25 17:40:45.000000000 -0500
++++ b/openconnect-9.21/main.c	2026-11-18 09:38:51.181605229 -0500
+@@ -233,11 +233,11 @@
+ #endif
+ 
+ static const struct option long_options[] = {
++	OPTION("script-tun", 0, 'S'),
+ #ifndef _WIN32
+ 	OPTION("background", 0, 'b'),
+ 	OPTION("pid-file", 1, OPT_PIDFILE),
+ 	OPTION("setuid", 1, 'U'),
+-	OPTION("script-tun", 0, 'S'),
+ 	OPTION("syslog", 0, 'l'),
+ 	OPTION("csd-user", 1, OPT_CSD_USER),
+ 	OPTION("csd-wrapper", 1, OPT_CSD_WRAPPER),
+@@ -1093,9 +1093,7 @@
+ 	printf("  -i, --interface=IFNAME          %s\n", _("Use IFNAME for tunnel interface"));
+ 	printf("  -s, --script=SCRIPT             %s\n", _("Shell command line for using a vpnc-compatible config script"));
+ 	printf("                                  %s: \"%s\"\n", _("default"), default_vpncscript);
+-#ifndef _WIN32
+ 	printf("  -S, --script-tun                %s\n", _("Pass traffic to 'script' program, not tun"));
+-#endif
+ 
+ 	printf("\n%s:\n", _("Tunnel control"));
+ 	printf("      --disable-ipv6              %s\n", _("Do not ask for IPv6 connectivity"));
+@@ -1881,6 +1879,9 @@
+ 			break;
+ 
+ 		switch (opt) {
++		case 'S':
++			vpninfo->use_tun_script = 1;
++			break;
+ #ifndef _WIN32
+ 		case 'b':
+ 			background = 1;
+@@ -1888,9 +1889,6 @@
+ 		case 'l':
+ 			use_syslog = 1;
+ 			break;
+-		case 'S':
+-			vpninfo->use_tun_script = 1;
+-			break;
+ 		case 'U':
+ 			assert_nonnull_config_arg("U", config_arg);
+ 			get_uids(config_arg, &vpninfo->uid, &vpninfo->gid);
 diff -ru a/openconnect-9.21/mainloop.c b/openconnect-9.21/mainloop.c
 --- a/openconnect-9.21/mainloop.c	2026-01-25 17:40:45.000000000 -0500
 +++ b/openconnect-9.21/mainloop.c	2026-11-18 09:13:42.750986955 -0500
