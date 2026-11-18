@@ -9,7 +9,7 @@ import time
 from concurrent.futures import Future
 from dataclasses import asdict, replace
 
-from ...agents import ask_all, catalog, chat_cache, permissions
+from ...agents import ask_all, catalog, chat_cache, notes, permissions
 from ...agents import chats as chat_store
 from ...compute import slurm
 from ...compute.limits import slurm_time
@@ -192,6 +192,7 @@ def agent_start(cluster: str, agent: str, folder: str = "", chat_id: str = "", l
     elif not s.allocation:
         progress(cluster, f"Requesting a compute node for {a.name}…")
     node = _node(s, picked, f"hpc-hub-{a.id}" if c.new_node else "")
+    notes.prepare(s.ssh)
     if a.remote_setting:  # remote control comes from the agent's settings, not a flag: set it first
         try:
             permissions.set_remote(s.ssh, a.remote_setting, c.remote)

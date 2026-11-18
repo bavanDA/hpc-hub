@@ -14,6 +14,7 @@ import { GoToFile } from '../components/code/desktop/GoToFile'
 import { closeFolderTerminals } from '../components/code/desktop/panel'
 import { folderName, inside } from '../components/code/desktop/paths'
 import { readOnlyKeys } from '../components/code/desktop/readOnly'
+import { SizeHint } from '../components/code/desktop/SizeHint'
 import { Start } from '../components/code/desktop/Start'
 import { StatusLine, type Look } from '../components/code/desktop/StatusLine'
 import { Switcher } from '../components/code/desktop/Switcher'
@@ -25,6 +26,7 @@ import { time } from '../components/code/desktop/time'
 import { TreePane } from '../components/code/desktop/TreePane'
 import { useBanners } from '../components/code/desktop/useBanners'
 import { useFollow } from '../components/code/desktop/useFollow'
+import { useJobSize } from '../components/code/desktop/useJobSize'
 import { usePageKeys } from '../components/code/desktop/usePageKeys'
 import { usePlaces } from '../components/code/desktop/usePlaces'
 import { useSave } from '../components/code/desktop/useSave'
@@ -32,7 +34,8 @@ import { useTerminalPanel } from '../components/code/desktop/useTerminalPanel'
 import { openFolder, rememberFolder } from '../components/code/desktop/workspace'
 import { discardDraft } from '../components/code/drafts'
 import type { EditorHandle } from '../components/code/Editor'
-import { detectIndent, type Lang } from '../components/code/languages'
+import { detect, detectIndent, type Lang } from '../components/code/languages'
+import { withFix } from '../components/code/sbatchEdit'
 import { closeFile, getFile, isDirty, openFile, reloadFile, replaceText, selectFile, setCursor, useCode }
   from '../components/code/store'
 import { undoAgentChange } from '../components/code/watch'
@@ -71,6 +74,8 @@ export function Code() {
   const name = (id: string) => shortName(clusters?.find((c) => c.id === id) ?? { name: id })
   const connected = !!sessions[cluster]?.connected
   const { save, compare, takeTheirs } = useSave({ current, name, dropBanner, setDialog, close })
+  const size = useJobSize(file, !!file?.writable && detect(file.path, file.saved).id === 'slurm'
+    && !!sessions[file.cluster]?.connected)
 
   const setRoot = useCallback((path: string) => {
     rememberFolder(cluster, path)
@@ -203,6 +208,11 @@ export function Code() {
             note="These edits were made on an older version. Pick the ones to keep."
             onUse={(text) => { replaceText(file.key, text); dropBanner(file.key) }} />)}
           onDiscardDraft={(d) => { void discardDraft(d.cluster, d.path); dropBanner(file.key) }} />}
+        {file && <SizeHint advice={size.advice} onFix={(fix) => {
+          const text = withFix(file.text, fix)
+          replaceText(file.key, text)
+          size.check(text)
+        }} />}
         {file && !file.writable && !file.loading && !file.error && (
           <p className="shrink-0 border-b border-line bg-window px-4 py-1.5 text-sm text-dim">
             Read-only: {file.readonlyReason || 'this file can\'t be changed here'}.</p>

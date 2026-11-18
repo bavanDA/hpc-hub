@@ -90,6 +90,11 @@ See what your jobs are doing and what your group has left.
 
 - Your jobs, your group's, your history or everyone's, with search and filters.
 - Why a job waits, in plain words, its output files, and cancel jobs. A notification tells you when a job ends.
+- Every finished job is measured: its details say how much memory and how many cores it used of what it asked for.
+  Before you submit a script that asks for much more than its earlier runs used, Code says so, with a one-click fix
+  like **Use 46 GB**. You can always submit as it is.
+- Agents size their jobs too: `hpchub-size run.sh` on the cluster shows what earlier runs used and what to ask for,
+  and HPC Hub tells Claude, ChatGPT and Antigravity to check it before they submit.
 - Service units left per group, how long they last at your recent pace, and storage quotas.
 - How busy each queue is now, and the limits of each queue and priority.
 

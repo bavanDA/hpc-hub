@@ -15,14 +15,16 @@ import { StatusLine, type Look } from '@shared/components/code/desktop/StatusLin
 import { TerminalToggle } from '@shared/components/code/desktop/TerminalToggle'
 import { parentDir } from '@shared/components/code/desktop/text'
 import { Tree } from '@shared/components/code/desktop/Tree'
+import { useJobSize } from '@shared/components/code/desktop/useJobSize'
 import { usePlaces } from '@shared/components/code/desktop/usePlaces'
 import { useTerminalPanel } from '@shared/components/code/desktop/useTerminalPanel'
 import { openFolder, rememberFolder } from '@shared/components/code/desktop/workspace'
 import { discardDraft, findDraft, keepDrafts, type Draft } from '@shared/components/code/drafts'
 import type { EditorHandle, Selection } from '@shared/components/code/Editor'
-import { detectIndent, type LangId } from '@shared/components/code/languages'
-import { closeFile, getFile, isDirty, openFile, reloadFile, saveFile, setCursor, setEditing, setText, useCode,
-  type OpenFile } from '@shared/components/code/store'
+import { detect, detectIndent, type LangId } from '@shared/components/code/languages'
+import { withFix } from '@shared/components/code/sbatchEdit'
+import { closeFile, getFile, isDirty, openFile, reloadFile, replaceText, saveFile, setCursor, setEditing, setText,
+  useCode, type OpenFile } from '@shared/components/code/store'
 import { onWatch, startWatch, undoAgentChange, type WatchEvent } from '@shared/components/code/watch'
 import { setActiveCluster, useActiveCluster } from '@shared/components/clusters/active'
 import { NotConnected } from '@shared/components/clusters/NotConnected'
@@ -114,6 +116,7 @@ export function Code() {
   const clusterName = (id: string) => shortCluster(clusters?.find((c) => c.id === id)?.name ?? id)
   const connected = (id: string) => !!sessions[id]?.connected
   const locked = (file: OpenFile) => !file.writable || readonly.current.has(file.key) || isLog(file.path)
+  const size = useJobSize(f, !!f && !locked(f) && connected(f.cluster) && detect(f.path, f.saved).id === 'slurm')
 
   const setRoot = useCallback((path: string) => {
     rememberFolder(cluster, path)
@@ -329,6 +332,15 @@ export function Code() {
       }
     } else if (locked(f) && f.readonlyReason) {
       banners.push({ id: 'readonly', text: `Read only: ${f.readonlyReason}.` })
+    }
+    for (const a of size.advice) {  // what earlier runs of this job used: advice only, Submit works either way
+      const fix = a.fix
+      banners.push({ id: `size-${a.kind}`, tone: a.strict ? 'warn' : 'info', text: a.text,
+        actions: fix && a.label ? [{ label: a.label, run: () => {
+          const text = withFix(f.text, fix)
+          replaceText(f.key, text)
+          size.check(text)
+        } }] : [] })
     }
   }
 

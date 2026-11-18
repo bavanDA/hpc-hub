@@ -35,6 +35,25 @@ You submit a job from a Slurm script open in **Code**.
 
 The new job appears in **Jobs**.
 
+## Ask for what a job needs
+
+Memory and cores a job asks for are held for it while it runs, even when it doesn't use them, and other people's jobs wait. HPC Hub measures every job of yours that finishes, from Slurm's own records, so you don't have to do anything.
+
+- A finished job's details show **What it used**, for example `38 GB of 256 GB asked for`, and what to ask for next time.
+- When a script open in **Code** asks for much more than its earlier runs used, a line above it says so, with a button such as **Use 46 GB** that changes its `#SBATCH` line. When a run ran out of memory, it suggests more. You can always submit the script as it is.
+- A job that takes whole nodes blocks nobody by asking for extra memory, so HPC Hub only mentions it.
+
+The suggestion is the most memory earlier runs used, plus 20% (more when runs vary or one ran out of memory), and the cores that were really busy.
+
+On the cluster, `hpchub-size` shows the same, with the words you would give `sbatch`:
+
+```sh
+hpchub-size run.sh --plan-only
+hpchub-size --mem=64G run.sh
+```
+
+HPC Hub puts `hpchub-size` in `~/.local/bin` and its history in `~/.hpc-hub/job-sizes.json` when you start an agent, and tells Claude, ChatGPT and Antigravity to check it before they submit a job (in `~/.claude/CLAUDE.md`, `~/.codex/AGENTS.md` and `~/.gemini/GEMINI.md`). If you delete that note, it stays deleted.
+
 ## Why a job waits
 
 When a job has not started, Jobs writes the reason in plain words. For example:

@@ -1,7 +1,7 @@
 import re
 from dataclasses import asdict
 
-from ...agents import schedules
+from ...agents import notes, schedules
 from ...agents.catalog import AGENTS, BY_ID
 from ...agents.schedules import PRESETS, Schedule, Status
 from ...connect.session import ClusterSession
@@ -40,6 +40,7 @@ def _find(s: ClusterSession, name: str) -> Status:
 
 
 def _queue(s: ClusterSession, sc: Schedule) -> None:
+    notes.prepare(s.ssh)  # a scheduled agent may submit jobs too
     _run(s, schedules.save_command(sc, getattr(s.cfg, sc.agent), s.cfg.profile), f"Could not save {sc.name}")
 
 

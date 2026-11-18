@@ -1,7 +1,7 @@
 import time
 from dataclasses import asdict
 
-from ...compute import job_text, jobs, sbatch, slurm
+from ...compute import job_size, job_text, jobs, sbatch, slurm
 from ...compute.jobs import JobInfo
 from ...compute.usage.accounts import account_usage
 from ...connect.session import ClusterSession
@@ -72,9 +72,28 @@ def list_jobs(cluster: str, scope: str = jobs.MINE, account: str = "") -> dict:
 
 @method("jobs.details")
 def details(cluster: str, job_id: str) -> dict:
-    """scontrol (or sacct for finished jobs): grouped fields, and the whole text for "All fields"."""
-    text = jobs.job_details(hub().connected(cluster).ssh, job_id)
-    return {"groups": job_text.detail_groups(jobs.parse_details(text), cluster), "text": text}
+    """scontrol (or sacct for finished jobs): grouped fields, and the whole text for "All fields". A finished job
+    also says what it used of what it asked for."""
+    ssh = hub().connected(cluster).ssh
+    text = jobs.job_details(ssh, job_id)
+    fields = jobs.parse_details(text)
+    groups = job_text.detail_groups(fields, cluster)
+    if fields.get("JobState", fields.get("State", "")).split(" ")[0] not in ACTIVE:
+        try:
+            used = job_size.usage_rows(ssh.read(job_size.usage_command(job_id), timeout=30).stdout)
+        except Exception:  # noqa: BLE001 - the rest of the details still help
+            used = []
+        if used:
+            at = next((i + 1 for i, g in enumerate(groups) if g["title"] == "Resources"), len(groups))
+            groups.insert(at, {"title": "What it used", "rows": used})
+    return {"groups": groups, "text": text}
+
+
+@method("jobs.size")
+def size(cluster: str, path: str, text: str = "") -> dict:
+    """Before submitting the job script at path: what earlier runs of it used, and advice with fixes (memory,
+    cores) when it asks for much more or less. Never stops a submit. text: the script as the editor has it."""
+    return job_size.check(hub().connected(cluster).ssh, path, text)
 
 
 @method("jobs.inside")

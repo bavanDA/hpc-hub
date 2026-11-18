@@ -109,3 +109,35 @@ def test_submit_answers_the_job_id(session, monkeypatch):
     assert m.submit("wulver", "~/run.sbatch") == {"job_id": "4242"}
     with pytest.raises(ValueError, match="invalid partition"):
         m.submit("wulver", "~/bad.sbatch")
+
+
+def test_details_of_a_finished_job_say_what_it_used(session, monkeypatch):
+    from hpc_hub.compute import job_size
+    assert all(g["title"] != "What it used" for g in m.details("wulver", "7")["groups"])  # still running
+    done = ("JobID|JobName|State|Elapsed|Timelimit|AllocCPUS|ReqMem|NodeList\n"
+            "11|train|COMPLETED|01:00:00|04:00:00|16|256G|n0042\n")
+    used = ("11|train|COMPLETED|01:00:00|02:00:00|16|256G||1||n0042|general|/home/jdoe/run\n"
+            "11.batch|batch|COMPLETED|01:00:00|02:00:00|16||36000000K|1|1|n0042||\n"
+            f"{job_size.CORES}\nn0042|128\n")
+    monkeypatch.setattr(jobs, "job_details", lambda ssh, job_id: done)
+    session.ssh.read = lambda command, timeout=60, fast=None: subprocess.CompletedProcess(command, 0, used, "")
+    got = m.details("wulver", "11")
+    titles = [g["title"] for g in got["groups"]]
+    assert titles.index("What it used") == titles.index("Resources") + 1
+    rows = {r["label"]: r["value"] for r in got["groups"][titles.index("What it used")]["rows"]}
+    assert rows["Memory"] == "34 GB of 256 GB asked for" and rows["Next time"] == "Ask for about 42 GB and 3 cores"
+
+
+def test_size_asks_hpchub_size_about_the_script(session, monkeypatch):
+    from hpc_hub.compute import job_size
+    with pytest.raises(ValueError, match="Open a job script first"):
+        job_size.check(session.ssh, " ")
+    asked = {}
+
+    def check(ssh, path, text=""):
+        asked.update(path=path, text=text)
+        return {"match": "none", "advice": []}
+
+    monkeypatch.setattr(job_size, "check", check)
+    assert m.size("wulver", "~/run.sh", "#!/bin/bash\n") == {"match": "none", "advice": []}
+    assert asked == {"path": "~/run.sh", "text": "#!/bin/bash\n"}

@@ -1,6 +1,6 @@
 // Demo data for the Jobs page: made-up jobs on Wulver and Yale, as jobs.list sends them.
 import { priorityName } from '../components/clusters/priority'
-import type { Job, JobDetails, JobList } from '../types/jobs'
+import type { Job, JobDetails, JobList, JobSize } from '../types/jobs'
 import type { Account } from '../types/usage'
 
 const ME = 'jdoe'
@@ -130,6 +130,9 @@ function details({ cluster, job_id }: Record<string, unknown>): JobDetails {
       ['Node', j.state === 'PENDING' ? '' : j.where], ['Cores', j.cpus], ['Memory', j.mem.replace(/G$/, ' GB')],
       ['GPU', j.partition === 'gpu' ? '2 × A100' : ''], ['Queue', j.partition], ['Priority', j.qos_shown && priorityName(j.qos_shown)],
       ['Charged to', 'mygroup']] },
+    ...(active ? [] : [{ title: 'What it used', rows: [
+      ['Memory', `${(parseFloat(j.mem) * 0.3).toFixed(1)} GB of ${j.mem.replace(/G$/, ' GB')} asked for`],
+      ['Cores', `${(Number(j.cpus) * 0.4).toFixed(1)} of ${j.cpus} busy on average`]] }]),
     { title: 'Files', rows: [['Work folder', dir], ['Output', `${dir}/slurm-${j.job_id}.out`]] },
   ].map((g) => ({ title: g.title, rows: g.rows.filter(([, v]) => v).map(([label, value]) => ({ label, value })) }))
   const text = [`JobId=${j.job_id} JobName=${j.name}`,
@@ -148,8 +151,17 @@ function list({ cluster, scope }: Record<string, unknown>): JobList {
     app_job: cluster === 'wulver' ? '123456' : '', groups: cluster === 'wulver' ? ['mygroup', 'abc123'] : ['mygroup'] }
 }
 
+// the demo's run.slurm asks for 16 GB; its earlier runs used about 3 GB
+function size({ text }: Record<string, unknown>): JobSize {
+  const mem = Number(String(text ?? '').match(/^#SBATCH --mem=(\d+)G/m)?.[1] ?? 16)
+  return { match: 'same', advice: mem <= 8 ? [] : [{ kind: 'memory', strict: true, fix: { mem_gb: 4 },
+    label: 'Use 4 GB', text: `Asks for ${mem} GB, but used at most 3.1 GB in its last 4 runs. The rest sits unused `
+      + 'while other jobs wait for it. Ask for 4 GB.' }] }
+}
+
 export const answers: Record<string, unknown> = {
   'jobs.list': list,
+  'jobs.size': size,
   'jobs.details': details,
   'jobs.inside': ({ job_id }: Record<string, unknown>) => job_id === '123456'
     ? { sessions: ['Claude: thesis', 'Terminal'], app_node: true } : { sessions: [], app_node: false },

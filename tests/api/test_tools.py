@@ -122,6 +122,8 @@ def test_agent_on_the_same_node_saves_choices(env):
     line = got["argv"][-1]
     assert got["argv"][:2] == ["ssh", "-tt"] and "n0042" in line and "--model sonnet" in line
     assert "remoteControlAtStartup" in " ".join(env.s.ssh.ran)  # set in settings.json before it starts
+    # hpchub-size, and the note about it in the agents' instructions, before the agent reads them
+    assert any(".local/bin/hpchub-size" in c and "CLAUDE.md" in c for c in env.s.ssh.ran)
     assert env.s.asked == [("main", None)]
     assert any(e[0] == "tools-progress" for e in env.events)
 

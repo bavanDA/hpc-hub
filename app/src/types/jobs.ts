@@ -36,3 +36,8 @@ export type DetailGroup = { title: string; rows: { label: string; value: string 
 export type JobDetails = { groups: DetailGroup[]; text: string }
 
 export type Inside = { sessions: string[]; app_node: boolean }
+
+/** What hpchub-size on the cluster says about a job script before it is submitted; fix is a one-click change. */
+export type SizeFix = { mem_gb?: number; cpus?: number }
+export type SizeAdvice = { kind: string; text: string; strict: boolean; fix: SizeFix | null; label: string }
+export type JobSize = { match: 'same' | 'script' | 'name' | 'none'; advice: SizeAdvice[] }
