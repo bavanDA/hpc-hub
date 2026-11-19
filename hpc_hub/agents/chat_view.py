@@ -218,6 +218,10 @@ def parse_screen(text: str) -> dict:
     """The pane as plain text: busy (Claude is working), mode (ask, edits, plan or auto, from the footer), and
     ask: a question with numbered choices waiting for an answer ({question, detail, options: [{key, label}]})."""
     lines = [ln.rstrip() for ln in text.splitlines()]
+    # a Claude that draws from the top of the pane leaves empty rows under its footer (a short conversation): the
+    # footer is the last row with something on it, not the pane's last row (2026-11-19 report: the mode never read)
+    while lines and not lines[-1].strip():
+        lines.pop()
     tail = "\n".join(lines[-6:]).lower()
     mode = next((m for words, m in MODES if words in tail and "on" in tail), "ask")
     busy = "esc to interrupt" in tail

@@ -9,6 +9,7 @@ from ..hub import hub
 from ..server import method
 
 MODE_TRIES = 6  # Shift+Tab presses at most when switching the permission mode
+MODE_WAIT = 4  # reads of the footer after a press before the next one (a node over ssh draws later)
 
 
 @method("chat.read")
@@ -43,9 +44,13 @@ def mode(cluster: str, session: str, mode: str, node: str = "") -> dict:
             return now
         if now.get("ask") or now.get("gone"):
             raise RuntimeError("Answer Claude's question first")
+        before = now.get("mode")
         tmux.run(ssh, chat_view.key_command(session, "mode", node))
-        time.sleep(0.35)
-        now = chat_view.screen(ssh, session, node)
+        for _ in range(MODE_WAIT):  # wait for the footer to change: pressing again too soon skips a mode
+            time.sleep(0.35)
+            now = chat_view.screen(ssh, session, node)
+            if now.get("mode") != before or now.get("ask") or now.get("gone"):
+                break
     if now.get("mode") == mode:
         return now
     raise RuntimeError("Claude didn't offer that mode. Some modes are only there when Claude starts with them")

@@ -47,3 +47,49 @@ def test_already_there_presses_nothing(fake):
     f = fake(["edits"])
     chat.mode("wulver", "s", "edits")
     assert f.keys == []
+
+
+class Slow(Fake):
+    """A footer drawn late (a node over ssh): the first read after a press still shows the old mode."""
+    def __init__(self, cycle):
+        super().__init__(cycle)
+        self.shown, self.reads = 0, 0
+
+    def screen(self, ssh, session, node=""):
+        self.reads += 1
+        out = {"busy": False, "mode": self.cycle[self.shown % len(self.cycle)], "ask": None}
+        self.shown = self.at  # the press shows up from the next read on
+        return out
+
+
+@pytest.fixture
+def slow(monkeypatch, fake):
+    def make(cycle):
+        fake(cycle)
+        f = Slow(cycle)
+        monkeypatch.setattr(chat.chat_view, "screen", f.screen)
+        monkeypatch.setattr(chat.tmux, "run", f.press)
+        return f
+    return make
+
+
+def test_a_late_footer_is_waited_for_not_pressed_past(slow):
+    """2026-11-19 reports: pressing again before the footer changed skipped modes, and the switch gave up."""
+    f = slow(["ask", "edits", "plan", "auto"])
+    assert chat.mode("wulver", "s", "auto", "n0042")["mode"] == "auto"
+    assert len(f.keys) == 3  # one press per mode, none skipped
+
+
+def test_back_to_ask_from_auto_goes_round_once(slow):
+    f = slow(["auto", "ask", "edits", "plan"])
+    assert chat.mode("wulver", "s", "ask")["mode"] == "ask"
+    assert len(f.keys) == 1
+
+
+def test_a_question_that_appears_after_a_press_stops_the_presses(monkeypatch, fake):
+    f = fake(["ask", "edits"])
+    reads = iter([{"mode": "ask", "ask": None}, {"mode": "ask", "ask": {"question": "Do you want?"}}])
+    monkeypatch.setattr(chat.chat_view, "screen", lambda *a, **k: next(reads))
+    with pytest.raises(RuntimeError, match="Answer Claude's question first"):
+        chat.mode("wulver", "s", "plan")
+    assert len(f.keys) == 1

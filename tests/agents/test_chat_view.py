@@ -203,3 +203,36 @@ def test_a_real_model_switch_asks_first():
     ask = chat_view.parse_screen((SCREENS / "claude-model.txt").read_text())["ask"]
     assert ask["question"] == "Switch model?" and not ask["permission"]
     assert [o["label"] for o in ask["options"]] == ["Yes, switch to Sonnet 5.5", "No, go back"]
+
+
+# 2026-11-19 reports (Windows, Wulver): switching to auto or another mode always failed with "Claude didn't offer
+# that mode". The pane had empty rows under Claude's footer (a Claude that draws from the top, a short
+# conversation), so the mode was read from blank rows and was always "ask".
+def drawn_from_top(name: str, blank_rows: int, blank: str = "") -> str:
+    rows = [ln for ln in (SCREENS / name).read_text().splitlines() if ln.strip()]
+    return "\n".join(rows + [blank] * blank_rows) + "\n"
+
+
+@pytest.mark.parametrize("blank_rows", [1, 6, 25, 60])
+def test_the_footer_above_empty_rows_still_gives_the_mode(blank_rows):
+    assert chat_view.parse_screen(drawn_from_top("claude-auto.txt", blank_rows))["mode"] == "auto"
+
+
+def test_rows_of_spaces_under_the_footer_are_empty_too():
+    assert chat_view.parse_screen(drawn_from_top("claude-auto.txt", 30, " " * 150))["mode"] == "auto"
+
+
+@pytest.mark.parametrize("footer, mode", [
+    ("  ⏵⏵ accept edits on (shift+tab to cycle)", "edits"),
+    ("  ⏸ plan mode on (shift+tab to cycle)", "plan"),
+    ("  ⏸ manual mode on · ? for shortcuts", "ask"),
+    ("  ? for shortcuts", "ask"),
+])
+def test_each_mode_reads_with_empty_rows_below(footer, mode):
+    screen = "\n".join(["╭───╮", "│ > hello │", "╰───╯", "─" * 80, "❯ ", "─" * 80, footer] + [""] * 30)
+    assert chat_view.parse_screen(screen)["mode"] == mode
+
+
+def test_a_menu_above_empty_rows_is_still_found():
+    r = chat_view.parse_screen(drawn_from_top("claude-ask.txt", 40))
+    assert r["ask"] is not None and len(r["ask"]["options"]) == 4
