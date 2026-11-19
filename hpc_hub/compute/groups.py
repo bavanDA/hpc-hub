@@ -48,3 +48,20 @@ def set_hidden(setting: str, cluster: str, account: str, hide: bool) -> str:
     if hide:
         items.append(f"{cluster}/{account}")
     return ",".join(items)
+
+
+def course_only(account: str, qos: list[str] | None = None) -> bool:
+    """A group just for a course: named for a term ("2025-spring-..."), or one whose only priority is course. (An
+    ordinary group may also be allowed the course priority: that doesn't make it a course group.)"""
+    return bool(TERM.match(account)) or (bool(qos) and set(qos) == {COURSE_QOS})
+
+
+def billed(default: str, account_qos: dict[str, list[str]], hide: list[str]) -> str:
+    """The group a job is billed to when you named none: Slurm's default, unless it is a course group (HPC Hub never
+    picks one on its own) or one you hid; then your first other group. "" when every group you have is a course
+    group or hidden: pick one yourself."""
+    def fine(a: str) -> bool:
+        return bool(a) and not course_only(a, account_qos.get(a)) and a not in hide
+    if fine(default):
+        return default
+    return next((a for a in sorted(account_qos) if fine(a)), "")

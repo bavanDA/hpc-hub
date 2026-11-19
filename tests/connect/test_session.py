@@ -4,6 +4,7 @@ from types import SimpleNamespace
 
 import pytest
 
+from hpc_hub.compute.slurm import SlurmError
 from hpc_hub.connect import prompts
 from hpc_hub.connect.askpass_server import AskpassServer
 from hpc_hub.connect.session import ClusterSession, State
@@ -474,14 +475,15 @@ def test_a_group_with_no_default_priority_names_one_and_the_log_says_what_was_as
     assert (p.qos, p.account) == ("standard", "lab")
     assert logged[-1] == "Asking Slurm for 4 cores, 16 GB, 01:00:00, account lab, priority standard"
     assert s.fit(config.ComputeProfile(cpus=4, mem_gb=16, time="01:00:00", qos="low")).qos == "low"  # yours stays
-    s.limits.account_qos = {"lab": ["course"]}
-    p = s.fit(config.ComputeProfile(cpus=4, mem_gb=16, time="01:00:00"))
-    assert p.qos == "" and p.partition == ""  # never course, never another queue: Slurm says why
+    s.limits.account_qos = {"lab": ["course"]}  # a group only for a course: HPC Hub never bills it on its own
+    with pytest.raises(SlurmError, match="course group, and HPC Hub never picks one"):
+        s.fit(config.ComputeProfile(cpus=4, mem_gb=16, time="01:00:00"))
     # you pick course yourself: yours to use
     s.limits.account_qos = {"lab": ["low", "course"]}
     s.limits.rules["course"] = {"AllowQos": "course"}
-    p = s.fit(config.ComputeProfile(cpus=4, mem_gb=16, time="01:00:00", partition="course", qos="course"))
-    assert (p.partition, p.qos) == ("course", "course")
+    p = s.fit(config.ComputeProfile(cpus=4, mem_gb=16, time="01:00:00", partition="course", qos="course",
+                                    account="lab"))
+    assert (p.partition, p.qos, p.account) == ("course", "course", "lab")
 
 
 def test_a_refused_course_group_says_it_may_have_ended():
@@ -749,3 +751,61 @@ def test_vpn_text_message_signs_in_again_with_the_texted_code(env, monkeypatch):
     s._bring_up_vpn(Login("u", "pw"), server.register(lambda p: None))
     assert calls == [("duo", "sms"), ("duo", "7654321"), ("up", "c-7654321")]
     assert rec.asked == [(prompts.ASK_SMS, False)]  # "Duo texted you passcodes", not a general passcode question
+
+
+
+# 2026-11-19 report: a VS Code job was billed to an old course group (2025-spring-...), Slurm's default for that
+# student, and Slurm refused it (AssocGrpBillingMinutes). HPC Hub never picks a course group on its own.
+def fitter(default, account_qos, monkeypatch, tmp_path, hidden=""):
+    import subprocess as sp
+
+    from hpc_hub.compute import limits
+    from hpc_hub.core import config
+    from tests.compute.test_limits import WULVER
+    monkeypatch.setattr(config, "APP_FILE", tmp_path / "app.toml")
+    if hidden:
+        config.save_app(config.AppSettings(hidden_groups=hidden), config.APP_FILE)
+
+    class Ssh:
+        def run(self, cmd, timeout=60):
+            return sp.CompletedProcess(cmd, 0, default + "\n" if "defaultaccount" in cmd else "", "")
+        on_login = run
+    s = object.__new__(ClusterSession)
+    s.cfg, s.ssh, s.default_account = config.default_clusters()[0], Ssh(), None
+    s.logged = []
+    s._log = s.logged.append
+    s.limits = limits.parse(WULVER)
+    s.limits.account_qos = account_qos
+    s.limits.rules = {}
+    return s
+
+
+def test_an_old_course_default_group_is_not_billed(monkeypatch, tmp_path):
+    from hpc_hub.core import config
+    course = "2025-spring-ds-100-ab12-jdoe"
+    s = fitter(course, {course: ["course"], "ab12": ["low", "standard"]}, monkeypatch, tmp_path)
+    p = s.fit(config.ComputeProfile(cpus=2, mem_gb=8, time="01:00:00"))
+    assert p.account == "ab12"
+    assert any("is a course group or hidden: billing ab12" in line for line in s.logged)
+
+
+def test_a_course_group_you_pick_yourself_is_yours(monkeypatch, tmp_path):
+    from hpc_hub.core import config
+    s = fitter("ab12", {"2025-spring-ds-100-ab12-jdoe": ["course"], "ab12": ["standard"]}, monkeypatch, tmp_path)
+    p = s.fit(config.ComputeProfile(cpus=2, mem_gb=8, time="01:00:00", account="2025-spring-ds-100-ab12-jdoe"))
+    assert p.account == "2025-spring-ds-100-ab12-jdoe"
+
+
+def test_a_normal_default_group_stays_and_a_hidden_one_is_passed_over(monkeypatch, tmp_path):
+    from hpc_hub.core import config
+    s = fitter("ab12", {"ab12": ["standard", "course"], "cd34": ["standard"]}, monkeypatch, tmp_path)
+    assert s.fit(config.ComputeProfile(cpus=2, mem_gb=8, time="01:00:00")).account == "ab12"  # may use course qos
+    s = fitter("ab12", {"ab12": ["standard"], "cd34": ["standard"]}, monkeypatch, tmp_path, hidden="wulver/ab12")
+    assert s.fit(config.ComputeProfile(cpus=2, mem_gb=8, time="01:00:00")).account == "cd34"
+
+
+def test_only_course_groups_asks_you_to_pick(monkeypatch, tmp_path):
+    from hpc_hub.core import config
+    s = fitter("2025-fall-cs-100-jdoe", {"2025-fall-cs-100-jdoe": ["course"]}, monkeypatch, tmp_path)
+    with pytest.raises(SlurmError, match="Pick a group to bill"):
+        s.fit(config.ComputeProfile(cpus=2, mem_gb=8, time="01:00:00"))

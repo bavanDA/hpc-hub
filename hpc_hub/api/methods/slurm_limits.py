@@ -31,8 +31,10 @@ def partitions(cluster: str, partition: str = "", qos: str = "", account: str = 
         return dict(UNKNOWN)
     partition, qos = partition.strip(), qos.strip()
     longest, why = lim.longest(partition, qos)
-    account = account.strip() or lim.default_account
     hid = groups.hidden(config.load_app(config.APP_FILE).hidden_groups, cluster)
+    # the group HPC Hub bills when you pick none: never an old course group that Slurm calls your default
+    billed = groups.billed(lim.default_account, lim.account_qos, hid) or lim.default_account
+    account = account.strip() or billed
     choices = lim.qos_choices(partition, account)
     refused = lim.refused_qos(partition, qos, account)
     part = partition or lim.default_partition
@@ -47,7 +49,7 @@ def partitions(cluster: str, partition: str = "", qos: str = "", account: str = 
             "qos_note": _only(part, choices, lim.account_qos.get(account) or lim.allowed_qos),
             "needs_gpu": lim.needs_gpu(part),  # a GPU-only queue: the window adds a GPU
             "gpu_queues": [p for p in lim.gpu_only if lim.yours(p)],  # only offered with the GPU size
-            "default_qos": lim.default_qos, "default_account": lim.default_account,
+            "default_qos": lim.default_qos, "default_account": billed,
             # the groups you hid (Hide this group) stay out, unless it is the one asked about
             "accounts": [a for a in lim.account_qos if a not in hid or a == account], "hidden_accounts": hid,
             # a course group whose term is over: "Ended (spring 2026)"

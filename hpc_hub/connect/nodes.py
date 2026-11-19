@@ -6,6 +6,7 @@ from dataclasses import replace
 
 from ..compute import groups, limits, salloc, slurm
 from ..compute.slurm import Allocation, SlurmError
+from ..core import config
 from ..core.config import ComputeProfile
 from ..core.ssh import SshError
 from .state import State
@@ -28,8 +29,8 @@ class NodesMixin:
         """The profile with your default account named when none is set, and its time cut to what its queue
         allows (Slurm would refuse it otherwise). A priority the queue refuses, or a GPU queue without a GPU, stops
         here with what to change. Blocking; worker thread."""
-        if not profile.account and self._account():
-            profile = replace(profile, account=self._account())
+        if not profile.account:
+            profile = replace(profile, account=self._billed())
         refused = self.limits.refused_qos(profile.partition, profile.qos, profile.account) if self.limits else ""
         if refused and not profile.qos:  # your default priority isn't allowed there: the one the queue takes
             choices = [c for c in self.limits.qos_choices(profile.partition, profile.account)
@@ -61,6 +62,20 @@ class NodesMixin:
         if isinstance(e, SlurmError) and account and groups.is_course(account, qos):
             return f"{e} {groups.refused_text(account)}"
         return str(e)
+
+    def _billed(self) -> str:
+        """The group to bill when the request names none: never a course group or a hidden one on HPC Hub's own
+        (Slurm's default may be an old course group, and Slurm refuses jobs billed to it)."""
+        default = self._account()
+        account_qos = self.limits.account_qos if self.limits else {}
+        hide = groups.hidden(config.load_app(config.APP_FILE).hidden_groups, self.cfg.id)
+        pick = groups.billed(default, account_qos, hide)
+        if pick and pick != default:
+            self._log(f"Your default group {default} is a course group or hidden: billing {pick}")
+        if not pick and default and groups.course_only(default, account_qos.get(default)):
+            raise SlurmError(f"Your default group {default} is a course group, and HPC Hub never picks one for you. "
+                             "Pick a group to bill under Queue and priority.")
+        return pick or default
 
     def _account(self) -> str:
         if self.default_account is None and self.ssh:
