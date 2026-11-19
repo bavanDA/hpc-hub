@@ -5,19 +5,16 @@ import { Check, ScanQrCode, Server } from 'lucide-react'
 import { useState } from 'react'
 
 import { Heading } from '@shared/components/app/onboarding/Heading'
-import { NodeStep } from '@shared/components/app/onboarding/NodeStep'
 import { Progress } from '@shared/components/app/onboarding/Progress'
-import type { Step } from '@shared/components/app/onboarding/step'
+import { setupSteps, type Step } from '@shared/components/app/onboarding/step'
 import { university, type SetupStatus } from '@shared/components/app/setup'
 import { copy, shortName } from '@shared/components/clusters/loginCopy'
-import { QueueWindow } from '@shared/components/clusters/node/QueueDialog'
 import { useLogin } from '@shared/components/clusters/useLogin'
 import { call } from '@shared/rpc'
 import type { Cluster } from '@shared/types/clusters'
 import { useBackLayer } from '../nav'
 import { Button, MainButton, useToast } from '../ui'
 import { LoginForm, useScan } from './clusters/LoginForm'
-import { QueueDialog } from './clusters/QueueDialog'
 
 /** The sign-in step: the three ways in, then the form when you pick typing it. */
 function LoginStep({ cluster: c, onNext, onScanned }:
@@ -83,10 +80,7 @@ export function Welcome({ status, onDone }: { status: SetupStatus; onDone: () =>
     try {
       const s = await call<SetupStatus>('setup.choose', { ids: status.choices.map((c) => c.id).filter((id) => picked.includes(id)) })
       const all = await call<Cluster[]>('clusters.list')
-      const found = s.chosen.flatMap((id) => {
-        const c = all.find((x) => x.id === id)
-        return c ? [{ cluster: c, kind: 'login' as const }, { cluster: c, kind: 'node' as const }] : []
-      })
+      const found = setupSteps(s.chosen, all)
       if (found.length) setSteps(found)
       else onDone()
     } catch (e) {
@@ -144,10 +138,7 @@ export function Welcome({ status, onDone }: { status: SetupStatus; onDone: () =>
         ) : (
           <div className="flex min-h-full flex-col gap-5 py-6">
             <Progress steps={steps!} at={at} />
-            {step.kind === 'login'
-              ? <LoginStep key={at} cluster={step.cluster} onNext={next} onScanned={scanned} />
-              : <QueueWindow.Provider value={QueueDialog}>
-                  <NodeStep key={at} cluster={step.cluster} onNext={next} last={at + 1 === steps!.length} /></QueueWindow.Provider>}
+            <LoginStep key={at} cluster={step.cluster} onNext={next} onScanned={scanned} />
           </div>
         )}
       </div>
