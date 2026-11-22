@@ -12,7 +12,7 @@ from ..connect import chrome_window
 from ..connect.askpass_server import AskpassServer
 from ..connect.session import SSO_PASS, SSO_USER, ClusterSession
 from ..connect.state import State
-from ..core import config, credentials, single
+from ..core import config, credentials, single, ssh
 
 QUESTION_SECONDS = 600
 
@@ -35,6 +35,8 @@ class Hub:
 
     def __init__(self, emit):
         self.emit = emit
+        # the window may start this argv in a PTY (pty.rs); the newest hub is the one talking to it
+        ssh.ON_TERMINAL[:] = [lambda argv: self.emit("pty-argv", {"argv": argv})]
         self.askpass = AskpassServer("askpass-app.sock")
         self.clusters = config.chosen(config.load(), config.load_app())
         self.sessions: dict[str, ClusterSession] = {}

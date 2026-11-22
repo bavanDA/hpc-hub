@@ -39,9 +39,14 @@ fn command() -> std::io::Result<Command> {
     Ok(Command::new(std::env::current_exe()?.with_file_name(name)))
 }
 
+fn override_backend(exe: Option<std::ffi::OsString>) -> Option<std::ffi::OsString> {
+    exe.filter(|_| cfg!(debug_assertions))
+}
+
 pub fn start(app: &AppHandle) -> std::io::Result<Backend> {
-    // HPC_HUB_BACKEND: run a frozen backend from a debug build too
-    let mut cmd = match std::env::var_os("HPC_HUB_BACKEND") {
+    // HPC_HUB_BACKEND: run a frozen backend from a debug build too. Never in a release build: anything that can
+    // set your environment could otherwise have HPC Hub start its program with your logins.
+    let mut cmd = match override_backend(std::env::var_os("HPC_HUB_BACKEND")) {
         Some(exe) => Command::new(exe),
         None => command()?,
     };
@@ -66,6 +71,13 @@ pub fn start(app: &AppHandle) -> std::io::Result<Backend> {
     let handle = app.clone();
     std::thread::spawn(move || {
         for line in BufReader::new(stdout).lines().map_while(Result::ok) {
+            // an argv the backend made for a terminal: the window may start it (pty.rs); the page needn't see it
+            if let Some(argv) = crate::pty::made_argv(&line) {
+                if let Some(ptys) = handle.try_state::<crate::pty::Ptys>() {
+                    ptys.allow(argv);
+                }
+                continue;
+            }
             let _ = handle.emit("rpc", line);
         }
         let _ = handle.emit("rpc-closed", ());
@@ -88,5 +100,28 @@ pub fn stop(app: &AppHandle) {
             return;
         }
         std::thread::sleep(Duration::from_millis(50));
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn hpc_hub_backend_is_for_debug_builds_only() {
+        let exe = Some(std::ffi::OsString::from("/tmp/other-backend"));
+        assert_eq!(override_backend(exe.clone()).is_some(), cfg!(debug_assertions));
+        assert!(override_backend(None).is_none());
+        let src = include_str!("backend.rs");
+        assert!(src.contains("override_backend(std::env::var_os(\"HPC_HUB_BACKEND\"))"));
+    }
+
+    #[test]
+    fn the_window_allows_no_plugins_base_or_form_posts() {
+        let conf: serde_json::Value = serde_json::from_str(include_str!("../tauri.conf.json")).unwrap();
+        let csp = conf["app"]["security"]["csp"].as_str().unwrap();
+        for rule in ["object-src 'none'", "base-uri 'none'", "form-action 'none'", "default-src 'self'"] {
+            assert!(csp.split(';').any(|r| r.trim() == rule), "no {rule} in {csp}");
+        }
     }
 }

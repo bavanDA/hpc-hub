@@ -23,6 +23,9 @@ COMMON = [
 FAST_SHELLS = 3  # quick commands share these; more at once (or long ones) use plain ssh
 NODE_SHELLS = 2  # shells kept open on compute nodes: each holds a session under the server's MaxSessions
 NODE_SSH = "ssh -o BatchMode=yes -o ConnectTimeout=10 -o LogLevel=ERROR"
+# Told every terminal argv made here (hpc_hub/api/hub.py sends it to the window as "pty-argv"): the window's
+# pty_open starts only an argv the backend made, never one the page puts together (app/src-tauri/src/pty.rs).
+ON_TERMINAL: list[Callable[[list[str]], None]] = []
 CHANNEL = "hpc-hub-channel"  # argv(tty=True) of a login no local ssh can ride: [CHANNEL, cluster id, command]
 
 
@@ -92,6 +95,9 @@ class SshMaster:
         argv += self._target()
         if command:
             argv.append(self.wrap(command))
+        if tty:
+            for told in ON_TERMINAL:
+                told(argv)
         return argv
 
     def start(self, timeout: float = 180, cancelled: Callable[[], bool] = lambda: False) -> None:
