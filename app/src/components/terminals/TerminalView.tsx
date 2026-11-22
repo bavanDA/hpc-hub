@@ -92,7 +92,8 @@ export function TerminalView({ tab, shown, rail = false }: { tab: Tab; shown: bo
         {rail ? <HistoryFrame tab={tab} shown={shown}>{terminal}</HistoryFrame> : terminal}
         {chat && <ChatView tab={tab} shown={shown} title={title} toggle={toggle} onTerminal={() => setView('terminal')} />}
       </div>
-      {tab.session && tab.cluster && <MonitorBar cluster={tab.cluster} node={tab.node} shown={shown} />}
+      {tab.session && tab.cluster && <MonitorBar cluster={tab.cluster} session={tab.session} node={tab.node}
+        shown={shown} />}
       {menu && (
         <Popover x={menu.x} y={menu.y} onClose={() => setMenu(null)}>
           <MenuItem onClick={() => { setMenu(null); copy(tab, toast) }}>Copy</MenuItem>

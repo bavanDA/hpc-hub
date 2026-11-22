@@ -1,13 +1,17 @@
-import { ArrowDown, ArrowUp, Clock, Cpu, HardDrive, MemoryStick, Server, Users } from 'lucide-react'
+import { ArrowDown, ArrowUp, Clock, Cpu, HardDrive, ListChecks, MemoryStick, Server, Users } from 'lucide-react'
 
 import { useEnabled } from './monitorBarSetting'
 import { duration, level, rate, size, usedOf } from './monitorFormat'
 import { MonitorItem } from './MonitorItem'
+import { jobText, jobTip, nodeJob } from './nodeJob'
+import { useMyJobs } from './useMyJobs'
 import { useStats } from './useStats'
 
-export function MonitorBar({ cluster, node, shown }: { cluster: string; node: string; shown: boolean }) {
+export function MonitorBar({ cluster, session, node, shown }: { cluster: string; session: string; node: string
+  shown: boolean }) {
   const on = useEnabled()
   const st = useStats(cluster, node, shown && on)
+  const job = nodeJob(session, node, useMyJobs(cluster, shown && on && !!node))
   if (!on) return null
   const host = st?.host ?? (node || 'login node')
   const mem = st && st.mem_total ? (100 * st.mem_used) / st.mem_total : null
@@ -16,6 +20,8 @@ export function MonitorBar({ cluster, node, shown }: { cluster: string; node: st
     <div className="flex h-6 shrink-0 items-center gap-3.5 overflow-hidden border-t border-line bg-view px-2.5
       font-mono text-xs whitespace-nowrap text-dim tabular-nums">
       <MonitorItem icon={Server} text={host} tip={`${host}: the whole machine, all users. Not just this terminal.`} />
+      {job && <MonitorItem icon={ListChecks} text={jobText(job, duration)} tip={jobTip(job, node, duration)}
+        level={job.state === 'ended' ? 'high' : undefined} />}
       <MonitorItem icon={Cpu} text={st?.cpu == null ? '...' : `${Math.round(st.cpu)}%`} level={level(st?.cpu ?? null)}
         tip={st?.cpu == null ? 'CPU: waiting for a second sample'
           : `CPU: ${st.cpu.toFixed(1)}% of all cores in use, by everyone on ${host}`} />
