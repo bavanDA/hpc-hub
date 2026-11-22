@@ -49,18 +49,15 @@ jobs:
           - os: skip
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30  # a stuck macOS job costs at most 300 of the month's minutes
+    # The secrets are given to the steps that need them, never to the whole job: npm's packages run in npm ci and
+    # the window's build, and none of them may read the update key (it signs what every app installs). Only
+    # whether each is set is known job-wide.
     env:
-      # signs the update files (packaging/release.py puts the signatures in latest.json); the app only installs
-      # updates signed with this key, whose public half is in app/src-tauri/tauri.conf.json
-      TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-      TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-      # macOS: HPC Hub's own code-signing certificate (self-made, not Apple's), so every build is the same app to
-      # macOS and the Keychain stops asking after one "Always Allow" (docs/releasing.md)
-      MACOS_SIGN_P12: ${{ secrets.MACOS_SIGN_P12 }}
-      MACOS_SIGN_P12_PASSWORD: ${{ secrets.MACOS_SIGN_P12_PASSWORD }}
+      HAS_UPDATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY != '' }}
+      HAS_MAC_CERT: ${{ secrets.MACOS_SIGN_P12 != '' }}
     steps:
       - name: A release needs the update key
-        if: inputs.publish && env.TAURI_SIGNING_PRIVATE_KEY == ''
+        if: inputs.publish && env.HAS_UPDATE_KEY != 'true'
         run: |
           echo "::error::Set the TAURI_SIGNING_PRIVATE_KEY secret first (see docs/releasing.md)"
           exit 1
@@ -224,11 +221,26 @@ jobs:
           key: tauri-tools-${{ runner.os }}-${{ hashFiles('app/src-tauri/Cargo.lock') }}
           restore-keys: tauri-tools-${{ runner.os }}-
 
-      - run: npm ci
+      # no install scripts: of all the app's packages only fsevents (an optional macOS file watcher) has one,
+      # and the build doesn't need it
+      - run: npm ci --ignore-scripts
         working-directory: app
-      - name: Sign the Mac app with HPC Hub's own certificate (when it is set)
-        if: runner.os == 'macOS' && env.MACOS_SIGN_P12 != ''
+      # the window's files, built here with no secret in reach; the tauri step below doesn't build them again
+      - run: npm run build
+        working-directory: app
+      - name: The Tauri build takes the window as built
         shell: bash
+        run: |
+          node -e "const f='packaging/tauri.release.json', c=JSON.parse(require('fs').readFileSync(f));
+            c.build = {...c.build, beforeBuildCommand: ''}; require('fs').writeFileSync(f, JSON.stringify(c, null, 2))"
+      # macOS: HPC Hub's own code-signing certificate (self-made, not Apple's), so every build is the same app to
+      # macOS and the Keychain stops asking after one "Always Allow" (docs/releasing.md)
+      - name: Sign the Mac app with HPC Hub's own certificate (when it is set)
+        if: runner.os == 'macOS' && env.HAS_MAC_CERT == 'true'
+        shell: bash
+        env:
+          MACOS_SIGN_P12: ${{ secrets.MACOS_SIGN_P12 }}
+          MACOS_SIGN_P12_PASSWORD: ${{ secrets.MACOS_SIGN_P12_PASSWORD }}
         run: |
           # A keychain of this run's own, in the search list (codesign looks there), with codesign allowed to use
           # the key without asking. macOS doesn't trust a self-made certificate, so it is named by its SHA-1:
@@ -247,7 +259,7 @@ jobs:
           echo "APPLE_SIGNING_IDENTITY=$id" >> "$GITHUB_ENV"
 
       - name: Make update files too (when the key is set)
-        if: env.TAURI_SIGNING_PRIVATE_KEY != ''
+        if: env.HAS_UPDATE_KEY == 'true'
         shell: bash
         run: |
           node -e "const f='packaging/tauri.release.json', c=JSON.parse(require('fs').readFileSync(f));
@@ -256,8 +268,13 @@ jobs:
       - run: npm run tauri:release -- ${{ inputs.beta && (runner.os == 'Linux' && '--bundles appimage'
           || runner.os == 'Windows' && '--bundles nsis' || '--bundles app') || '' }}
         working-directory: app
+        env:
+          # signs the update files (packaging/release.py puts the signatures in latest.json); the app only installs
+          # updates signed with this key, whose public half is in app/src-tauri/tauri.conf.json
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
       - name: The Mac app is signed with HPC Hub's certificate
-        if: runner.os == 'macOS' && env.MACOS_SIGN_P12 != ''
+        if: runner.os == 'macOS' && env.HAS_MAC_CERT == 'true'
         shell: bash
         run: |
           app=$(ls -d app/src-tauri/target/release/bundle/macos/*.app)
