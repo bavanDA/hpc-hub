@@ -1,8 +1,13 @@
 """Logins in the system keyring: libsecret when PyGObject is there, else secretstorage on Linux, Keychain or
-Credential Manager elsewhere, and the encrypted vault file on Android."""
+Credential Manager elsewhere, and the encrypted vault file on Android.
+
+A login found is kept in memory for the backend's lifetime, so the keyring (a new D-Bus connection each time on
+Linux) is asked once per login. Saving or clearing one changes what is kept. Nothing found is not kept: a locked
+keyring or a dismissed unlock looks the same as no login, so the next load asks again."""
 
 import json
 import sys
+import threading
 from contextlib import closing
 from dataclasses import dataclass
 
@@ -51,13 +56,51 @@ def _attrs(cluster_id: str, kind: str) -> dict:
     return {"cluster": cluster_id, "kind": kind}
 
 
+_cache: dict[tuple, str] = {}  # the secrets found, by their attrs: in memory only, never written anywhere
+_cache_lock = threading.Lock()
+_changes = 0  # counts saves and clears: a lookup that ran while one happened may be old, so it isn't kept
+
+
+def _key(attrs: dict) -> tuple:
+    return tuple(sorted(attrs.items()))
+
+
+def _forget(attrs: dict) -> None:
+    """Drop what is kept for these attrs; fewer attrs ({"cluster": ...}) drop every login they match."""
+    global _changes
+    with _cache_lock:
+        _changes += 1
+        for key in [k for k in _cache if set(attrs.items()) <= set(k)]:
+            del _cache[key]
+
+
+def _cached_lookup(attrs: dict) -> str | None:
+    key = _key(attrs)
+    with _cache_lock:
+        if key in _cache:
+            return _cache[key]
+        before = _changes
+    secret = _lookup(attrs)
+    if secret:  # only a login found: nothing found may be a locked keyring, so that is asked again next time
+        with _cache_lock:
+            if _changes == before:
+                _cache[key] = secret
+    return secret
+
+
 def save(cluster_id: str, kind: str, login: Login) -> None:
+    global _changes
     secret = json.dumps({"username": login.username, "password": login.password})
-    _store(_attrs(cluster_id, kind), f"HPC Hub {kind.upper()} login ({cluster_id})", secret)
+    attrs = _attrs(cluster_id, kind)
+    _forget(attrs)  # a store that fails leaves nothing kept: the next load asks the keyring what it has
+    _store(attrs, f"HPC Hub {kind.upper()} login ({cluster_id})", secret)
+    with _cache_lock:
+        _changes += 1
+        _cache[_key(attrs)] = secret
 
 
 def load(cluster_id: str, kind: str) -> Login | None:
-    secret = _lookup(_attrs(cluster_id, kind))
+    secret = _cached_lookup(_attrs(cluster_id, kind))
     if not secret:
         return None
     try:
@@ -68,7 +111,11 @@ def load(cluster_id: str, kind: str) -> Login | None:
 
 
 def clear(cluster_id: str, kind: str) -> None:
-    _clear(_attrs(cluster_id, kind))
+    attrs = _attrs(cluster_id, kind)
+    try:
+        _clear(attrs)
+    finally:
+        _forget(attrs)  # even when the clear failed: the keyring is asked again
 
 
 def _vault():

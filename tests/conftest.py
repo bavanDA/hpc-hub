@@ -136,11 +136,12 @@ def _own_cache_folder(tmp_path_factory, monkeypatch):
 def _never_the_real_keyring(request, monkeypatch):
     """Every test gets an in-memory keyring, so none can read, change or delete the logins of whoever runs the
     tests (a missed monkeypatch once called the real one). Tests marked keyring_backends stub the vaults
-    themselves."""
+    themselves. Either way the logins kept in memory start empty."""
+    from hpc_hub.core import credentials
+    monkeypatch.setattr(credentials, "_cache", {})
     if request.node.get_closest_marker("keyring_backends"):
         yield
         return
-    from hpc_hub.core import credentials
     store: dict = {}
     key = lambda attrs: tuple(sorted(attrs.items()))  # noqa: E731
     monkeypatch.setattr(credentials, "_store", lambda attrs, label, secret: store.__setitem__(key(attrs), secret))
