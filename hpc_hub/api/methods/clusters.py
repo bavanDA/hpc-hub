@@ -31,7 +31,7 @@ def _blocker(session):
     return None
 
 
-@method("clusters.connect")
+@method("clusters.connect", slow=True)
 def connect(cluster: str, vpn_only: bool = False, switch: bool = False) -> dict | None:
     """Start connecting; progress comes as session and log events. When another VPN is in the way, answers
     {"switch": {id, name}} and does nothing, unless switch is true: then that one is disconnected first."""

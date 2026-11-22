@@ -149,7 +149,7 @@ def _set_options(a: catalog.Agent, c, options: dict) -> None:
             setattr(c, o.key, value)
 
 
-@method("tools.agent_start")
+@method("tools.agent_start", slow=True)
 def agent_start(cluster: str, agent: str, folder: str = "", chat_id: str = "", label: str = "", task: str = "",
                 options: dict | None = None, new_node: bool | None = None, remote_control: bool | None = None,
                 profile: dict | None = None) -> dict:
@@ -253,7 +253,7 @@ def agent_install(cluster: str, agent: str) -> dict:
     return {"argv": s.ssh.argv(line, tty=True), "name": name, "node": "", "title": title, "color": color}
 
 
-@method("tools.ask_start")
+@method("tools.ask_start", slow=True)
 def ask_start(cluster: str, folder: str, out: str, prompt: str, agents: list[str], discuss: bool = False,
               profile: dict | None = None, remember: bool = False) -> dict:
     """One prompt to every agent picked (agents: ids); answers go to out. Waits for the node."""

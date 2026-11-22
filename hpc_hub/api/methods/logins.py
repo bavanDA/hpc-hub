@@ -102,7 +102,7 @@ def set_login(cluster: str, kind: str, username: str, password: str | None = Non
     save(cfg.id, kind, username, password)
 
 
-@method("clusters.check_login")
+@method("clusters.check_login", slow=True)
 def check_login(cluster: str, username: str, password: str = "") -> dict:
     """Whether this username and password work, before you connect (login_check.py: no Duo push). An empty
     password checks the saved one. {ok: True | False | None (can't tell from this network), text}."""

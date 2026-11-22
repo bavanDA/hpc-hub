@@ -64,7 +64,7 @@ def _error(e: Exception) -> str:
     return str(e) or type(e).__name__
 
 
-@method("projects.copy_plan")
+@method("projects.copy_plan", slow=True)
 def copy_plan(id: str) -> dict:
     """What is in the project (biggest first) and its Claude chats, so some can stay behind."""
     p = _find(_load(), id)

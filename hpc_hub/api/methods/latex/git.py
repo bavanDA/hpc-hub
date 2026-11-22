@@ -41,12 +41,12 @@ def git_commit_split(cluster: str, folder: str, commits: list[dict]) -> dict:
     return {"commits": len(commits)}
 
 
-@method("latex.git_pull")
+@method("latex.git_pull", slow=True)
 def git_pull(cluster: str, folder: str) -> str:
     return git.pull(hub().connected(cluster).ssh, folder)
 
 
-@method("latex.git_push")
+@method("latex.git_push", slow=True)
 def git_push(cluster: str, folder: str) -> str:
     return git.push(hub().connected(cluster).ssh, folder)
 

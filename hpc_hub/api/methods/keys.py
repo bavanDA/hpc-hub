@@ -41,7 +41,7 @@ def use(cluster: str, path: str, temporary: bool = False) -> dict:
     return key.json()
 
 
-@method("keys.test")
+@method("keys.test", slow=True)
 def test(cluster: str, username: str) -> dict:
     """Try a sign-in with only the key and no prompts. {ok, text, kind, reason, last}. The screen only asks once
     there are a key and a username."""

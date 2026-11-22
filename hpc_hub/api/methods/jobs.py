@@ -108,7 +108,7 @@ def inside(cluster: str, job_id: str) -> dict:
     return {"sessions": titles, "app_node": s.allocation is not None and s.allocation.job_id == job_id}
 
 
-@method("jobs.submit")
+@method("jobs.submit", slow=True)
 def submit(cluster: str, path: str) -> dict:
     """sbatch the job script at path (on the cluster), from its folder. Answers {job_id}."""
     try:

@@ -100,7 +100,7 @@ def _resume_globus() -> None:
               task=task["task_id"], status="Asking Globus…")
 
 
-@method("files.copy_plan")
+@method("files.copy_plan", slow=True)
 def copy_plan(cluster: str, path: str) -> dict:
     """What is inside a folder and how big, so big parts can stay behind."""
     sizes = transfer.subfolder_sizes(hub().connected(cluster).ssh, path)

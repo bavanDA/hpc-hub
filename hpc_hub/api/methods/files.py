@@ -77,23 +77,23 @@ def rename(cluster: str, path: str, name: str) -> str:
     return target
 
 
-@method("files.move")
+@method("files.move", slow=True)
 def move(cluster: str, paths: list[str], folder: str) -> list[str]:
     """Move files and folders into folder on the same cluster; answers why any stayed put ("a.txt is already
     there")."""
     return remote_fs.move(hub().connected(cluster).ssh, paths, folder)
 
 
-@method("files.delete")
+@method("files.delete", slow=True)
 def delete(cluster: str, path: str) -> None:
     remote_fs.remove(hub().connected(cluster).ssh, path)
 
 
-@method("files.zip")
+@method("files.zip", slow=True)
 def make_zip(cluster: str, path: str) -> None:
     remote_fs.make_zip(hub().connected(cluster).ssh, path)
 
 
-@method("files.extract")
+@method("files.extract", slow=True)
 def extract(cluster: str, path: str) -> None:
     remote_fs.extract(hub().connected(cluster).ssh, path)

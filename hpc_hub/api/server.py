@@ -1,7 +1,9 @@
 """JSON-RPC 2.0 over stdin/stdout, one JSON message per line: how the Tauri UI talks to the Python logic.
 
-Requests run on worker threads, so a slow cluster never blocks the others. Events (session state, logs,
-progress) go out as notifications: {"jsonrpc": "2.0", "method": "event", "params": {"name": ..., "data": ...}}.
+Requests run on worker threads, so a slow cluster never blocks the others. Calls that can wait a long time (for
+you to answer a sign-in question, for a node, for a big job on the cluster) run on workers of their own, so quick
+calls always find one free. Events (session state, logs, progress) go out as notifications:
+{"jsonrpc": "2.0", "method": "event", "params": {"name": ..., "data": ...}}.
 stdout carries only protocol messages; anything printed goes to stderr.
 """
 
@@ -15,21 +17,28 @@ from concurrent.futures import ThreadPoolExecutor
 from . import recent
 
 METHODS: dict[str, Callable] = {}
+SLOW: set[str] = set()  # methods that may wait minutes: they get the slow pool
 
 
-def method(name: str):
-    """Register a function the UI may call by name, with keyword params."""
+def method(name: str, slow: bool = False):
+    """Register a function the UI may call by name, with keyword params. slow: it may wait a long time (a question
+    to you, a node from the queue, a long command), so it runs on the slow pool and never holds a quick call up."""
     def add(fn):
         METHODS[name] = fn
+        if slow:
+            SLOW.add(name)
+        else:
+            SLOW.discard(name)
         return fn
     return add
 
 
 class Server:
-    def __init__(self, out=None, workers: int = 16):
+    def __init__(self, out=None, workers: int = 16, slow_workers: int = 16):
         self.out = out or sys.stdout
         self.lock = threading.Lock()
         self.pool = ThreadPoolExecutor(max_workers=workers, thread_name_prefix="rpc")
+        self.slow_pool = ThreadPoolExecutor(max_workers=slow_workers, thread_name_prefix="rpc-slow")
 
     def send(self, message: dict) -> None:
         line = json.dumps(message, separators=(",", ":"), default=str)
@@ -49,7 +58,8 @@ class Server:
         if not isinstance(msg, dict) or "method" not in msg:
             self.send({"jsonrpc": "2.0", "id": None, "error": {"code": -32600, "message": "Invalid request"}})
             return
-        self.pool.submit(self._call, msg)
+        pool = self.slow_pool if isinstance(msg["method"], str) and msg["method"] in SLOW else self.pool
+        pool.submit(self._call, msg)
 
     def _call(self, msg: dict) -> None:
         rid, name, params = msg.get("id"), msg["method"], msg.get("params") or {}
@@ -77,3 +87,4 @@ class Server:
             if line.strip():
                 self.handle(line)
         self.pool.shutdown(wait=True)
+        self.slow_pool.shutdown(wait=True)

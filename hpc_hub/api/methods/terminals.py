@@ -145,7 +145,7 @@ def links_in(text: str, node: str = "") -> list[dict]:
     return out
 
 
-@method("terminals.page")
+@method("terminals.page", slow=True)
 def page(cluster: str, path: str, local_dir: str = "", session: str = "", node: str = "") -> str:
     """A web page a terminal made: path as the terminal printed it (relative ones are in the session's folder). It and
     the files it uses from its folder come to local_dir; answers the page's path here, to open in the browser."""

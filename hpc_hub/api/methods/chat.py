@@ -39,7 +39,7 @@ def key(cluster: str, session: str, key: str, node: str = "") -> None:
     tmux.run(hub().connected(cluster).ssh, chat_view.key_command(session, key, node))
 
 
-@method("chat.mode")
+@method("chat.mode", slow=True)
 def mode(cluster: str, session: str, mode: str, node: str = "") -> dict:
     """Switch Claude's permission mode (ask, edits, plan, auto) as Shift+Tab does, checking the footer after each
     press. Some modes exist only when Claude was started with them; then it says so."""

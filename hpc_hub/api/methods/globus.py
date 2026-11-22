@@ -272,7 +272,7 @@ def cancel(task_id: str) -> None:
     client().cancel(task_id)
 
 
-@method("globus.start_personal")
+@method("globus.start_personal", slow=True)
 def start_personal(cluster: str, restart: bool = False) -> None:
     """Your own collection (Wulver): start Globus Connect Personal on the login node, sharing your storage; restart:
     stop it first even when it runs with those folders."""
