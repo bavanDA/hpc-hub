@@ -40,6 +40,12 @@ def a_zip(files: dict[str, str]) -> bytes:
 
 
 FIX = {"ui/index.html": "<html>fixed</html>", "py/hpc_hub/__init__.py": '__version__ = "1.0.0-beta.1"\n'}
+URL = "https://github.com/bavanDA/hpc-hub/releases/download/beta/quick-fix-4.zip"
+
+
+def for_fix(number: int, base: str = "1.0.0-beta.1", files: dict | None = None) -> bytes:
+    """A fix zip as packaging/quick_fix.py packs it: fix.json, signed with the rest, names what it is for."""
+    return a_zip({"fix.json": json.dumps({"base": base, "number": number}), **(files or FIX)})
 
 
 @pytest.fixture
@@ -72,7 +78,7 @@ def test_the_key_is_the_update_key():
 
 
 def test_only_a_newer_fix_for_this_very_version_is_offered(app):
-    feed = {"base": "1.0.0-beta.1", "number": 7, "url": "https://x/quick-fix-7.zip", "signature": "s", "notes": "n"}
+    feed = {"base": "1.0.0-beta.1", "number": 7, "url": URL, "signature": "s", "notes": "n"}
     assert quickfix.offered(feed, app)["number"] == 7
     assert quickfix.offered({**feed, "base": "1.0.0-beta.2"}, app) is None
     assert quickfix.offered({**feed, "number": "x"}, app) is None
@@ -95,9 +101,8 @@ def test_a_fix_for_another_version_is_not_in_use(app):
 def test_install_downloads_checks_and_unpacks(app, monkeypatch):
     sk, pub = keypair()
     monkeypatch.setattr(quickfix, "PUBKEY", pub)
-    data = a_zip(FIX)
-    feed = {"base": "1.0.0-beta.1", "number": 4, "url": "https://x/quick-fix-4.zip", "signature": signed(sk, data),
-            "notes": "Paste works"}
+    data = for_fix(4)
+    feed = {"base": "1.0.0-beta.1", "number": 4, "url": URL, "signature": signed(sk, data), "notes": "Paste works"}
     fetched = []
 
     def fetch(url, limit):
@@ -109,6 +114,9 @@ def test_install_downloads_checks_and_unpacks(app, monkeypatch):
     assert quickfix.install(fix, fetch) == {"base": "1.0.0-beta.1", "number": 4, "notes": "Paste works"}
     assert (app / "4" / "ui" / "index.html").read_text() == "<html>fixed</html>"
     assert (app / "4" / "py" / "hpc_hub" / "__init__.py").exists()
+    # kept for the window to check again at every start (quickfix.rs)
+    assert (app / "4" / "fix.zip").read_bytes() == data
+    assert (app / "4" / "fix.zip.sig").read_text() == feed["signature"]
     assert quickfix.check(fetch) is None  # nothing newer now
 
 
@@ -116,8 +124,8 @@ def test_a_badly_signed_fix_is_not_installed(app, monkeypatch):
     sk, pub = keypair()
     monkeypatch.setattr(quickfix, "PUBKEY", pub)
     other, _ = keypair()
-    data = a_zip(FIX)
-    fix = {"base": "1.0.0-beta.1", "number": 4, "url": "u", "signature": signed(other, data), "notes": ""}
+    data = for_fix(4)
+    fix = {"base": "1.0.0-beta.1", "number": 4, "url": URL, "signature": signed(other, data), "notes": ""}
     with pytest.raises(quickfix.BadFix):
         quickfix.install(fix, lambda url, limit: data)
     assert quickfix.current(app) is None
@@ -162,7 +170,64 @@ def test_a_release_reads_the_releases_fixes(app, monkeypatch):
     assert quickfix.feed_url() == quickfix.FEED  # 1.0.0-beta.1
     monkeypatch.setenv("HPC_HUB_APP_VERSION", "1.0.0")
     assert quickfix.feed_url() == quickfix.RELEASE_FEED
-    feed = {"base": "1.0.0", "number": 9, "url": "u", "signature": "s", "notes": ""}
+    feed = {"base": "1.0.0", "number": 9, "url": URL, "signature": "s", "notes": ""}
     asked = []
     assert quickfix.check(lambda url, limit: asked.append(url) or json.dumps(feed).encode())["number"] == 9
     assert asked == [quickfix.RELEASE_FEED]
+
+
+def test_an_old_signed_fix_cant_be_passed_off_as_a_newer_one(app, monkeypatch):
+    """The feed isn't signed: someone who can change it could offer fix 3's genuine zip as fix 9."""
+    sk, pub = keypair()
+    monkeypatch.setattr(quickfix, "PUBKEY", pub)
+    old = for_fix(3)
+    fix = {"base": "1.0.0-beta.1", "number": 9, "url": URL, "signature": signed(sk, old), "notes": ""}
+    with pytest.raises(quickfix.BadFix, match="fix 3"):
+        quickfix.install(fix, lambda url, limit: old)
+    assert quickfix.current(app) is None and not (app / "9").exists()
+
+
+def test_a_signed_fix_for_another_version_is_refused(app, monkeypatch):
+    sk, pub = keypair()
+    monkeypatch.setattr(quickfix, "PUBKEY", pub)
+    other = for_fix(4, base="1.0.0-beta.0")  # a real fix, for the beta before
+    fix = {"base": "1.0.0-beta.1", "number": 4, "url": URL, "signature": signed(sk, other), "notes": ""}
+    with pytest.raises(quickfix.BadFix, match="1.0.0-beta.0"):
+        quickfix.install(fix, lambda url, limit: other)
+    assert quickfix.current(app) is None
+
+
+def test_a_signed_zip_that_doesnt_say_what_it_is_for_is_refused(app, monkeypatch):
+    sk, pub = keypair()
+    monkeypatch.setattr(quickfix, "PUBKEY", pub)
+    data = a_zip(FIX)  # packed before fix.json existed
+    fix = {"base": "1.0.0-beta.1", "number": 4, "url": URL, "signature": signed(sk, data), "notes": ""}
+    with pytest.raises(quickfix.BadFix, match="which version"):
+        quickfix.install(fix, lambda url, limit: data)
+
+
+@pytest.mark.parametrize("url", ["http://github.com/bavanDA/hpc-hub/releases/download/beta/q.zip",
+                                 "https://example.com/bavanDA/hpc-hub/releases/download/beta/q.zip",
+                                 "https://github.com/someone/hpc-hub/releases/download/beta/q.zip",
+                                 "https://github.com/bavanDA/hpc-hub/releases/download/../../x/q.zip",
+                                 "file:///tmp/q.zip", "", None])
+def test_fixes_come_only_from_hpc_hubs_releases_over_https(app, url):
+    feed = {"base": "1.0.0-beta.1", "number": 7, "url": url, "signature": "s", "notes": ""}
+    assert quickfix.offered(feed, app) is None
+    with pytest.raises(quickfix.BadFix):
+        quickfix.install({**feed, "url": url or ""}, lambda u, limit: pytest.fail("never downloaded"))
+
+
+def test_the_update_key_never_shares_a_job_with_npm():
+    """The Quick fix workflow: npm ci runs hundreds of packages' code; none of it may see the key or a write token."""
+    text = (ROOT / ".github" / "workflows" / "quick-fix.yml").read_text()
+    build, sign = text.split("\n  sign:\n")
+    assert "npm ci" in build and "SIGNING" not in build and "contents: write" not in build
+    assert "GH_TOKEN" not in build.split("- run: npm ci")[1]  # only the step that reads the beta's version has it
+    assert "npm ci" not in sign and "cache: npm" not in sign
+    assert "--ignore-scripts" in sign and "@tauri-apps/cli@$V" in sign
+    steps = sign.split("\n      - ")
+    with_key = [st for st in steps if "TAURI_SIGNING_PRIVATE_KEY" in st]
+    assert len(with_key) == 1 and with_key[0].startswith("name: Sign")
+    assert "env:" not in sign.split("steps:")[0]  # no job-wide secrets
+    assert "--unsigned" in build

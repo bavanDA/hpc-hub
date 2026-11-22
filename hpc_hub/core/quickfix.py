@@ -3,9 +3,14 @@ zip next to the beta's installers (packaging/quick_fix.py) with ui/ (the window'
 package), for exactly one version, signed with the update key like every update. A beta reads quick-fix.json, a
 release quick-fix-release.json, so each kind of version has its own.
 
-Kept in HPC_HUB_QUICKFIX_DIR (the app's data folder, set by the window, release builds only): <number>/ui, <number>/py
-and current.json naming the one in use. The window serves ui/ (app/src-tauri/src/quickfix.rs) and starts the
-backend with py/ first on its path (packaging/backend.py); a start that never gets going drops the fix by itself."""
+Kept in HPC_HUB_QUICKFIX_DIR (the app's data folder, set by the window, release builds only): <number>/ui, <number>/py,
+the signed zip itself (<number>/fix.zip and fix.zip.sig) and current.json naming the one in use. The window checks the
+zip's signature again at every start (app/src-tauri/src/quickfix.rs): it serves ui/ from the checked zip and puts py/
+back the way the zip has it before the backend starts with py/ first on its path (packaging/backend.py). A start
+that never gets going drops the fix by itself.
+
+The feed (quick-fix.json) isn't signed: only the zip is. So which version and number a fix is for comes from the
+signed fix.json inside the zip, never from the feed alone; an old signed zip can't be passed off as a newer fix."""
 
 import base64
 import hashlib
@@ -26,10 +31,14 @@ RELEASE_FEED = "https://github.com/bavanDA/hpc-hub/releases/download/beta/quick-
 # the update key's public half, the same as plugins.updater.pubkey in app/src-tauri/tauri.conf.json
 PUBKEY = ("dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDlDOEU3QkFCQzNGMDgxMzQKUldRMGdmRERxM3VPbkw2d3BJY2xpenRu"
           "VFFmZjNhZW9xbTdYb1BpYSsrR1BlalBxWVA5ZURsQncK")
+# the only place quick fixes come from: this repository's releases, over https
+DOWNLOADS = "https://github.com/bavanDA/hpc-hub/releases/download/"
 MAX_ZIP = 60 * 1024 * 1024
 MAX_FILES = 5000
 TIMEOUT = 30
 CURRENT = "current.json"
+META = "fix.json"  # in the zip: {"base", "number"}, signed with it
+KEPT = "fix.zip"  # the signed zip, kept for the window to check at every start
 
 
 class BadFix(Exception):
@@ -124,13 +133,18 @@ def _get(url: str, limit: int) -> bytes:
     return data
 
 
+def from_releases(url) -> bool:
+    """Only this repository's release downloads, over https."""
+    return isinstance(url, str) and url.startswith(DOWNLOADS) and "/.." not in url and "\\" not in url
+
+
 def offered(feed: dict, root: Path) -> dict | None:
     """The fix the feed offers, when it's for this version and newer than the one in use."""
     try:
         number = int(feed["number"])
     except (KeyError, TypeError, ValueError):
         return None
-    if feed.get("base") != app_version() or not feed.get("url") or not feed.get("signature"):
+    if feed.get("base") != app_version() or not from_releases(feed.get("url")) or not feed.get("signature"):
         return None
     cur = current(root)
     if cur and cur["number"] >= number or number in failed(root):
@@ -169,6 +183,8 @@ def unpack(data: bytes, into: Path) -> None:
         raise BadFix("The quick fix has too many files")
     for name in names:
         parts = Path(name).parts
+        if name == META:
+            continue
         if name.startswith(("/", "\\")) or ".." in parts or ":" in name or not parts or parts[0] not in ("ui", "py"):
             raise BadFix(f"The quick fix has a file it shouldn't: {name}")
     if "ui/index.html" not in names and "py/hpc_hub/__init__.py" not in names:
@@ -179,19 +195,35 @@ def unpack(data: bytes, into: Path) -> None:
     tmp.rename(into)
 
 
+def signed_for(data: bytes) -> tuple[str, int]:
+    """The version and number a verified zip is for, from its own fix.json."""
+    try:
+        meta = json.loads(zipfile.ZipFile(io.BytesIO(data)).read(META))
+        return str(meta["base"]), int(meta["number"])
+    except (KeyError, ValueError, TypeError, zipfile.BadZipFile):
+        raise BadFix("The quick fix doesn't say which version it is for") from None
+
+
 def install(fix: dict, fetch=_get) -> dict:
     """Download, check the signature, unpack and make it the one in use from the next start. Returns current()."""
     root = folder()
     if root is None:
         raise BadFix("This build of HPC Hub can't take quick fixes")
+    if not from_releases(fix.get("url")):
+        raise BadFix("The quick fix isn't from HPC Hub's releases")
     data = fetch(fix["url"], MAX_ZIP)
     verify(data, fix["signature"])
+    base, number = signed_for(data)
+    if base != app_version() or number != int(fix["number"]) or base != fix.get("base"):
+        raise BadFix(f"The quick fix is for {base} fix {number}, not this version")
     root.mkdir(parents=True, exist_ok=True)
-    into = root / str(int(fix["number"]))
+    into = root / str(number)
     shutil.rmtree(into, ignore_errors=True)
     unpack(data, into)
+    (into / KEPT).write_bytes(data)
+    (into / (KEPT + ".sig")).write_text(fix["signature"], encoding="ascii")
     tmp = root / (CURRENT + ".part")
-    tmp.write_text(json.dumps({"base": fix["base"], "number": int(fix["number"]), "notes": fix.get("notes", "")}),
+    tmp.write_text(json.dumps({"base": base, "number": number, "notes": fix.get("notes", "")}),
                    encoding="utf-8")
     os.replace(tmp, root / CURRENT)
     tidy(root)

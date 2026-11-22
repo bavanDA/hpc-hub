@@ -30,4 +30,7 @@ tauri-plugin-notification = "2.7.0"
 tauri-plugin-updater = "2"
 tauri-plugin-process = "2"
 dirs = "7"
+# quick fixes are checked again at every start (quickfix.rs): the update key's signature and the zip inside
+minisign-verify = "0.3"
+zip = { version = "9", default-features = false, features = ["deflate-flate2-zlib-rs"] }
 tauri-plugin-single-instance = "2"

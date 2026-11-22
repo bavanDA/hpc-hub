@@ -3,6 +3,10 @@ name: Quick fix
 # A fix in about a minute, without a new build: the window's files and the Python, for apps on exactly the current
 # beta, or with "release" ticked the latest release (they look every minute). packaging/quick_fix.py refuses a change that
 # needs a new build (Rust, packaging, the backend's libraries): run Build with beta ticked for those.
+#
+# Two jobs, so the update key never shares a job with npm ci: "build" runs the app's npm packages (any of them could
+# read the job's secrets) with no key and a read-only token; "sign" installs only the Tauri CLI, without running any
+# install scripts, and gets the key in its one signing step. A bad package can't sign a fix for everyone.
 on:
   workflow_dispatch:
     inputs:
@@ -20,23 +24,27 @@ concurrency:
   cancel-in-progress: false
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  quick-fix:
+  build:
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    env:
-      TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-      TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-      GH_TOKEN: ${{ github.token }}
+    permissions:
+      contents: read
+    outputs:
+      feed: ${{ steps.version.outputs.feed }}
+      version: ${{ steps.version.outputs.version }}
     steps:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0  # to compare with the beta's commit
+          persist-credentials: false
       - name: The version it fixes
+        id: version
         env:
           RELEASE: ${{ inputs.release }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           if [ "$RELEASE" = "true" ]; then
             T=$(gh api "repos/${{ github.repository }}/releases/latest" -q .tag_name)
@@ -50,9 +58,10 @@ jobs:
           fi
           C=$(git rev-list -n 1 "$T")
           echo "$V from $C"
-          echo "FEED=$FEED" >> "$GITHUB_ENV"
-          echo "V=$V" >> "$GITHUB_ENV"
+          echo "feed=$FEED" >> "$GITHUB_OUTPUT"
+          echo "version=$V" >> "$GITHUB_OUTPUT"
           echo "C=$C" >> "$GITHUB_ENV"
+          echo "V=$V" >> "$GITHUB_ENV"
       - uses: actions/setup-node@v7
         with:
           node-version: 22
@@ -60,15 +69,58 @@ jobs:
           cache-dependency-path: app/package-lock.json
       - run: npm ci --no-audit --no-fund
         working-directory: app
-      - name: Pack and sign
+      - name: Pack (not signed)
         env:
           NOTES: ${{ inputs.notes }}
         run: |
           printf '%s\n' "$NOTES" > notes.txt
-          python3 packaging/quick_fix.py out "$V" "${{ github.run_number }}" notes.txt --check "$C"
-      - name: Publish next to the beta
+          python3 packaging/quick_fix.py out "$V" "${{ github.run_number }}" notes.txt --check "$C" --unsigned
+      - uses: actions/upload-artifact@v7
+        with:
+          name: quick-fix
+          path: out/
+          retention-days: 1
+
+  sign:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+          sparse-checkout: |
+            packaging/quick_fix.py
+            app/package-lock.json
+          sparse-checkout-cone-mode: false
+      - uses: actions/download-artifact@v8
+        with:
+          name: quick-fix
+          path: out
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22  # no npm cache here: nothing from the build job's packages
+      - name: Only the Tauri CLI, at the app's locked version, no install scripts
         run: |
-          gh release upload beta out/quick-fix-*.zip --clobber
+          V=$(node -p "require('./app/package-lock.json').packages['node_modules/@tauri-apps/cli'].version")
+          mkdir -p "$RUNNER_TEMP/signer"
+          npm install --prefix "$RUNNER_TEMP/signer" --ignore-scripts --no-audit --no-fund --no-save "@tauri-apps/cli@$V"
+      - name: Sign
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: |
+          node "$RUNNER_TEMP/signer/node_modules/@tauri-apps/cli/tauri.js" signer sign out/quick-fix-*.zip > /dev/null
+          python3 packaging/quick_fix.py --add-signature out
+      - name: Publish next to the beta
+        env:
+          GH_TOKEN: ${{ github.token }}
+          FEED: ${{ needs.build.outputs.feed }}
+          V: ${{ needs.build.outputs.version }}
+        run: |
+          gh release upload beta out/quick-fix-*.zip --clobber -R "${{ github.repository }}"
           [ "$FEED" = quick-fix.json ] || mv out/quick-fix.json "out/$FEED"
-          gh release upload beta "out/$FEED" --clobber
+          gh release upload beta "out/$FEED" --clobber -R "${{ github.repository }}"
           echo "Quick fix ${{ github.run_number }} for $V is out"

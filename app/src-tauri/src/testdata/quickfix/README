@@ -1,0 +1,2 @@
+Quick fix zips signed with a throwaway test key (not the update key) for quickfix.rs tests.
+Only test.pub is kept; the private half was thrown away.

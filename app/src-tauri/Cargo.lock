@@ -1598,6 +1598,7 @@ version = "0.2.6"
 dependencies = [
  "base64 0.23.1",
  "dirs",
+ "minisign-verify",
  "portable-pty",
  "serde",
  "serde_json",
@@ -1610,6 +1611,7 @@ dependencies = [
  "tauri-plugin-process",
  "tauri-plugin-single-instance",
  "tauri-plugin-updater",
+ "zip",
 ]
 
 [[package]]
@@ -5980,6 +5982,7 @@ checksum = "e3476fd497ac8af5b1ec7b51acab7bef380f7e8dd8e0487595bafd839417a302"
 dependencies = [
  "constant_time_eq",
  "crc32fast",
+ "flate2",
  "getrandom 0.4.3",
  "indexmap 2.14.2",
  "libc",

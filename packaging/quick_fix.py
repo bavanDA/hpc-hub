@@ -1,9 +1,13 @@
 """A quick fix for the current beta (hpc_hub/core/quickfix.py): the window's files (app/dist, built first) and the
 hpc_hub package, zipped for apps on exactly that beta, plus quick-fix.json, which those apps read every minute.
 
-    python packaging/quick_fix.py <out folder> <beta version> <number> [notes file] [--check <beta commit>]
+    python packaging/quick_fix.py <out folder> <beta version> <number> [notes file] [--check <beta commit>] [--unsigned]
+    python packaging/quick_fix.py --add-signature <out folder>
 
-The zip is signed with the update key (TAURI_SIGNING_PRIVATE_KEY, as for updates; `tauri signer sign`). --check
+The zip is signed with the update key (TAURI_SIGNING_PRIVATE_KEY, as for updates; `tauri signer sign`). With
+--unsigned the feed is written without a signature: the workflow builds in a job that never sees the key (npm ci runs
+hundreds of packages' code there), then signs in another that installs nothing but the Tauri CLI, and --add-signature
+puts the zip's .sig into the feed. --check
 refuses a fix that can't work without a new build: one that changes the Rust side, the packaging or the Python
 libraries the frozen backend carries. The Quick fix workflow (.github/workflows/quick-fix.yml) runs this."""
 
@@ -31,10 +35,12 @@ def files(folder: Path):
             yield f
 
 
-def pack(zip_path: Path, dist: Path, package: Path, version: str) -> int:
-    """ui/ from the built window, py/hpc_hub/ from the package, its __version__ set to the beta's own."""
+def pack(zip_path: Path, dist: Path, package: Path, version: str, number: int) -> int:
+    """ui/ from the built window, py/hpc_hub/ from the package, its __version__ set to the beta's own, and fix.json
+    naming the version and number: the feed isn't signed, so the app takes those from the signed zip."""
     count = 0
     with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as z:
+        z.writestr("fix.json", json.dumps({"base": version, "number": number}) + "\n")
         for f in files(dist):
             z.write(f, "ui/" + f.relative_to(dist).as_posix())
             count += 1
@@ -63,8 +69,28 @@ def sign(path: Path) -> str:
     return text
 
 
+def add_signature(out: Path) -> str:
+    """The .sig `tauri signer sign` wrote next to the zip, moved into the feed. Standard library only."""
+    feed_path = out / "quick-fix.json"
+    feed = json.loads(feed_path.read_text(encoding="utf-8"))
+    zip_path = out / feed["url"].rsplit("/", 1)[-1]
+    sig = zip_path.with_name(zip_path.name + ".sig")
+    feed["signature"] = sig.read_text().strip()
+    if not feed["signature"]:
+        raise SystemExit(f"{sig} is empty")
+    feed_path.write_text(json.dumps(feed, indent=2) + "\n", encoding="utf-8")
+    sig.unlink()
+    return feed["signature"]
+
+
 def main() -> int:
     args = list(sys.argv[1:])
+    if args[:1] == ["--add-signature"] and len(args) == 2:
+        add_signature(Path(args[1]))
+        return 0
+    unsigned = "--unsigned" in args
+    if unsigned:
+        args.remove("--unsigned")
     base_commit = ""
     if "--check" in args:
         i = args.index("--check")
@@ -87,10 +113,10 @@ def main() -> int:
     subprocess.run([npm, "run", "build"], cwd=ROOT / "app", check=True)
     out.mkdir(parents=True, exist_ok=True)
     zip_path = out / f"quick-fix-{number}.zip"
-    count = pack(zip_path, ROOT / "app" / "dist", ROOT / "hpc_hub", version)
+    count = pack(zip_path, ROOT / "app" / "dist", ROOT / "hpc_hub", version, number)
     feed = {"base": version, "number": number, "notes": notes or f"Quick fix {number}",
             "url": f"https://github.com/{REPO}/releases/download/beta/{zip_path.name}",
-            "signature": sign(zip_path), "date": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())}
+            "signature": "" if unsigned else sign(zip_path), "date": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())}
     (out / "quick-fix.json").write_text(json.dumps(feed, indent=2) + "\n", encoding="utf-8")
     print(f"Quick fix {number} for {version}: {count} files, {zip_path.stat().st_size // 1024} KB")
     return 0

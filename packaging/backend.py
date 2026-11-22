@@ -20,6 +20,9 @@ def _without_fix() -> None:
 
 
 if FIX and os.path.isfile(os.path.join(FIX, "hpc_hub", "__init__.py")):
+    # no __pycache__ beside the fix: the window puts py/ back the way the signed zip has it at every start and
+    # would remove one each time (quickfix.rs restore), and a .pyc there is code no signature covers
+    sys.dont_write_bytecode = True
     sys.path.insert(0, FIX)
     try:
         from hpc_hub.core import hostenv
