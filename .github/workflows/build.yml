@@ -111,6 +111,12 @@ jobs:
             app/src-tauri
             app/vpn-helper
 
+      # the window shell's own tests (the window fits the screen, PTYs, sign-in pages); Linux has every library
+      - name: Window shell tests
+        if: runner.os == 'Linux'
+        working-directory: app/src-tauri
+        run: cargo test --locked --lib
+
       # The frozen backend changes only with the Python: a test build reuses the last one made from the same files.
       # A release always makes its own.
       - name: Frozen backend from an earlier build

@@ -67,5 +67,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: app/src-tauri
-      - run: cargo check --locked && cargo test --locked --lib
+      # check only: the cached libraries above lack glib's build files, which building the tests needs (the Build
+      # workflow installs them all and runs the shell's Rust tests)
+      - run: cargo check --locked
         working-directory: app/src-tauri
