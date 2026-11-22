@@ -2,12 +2,14 @@
 // half is in tauri.conf.json). Checked a little after the start and twice a day (every minute with Beta updates on); installing is one click: download,
 // stop the backend (Windows can't replace a running program), install, restart. Work on the cluster keeps running.
 // Quick fixes for this very version (quickFix below) every minute; with Beta updates on, betas too. Installed the same way.
+// While the window is hidden those quiet checks slow to every 15 minutes (quietChecks.ts).
 // In a plain browser (design work), ?update=0.9.0 pretends that version is out.
 import { invoke } from '@tauri-apps/api/core'
 import { useSyncExternalStore } from 'react'
 
 import { call } from '../../rpc'
 import { inTauri } from './platform'
+import { quietChecks, SHOWN_EVERY_MS } from './quietChecks'
 import { gone, newer, replaces } from './versions'
 
 export type UpdateState =
@@ -20,7 +22,6 @@ export type UpdateState =
 export const RELEASES = 'https://github.com/bavanDA/hpc-hub/releases/latest'
 const FIRST_CHECK_MS = 20_000
 const EVERY_MS = 12 * 3600_000
-const BETA_EVERY_MS = 60_000  // with Beta updates on
 
 type Found = { version: string; body?: string
   download: (onEvent: (e: DownloadEvent) => void) => Promise<void>
@@ -176,9 +177,10 @@ export function startUpdateChecks(found: (version: string) => void) {
   // every minute, quietly: a quick fix for this version; with Beta updates on also a new beta and a release (three
   // small files) (no "Checking…"); an update already offered or installing is left alone
   // An offer is looked at again too: a newer beta replaces the files of the one offered, so that one can't install.
+  // Hidden, every 15 minutes instead, and once right away when the window shows again (quietChecks.ts).
   const quiet = () => state.kind === 'idle' || state.kind === 'none' || state.kind === 'available'
     || state.kind === 'error' && !state.version
-  setInterval(() => {
+  const checks = quietChecks(() => {
     if (!quiet()) return
     void betaOn().then(async (on) => {
       const f = on ? await newest() : await quickFix()  // Beta updates off: only a quick fix, one small file
@@ -189,7 +191,9 @@ export function startUpdateChecks(found: (version: string) => void) {
       setFound(f)
       if (f.version !== told) { told = f.version; found(f.version) }
     }).catch(() => {})
-  }, BETA_EVERY_MS)
+  }, () => Date.now(), () => document.hidden)
+  setInterval(checks.tick, SHOWN_EVERY_MS)
+  document.addEventListener('visibilitychange', checks.shown)
 }
 
 const betaOn = () => call<{ beta_updates: boolean }>('preferences.get').then((p) => p.beta_updates).catch(() => false)
