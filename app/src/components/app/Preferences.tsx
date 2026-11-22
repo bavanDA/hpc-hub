@@ -20,7 +20,7 @@ import { AppearanceGroup } from './Appearance'
 import { forgetProfiles, getProfiles } from './openLink'
 import { PairPhoneDialog } from './PairPhoneDialog'
 import { PaperAgent } from './PaperAgent'
-import { university, type SetupStatus } from './setup'
+import { needsSignIn, setupUrl, university, type SetupStatus } from './setup'
 import { experimentsOf, type Experiments, type Preferences, type Profiles } from './types'
 
 const isWindows = navigator.userAgent.includes('Windows')
@@ -74,8 +74,14 @@ export function PreferencesDialog({ onClose, onExperimental, onDisconnectAndQuit
               onChange={(on) => {
                 const ids = setup.choices.map((x) => x.id)
                   .filter((id) => id === c.id ? on : setup.chosen.includes(id))
-                call<SetupStatus>('setup.choose', { ids }).then((s) => { setSetup(s); location.reload() })
-                  .catch((e: Error) => toast(e.message))
+                call<SetupStatus>('setup.choose', { ids }).then(async (s) => {
+                  setSetup(s)
+                  // just turned on and never signed in: its sign-in step, as in first-time setup
+                  const login = on ? await call<{ ssh?: { username?: string } }>('clusters.login', { cluster: c.id })
+                    .catch(() => null) : null
+                  if (on && needsSignIn(login)) location.replace(setupUrl(location.href, c.id))
+                  else location.reload()
+                }).catch((e: Error) => toast(e.message))
               }} />
           ))}
         </Section>}

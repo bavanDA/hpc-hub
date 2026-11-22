@@ -8,7 +8,7 @@ import { useSessionNotifications } from './components/app/notify'
 import { Onboarding } from './components/app/Onboarding'
 import { UpdateChecker } from './components/app/UpdateDialog'
 import { GROUPS, HOME, type Page } from './components/app/pages'
-import type { SetupStatus } from './components/app/setup'
+import { setupFor, withoutSetup, type SetupStatus } from './components/app/setup'
 import { experimentsOf, NO_EXPERIMENTS, type Experiments, type Preferences } from './components/app/types'
 import { useWatch } from './components/app/watch'
 import { Welcome } from './components/app/Welcome'
@@ -129,6 +129,15 @@ export default function App() {
         {onboard
           ? <Onboarding ids={onboard} onDone={() => location.reload()} />
           : <Welcome status={setup} onDone={setOnboard} />}
+      </div>
+    )
+  }
+  const joining = setup && !blocked ? setupFor(location.search, setup.chosen) : ''
+  if (joining) {  // a cluster just turned on in Settings: sign in to it first (setup.ts)
+    return (
+      <div className="flex h-full flex-col">
+        <HeaderBar title="HPC Hub" />
+        <Onboarding ids={[joining]} onDone={() => location.replace(withoutSetup(location.href))} />
       </div>
     )
   }
