@@ -9,7 +9,7 @@ import { splitHits } from '../reader/hits'
 import { TextFind } from '../reader/TextFind'
 import { useToast } from '../useToast'
 import type { Tab } from '../terminals/tabs'
-import { blocks, COMMANDS, EFFORTS, inline, items, MODELS, MODES, needsTerminal, toolHolds, type Item, type Mode } from './model'
+import { blocks, COMMANDS, EFFORTS, inline, items, MODELS, MODES, needsTerminal, starting, toolHolds, type Item, type Mode } from './model'
 import { useChat } from './useChat'
 
 type Tool = Extract<Item, { kind: 'tool' }>
@@ -171,6 +171,7 @@ export function ChatView({ tab, shown, title, toggle, onTerminal }: { tab: Tab; 
   title: ReactNode; toggle: ReactNode; onTerminal: () => void }) {
   const toast = useToast()
   const { state, send, key, mode } = useChat(tab, shown)
+  const [switching, setSwitching] = useState<Mode | null>(null)  // a mode switch on its way (a few presses)
   const [draft, setDraft] = useState('')
   const [slash, setSlash] = useState(false)
   const [model, setModel] = useState('')
@@ -187,6 +188,7 @@ export function ChatView({ tab, shown, title, toggle, onTerminal }: { tab: Tab; 
   const step = (back: boolean) => setHit((h) => h.total ? { ...h, n: (h.n + (back ? h.total - 1 : 1)) % h.total } : h)
   const shownItems = items(state.events, state.cwd)
   const screen = state.screen
+  const wait = starting(screen)  // Claude is still starting: say so, and nothing to switch yet
   const ask = screen?.ask ?? null
 
   // Ctrl+F (⌘F on a Mac) while the chat shows: find in the conversation
@@ -242,9 +244,15 @@ export function ChatView({ tab, shown, title, toggle, onTerminal }: { tab: Tab; 
           onPick={(v) => { setEffort(v); send(`/effort ${v}`).catch(fail) }} />
         <div role="group" aria-label="Permission mode" className="flex rounded-lg border border-line-strong p-0.5">
           {MODES.map((m) => (
-            <button key={m.value} title={m.note} aria-pressed={screen?.mode === m.value}
-              onClick={() => mode(m.value as Mode).catch(fail)}
-              className={`h-7 rounded-md px-2.5 text-sm ${screen?.mode === m.value ? 'bg-selected font-semibold' : 'text-dim hover:bg-hover'}`}>
+            <button key={m.value} title={wait ? 'Claude is still starting' : m.note} aria-pressed={screen?.mode === m.value}
+              disabled={wait || !!switching}
+              onClick={() => {
+                setSwitching(m.value as Mode)
+                mode(m.value as Mode).catch(fail).finally(() => setSwitching(null))
+              }}
+              className={`h-7 rounded-md px-2.5 text-sm disabled:cursor-default ${switching === m.value
+                ? 'animate-pulse bg-hover' : screen?.mode === m.value ? 'bg-selected font-semibold'
+                : wait ? 'text-dim opacity-60' : 'text-dim hover:bg-hover'}`}>
               {m.label}</button>
           ))}
         </div>
@@ -263,6 +271,11 @@ export function ChatView({ tab, shown, title, toggle, onTerminal }: { tab: Tab; 
             </div>
           )}
           {state.waiting && !state.unknown && <div className="py-10 text-center text-sm text-dim">Waiting for Claude to start…</div>}
+          {!state.waiting && wait && (
+            <div className="flex items-center justify-center gap-2 py-6 text-sm text-dim">
+              <span className="size-2 animate-pulse rounded-full bg-[var(--color-orange)]" />Claude is starting…
+            </div>
+          )}
           {state.trimmed && <div className="text-center text-xs text-dim">Earlier messages are in the terminal</div>}
           {shownItems.map((it) => {
             if (it.kind === 'tool') return <ToolCard key={it.id} t={it} />

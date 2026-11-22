@@ -253,6 +253,24 @@ def _arrow_menu(lines: list[str]) -> tuple[list[dict], int | None]:
                    for j in range(top, end)]
         return options, start + top
     return [], None
+# the input box's edges: a rule across the pane, or the rounded box of older Claudes ("╰────╯")
+EDGE = re.compile(r"^\s*[╭┌╰└]?─{20,}[╮┐╯┘]?\s*$")
+
+
+STATUS_WORDS = ("shift+tab", "for shortcuts", "mode on", "accept edits", "bypass permissions", "esc to interrupt")
+
+
+def _status_line(lines: list[str]) -> str | None:
+    """The rows under Claude's input box, where it says its mode; None while there is no input box (Claude is
+    still starting, or a question takes its place). Only these rows: the answer above may mention "plan mode"."""
+    edges = [i for i, ln in enumerate(lines) if EDGE.match(ln)]
+    if len(edges) < 2 or len(lines) - edges[-1] > 5:
+        return None
+    below = "\n".join(lines[edges[-1] + 1:]).lower()
+    # only a real status line: Claude's welcome box has the same edges, with other words under it
+    return below if any(w in below for w in STATUS_WORDS) else None
+
+
 MODES = (("accept edits", "edits"), ("plan mode", "plan"), ("auto mode", "auto"), ("bypass permissions", "auto"),
          ("don't ask", "auto"))
 
@@ -266,7 +284,9 @@ def parse_screen(text: str) -> dict:
     while lines and not lines[-1].strip():
         lines.pop()
     tail = "\n".join(lines[-6:]).lower()
-    mode = next((m for words, m in MODES if words in tail and "on" in tail), "ask")
+    status = _status_line(lines)
+    words_from = status if status is not None else tail  # no input box: the old guess from the last rows
+    mode = next((m for words, m in MODES if words in words_from and "on" in words_from), "ask")
     busy = "esc to interrupt" in tail
     ask = None
     options: list[dict] = []
@@ -301,7 +321,9 @@ def parse_screen(text: str) -> dict:
         detail = "\n".join(ln for ln in (above[:q] if q is not None else above[:-1]) if ln.strip(BOX))[-1500:]
         ask = {"question": question, "detail": detail, "options": options,
                "permission": question.lower().startswith("do you want")}
-    return {"busy": busy and not ask, "mode": mode, "ask": ask}
+    # ready: Claude's input box is up (it has started); until then the window says it is starting
+    ready = status is not None or "shift+tab" in tail or "for shortcuts" in tail
+    return {"busy": busy and not ask, "mode": mode, "ask": ask, "ready": ready}
 
 
 def screen_command(session: str, node: str = "") -> str:
@@ -311,12 +333,13 @@ def screen_command(session: str, node: str = "") -> str:
 def screen(ssh: SshMaster, session: str, node: str = "") -> dict:
     res = ssh.on_login(screen_command(session, node), timeout=20)
     if res.returncode != 0 and not res.stdout:
-        return {"gone": True, "busy": False, "mode": "ask", "ask": None}
+        return {"gone": True, "busy": False, "mode": "ask", "ask": None, "ready": False}
     return parse_screen(res.stdout)
 
 
 # keys the view may press: an answer's number, Escape (stop Claude, or say no), Enter, Shift+Tab (next mode)
-KEYS = {**{str(n): str(n) for n in range(1, 10)}, "escape": "Escape", "enter": "Enter", "mode": "BTab"}
+KEYS = {**{str(n): str(n) for n in range(1, 10)}, "escape": "Escape", "enter": "Enter", "mode": "BTab",
+        **{f"mode:{n}": " ".join(["BTab"] * n) for n in range(1, 4)}}  # several presses at once
 
 
 MOVE = re.compile(r"^move:([+-]\d)$")

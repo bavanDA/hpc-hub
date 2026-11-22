@@ -26,3 +26,19 @@ describe('terminal links', () => {
     expect(tab).not.toContain('WebLinksAddon')
   })
 })
+
+// 2026-11-20 report (Linux): "when claude is not starting it should say wait or claude loading", and switching
+// modes was slow with nothing showing it was on its way
+describe('while Claude starts, and while a mode switch is on its way', () => {
+  it('says Claude is starting', () => {
+    expect(view).toContain('const wait = starting(screen)')
+    expect(view).toMatch(/\{!state\.waiting && wait && \(/)
+    expect(view).toContain('Claude is starting…')
+  })
+
+  it('the mode buttons wait for Claude, and the one clicked pulses until the switch is done', () => {
+    expect(view).toContain('disabled={wait || !!switching}')
+    expect(view).toMatch(/setSwitching\(m\.value as Mode\)\s+mode\(m\.value as Mode\)\.catch\(fail\)\.finally\(\(\) => setSwitching\(null\)\)/)
+    expect(view).toContain("'animate-pulse bg-hover'")
+  })
+})

@@ -10,7 +10,11 @@ export type ReadAnswer = { waiting?: boolean; unknown?: boolean; file?: string; 
   trimmed?: boolean; reset?: boolean; cwd?: string; events?: ChatEvent[] }
 
 export type Ask = { question: string; detail: string; options: { key: string; label: string }[]; permission: boolean }
-export type Screen = { busy: boolean; mode: Mode; ask: Ask | null; gone?: boolean }
+export type Screen = { busy: boolean; mode: Mode; ask: Ask | null; gone?: boolean
+  ready?: boolean }  // false while Claude is starting: no input box yet
+
+/** Claude is still starting: nothing to answer or switch yet (2026-11-20 report: nothing said so). */
+export const starting = (s: Screen | null) => !!s && s.ready === false && !s.ask && !s.gone
 export type Mode = 'ask' | 'edits' | 'plan' | 'auto'
 
 export type DiffLine = { kind: 'same' | 'del' | 'add'; text: string }

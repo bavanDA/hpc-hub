@@ -9,6 +9,7 @@ from ..hub import hub
 from ..server import method
 
 MODE_TRIES = 6  # Shift+Tab presses at most when switching the permission mode
+CYCLE = ("ask", "edits", "plan", "auto")  # Shift+Tab's order; auto (or bypass) only when Claude offers it
 MODE_WAIT = 4  # reads of the footer after a press before the next one (a node over ssh draws later)
 
 
@@ -46,6 +47,13 @@ def mode(cluster: str, session: str, mode: str, node: str = "") -> dict:
         raise ValueError(f"Unknown mode {mode}")
     ssh = hub().connected(cluster).ssh
     now = chat_view.screen(ssh, session, node)
+    if not now.get("ready", True) and not now.get("ask") and not now.get("gone"):
+        raise RuntimeError("Claude is still starting. Switch once its input box shows")
+    ahead = forward(now.get("mode", ""), mode)
+    if ahead > 1 and not now.get("ask") and not now.get("gone"):  # one trip over ssh for every press needed
+        before = now.get("mode")
+        tmux.run(ssh, chat_view.key_command(session, f"mode:{ahead}", node))
+        now = _changed(ssh, session, node, before)
     for _ in range(MODE_TRIES):
         if now.get("mode") == mode:
             return now
@@ -53,11 +61,28 @@ def mode(cluster: str, session: str, mode: str, node: str = "") -> dict:
             raise RuntimeError("Answer Claude's question first")
         before = now.get("mode")
         tmux.run(ssh, chat_view.key_command(session, "mode", node))
-        for _ in range(MODE_WAIT):  # wait for the footer to change: pressing again too soon skips a mode
-            time.sleep(0.35)
-            now = chat_view.screen(ssh, session, node)
-            if now.get("mode") != before or now.get("ask") or now.get("gone"):
-                break
+        now = _changed(ssh, session, node, before)
     if now.get("mode") == mode:
         return now
     raise RuntimeError("Claude didn't offer that mode. Some modes are only there when Claude starts with them")
+
+
+def forward(now: str, want: str) -> int:
+    """Presses from now to want that never wrap past the end of the cycle (auto may not be there): 0 when it
+    would wrap, or either mode is unknown. Those go one press at a time."""
+    if now not in CYCLE or want not in CYCLE:
+        return 0
+    ahead = CYCLE.index(want) - CYCLE.index(now)
+    return ahead if ahead > 0 else 0
+
+
+def _changed(ssh, session: str, node: str, before) -> dict:
+    """The screen once the footer moved on from before (or a question came up), read a few times: pressing again
+    too soon would skip a mode."""
+    now = {}
+    for _ in range(MODE_WAIT):
+        time.sleep(0.35)
+        now = chat_view.screen(ssh, session, node)
+        if now.get("mode") != before or now.get("ask") or now.get("gone"):
+            break
+    return now

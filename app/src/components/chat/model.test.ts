@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { blocks, cells, describe as describeTool, toolHolds, diff, inline, items, needsTerminal, shortPath, type ChatEvent } from './model'
+import { blocks, cells, describe as describeTool, toolHolds, diff, inline, items, needsTerminal, shortPath, starting, type ChatEvent, type Screen } from './model'
 
 describe('the chat as items', () => {
   const events: ChatEvent[] = [
@@ -124,5 +124,18 @@ describe('links in what Claude writes', () => {
   it('links work inside table cells and headings too', () => {
     const b = blocks('| job | log |\n|---|---|\n| 1606 | https://example.edu/log |')
     expect(inline(b[0].table!.rows[0][1])[0]).toMatchObject({ kind: 'link', url: 'https://example.edu/log' })
+  })
+})
+
+describe('starting', () => {
+  const s = (over: Partial<Screen>): Screen => ({ busy: false, mode: 'ask', ask: null, ...over })
+  it('only while Claude has no input box and nothing waits on you', () => {
+    expect(starting(s({ ready: false }))).toBe(true)
+    expect(starting(s({ ready: true }))).toBe(false)
+    expect(starting(s({}))).toBe(false)  // an older backend that doesn't say: never stuck on "starting"
+    expect(starting(s({ ready: false, ask: { question: 'Trust this folder?', detail: '', options: [], permission: false } })))
+      .toBe(false)  // the trust question comes first: answer it
+    expect(starting(s({ ready: false, gone: true }))).toBe(false)
+    expect(starting(null)).toBe(false)
   })
 })

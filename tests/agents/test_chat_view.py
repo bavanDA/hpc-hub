@@ -151,7 +151,7 @@ def test_a_permission_question_is_read_with_its_own_choices():
 def test_working_and_the_mode_come_from_the_footer():
     working = "● Reading files…\n\n> \n  ⏵⏵ accept edits on (shift+tab to cycle) · esc to interrupt\n"
     got = chat_view.parse_screen(working)
-    assert got == {"busy": True, "mode": "edits", "ask": None}
+    assert got == {"busy": True, "mode": "edits", "ask": None, "ready": True}
     assert chat_view.parse_screen("> \n  ⏸ plan mode on (shift+tab to cycle)\n")["mode"] == "plan"
     assert chat_view.parse_screen("> \n  ? for shortcuts\n")["mode"] == "ask"
     # a numbered list in Claude's answer is not a menu: nothing is marked as picked
@@ -236,3 +236,31 @@ def test_each_mode_reads_with_empty_rows_below(footer, mode):
 def test_a_menu_above_empty_rows_is_still_found():
     r = chat_view.parse_screen(drawn_from_top("claude-ask.txt", 40))
     assert r["ask"] is not None and len(r["ask"]["options"]) == 4
+
+
+
+# 2026-11-20 report: the mode is read only from the status line under the input box; the answer above may name a
+# mode ("switch to plan mode first") without being it.
+def test_an_answer_that_names_a_mode_does_not_change_it():
+    rows = [ln for ln in (SCREENS / "claude-auto.txt").read_text().splitlines()]
+    edges = [i for i, ln in enumerate(rows) if chat_view.EDGE.match(ln)]
+    rows.insert(edges[-2], "Tip: use plan mode or accept edits on for this.")  # just above the input box
+    assert chat_view.parse_screen("\n".join(rows))["mode"] == "auto"
+
+
+def test_a_real_screen_with_its_input_box_is_ready():
+    r = chat_view.parse_screen((SCREENS / "claude-auto.txt").read_text())
+    assert r["ready"] is True
+
+
+def test_claude_still_starting_is_not_ready():
+    starting = "\n".join(["╭──────────────────────────────╮", "│ ✻ Welcome to Claude Code!     │",
+                          "╰──────────────────────────────╯", "", "  Loading…"] + [""] * 20)
+    assert chat_view.parse_screen(starting)["ready"] is False
+
+
+def test_an_older_claude_with_a_rounded_input_box_reads_its_mode():
+    box = ["╭" + "─" * 60 + "╮", "│ >" + " " * 58 + "│", "╰" + "─" * 60 + "╯"]
+    screen = "\n".join(["answer text", *box, "  ⏸ plan mode on (shift+tab to cycle)"])
+    r = chat_view.parse_screen(screen)
+    assert (r["mode"], r["ready"]) == ("plan", True)
