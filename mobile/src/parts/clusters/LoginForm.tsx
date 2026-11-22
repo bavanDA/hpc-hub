@@ -11,25 +11,50 @@ import { PasswordInstead } from '@shared/components/clusters/PasswordInstead'
 import type { Login } from '@shared/components/clusters/useLogin'
 import { Spinner } from '@shared/components/ui/Spinner'
 import { secondStep, type Cluster } from '@shared/types/clusters'
-import { BackLayer, Button, Field, Row, Section, ToggleRow, useToast } from '../../ui'
-import { scanPairing } from '../scanPairing'
+import { BackLayer, Button, Dialog, Field, MainButton, Row, Section, ToggleRow, useToast } from '../../ui'
+import { pairingCode, scanPairing } from '../scanPairing'
 import { KeySteps } from './KeySteps'
 
-/** Scan the desktop's code; onScanned hears the cluster names it signed in. */
-export function useScan(onScanned: (names: string[]) => void) {
+/** Scan the desktop's code: first this phone's one-time code to type on the desktop (the QR code is sealed with it),
+ *  then the camera. Answers the button's action and the window to mount; onScanned hears the clusters signed in. */
+export function useScan(onScanned: (names: string[]) => void): [() => Promise<void>, ReactNode] {
   const toast = useToast()
-  return async () => {
-    const { msg, names } = await scanPairing()
-    if (msg) toast(msg)
-    if (names.length) onScanned(names)
+  const [code, setCode] = useState('')  // shown: the window is open
+  const [note, setNote] = useState('')  // what the last scan said, a wrong code most of all
+  const [busy, setBusy] = useState(false)
+  async function open() {
+    const got = await pairingCode()
+    if (!got.code) { toast(got.msg); return }
+    setNote('')
+    setCode(got.code)
   }
+  async function scan() {
+    setBusy(true)
+    const { msg, names } = await scanPairing()
+    setBusy(false)
+    if (!names.length) { setNote(msg); return }  // '' when you closed the camera
+    setCode('')
+    toast(msg)
+    onScanned(names)
+  }
+  const shown = code && <Dialog title="Scan from your computer" onClose={() => setCode('')}
+    actions={<MainButton icon={ScanQrCode} disabled={busy} onClick={scan}>Scan</MainButton>}>
+    <div className="flex flex-col gap-3 px-5 pb-2">
+      <p className="text-dim">On the computer, open HPC Hub's menu, then Set up the phone app. Type this code there,
+        then tap Scan and point the phone at the QR code it shows.</p>
+      <p aria-label="Code to type on the computer" className="py-2 text-center font-mono text-3xl font-semibold
+        tracking-widest select-text">{code}</p>
+      {note && <p className="text-sm text-bad">{note}</p>}
+    </div>
+  </Dialog>
+  return [open, shown || null]
 }
 
 export function LoginForm({ cluster: c, login, onScanned, signedIn, onTested, children }: {
   cluster: Cluster; login: Login; onScanned: (names: string[]) => void; signedIn?: boolean
   onTested?: (ok: boolean) => void; children?: ReactNode
 }) {
-  const scan = useScan(onScanned)
+  const [scan, scanWindow] = useScan(onScanned)
   const [help, setHelp] = useState(false)
   const keys = !!c.key_page && !login.usePassword
   const instead = c.key_page && c.password_too
@@ -38,6 +63,7 @@ export function LoginForm({ cluster: c, login, onScanned, signedIn, onTested, ch
     <div className="px-5">
       <Button icon={ScanQrCode} className="w-full" onClick={scan}>Scan from your computer</Button>
       <p className="pt-2 text-sm text-dim">On the computer, open HPC Hub's menu, then Set up the phone app.</p>
+      {scanWindow}
     </div>
     <h3 className="px-5 pt-5 pb-1.5 text-xs font-semibold tracking-wide text-dim uppercase">Or type it</h3>
     {keys ? <>

@@ -20,7 +20,7 @@ import { LoginForm, useScan } from './clusters/LoginForm'
 function LoginStep({ cluster: c, onNext, onScanned }:
   { cluster: Cluster; onNext: () => void; onScanned: (names: string[]) => void }) {
   const login = useLogin(c.id)
-  const scan = useScan(onScanned)
+  const [scan, scanWindow] = useScan(onScanned)
   const [typing, setTyping] = useState(false)
   useBackLayer(() => setTyping(false), typing)
   const [works, setWorks] = useState(false)  // the key's login test passed: Continue is the main button
@@ -47,9 +47,11 @@ function LoginStep({ cluster: c, onNext, onScanned }:
     return (
       <div className="flex flex-1 flex-col gap-5">
         <Heading title={copy.signIn({ ...c, name: shortName(c) })}
-          text="On your computer, open HPC Hub's menu, then Set up the phone app, and scan the code it shows." />
+          text={"On your computer, open HPC Hub's menu, then Set up the phone app. Tap Scan from your computer "
+            + 'for the code to type there, then scan the QR code it shows.'} />
         <div className="mt-auto flex flex-col items-center gap-3 px-5 pb-2">
           <MainButton icon={ScanQrCode} onClick={scan}>Scan from your computer</MainButton>
+          {scanWindow}
           <Button className="h-11 w-full" onClick={() => setTyping(true)}>Type it instead</Button>
           <Button kind="quiet" className="text-dim" onClick={onNext}>{copy.skip}</Button>
         </div>

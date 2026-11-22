@@ -105,12 +105,12 @@ export const answers: Record<string, unknown> = {
     ({ id, state: 'done', chat_id: '7f3c2a10-demo', put_back: [], ...answer(asks[id]) }),
   'terminals.send': () => null,
   'jobs.submit': () => ({ job_id: String(4240000 + Math.floor(Math.random() * 9999)) }),
-  'pairing.make': ({ clusters: ids }: { clusters?: string[] }) => {
+  'pairing.make': ({ clusters: ids }: { code?: string; clusters?: string[] }) => {
     const matrix = qr()
     const n = matrix.length
     const path = matrix.flatMap((row, y) => [...row].map((c, x) => (c === '1' ? `M${x} ${y}h1v1h-1z` : ''))).join('')
     return {
-      text: 'hpchub-pair:1:demo', matrix, skipped: [],
+      text: 'hpchub-pair:2:demo', matrix, skipped: [],
       clusters: (ids ?? ['wulver', 'yale']).map((id) => NAMES[id] ?? id),
       svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${n} ${n}" shape-rendering="crispEdges">`
         + `<rect width="${n}" height="${n}" fill="#fff"/><path d="${path}" fill="#000"/></svg>`,

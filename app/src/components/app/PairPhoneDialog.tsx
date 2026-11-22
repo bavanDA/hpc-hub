@@ -12,10 +12,12 @@ import { List } from '../ui/List'
 import { Row } from '../ui/Row'
 import { Spinner } from '../ui/Spinner'
 import { Switch } from '../ui/Switch'
+import { FIELD } from '../ui/field'
+import { phoneCode } from './phoneCode'
 
-const SHOWN = 60  // seconds: anyone who sees the code sees the logins in it
+const SHOWN = 60  // seconds: the QR code is sealed with the phone's code, and still hides soon
 
-type Made = { svg: string; clusters: string[]; skipped: { name: string; reason: string }[] }
+type Made = { svg: string; clusters: string[]; skipped: { name: string; reason: string }[]; expires: number }
 type Pick = { cluster: Cluster; username: string; password: boolean; ready: boolean; note: string }
 
 const takesKeys = (c: Cluster) => Boolean((c as Cluster & { key_login?: boolean }).key_login)
@@ -23,12 +25,14 @@ const takesKeys = (c: Cluster) => Boolean((c as Cluster & { key_login?: boolean 
 /** "Wulver", "Wulver and Yale", "Wulver, Yale and SDSC". */
 const listed = (xs: string[]) => xs.length > 1 ? `${xs.slice(0, -1).join(', ')} and ${xs[xs.length - 1]}` : xs[0] ?? ''
 
-/** only: these clusters (a cluster card's "Connect phone"); the code shows right away when they're ready. */
+/** only: these clusters (a cluster card's "Connect phone"). The code the phone shows is typed first: the QR code is
+ *  sealed with it (hpc_hub/core/pairing.py), so a photo of this screen alone gives nothing away. */
 export function PairPhoneDialog({ only, onClose }: { only?: string[]; onClose: () => void }) {
   const { clusters, sessions } = useClusters()
   const [picks, setPicks] = useState<Pick[] | null>(null)
   const [on, setOn] = useState<Set<string>>(new Set())
   const [passwords, setPasswords] = useState(true)
+  const [typed, setTyped] = useState('')  // the code on the phone
   const [made, setMade] = useState<Made | null>(null)
   const [left, setLeft] = useState(0)
   const [busy, setBusy] = useState(false)
@@ -52,12 +56,15 @@ export function PairPhoneDialog({ only, onClose }: { only?: string[]; onClose: (
       })
   }, [clusters, sessions, only?.join(',')])  // eslint-disable-line react-hooks/exhaustive-deps
 
-  async function show(ids = [...on]) {
+  async function show() {
+    const checked = phoneCode(typed)  // the phone's code first: no QR code without it
+    if (checked.error !== undefined) { setError(checked.error); return }
     setBusy(true)
     setError('')
     try {
-      setMade(await call<Made>('pairing.make', { clusters: ids, passwords }))
-      setLeft(SHOWN)
+      const got = await call<Made>('pairing.make', { code: checked.code, clusters: [...on], passwords })
+      setMade(got)
+      setLeft(Math.min(SHOWN, got.expires - Math.floor(Date.now() / 1000)))
     } catch (e) {
       setError((e as Error).message)
     } finally {
@@ -65,17 +72,9 @@ export function PairPhoneDialog({ only, onClose }: { only?: string[]; onClose: (
     }
   }
 
-  const [started, setStarted] = useState(false)
-  useEffect(() => {  // a cluster card's "Connect phone": straight to the code when it can be made
-    if (!only || started || !picks) return
-    setStarted(true)
-    const ready = picks.filter((p) => p.ready).map((p) => p.cluster.id)
-    if (ready.length && ready.length === picks.length) void show(ready)
-  }, [picks])  // eslint-disable-line react-hooks/exhaustive-deps
-
-  useEffect(() => {  // count down, then hide the code
+  useEffect(() => {  // count down, then hide the code (before it expires, the phone refuses it after)
     if (!made) return
-    if (left <= 0) { setMade(null); return }
+    if (left <= 0 || Date.now() / 1000 >= made.expires) { setMade(null); return }
     const t = window.setTimeout(() => setLeft(left - 1), 1000)
     return () => clearTimeout(t)
   }, [made, left])
@@ -88,12 +87,12 @@ export function PairPhoneDialog({ only, onClose }: { only?: string[]; onClose: (
       ? <Button onClick={() => setMade(null)}>Hide</Button>
       : <>
           <Button kind="ghost" onClick={onClose}>Cancel</Button>
-          <Button kind="primary" disabled={busy || !on.size} onClick={() => void show()}>
+          <Button kind="primary" disabled={busy || !on.size || !typed.trim()} onClick={() => void show()}>
             {busy && <Spinner size={14} />}Show QR code</Button>
         </>}>
       {made ? (
         <div className="flex flex-col items-center gap-3 pb-2 text-center">
-          <p className="text-dim">In HPC Hub on the phone, tap QR code on a cluster. Hides in {left} s.</p>
+          <p className="text-dim">On the phone, tap Scan and point it at this code. Hides in {left} s.</p>
           <img src={`data:image/svg+xml;utf8,${encodeURIComponent(made.svg)}`} alt="QR code with your logins"
             className="size-[300px] rounded-md bg-white p-3 [image-rendering:pixelated]" />
           <p className="text-sm text-dim">Signs the phone in to {listed(made.clusters.map(short))}.</p>
@@ -106,6 +105,15 @@ export function PairPhoneDialog({ only, onClose }: { only?: string[]; onClose: (
             <p className="text-dim">Each login you pick goes to HPC Hub on your phone. Duo still asks when the phone
               connects.</p>
           </div>
+          <label className="flex flex-col gap-1.5">
+            <span className="text-sm text-dim">In HPC Hub on the phone, tap Scan from your computer. Type the code
+              it shows here.</span>
+            <input className={`${FIELD} font-mono tracking-wider uppercase`} value={typed} autoFocus
+              placeholder="XXXXX-XXXXX" spellCheck={false} autoComplete="off" autoCapitalize="characters"
+              aria-label="Code on the phone" maxLength={20}
+              onChange={(e) => { setTyped(e.target.value); setError('') }}
+              onKeyDown={(e) => { if (e.key === 'Enter' && !busy && on.size) void show() }} />
+          </label>
           {!picks ? <p className="flex items-center gap-2 text-dim"><Spinner size={14} /> Looking at your logins</p>
             : !picks.length ? <p className="text-dim">No saved logins yet. Connect to a cluster here first.</p>
             : (
