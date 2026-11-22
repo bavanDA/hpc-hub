@@ -5,6 +5,7 @@ mod hostenv;
 mod backend;
 mod pty;
 mod quickfix;
+mod screen_fit;
 mod sso;
 
 use tauri::{Manager, RunEvent};
@@ -64,6 +65,7 @@ pub fn run() {
         .manage(pty::Ptys::default())
         .manage(fix)
         .setup(|app| {
+            screen_fit::fit_main(app.handle()); // before it shows: never taller than the room above the taskbar
             let backend = backend::start(app.handle())?;
             app.manage(backend);
             Ok(())

@@ -67,5 +67,5 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: app/src-tauri
-      - run: cargo check --locked
+      - run: cargo check --locked && cargo test --locked --lib
         working-directory: app/src-tauri
