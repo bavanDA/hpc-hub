@@ -3,10 +3,12 @@ import type { Terminal } from '@xterm/xterm'
 
 import { call, on } from '../../rpc'
 import type { Session } from '../../types/clusters'
+import type { Started } from '../../types/tools'
 import type { Command, Link, Listing, NewTerminal, TmuxSession } from '../../types/terminals'
 import { inTauri } from '../app/platform'
 import { clusterLabel, isConnected } from '../clusters/store'
 import { banner, dismiss } from './banners'
+import { continueLabel, endedNote } from './continueChat'
 import { demoShell } from './demoShell'
 import { dropHistory } from './history/view'
 import { makeTab } from './makeTab'
@@ -130,7 +132,10 @@ async function afterExit(tab: Tab, code: number, ranFor: number, tries = 6) {
   const found = listing?.sessions.find((s) => s.name === tab.session)
   const step = nextStep(listing !== null, !!found, code, ranFor)
   if (step === 'attach') return attachAgain(tab, found?.node)
-  if (step === 'gone') return lostNote(tab, 'This session has ended. Close this tab, or start a new one from the list.')
+  if (step === 'gone') {
+    const note = endedNote(tab.session)
+    return lostNote(tab, note.text, note.button, note.button ? () => void continueChat(tab) : undefined)
+  }
   if (step === 'offer') {
     return lostNote(tab, 'You left this session. It is still running.', 'Attach again', () => attachAgain(tab, found?.node))
   }
@@ -138,6 +143,23 @@ async function afterExit(tab: Tab, code: number, ranFor: number, tries = 6) {
   const name = clusterLabel(tab.cluster)
   lostNote(tab, `${name} disconnected. Your session should still be running there.`, `Reconnect to ${name}`, undefined,
     tab.cluster)
+}
+
+/** Claude again on the ended tab's chat, in its folder: its new tab takes this one's place. */
+export async function continueChat(tab: Tab) {
+  const { cluster, session } = tab
+  lostNote(tab, 'Continuing the chat. If its job ended, this waits for a compute node first.')
+  try {
+    const at = await call<{ chat_id: string; folder: string }>('chat.where', { cluster, session })
+    const c = await call<Started>('tools.agent_start', { cluster, agent: 'claude', folder: at.folder,
+      chat_id: at.chat_id, label: continueLabel(tab.title) })
+    close(tab.key)
+    openTmux(cluster, c)
+  } catch (e) {
+    if (!getState().tabs.includes(tab)) return
+    lostNote(tab, `Could not continue: ${e instanceof Error ? e.message : String(e)}`, 'Try again',
+      () => void continueChat(tab))
+  }
 }
 
 on('session', (d) => {

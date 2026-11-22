@@ -19,6 +19,13 @@ def read(cluster: str, session: str, file: str = "", offset: int = -1, since: fl
     return chat_view.read(hub().connected(cluster).ssh, session, file, offset, since)
 
 
+@method("chat.where")
+def where(cluster: str, session: str) -> dict:
+    """The chat of a Claude tab, also once its session (or its job) ended: {chat_id, folder}, so Continue starts
+    claude --resume there (tools.agent_start)."""
+    return chat_view.where(hub().connected(cluster).ssh, session)
+
+
 @method("chat.screen")
 def screen(cluster: str, session: str, node: str = "") -> dict:
     """What waits on you: {busy, mode, ask: {question, detail, options: [{key, label}], permission}}."""

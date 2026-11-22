@@ -160,6 +160,49 @@ def events(lines: list[dict]) -> list[dict]:
     return out
 
 
+# Runs on the cluster: the newest conversation file whose name starts with the tag (argv[1]), and the folder Claude
+# ran in, from the first lines that say. Prints {} when there is none.
+WHERE = r'''
+import glob, json, os, sys
+root = os.path.realpath(os.path.expanduser("~/.claude/projects"))
+found = [p for p in glob.glob(os.path.join(root, "*", sys.argv[1] + "*.jsonl"))
+         if os.path.realpath(p).startswith(root + os.sep)]
+if not found:
+    print("{}")
+    sys.exit(0)
+found.sort(key=os.path.getmtime)
+path, cwd = found[-1], ""
+with open(path, "rb") as f:
+    for n, raw in enumerate(f):
+        if n >= 400:
+            break
+        try:
+            line = json.loads(raw.decode("utf-8", "replace"))
+        except ValueError:
+            continue
+        if isinstance(line, dict) and isinstance(line.get("cwd"), str) and line["cwd"]:
+            cwd = line["cwd"]
+            break
+print(json.dumps({"chat_id": os.path.basename(path)[:-len(".jsonl")], "folder": cwd}))
+'''
+
+
+def where(ssh: SshMaster, session: str) -> dict:
+    """A Claude tab's conversation, also after its session ended: {chat_id, folder} for claude --resume in the same
+    folder. The tab's tmux name ends in the chat id's first 8 characters (catalog.command, tools.agent_start)."""
+    tag = tag_of(session)
+    if not tag:
+        raise ValueError("Not a Claude chat started by HPC Hub")
+    res = ssh.run(f"python3 -c {shlex.quote(WHERE)} {shlex.quote(tag)}", timeout=60)
+    try:
+        data = json.loads(res.stdout.strip().splitlines()[-1])
+    except (ValueError, IndexError):
+        raise RuntimeError(res.stderr.strip().splitlines()[-1] if res.stderr.strip() else "Could not find the chat")
+    if not data.get("chat_id"):
+        raise RuntimeError("Claude never saved this chat, so there is nothing to continue. Start a new one")
+    return {"chat_id": data["chat_id"], "folder": data.get("folder") or ""}
+
+
 def read(ssh: SshMaster, session: str, file: str = "", offset: int = -1, since: float = 0) -> dict:
     tag = tag_of(session)
     if not tag and not file:
