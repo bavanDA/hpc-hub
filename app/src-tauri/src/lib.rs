@@ -3,6 +3,7 @@
 
 mod hostenv;
 mod backend;
+pub mod fonts;
 mod pty;
 mod quickfix;
 mod screen_fit;

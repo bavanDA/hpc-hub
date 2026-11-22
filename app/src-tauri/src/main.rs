@@ -10,5 +10,8 @@ fn main() {
         // SAFETY: first thing in main, before any other thread exists
         unsafe { std::env::set_var("WEBKIT_DISABLE_DMABUF_RENDERER", "1") };
     }
+    // the AppImage's WebKit aborts on some COLRv1 color emoji: leave those font files out (fonts.rs)
+    #[cfg(target_os = "linux")]
+    hpc_hub_lib::fonts::avoid_colrv1();
     hpc_hub_lib::run();
 }
