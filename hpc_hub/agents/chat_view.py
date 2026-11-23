@@ -314,6 +314,20 @@ def _status_line(lines: list[str]) -> str | None:
 
 # the start of Claude's input box: its prompt (❯, then a no-break space in recent Claudes; > in older ones)
 PROMPT = re.compile(r"^\s*[❯>][ \u00a0]")
+BOX_PROMPT = re.compile(r"^\s*│?\s*[❯>](?:[ \u00a0]|$)")  # also inside the rounded box of older Claudes
+
+
+def _box_rows(lines: list[str]) -> tuple[int, int] | None:
+    """Where Claude's input box is (its two edges), or None. Found by the words under it, or else by its shape: two
+    edges near the bottom with the prompt right under the first. Some Claudes leave nothing under the box once text
+    is in it (2026-11-23 report: "Claude is still starting" an hour and a half after it started, twice)."""
+    edges = [i for i, ln in enumerate(lines) if EDGE.match(ln)]
+    if len(edges) < 2 or len(lines) - edges[-1] > 5:
+        return None
+    top, bottom = edges[-2], edges[-1]
+    if _status_line(lines) is not None or (bottom - top >= 2 and BOX_PROMPT.match(lines[top + 1])):
+        return top, bottom
+    return None
 # what an empty box shows, dim; told apart by its style (screen captures keep it) or, in plain text, by its words
 HINTS = ('Try "', "Press up to edit queued messages")
 STYLED = re.compile(r"\x1b\[[0-9;]*m")
@@ -336,10 +350,10 @@ def _draft(lines: list[str], raw: list[str]) -> str:
     """What sits in Claude's input box, not sent: a message it gave back when you stopped it before it answered, or
     the one you went back to with Esc Esc. Typing more would add to it (2026-11-22 report: messages ran together).
     "" for an empty box (or one that shows only Claude's hint) and when there is no box."""
-    edges = [i for i, ln in enumerate(lines) if EDGE.match(ln)]
-    if len(edges) < 2 or _status_line(lines) is None:
+    where = _box_rows(lines)
+    if where is None:
         return ""
-    top, bottom = edges[-2], edges[-1]
+    top, bottom = where
     rows = lines[top + 1:bottom]
     if not rows or not PROMPT.match(rows[0]) or (top + 1 < len(raw) and _dim(raw[top + 1])):
         return ""
@@ -412,8 +426,9 @@ def parse_screen(text: str) -> dict:
         ask = {"question": question, "detail": detail, "options": options,
                "permission": question.lower().startswith("do you want")}
     # ready: Claude's input box is up (it has started); until then the window says it is starting
-    ready = status is not None or "shift+tab" in tail or "for shortcuts" in tail
-    box = status is not None and not ask
+    up = _box_rows(lines) is not None
+    ready = up or "shift+tab" in tail or "for shortcuts" in tail
+    box = up and not ask
     return {"busy": busy and not ask, "mode": mode, "ask": ask, "ready": ready, "box": box,
             "draft": _draft(lines, raw) if box else ""}
 
