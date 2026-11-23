@@ -10,6 +10,7 @@ import { MainButton } from '../e/MainButton'
 import { useToast } from '../useToast'
 import { openLink } from './openLink'
 import { installUpdate, RELEASES, setOpener, startUpdateChecks, useUpdateState } from './updates'
+import { restartNote } from './windowRestart'
 
 const mb = (n: number) => `${Math.round(n / 1_000_000)} MB`
 
@@ -46,7 +47,7 @@ export function UpdateDialog({ onClose }: { onClose: () => void }) {
   )
 }
 
-/** Mounted once in App: checks for updates and shows the window when asked. */
+/** Mounted once in App: checks for updates and shows the window when asked; says when the window came back. */
 export function UpdateChecker() {
   const toast = useToast()
   const [open, setOpen] = useState(false)
@@ -54,6 +55,7 @@ export function UpdateChecker() {
     setOpener(() => setOpen(true))
     startUpdateChecks((version) => toast(`HPC Hub ${version} is ready to install`,
       { action: { label: 'Update', run: () => setOpen(true) } }))
+    void restartNote().then((note) => { if (note) toast(note, { stay: true }) })  // the window came back from a crash
     return () => setOpener(null)
   }, [toast])
   return open ? <UpdateDialog onClose={() => setOpen(false)} /> : null

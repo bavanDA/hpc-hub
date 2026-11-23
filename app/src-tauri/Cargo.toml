@@ -34,3 +34,11 @@ dirs = "7"
 minisign-verify = "0.3"
 zip = { version = "9", default-features = false, features = ["deflate-flate2-zlib-rs"] }
 tauri-plugin-single-instance = "2"
+
+# the window comes back when the process drawing it dies (window_crash.rs); the versions wry already uses
+[target.'cfg(target_os = "linux")'.dependencies]
+webkit2gtk = "=2.0.2"
+
+[target.'cfg(windows)'.dependencies]
+webview2-com = "0.39"
+windows-core = "0.62"

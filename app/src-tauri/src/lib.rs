@@ -8,6 +8,7 @@ mod pty;
 mod quickfix;
 mod screen_fit;
 mod sso;
+mod window_crash;
 
 use tauri::{Manager, RunEvent};
 
@@ -67,6 +68,7 @@ pub fn run() {
         .manage(fix)
         .setup(|app| {
             screen_fit::fit_main(app.handle()); // before it shows: never taller than the room above the taskbar
+            window_crash::watch(app); // the window comes back when the process drawing it dies
             let backend = backend::start(app.handle())?;
             app.manage(backend);
             Ok(())
@@ -82,7 +84,8 @@ pub fn run() {
             sso::sso_close,
             update_ready,
             check_beta_update,
-            quickfix::quick_fix_started
+            quickfix::quick_fix_started,
+            window_crash::window_restarted
         ])
         .build(context)
         .expect("error while building HPC Hub")
