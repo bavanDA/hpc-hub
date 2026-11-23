@@ -22,6 +22,7 @@ export type UpdateState =
 export const RELEASES = 'https://github.com/bavanDA/hpc-hub/releases/latest'
 const FIRST_CHECK_MS = 20_000
 const EVERY_MS = 12 * 3600_000
+const STAGE_MS = 60_000  // an update's quick fix: the update installs without it after this
 
 type Found = { version: string; body?: string
   download: (onEvent: (e: DownloadEvent) => void) => Promise<void>
@@ -140,6 +141,11 @@ export async function installUpdate(): Promise<void> {
       found = fresh
       ;({ version, body = '' } = fresh)
       await get(fresh)
+    }
+    // an update's own quick fix comes with it, ready for its first start: one restart, not two (quickfix.stage)
+    if (inTauri && !/ fix \d+$/.test(version)) {
+      await Promise.race([call('updates.quick_fix_stage', { version }).catch(() => null),
+        new Promise((ok) => setTimeout(ok, STAGE_MS))])
     }
     set({ kind: 'installing', version, notes: body })
     if (inTauri) { await invoke('update_ready'); stopped = true }  // nothing is lost on the cluster

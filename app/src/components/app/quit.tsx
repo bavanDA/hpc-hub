@@ -15,6 +15,12 @@ const BUSY: State[] = ['Connecting VPN', 'Signing in', 'Approve Duo on your phon
 const IDLE: State[] = ['Disconnected', 'Error']
 const ASK_MS = 2000  // a backend that does not answer never keeps the window open
 const DISCONNECT_MS = 60_000
+const INFO_MS = 3000  // what a reset removes, for its question: shown without it when the backend is slow
+const RESET_MS = 60_000
+
+/** p, or an Error saying what after ms. */
+const within = <T,>(p: Promise<T>, ms: number, what: string) =>
+  Promise.race([p, new Promise<T>((_, no) => setTimeout(() => no(new Error(what)), ms))])
 
 type Named = { id: string; name: string }
 const KEPT = ['Your SSH keys and known hosts (~/.ssh)', 'Your files and jobs on the clusters']
@@ -89,10 +95,13 @@ export function useQuit() {
 
   // Settings > Reset HPC Hub and Uninstall HPC Hub: asked first, every cluster disconnected, then the backend
   // forgets the logins (and starts the uninstall), and the window quits; the folders go once it has closed.
+  // The question shows at once: what the backend lists comes into it when it answers (it once waited for that
+  // answer first, so a slow backend showed nothing at all: 2026-11-22, "I click on this and still nothing happened").
   const resetAndQuit = useCallback(async (kind: 'reset' | 'uninstall') => {
-    const info = await call<ResetInfo>('app.reset_info').catch(() => null)
     let erase = true
+    let open = true  // the question is still up
     const run = async () => {
+      open = false
       setDialog(<Dialog title={kind === 'reset' ? 'Resetting' : 'Uninstalling'} onClose={() => {}} width={420}>
         <div className="flex items-center gap-3"><Spinner size={20} /><p>Disconnecting and removing…</p></div>
       </Dialog>)
@@ -101,7 +110,8 @@ export function useQuit() {
       const until = Date.now() + DISCONNECT_MS
       while (list.length && Date.now() < until && (await active()).length) await new Promise((ok) => setTimeout(ok, 500))
       try {
-        await call(kind === 'reset' ? 'app.reset' : 'app.uninstall', kind === 'reset' ? {} : { erase })
+        await within(call(kind === 'reset' ? 'app.reset' : 'app.uninstall', kind === 'reset' ? {} : { erase }), RESET_MS,
+          "HPC Hub's background part didn't answer. Quit HPC Hub, start it again and try once more.")
       } catch (e) {
         setDialog(<Dialog title={kind === 'reset' ? 'Could not reset' : 'Could not uninstall'} onClose={close}
           width={440} actions={<Button kind="primary" onClick={close}>OK</Button>}>
@@ -110,33 +120,39 @@ export function useQuit() {
       }
       await end()
     }
-    const what = <>
-      <p className="pt-1 text-sm">Removed from this computer:</p>
-      <ul className="list-disc pl-5 text-sm">
-        <li>Saved logins: passwords{info?.clusters.length ? ` for ${info.clusters.join(', ')}` : ''}, VPN and
-          Globus</li>
-        <li>Settings, projects list, logs and sign-in cookies
-          {info?.folders.length ? <span className="block font-mono text-xs text-dim">{info.folders.join('  ')}</span>
-            : null}</li>
-      </ul>
-      <p className="pt-3 text-sm text-dim">Kept: {(info?.kept ?? KEPT).join('; ')}.</p>
-    </>
-    setDialog(kind === 'reset'
-      ? <AlertDialog title="Reset HPC Hub?" keep="Keep everything" act="Reset and quit" onAct={run} onClose={close}>
-          <p>HPC Hub signs out of every cluster and forgets everything it saved, as if newly installed. Start it
-            again to set it up.</p>
-          {what}
-        </AlertDialog>
-      : <AlertDialog title="Uninstall HPC Hub?" keep="Keep HPC Hub" act="Uninstall" onAct={run} onClose={close}>
-          <p>HPC Hub disconnects, quits and removes itself
-            {isWindows ? ' (Windows then shows its uninstaller)' : isMac ? ' (it goes to the Trash)' : ''}.
-            {needsHelper ? ' Its VPN helper is removed too, which asks for your permission.' : ''}</p>
-          <label className="mt-1 flex items-start gap-2 text-text">
-            <input type="checkbox" defaultChecked className="mt-1" onChange={(e) => { erase = e.target.checked }} />
-            <span>Also remove my saved logins and data</span>
-          </label>
-          {what}
-        </AlertDialog>)
+    const shut = () => { open = false; close() }
+    const ask = (info: ResetInfo | null) => {
+      const what = <>
+        <p className="pt-1 text-sm">Removed from this computer:</p>
+        <ul className="list-disc pl-5 text-sm">
+          <li>Saved logins: passwords{info?.clusters.length ? ` for ${info.clusters.join(', ')}` : ''}, VPN and
+            Globus</li>
+          <li>Settings, projects list, logs and sign-in cookies
+            {info?.folders.length ? <span className="block font-mono text-xs text-dim">{info.folders.join('  ')}</span>
+              : null}</li>
+        </ul>
+        <p className="pt-3 text-sm text-dim">Kept: {(info?.kept ?? KEPT).join('; ')}.</p>
+      </>
+      setDialog(kind === 'reset'
+        ? <AlertDialog title="Reset HPC Hub?" keep="Keep everything" act="Reset and quit" onAct={run} onClose={shut}>
+            <p>HPC Hub signs out of every cluster and forgets everything it saved, as if newly installed. Start it
+              again to set it up.</p>
+            {what}
+          </AlertDialog>
+        : <AlertDialog title="Uninstall HPC Hub?" keep="Keep HPC Hub" act="Uninstall" onAct={run} onClose={shut}>
+            <p>HPC Hub disconnects, quits and removes itself
+              {isWindows ? ' (Windows then shows its uninstaller)' : isMac ? ' (it goes to the Trash)' : ''}.
+              {needsHelper ? ' Its VPN helper is removed too, which asks for your permission.' : ''}</p>
+            <label className="mt-1 flex items-start gap-2 text-text">
+              <input type="checkbox" defaultChecked className="mt-1" onChange={(e) => { erase = e.target.checked }} />
+              <span>Also remove my saved logins and data</span>
+            </label>
+            {what}
+          </AlertDialog>)
+    }
+    ask(null)
+    const info = await within(call<ResetInfo>('app.reset_info'), INFO_MS, 'no answer').catch(() => null)
+    if (open && info) ask(info)
   }, [close, end])
 
   // The window's close button (ours, or the system's on macOS) and Alt+F4

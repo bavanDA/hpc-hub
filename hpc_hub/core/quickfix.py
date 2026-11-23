@@ -204,8 +204,9 @@ def signed_for(data: bytes) -> tuple[str, int]:
         raise BadFix("The quick fix doesn't say which version it is for") from None
 
 
-def install(fix: dict, fetch=_get) -> dict:
-    """Download, check the signature, unpack and make it the one in use from the next start. Returns current()."""
+def install(fix: dict, fetch=_get, version: str = "") -> dict:
+    """Download, check the signature, unpack and make it the one in use from the next start. Returns current(). With
+    version: the fix for that version instead, an update about to be installed (stage)."""
     root = folder()
     if root is None:
         raise BadFix("This build of HPC Hub can't take quick fixes")
@@ -214,7 +215,7 @@ def install(fix: dict, fetch=_get) -> dict:
     data = fetch(fix["url"], MAX_ZIP)
     verify(data, fix["signature"])
     base, number = signed_for(data)
-    if base != app_version() or number != int(fix["number"]) or base != fix.get("base"):
+    if base != (version or app_version()) or number != int(fix["number"]) or base != fix.get("base"):
         raise BadFix(f"The quick fix is for {base} fix {number}, not this version")
     root.mkdir(parents=True, exist_ok=True)
     into = root / str(number)
@@ -226,8 +227,36 @@ def install(fix: dict, fetch=_get) -> dict:
     tmp.write_text(json.dumps({"base": base, "number": number, "notes": fix.get("notes", "")}),
                    encoding="utf-8")
     os.replace(tmp, root / CURRENT)
+    if version:  # for the version about to start: it tidies when it installs a fix of its own
+        return {"base": base, "number": number, "notes": str(fix.get("notes", ""))}
     tidy(root)
     return current(root) or {}
+
+
+def stage(version: str, fetch=_get) -> dict | None:
+    """The quick fix for version, an update about to be installed, downloaded, checked and put in place for its
+    first start: one update and one restart, not an update and then its quick fix after the restart (2026-11-22:
+    "why sometimes I have to update multiple times to reach the latest version?"). None when that version has no
+    fix yet, or this build takes none. The window checks it again at that start, like any fix."""
+    root = folder()
+    if root is None or not version:
+        return None
+    try:
+        feed = json.loads(fetch(FEED if "-" in version else RELEASE_FEED, 256 * 1024))
+    except urllib.error.HTTPError as e:
+        if e.code == 404:
+            return None
+        raise
+    if not isinstance(feed, dict) or feed.get("base") != version or not from_releases(feed.get("url")) \
+            or not feed.get("signature"):
+        return None
+    try:
+        number = int(feed["number"])
+    except (KeyError, TypeError, ValueError):
+        return None
+    if number in failed(root):
+        return None
+    return install({**feed, "number": number}, fetch, version=version)
 
 
 def tidy(root: Path) -> None:

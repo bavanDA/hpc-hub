@@ -28,3 +28,13 @@ def quick_fix_install() -> dict:
         return quickfix.install(fix)
     except quickfix.BadFix as e:
         raise RuntimeError(f"The quick fix wasn't installed: {e}") from None
+
+
+@method("updates.quick_fix_stage", slow=True)
+def quick_fix_stage(version: str) -> dict | None:
+    """Before an update to version installs: its quick fix, if it has one, ready for its first start (quickfix.stage).
+    None when there is none. A fix that fails its checks is left out: the update itself still installs."""
+    try:
+        return quickfix.stage(version)
+    except (quickfix.BadFix, OSError, ValueError) as e:
+        return {"skipped": str(e)}

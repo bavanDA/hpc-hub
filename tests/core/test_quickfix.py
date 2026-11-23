@@ -231,3 +231,91 @@ def test_the_update_key_never_shares_a_job_with_npm():
     assert len(with_key) == 1 and with_key[0].startswith("name: Sign")
     assert "env:" not in sign.split("steps:")[0]  # no job-wide secrets
     assert "--unsigned" in build
+
+
+# -- an update's quick fix comes with it (2026-11-22: "I have to update multiple times to reach the latest") ----
+
+def test_an_updates_quick_fix_is_ready_for_its_first_start(app, monkeypatch):
+    sk, pub = keypair()
+    monkeypatch.setattr(quickfix, "PUBKEY", pub)
+    data = for_fix(27, base="1.0.0-beta.3")
+    feed = {"base": "1.0.0-beta.3", "number": 27, "url": URL, "signature": signed(sk, data), "notes": "Chat fixes"}
+    asked = []
+
+    def fetch(url, limit):
+        asked.append(url)
+        return json.dumps(feed).encode() if url == quickfix.FEED else data
+
+    got = quickfix.stage("1.0.0-beta.3", fetch)  # this app is 1.0.0-beta.1, about to become beta.3
+    assert got == {"base": "1.0.0-beta.3", "number": 27, "notes": "Chat fixes"}
+    assert asked == [quickfix.FEED, URL]
+    # in place as quickfix.rs looks for it at beta.3's first start: current.json, the files, the signed zip
+    assert json.loads((app / "current.json").read_text())["base"] == "1.0.0-beta.3"
+    assert (app / "27" / "fix.zip").read_bytes() == data and (app / "27" / "fix.zip.sig").exists()
+    monkeypatch.setenv("HPC_HUB_APP_VERSION", "1.0.0-beta.3")
+    assert quickfix.current(app)["number"] == 27
+
+
+def test_staging_keeps_the_running_fix(app, monkeypatch):
+    sk, pub = keypair()
+    monkeypatch.setattr(quickfix, "PUBKEY", pub)
+    app.mkdir()
+    (app / "4").mkdir()  # the fix this start runs with, for 1.0.0-beta.1
+    monkeypatch.setenv("HPC_HUB_QUICKFIX_NUMBER", "4")
+    data = for_fix(27, base="1.0.0-beta.3")
+    feed = {"base": "1.0.0-beta.3", "number": 27, "url": URL, "signature": signed(sk, data)}
+    quickfix.stage("1.0.0-beta.3", lambda url, limit: json.dumps(feed).encode() if url == quickfix.FEED else data)
+    assert (app / "4").is_dir()  # an update that fails to install restarts on it
+
+
+def test_nothing_is_staged_without_a_fix_for_that_very_version(app, monkeypatch):
+    sk, pub = keypair()
+    monkeypatch.setattr(quickfix, "PUBKEY", pub)
+    older = {"base": "1.0.0-beta.2", "number": 26, "url": URL, "signature": "s"}  # the feed hasn't moved on yet
+    assert quickfix.stage("1.0.0-beta.3", lambda url, limit: json.dumps(older).encode()) is None
+    assert quickfix.stage("", lambda url, limit: pytest.fail("no version, no download")) is None
+
+    def missing(url, limit):
+        raise quickfix.urllib.error.HTTPError(url, 404, "not found", {}, None)
+    assert quickfix.stage("1.0.0-beta.3", missing) is None
+    assert not (app / "current.json").exists()
+
+
+def test_a_release_update_stages_from_the_releases_feed(app, monkeypatch):
+    asked = []
+    quickfix.stage("1.0.1", lambda url, limit: asked.append(url) or b"{}")
+    assert asked == [quickfix.RELEASE_FEED]
+
+
+def test_a_staged_fix_is_checked_like_any(app, monkeypatch):
+    sk, pub = keypair()
+    monkeypatch.setattr(quickfix, "PUBKEY", pub)
+    other, _ = keypair()
+    data = for_fix(27, base="1.0.0-beta.3")
+    feed = {"base": "1.0.0-beta.3", "number": 27, "url": URL, "signature": signed(other, data)}
+    with pytest.raises(quickfix.BadFix):
+        quickfix.stage("1.0.0-beta.3", lambda url, limit: json.dumps(feed).encode() if url == quickfix.FEED else data)
+    old = for_fix(26, base="1.0.0-beta.3")  # a genuine older zip offered as fix 27
+    feed = {"base": "1.0.0-beta.3", "number": 27, "url": URL, "signature": signed(sk, old)}
+    with pytest.raises(quickfix.BadFix):
+        quickfix.stage("1.0.0-beta.3", lambda url, limit: json.dumps(feed).encode() if url == quickfix.FEED else old)
+    (app).mkdir(exist_ok=True)
+    (app / "failed").write_text("27\n")  # a start with it never got going
+    assert quickfix.stage("1.0.0-beta.3", lambda url, limit: json.dumps(feed).encode()) is None
+
+
+def test_the_update_window_stages_before_it_installs():
+    src = (ROOT / "app" / "src" / "components" / "app" / "updates.ts").read_text()
+    stage = src.index("call('updates.quick_fix_stage', { version })")
+    assert stage < src.index("invoke('update_ready')")  # while the backend still runs
+    assert "!/ fix \\d+$/.test(version)" in src[stage - 200:stage]  # a quick fix itself stages nothing
+    assert "STAGE_MS" in src[stage:stage + 200]  # never holds the update up for long
+
+
+def test_a_failed_stage_never_stops_the_update(monkeypatch):
+    from hpc_hub.api.methods import updates
+
+    def bad(version):
+        raise quickfix.BadFix("Signed with another key")
+    monkeypatch.setattr(quickfix, "stage", bad)
+    assert updates.quick_fix_stage("1.0.0-beta.3") == {"skipped": "Signed with another key"}
