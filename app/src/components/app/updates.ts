@@ -10,7 +10,7 @@ import { useSyncExternalStore } from 'react'
 import { call } from '../../rpc'
 import { inTauri } from './platform'
 import { quietChecks, SHOWN_EVERY_MS } from './quietChecks'
-import { gone, newer, replaces } from './versions'
+import { gone, newer, takesOver } from './versions'
 
 export type UpdateState =
   | { kind: 'idle' | 'checking' | 'none' }
@@ -184,13 +184,14 @@ export function startUpdateChecks(found: (version: string) => void) {
   // small files) (no "Checking…"); an update already offered or installing is left alone
   // An offer is looked at again too: a newer beta replaces the files of the one offered, so that one can't install.
   // Hidden, every 15 minutes instead, and once right away when the window shows again (quietChecks.ts).
+  // An offer that failed to install is looked past too: a newer one takes its place (takesOver).
   const quiet = () => state.kind === 'idle' || state.kind === 'none' || state.kind === 'available'
-    || state.kind === 'error' && !state.version
+    || state.kind === 'error'
   const checks = quietChecks(() => {
     if (!quiet()) return
     void betaOn().then(async (on) => {
       const f = on ? await newest() : await quickFix()  // Beta updates off: only a quick fix, one small file
-      if (!f || !quiet() || state.kind === 'available' && !replaces(f.version, state.version)) {
+      if (!f || !takesOver(f.version, state)) {
         void f?.close?.().catch(() => {})
         return
       }

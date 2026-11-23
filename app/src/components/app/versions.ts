@@ -16,6 +16,15 @@ export function replaces(next: string, shown: string): boolean {
   return fix(next) > fix(shown)
 }
 
+/** Whether a quiet check's offer takes the place of what the update window shows now. An offer that failed to install
+ * is replaced by a newer one: 2026-11-23, fix 32 couldn't install, and the app kept showing its error and never
+ * offered the beta that came out after it until it was restarted. Busy (downloading, installing) is left alone. */
+export function takesOver(next: string, now: { kind: string; version?: string }): boolean {
+  if (now.kind === 'idle' || now.kind === 'none') return true
+  if (now.kind !== 'available' && now.kind !== 'error') return false  // checking, downloading, installing
+  return !now.version || replaces(next, now.version)
+}
+
 /** A download that is gone: the beta moved on (a newer one replaced its files) after this one was offered. */
 export function gone(e: unknown): boolean {
   return /\b404\b|not found/i.test(e instanceof Error ? e.message : String(e))
