@@ -33,8 +33,8 @@ export function LinkPicker() {
     close()
     copyText(shown.url).then(() => toast('Link copied'), () => toast('Could not copy'))
   }
-  const options: [string, string, string][] = [['', 'System browser', ''],
-    ...shown.found.profiles.map((p): [string, string, string] => [p.name, `Chrome: ${p.name}`, p.email])]
+  const options: [string, string][] = [['', 'System browser'],
+    ...shown.found.profiles.map((p): [string, string] => [p.name, `Chrome: ${p.name}`])]
   return (
     <Dialog title="Open link" onClose={close} width={460}
       actions={<>
@@ -44,11 +44,11 @@ export function LinkPicker() {
       </>}>
       <p className="mb-4 break-all text-center text-sm text-dim" title={shown.url}>{short(shown.url)}</p>
       <List>
-        {options.map(([name, title, email]) => (
+        {options.map(([name, title]) => (
           <button key={name || '-'} onClick={() => setPicked(name)} onDoubleClick={() => go(name)}
             onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); go(name) } }}
             role="radio" aria-checked={picked === name} className="block w-full text-left">
-            <Row title={title} subtitle={email || undefined} onClick={() => {}}
+            <Row title={title} onClick={() => {}}
               suffix={picked === name ? <Check size={20} className="text-accent-text" /> : <span className="w-[18px]" />} />
           </button>
         ))}

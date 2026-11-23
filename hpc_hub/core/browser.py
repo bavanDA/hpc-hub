@@ -17,7 +17,6 @@ WINDOWS_EXE = r"Google\Chrome\Application\chrome.exe"
 class Profile:
     folder: str  # "Profile 2"
     name: str  # "Uni"
-    email: str = ""
 
 
 def chrome_dirs(platform: str = sys.platform, env=os.environ, home: Path | None = None) -> list[Path]:
@@ -61,7 +60,9 @@ def profiles(config_dir: Path | None = None) -> list[Profile]:
         except (OSError, ValueError):
             continue
         cache = data.get("profile", {}).get("info_cache", {})
-        return sorted((Profile(k, v.get("name", k), v.get("user_name", "")) for k, v in cache.items()),
+        # only each profile's folder and name: never the account signed in to it (its email), nor anything else
+        # of yours in Chrome's files (2026-11-22, owner: "it shouldn't read cookie of browser")
+        return sorted((Profile(k, v.get("name", k)) for k, v in cache.items()),
                       key=lambda p: p.name.lower())
     return []
 

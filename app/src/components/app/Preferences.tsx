@@ -56,7 +56,7 @@ export function PreferencesDialog({ onClose, onExperimental, onDisconnectAndQuit
   const profiles = found?.profiles ?? []
   const current = profiles.find((p) => p.name.toLowerCase() === prefs?.browser_profile.toLowerCase())?.name ?? ''
   const options: [string, string][] = [['', 'System browser'],
-    ...profiles.map((p): [string, string] => [p.name, `Chrome: ${p.name}${p.email ? ` (${p.email})` : ''}`])]
+    ...profiles.map((p): [string, string] => [p.name, `Chrome: ${p.name}`])]
   return (
     <EDialog title="Settings" onClose={onClose} width={560}>
       {!prefs || !found ? <div className="grid h-40 place-items-center"><Spinner size={24} /></div> : <>

@@ -20,7 +20,7 @@ def test_missing_chrome_config(tmp_path):
 def test_open_url_passes_only_web_links(monkeypatch):
     calls = []
     monkeypatch.setattr(browser, "chrome", lambda: "/usr/bin/chrome")
-    monkeypatch.setattr(browser, "find", lambda name: browser.Profile("Profile 2", "Uni", ""))
+    monkeypatch.setattr(browser, "find", lambda name: browser.Profile("Profile 2", "Uni"))
     monkeypatch.setattr(browser.subprocess, "Popen", lambda argv, **kw: calls.append(argv))
     assert browser.open_url("https://example.org/a", "Uni")
     assert calls[-1][-2:] == ["--", "https://example.org/a"]

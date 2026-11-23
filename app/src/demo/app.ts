@@ -21,8 +21,8 @@ const prefs: Preferences = { browser_profile: 'Uni',
 
 const profiles: Profiles = {
   profiles: [
-    { folder: 'Default', name: 'Home', email: 'jdoe@example.com' },
-    { folder: 'Profile 2', name: 'Uni', email: 'jdoe@university.example.edu' },
+    { folder: 'Default', name: 'Home' },
+    { folder: 'Profile 2', name: 'Uni' },
   ],
   default: 'Uni',
 }

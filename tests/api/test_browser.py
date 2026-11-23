@@ -27,8 +27,28 @@ def test_profiles_and_the_default(chrome):
     config.save_app(config.AppSettings(browser_profile="Uni"), config.APP_FILE)
     got = api.profiles()
     assert got["default"] == "Uni"
-    assert [(p["folder"], p["name"], p["email"]) for p in got["profiles"]] == [
-        ("Default", "Home", "jdoe@example.com"), ("Profile 2", "Uni", "")]
+    assert got["profiles"] == [{"folder": "Default", "name": "Home"}, {"folder": "Profile 2", "name": "Uni"}]
+
+
+def test_the_account_signed_in_to_chrome_is_never_read(chrome):
+    """Only the profiles' folders and names leave Chrome's Local State: not the Google account's email."""
+    got = json.dumps(api.profiles())
+    assert "jdoe@example.com" not in got and "user_name" not in got and "email" not in got
+    src = (Path(__file__).parents[2] / "hpc_hub" / "core" / "browser.py").read_text()
+    assert "user_name" not in src.split("def profiles(")[1].split("\ndef ")[0].replace("never the account", "")
+
+
+def test_nothing_reads_chromes_cookie_files():
+    """HPC Hub's sign-in windows keep cookies of their own, in its own folder (paths.web_dir: sso.py's
+    cookies.sqlite is the in-app window's); nothing points at a browser's cookie or login files."""
+    root = Path(__file__).parents[2] / "hpc_hub"
+    for f in root.rglob("*.py"):
+        text = f.read_text(encoding="utf-8")
+        for name in ('"Cookies"', "'Cookies'", "/Cookies", "Login Data", "Web Data", ".mozilla", "Firefox/Profiles",
+                     "Network/Cookies", "Cookies.binarycookies"):
+            assert name not in text, f"{f.relative_to(root)} names {name}"
+    sso = (root / "connect" / "sso.py").read_text()
+    assert 'd = web_dir()' in sso and 'str(d / "cookies.sqlite")' in sso  # its own, in HPC Hub's folder
 
 
 def test_no_chrome_no_profiles(chrome, monkeypatch):
