@@ -20,12 +20,15 @@ import { Popover } from './Popover'
 import { start, type Tab } from './tabs'
 import { copy, paste, rightClickPastes } from './xterm'
 
-export function TerminalView({ tab, shown, rail = false }: { tab: Tab; shown: boolean; rail?: boolean }) {
+/** One tab's terminal. A Claude tab can show as a chat too (Chat | Terminal); plain: only ever the terminal (the Code
+ * page's panel, 2026-11-22 owner: "the terminal should be just terminal, not terminal and chat"). */
+export function TerminalView({ tab, shown, rail = false, plain = false }: { tab: Tab; shown: boolean; rail?: boolean
+  plain?: boolean }) {
   const host = useRef<HTMLDivElement>(null)
   const toast = useToast()
   const go = useGo()
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null)
-  const claude = isClaudeTab(tab) && tab.cluster !== ''
+  const claude = !plain && isClaudeTab(tab) && tab.cluster !== ''
   const [view, setViewState] = useState<'chat' | 'terminal'>(() => claude ? lastView() : 'terminal')
   const setView = (v: 'chat' | 'terminal') => {
     rememberView(v)

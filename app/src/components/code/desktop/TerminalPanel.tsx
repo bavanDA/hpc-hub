@@ -138,7 +138,7 @@ export function TerminalPanel({ cluster, live, folder, name, home, sessions, hei
       </div>
       <div className="flex min-h-0 flex-1">
         <div className="relative min-w-0 flex-1">
-          {mine.map((t) => <TerminalView key={t.key} tab={t} shown={t.key === on?.key} />)}
+          {mine.map((t) => <TerminalView key={t.key} tab={t} shown={t.key === on?.key} plain />)}
           {body}
         </div>
         {items.length > 0 && (
