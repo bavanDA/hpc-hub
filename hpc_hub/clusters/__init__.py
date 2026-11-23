@@ -23,5 +23,7 @@ def site(cluster_id: str) -> Site:
 
 
 def vpn_gateways() -> tuple[str, ...]:
-    """The VPN gateways of the clusters built in (never ones from your settings): the VPN helper trusts these."""
-    return tuple(c.vpn.gateway for c in default_clusters() if c.vpn.enabled and c.vpn.gateway)
+    """The VPN gateways of the clusters built in (never ones from your settings), and the servers each hands you to:
+    the VPN helper trusts these."""
+    return tuple(h for c in default_clusters() if c.vpn.enabled and c.vpn.gateway
+                 for h in (c.vpn.gateway, *site(c.id).vpn_servers))

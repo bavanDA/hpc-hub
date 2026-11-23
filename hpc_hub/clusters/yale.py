@@ -42,4 +42,7 @@ SITE = Site(
                 quote="Files stored in scratch are purged if they are older than 30 days."),
     gpu_docs=(("rtx_5000_ada", "gpu"), ("a5000", "gpu"), ("a40", "gpu"), ("l40s", "gpu"), ("h100", "gpu_h100"),
               ("h200", "gpu_h200"), ("b200", "gpu_b200"), ("rtx_pro_6000_blackwell", "gpu_rtx6000")),
+    # access.yale.edu signs you in, then hands the tunnel to one of these (2026-11-23: "VPN helper: vpn4.its.yale.edu
+    # is not a gateway this helper was set up for"); access.yale.edu's certificate names exactly these
+    vpn_servers=("vpn3.its.yale.edu", "vpn4.its.yale.edu", "vpn5.its.yale.edu", "vpn6.its.yale.edu"),
 )

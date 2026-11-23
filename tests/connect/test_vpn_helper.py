@@ -142,7 +142,8 @@ def test_install_args_always_allow_the_known_gateways():
     args = vpn_helper.install_args(["VPN.example.edu", "vpn.njit.edu"], "4242", Path("/opt/app/vpn"))
     assert args[:5] == ["install", "--user", "4242", "--from", "/opt/app/vpn"]
     assert [args[i + 1] for i, a in enumerate(args) if a == "--gateway"] == \
-        ["vpn.njit.edu", "access.yale.edu", "vpn.example.edu"]
+        ["vpn.njit.edu", "access.yale.edu", "vpn3.its.yale.edu", "vpn4.its.yale.edu", "vpn5.its.yale.edu",
+         "vpn6.its.yale.edu", "vpn.example.edu"]
 
 
 def test_full_tunnel_sends_no_routes(wulver):
@@ -201,3 +202,85 @@ def test_side_by_side_needs_split_routes_and_dns_where_the_helper_runs(wulver, m
     assert not vpn_helper.side_by_side(wulver)
     wulver.vpn.routes, wulver.vpn.split_tunnel = "128.235.0.0/16", False
     assert not vpn_helper.side_by_side(wulver)
+
+
+# -- Yale's gateway hands the tunnel to another server (2026-11-23: "VPN helper: vpn4.its.yale.edu is not a gateway
+# this helper was set up for") ----------------------------------------------------------------------------------
+
+class PickyHelper(FakeHelper):
+    """Refuses gateways it wasn't set up for, in validate.rs's words."""
+
+    def __init__(self, path, trusted):
+        super().__init__(path)
+        self.trusted = set(trusted)
+
+    def _answer(self, req):
+        if req.get("op") == "up":
+            host = req["url"].split("//", 1)[1].split("/")[0]
+            if host not in self.trusted:
+                return {"ok": False, "error": f"{host} is not a gateway this helper was set up for"}
+        return super()._answer(req)
+
+
+@pytest.fixture
+def yale():
+    return next(c for c in config.default_clusters() if c.id == "yale")
+
+
+YALE_AUTH = {"COOKIE": "webvpn=abc", "HOST": "vpn4.its.yale.edu", "FINGERPRINT": "pin-sha256:xyz",
+             "RESOLVE": "vpn4.its.yale.edu:130.132.2.14"}
+
+
+def test_the_helper_trusts_the_servers_yales_gateway_hands_you_to():
+    known = vpn_helper.KNOWN_GATEWAYS
+    assert "access.yale.edu" in known
+    assert {f"vpn{n}.its.yale.edu" for n in (3, 4, 5, 6)} <= set(known)
+    args = vpn_helper.install_args(["access.yale.edu"], "501", Path("/x"))
+    assert "vpn4.its.yale.edu" in args and args.count("--gateway") == len(set(known))
+
+
+def test_the_helpers_refusal_names_the_server():
+    """The words of app/vpn-helper/src/validate.rs check_url, which this reads."""
+    rust = (Path(__file__).resolve().parents[2] / "app" / "vpn-helper" / "src" / "validate.rs").read_text()
+    assert '"{host} is not a gateway this helper was set up for"' in rust
+    said = "VPN helper: vpn4.its.yale.edu is not a gateway this helper was set up for"
+    assert vpn_helper.untrusted_server(said) == "vpn4.its.yale.edu"
+    assert vpn_helper.untrusted_server("VPN helper: Failed to open tun device") == ""
+
+
+def test_a_helper_set_up_before_it_knew_yales_servers_is_set_up_again_once(tmp_path, yale, monkeypatch):
+    monkeypatch.setattr(vpn_helper, "UP_TIMEOUT", 5)
+    helper = PickyHelper(tmp_path / "h.sock", {"vpn.njit.edu", "access.yale.edu"})  # an older install
+    installed, asked = [], []
+
+    def install(gateways):
+        installed.append(gateways)
+        helper.trusted |= {*vpn_helper.KNOWN_GATEWAYS, *gateways}
+    monkeypatch.setattr(vpn_helper, "install", install)
+    try:
+        v, logged = make(yale, helper.path, lambda title, text: asked.append(text) or True)
+        v.up(YALE_AUTH)
+        assert v.is_active()
+        assert installed == [["access.yale.edu", "vpn4.its.yale.edu"]]
+        assert "vpn4.its.yale.edu" in asked[0] and "permission once more" in asked[0]
+        assert [r["op"] for r in helper.requests].count("up") == 2  # refused, then through
+        v.up(YALE_AUTH)  # trusted now: nothing asked again
+        assert len(installed) == 1 and len(asked) == 1
+    finally:
+        helper.close()
+
+
+def test_saying_no_or_an_unknown_server_installs_nothing(tmp_path, yale, monkeypatch):
+    helper = PickyHelper(tmp_path / "h.sock", {"access.yale.edu"})
+    installed = []
+    monkeypatch.setattr(vpn_helper, "install", installed.append)
+    try:
+        v, _ = make(yale, helper.path, lambda title, text: False)
+        with pytest.raises(VpnError, match="until it is set up again"):
+            v.up(YALE_AUTH)
+        v.confirm = lambda title, text: True
+        with pytest.raises(VpnError, match="evil.example.com is not a gateway"):  # never one HPC Hub doesn't know
+            v.up({**YALE_AUTH, "HOST": "evil.example.com", "RESOLVE": "evil.example.com:192.0.2.9"})
+        assert installed == []
+    finally:
+        helper.close()

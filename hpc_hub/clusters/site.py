@@ -14,3 +14,6 @@ class Site:
     scan_args: str = ""  # extra sbatch arguments for Backup's scan job
     help_email: str = ""  # the help desk it publishes
     code_sign_in: str = ""  # how to sign in on its authenticator setup page (code_setup)
+    # the servers its VPN gateway hands you to after the sign-in (the gateway's certificate names them): the VPN
+    # helper trusts them too (vpn_gateways)
+    vpn_servers: tuple[str, ...] = ()

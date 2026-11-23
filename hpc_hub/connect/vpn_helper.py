@@ -81,6 +81,15 @@ def _checked(answer: dict) -> dict:
     return answer
 
 
+UNTRUSTED = re.compile(r"\b([a-z0-9.-]+) is not a gateway this helper was set up for")
+
+
+def untrusted_server(error: str) -> str:
+    """The server named by the helper's "not a gateway this helper was set up for" (validate.rs), else ""."""
+    m = UNTRUSTED.search(error)
+    return m.group(1) if m else ""
+
+
 def installed_version(address: str | None = None) -> str | None:
     try:
         return str(request({"op": "version"}, timeout=5, address=address).get("version") or "")
@@ -272,6 +281,17 @@ class HelperVpn(Vpn):
             raise VpnError(f"{e}. {NO_ADMIN}") if standard else e
         self.log("VPN helper installed")
 
+    def _trust_again(self, host: str) -> None:
+        """The helper was set up before HPC Hub knew the server the gateway handed you to (Yale's vpn3-6): set it up
+        again with the servers known now, which asks your permission once more."""
+        text = (f"{self.cfg.short or self.cfg.name}'s VPN sent you on to {host}, which the VPN helper wasn't set up "
+                f"for. {'Windows' if WINDOWS else 'macOS'} asks for your permission once more to add it.")
+        if not self.confirm("Let HPC Hub start the VPN", text):
+            raise VpnError(f"The VPN helper can't connect to {host} until it is set up again. Connect again to do it.")
+        self.log(f"Setting the VPN helper up again for {host}")
+        host_of = urlsplit(self.cfg.vpn.gateway if "//" in self.cfg.vpn.gateway else "//" + self.cfg.vpn.gateway)
+        install([host_of.hostname or self.cfg.vpn.gateway, host])
+
     def own_vpn_available(self) -> bool:
         """This HPC Hub has its own VPN to offer instead (vpn_local)."""
         from . import vpn_local
@@ -287,7 +307,15 @@ class HelperVpn(Vpn):
             return False
 
     def up(self, auth: dict[str, str]) -> None:
-        _checked(request(up_request(self.cfg, auth), address=self.address))
+        req = up_request(self.cfg, auth)
+        try:
+            _checked(request(req, address=self.address))
+        except VpnError as e:
+            host = untrusted_server(str(e))
+            if not host or host not in KNOWN_GATEWAYS:
+                raise
+            self._trust_again(host)
+            _checked(request(req, address=self.address))
         deadline = time.monotonic() + UP_TIMEOUT
         while time.monotonic() < deadline:
             status = self._status()
