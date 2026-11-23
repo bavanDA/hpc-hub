@@ -1,5 +1,8 @@
 """This computer's SSH key, for clusters you log in to with one (core/my_key.py): show it, make it, test it."""
 
+from urllib.parse import urlsplit
+
+from ...connect import network
 from ...core import my_key, pairing
 from ..hub import hub
 from ..server import method
@@ -15,6 +18,24 @@ def mine(cluster: str = "") -> dict | None:
     """The key this cluster signs in with: the one you picked for it, else the one ssh finds by itself."""
     key = my_key.find(_chosen(cluster))
     return key.json() if key else None
+
+
+PAGE_WAIT = 1.0  # seconds: the screen asks every second
+
+
+@method("keys.page_reachable", slow=True)
+def page_reachable(cluster: str) -> dict:
+    """Whether the cluster's key page answers from this computer now: Yale's only does on its network (its name is
+    a private Yale address), however you got there: HPC Hub's VPN, Yale's own VPN app, or campus. Setup asks every
+    second and goes on once it does (2026-11-23, owner: "check every second if they got connected"). {reachable}"""
+    parts = urlsplit(hub().session(cluster).cfg.key_page)
+    if not parts.hostname:
+        return {"reachable": False}
+    try:
+        port = parts.port or (80 if parts.scheme == "http" else 443)
+    except ValueError:
+        return {"reachable": False}
+    return {"reachable": network.reachable(parts.hostname, port, timeout=PAGE_WAIT)}
 
 
 @method("keys.create")

@@ -1,5 +1,5 @@
 import { Check, Copy, ExternalLink, FolderOpen, Info, KeyRound, ShieldCheck } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 
 import { call } from '../../rpc'
 import { BUSY, type KeyTest } from '../../types/clusters'
@@ -11,6 +11,7 @@ import { copy, fill, who } from './loginCopy'
 import { S } from './loginStrings'
 import { ownVpnLogin } from './settings/changes'
 import { useClusters } from './store'
+import { useCameUp, useKeyPageReach } from './keyPageReach'
 import { useKeySignIn, type PanelProps } from './useKeySignIn'
 
 const KEY = 0, ADD = 1, TEST = 2
@@ -31,14 +32,19 @@ export function KeyPanel(props: PanelProps) {
   const file = s.key?.file ?? ''
   const keyLine = fill(s.how === 'made' ? S.KEY_MADE : s.how === 'picked' ? S.KEY_PICKED : S.KEY_FOUND, { file })
   const toTest = () => { s.setAdded(true); setOpen(null) }
-  // the key page only opens on the cluster's VPN (Yale): connect that first, then open the page by itself
+  // the key page only opens on the cluster's network (Yale): until it answers, step 2 is only "Connect to Yale's
+  // VPN". Asked every second, so Yale's own VPN app or campus count too; once it answers, the page opens by itself.
   const session = useClusters().sessions[c.id]
   const vpnUp = session?.state === 'Connected'
   const vpnBusy = !!session && BUSY.includes(session.state)
-  const [campus, setCampus] = useState(false)
-  const [wantPage, setWantPage] = useState(false)
   const [vpnError, setVpnError] = useState('')
-  const needVpn = c.vpn.enabled && !vpnUp && !campus
+  const watching = c.vpn.enabled && !!c.key_page && at === ADD && !vpnUp
+  const reach = useKeyPageReach(c.id, watching)
+  const onNet = vpnUp || (watching && reach === true)
+  const needVpn = c.vpn.enabled && !onNet
+  // seen only while step 2 watches (or the VPN is up): reopening the step on the network isn't "just connected"
+  const seen = !c.vpn.enabled ? null : vpnUp ? true : watching ? reach : null
+  useCameUp(seen, () => { if (at === ADD) s.openPage() })
   // a VPN that signs in with the username needs it first; one with a login of its own (Yale's Microsoft page) asks
   // for that on its page, so nothing is asked here (2026-11-22, owner: "why do you ask for username when you
   // don't need that")
@@ -46,16 +52,11 @@ export function KeyPanel(props: PanelProps) {
   const ready = !askUser || !!user.trim()
   // the VPN signs in with the username (Yale: the NetID), typed here when step 3 hasn't had it yet; a failure is
   // said, never swallowed (2026-11-22: "connect Yale VPN doesn't work" showed nothing)
-  const connectVpn = (thenPage = true) => {
+  const connectVpn = () => {
     setVpnError('')
-    setWantPage(thenPage)
     call('clusters.connect', { cluster: c.id, vpn_only: true, username: user.trim() })
-      .catch((e: Error) => { setWantPage(false); setVpnError(e.message) })
+      .catch((e: Error) => setVpnError(e.message))
   }
-  useEffect(() => {
-    if (wantPage && vpnUp) { setWantPage(false); s.openPage() }
-    if (wantPage && session?.state === 'Error') setWantPage(false)
-  }, [wantPage, vpnUp, session?.state]) // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="flex flex-col">
@@ -75,12 +76,12 @@ export function KeyPanel(props: PanelProps) {
       <KeyStep n={2} state={state(ADD)} title={fill(S.STEP_ADD, { who: org })} done={S.PASTED} change={S.CHANGE}
         onOpen={() => setOpen(ADD)}>
         {s.key && <>
-          <div className="flex h-10 items-center gap-2 rounded-lg border border-line-strong pr-1 pl-3">
+          {!needVpn && <div className="flex h-10 items-center gap-2 rounded-lg border border-line-strong pr-1 pl-3">
             <code className="min-w-0 flex-1 truncate font-mono text-xs text-dim" title={s.key.public}>
               {s.key.public}</code>
             <EButton kind="quiet" icon={s.copied ? Check : Copy} onClick={s.copyKey} className="h-8 px-2.5 text-sm">
               {s.copied ? S.COPIED : S.COPY_KEY}</EButton>
-          </div>
+          </div>}
           {needVpn ? <>
             <p>{fill(S.VPN_FIRST, { who: org })}</p>
             {askUser && (
@@ -95,11 +96,11 @@ export function KeyPanel(props: PanelProps) {
               </div>
             )}
             <div className="flex flex-wrap items-center gap-2">
-              <EButton icon={vpnBusy ? undefined : ShieldCheck} onClick={() => connectVpn()}
+              <EButton icon={vpnBusy ? undefined : ShieldCheck} onClick={connectVpn}
                 disabled={vpnBusy || !ready}>
                 {vpnBusy && <Spinner />}{copy.connectVpn(c)}</EButton>
-              <EButton kind="quiet" onClick={() => { setCampus(true); s.openPage() }}>{S.ON_CAMPUS}</EButton>
             </div>
+            {!vpnBusy && <p className="text-sm text-dim">{fill(S.VPN_WATCH, { who: org })}</p>}
             {vpnBusy && session?.detail && <p className="text-sm text-dim">{session.detail}</p>}
             {session?.state === 'Error' && session.detail && <p className="text-sm text-bad">{session.detail}</p>}
             {vpnError && <p className="text-sm text-bad">{vpnError}</p>}
@@ -134,7 +135,7 @@ export function KeyPanel(props: PanelProps) {
         {s.busy && c.second_factor !== 'code' && <p className="text-sm text-dim">{S.DUO_NOW}</p>}
         {s.test && !works && <KeyTestResult test={s.test} text={said(s.test, org)} />}
         {s.test?.reason === 'no_vpn' && c.vpn.enabled && (
-          <div className="flex flex-col gap-1.5"><div><EButton onClick={() => connectVpn(false)}>{copy.connectVpn(c)}</EButton></div>
+          <div className="flex flex-col gap-1.5"><div><EButton onClick={connectVpn}>{copy.connectVpn(c)}</EButton></div>
             {vpnError && <p className="text-sm text-bad">{vpnError}</p>}</div>
         )}
       </KeyStep>

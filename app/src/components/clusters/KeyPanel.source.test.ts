@@ -14,11 +14,20 @@ describe('Connect VPN in setup', () => {
   it('says why it failed, never nothing', () => {
     expect(panel).not.toMatch(/\.catch\(\(\) => setWantPage\(false\)\)/)
     expect(panel).not.toMatch(/vpn_only: true \}\)\s*\.catch\(\(\) => \{\}\)/)
-    expect(panel).toContain('.catch((e: Error) => { setWantPage(false); setVpnError(e.message) })')
+    expect(panel).toContain('.catch((e: Error) => setVpnError(e.message))')
     expect(panel.match(/\{vpnError && <p className="text-sm text-bad">\{vpnError\}<\/p>\}/g)).toHaveLength(2)
   })
-  it("the key page opens by itself once the VPN is up, from step 2 only", () => {
-    expect(panel).toContain('onClick={() => connectVpn()}')
-    expect(panel).toContain('onClick={() => connectVpn(false)}')
+  it("the key page opens by itself once the network is up, from step 2 only", () => {
+    expect(panel).toContain('useCameUp(seen, () => { if (at === ADD) s.openPage() })')
+    expect(panel).toContain("const seen = !c.vpn.enabled ? null : vpnUp ? true : watching ? reach : null")
+  })
+  // 2026-11-23, owner: "if the user is not on Yale VPN you should only show connect to Yale, and check every second"
+  it('off the network, step 2 is only Connect: no key to copy, no "I\'m on campus"', () => {
+    expect(panel).toContain('{!needVpn && <div className="flex h-10')
+    expect(panel).not.toContain('ON_CAMPUS')
+    expect(panel).not.toContain('setCampus')
+    expect(panel).toContain("const watching = c.vpn.enabled && !!c.key_page && at === ADD && !vpnUp")
+    expect(panel).toContain('const reach = useKeyPageReach(c.id, watching)')
+    expect(panel).toContain('const needVpn = c.vpn.enabled && !onNet')
   })
 })

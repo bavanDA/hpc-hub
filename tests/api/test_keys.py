@@ -136,3 +136,48 @@ def test_no_ssh_program_checks_through_asyncssh(home, monkeypatch, prompts, ends
     keys.create()
     assert keys.test("yale", "jdoe")["reason"] == reason
     assert FakeMaster.last.cfg.ssh_key.endswith("id_ed25519") and FakeMaster.last.user == "jdoe"
+
+
+# -- Yale's key page opens only on Yale's network (2026-11-23, owner: "check every second if they got connected") --
+
+def test_the_key_page_is_asked_at_its_own_host_and_port_within_a_second(home, monkeypatch):
+    asked = []
+    monkeypatch.setattr(keys.network, "reachable", lambda host, port, timeout: asked.append((host, port, timeout)))
+    keys.page_reachable("yale")
+    assert asked == [("sshkeys.ycrc.yale.edu", 443, 1.0)]
+    cfg = hub_mod._hub.sessions["yale"].cfg
+    for page, want in (("http://keys.example.edu/", ("keys.example.edu", 80)),
+                       ("https://keys.example.edu:8443/up", ("keys.example.edu", 8443))):
+        cfg.key_page = page
+        keys.page_reachable("yale")
+        assert asked[-1][:2] == want
+
+
+def test_no_page_or_a_bad_one_is_not_reachable(home, monkeypatch):
+    monkeypatch.setattr(keys.network, "reachable", lambda *a, **k: pytest.fail("nothing to ask"))
+    cfg = hub_mod._hub.sessions["yale"].cfg
+    for page in ("", "not a url", "https://keys.example.edu:99999/"):
+        cfg.key_page = page
+        assert keys.page_reachable("yale") == {"reachable": False}
+
+
+def test_it_answers_from_a_real_socket(home):
+    import socket
+    import time
+
+    server = socket.socket()
+    server.bind(("127.0.0.1", 0))
+    server.listen(1)
+    port = server.getsockname()[1]
+    cfg = hub_mod._hub.sessions["yale"].cfg
+    cfg.key_page = f"https://127.0.0.1:{port}/"
+    assert keys.page_reachable("yale") == {"reachable": True}
+    server.close()
+    start = time.monotonic()
+    assert keys.page_reachable("yale") == {"reachable": False}  # nothing there now
+    assert time.monotonic() - start < 2
+
+
+def test_the_screen_asks_every_second():
+    assert keys.PAGE_WAIT <= 1.0
+    assert login_copy.VPN_WATCH and not hasattr(login_copy, "ON_CAMPUS")
