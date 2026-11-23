@@ -95,3 +95,101 @@ def test_uninstall_on_a_mac_moves_the_app_to_the_trash(home, monkeypatch):
 
 def test_shown_uses_a_tilde(home):
     assert reset.shown(home / ".config" / "hpc-hub") == "~" + os.sep.join(["", ".config", "hpc-hub"])
+
+
+# -- Windows: the remover must really run (2026-11-22: Reset HPC Hub removed nothing on Windows) -----------------
+
+def _decoded(argv: list[str]) -> str:
+    import base64
+    return base64.b64decode(argv[argv.index("-EncodedCommand") + 1]).decode("utf-16-le")
+
+
+def test_the_windows_remover_is_never_started_detached(home, monkeypatch):
+    """PowerShell started with DETACHED_PROCESS has no console and quits before it runs anything."""
+    started = []
+    monkeypatch.setattr(reset, "WINDOWS", True)
+    monkeypatch.setattr(reset.subprocess, "Popen", lambda argv, **kw: started.append((argv, kw)))
+    reset.after_quit(reset.places(), [], app_pid=4242)
+    (argv, kw), = started
+    flags = kw["creationflags"]
+    assert not flags & 0x00000008, "DETACHED_PROCESS"
+    assert flags & reset.NO_WINDOW and flags & reset.BREAKAWAY
+    assert argv[0] == "powershell" and "-NonInteractive" in argv
+    assert "Remove-Item" in _decoded(argv)
+
+
+def test_inside_a_job_that_allows_no_breakaway_it_starts_without(home, monkeypatch):
+    tries = []
+
+    def popen(argv, creationflags=0, **kw):
+        tries.append(creationflags)
+        if creationflags & reset.BREAKAWAY:
+            raise PermissionError(5, "Access is denied")
+
+    monkeypatch.setattr(reset, "WINDOWS", True)
+    monkeypatch.setattr(reset.subprocess, "Popen", popen)
+    reset.after_quit(reset.places(), [], app_pid=4242)
+    assert len(tries) == 2 and tries[0] & reset.BREAKAWAY and not tries[1] & reset.BREAKAWAY
+    assert not any(t & 0x8 for t in tries)
+
+
+def test_the_windows_script_waits_for_every_process_and_the_windows_browser():
+    script = reset.windows_script([Path(r"C:\Users\jdoe\AppData\Roaming\HPC Hub")], [], [11, 22, 33])
+    assert "foreach ($id in @(11, 22, 33)) { Wait-Process -Id $id" in script
+    assert "msedgewebview2.exe" in script and f"*{reset.IDENTIFIER}*" in script
+    assert script.index("Wait-Process") < script.index("msedgewebview2") < script.index("Remove-Item")
+
+
+def test_the_windows_script_tries_again_while_files_are_locked_and_says_what_was_left():
+    script = reset.windows_script([Path(r"C:\Users\jdoe\it's mine\HPC Hub")], [], [1])
+    assert f"for ($i = 0; $i -lt {reset.REMOVE_TRIES}; $i++)" in script
+    assert "'C:\\Users\\jdoe\\it''s mine\\HPC Hub'" in script  # a quote in a path is doubled, not a break-out
+    assert "hpc-hub-reset.log" in script and "not removed:" in script
+
+
+def test_the_uninstaller_runs_after_the_folders_are_gone():
+    exe = r"C:\Program Files\HPC Hub\uninstall.exe"
+    script = reset.windows_script([Path(r"C:\Users\jdoe\.config\hpc-hub")], [exe], [1])
+    assert script.index("Remove-Item") < script.index(f"Start-Process -FilePath '{exe}'")
+    only = reset.windows_script([], [r"C:\x\uninstall.exe"], [1])
+    assert "Remove-Item" not in only and "Start-Process" in only
+
+
+def test_the_app_is_waited_for_not_only_pyinstallers_bootloader(monkeypatch):
+    """A frozen backend's parent is PyInstaller's bootloader; the app (whose WebView2 holds files open) is above it."""
+    monkeypatch.delenv("HPC_HUB_APP_PID", raising=False)
+    monkeypatch.setattr(reset.os, "getpid", lambda: 300)
+    monkeypatch.setattr(reset.os, "getppid", lambda: 200)
+    monkeypatch.setattr(reset, "parent_of", lambda pid: {200: 100}.get(pid))
+    monkeypatch.setattr(reset.sys, "frozen", True, raising=False)
+    assert reset.app_processes() == [100, 200, 300]
+    monkeypatch.setenv("HPC_HUB_APP_PID", "77")
+    assert reset.app_processes() == [77, 200, 300]
+    monkeypatch.delenv("HPC_HUB_APP_PID")
+    monkeypatch.setattr(reset.sys, "frozen", False)
+    assert reset.app_processes() == [200, 300]  # python -m hpc_hub.api: the parent is the app
+
+
+def test_parent_of_finds_this_tests_own_parent():
+    """The real lookup on the system the tests run on (Toolhelp on Windows, /proc on Linux, ps on macOS)."""
+    assert reset.parent_of(os.getpid()) == os.getppid()
+    assert reset.parent_of(2**31 - 7) is None
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="the Windows remover is PowerShell")
+def test_folders_wait_for_every_app_process(home):
+    import subprocess
+    places = [p for p in reset.places() if p.exists()]
+    assert len(places) >= 3
+    sleeper = subprocess.Popen(["sleep", "2"])  # the app, still closing
+    import unittest.mock as mock
+    with mock.patch.object(reset, "app_processes", lambda: [sleeper.pid, 999999999]):
+        reset.after_quit(places, [])
+    time.sleep(1)
+    assert all(p.exists() for p in places), "removed while the app still ran"
+    sleeper.wait()
+    for _ in range(60):
+        if not any(p.exists() for p in places):
+            break
+        time.sleep(0.1)
+    assert not any(p.exists() for p in places)

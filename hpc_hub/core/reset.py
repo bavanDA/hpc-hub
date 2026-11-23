@@ -139,24 +139,124 @@ def remove_vpn_helper(log) -> None:
 
 # -- after the app quits --------------------------------------------------------------------------------
 
+# Windows process flags. Never DETACHED_PROCESS: PowerShell started without a console quits at once, before it
+# runs anything (2026-11-22: Reset HPC Hub on Windows removed nothing for that reason). CREATE_NO_WINDOW gives it a
+# hidden console of its own instead; breaking away from the app's job keeps it alive when the app's processes end.
+NO_WINDOW, NEW_GROUP, BREAKAWAY = 0x08000000, 0x00000200, 0x01000000
+REMOVE_TRIES = 30  # seconds a locked file (a WebView2 process still closing) gets before the remover gives up
+
+
+def parent_of(pid: int) -> int | None:
+    """The process that started pid, while both run; None when it can't be told."""
+    try:
+        if WINDOWS:
+            import ctypes
+            from ctypes import wintypes
+
+            class Entry(ctypes.Structure):
+                _fields_ = [("dwSize", wintypes.DWORD), ("cntUsage", wintypes.DWORD),
+                            ("th32ProcessID", wintypes.DWORD), ("th32DefaultHeapID", ctypes.c_size_t),
+                            ("th32ModuleID", wintypes.DWORD), ("cntThreads", wintypes.DWORD),
+                            ("th32ParentProcessID", wintypes.DWORD), ("pcPriClassBase", ctypes.c_long),
+                            ("dwFlags", wintypes.DWORD), ("szExeFile", ctypes.c_wchar * 260)]
+
+            k32 = ctypes.WinDLL("kernel32", use_last_error=True)
+            k32.CreateToolhelp32Snapshot.restype = wintypes.HANDLE
+            snap = k32.CreateToolhelp32Snapshot(0x2, 0)  # TH32CS_SNAPPROCESS
+            if not snap or snap == wintypes.HANDLE(-1).value:
+                return None
+            try:
+                e = Entry()
+                e.dwSize = ctypes.sizeof(Entry)
+                ok = k32.Process32FirstW(snap, ctypes.byref(e))
+                while ok:
+                    if e.th32ProcessID == pid:
+                        return int(e.th32ParentProcessID) or None
+                    ok = k32.Process32NextW(snap, ctypes.byref(e))
+            finally:
+                k32.CloseHandle(snap)
+            return None
+        if MAC:
+            out = subprocess.run(["ps", "-o", "ppid=", "-p", str(pid)], capture_output=True, text=True, timeout=5)
+            return int(out.stdout.strip()) or None
+        stat = Path(f"/proc/{pid}/stat").read_text()
+        return int(stat[stat.rindex(")") + 2:].split()[1]) or None
+    except (OSError, ValueError, subprocess.SubprocessError, AttributeError):
+        return None
+
+
+def app_processes() -> list[int]:
+    """The processes to wait for: this backend, the process that started it and the app itself. A frozen backend
+    is two processes (PyInstaller's bootloader starts the Python one), so the app is the parent's parent; the
+    app's own process id, when the window passes it (HPC_HUB_APP_PID), is used first."""
+    own, parent = os.getpid(), os.getppid()
+    told = os.environ.get("HPC_HUB_APP_PID", "")
+    app = int(told) if told.isdigit() else (parent_of(parent) if getattr(sys, "frozen", False) else None)
+    return list(dict.fromkeys(p for p in (app, parent, own) if p))
+
+
+def windows_script(paths: list[Path], then: list[str], wait: list[int]) -> str:
+    """The PowerShell that waits for the app (and its WebView2 processes, which hold its browser data open) to end,
+    removes paths, trying again while files are still locked, and then runs then. What it couldn't remove is
+    written to %TEMP%\\hpc-hub-reset.log."""
+    quoted = ", ".join("'" + str(p).replace("'", "''") + "'" for p in paths)
+    ids = ", ".join(str(int(p)) for p in wait)
+    lines = [
+        # one at a time: those already gone are skipped, the rest still waited for
+        f"foreach ($id in @({ids})) {{ Wait-Process -Id $id -Timeout 120 -ErrorAction SilentlyContinue }}",
+        # the window's WebView2 processes close a moment after it; they name its data folder on their command line
+        "$deadline = (Get-Date).AddSeconds(20)",
+        "while ((Get-Date) -lt $deadline -and (Get-CimInstance Win32_Process -Filter \"Name='msedgewebview2.exe'\" "
+        f"-ErrorAction SilentlyContinue | Where-Object {{ $_.CommandLine -like '*{IDENTIFIER}*' }})) "
+        "{ Start-Sleep -Milliseconds 500 }",
+        "Start-Sleep -Seconds 1",
+    ]
+    if paths:
+        lines += [
+            f"$paths = @({quoted})",
+            f"for ($i = 0; $i -lt {REMOVE_TRIES}; $i++) {{",
+            "  $left = @($paths | Where-Object { Test-Path -LiteralPath $_ })",
+            "  if (-not $left) { break }",
+            "  $left | ForEach-Object { Remove-Item -LiteralPath $_ -Recurse -Force -ErrorAction SilentlyContinue }",
+            "  if (@($paths | Where-Object { Test-Path -LiteralPath $_ })) { Start-Sleep -Seconds 1 }",
+            "}",
+            "$left = @($paths | Where-Object { Test-Path -LiteralPath $_ })",
+            "$log = Join-Path $env:TEMP 'hpc-hub-reset.log'",
+            "if ($left) { \"$(Get-Date -Format s) not removed: $($left -join ', ')\" | Add-Content -LiteralPath $log } "
+            "else { \"$(Get-Date -Format s) removed: $($paths -join ', ')\" | Add-Content -LiteralPath $log }",
+        ]
+    if then:
+        lines.append("Start-Process -FilePath '" + then[0].replace("'", "''") + "'")
+    return "\n".join(lines) + "\n"
+
+
+def _start_windows(script: str) -> None:
+    """PowerShell, hidden, apart from the app: out of its job when Windows allows that."""
+    import base64
+    argv = ["powershell", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-WindowStyle", "Hidden",
+            "-EncodedCommand", base64.b64encode(script.encode("utf-16-le")).decode()]
+    for flags in (NO_WINDOW | NEW_GROUP | BREAKAWAY, NO_WINDOW | NEW_GROUP):
+        try:
+            subprocess.Popen(argv, creationflags=flags, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                             stderr=subprocess.DEVNULL)
+            return
+        except OSError:  # the job allows no breakaway: started inside it, which still outlives the app's quit
+            if not flags & BREAKAWAY:
+                raise
+
+
 def after_quit(paths: list[Path], then: list[str], app_pid: int | None = None) -> None:
     """Start a process, apart from the app, that waits for it to quit, then removes paths and runs then."""
     for p in paths:
         if not (_ours(p) or p.suffix == ".AppImage" or p.name in ("hpc-hub.desktop", "hpc-hub.png",
                                                                     ".hpc-hub-version")):
             raise ResetError(f"Refusing to remove {p}: it isn't HPC Hub's")
-    pid = app_pid if app_pid is not None else os.getppid()
+    wait = [app_pid] if app_pid is not None else app_processes()
     if WINDOWS:
-        quoted = ", ".join("'" + str(p).replace("'", "''") + "'" for p in paths)
-        run = "Start-Process -FilePath '" + then[0].replace("'", "''") + "'" if then else ""
-        script = (f"Wait-Process -Id {pid} -Timeout 120 -ErrorAction SilentlyContinue; Start-Sleep -Seconds 1; "
-                  + (f"Remove-Item -LiteralPath {quoted} -Recurse -Force -ErrorAction SilentlyContinue; "
-                     if paths else "") + run)
-        subprocess.Popen(["powershell", "-NoProfile", "-NonInteractive", "-WindowStyle", "Hidden", "-Command", script],
-                         creationflags=0x00000008 | 0x00000200 | 0x08000000,  # detached, own group, no window
-                         stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        _start_windows(windows_script(paths, then, wait))
         return
-    script = (f"i=0; while kill -0 {pid} 2>/dev/null && [ $i -lt 240 ]; do sleep 0.5; i=$((i+1)); done; sleep 1; "
+    alive = " || ".join(f"kill -0 {int(p)} 2>/dev/null" for p in wait) or "false"
+    script = (f"i=0; while {{ {alive}; }} && [ $i -lt 240 ]; do sleep 0.5; i=$((i+1)); done; sleep 1; "
               + (f"rm -rf -- {shlex.join(str(p) for p in paths)}; " if paths else "")
               + (shlex.join(then) if then else "true"))
     subprocess.Popen(["/bin/sh", "-c", script], start_new_session=True, stdin=subprocess.DEVNULL,
