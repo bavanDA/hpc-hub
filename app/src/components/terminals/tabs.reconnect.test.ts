@@ -107,6 +107,53 @@ describe('a tab that loses its cluster', () => {
     expect(tab.banners[tab.banners.length - 1].text).toContain('has ended')
   })
 
+  it('does not call a session ended when its node did not answer', async () => {
+    const { call } = await import('../../rpc')
+    const tab = await opened()
+    vi.mocked(Date.now).mockReturnValue(60_000)
+    vi.mocked(call).mockClear()
+    h.listing = { sessions: [], read: [''] }  // the login node answered, n1 didn't
+    h.opened[0].exit(255)
+    await flush()
+    expect(vi.mocked(call)).toHaveBeenCalledWith('terminals.list', { cluster: 'wulver', node: 'n1' })
+    const note = tab.banners[tab.banners.length - 1]
+    expect(note.text).not.toContain('has ended')
+    expect(note.text).toContain("n1 didn't answer")
+    expect(note.button).toBe('Attach again')
+    h.listing = alive
+    note.action!()
+    await flush()
+    expect(h.opened).toHaveLength(2)
+  })
+
+  it('asks again while connected before it says anything', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout'] })
+    try {
+      const tab = await opened()
+      vi.mocked(Date.now).mockReturnValue(60_000)
+      h.connected = true
+      h.listing = { sessions: [], read: [''] }
+      h.opened[0].exit(255)
+      await flush()
+      expect(tab.banners[tab.banners.length - 1].text).toContain('Checking')
+      h.listing = { sessions: [{ name: 'tmux-1', node: 'n1' }], read: ['', 'n1'] }  // n1 answers this time
+      await vi.advanceTimersByTimeAsync(5000)
+      await flush()
+      expect(h.opened).toHaveLength(2)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('says it ended when the node answered without it', async () => {
+    const tab = await opened()
+    vi.mocked(Date.now).mockReturnValue(60_000)
+    h.listing = { sessions: [], read: ['', 'n1'] }
+    h.opened[0].exit(255)
+    await flush()
+    expect(tab.banners[tab.banners.length - 1].text).toContain('has ended')
+  })
+
   it('does not reattach someone who left on purpose', async () => {
     const tab = await opened()
     vi.mocked(Date.now).mockReturnValue(60_000)

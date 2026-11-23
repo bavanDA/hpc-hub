@@ -22,6 +22,7 @@ export type Listing = {
   nodes: Record<string, string> | null  // running job id -> node
   homes?: string[]  // your home folder, as $HOME and as on disk
   sessions: TmuxSession[]
+  read?: string[]  // where sessions were read: '' the login node, then nodes; one on a node not here may still run
 }
 
 /** The local command line that opens a terminal, from terminals.command. */

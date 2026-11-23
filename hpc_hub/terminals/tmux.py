@@ -15,6 +15,7 @@ FIELDS = ["session_name", "session_created", "session_attached", "@hpchub_label"
           "pane_current_command", "session_windows", "pane_current_path", "@hpchub_remote"]
 NODE_SSH = "ssh -o BatchMode=yes -o ConnectTimeout=10 -o LogLevel=ERROR"
 NODE_MARK = "@@NODE "
+READ_MARK = "@@READ"  # after a node's sessions: the node answered (none listed then means none there)
 _LS = f"tmux list-sessions -F {shlex.quote(SEP.join('#{' + f + '}' for f in FIELDS))} 2>/dev/null"
 # First line: the host, then home as $HOME has it and as the disk does (tmux gives a pane's folder the disk's way,
 # /mmfs1/home/... where $HOME says /home/...), so a session's folder can read ~/...
@@ -68,6 +69,10 @@ class Listing:
     sessions: list[Session]
     nodes: dict[str, str] | None = None  # running job id -> node; None if squeue gave nothing
     homes: list[str] = field(default_factory=list)  # your home folder, as $HOME and as on disk
+    # where the sessions were read: "" the login node, then compute nodes. A session on a node not here may still be
+    # running: that node didn't answer (busy, a slow ssh hop) or wasn't asked (squeue didn't answer). 2026-11-23: a
+    # tab said "This session has ended" while its session on the node ran on.
+    read: list[str] = field(default_factory=list)
 
 
 def _session(line: str, node: str = "") -> Session:
@@ -91,10 +96,13 @@ def parse(text: str) -> Listing:
             continue
         if not in_screen and SEP in line:
             out.append(_session(line))
+    read = [""] if host else []
     node = ""
     for line in node_part.splitlines():
         if line.startswith(NODE_MARK):
             node = line[len(NODE_MARK):].strip()
+        elif node and line.strip() == READ_MARK:
+            read.append(node)
         elif node and SEP in line:
             out.append(_session(line, node))
     text, found, job_part = text.partition("JOB_LIST\n")
@@ -104,7 +112,7 @@ def parse(text: str) -> Listing:
         out.append(Session(f"{m.group(1)}.{m.group(2)}", "screen", attached=int(m.group(3) == "Attached"),
                            label=m.group(2)))
     out.sort(key=lambda s: (s.kind != "tmux", -s.created, s.name))
-    return Listing(host, has_tmux, out, nodes, homes)
+    return Listing(host, has_tmux, out, nodes, homes, read)
 
 
 def _int(v: str) -> int:
@@ -221,14 +229,17 @@ def save_buffer(node: str) -> str:
 
 
 def _on_node(ssh: SshMaster, node: str) -> str:
-    res = ssh.run_on_host(node, _LS) or ssh.on_login(on(node, _LS), timeout=20)
+    line = f"{_LS}; echo {READ_MARK}"  # printed on the node, so only when it was reached
+    res = ssh.run_on_host(node, line) or ssh.on_login(on(node, line), timeout=20)
     return f"{NODE_MARK}{node}\n{res.stdout}"
 
 
-def list_sessions(ssh: SshMaster, also: str = "") -> Listing:
-    """Sessions on the login node and on the nodes of our own jobs; also: the node in use, if it isn't one."""
-    text, mark, nodes = ssh.on_login(LIST, timeout=30).stdout.partition("NODE_LIST\n")
-    return parse(text + mark + "".join(_on_node(ssh, n) for n in sorted({*nodes.split(), also} - {""})))
+def list_sessions(ssh: SshMaster, *also: str) -> Listing:
+    """Sessions on the login node and on the nodes of our own jobs; also: other nodes to look at (the one in use, a
+    tab's). Listing.read says which places answered."""
+    text, _, nodes = ssh.on_login(LIST, timeout=30).stdout.partition("NODE_LIST\n")
+    # the mark always: with no answer from the login node, the nodes' part mustn't read as the login node's
+    return parse(text + "NODE_LIST\n" + "".join(_on_node(ssh, n) for n in sorted({*nodes.split(), *also} - {""})))
 
 
 def run(ssh: SshMaster, line: str) -> None:

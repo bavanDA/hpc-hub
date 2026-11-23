@@ -11,7 +11,7 @@ class FakeSsh:
     """Records what would run on the cluster."""
 
     def __init__(self, out: str = ""):
-        self.out, self.ran, self.on_node = out, [], {}
+        self.out, self.ran, self.on_node, self.silent = out, [], {}, set()
 
     def argv(self, command=None, tty=False):
         return ["ssh", *(["-tt"] if tty else []), "jdoe@cluster", *([command] if command else [])]
@@ -24,7 +24,10 @@ class FakeSsh:
 
     def run_on_host(self, node, command, timeout=15):
         self.ran.append((node, command))
-        return subprocess.CompletedProcess(command, 0, self.on_node.get(node, ""), "")
+        if node in self.silent:  # a node that doesn't answer
+            return subprocess.CompletedProcess(command, 255, "", "ssh: connect to host timed out")
+        mark = f"{tmux.READ_MARK}\n" if tmux.READ_MARK in command else ""
+        return subprocess.CompletedProcess(command, 0, self.on_node.get(node, "") + mark, "")
 
 
 class FakeSession:
@@ -61,6 +64,24 @@ def test_list_gives_sessions_with_colors(ssh):
     assert claude["color"] == tmux.AGENT_COLORS["claude"] and claude["title"] == claude["name"]
     assert build["title"] == "Build" and build["color"] == "#2ec27e" and build["node"] == ""
     assert (build["path"], claude["path"]) == ("/home/jdoe", "/h")  # the folder each one is in now
+
+
+def test_list_says_where_it_read_and_asks_the_tabs_node_too(ssh):
+    """2026-11-23: a tab said "This session has ended" while it ran on: its node didn't answer the listing."""
+    row = tmux.SEP.join(["hpchub-term-1123-1000", "100", "0", "Terminal", "", "claude", "1", "/h"])
+    ssh.out = "login1\nTMUX_OK\nSCREEN_LIST\nJOB_LIST\nNODE_LIST\n"  # squeue gave nothing this time
+    ssh.silent = {"n0007"}
+    got = terminals.sessions("wulver", node="n0007")
+    assert "n0007" in [r[0] for r in ssh.ran if isinstance(r, tuple)]  # asked, though not among the jobs' nodes
+    assert got["read"] == ["", "n0042"]  # n0007 didn't answer
+    ssh.silent, ssh.on_node["n0007"] = set(), f"{row}\n"
+    got = terminals.sessions("wulver", node="n0007")
+    assert "n0007" in got["read"] and [s["node"] for s in got["sessions"]] == ["n0007"]
+
+
+def test_a_login_node_that_gives_nothing_read_nowhere(ssh):
+    ssh.out, ssh.silent = "", {"n0042"}
+    assert terminals.sessions("wulver")["read"] == []  # nor did the node in use
 
 
 def test_not_connected_says_so(ssh):

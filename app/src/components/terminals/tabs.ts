@@ -13,7 +13,7 @@ import { demoShell } from './demoShell'
 import { dropHistory } from './history/view'
 import { makeTab } from './makeTab'
 import { ptyClose, ptyOpen, ptyResize, ptyWrite } from './pty'
-import { nextStep } from './reattach'
+import { lookedAt, nextStep } from './reattach'
 import { scanLinks } from './scanLinks'
 import { screenText } from './screenText'
 import { nextCurrent, tabKey } from './tabKey'
@@ -123,15 +123,22 @@ const stillOpen = (tab: Tab) => getState().tabs.includes(tab) && tab.pty === nul
 
 /** Its connection ended: the cluster gone (wait for it), or only this tab (attach), or the session is over. */
 async function afterExit(tab: Tab, code: number, ranFor: number, tries = 6) {
-  const listing = await call<Listing>('terminals.list', { cluster: tab.cluster }).catch(() => null)
+  // its node is asked too: it may not be among your jobs' nodes when squeue doesn't answer
+  const listing = await call<Listing>('terminals.list', { cluster: tab.cluster, node: tab.node }).catch(() => null)
   if (!stillOpen(tab)) return
-  if (!listing && tries > 0 && isConnected(tab.cluster)) {  // the app hasn't noticed the lost link yet
+  const found = listing?.sessions.find((s) => s.name === tab.session)
+  const looked = !!listing && (!!found || lookedAt(listing, tab.node))
+  // no answer: the app hasn't noticed the lost link yet, or the node was busy; ask again
+  if (!looked && tries > 0 && isConnected(tab.cluster)) {
     setTimeout(() => void afterExit(tab, code, ranFor, tries - 1), 5000)
     return
   }
-  const found = listing?.sessions.find((s) => s.name === tab.session)
-  const step = nextStep(listing !== null, !!found, code, ranFor)
+  const step = nextStep(listing !== null, looked, !!found, code, ranFor)
   if (step === 'attach') return attachAgain(tab, found?.node)
+  if (step === 'unsure') {  // 2026-11-23: "This session has ended" while it ran on, its node slow to answer
+    return lostNote(tab, `Connection ended. ${tab.node || clusterLabel(tab.cluster)} didn't answer, so HPC Hub `
+      + "can't tell whether this session still runs.", 'Attach again', () => attachAgain(tab))
+  }
   if (step === 'gone') {
     const note = endedNote(tab.session)
     return lostNote(tab, note.text, note.button, note.button ? () => void continueChat(tab) : undefined)

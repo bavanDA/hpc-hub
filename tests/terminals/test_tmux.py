@@ -1,4 +1,5 @@
 import os
+import shlex
 import shutil
 import subprocess
 
@@ -148,11 +149,14 @@ class NodeSsh:
         self.ran.append(command)
         if command == tmux.LIST:
             return subprocess.CompletedProcess(command, 0, f"login1\nTMUX_OK\nNODE_LIST\n{self.nodes}", "")
-        return subprocess.CompletedProcess(command, 0, _row("by-hop") + "\n", "")
+        mark = f"{tmux.READ_MARK}\n" if tmux.READ_MARK in command else ""
+        return subprocess.CompletedProcess(command, 0, _row("by-hop") + "\n" + mark, "")
     on_login = run
 
     def run_on_host(self, node, command, timeout=15):
-        return subprocess.CompletedProcess(command, 0, _row(f"on-{node}") + "\n", "") if self.kept else None
+        if not self.kept:
+            return None
+        return subprocess.CompletedProcess(command, 0, f"{_row(f'on-{node}')}\n{tmux.READ_MARK}\n", "")
 
 
 def test_sessions_come_from_the_shell_kept_on_the_node():
@@ -161,9 +165,43 @@ def test_sessions_come_from_the_shell_kept_on_the_node():
 
 
 def test_the_node_in_use_is_looked_at_too():
-    got = tmux.list_sessions(NodeSsh("n0006\n"), also="n0031").sessions
+    got = tmux.list_sessions(NodeSsh("n0006\n"), "n0031").sessions
     assert {t.node for t in got} == {"n0006", "n0031"}
-    assert len(tmux.list_sessions(NodeSsh("n0006\n"), also="n0006").sessions) == 1
+    assert len(tmux.list_sessions(NodeSsh("n0006\n"), "n0006").sessions) == 1
+
+
+def test_a_listing_says_which_places_answered():
+    row = _row("work")
+    got = tmux.parse(f"login02\nTMUX_OK\nNODE_LIST\n{tmux.NODE_MARK}n0006\n{row}\n{tmux.READ_MARK}\n"
+                     f"{tmux.NODE_MARK}n0007\n")
+    assert got.read == ["", "n0006"]  # n0007 printed nothing, not even the mark: not reached
+    assert tmux.parse("").read == []  # the login node gave nothing either
+    # a node reached with no sessions on it is read: none there
+    assert tmux.parse(f"login02\nNODE_LIST\n{tmux.NODE_MARK}n0006\n{tmux.READ_MARK}\n").read == ["", "n0006"]
+
+
+def test_the_mark_comes_only_from_the_node():
+    """Printed after tmux on the node, by the same command: with no tmux server (or no tmux) still printed."""
+    line = tmux.on("n0006", f"{tmux._LS}; echo {tmux.READ_MARK}")
+    assert line.startswith(tmux.NODE_SSH) and shlex.split(line)[-1].endswith(f"echo {tmux.READ_MARK}")
+    bash = shutil.which("bash")
+    if not bash or os.name == "nt":
+        pytest.skip("needs a POSIX shell")
+    out = subprocess.run([bash, "-c", f"{tmux._LS}; echo {tmux.READ_MARK}"], capture_output=True, text=True,
+                         env={"PATH": "/nonexistent"}).stdout  # no tmux at all
+    assert out.splitlines()[-1] == tmux.READ_MARK
+
+
+def test_a_node_that_does_not_answer_is_not_read():
+    class Silent(NodeSsh):
+        def run(self, command, timeout=60, fast=None):
+            if command == tmux.LIST:
+                return super().run(command)
+            return subprocess.CompletedProcess(command, 255, "", "timed out")
+        on_login = run
+    got = tmux.list_sessions(Silent("n0006\n", kept=False), "", "n0007")
+    assert got.read == [""] and got.sessions == []
+    assert tmux.list_sessions(NodeSsh("n0006\n"), "", "n0007").read == ["", "n0006", "n0007"]
 
 
 def test_without_a_kept_shell_it_hops_with_ssh():

@@ -32,11 +32,13 @@ def _target(session: str, node: str = "", kind: str = "tmux") -> tmux.Session:
 
 
 @method("terminals.list")
-def sessions(cluster: str) -> dict:
-    """tmux (and screen) sessions on the cluster and on your running jobs' nodes."""
+def sessions(cluster: str, node: str = "") -> dict:
+    """tmux (and screen) sessions on the cluster and on your running jobs' nodes; node: look there too (a tab whose
+    connection ended asks whether its session still runs). read: where sessions were read ("" the login node); a
+    session on a node not in it may still run."""
     s = hub().connected(cluster)
-    listing = tmux.list_sessions(s.ssh, s.allocation.node if s.allocation else "")
-    return {"host": listing.host, "has_tmux": listing.has_tmux, "nodes": listing.nodes,
+    listing = tmux.list_sessions(s.ssh, s.allocation.node if s.allocation else "", node)
+    return {"host": listing.host, "has_tmux": listing.has_tmux, "nodes": listing.nodes, "read": listing.read,
             "homes": listing.homes, "sessions": [_session_json(t) for t in listing.sessions]}
 
 
