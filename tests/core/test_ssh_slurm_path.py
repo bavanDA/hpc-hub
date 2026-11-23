@@ -105,7 +105,7 @@ def test_a_broken_check_leaves_commands_alone(master, monkeypatch):
         raise subprocess.TimeoutExpired(command, timeout)
     monkeypatch.setattr(master, "_run_plain", broken)
     master.slurm_path = "/stale"
-    master.find_slurm()
+    assert not master.find_slurm(waits=())
     assert master.slurm_path == ""  # a new sign-in starts fresh
 
 
@@ -143,3 +143,168 @@ def test_the_session_looks_once_signed_in():
     from hpc_hub.connect.session import ClusterSession
     src = inspect.getsource(ClusterSession._after_login)
     assert src.index("find_slurm()") < src.index("_read_limits()")
+
+
+# -- a check that got no answer (2026-11-23 report from Windows, 0.2.7-beta.61: after signing in again every squeue
+# and salloc said "command not found" until the next sign-in; the log never said where Slurm was) -----------------
+
+LOGIN_PATH = "/opt/slurm/bin:/usr/bin"
+MISSING = "bash: line 1: squeue: command not found"
+
+
+class Cluster:
+    """The login node: the check answers after `silent` tries; Slurm runs only with its login PATH."""
+
+    def __init__(self, silent: int = 0):
+        self.silent, self.sent = silent, []
+
+    def __call__(self, command, timeout):
+        self.sent.append(command)
+        if command == ssh_mod.FIND_SLURM:
+            if self.silent:
+                self.silent -= 1
+                return subprocess.CompletedProcess(command, 255, "", "Not connected to the cluster")
+            return subprocess.CompletedProcess(command, 0, f"@path={LOGIN_PATH}\n", "")
+        if command.startswith(f"export PATH={LOGIN_PATH}; "):
+            return subprocess.CompletedProcess(command, 0, "1659999 n0042\n", "")
+        tool = command.split()[0]
+        return subprocess.CompletedProcess(command, 127, "", f"bash: line 1: {tool}: command not found")
+
+
+@pytest.fixture
+def cluster(master, monkeypatch):
+    c = Cluster()
+    monkeypatch.setattr(master, "_run_plain", c)
+    monkeypatch.setattr(ssh_mod.time, "sleep", lambda s: None)
+    return c
+
+
+def test_a_check_with_no_answer_asks_again(master, cluster):
+    cluster.silent = 1
+    assert master.find_slurm() and master.slurm_path == LOGIN_PATH
+    assert cluster.sent.count(ssh_mod.FIND_SLURM) == 2
+
+
+def test_a_check_that_never_answers_says_so(master, cluster):
+    logged = []
+    master.log = logged.append
+    cluster.silent = 10
+    assert not master.find_slurm() and master.slurm_path == ""
+    assert cluster.sent.count(ssh_mod.FIND_SLURM) == len(ssh_mod.FIND_WAITS) + 1
+    assert any("Couldn't check where Slurm is" in line for line in logged)
+
+
+def test_no_slurm_anywhere_is_an_answer_not_asked_again(master, monkeypatch):
+    sent = []
+
+    def plain(command, timeout):
+        sent.append(command)
+        return subprocess.CompletedProcess(command, 1, "", "")
+    monkeypatch.setattr(master, "_run_plain", plain)
+    assert master.find_slurm() and master.slurm_path == "" and len(sent) == 1
+
+
+def test_squeue_not_found_looks_for_slurm_again_and_runs_once_more(master, cluster):
+    cluster.silent = 10
+    master.find_slurm()  # signed in: no answer
+    cluster.silent = 0
+    res = master.on_login("squeue -h -u jdoe", fast=False)
+    assert res.returncode == 0 and res.stdout == "1659999 n0042\n"
+    with_path = f"export PATH={LOGIN_PATH}; squeue -h -u jdoe"
+    assert cluster.sent[-3:] == ["squeue -h -u jdoe", ssh_mod.FIND_SLURM, with_path]
+    assert master.run("sinfo -h").returncode == 0  # later commands have it from the start
+    assert cluster.sent[-1] == f"export PATH={LOGIN_PATH}; sinfo -h"
+
+
+def test_on_the_jobs_node_too(master, cluster, monkeypatch):
+    cluster.silent = 10
+    master.find_slurm()
+    cluster.silent = 0
+    master.work_node = "n0042"
+    on_node = []
+
+    class Shell:
+        def run(self, command, timeout):
+            on_node.append(command)
+            ok = command.startswith("export PATH=")
+            return subprocess.CompletedProcess(command, 0 if ok else 127, "", "" if ok else MISSING)
+    monkeypatch.setattr(master, "_shell_on", lambda node: Shell())
+    assert master.run("squeue -h").returncode == 0
+    assert on_node == ["squeue -h", f"export PATH={LOGIN_PATH}; squeue -h"]
+
+
+def test_other_missing_commands_are_left_alone(master, cluster):
+    res = master.on_login("nvidia-smi", fast=False)
+    assert res.returncode == 127 and ssh_mod.FIND_SLURM not in cluster.sent
+
+
+def test_looking_again_is_not_done_on_every_command(master, cluster, monkeypatch):
+    monkeypatch.setattr(master, "_run_plain", lambda command, timeout: (
+        cluster.sent.append(command),
+        subprocess.CompletedProcess(command, 127 if command != ssh_mod.FIND_SLURM else 1, "", MISSING))[1])
+    for _ in range(5):
+        assert master.on_login("squeue -h", fast=False).returncode == 127
+    assert cluster.sent.count(ssh_mod.FIND_SLURM) == 1  # Slurm isn't there at all: once a minute at most
+
+
+def test_a_command_that_had_the_path_is_not_run_again(master, cluster):
+    master.slurm_path = LOGIN_PATH
+    res = subprocess.CompletedProcess("x", 127, "", MISSING)
+    assert not master.slurm_found_late(f"export PATH={LOGIN_PATH}; squeue -h", res)
+    assert not master.slurm_found_late("squeue -h", subprocess.CompletedProcess("x", 0, "", ""))
+
+
+@pytest.mark.parametrize("err", ["bash: line 1: salloc: command not found", "sh: sbatch: not found",
+                                 "bash: scontrol: command not found"])
+def test_the_ways_a_shell_says_a_slurm_tool_is_missing(err):
+    assert ssh_mod.SLURM_MISSING.search(err)
+
+
+def test_salloc_not_found_gets_a_node_once_slurm_is_found(master, cluster, monkeypatch):
+    from hpc_hub.compute import salloc
+    from hpc_hub.core.config import ComputeProfile
+
+    cluster.silent = 10
+    master.find_slurm()
+    cluster.silent = 0
+
+    class Proc:
+        def __init__(self, lines, code):
+            self.stdout, self.code = iter(line + "\n" for line in lines), code
+
+        def poll(self):
+            return self.code
+
+        wait = poll
+
+        def terminate(self):
+            pass
+    started = []
+
+    def popen(command, **kw):
+        started.append(master.wrap(command))
+        if started[-1].startswith("export PATH="):
+            return Proc(["salloc: Granted job allocation 1659999"], 0)
+        return Proc(["bash: line 1: salloc: command not found"], 127)
+    monkeypatch.setattr(master, "popen", popen)
+    a = salloc.allocate(master, ComputeProfile(), lambda line: None)
+    assert a.job_id == "1659999" and len(started) == 2 and started[1].startswith(f"export PATH={LOGIN_PATH}; salloc ")
+
+
+def test_salloc_refused_for_other_reasons_is_not_run_again(master, cluster, monkeypatch):
+    from hpc_hub.compute import salloc, slurm
+    from hpc_hub.core.config import ComputeProfile
+
+    master.slurm_path = LOGIN_PATH
+    started = []
+
+    class Proc:
+        stdout = iter(["salloc: error: Job submit/allocate failed: Invalid account\n"])
+
+        def poll(self):
+            return 1
+        wait = poll
+    monkeypatch.setattr(master, "popen", lambda command, **kw: started.append(command) or Proc())
+    with pytest.raises(slurm.SlurmError, match="Invalid account"):
+        salloc.allocate(master, ComputeProfile(), lambda line: None)
+    assert len(started) == 1

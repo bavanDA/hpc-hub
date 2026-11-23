@@ -1,6 +1,7 @@
 """One SSH ControlMaster per cluster, so Duo is asked once. Windows' OpenSSH has none: there it is ssh_async.py."""
 
 import os
+import re
 import shlex
 import socket
 import subprocess
@@ -36,6 +37,10 @@ BASH = "exec bash --norc --noprofile"  # a kept shell's launcher
 # Commands over ssh run without a login shell, so they find Slurm only if your ~/.bashrc puts it on the PATH (a new or
 # edited one may not: every squeue failed with 127, and the node form fell back to text boxes). Then a login shell's
 # PATH, which has it, is used for HPC Hub's commands. Its output is marked: a login shell may print a banner first.
+FIND_WAITS = (1.0, 3.0)  # asked again after these when the check gets no answer
+SLURM_RECHECK = 60.0
+SLURM_TOOLS = "squeue|salloc|sbatch|srun|scontrol|sinfo|sacct|scancel|sacctmgr|sshare|sprio|seff"
+SLURM_MISSING = re.compile(rf"\b(?:{SLURM_TOOLS}): (?:command )?not found")
 FIND_SLURM = ("command -v sinfo >/dev/null 2>&1 && echo @ok || "
               "bash -lc 'command -v sinfo >/dev/null 2>&1 && printf \"@path=%s\\n\" \"$PATH\"' </dev/null 2>/dev/null")
 
@@ -63,19 +68,41 @@ class SshMaster:
         self._node_off: dict[str, float] = {}  # node -> no shell there until then
         self._node_shells: dict[str, tuple[FastShell | None, threading.Lock]] = {}  # job id or node -> shell
         self.slurm_path = ""  # find_slurm: a login shell's PATH, when the plain one has no Slurm
+        self._slurm_lock = threading.Lock()
+        self._slurm_next = 0.0  # a Slurm command not found looks for Slurm again from then on
 
-    def find_slurm(self) -> None:
-        """After signing in: is Slurm on the PATH commands get? If only a login shell has it, use that PATH."""
+    def find_slurm(self, waits: tuple[float, ...] = FIND_WAITS) -> bool:
+        """After signing in: is Slurm on the PATH commands get? If only a login shell has it, use that PATH.
+        Asked again after waits when the cluster gives no answer; False when it never did (a check that failed
+        then had every Slurm command fail with 127 until you signed in again: 2026-11-23 report from Windows)."""
         self.slurm_path = ""
-        try:
-            res = self._run_plain(FIND_SLURM, 30)
-        except (subprocess.SubprocessError, OSError):
-            return
-        for line in res.stdout.splitlines():
-            if line.startswith("@path=") and line[len("@path="):].strip():
-                self.slurm_path = line[len("@path="):].strip()
-        if self.slurm_path:
-            self.log("Slurm is on a login shell's PATH only (not your ~/.bashrc's): HPC Hub uses that PATH")
+        for wait in (*waits, None):
+            try:
+                res = self._run_plain(FIND_SLURM, 30)
+            except (subprocess.SubprocessError, OSError):
+                res = None
+            if res is not None and res.returncode in (0, 1):  # 1: no Slurm on either PATH, an answer too
+                for line in res.stdout.splitlines():
+                    if line.startswith("@path=") and line[len("@path="):].strip():
+                        self.slurm_path = line[len("@path="):].strip()
+                if self.slurm_path:
+                    self.log("Slurm is on a login shell's PATH only (not your ~/.bashrc's): HPC Hub uses that PATH")
+                return True
+            if wait is not None:
+                time.sleep(wait)
+        self.log("Couldn't check where Slurm is: HPC Hub looks again when a Slurm command isn't found")
+        return False
+
+    def slurm_found_late(self, ran: str, res: subprocess.CompletedProcess) -> bool:
+        """A Slurm command wasn't found: look for Slurm again (at most every SLURM_RECHECK seconds). True when
+        the command ran without a PATH there now is, so it can run again: what wasn't found never ran."""
+        if res.returncode == 0 or not SLURM_MISSING.search(res.stderr + res.stdout):
+            return False
+        with self._slurm_lock:
+            if not self.slurm_path and time.monotonic() >= self._slurm_next:
+                self._slurm_next = time.monotonic() + SLURM_RECHECK
+                self.find_slurm(waits=())
+        return bool(self.slurm_path) and not ran.startswith(f"export PATH={shlex.quote(self.slurm_path)}; ")
 
     def wrap(self, command: str) -> str:
         """command with the PATH that has Slurm, when find_slurm found one (never twice)."""
@@ -145,19 +172,29 @@ class SshMaster:
 
     def run(self, command: str, timeout: float = 60, fast: bool | None = None) -> subprocess.CompletedProcess:
         """On the running job's node, with no job on the login node. A command that may have run isn't run twice."""
-        command = self.wrap(command)
-        shell = self._shell_on(self.work_node) if self.work_node else None
-        if shell:
+        for again in (True, False):
+            ran = self.wrap(command)
+            shell = self._shell_on(self.work_node) if self.work_node else None
+            if not shell:
+                break
             try:
-                return shell.run(command, timeout)
+                res = shell.run(ran, timeout)
             except FastShellError as e:
                 if e.sent:
-                    return subprocess.CompletedProcess(command, 255, "", f"connection to the node broke: {e}")
-        return self.on_login(command, timeout, fast)
+                    return subprocess.CompletedProcess(ran, 255, "", f"connection to the node broke: {e}")
+                break
+            if not (again and self.slurm_found_late(ran, res)):
+                return res
+        return self.on_login(command, timeout, fast)  # it looks for Slurm again itself
 
     def on_login(self, command: str, timeout: float = 60, fast: bool | None = None) -> subprocess.CompletedProcess:
         """For what lives on the login node or must outlast the job. Quick commands (or fast=True) go through a
         shell kept open there; the rest through plain ssh."""
+        ran = self.wrap(command)
+        res = self._on_login(command, timeout, fast)
+        return self._on_login(command, timeout, fast) if self.slurm_found_late(ran, res) else res
+
+    def _on_login(self, command: str, timeout: float, fast: bool | None) -> subprocess.CompletedProcess:
         command = self.wrap(command)
         shell = self._take_shell() if (timeout <= 60 if fast is None else fast) else None
         if shell:

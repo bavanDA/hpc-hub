@@ -27,9 +27,12 @@ def allocate(
     on_pending: Callable[[str], None] = lambda job_id: None,
     cancelled: Callable[[], bool] = lambda: False,
     job_name: str = MAIN_JOB,
+    again: bool = True,
 ) -> Allocation:
     checked(profile)
-    proc = ssh.popen(salloc_command(profile, job_name), stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    command = salloc_command(profile, job_name)
+    ran = getattr(ssh, "wrap", str)(command)  # as it runs: with the PATH that has Slurm, if one was found
+    proc = ssh.popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
 
     job_id, granted, last = "", False, ""
     stopped = threading.Event()
@@ -66,6 +69,10 @@ def allocate(
                 on_pending(job_id)
     code = proc.wait()
 
+    late = getattr(ssh, "slurm_found_late", None)  # salloc not found: Slurm's PATH looked for again, then once more
+    if again and code != 0 and not job_id and not cancelled() and late and \
+            late(ran, subprocess.CompletedProcess(command, code, "", last)):
+        return allocate(ssh, profile, log, on_pending, cancelled, job_name, again=False)
     if cancelled() or code != 0 or not granted:
         if job_id and not stopped.is_set():
             cancel(ssh, job_id)
