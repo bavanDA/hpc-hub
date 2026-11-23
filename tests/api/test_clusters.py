@@ -365,5 +365,6 @@ def test_a_vpn_that_wants_a_username_first_says_so(monkeypatch):
         assert answer("Username:") is None  # nothing typed for it
         return 1, [], ["Failed to obtain WebVPN cookie"]
     monkeypatch.setattr(vpn_mod, "run_interactive", run)
+    monkeypatch.setattr(vpn_mod, "end_stale_sign_ins", lambda: None)  # pkill: Linux and macOS only
     with pytest.raises(vpn_mod.VpnError, match="asks for a username first: add your VPN login"):
         v.authenticate("", "", ask=lambda p: None, on_duo=lambda: None)
