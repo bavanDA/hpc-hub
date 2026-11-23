@@ -1,5 +1,6 @@
 # PyInstaller: the Python backend (python -m hpc_hub.api) as one executable, hpc-hub-backend.
 # Build with packaging/build_backend.py, which also puts it where Tauri looks for its sidecar.
+import re
 from pathlib import Path
 
 from PyInstaller.utils.hooks import collect_submodules
@@ -33,6 +34,14 @@ datas = [
     one(PKG / "connect" / "askpass.py"),
     one(PKG / "connect" / "sso.py"),
 ]
+
+# The version this program is built as, at the bundle's top and not in hpc_hub, so a quick fix can't stand in for it
+# (core/quickfix.py built_as): the window tells when an update left an older program in place.
+BUILT_AS = ROOT / "build" / "pyinstaller" / "hpc-hub-build.txt"
+BUILT_AS.parent.mkdir(parents=True, exist_ok=True)
+BUILT_AS.write_text(re.search(r'^__version__ = "([^"]+)"', (PKG / "__init__.py").read_text(), re.M).group(1),
+                    encoding="utf-8")
+datas.append((str(BUILT_AS), "."))
 
 a = Analysis(
     [str(Path(SPECPATH) / "backend.py")],

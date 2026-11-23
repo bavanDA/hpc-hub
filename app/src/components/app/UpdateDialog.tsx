@@ -9,6 +9,7 @@ import { EDialog } from '../e/EDialog'
 import { MainButton } from '../e/MainButton'
 import { useToast } from '../useToast'
 import { openLink } from './openLink'
+import { unfinishedUpdate } from './unfinishedUpdate'
 import { installUpdate, RELEASES, setOpener, startUpdateChecks, useUpdateState } from './updates'
 import { restartNote } from './windowRestart'
 
@@ -56,6 +57,9 @@ export function UpdateChecker() {
     startUpdateChecks((version) => toast(`HPC Hub ${version} is ready to install`,
       { action: { label: 'Update', run: () => setOpen(true) } }))
     void restartNote().then((note) => { if (note) toast(note, { stay: true }) })  // the window came back from a crash
+    void unfinishedUpdate().then((note) => {  // an update that left an older backend in place
+      if (note) toast(note, { kind: 'error', action: { label: 'Download', run: () => { void openLink(RELEASES) } } })
+    })
     return () => setOpener(null)
   }, [toast])
   return open ? <UpdateDialog onClose={() => setOpen(false)} /> : null

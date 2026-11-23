@@ -17,9 +17,10 @@ def cluster_json(c: ClusterConfig) -> dict:
 @method("app.version")
 def version() -> dict:
     """The installed version (a quick fix's own package keeps the version it was made for, so the window's wins), and
-    the quick fix this start runs with."""
-    from ...core.quickfix import app_version, running
-    return {"version": app_version(), "fix": running()}
+    the quick fix this start runs with. build: the version the backend program itself was built as ("" when not
+    frozen); another one than version means an update left an older program in place."""
+    from ...core.quickfix import app_version, built_as, running
+    return {"version": app_version(), "fix": running(), "build": built_as()}
 
 
 @method("clusters.list")

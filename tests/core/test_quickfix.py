@@ -319,3 +319,27 @@ def test_a_failed_stage_never_stops_the_update(monkeypatch):
         raise quickfix.BadFix("Signed with another key")
     monkeypatch.setattr(quickfix, "stage", bad)
     assert updates.quick_fix_stage("1.0.0-beta.3") == {"skipped": "Signed with another key"}
+
+
+# -- an update that left an older backend program (2026-11-23) -------------------------------------------------
+
+def test_the_backend_says_which_version_it_was_built_as(tmp_path, monkeypatch):
+    import sys
+
+    from hpc_hub.api.methods import app as app_methods
+
+    monkeypatch.delattr(sys, "_MEIPASS", raising=False)
+    assert quickfix.built_as() == ""  # not frozen: nothing to compare
+    monkeypatch.setattr(sys, "_MEIPASS", str(tmp_path), raising=False)
+    assert quickfix.built_as() == ""  # a program from before the file
+    (tmp_path / quickfix.BUILT_AS).write_text("0.2.7-beta.61\n", encoding="utf-8")
+    monkeypatch.setenv("HPC_HUB_APP_VERSION", "0.2.7-beta.62")
+    got = app_methods.version()
+    assert got["build"] == "0.2.7-beta.61" and got["version"] == "0.2.7-beta.62"
+
+
+def test_the_frozen_backend_carries_its_version_outside_hpc_hub():
+    """A quick fix puts its own hpc_hub first on the path, so the file sits at the bundle's top, not in the package."""
+    spec = (Path(__file__).resolve().parents[2] / "packaging" / "backend.spec").read_text(encoding="utf-8")
+    assert 'datas.append((str(BUILT_AS), "."))' in spec and '"hpc-hub-build.txt"' in spec
+    assert quickfix.BUILT_AS == "hpc-hub-build.txt" and "_MEIPASS" in Path(quickfix.__file__).read_text()

@@ -18,6 +18,7 @@ import io
 import json
 import os
 import shutil
+import sys
 import urllib.error
 import urllib.request
 import zipfile
@@ -56,6 +57,23 @@ def app_version() -> str:
     from .. import __version__
 
     return os.environ.get("HPC_HUB_APP_VERSION") or __version__
+
+
+BUILT_AS = "hpc-hub-build.txt"  # in the frozen backend, beside its own files (packaging/backend.spec)
+
+
+def built_as() -> str:
+    """The version this backend program was built as; "" when it isn't a frozen one (or one from before 0.2.7-beta.62).
+    It is a file of the program, outside hpc_hub, so a quick fix can't stand in for it: an update whose installer
+    couldn't replace hpc-hub-backend.exe (still running; Ignore pressed) left an older one next to the new window
+    (2026-11-23), and the window says so (app/src/components/app/unfinishedUpdate.ts)."""
+    base = getattr(sys, "_MEIPASS", None)
+    if not base:
+        return ""
+    try:
+        return (Path(base) / BUILT_AS).read_text(encoding="utf-8").strip()
+    except OSError:
+        return ""
 
 
 def current(root: Path) -> dict | None:
