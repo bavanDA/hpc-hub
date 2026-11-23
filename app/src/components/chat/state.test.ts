@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import real from './fixtures/stop-and-rewind.json'
 import { items, type ReadAnswer } from './model'
-import { empty, merge, onBranch } from './state'
+import { empty, merge } from './state'
 
 const F = '~/.claude/projects/-home-jdoe-proj/3f2a9c1e.jsonl'
 
@@ -39,34 +39,36 @@ describe('reads add up', () => {
 // From a real Claude Code (2026-11-22, made-up paths): a message stopped before Claude answered, then sent again
 // (Claude gave it back and the next message ran into it), a rewind to "Also: what is 2+2?" (Esc Esc) and a new
 // message from there, and at the end a message Claude gave back, still in its box.
-
 const read = real as unknown as Required<Pick<ReadAnswer, 'events' | 'links'>>
 const said = (s: ReturnType<typeof merge>, draft = '') =>
-  items(onBranch(s), '', draft).flatMap((i) => i.kind === 'note' ? [`(${i.text})`] : i.kind === 'user' ? [i.text] : [])
+  items(s.events, '', draft, s.links).flatMap((i) => i.kind === 'note' ? [`(${i.text})`]
+    : i.kind === 'user' ? [i.again ? `again: ${i.text}` : i.text] : [])
 
-describe('the conversation as it stands, after stopping and going back (2026-11-22 report)', () => {
-  it('what a rewind went back on is left out; what was sent after it stays', () => {
-    const s = merge(empty(), { file: F, offset: 9000, ...read })
-    const shown = said(s)
-    expect(shown).toContain('Also: what is 2+2?What is 3+3?')
-    expect(shown).not.toContain('Also: what is 2+2?')  // gone back on
-    expect(shown).not.toContain('Write a 400 word story about a fox.')
-    expect(shown).not.toContain('Make it funny please.')
-    // the stopped message Claude gave back is not shown as sent: only the one sent after it
-    expect(shown.filter((t) => t.startsWith('Count slowly'))).toHaveLength(1)
+describe('stopping, editing and going back (2026-11-22 report)', () => {
+  it('nothing you sent is ever left out, also what a rewind went back on', () => {
+    const shown = said(merge(empty(), { file: F, offset: 9000, ...read }))
+    for (const t of ['Also: what is 2+2?', 'Write a 400 word story about a fox.', 'Make it funny please.',
+      'Also: what is 2+2?What is 3+3?']) expect(shown).toContain(t)
+    expect(shown.filter((t) => t.includes('Count slowly'))).toHaveLength(2)
   })
 
-  it('every event stays without links (an older backend), and before any branch', () => {
-    const s = merge(empty(), { file: F, offset: 9000, events: read.events })
-    expect(onBranch(s)).toHaveLength(read.events.length)
+  it('a message stopped before Claude answered and sent again says so', () => {
+    const shown = said(merge(empty(), { file: F, offset: 9000, ...read }))
+    expect(shown[0]).toMatch(/^again: Count slowly/)
+    expect(shown[1]).toMatch(/^Count slowly .*sentence\.Just say hello\.$/)
+    expect(shown.filter((t) => t.startsWith('again:'))).toHaveLength(1)  // the rewind's had an answer between
   })
 
-  it('the same holds when the file comes in several reads', () => {
+  it('the same when the file comes in several reads', () => {
     const half = Math.floor(read.links.length / 2)
     const cut = read.events.findIndex((e) => e.line === read.links[half][0])
     let s = merge(empty(), { file: F, offset: 10, events: read.events.slice(0, cut), links: read.links.slice(0, half) })
     s = merge(s, { file: F, offset: 9000, events: read.events.slice(cut), links: read.links.slice(half) })
     expect(said(s)).toEqual(said(merge(empty(), { file: F, offset: 9000, ...read })))
+  })
+
+  it('without links (an older backend) nothing is marked', () => {
+    expect(said(merge(empty(), { file: F, offset: 9000, events: read.events })).some((t) => t.startsWith('again:'))).toBe(false)
   })
 
   it('a message Claude gave back, still in its box, is not shown as sent', () => {
@@ -81,11 +83,9 @@ describe('the conversation as it stands, after stopping and going back (2026-11-
     expect(said(merge(empty(), { file: F, offset: 9000, ...read }))).toContain('(Stopped)')
   })
 
-  it('a new file links only its own lines: what the old one showed stays', () => {
-    let s = merge(empty(), { file: F, offset: 9000, ...read })
-    const before = onBranch(s).length
-    s = merge(s, { file: F.replace('3f2a', '9b9b'), offset: 5, events: [{ kind: 'user', id: 'n1', text: 'new', line: 'n1' }],
-      links: [['n1', '']] })
-    expect(onBranch(s)).toHaveLength(before + 2)  // the note and the new message
+  it('two messages with an answer between are never marked, even from the same line', () => {
+    const ev = [{ kind: 'user' as const, id: 'u1', text: 'a', line: 'u1' }, { kind: 'text' as const, id: 't', text: 'ok', line: 't' },
+      { kind: 'user' as const, id: 'u2', text: 'b', line: 'u2' }]
+    expect(items(ev, '', '', { u1: 's1', t: 'u1', u2: 's1' }).some((i) => i.kind === 'user' && i.again)).toBe(false)
   })
 })

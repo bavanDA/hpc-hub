@@ -24,7 +24,8 @@ export type DiffLine = { kind: 'same' | 'del' | 'add'; text: string }
 export type Todo = { text: string; status: 'pending' | 'in_progress' | 'completed' }
 
 export type Item =
-  | { kind: 'user' | 'text' | 'command' | 'note'; id: string; text: string }
+  | { kind: 'user' | 'text' | 'command' | 'note'; id: string; text: string
+      again?: boolean }  // yours, stopped before Claude answered and sent again just below
   | { kind: 'tool'; id: string; name: string; verb: string; target: string; detail: string
       diff: DiffLine[] | null; todos: Todo[] | null; result: string | null; error: boolean }
 
@@ -85,11 +86,20 @@ export function describe(name: string, input: Record<string, unknown>, cwd = '')
 }
 
 /** The events so far as the view's items: each tool call with its result folded into it. With draft (what sits in
- * Claude's input box), a last message of yours with the same text is left out: Claude gave it back, unsent. */
-export function items(events: ChatEvent[], cwd = '', draft = ''): Item[] {
+ * Claude's input box), a last message of yours with the same text is left out: Claude gave it back, unsent. With
+ * links (line -> the line it hangs from), a message of yours followed by another from the same line, nothing from
+ * Claude between, is marked again: stopped before an answer and sent again, edited or run into the next. Nothing is
+ * ever left out for that (2026-11-22: Claude hangs lines off its bookkeeping too, so wider guesses lost messages). */
+export function items(events: ChatEvent[], cwd = '', draft = '', links: Record<string, string> = {}): Item[] {
   const out: Item[] = []
   const tools = new Map<string, Item & { kind: 'tool' }>()
+  let mine: (Item & { kind: 'user' }) | null = null  // your last message, while nothing from Claude came after it
+  let mineLine = ''
   for (const e of events) {
+    if (e.kind === 'user') {
+      const from = e.line ? links[e.line] : undefined
+      if (mine && from !== undefined && links[mineLine] === from) mine.again = true
+    }
     if (e.kind === 'tool') {
       const t = { kind: 'tool' as const, id: e.id, name: e.name, ...describe(e.name, e.input, cwd), result: null, error: false }
       tools.set(e.id, t)
@@ -98,8 +108,11 @@ export function items(events: ChatEvent[], cwd = '', draft = ''): Item[] {
       const t = tools.get(e.tool)
       if (t) { t.result = e.text; t.error = e.error }
     } else {
-      out.push({ kind: e.kind, id: e.id, text: e.text })
+      const item = { kind: e.kind, id: e.id, text: e.text }
+      out.push(item)
+      if (e.kind === 'user') { mine = item as Item & { kind: 'user' }; mineLine = e.line ?? ''; continue }
     }
+    if (e.kind !== 'note') mine = null
   }
   const last = out.at(-1)
   if (draft.trim() && last?.kind === 'user' && last.text.trim() === draft.trim()) out.pop()

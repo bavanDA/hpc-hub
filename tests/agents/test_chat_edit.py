@@ -167,10 +167,43 @@ def test_every_item_names_its_line_and_every_line_its_parent():
     assert links[first["line"]] == links[edited["line"]]
 
 
-def test_a_compacted_chat_goes_on_through_its_logical_parent():
+def test_links_are_each_lines_parent_only():
     got = chat_view.links([{"type": "system", "uuid": "c1", "parentUuid": None, "logicalParentUuid": "u9"},
                            {"type": "user", "uuid": "u10", "parentUuid": "c1"}, {"type": "summary"}])
-    assert got == [["c1", "u9"], ["u10", "c1"]]
+    assert got == [["c1", ""], ["u10", "c1"]]
+
+
+# -- a message sent while Claude works (2026-11-22: "she missed one chat message") -----------------------------
+
+def queued(uid: str, prompt, parent: str = "a1") -> dict:
+    return {"type": "attachment", "uuid": uid, "parentUuid": parent, "attachment": {"type": "queued_command",
+                                                                                   "prompt": prompt}}
+
+
+def test_a_message_given_to_claude_between_two_steps_shows():
+    """Claude writes a message you send while it works only as a queued_command attachment: it never showed."""
+    tool = {"type": "tool_use", "id": "t1", "name": "Bash", "input": {"command": "pytest"}}
+    lines = [{"type": "user", "uuid": "u1", "message": {"content": "run the tests"}},
+             {"type": "assistant", "uuid": "a1", "parentUuid": "u1", "message": {"content": [tool]}},
+             queued("q1", "also check the plots"),
+             queued("q2", [{"type": "text", "text": "[Image #2] and this one"}, {"type": "image", "source": {}}], "q1")]
+    got = [(e["kind"], e.get("text")) for e in chat_view.events(lines) if e["kind"] == "user"]
+    assert got == [("user", "run the tests"), ("user", "also check the plots"), ("user", "[Image #2] and this one")]
+
+
+def test_other_attachments_and_claudes_own_reminders_stay_out():
+    lines = [queued("q1", "<system-reminder>x</system-reminder>"), queued("q2", ""),
+             {"type": "attachment", "uuid": "e1", "attachment": {"type": "environment", "text": "hi"}}]
+    assert chat_view.events(lines) == []
+
+
+def test_a_queued_message_written_again_as_a_message_shows_once():
+    lines = [queued("q1", "also check the plots"),
+             {"type": "user", "uuid": "u2", "parentUuid": "q1", "message": {"content": "also check the plots"}}]
+    assert [e["text"] for e in chat_view.events(lines)] == ["also check the plots"]
+    # the same words sent again after Claude answered are two messages
+    lines.insert(1, {"type": "assistant", "uuid": "a2", "message": {"content": [{"type": "text", "text": "Done."}]}})
+    assert [e["text"] for e in chat_view.events(lines)] == ["also check the plots", "Done.", "also check the plots"]
 
 
 def test_the_views_fixture_is_this_files_reading():

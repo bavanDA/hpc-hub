@@ -10,7 +10,6 @@ import { TextFind } from '../reader/TextFind'
 import { useToast } from '../useToast'
 import type { Tab } from '../terminals/tabs'
 import { blocks, COMMANDS, EFFORTS, inline, items, MODELS, MODES, needsTerminal, starting, toolHolds, type Item, type Mode } from './model'
-import { onBranch } from './state'
 import { useChat } from './useChat'
 
 type Tool = Extract<Item, { kind: 'tool' }>
@@ -191,7 +190,7 @@ export function ChatView({ tab, shown, title, toggle, onTerminal }: { tab: Tab; 
   // what sits unsent in Claude's input box: a message it gave back when you stopped it before it answered, or the
   // one you went back to. It comes into the box below to edit; sending replaces it (2026-11-22 report)
   const given = screen?.draft ?? ''
-  const shownItems = items(onBranch(state), state.cwd, given)
+  const shownItems = items(state.events, state.cwd, given, state.links)
   const took = useRef('')
   useEffect(() => {
     if (!given) { took.current = ''; return }
@@ -292,6 +291,14 @@ export function ChatView({ tab, shown, title, toggle, onTerminal }: { tab: Tab; 
           {state.trimmed && <div className="text-center text-xs text-dim">Earlier messages are in the terminal</div>}
           {shownItems.map((it) => {
             if (it.kind === 'tool') return <ToolCard key={it.id} t={it} />
+            if (it.kind === 'user' && it.again) {  // stopped before an answer, sent again below: kept, quietly
+              return (
+                <div key={it.id} className="flex max-w-[78%] flex-col items-end gap-1 self-end">
+                  <div className="rounded-2xl border border-dashed border-line-strong px-4 py-2.5 whitespace-pre-wrap text-dim"><Hl text={it.text} /></div>
+                  <span className="text-xs text-dim">Stopped before Claude answered · sent again below</span>
+                </div>
+              )
+            }
             if (it.kind === 'user') {
               return <div key={it.id} className="max-w-[78%] self-end rounded-2xl bg-control px-4 py-2.5 whitespace-pre-wrap"><Hl text={it.text} /></div>
             }

@@ -50,8 +50,9 @@ describe('stopping and editing a message (2026-11-22 report: messages ran togeth
     expect(view).toContain("Claude gave your message back, unsent.")
     expect(view).toContain("onClick={() => setDraft(given)}")
   })
-  it('the conversation shown is the one as it stands, without a given-back message as if sent', () => {
-    expect(view).toContain('items(onBranch(state), state.cwd, given)')
+  it('every message shows; one stopped and sent again is marked, never left out', () => {
+    expect(view).toContain('items(state.events, state.cwd, given, state.links)')
+    expect(view).toContain('Stopped before Claude answered · sent again below')
   })
   it('Stop goes through chat.stop (Esc only while Claude works), and a message not sent comes back to the box', () => {
     expect(view).toContain('stop().catch(fail)')

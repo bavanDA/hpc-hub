@@ -124,19 +124,26 @@ def events(lines: list[dict]) -> list[dict]:
         line = str(d.get("uuid") or "") if isinstance(d, dict) else ""
         for e in out[start:]:
             e["line"] = line
+        # a message given to Claude mid-turn now and then is written again as a plain message: once is enough
+        if len(out) == start + 1 and out[-1]["kind"] == "user":
+            before = next((e for e in reversed(out[:start]) if e["kind"] != "result"), None)
+            if before and before["kind"] == "user" and before["text"] == out[-1]["text"]:
+                out.pop()
     return out
 
 
 def links(lines: list[dict]) -> list[list[str]]:
-    """[line, the line before it] for every line with an id, in file order. Claude's file only grows: when you go
-    back to an earlier message (Esc Esc, or Stop before Claude answered), what you send next starts a new branch
-    from there, and the newest line's chain of earlier lines is the conversation as it stands. A compacted chat's
-    first line goes on through logicalParentUuid."""
-    out = []
-    for d in lines:
-        if isinstance(d, dict) and d.get("uuid"):
-            out.append([str(d["uuid"]), str(d.get("parentUuid") or d.get("logicalParentUuid") or "")])
-    return out
+    """[line, the line before it (its parentUuid)] for every line with an id, in file order. Two messages of yours
+    one after the other, from the same line, mean the first was stopped before Claude answered and sent again
+    (edited, or run into the next one): the view says so on the first (model.ts items). Only that: Claude also
+    hangs lines off its own bookkeeping, so other branches say nothing about what you sent."""
+    return [[str(d["uuid"]), str(d.get("parentUuid") or "")] for d in lines if isinstance(d, dict) and d.get("uuid")]
+
+
+def _prompt(p) -> str:
+    if isinstance(p, str):
+        return p
+    return _text(p) if isinstance(p, list) else ""
 
 
 def _event(d, out: list[dict]) -> None:
@@ -145,6 +152,14 @@ def _event(d, out: list[dict]) -> None:
         return
     kind, uid = d.get("type"), str(d.get("uuid") or len(out))
     msg = d.get("message") if isinstance(d.get("message"), dict) else {}
+    att = d.get("attachment") if kind == "attachment" and isinstance(d.get("attachment"), dict) else {}
+    if att.get("type") == "queued_command":
+        # a message you sent while Claude was working, given to it between two steps: Claude writes it only as this
+        # (2026-11-22 report: a message missing from the chat)
+        text = _prompt(att.get("prompt")).strip()
+        if text and not text.startswith("<"):
+            out.append({"kind": "user", "id": uid, "text": text})
+        return
     if kind == "system" and d.get("subtype") == "compact_boundary":
         out.append({"kind": "note", "id": uid, "text": "The conversation was compacted"})
     if kind == "user":
