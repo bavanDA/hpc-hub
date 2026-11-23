@@ -106,6 +106,8 @@ def _text(content) -> str:
 
 
 COMMAND = re.compile(r"<command-name>(.*?)</command-name>", re.S)
+# what Claude writes as your message when you stop it (Esc, the view's Stop): a note, not something you said
+INTERRUPTED = re.compile(r"^\[Request interrupted by user[^\]]*\]$")
 ARGS = re.compile(r"<command-args>(.*?)</command-args>", re.S)
 STDOUT = re.compile(r"<local-command-stdout>(.*?)</local-command-stdout>", re.S)
 ANSI = re.compile(r"\x1b\[[0-9;]*[A-Za-z]")
@@ -113,51 +115,75 @@ ANSI = re.compile(r"\x1b\[[0-9;]*[A-Za-z]")
 
 def events(lines: list[dict]) -> list[dict]:
     """Claude's conversation lines as the view's items: user and assistant text, tool calls and their results,
-    slash commands and notes. Thinking, bookkeeping and Claude's own reminders are left out."""
+    slash commands and notes. Thinking, bookkeeping and Claude's own reminders are left out. Each item names the
+    line it came from ("line"), so the view can leave out what a rewind went back on (links)."""
     out: list[dict] = []
     for d in lines:
-        if not isinstance(d, dict):
-            continue
-        kind, uid = d.get("type"), str(d.get("uuid") or len(out))
-        msg = d.get("message") if isinstance(d.get("message"), dict) else {}
-        if kind == "system" and d.get("subtype") == "compact_boundary":
-            out.append({"kind": "note", "id": uid, "text": "The conversation was compacted"})
-        if kind == "user":
-            if d.get("isCompactSummary"):
-                out.append({"kind": "note", "id": uid, "text": "Earlier messages were summarized"})
-                continue
-            content = msg.get("content")
-            if isinstance(content, list):
-                for i, b in enumerate(content):
-                    if isinstance(b, dict) and b.get("type") == "tool_result":
-                        out.append({"kind": "result", "id": f"{uid}-{i}", "tool": b.get("tool_use_id", ""),
-                                    "text": ANSI.sub("", _text(b.get("content"))), "error": bool(b.get("is_error"))})
-            if d.get("isMeta"):
-                continue
-            text = _text(content).strip()
-            if not text or text.startswith("Caveat:"):
-                continue
-            if m := COMMAND.search(text):
-                args = ARGS.search(text)
-                said = " ".join(x for x in (m.group(1), args.group(1) if args else "") if x.strip())
-                out.append({"kind": "command", "id": uid, "text": said.strip()})
-            elif m := STDOUT.search(text):
-                said = ANSI.sub("", m.group(1)).strip()
-                if said:
-                    out.append({"kind": "note", "id": uid, "text": said})
-            elif not text.startswith("<"):
-                out.append({"kind": "user", "id": uid, "text": text})
-        elif kind == "assistant":
-            content = msg.get("content")
-            for i, b in enumerate(content if isinstance(content, list) else []):
-                if not isinstance(b, dict):
-                    continue
-                if b.get("type") == "text" and b.get("text", "").strip():
-                    out.append({"kind": "text", "id": f"{uid}-{i}", "text": b["text"].strip()})
-                elif b.get("type") == "tool_use":
-                    out.append({"kind": "tool", "id": b.get("id") or f"{uid}-{i}", "name": b.get("name", ""),
-                                "input": b.get("input") if isinstance(b.get("input"), dict) else {}})
+        start = len(out)
+        _event(d, out)
+        line = str(d.get("uuid") or "") if isinstance(d, dict) else ""
+        for e in out[start:]:
+            e["line"] = line
     return out
+
+
+def links(lines: list[dict]) -> list[list[str]]:
+    """[line, the line before it] for every line with an id, in file order. Claude's file only grows: when you go
+    back to an earlier message (Esc Esc, or Stop before Claude answered), what you send next starts a new branch
+    from there, and the newest line's chain of earlier lines is the conversation as it stands. A compacted chat's
+    first line goes on through logicalParentUuid."""
+    out = []
+    for d in lines:
+        if isinstance(d, dict) and d.get("uuid"):
+            out.append([str(d["uuid"]), str(d.get("parentUuid") or d.get("logicalParentUuid") or "")])
+    return out
+
+
+def _event(d, out: list[dict]) -> None:
+    """One conversation line's items, added to out."""
+    if not isinstance(d, dict):
+        return
+    kind, uid = d.get("type"), str(d.get("uuid") or len(out))
+    msg = d.get("message") if isinstance(d.get("message"), dict) else {}
+    if kind == "system" and d.get("subtype") == "compact_boundary":
+        out.append({"kind": "note", "id": uid, "text": "The conversation was compacted"})
+    if kind == "user":
+        if d.get("isCompactSummary"):
+            out.append({"kind": "note", "id": uid, "text": "Earlier messages were summarized"})
+            return
+        content = msg.get("content")
+        if isinstance(content, list):
+            for i, b in enumerate(content):
+                if isinstance(b, dict) and b.get("type") == "tool_result":
+                    out.append({"kind": "result", "id": f"{uid}-{i}", "tool": b.get("tool_use_id", ""),
+                                "text": ANSI.sub("", _text(b.get("content"))), "error": bool(b.get("is_error"))})
+        if d.get("isMeta"):
+            return
+        text = _text(content).strip()
+        if not text or text.startswith("Caveat:"):
+            return
+        if INTERRUPTED.match(text):
+            out.append({"kind": "note", "id": uid, "text": "Stopped"})
+        elif m := COMMAND.search(text):
+            args = ARGS.search(text)
+            said = " ".join(x for x in (m.group(1), args.group(1) if args else "") if x.strip())
+            out.append({"kind": "command", "id": uid, "text": said.strip()})
+        elif m := STDOUT.search(text):
+            said = ANSI.sub("", m.group(1)).strip()
+            if said:
+                out.append({"kind": "note", "id": uid, "text": said})
+        elif not text.startswith("<"):
+            out.append({"kind": "user", "id": uid, "text": text})
+    elif kind == "assistant":
+        content = msg.get("content")
+        for i, b in enumerate(content if isinstance(content, list) else []):
+            if not isinstance(b, dict):
+                continue
+            if b.get("type") == "text" and b.get("text", "").strip():
+                out.append({"kind": "text", "id": f"{uid}-{i}", "text": b["text"].strip()})
+            elif b.get("type") == "tool_use":
+                out.append({"kind": "tool", "id": b.get("id") or f"{uid}-{i}", "name": b.get("name", ""),
+                            "input": b.get("input") if isinstance(b.get("input"), dict) else {}})
 
 
 # Runs on the cluster: the newest conversation file whose name starts with the tag (argv[1]), and the folder Claude
@@ -217,7 +243,7 @@ def read(ssh: SshMaster, session: str, file: str = "", offset: int = -1, since: 
     lines = data.get("lines") or []
     cwd = next((d["cwd"] for d in reversed(lines) if isinstance(d, dict) and isinstance(d.get("cwd"), str)), "")
     return {"file": data["file"], "offset": data["offset"], "size": data["size"], "trimmed": data["trimmed"],
-            "reset": data.get("reset", False), "cwd": cwd, "events": events(lines)}
+            "reset": data.get("reset", False), "cwd": cwd, "events": events(lines), "links": links(lines)}
 
 
 # -- what waits on you, from the screen -----------------------------------------------------------------
@@ -271,18 +297,67 @@ def _status_line(lines: list[str]) -> str | None:
     return below if any(w in below for w in STATUS_WORDS) else None
 
 
+# the start of Claude's input box: its prompt (❯, then a no-break space in recent Claudes; > in older ones)
+PROMPT = re.compile(r"^\s*[❯>][ \u00a0]")
+# what an empty box shows, dim; told apart by its style (screen captures keep it) or, in plain text, by its words
+HINTS = ('Try "', "Press up to edit queued messages")
+STYLED = re.compile(r"\x1b\[[0-9;]*m")
+TERMINAL_CODES = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]|\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)")
+
+
+def _dim(raw_row: str) -> bool:
+    """Does the text after the prompt start dim (SGR 2) or in grey: Claude's hint, not something typed?"""
+    after = raw_row[raw_row.find("❯") + 1:] if "❯" in raw_row else raw_row
+    after = after.lstrip(" \u00a0")
+    m = STYLED.match(after)
+    if not m:
+        return False
+    params = m.group(0)[2:-1].split(";")
+    return "2" in params or "90" in params or (params[:2] == ["38", "5"] and params[2:3] and params[2] in
+                                                 {"240", "241", "242", "243", "244", "245", "246", "247", "248"})
+
+
+def _draft(lines: list[str], raw: list[str]) -> str:
+    """What sits in Claude's input box, not sent: a message it gave back when you stopped it before it answered, or
+    the one you went back to with Esc Esc. Typing more would add to it (2026-11-22 report: messages ran together).
+    "" for an empty box (or one that shows only Claude's hint) and when there is no box."""
+    edges = [i for i, ln in enumerate(lines) if EDGE.match(ln)]
+    if len(edges) < 2 or _status_line(lines) is None:
+        return ""
+    top, bottom = edges[-2], edges[-1]
+    rows = lines[top + 1:bottom]
+    if not rows or not PROMPT.match(rows[0]) or (top + 1 < len(raw) and _dim(raw[top + 1])):
+        return ""
+    width = len(lines[bottom])
+    text = ""
+    for k, row in enumerate(rows):
+        part = row[2:] if k else PROMPT.sub("", row, count=1)
+        if k:  # a long line Claude wrapped goes on with a space, a new line of yours with a line break
+            text += " " if len(rows[k - 1]) >= width - 12 else "\n"
+        text += part.replace("\u00a0", " ")
+    text = text.strip()
+    plain = not any("\x1b[" in r for r in raw)  # no colours to tell by: the hint's own words
+    if plain and len(rows) == 1 and text.startswith(HINTS):
+        return ""
+    return text
+
+
 MODES = (("accept edits", "edits"), ("plan mode", "plan"), ("auto mode", "auto"), ("bypass permissions", "auto"),
          ("don't ask", "auto"))
 
 
 def parse_screen(text: str) -> dict:
-    """The pane as plain text: busy (Claude is working), mode (ask, edits, plan or auto, from the footer), and
-    ask: a question with numbered choices waiting for an answer ({question, detail, options: [{key, label}]})."""
-    lines = [ln.rstrip() for ln in text.splitlines()]
+    """The pane (with its colours, or as plain text): busy (Claude is working), mode (ask, edits, plan or auto, from
+    the footer), ask: a question with numbered choices waiting for an answer ({question, detail, options: [{key,
+    label}]}), ready (its input box is up), box (the input box shows, so typing goes into it) and draft (what is in
+    that box, not sent)."""
+    raw = text.splitlines()
+    lines = [TERMINAL_CODES.sub("", ln).rstrip() for ln in raw]
     # a Claude that draws from the top of the pane leaves empty rows under its footer (a short conversation): the
     # footer is the last row with something on it, not the pane's last row (2026-11-19 report: the mode never read)
     while lines and not lines[-1].strip():
         lines.pop()
+        raw.pop()
     tail = "\n".join(lines[-6:]).lower()
     status = _status_line(lines)
     words_from = status if status is not None else tail  # no input box: the old guess from the last rows
@@ -323,17 +398,20 @@ def parse_screen(text: str) -> dict:
                "permission": question.lower().startswith("do you want")}
     # ready: Claude's input box is up (it has started); until then the window says it is starting
     ready = status is not None or "shift+tab" in tail or "for shortcuts" in tail
-    return {"busy": busy and not ask, "mode": mode, "ask": ask, "ready": ready}
+    box = status is not None and not ask
+    return {"busy": busy and not ask, "mode": mode, "ask": ask, "ready": ready, "box": box,
+            "draft": _draft(lines, raw) if box else ""}
 
 
 def screen_command(session: str, node: str = "") -> str:
-    return tmux.on(node, f"tmux capture-pane -p -t {shlex.quote(session + ':')} 2>/dev/null")
+    # -e: with its colours, so Claude's dim hint in an empty box isn't taken for something you typed
+    return tmux.on(node, f"tmux capture-pane -p -e -t {shlex.quote(session + ':')} 2>/dev/null")
 
 
 def screen(ssh: SshMaster, session: str, node: str = "") -> dict:
     res = ssh.on_login(screen_command(session, node), timeout=20)
     if res.returncode != 0 and not res.stdout:
-        return {"gone": True, "busy": False, "mode": "ask", "ask": None, "ready": False}
+        return {"gone": True, "busy": False, "mode": "ask", "ask": None, "ready": False, "box": False, "draft": ""}
     return parse_screen(res.stdout)
 
 
@@ -343,6 +421,24 @@ KEYS = {**{str(n): str(n) for n in range(1, 10)}, "escape": "Escape", "enter": "
 
 
 MOVE = re.compile(r"^move:([+-]\d)$")
+CLEAR_MAX = 60  # lines of a draft cleared at most (each line takes two rounds of keys)
+
+
+def clear_keys(draft: str) -> str:
+    """Keys that empty Claude's input box wherever the cursor is: the lines below it (start of line, cut to its end,
+    Delete joins the next), then those above (end of line, cut to its start, Backspace joins the one before).
+    Never Esc: twice on an idle Claude opens its rewind menu. Never Ctrl+C: twice quits Claude."""
+    n = min(draft.count("\n") + 2 + len(draft) // 100, CLEAR_MAX)
+    return " ".join(["C-a C-k Delete"] * n + ["C-e C-u BSpace"] * n)
+
+
+def send_command(session: str, text: str, draft: str = "", node: str = "") -> str:
+    """Type text into Claude as one paste, then Enter; first empties its input box when something is in it, so your
+    message is sent on its own, never added to what was there."""
+    line = tmux.send_text(session, text, "", True)
+    if draft:
+        line = f"tmux send-keys -t {shlex.quote(session + ':')} {clear_keys(draft)} && {line}"
+    return tmux.on(node, line)
 
 
 def key_command(session: str, key: str, node: str = "") -> str:

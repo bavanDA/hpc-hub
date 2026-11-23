@@ -45,5 +45,7 @@ export const answers: Record<string, unknown> = {
   'chat.where': () => ({ chat_id: '3f2a9c1e-1111-4222-8333-444455556666', folder: '/home/jdoe/thesis' }),
   'chat.screen': (): Screen => ({ busy: false, mode, ask: answered ? null : ASK }),
   'chat.key': ({ key }: { key: string }) => { if (/^[1-3]$/.test(key)) answered = key; return null },
+  'chat.send': () => ({ replaced: false }),
+  'chat.stop': () => ({ stopped: false }),
   'chat.mode': ({ mode: m }: { mode: Screen['mode'] }): Screen => { mode = m; return { busy: false, mode, ask: answered ? null : ASK } },
 }

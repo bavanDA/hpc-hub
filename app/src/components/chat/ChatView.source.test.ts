@@ -42,3 +42,21 @@ describe('while Claude starts, and while a mode switch is on its way', () => {
     expect(view).toContain("'animate-pulse bg-hover'")
   })
 })
+
+describe('stopping and editing a message (2026-11-22 report: messages ran together, some never showed)', () => {
+  it("a message Claude gave back comes into the message box to edit, with a note that sending replaces it", () => {
+    expect(view).toContain("const given = screen?.draft ?? ''")
+    expect(view).toMatch(/setDraft\(\(d\) => d\.trim\(\) \? d : given\)/)  // never over what you are writing
+    expect(view).toContain("Claude gave your message back, unsent.")
+    expect(view).toContain("onClick={() => setDraft(given)}")
+  })
+  it('the conversation shown is the one as it stands, without a given-back message as if sent', () => {
+    expect(view).toContain('items(onBranch(state), state.cwd, given)')
+  })
+  it('Stop goes through chat.stop (Esc only while Claude works), and a message not sent comes back to the box', () => {
+    expect(view).toContain('stop().catch(fail)')
+    expect(view).not.toContain("key('escape')")
+    expect(view).toMatch(/const keep = \(e: Error\) => \{ setDraft\(\(d\) => d\.trim\(\) \? d : t\); fail\(e\) \}/)
+    expect(view).toContain('void send(t).catch(keep)')
+  })
+})

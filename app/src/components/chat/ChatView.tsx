@@ -10,6 +10,7 @@ import { TextFind } from '../reader/TextFind'
 import { useToast } from '../useToast'
 import type { Tab } from '../terminals/tabs'
 import { blocks, COMMANDS, EFFORTS, inline, items, MODELS, MODES, needsTerminal, starting, toolHolds, type Item, type Mode } from './model'
+import { onBranch } from './state'
 import { useChat } from './useChat'
 
 type Tool = Extract<Item, { kind: 'tool' }>
@@ -81,6 +82,7 @@ const ICON: Record<string, typeof FileText> = { Read: FileText, Edit: Pencil, Mu
 
 function ToolCard({ t }: { t: Tool }) {
   const [open, setOpen] = useState(false)
+  const q = useContext(Find)
   const Icon = ICON[t.name] ?? Wrench
   if (t.todos) {
     return (
@@ -97,7 +99,6 @@ function ToolCard({ t }: { t: Tool }) {
     )
   }
   const body = t.diff || t.result !== null || t.detail
-  const q = useContext(Find)
   const shown = open || (!!q && toolHolds(t, q))
   return (
     <div className={`overflow-hidden rounded-xl border bg-card ${t.error ? 'border-bad/50' : 'border-line'}`}>
@@ -170,7 +171,7 @@ function Menu<T extends string>({ label, value, choices, onPick, note }: { label
 export function ChatView({ tab, shown, title, toggle, onTerminal }: { tab: Tab; shown: boolean
   title: ReactNode; toggle: ReactNode; onTerminal: () => void }) {
   const toast = useToast()
-  const { state, send, key, mode } = useChat(tab, shown)
+  const { state, send, key, stop, mode } = useChat(tab, shown)
   const [switching, setSwitching] = useState<Mode | null>(null)  // a mode switch on its way (a few presses)
   const [draft, setDraft] = useState('')
   const [slash, setSlash] = useState(false)
@@ -186,8 +187,18 @@ export function ChatView({ tab, shown, title, toggle, onTerminal }: { tab: Tab; 
   const openFind = () => { setFinding(true); requestAnimationFrame(() => { findBox.current?.focus(); findBox.current?.select() }) }
   const closeFind = () => { setFinding(false); setQuery('') }
   const step = (back: boolean) => setHit((h) => h.total ? { ...h, n: (h.n + (back ? h.total - 1 : 1)) % h.total } : h)
-  const shownItems = items(state.events, state.cwd)
   const screen = state.screen
+  // what sits unsent in Claude's input box: a message it gave back when you stopped it before it answered, or the
+  // one you went back to. It comes into the box below to edit; sending replaces it (2026-11-22 report)
+  const given = screen?.draft ?? ''
+  const shownItems = items(onBranch(state), state.cwd, given)
+  const took = useRef('')
+  useEffect(() => {
+    if (!given) { took.current = ''; return }
+    if (given === took.current) return
+    took.current = given
+    setDraft((d) => d.trim() ? d : given)
+  }, [given])
   const wait = starting(screen)  // Claude is still starting: say so, and nothing to switch yet
   const ask = screen?.ask ?? null
 
@@ -220,11 +231,13 @@ export function ChatView({ tab, shown, title, toggle, onTerminal }: { tab: Tab; 
   const submit = (text = draft) => {
     const t = text.trim()
     if (!t) return
+    // not sent (a question or a menu is open): your text comes back to the box, never lost
+    const keep = (e: Error) => { setDraft((d) => d.trim() ? d : t); fail(e) }
     if (needsTerminal(t)) {
-      void send(t).then(onTerminal).catch(fail)
+      void send(t).then(onTerminal).catch(keep)
       toast('That command opens a menu: answer it in the terminal')
     } else {
-      void send(t).catch(fail)
+      void send(t).catch(keep)
     }
     setDraft('')
     atEnd.current = true
@@ -305,7 +318,7 @@ export function ChatView({ tab, shown, title, toggle, onTerminal }: { tab: Tab; 
           {screen?.busy && (
             <div className="flex items-center gap-2 text-sm text-dim">
               <span className="size-2 animate-pulse rounded-full bg-[var(--color-orange)]" />Claude is working
-              <button onClick={() => key('escape').catch(fail)} className="ml-2 rounded-md border border-line-strong px-2 py-0.5 text-xs hover:bg-hover">Stop</button>
+              <button onClick={() => stop().catch(fail)} className="ml-2 rounded-md border border-line-strong px-2 py-0.5 text-xs hover:bg-hover">Stop</button>
             </div>
           )}
           {state.error && <div className="text-sm text-bad">{state.error}</div>}
@@ -325,6 +338,17 @@ export function ChatView({ tab, shown, title, toggle, onTerminal }: { tab: Tab; 
                 </button>
               ))}
               <div className="mt-1 border-t border-line px-2.5 pt-2 pb-1 text-xs text-dim">Others open the terminal for that step.</div>
+            </div>
+          )}
+          {given && (
+            <div className="mb-2 flex items-center gap-2 rounded-lg bg-accent-soft px-3 py-1.5 text-sm">
+              <span className="min-w-0 flex-1">Claude gave your message back, unsent. Edit it below and send: it
+                replaces what is in Claude's box.</span>
+              {draft.trim() !== given.trim() && (
+                <button onClick={() => setDraft(given)}
+                  className="shrink-0 rounded-md border border-line-strong bg-window px-2 py-0.5 text-xs hover:bg-hover">
+                  Edit Claude's copy</button>
+              )}
             </div>
           )}
           <div className="flex flex-col gap-2 rounded-2xl border border-line-strong bg-window px-3 py-2.5">

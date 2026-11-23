@@ -151,7 +151,7 @@ def test_a_permission_question_is_read_with_its_own_choices():
 def test_working_and_the_mode_come_from_the_footer():
     working = "● Reading files…\n\n> \n  ⏵⏵ accept edits on (shift+tab to cycle) · esc to interrupt\n"
     got = chat_view.parse_screen(working)
-    assert got == {"busy": True, "mode": "edits", "ask": None, "ready": True}
+    assert got == {"busy": True, "mode": "edits", "ask": None, "ready": True, "box": False, "draft": ""}
     assert chat_view.parse_screen("> \n  ⏸ plan mode on (shift+tab to cycle)\n")["mode"] == "plan"
     assert chat_view.parse_screen("> \n  ? for shortcuts\n")["mode"] == "ask"
     # a numbered list in Claude's answer is not a menu: nothing is marked as picked

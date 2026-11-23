@@ -33,6 +33,39 @@ def screen(cluster: str, session: str, node: str = "") -> dict:
     return chat_view.screen(hub().connected(cluster).ssh, session, node)
 
 
+@method("chat.send")
+def send(cluster: str, session: str, text: str, node: str = "") -> dict:
+    """Your message to Claude, as one paste and Enter. What Claude has in its input box (a message it gave back
+    when you stopped it, or one you went back to) is cleared first: the view showed it to you to edit, and your
+    text replaces it. Refused, never lost, when the box isn't there: a question or a menu is open."""
+    if not text.strip():
+        raise ValueError("Nothing to send")
+    ssh = hub().connected(cluster).ssh
+    now = chat_view.screen(ssh, session, node)
+    if now.get("gone"):
+        raise RuntimeError("This Claude session has ended")
+    if not now.get("box"):
+        if now.get("ask"):
+            raise RuntimeError("Claude is asking something: answer it first, then send your message")
+        if not now.get("ready"):
+            raise RuntimeError("Claude is still starting or has a menu open. Send once its input box shows, or "
+                               "finish the menu in the terminal")
+    tmux.run(ssh, chat_view.send_command(session, text, now.get("draft", ""), node))
+    return {"replaced": bool(now.get("draft"))}
+
+
+@method("chat.stop")
+def stop(cluster: str, session: str, node: str = "") -> dict:
+    """Stop Claude (Esc) while it works. Nothing when it has already stopped: a second Esc on an idle Claude opens
+    its rewind menu, which the view can't show (and a message typed then would go into that menu)."""
+    ssh = hub().connected(cluster).ssh
+    now = chat_view.screen(ssh, session, node)
+    if now.get("busy"):
+        tmux.run(ssh, chat_view.key_command(session, "escape", node))
+        return {"stopped": True}
+    return {"stopped": False}
+
+
 @method("chat.key")
 def key(cluster: str, session: str, key: str, node: str = "") -> None:
     """Press an answer's number, escape, enter, or mode (Shift+Tab) in the session."""

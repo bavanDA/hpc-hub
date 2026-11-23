@@ -139,3 +139,14 @@ describe('starting', () => {
     expect(starting(null)).toBe(false)
   })
 })
+
+describe('a message Claude gave back (2026-11-22 report)', () => {
+  const ev = [{ kind: 'user' as const, id: 'u1', text: 'fix the plot' }, { kind: 'text' as const, id: 'a1', text: 'Done.' },
+    { kind: 'user' as const, id: 'u2', text: 'and the labels\n' }]
+  it('is left out only when it is the last message and the very text in the box', () => {
+    expect(items(ev, '', 'and the labels').map((i) => i.id)).toEqual(['u1', 'a1'])
+    expect(items(ev, '', 'fix the plot').map((i) => i.id)).toEqual(['u1', 'a1', 'u2'])  // not the last one
+    expect(items(ev, '').map((i) => i.id)).toEqual(['u1', 'a1', 'u2'])
+    expect(items(ev.slice(0, 2), '', 'Done.').map((i) => i.id)).toEqual(['u1', 'a1'])  // never Claude's reply
+  })
+})

@@ -1,17 +1,20 @@
 // The Chat view's data: what chat.read sends (hpc_hub/agents/chat_view.py) turned into what the view draws. Every
 // string here came from the cluster: it is shown as text, never as HTML.
 
-export type ChatEvent =
+// line: the conversation line it came from (links say which line came before which: see onBranch in state.ts)
+export type ChatEvent = (
   | { kind: 'user' | 'text' | 'command' | 'note'; id: string; text: string }
   | { kind: 'tool'; id: string; name: string; input: Record<string, unknown> }
-  | { kind: 'result'; id: string; tool: string; text: string; error: boolean }
+  | { kind: 'result'; id: string; tool: string; text: string; error: boolean }) & { line?: string }
 
 export type ReadAnswer = { waiting?: boolean; unknown?: boolean; file?: string; offset?: number; size?: number
-  trimmed?: boolean; reset?: boolean; cwd?: string; events?: ChatEvent[] }
+  trimmed?: boolean; reset?: boolean; cwd?: string; events?: ChatEvent[]; links?: [string, string][] }
 
 export type Ask = { question: string; detail: string; options: { key: string; label: string }[]; permission: boolean }
 export type Screen = { busy: boolean; mode: Mode; ask: Ask | null; gone?: boolean
-  ready?: boolean }  // false while Claude is starting: no input box yet
+  ready?: boolean  // false while Claude is starting: no input box yet
+  box?: boolean  // Claude's input box shows (no question or menu in its place)
+  draft?: string }  // what is in that box, not sent: a message Claude gave back when stopped, or one gone back to
 
 /** Claude is still starting: nothing to answer or switch yet (2026-11-20 report: nothing said so). */
 export const starting = (s: Screen | null) => !!s && s.ready === false && !s.ask && !s.gone
@@ -81,8 +84,9 @@ export function describe(name: string, input: Record<string, unknown>, cwd = '')
   }
 }
 
-/** The events so far as the view's items: each tool call with its result folded into it. */
-export function items(events: ChatEvent[], cwd = ''): Item[] {
+/** The events so far as the view's items: each tool call with its result folded into it. With draft (what sits in
+ * Claude's input box), a last message of yours with the same text is left out: Claude gave it back, unsent. */
+export function items(events: ChatEvent[], cwd = '', draft = ''): Item[] {
   const out: Item[] = []
   const tools = new Map<string, Item & { kind: 'tool' }>()
   for (const e of events) {
@@ -97,6 +101,8 @@ export function items(events: ChatEvent[], cwd = ''): Item[] {
       out.push({ kind: e.kind, id: e.id, text: e.text })
     }
   }
+  const last = out.at(-1)
+  if (draft.trim() && last?.kind === 'user' && last.text.trim() === draft.trim()) out.pop()
   return out
 }
 

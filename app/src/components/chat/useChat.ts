@@ -47,17 +47,20 @@ export function useChat(tab: Tab, shown: boolean) {
     return () => { stop = true; clearTimeout(timer) }
   }, [shown, tab.key, tab.cluster, tab.session, tab.node, tab.ended, put])
 
-  /** Typed into Claude as one paste, then Enter, as if you typed it in the terminal. */
+  /** Typed into Claude as one paste, then Enter, as if you typed it in the terminal; what was in Claude's input box
+   * is cleared first (chat.send), so your message never runs into it. */
   const send = async (text: string) => {
-    await call('terminals.send', { ...where, text })
+    await call('chat.send', { ...where, text })
     if (COMMANDS.find((c) => c.newChat && text.trim().startsWith(c.name))) {
       put({ ...chatState(tab.key), since: Date.now() })
     }
   }
   const key = (k: string) => call('chat.key', { ...where, key: k })
+  /** Esc only while Claude works: a second Esc on an idle Claude opens its rewind menu. */
+  const stop = () => call('chat.stop', where)
   const mode = async (m: Mode) => {
     const screen = await call<Screen>('chat.mode', { ...where, mode: m })
     put({ ...chatState(tab.key), screen })
   }
-  return { state, send, key, mode }
+  return { state, send, key, stop, mode }
 }
