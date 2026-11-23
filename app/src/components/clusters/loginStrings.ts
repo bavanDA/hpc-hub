@@ -40,8 +40,6 @@ export const S = {
   "PASTE_IT": "Paste it on {who}'s key page.",
   "VPN_FIRST": "{who}'s key page only opens on {who}'s VPN. Connect to it first.",
   "VPN_UP": "On {who}'s VPN",
-  "VPN_LOGIN": "Your {who} email for the VPN",
-  "VPN_LOGIN_HINT": "first.last@example.edu",
   "ON_CAMPUS": "I'm on campus",
   "OPEN_PAGE": "Open key page",
   "PASTED_IT": "I pasted it",

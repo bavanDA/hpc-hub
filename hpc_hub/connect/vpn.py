@@ -240,10 +240,14 @@ class Vpn:
 
         asked = {prompts.PASSWORD: 0, prompts.DUO: 0}
         self.sms_sent = False
+        no_user = []  # the VPN asked for a username and none is saved (a web sign-in never asks: for_connect)
 
         def answer(prompt: str) -> str | None:
             kind = prompts.classify(prompt)
             if kind == prompts.USERNAME:
+                if not username:
+                    no_user.append(prompt)
+                    return None
                 return username
             if kind == prompts.GROUP:
                 return prompts.group_choice(prompt, v.authgroup)
@@ -270,6 +274,9 @@ class Vpn:
         if code != 0 or "COOKIE" not in result:
             if any("No SSO handler" in line for line in err):
                 raise NeedsWebLogin("VPN wants web sign-in")
+            if no_user:
+                raise VpnError(f"{self.cfg.name}'s VPN asks for a username first: add your VPN login in the "
+                               "cluster's settings")
             if asked[prompts.PASSWORD] > 1:
                 raise VpnError("VPN rejected the password")
             tail = next((line for line in reversed(err) if line.strip()), "")

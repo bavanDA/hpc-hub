@@ -39,26 +39,17 @@ export function KeyPanel(props: PanelProps) {
   const [wantPage, setWantPage] = useState(false)
   const [vpnError, setVpnError] = useState('')
   const needVpn = c.vpn.enabled && !vpnUp && !campus
-  // the VPN's own login (Yale: first.last@yale.edu for Microsoft's sign-in), asked here when none is saved
-  const own = ownVpnLogin(c.vpn)
-  const [vpnUser, setVpnUser] = useState('')
-  const [vpnSaved, setVpnSaved] = useState<boolean | null>(null)
-  useEffect(() => {
-    if (!own) return
-    call<{ vpn: { username: string } }>('clusters.login', { cluster: c.id })
-      .then((l) => setVpnSaved(!!l.vpn.username)).catch(() => setVpnSaved(false))
-  }, [own, c.id])
-  const askVpnUser = own && vpnSaved === false
-  const domain = (c.vpn.domains ?? '').split(/[\s,]+/).find(Boolean)
-  const emailHint = domain ? `first.last@${domain}` : S.VPN_LOGIN_HINT
-  const askUser = !own && !known
-  const ready = (!askVpnUser || !!vpnUser.trim()) && (!askUser || !!user.trim())
+  // a VPN that signs in with the username needs it first; one with a login of its own (Yale's Microsoft page) asks
+  // for that on its page, so nothing is asked here (2026-11-22, owner: "why do you ask for username when you
+  // don't need that")
+  const askUser = !ownVpnLogin(c.vpn) && !known
+  const ready = !askUser || !!user.trim()
   // the VPN signs in with the username (Yale: the NetID), typed here when step 3 hasn't had it yet; a failure is
   // said, never swallowed (2026-11-22: "connect Yale VPN doesn't work" showed nothing)
   const connectVpn = (thenPage = true) => {
     setVpnError('')
     setWantPage(thenPage)
-    call('clusters.connect', { cluster: c.id, vpn_only: true, username: user.trim(), vpn_username: vpnUser.trim() })
+    call('clusters.connect', { cluster: c.id, vpn_only: true, username: user.trim() })
       .catch((e: Error) => { setWantPage(false); setVpnError(e.message) })
   }
   useEffect(() => {
@@ -92,13 +83,12 @@ export function KeyPanel(props: PanelProps) {
           </div>
           {needVpn ? <>
             <p>{fill(S.VPN_FIRST, { who: org })}</p>
-            {(askUser || askVpnUser) && (
+            {askUser && (
               <div className="flex flex-col gap-1.5">
-                <label htmlFor="vpn-user" className="text-sm text-dim">
-                  {askVpnUser ? fill(S.VPN_LOGIN, { who: org }) : c.username_label || 'Username'}</label>
-                <input id="vpn-user" value={askVpnUser ? vpnUser : user} spellCheck={false} autoComplete="username"
-                  placeholder={askVpnUser ? emailHint : copy.usernameHint}
-                  onChange={(e) => { if (askVpnUser) setVpnUser(e.target.value); else onUser(e.target.value); setVpnError('') }}
+                <label htmlFor="vpn-user" className="text-sm text-dim">{c.username_label || 'Username'}</label>
+                <input id="vpn-user" value={user} spellCheck={false} autoComplete="username"
+                  placeholder={copy.usernameHint}
+                  onChange={(e) => { onUser(e.target.value); setVpnError('') }}
                   onKeyDown={(e) => { if (e.key === 'Enter' && ready && !vpnBusy) { e.preventDefault(); connectVpn() } }}
                   className="h-10 rounded-lg border border-line-strong bg-window px-3 outline-none
                     placeholder:text-faint focus:border-accent focus:ring-1 focus:ring-accent" />

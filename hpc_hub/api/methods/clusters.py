@@ -33,18 +33,16 @@ def _blocker(session):
 
 
 @method("clusters.connect", slow=True)
-def connect(cluster: str, vpn_only: bool = False, switch: bool = False, username: str = "",
-            vpn_username: str = "") -> dict | None:
+def connect(cluster: str, vpn_only: bool = False, switch: bool = False, username: str = "") -> dict | None:
     """Start connecting; progress comes as session and log events. When another VPN is in the way, answers
     {"switch": {id, name}} and does nothing, unless switch is true: then that one is disconnected first.
-    username, vpn_username: typed in setup, saved first when none is saved. Setup brings the VPN up for the key
-    page before its last step, which saves the username, and never asked for a VPN login of its own at all
-    (Yale's: first.last@yale.edu), so Connect Yale VPN failed and said nothing (2026-11-22)."""
+    username: typed in setup, saved first when none is: setup brings the VPN up for the key page before its last
+    step, which saves it, and a VPN that signs in with it can't start without (2026-11-22, Connect Yale VPN did
+    nothing). Yale's VPN has a login of its own, typed on its Microsoft page: nothing is needed for it here."""
     s = hub().session(cluster)
-    for kind, typed in ((credentials.SSH, username), (credentials.VPN, vpn_username)):
-        saved = credentials.load(s.cfg.id, kind)
-        if typed.strip() and (not saved or not saved.username):
-            set_login(s.cfg.id, kind, typed, None, s.cfg.remember_password)
+    saved = credentials.load(s.cfg.id, credentials.SSH)
+    if username.strip() and (not saved or not saved.username):
+        set_login(s.cfg.id, credentials.SSH, username, None, s.cfg.remember_password)
     ssh, vpn = for_connect(s.cfg, vpn_only)
     other = _blocker(s)
     if not other:

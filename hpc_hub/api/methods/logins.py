@@ -30,29 +30,28 @@ def _unsaved(cfg, kind: str, login: Login) -> Login:
 
 
 def for_connect(cfg, vpn_only: bool = False) -> tuple[Login, Login | None]:
-    """The SSH and VPN logins to connect with: the VPN uses the SSH login or its own. vpn_only with a VPN of its own
-    login needs no SSH username (setup brings Yale's VPN up for its key page before the NetID is saved)."""
+    """The SSH and VPN logins to connect with: the VPN uses the SSH login or its own. A VPN with a login of its own
+    that has none saved starts with none: a web sign-in (Yale's Microsoft page) asks for it there, and remembers
+    you (2026-11-22, owner: "why do you ask for username when you don't need that"); one that wants it typed
+    first says so (vpn.py). vpn_only with such a VPN needs no SSH username either: setup brings it up for Yale's
+    key page before the NetID is saved."""
     ssh = credentials.load(cfg.id, credentials.SSH)
-    if (not ssh or not ssh.username) and vpn_only and cfg.vpn.enabled and not cfg.vpn.same_login_as_ssh:
+    own_vpn = cfg.vpn.enabled and not cfg.vpn.same_login_as_ssh
+    if not ssh or not ssh.username:
+        if not (vpn_only and own_vpn):
+            raise ValueError(f"Add your {cfg.name} username in the cluster's settings first")
         ssh = Login("", "")
-    elif not ssh or not ssh.username:
-        raise ValueError(f"Add your {cfg.name} username in the cluster's settings first")
-    if not ssh.username:  # only the VPN, with its own login
-        vpn = credentials.load(cfg.id, credentials.VPN)
-        if not vpn or not vpn.username:
-            raise ValueError(f"Add your {cfg.name} VPN login in the cluster's settings first")
-        return ssh, _unsaved(cfg, credentials.VPN, vpn)
-    ssh = _unsaved(cfg, credentials.SSH, Login(credentials.cluster_username(cfg.host, ssh.username), ssh.password))
+    else:
+        ssh = _unsaved(cfg, credentials.SSH, Login(credentials.cluster_username(cfg.host, ssh.username), ssh.password))
     if not cfg.vpn.enabled:
         return ssh, None
-    vpn = ssh if cfg.vpn.same_login_as_ssh else credentials.load(cfg.id, credentials.VPN)
-    if vpn and not cfg.vpn.same_login_as_ssh:
-        vpn = _unsaved(cfg, credentials.VPN, vpn)
-    if vpn and not vpn.password:
-        vpn = Login(vpn.username, ssh.password)
+    if not own_vpn:
+        return ssh, Login(ssh.username, ssh.password)
+    vpn = credentials.load(cfg.id, credentials.VPN)
     if not vpn or not vpn.username:
-        raise ValueError(f"Add your {cfg.name} VPN login in the cluster's settings first")
-    return ssh, vpn
+        return ssh, Login("", "")  # signed in on the VPN's own page
+    vpn = _unsaved(cfg, credentials.VPN, vpn)
+    return ssh, vpn if vpn.password else Login(vpn.username, ssh.password)
 
 
 @method("clusters.login")

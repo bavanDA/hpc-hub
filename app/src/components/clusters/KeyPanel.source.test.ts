@@ -5,11 +5,10 @@ import { describe, expect, it } from 'vitest'
 import panel from './KeyPanel.tsx?raw'
 
 describe('Connect VPN in setup', () => {
-  it('asks for what the VPN signs in with when nothing is saved: its own login, else the username', () => {
-    expect(panel).toContain("call<{ vpn: { username: string } }>('clusters.login', { cluster: c.id })")
-    expect(panel).toContain('const askVpnUser = own && vpnSaved === false')
-    expect(panel).toContain('const askUser = !own && !known')
-    expect(panel).toContain('vpn_username: vpnUser.trim()')
+  it('asks only for a username the VPN signs in with; a VPN with its own login asks on its page', () => {
+    expect(panel).toContain('const askUser = !ownVpnLogin(c.vpn) && !known')
+    expect(panel).not.toContain('vpn_username')
+    expect(panel).toContain("call('clusters.connect', { cluster: c.id, vpn_only: true, username: user.trim() })")
     expect(panel).toContain('disabled={vpnBusy || !ready}')
   })
   it('says why it failed, never nothing', () => {

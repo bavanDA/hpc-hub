@@ -75,9 +75,11 @@ def test_connect_uses_the_saved_logins(hub, keyring):
     _, ssh, vpn, only = hub.sessions["wulver"].calls[0]
     assert ssh == Login("jdoe", "pw") and vpn == ssh and only
 
-    keyring["yale", "ssh"] = Login("jdoe", "pw")  # Yale's VPN wants its own login
-    with pytest.raises(ValueError, match="VPN login"):
-        clusters.connect("yale")
+    keyring["yale", "ssh"] = Login("jdoe", "pw")  # Yale's VPN has its own login, typed on its Microsoft page
+    clusters.connect("yale")
+    assert hub.sessions["yale"].calls[0][2] == Login("", "")  # none saved: nothing to fill in, the page asks
+    hub.sessions["yale"].calls.clear()
+    hub.sessions["yale"].state = State.DISCONNECTED
     keyring["yale", "vpn"] = Login("jane.doe@example.edu", "")
     hub.sessions["wulver"].state = State.DISCONNECTED
     clusters.connect("yale")
@@ -319,38 +321,49 @@ def test_the_app_gets_each_clusters_own_ways_as_data(hub):
     assert clusters.update("yale", {"ask_node": True})["help_email"] == ""  # every answer that sends a cluster
 
 
-# -- Connect Yale VPN in setup (2026-11-22, "connect Yale VPN doesn't work") ---------------------------------
-# Setup brings the VPN up for Yale's key page in step 2; the NetID is saved in step 3, and a VPN login of its own
-# (first.last@yale.edu, Microsoft's sign-in) was never asked at all, so connect refused and the button hid why.
+# -- Connect Yale VPN in setup (2026-11-22, "connect Yale VPN doesn't work"; "why do you ask for username when you
+# don't need that") ------------------------------------------------------------------------------------------------
+# Setup brings the VPN up for Yale's key page in step 2, before step 3 saves the NetID; Yale's VPN login is typed
+# on its own Microsoft page. Connect refused both missing logins, and the button hid why.
 
-def test_setup_saves_the_vpn_login_typed_with_connect(hub, keyring):
-    assert clusters.connect("yale", vpn_only=True, vpn_username="jane.doe@example.edu") is None
-    assert keyring["yale", "vpn"].username == "jane.doe@example.edu"
+def test_yales_vpn_starts_in_setup_with_nothing_saved(hub, keyring):
+    assert clusters.connect("yale", vpn_only=True) is None
     _, ssh, vpn, only = hub.sessions["yale"].calls[0]
-    assert only and vpn.username == "jane.doe@example.edu" and ssh.username == ""  # no NetID needed for the VPN
+    assert only and ssh == Login("", "") and vpn == Login("", "")
+    assert keyring == {}  # nothing asked, nothing saved
 
 
-def test_the_vpn_alone_never_needs_the_ssh_username_when_it_has_its_own_login(hub, keyring):
+def test_a_saved_vpn_login_still_fills_the_page(hub, keyring):
     keyring["yale", "vpn"] = Login("jane.doe@example.edu", "")
     clusters.connect("yale", vpn_only=True)
     assert hub.sessions["yale"].calls[0][2].username == "jane.doe@example.edu"
-    hub.sessions["yale"].calls.clear()
-    with pytest.raises(ValueError, match="username"):  # a full connect still needs it
+
+
+def test_a_full_connect_still_needs_the_username_and_a_vpn_on_the_ssh_login_too(hub, keyring):
+    with pytest.raises(ValueError, match="username"):
         clusters.connect("yale")
-    assert hub.sessions["yale"].calls == []
-
-
-def test_a_vpn_without_its_login_still_says_so(hub, keyring):
-    with pytest.raises(ValueError, match="VPN login"):
-        clusters.connect("yale", vpn_only=True)
-    with pytest.raises(ValueError, match="username"):  # Wulver's VPN uses the SSH login: that is needed
+    with pytest.raises(ValueError, match="username"):  # Wulver's VPN signs in with the SSH login
         clusters.connect("wulver", vpn_only=True)
+    assert hub.sessions["yale"].calls == [] and hub.sessions["wulver"].calls == []
 
 
 def test_a_username_typed_in_setup_is_saved_but_never_replaces_a_saved_one(hub, keyring):
     clusters.connect("wulver", vpn_only=True, username="jdoe")
     assert keyring["wulver", "ssh"].username == "jdoe"
     keyring["yale", "ssh"] = Login("ab12", "")
-    keyring["yale", "vpn"] = Login("jane.doe@example.edu", "")
-    clusters.connect("yale", vpn_only=True, username="other", vpn_username="other@example.edu")
-    assert keyring["yale", "ssh"].username == "ab12" and keyring["yale", "vpn"].username == "jane.doe@example.edu"
+    clusters.connect("yale", vpn_only=True, username="other")
+    assert keyring["yale", "ssh"].username == "ab12"
+
+
+def test_a_vpn_that_wants_a_username_first_says_so(monkeypatch):
+    """A VPN with its own login that asks for a username before any web page: the message says where to add it."""
+    from hpc_hub.connect import vpn as vpn_mod
+    cfg = next(c for c in config.default_clusters() if c.id == "yale")
+    v = vpn_mod.Vpn(cfg, lambda _: None)
+
+    def run(argv, answer, log, **kw):
+        assert answer("Username:") is None  # nothing typed for it
+        return 1, [], ["Failed to obtain WebVPN cookie"]
+    monkeypatch.setattr(vpn_mod, "run_interactive", run)
+    with pytest.raises(vpn_mod.VpnError, match="asks for a username first: add your VPN login"):
+        v.authenticate("", "", ask=lambda p: None, on_duo=lambda: None)
