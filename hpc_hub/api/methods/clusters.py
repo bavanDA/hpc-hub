@@ -6,12 +6,13 @@ from ...compute import gpus as gpu_list
 from ...compute import slurm, slurm_args
 from ...connect import vpn_helper
 from ...connect.state import State
+from ...core import credentials
 from ...core.config import ComputeProfile
 from ...core.paths import log_dir
 from ..hub import hub
 from ..server import method
 from .app import cluster_json
-from .logins import for_connect
+from .logins import for_connect, set_login
 
 # extra_args stays out: free text that ends up on a command line
 PROFILE_KEYS = {f.name for f in fields(ComputeProfile)} - {"extra_args"}
@@ -32,11 +33,19 @@ def _blocker(session):
 
 
 @method("clusters.connect", slow=True)
-def connect(cluster: str, vpn_only: bool = False, switch: bool = False) -> dict | None:
+def connect(cluster: str, vpn_only: bool = False, switch: bool = False, username: str = "",
+            vpn_username: str = "") -> dict | None:
     """Start connecting; progress comes as session and log events. When another VPN is in the way, answers
-    {"switch": {id, name}} and does nothing, unless switch is true: then that one is disconnected first."""
+    {"switch": {id, name}} and does nothing, unless switch is true: then that one is disconnected first.
+    username, vpn_username: typed in setup, saved first when none is saved. Setup brings the VPN up for the key
+    page before its last step, which saves the username, and never asked for a VPN login of its own at all
+    (Yale's: first.last@yale.edu), so Connect Yale VPN failed and said nothing (2026-11-22)."""
     s = hub().session(cluster)
-    ssh, vpn = for_connect(s.cfg)
+    for kind, typed in ((credentials.SSH, username), (credentials.VPN, vpn_username)):
+        saved = credentials.load(s.cfg.id, kind)
+        if typed.strip() and (not saved or not saved.username):
+            set_login(s.cfg.id, kind, typed, None, s.cfg.remember_password)
+    ssh, vpn = for_connect(s.cfg, vpn_only)
     other = _blocker(s)
     if not other:
         s.connect(ssh, vpn, vpn_only)

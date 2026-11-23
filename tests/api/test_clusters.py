@@ -317,3 +317,40 @@ def test_the_app_gets_each_clusters_own_ways_as_data(hub):
     assert got["wulver"]["help_email"] == "hpc@njit.edu" and got["wulver"]["code_sign_in"] == ""
     assert "ACCESS" in got["sdsc"]["code_sign_in"] and got["sdsc"]["help_email"] == ""
     assert clusters.update("yale", {"ask_node": True})["help_email"] == ""  # every answer that sends a cluster
+
+
+# -- Connect Yale VPN in setup (2026-11-22, "connect Yale VPN doesn't work") ---------------------------------
+# Setup brings the VPN up for Yale's key page in step 2; the NetID is saved in step 3, and a VPN login of its own
+# (first.last@yale.edu, Microsoft's sign-in) was never asked at all, so connect refused and the button hid why.
+
+def test_setup_saves_the_vpn_login_typed_with_connect(hub, keyring):
+    assert clusters.connect("yale", vpn_only=True, vpn_username="jane.doe@example.edu") is None
+    assert keyring["yale", "vpn"].username == "jane.doe@example.edu"
+    _, ssh, vpn, only = hub.sessions["yale"].calls[0]
+    assert only and vpn.username == "jane.doe@example.edu" and ssh.username == ""  # no NetID needed for the VPN
+
+
+def test_the_vpn_alone_never_needs_the_ssh_username_when_it_has_its_own_login(hub, keyring):
+    keyring["yale", "vpn"] = Login("jane.doe@example.edu", "")
+    clusters.connect("yale", vpn_only=True)
+    assert hub.sessions["yale"].calls[0][2].username == "jane.doe@example.edu"
+    hub.sessions["yale"].calls.clear()
+    with pytest.raises(ValueError, match="username"):  # a full connect still needs it
+        clusters.connect("yale")
+    assert hub.sessions["yale"].calls == []
+
+
+def test_a_vpn_without_its_login_still_says_so(hub, keyring):
+    with pytest.raises(ValueError, match="VPN login"):
+        clusters.connect("yale", vpn_only=True)
+    with pytest.raises(ValueError, match="username"):  # Wulver's VPN uses the SSH login: that is needed
+        clusters.connect("wulver", vpn_only=True)
+
+
+def test_a_username_typed_in_setup_is_saved_but_never_replaces_a_saved_one(hub, keyring):
+    clusters.connect("wulver", vpn_only=True, username="jdoe")
+    assert keyring["wulver", "ssh"].username == "jdoe"
+    keyring["yale", "ssh"] = Login("ab12", "")
+    keyring["yale", "vpn"] = Login("jane.doe@example.edu", "")
+    clusters.connect("yale", vpn_only=True, username="other", vpn_username="other@example.edu")
+    assert keyring["yale", "ssh"].username == "ab12" and keyring["yale", "vpn"].username == "jane.doe@example.edu"

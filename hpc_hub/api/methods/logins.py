@@ -29,11 +29,19 @@ def _unsaved(cfg, kind: str, login: Login) -> Login:
     return Login(login.username, _memory()[key])
 
 
-def for_connect(cfg) -> tuple[Login, Login | None]:
-    """The SSH and VPN logins to connect with: the VPN uses the SSH login or its own."""
+def for_connect(cfg, vpn_only: bool = False) -> tuple[Login, Login | None]:
+    """The SSH and VPN logins to connect with: the VPN uses the SSH login or its own. vpn_only with a VPN of its own
+    login needs no SSH username (setup brings Yale's VPN up for its key page before the NetID is saved)."""
     ssh = credentials.load(cfg.id, credentials.SSH)
-    if not ssh or not ssh.username:
+    if (not ssh or not ssh.username) and vpn_only and cfg.vpn.enabled and not cfg.vpn.same_login_as_ssh:
+        ssh = Login("", "")
+    elif not ssh or not ssh.username:
         raise ValueError(f"Add your {cfg.name} username in the cluster's settings first")
+    if not ssh.username:  # only the VPN, with its own login
+        vpn = credentials.load(cfg.id, credentials.VPN)
+        if not vpn or not vpn.username:
+            raise ValueError(f"Add your {cfg.name} VPN login in the cluster's settings first")
+        return ssh, _unsaved(cfg, credentials.VPN, vpn)
     ssh = _unsaved(cfg, credentials.SSH, Login(credentials.cluster_username(cfg.host, ssh.username), ssh.password))
     if not cfg.vpn.enabled:
         return ssh, None
