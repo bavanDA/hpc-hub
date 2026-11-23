@@ -19,3 +19,15 @@ describe('terminals in the Code page are only terminals', () => {
     expect(terminals).toMatch(/<TerminalView key=\{t\.key\} tab=\{t\} shown=\{t\.key === current\} rail \/>/)
   })
 })
+
+describe('the list of terminals on the right can be hidden (2026-11-22 owner)', () => {
+  it('a button in the panel header hides and shows it', () => {
+    expect(panel).toContain("label={list ? 'Hide the list of terminals' : 'Show the list of terminals'}")
+    expect(panel).toContain('onClick={() => showList(!list)}')
+    expect(panel).toMatch(/\{list && items\.length > 0 && \(\s*<div role="tablist"/)
+  })
+  it('hidden, the note points to the ⌄ menu, which still switches terminals', () => {
+    expect(panel).toContain("'Pick a terminal in the ⌄ menu, or start a new one with +.'")
+    expect(panel).toMatch(/<RunningMenu [^>]*onOpen=\{open\}/)
+  })
+})

@@ -1,4 +1,4 @@
-import { Plus, Trash2, X } from 'lucide-react'
+import { PanelRightClose, PanelRightOpen, Plus, Trash2, X } from 'lucide-react'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 
 import { call } from '../../../rpc'
@@ -20,6 +20,7 @@ import type { FolderSessions } from './folderSessions'
 import { Note } from './Note'
 import { TOGGLE_KEY, usePanelTabs } from './panel'
 import { RunningMenu } from './RunningMenu'
+import { listShown, rememberList } from './terminalList'
 
 const MIN = 120
 
@@ -41,6 +42,9 @@ export function TerminalPanel({ cluster, live, folder, name, home, sessions, hei
   const panel = usePanelTabs(cluster, folder)
   const mine = panel.keys.map((k) => tabs.find((t) => t.key === k)).filter((t) => t !== undefined)
   const on = mine.find((t) => t.key === panel.current) ?? mine[mine.length - 1]
+  // the list on the right can be hidden for a wider terminal; the ⌄ menu (RunningMenu) still switches terminals
+  const [list, setList] = useState(listShown)
+  const showList = (shown: boolean) => { rememberList(shown); setList(shown) }
 
   const open = (s: TmuxSession) => {
     openSession(cluster, s)
@@ -113,7 +117,8 @@ export function TerminalPanel({ cluster, live, folder, name, home, sessions, hei
       : !listed?.listing && listed?.error ? <Note>{listed.error}</Note>
       : !listed?.listing ? <div className="grid h-full place-items-center"><Spinner /></div>
       : !listed.listing.has_tmux ? <Note>tmux is not installed on this cluster.</Note>
-      : items.length ? <Note>Pick a terminal on the right, or start a new one with +.</Note>
+      : items.length ? <Note>{list ? 'Pick a terminal on the right, or start a new one with +.'
+        : 'Pick a terminal in the ⌄ menu, or start a new one with +.'}</Note>
       : (
         <div className="flex h-full flex-col items-center justify-center gap-3">
           <span className="text-dim">Nothing running in {name}.</span>
@@ -130,6 +135,9 @@ export function TerminalPanel({ cluster, live, folder, name, home, sessions, hei
       <div className="flex h-9 shrink-0 items-center gap-0.5 pr-1">
         <span className="flex-1 truncate px-4 text-xs font-semibold tracking-wide text-dim uppercase">
           {on ? on.title : 'Terminal'}</span>
+        {items.length > 0 && <IconButton icon={list ? PanelRightClose : PanelRightOpen}
+          label={list ? 'Hide the list of terminals' : 'Show the list of terminals'} small
+          onClick={() => showList(!list)} />}
         <IconButton icon={Plus} label={`New terminal in ${name}`} small disabled={!live}
           onClick={() => start(Boolean(node))} />
         <RunningMenu sessions={sessions} folder={folder} name={name} home={home} node={node} disabled={!live}
@@ -141,7 +149,7 @@ export function TerminalPanel({ cluster, live, folder, name, home, sessions, hei
           {mine.map((t) => <TerminalView key={t.key} tab={t} shown={t.key === on?.key} plain />)}
           {body}
         </div>
-        {items.length > 0 && (
+        {list && items.length > 0 && (
           <div role="tablist" aria-orientation="vertical" className="flex w-[220px] shrink-0 flex-col gap-0.5
             overflow-y-auto border-l border-line p-1.5">
             {items.map((it) => {
