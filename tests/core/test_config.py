@@ -29,7 +29,7 @@ def test_unknown_keys_ignored(tmp_path):
     path.write_text('[clusters.wulver]\nbogus = 1\nport = "x"\n[clusters.nope]\nhost = "a"\n')
     loaded = config.load(path)
     assert loaded[0].port == 22
-    assert len(loaded) == 3
+    assert len(loaded) == 4  # the built-in ones; nope isn't one
 
 
 def test_load_strips_user_from_host(tmp_path):
@@ -104,7 +104,7 @@ def test_agent_compute_roundtrip(tmp_path):
 
 def test_short_names(tmp_path):
     by_id = {c.id: c.short_name for c in config.default_clusters()}
-    assert by_id == {"wulver": "Wulver", "yale": "Yale", "sdsc": "SDSC"}
+    assert by_id == {"wulver": "Wulver", "yale": "Yale", "sdsc": "SDSC", "delta": "Delta"}
     assert config.ClusterConfig(id="x", name="Great Lakes (UMich)").short_name == "Great Lakes"
     path = tmp_path / "old.toml"  # saved before there was a short field
     path.write_text('[clusters.yale]\nname = "Yale Bouchet"\nhost = "bouchet.ycrc.yale.edu"\n')

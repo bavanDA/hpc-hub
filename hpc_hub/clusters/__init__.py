@@ -3,10 +3,10 @@
 cluster, so that's all."""
 
 from ..core.cluster_settings import ClusterConfig
-from . import sdsc, wulver, yale
+from . import delta, sdsc, wulver, yale
 from .site import Site
 
-ALL = (wulver, yale, sdsc)  # the order the first start offers them
+ALL = (wulver, yale, sdsc, delta)  # the order the first start offers them
 _SITES = {m.cluster().id: m.SITE for m in ALL}
 
 

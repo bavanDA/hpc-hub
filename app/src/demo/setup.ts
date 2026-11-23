@@ -3,6 +3,7 @@ const choices = [
   { id: 'wulver', name: 'Wulver (NJIT)', short: 'Wulver', org: 'NJIT', host: 'wulver.njit.edu', vpn: true, second_factor: 'duo' },
   { id: 'yale', name: 'Yale Bouchet', short: 'Yale', org: 'Yale', host: 'bouchet.ycrc.yale.edu', vpn: true, second_factor: 'duo' },
   { id: 'sdsc', name: 'SDSC Expanse', short: 'SDSC', org: 'SDSC', host: 'login.expanse.sdsc.edu', vpn: false, second_factor: 'code' },
+  { id: 'delta', name: 'NCSA Delta', short: 'Delta', org: 'NCSA', host: 'login.delta.ncsa.illinois.edu', vpn: false, second_factor: 'duo' },
 ]
 
 export const answers: Record<string, unknown> = {

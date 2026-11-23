@@ -12,7 +12,7 @@ usernames, passwords or personal paths in code or tests.
 
 ## Add your cluster
 
-Each built-in cluster is one file in `hpc_hub/clusters/` (`wulver.py`, `yale.py`, `sdsc.py`):
+Each built-in cluster is one file in `hpc_hub/clusters/` (`wulver.py`, `yale.py`, `sdsc.py`, `delta.py`):
 
 1. Copy the one closest to yours (same sign-in: password and Duo, SSH key, or an authenticator code).
 2. Change `cluster()`: its name, login host, VPN, and the node sizes to start with.

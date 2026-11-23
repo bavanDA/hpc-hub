@@ -63,9 +63,11 @@ def chosen(tmp_path, monkeypatch):
 def test_first_start_offers_every_cluster(chosen):
     from hpc_hub.api.methods import setup
     got = setup.status()
-    assert got["first_run"] and got["chosen"] == ["wulver", "yale", "sdsc"]
+    assert got["first_run"] and got["chosen"] == ["wulver", "yale", "sdsc", "delta"]
     yale = next(c for c in got["choices"] if c["id"] == "yale")
     assert (yale["short"], yale["org"], yale["vpn"], yale["second_factor"]) == ("Yale", "Yale", True, "duo")
+    delta = next(c for c in got["choices"] if c["id"] == "delta")
+    assert (delta["short"], delta["org"], delta["vpn"], delta["second_factor"]) == ("Delta", "NCSA", False, "duo")
 
 
 def test_choose_keeps_known_clusters_once(chosen):
