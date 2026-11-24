@@ -50,7 +50,7 @@ export function TerminalPane({ tab, shown, monitor = true, rail = false }:
       ))}
       {rail ? <HistoryFrame tab={tab} shown={shown} phone useBack={useBackLayer}>{terminal}</HistoryFrame> : terminal}
       {monitor && tab.session && tab.cluster && <div className="phone-monitor">
-        <MonitorBar cluster={tab.cluster} node={tab.node} shown={shown} /></div>}
+        <MonitorBar cluster={tab.cluster} session={tab.session} node={tab.node} shown={shown} /></div>}
     </div>
   )
 }

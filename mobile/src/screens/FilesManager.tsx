@@ -54,7 +54,9 @@ export function FilesManager({ tabs }: { tabs?: ReactNode }) {
   const setSort = (s: Sort) => { memory.sort = s; setSortState(s) }
 
   const here = active ? shortName(active) : cluster
-  const { listing, path, loading, error, places, selected, setSelected, go } = useListing(cluster, connected, clusters)
+  const { listing, path, loading, error, places, selected, pickRows, go } = useListing(cluster, connected, clusters)
+  // one row at a time on a phone; the desktop picks several (the shared list keeps them as a set)
+  const setSelected = (name: string | null) => pickRows(new Set(name ? [name] : []), name)
   const entries = listing ? sorted(listing.entries, sort) : []
   const entry = entries.find((e) => e.name === selected) ?? null
   const refresh = () => go(path)
@@ -108,6 +110,7 @@ export function FilesManager({ tabs }: { tabs?: ReactNode }) {
     copyText(p).then((ok) => toast(ok ? `Copied ${p}` : 'Could not copy'))
   }
   const copy = (e: Entry) => setClip({ cluster, clusterName: here, path: join(path, e.name), name: e.name, folder: isDir(e) })
+  const notHere = () => toast('Moving files is in the desktop app for now. Copy, then delete, works here')
   const folderOf = (e: Entry | null) => (e && isDir(e) ? join(path, e.name) : path)
   const tool = (start: 'vscode' | 'claude', folder: string) => goPage('agents', { cluster, folder, start })
 
@@ -131,14 +134,15 @@ export function FilesManager({ tabs }: { tabs?: ReactNode }) {
 
   const act = (a: Action, e: Entry | null = entry) => {
     if (!e) return
-    ({ open, download: (x: Entry) => download(cluster, join(path, x.name)), rename, zip, delete: remove, copy } as
-      Record<Action, (e: Entry) => void>)[a](e)
+    const actions: Record<Action, (e: Entry) => void> = { open, download: (x: Entry) => download(cluster, join(path, x.name)),
+      rename, zip, delete: remove, copy, move: notHere }
+    actions[a](e)
   }
   const on = menu?.entry ?? null  // what was pressed; null: the folder itself
   const items: SheetAction[] = menu ? menuFor(on, !!clip, {
     open: () => act('open', on), edit: () => on && edit(on), copyPath: () => copyPath(on),
     download: () => act('download', on), rename: () => act('rename', on), zip: () => act('zip', on),
-    copy: () => act('copy', on), delete: () => act('delete', on), newFolder,
+    copy: () => act('copy', on), move: notHere, delete: () => act('delete', on), newFolder,
     upload: () => upload(cluster, path), paste,
     vscode: () => tool('vscode', folderOf(on)), claude: () => tool('claude', folderOf(on)),
     code: () => goPage('code', { cluster, folder: folderOf(on) }),
@@ -170,9 +174,9 @@ export function FilesManager({ tabs }: { tabs?: ReactNode }) {
       </div>}
       {connected && <div className="px-4"><ScratchBanner cluster={cluster} path={path} places={places}
         onOpen={() => goPage('backup', { cluster, step: 'plan' })} /></div>}
-      {clip && <ClipBanner clip={clip} canPaste={connected && !!path} onPaste={paste} onDrop={() => setClip(null)} />}
+      {clip && <ClipBanner held={{ items: [clip], move: false }} canPaste={connected && !!path} onPaste={paste} onDrop={() => setClip(null)} />}
       <div className="flex min-h-0 flex-1 flex-col">{body}</div>
-      {connected && <ActionBar entry={entry} onAction={(a) => act(a)} />}
+      {connected && <ActionBar picked={entry ? [entry] : []} onAction={(a) => act(a)} />}
       {running.length > 0 && <div className="max-h-[188px] shrink-0 divide-y divide-line overflow-y-auto border-t border-line bg-window">
         {running.map((t) => <TransferRow key={t.id} t={t} onX={stopCopy} />)}</div>}
       {stopDialog}
