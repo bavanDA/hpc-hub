@@ -43,7 +43,12 @@ def job(cluster, scan_id, p, mode):
                     hardlinks=True, total_bytes=p.bytes)
     res = cluster.run(copy.start_command(scan_id, mode, j, plan.rules_json(p) if mode == "dry" else ""))
     assert res.returncode == 0, res.stderr
-    return (work(cluster, scan_id) / "copy.state").read_text().strip()
+    d = work(cluster, scan_id)
+    state = (d / "copy.state").read_text().strip()
+    if state == "failed":  # why, with the test's failure
+        for f in sorted(d.glob("copy.why")) + sorted(d.glob("*.err")) + sorted(d.glob("*.out")):
+            print(f"{f.name}: {f.read_text(errors='replace')[-2000:]}")
+    return state
 
 
 def copied(cluster):
