@@ -301,8 +301,24 @@ mod tests {
     fn runs_a_command_and_reads_its_output() {
         let ptys = Ptys::default();
         let argv: &[&str] = if cfg!(windows) { &["cmd", "/c", "echo hi"] } else { &["sh", "-c", "echo hi"] };
-        let (_, out, ended) = run(&ptys, argv);
-        assert_eq!(ended.recv_timeout(Duration::from_secs(10)).unwrap(), 0);
+        let (id, out, ended) = run(&ptys, argv);
+        // ConPTY first asks where the cursor is (ESC[6n) and holds the command's output until a terminal answers,
+        // as xterm.js does in the window
+        let start = Instant::now();
+        let mut answered = false;
+        let code = loop {
+            match ended.recv_timeout(Duration::from_millis(20)) {
+                Ok(code) => break code,
+                Err(_) if start.elapsed() < Duration::from_secs(10) => {
+                    if !answered && text(&out).contains("\x1b[6n") {
+                        ptys.write(id, b"\x1b[1;1R").unwrap();
+                        answered = true;
+                    }
+                }
+                Err(e) => panic!("{e:?}; got {:?}", text(&out)),
+            }
+        };
+        assert_eq!(code, 0);
         assert!(text(&out).contains("hi"), "got {:?}", text(&out));
     }
 
