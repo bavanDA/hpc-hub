@@ -145,3 +145,50 @@ def test_chat_send_still_refuses_while_claude_starts(session):
 def test_the_view_says_starting_only_from_ready():
     model = (Path(__file__).parents[2] / "app" / "src" / "components" / "chat" / "model.ts").read_text()
     assert "s.ready === false" in model
+
+
+# -- 2026-11-23, the owner's laptop (Linux, fix 40): a recent Claude names the session in the box's top edge, and
+# lists its agents and notices under the box. claude-named-box.txt is that screen, its words made up. ------------
+
+NAMED = (SCREENS / "claude-named-box.txt").read_text(encoding="utf-8")
+
+
+def test_a_box_whose_top_edge_has_the_sessions_name():
+    got = chat_view.parse_screen(NAMED)
+    assert got["ready"] and got["box"] and not got["ask"] and not got["busy"]
+    assert got["draft"] == ""  # Claude's suggestion, dim: not something typed
+    assert got["mode"] == "auto"
+
+
+def test_the_named_box_with_something_typed():
+    typed = NAMED.replace("❯ \x1b[2mwhen", "❯ when", 1)
+    assert "❯ when" in typed
+    assert chat_view.parse_screen(typed)["draft"].startswith("when")
+
+
+@pytest.mark.parametrize("row, edge", [
+    ("─" * 53 + " Claude · plots ─", True),
+    ("─" * 40 + " a much longer session name, still one line ──", True),
+    ("─" * 100, True),
+    ("╰" + "─" * 98 + "╯", True),
+    ("── a heading ──", False),  # a short rule in an answer
+    ("─" * 30 + " " + "x" * 80 + " ─", False),  # words, not a name
+    ("● Done ───────────────────", False),
+])
+def test_what_counts_as_an_edge(row, edge):
+    assert bool(chat_view.EDGE.match(row)) is edge
+
+
+def test_the_mode_is_read_under_the_box_not_from_the_last_rows():
+    for words, mode in (("⏸ plan mode on", "plan"), ("⏵⏵ accept edits on", "edits"), ("⏸ manual mode on", "ask")):
+        screen = NAMED.replace("auto\x1b[39m \x1b[93mmode", "x\x1b[39m \x1b[93mx", 1)
+        lines = screen.split("\n")
+        k = next(i for i, ln in enumerate(lines) if "x\x1b[39m \x1b[93mx" in ln)
+        lines[k] = "  " + words + " · 1 shell"
+        assert chat_view.parse_screen("\n".join(lines))["mode"] == mode
+
+
+def test_chat_send_goes_into_the_named_box(session):
+    session.screen = NAMED
+    assert chat.send("wulver", SESSION, "are you still working or not", node="n0042") == {"replaced": False}
+    assert len(session.ran) == 1 and session.logged == []

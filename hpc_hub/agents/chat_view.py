@@ -295,7 +295,9 @@ def _arrow_menu(lines: list[str]) -> tuple[list[dict], int | None]:
         return options, start + top
     return [], None
 # the input box's edges: a rule across the pane, or the rounded box of older Claudes ("╰────╯")
-EDGE = re.compile(r"^\s*[╭┌╰└]?─{20,}[╮┐╯┘]?\s*$")
+# Recent Claudes write the session's name into the top one ("───── Claude · Kpath ─"; 2026-11-23, the owner's
+# laptop: with it, the box wasn't found and sending said Claude was still starting)
+EDGE = re.compile(r"^\s*[╭┌╰└]?─{20,}[╮┐╯┘]?\s*$|^\s*[╭┌]?─{10,} [^─]{1,60} ─+[╮┐]?\s*$")
 
 
 STATUS_WORDS = ("shift+tab", "for shortcuts", "mode on", "accept edits", "bypass permissions", "esc to interrupt")
@@ -407,7 +409,9 @@ def parse_screen(text: str) -> dict:
         lines.pop()
         raw.pop()
     tail = "\n".join(lines[-6:]).lower()
-    status = _status_line(lines)
+    where = _box_rows(lines)
+    # the mode is in the row under the box (more rows may follow: tasks, agents, notices)
+    status = _status_line(lines) if where is None else "\n".join(lines[where[1] + 1:where[1] + 3]).lower()
     words_from = status if status is not None else tail  # no input box: the old guess from the last rows
     mode = next((m for words, m in MODES if words in words_from and "on" in words_from), "ask")
     busy = "esc to interrupt" in tail
@@ -445,7 +449,7 @@ def parse_screen(text: str) -> dict:
         ask = {"question": question, "detail": detail, "options": options,
                "permission": question.lower().startswith("do you want")}
     # ready: Claude's input box is up (it has started); until then the window says it is starting
-    up = _box_rows(lines) is not None
+    up = where is not None
     ready = up or "shift+tab" in tail or "for shortcuts" in tail
     box = up and not ask
     return {"busy": busy and not ask, "mode": mode, "ask": ask, "ready": ready, "box": box,

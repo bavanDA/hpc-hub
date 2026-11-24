@@ -1,0 +1,14 @@
+● The plots are in figures/, and the table is updated.
+
+  Nothing is running now.
+[2m[37m✻[0m[39m[49m [2m[37mBaked[0m[39m[49m [2m[37mfor[0m[39m[49m [2m[37m38s[0m[39m[49m [2m[37m·[0m[39m[49m [2m[37mdone[0m[39m[49m [2m[37m7:57[0m[39m[49m [2m[37mAM[0m[39m[49m [2m[37m·[0m[39m[49m [2m[37m1[0m[39m[49m [2m[37mshell[0m[39m[49m [2m[37mstill[0m[39m[49m [2m[37mrunning[0m[39m[49m
+
+[37m─────────────────────────────────────────────────────[39m [37mClaude[39m [37m·[39m [37mplots[39m [37m─
+[39m❯ [2mwhen[0m[39m[49m [2mwill[0m[39m[49m [2mthe[0m[39m[49m [2mrun[0m[39m[49m [2mbe[0m[39m[49m [2mdone[0m[39m[49m [2mdo[0m[39m[49m [2myou[0m[39m[49m
+[37m──────────────────────────────────────────────────────────────────────
+[39m  [93m⏵⏵[39m [93mauto[39m [93mmode[39m [93mon[2m[37m ·[0m[39m[49m [36m1[39m [36mshell[2m[37m ·[0m[39m[49m [2m[37m1[0m[39m[49m [2m[37mfeedback[0m[39m[49m [2m[37mdraft[0m[39m[49m [2m[37m·[0m[39m[49m [2m[37m↓[0m[39m[49m [2m[37mto[0m[39m[49m [2m[37mmanage[0m[39m[49m
+                              [32m✔[39m [32mUpdate[39m [32minstalled[39m [32m·[39m [32mRestart[39m [32mto[39m [32mupdate[39m
+                              [2m[37mnew[0m[39m[49m [2m[37mtask?[0m[39m[49m [97m/clear[2m[37m to[0m[39m[49m [2m[37msave[0m[39m[49m [97m654.4k[39m [97mtokens[39m
+
+  [1m●[0m[39m[49m [1mmain[0m[39m[49m
+  [2m[37m◯[0m[39m[49m [2m[37mgeneral-purpose[0m[39m[49m  [2m[37mwaiting[0m[39m[49m [2m[37mon[0m[39m[49m [2m[37m1[0m[39m[49m [2m[37mshell[0m[39m[49m [2m[37m·[0m[39m[49m [2m[37mMake[0m[39m[49m [2m[37mthe[0m[39m[49m [2m[37mplots[0m[39m[49m [2m[37mfor[0m[39m[49m [2m[37mt…[0m[39m[49m
