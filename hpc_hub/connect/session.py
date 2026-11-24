@@ -301,8 +301,13 @@ class ClusterSession(NodesMixin):
         if self.ssh:
             self.ssh.find_slurm()  # Slurm only on a login shell's PATH: use that one
         self._read_limits()
-        if self.allocation and self._job_running(self.allocation.job_id):
+        running = self._job_running(self.allocation.job_id) if self.allocation else False
+        if running:
             self._log(f"Reusing job {self.allocation.job_id} on {self.allocation.node}")
+            self._set(State.CONNECTED)
+        elif running is None:  # signed in again but Slurm didn't answer (just after a sleep): keep the node
+            self._log(f"Slurm didn't answer, so keeping job {self.allocation.job_id} on {self.allocation.node}; "
+                      "it is checked again before use")
             self._set(State.CONNECTED)
         elif self._reuse_running_job():
             self._set(State.CONNECTED)

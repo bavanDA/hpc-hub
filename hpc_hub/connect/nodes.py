@@ -187,11 +187,12 @@ class NodesMixin:
             self._log(f"Reusing running job {job.job_id} ({job.name}) on {job.node}")
         return True
 
-    def _job_running(self, job_id: str) -> bool:
+    def _job_running(self, job_id: str) -> bool | None:
+        """None: Slurm didn't answer, so whether it runs is unknown."""
         try:
             return slurm.job_state(self.ssh, job_id) == "RUNNING"
         except (OSError, subprocess.SubprocessError):
-            return False
+            return None
 
     def _allocate_safely(self, profile: ComputeProfile | None = None) -> None:
         profile = profile or self.cfg.profile

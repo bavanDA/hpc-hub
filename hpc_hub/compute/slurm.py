@@ -60,8 +60,14 @@ def cancel(ssh: SshMaster, job_id: str) -> None:
 
 
 def job_state(ssh: SshMaster, job_id: str) -> str:
+    """RUNNING, PENDING…; "" for a job no longer in the queue. Raises when squeue gave no answer (the connection
+    dropped, Slurm busy): that is not "ended" (2026-11-23: after a laptop's sleep the node was let go)."""
     res = ssh.run(f"squeue -h -j {int(job_id)} -o %T")
-    return res.stdout.strip()
+    if res.returncode == 0:
+        return res.stdout.strip()
+    if "invalid job id" in (res.stderr + res.stdout).lower():  # squeue's answer for a job that has left the queue
+        return ""
+    raise subprocess.CalledProcessError(res.returncode, "squeue", res.stdout, res.stderr)
 
 
 def node_of(ssh: SshMaster, job_id: str) -> str:
