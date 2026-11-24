@@ -16,20 +16,46 @@ pub use unix::Datagram;
 #[cfg(unix)]
 mod unix {
     use std::io;
-    use std::os::fd::{FromRawFd, RawFd};
+    use std::os::fd::{AsRawFd, FromRawFd, RawFd};
     use std::os::unix::net::UnixDatagram;
+    use std::time::{Duration, Instant};
 
-    pub struct Datagram(pub UnixDatagram);
+    pub struct Datagram(UnixDatagram);
+
+    /// Room asked for in each direction: macOS gives a datagram socket 4 KB (about three packets), so a fast
+    /// transfer lost most of its packets there (Linux's default is far larger).
+    const ROOM: libc::c_int = 1 << 20;
+    /// How long a packet waits for openconnect to make room before it is dropped.
+    const FULL_WAIT: Duration = Duration::from_millis(20);
 
     impl Datagram {
+        pub fn new(socket: UnixDatagram) -> Datagram {
+            for option in [libc::SO_SNDBUF, libc::SO_RCVBUF] {
+                // SAFETY: a socket this Datagram owns, and an int that lives for the call. If the system refuses,
+                // its own size stays (the tunnel works, only slower).
+                unsafe {
+                    libc::setsockopt(socket.as_raw_fd(), libc::SOL_SOCKET, option,
+                                     (&ROOM as *const libc::c_int).cast(),
+                                     size_of::<libc::c_int>() as libc::socklen_t);
+                }
+            }
+            Datagram(socket)
+        }
+
         /// VPNFD: the fd openconnect left open for its script.
         pub fn from_fd(fd: RawFd) -> io::Result<Datagram> {
             if fd < 3 {
                 return Err(io::Error::new(io::ErrorKind::InvalidInput, "VPNFD is not a socket"));
             }
             // SAFETY: openconnect passes this fd to its script for exactly this; nothing else here owns it.
-            Ok(Datagram(unsafe { UnixDatagram::from_raw_fd(fd) }))
+            Ok(Datagram::new(unsafe { UnixDatagram::from_raw_fd(fd) }))
         }
+    }
+
+    /// openconnect's side is full for a moment. Linux says EAGAIN (or blocks); macOS says ENOBUFS at once,
+    /// even on a blocking socket.
+    fn full(e: &io::Error) -> bool {
+        e.kind() == io::ErrorKind::WouldBlock || e.raw_os_error() == Some(libc::ENOBUFS)
     }
 
     impl super::Link for Datagram {
@@ -43,11 +69,20 @@ mod unix {
         }
 
         fn send(&self, packet: &[u8]) -> io::Result<()> {
-            match self.0.send(packet) {
-                // openconnect's side is full for a moment: drop it, as a network would (TCP sends it again)
-                Err(e) if e.kind() == io::ErrorKind::WouldBlock => Ok(()),
-                Err(e) if e.raw_os_error() == Some(105) => Ok(()), // ENOBUFS
-                other => other.map(|_| ()),
+            let start = Instant::now();
+            loop {
+                match self.0.send(packet) {
+                    Err(e) if e.kind() == io::ErrorKind::Interrupted => continue,
+                    // wait a moment for openconnect to read; still full: drop it, as a network would (TCP sends
+                    // it again)
+                    Err(e) if full(&e) => {
+                        if start.elapsed() >= FULL_WAIT {
+                            return Ok(());
+                        }
+                        std::thread::sleep(Duration::from_micros(200));
+                    }
+                    other => return other.map(|_| ()),
+                }
             }
         }
     }

@@ -83,7 +83,7 @@ fn forwards_a_port_through_the_tunnel_by_name() {
     let listener = TcpListener::bind(("127.0.0.1", port)).unwrap();
     let s = Settings { address: Ipv4Addr::new(10, 9, 0, 10), mtu: 1300, dns: vec![Ipv4Addr::new(10, 9, 0, 53)],
                        domains: vec!["example.edu".into()], keepalive: Some(30) };
-    let link: Arc<dyn link::Link> = Arc::new(link::Datagram(ours.try_clone().unwrap()));
+    let link: Arc<dyn link::Link> = Arc::new(link::Datagram::new(ours.try_clone().unwrap()));
     let stack = std::thread::spawn(move || stack::run(link, s, vec![forward], vec![listener]));
 
     for round in 0..2 {
@@ -111,4 +111,25 @@ fn forwards_a_port_through_the_tunnel_by_name() {
     // the tunnel goes (openconnect's end closes): the stack stops
     ours.shutdown(std::net::Shutdown::Both).unwrap();
     assert!(stack.join().unwrap().is_ok());
+}
+
+/// macOS gives a datagram socket 4 KB, about three packets: the tunnel asks for more, or a fast transfer through it
+/// loses most of its packets (it did, 2026-11-24)
+#[cfg(unix)]
+#[test]
+fn the_tunnel_socket_has_room_for_many_packets() {
+    use std::os::fd::AsRawFd;
+    use std::os::unix::net::UnixDatagram;
+
+    let (ours, _theirs) = UnixDatagram::pair().unwrap();
+    let fd = ours.as_raw_fd();
+    let _link = link::Datagram::new(ours);
+    for option in [libc::SO_SNDBUF, libc::SO_RCVBUF] {
+        let mut room: libc::c_int = 0;
+        let mut len = size_of::<libc::c_int>() as libc::socklen_t;
+        // SAFETY: the socket _link owns, still open; room and len live for the call.
+        let got = unsafe { libc::getsockopt(fd, libc::SOL_SOCKET, option, (&mut room as *mut libc::c_int).cast(), &mut len) };
+        assert_eq!(got, 0);
+        assert!(room >= 200_000, "option {option}: {room} bytes");
+    }
 }
