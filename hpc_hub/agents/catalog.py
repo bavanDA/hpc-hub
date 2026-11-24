@@ -88,13 +88,40 @@ PAIR_NOTE = "Pairing code below. In the ChatGPT app open Codex, then connect a m
 CLAUDE_CLASSIC = "export CLAUDE_CODE_DISABLE_ALTERNATE_SCREEN=1 && "  # see command()
 
 
+def _exe(base: str, default: str) -> str:
+    return shlex.quote(shlex.split(base)[0]) if base.strip() else default
+
+
+def _where(exe: str) -> str:
+    """The program's real file (an update points the link in ~/.local/bin at a new one); "" when not on PATH."""
+    return f"\"$(readlink -f \"$(type -P {exe})\")\""
+
+
+def _warm(exe: str) -> str:
+    return f"{{ cat {_where(exe)} >/dev/null 2>&1 || true; }} && "
+
+
 def claude_start(base: str) -> str:
     """What runs before Claude. Its program is ~300 MB on the cluster's shared file system: started cold it
     reads itself in small pieces and took over 2 minutes on Wulver (blank tab); read in one go it takes
     seconds. A custom command or an alias that isn't on PATH is just started."""
-    exe = shlex.quote(shlex.split(base)[0]) if base.strip() else "claude"
-    return (CLAUDE_CLASSIC + "echo 'Starting Claude...' && "
-            f"{{ cat \"$(readlink -f \"$(type -P {exe})\")\" >/dev/null 2>&1 || true; }} && ")
+    return CLAUDE_CLASSIC + "echo 'Starting Claude...' && " + _warm(_exe(base, "claude"))
+
+
+CODEX_UPDATED = "Codex updated itself: starting it again..."
+
+
+def codex_start(base: str, line: str) -> str:
+    """Codex, read in one go first as Claude is (its program is ~320 MB too: 11 s cold on Wulver just to print its
+    version). And when it updates itself on start it says "Please restart Codex" and quits: the tab was left at a
+    shell, and plain `codex` typed there waits on Codex's shared background server, which on a cluster never
+    answers (2026-11-24: "codex starting is very slow"). So a Codex whose program changed while it ran is
+    started again, the same way (--no-daemon)."""
+    exe = _exe(base, "codex")
+    # in braces: one command, so `cd folder && ...` before it still holds it back
+    return (f"{{ echo 'Starting Codex...' && {_warm(exe)}was={_where(exe)}; {line}; "
+            f"if [ -n \"$was\" ] && [ {_where(exe)} != \"$was\" ]; then "
+            f"echo {shlex.quote(CODEX_UPDATED)}; {line}; fi; }}")
 
 
 def command(agent: Agent, s: AgentSettings, chat_id: str = "", task: str = "", session_id: str = "") -> str:
@@ -109,7 +136,7 @@ def command(agent: Agent, s: AgentSettings, chat_id: str = "", task: str = "", s
         # --no-daemon: Codex's shared background server keeps its socket in the job's private /tmp,
         # so from any other job it is unreachable ("app server did not become ready").
         args = ["resume", "--no-daemon", chat, *opts] if chat else ["--no-daemon", *opts]
-        line = " ".join([base, *args, *_task(agent, task)])
+        line = codex_start(base, " ".join([base, *args, *_task(agent, task)]))
         if s.remote:
             # one remote server per account: stop the old one, start it in this job (tmux keeps it alive)
             line = (f"{base} remote-control stop >/dev/null 2>&1; "

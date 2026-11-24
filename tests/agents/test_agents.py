@@ -1,7 +1,13 @@
 from hpc_hub.agents import catalog as agents
 from hpc_hub.core.config import AgentSettings
+from tests.helpers import on_linux_cluster
 
 C = agents.claude_start("claude")  # classic screen, its program read in one go first
+
+
+def X(line: str) -> str:
+    """Codex's line, read in one go first and started again after it updates itself (test_codex_start_*)."""
+    return agents.codex_start("codex", line)
 
 
 def test_claude():
@@ -14,12 +20,12 @@ def test_claude():
 
 def test_codex():
     s = AgentSettings(command="codex")
-    assert agents.command(agents.CODEX, s) == "codex --no-daemon"
-    assert agents.command(agents.CODEX, s, "01a1") == "codex resume --no-daemon 01a1"
+    assert agents.command(agents.CODEX, s) == X("codex --no-daemon")
+    assert agents.command(agents.CODEX, s, "01a1") == X("codex resume --no-daemon 01a1")
     s.remote = True
     line = agents.command(agents.CODEX, s)
     assert line.startswith("codex remote-control stop >/dev/null 2>&1; codex remote-control start >/dev/null && echo ")
-    assert line.endswith("&& codex remote-control pair --json; codex --no-daemon")
+    assert line.endswith("&& codex remote-control pair --json; " + X("codex --no-daemon"))
 
 
 def test_agy():
@@ -44,7 +50,7 @@ def test_options_add_flags():
     assert agents.command(agents.CLAUDE, s) == C + "claude --model opus --permission-mode plan --effort high"
     c = AgentSettings(command="codex", sandbox="workspace-write", approval="never", effort="xhigh")
     assert agents.command(agents.CODEX, c) == \
-        "codex --no-daemon -s workspace-write -a never -c model_reasoning_effort=xhigh"
+        X("codex --no-daemon -s workspace-write -a never -c model_reasoning_effort=xhigh")
     a = AgentSettings(command="agy", mode="auto", sandbox="on")
     assert agents.command(agents.AGY, a) == "agy --mode auto --sandbox"
 
@@ -68,7 +74,7 @@ def test_task_is_the_first_prompt():
     s = AgentSettings(command="")
     assert agents.command(agents.CLAUDE, s, task="fix it's tests") == \
         C + "claude --permission-mode auto 'fix it'\"'\"'s tests'"
-    assert agents.command(agents.CODEX, s, "abc", task="go") == "codex resume --no-daemon abc go"
+    assert agents.command(agents.CODEX, s, "abc", task="go") == X("codex resume --no-daemon abc go")
     assert agents.command(agents.AGY, s, task="go on") == "agy -i 'go on'"
     assert agents.command(agents.AGY, s, task="  ") == "agy"
 
@@ -77,7 +83,7 @@ def test_claude_runs_with_its_classic_screen():
     """Its output goes to the terminal's scrollback and the mouse stays with the terminal; Claude only."""
     assert agents.command(agents.CLAUDE, AgentSettings(command="claude"), "abc") == \
         C + "claude --permission-mode auto --resume abc"
-    assert agents.command(agents.CODEX, AgentSettings(command="codex")) == "codex --no-daemon"
+    assert agents.command(agents.CODEX, AgentSettings(command="codex")) == X("codex --no-daemon")
 
 
 def test_claude_start_reads_its_program_first(tmp_path):
@@ -101,3 +107,73 @@ def test_claude_starts_in_auto_mode_unless_you_pick_another():
     s = AgentSettings(command="claude", mode="manual")
     assert agents.command(agents.CLAUDE, s) == C + "claude --permission-mode manual"
     assert agents.command(agents.AGY, AgentSettings(command="agy")) == "agy"  # other agents: their own default
+
+
+# 2026-11-24 report: "codex starting is very slow". Codex updated itself on start, said "Please restart Codex" and
+# quit; the tab was left at a shell, and plain `codex` typed there waited on Codex's shared background server
+# (unreachable from a compute node) until it gave up. These run the real line in bash with a stand-in codex.
+def _codex_home(tmp_path, body: str):
+    bin_ = tmp_path / ".local" / "bin"
+    bin_.mkdir(parents=True)
+    rel = tmp_path / "releases"
+    for v in ("1", "2"):
+        (rel / v).mkdir(parents=True)
+        exe = rel / v / "codex"
+        exe.write_text("#!/bin/bash\n" + body.replace("VERSION", v))
+        exe.chmod(0o755)
+    (bin_ / "codex").symlink_to(rel / "1" / "codex")
+    return {"PATH": f"{bin_}:/usr/bin:/bin", "HOME": str(tmp_path), "LOG": str(tmp_path / "log")}
+
+
+def _run_codex(env, chat_id="", task=""):
+    import subprocess
+    line = agents.command(agents.CODEX, AgentSettings(command="codex", effort="low"), chat_id, task)
+    out = subprocess.run(["bash", "-c", line], env=env, capture_output=True, text=True, timeout=20)
+    return out.stdout, open(env["LOG"]).read().splitlines()
+
+
+@on_linux_cluster
+def test_codex_start_again_after_it_updates_itself(tmp_path):
+    # version 1 moves the link to version 2 and quits, as Codex's updater does; version 2 just runs
+    env = _codex_home(tmp_path, 'echo "VERSION $*" >> "$LOG"\n'
+                      '[ VERSION = 1 ] && ln -sfn "$HOME/releases/2/codex" "$HOME/.local/bin/codex" && '
+                      'echo "Update ran successfully! Please restart Codex."\nexit 0\n')
+    out, log = _run_codex(env, task="go on")
+    assert log == ["1 --no-daemon -c model_reasoning_effort=low go on",
+                   "2 --no-daemon -c model_reasoning_effort=low go on"]  # the same way: no background server
+    assert agents.CODEX_UPDATED in out and out.startswith("Starting Codex...")
+
+
+@on_linux_cluster
+def test_codex_quitting_without_an_update_is_not_started_again(tmp_path):
+    env = _codex_home(tmp_path, 'echo "VERSION $*" >> "$LOG"\nexit 1\n')
+    out, log = _run_codex(env, "01a1")
+    assert log == ["1 resume --no-daemon 01a1 -c model_reasoning_effort=low"]
+    assert agents.CODEX_UPDATED not in out
+
+
+@on_linux_cluster
+def test_codex_not_on_path_or_custom_is_started_once(tmp_path):
+    env = _codex_home(tmp_path, "")
+    env["PATH"] = "/usr/bin:/bin"  # e.g. an alias from a module: nothing to read first or compare
+    import subprocess
+    line = agents.command(agents.CODEX, AgentSettings(command="codex"))
+    out = subprocess.run(["bash", "-c", "codex() { echo ran \"$*\" >> \"$LOG\"; }; " + line], env=env,
+                         capture_output=True, text=True, timeout=20)
+    assert open(env["LOG"]).read().splitlines() == ["ran --no-daemon"]
+    assert agents.CODEX_UPDATED not in out.stdout
+
+
+def test_codex_program_is_read_in_one_go_first():
+    line = agents.command(agents.CODEX, AgentSettings(command="codex"))
+    assert line.startswith("{ echo 'Starting Codex...' && { cat \"$(readlink -f \"$(type -P codex)\")\" >/dev/null")
+
+
+@on_linux_cluster
+def test_codex_waits_for_the_folder(tmp_path):
+    """The tab runs `cd folder && <line>`: no folder, no Codex."""
+    import subprocess
+    env = _codex_home(tmp_path, 'echo "VERSION $*" >> "$LOG"\n')
+    line = agents.command(agents.CODEX, AgentSettings(command="codex"))
+    subprocess.run(["bash", "-c", f"cd {tmp_path}/missing 2>/dev/null && " + line], env=env, timeout=20)
+    assert not (tmp_path / "log").exists()
