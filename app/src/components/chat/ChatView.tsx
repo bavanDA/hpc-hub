@@ -9,6 +9,7 @@ import { splitHits } from '../reader/hits'
 import { TextFind } from '../reader/TextFind'
 import { useToast } from '../useToast'
 import type { Tab } from '../terminals/tabs'
+import { loadDraft, saveDraft } from './draft'
 import { blocks, COMMANDS, EFFORTS, inline, items, MODELS, MODES, needsTerminal, starting, toolHolds, type Item, type Mode } from './model'
 import { useChat } from './useChat'
 
@@ -172,7 +173,7 @@ export function ChatView({ tab, shown, title, toggle, onTerminal }: { tab: Tab; 
   const toast = useToast()
   const { state, send, key, stop, mode } = useChat(tab, shown)
   const [switching, setSwitching] = useState<Mode | null>(null)  // a mode switch on its way (a few presses)
-  const [draft, setDraft] = useState('')
+  const [draft, setDraft] = useState(() => loadDraft(tab))  // what you typed comes back with the view
   const [slash, setSlash] = useState(false)
   const [model, setModel] = useState('')
   const [effort, setEffort] = useState('')
@@ -198,6 +199,7 @@ export function ChatView({ tab, shown, title, toggle, onTerminal }: { tab: Tab; 
     took.current = given
     setDraft((d) => d.trim() ? d : given)
   }, [given])
+  useEffect(() => saveDraft(tab, draft), [tab, draft])
   const wait = starting(screen)  // Claude is still starting: say so, and nothing to switch yet
   const ask = screen?.ask ?? null
 
@@ -230,6 +232,7 @@ export function ChatView({ tab, shown, title, toggle, onTerminal }: { tab: Tab; 
   const submit = (text = draft) => {
     const t = text.trim()
     if (!t) return
+    const mine = text === draft  // a command from the / menu leaves what you typed in the box
     // not sent (a question or a menu is open): your text comes back to the box, never lost
     const keep = (e: Error) => { setDraft((d) => d.trim() ? d : t); fail(e) }
     if (needsTerminal(t)) {
@@ -238,10 +241,15 @@ export function ChatView({ tab, shown, title, toggle, onTerminal }: { tab: Tab; 
     } else {
       void send(t).catch(keep)
     }
-    setDraft('')
+    if (mine) setDraft('')
     atEnd.current = true
   }
-  const command = (c: string) => { setSlash(false); if (c === '/model' || c === '/effort') setDraft(c + ' '); else submit(c) }
+  const command = (c: string) => {
+    setSlash(false)
+    if (c !== '/model' && c !== '/effort') submit(c)
+    else if (!draft.trim()) setDraft(c + ' ')
+    else toast(`Your message stays in the box. Pick ${c === '/model' ? 'a model' : 'an effort'} at the top instead`)
+  }
 
   return (
     <Find.Provider value={q}>
