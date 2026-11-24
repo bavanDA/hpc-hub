@@ -1,11 +1,20 @@
 """Shared test helpers."""
 
+import os
 import sys
 
 import pytest
 
 # The clusters run Linux: tests that use the local bash as one skip on Windows
 on_linux_cluster = pytest.mark.skipif(sys.platform == "win32", reason="the local bash stands in for the cluster")
+
+# macOS: Homebrew's GNU tools under their own names, which the stand-in cluster needs as a Linux cluster has them
+# (tests/conftest.py GNU_TOOLS). A test that sets its own PATH keeps these in it.
+GNU_PATH = [d for prefix in ("/opt/homebrew", "/usr/local") for d in (
+    f"{prefix}/opt/coreutils/libexec/gnubin", f"{prefix}/opt/findutils/libexec/gnubin",
+    f"{prefix}/opt/gnu-sed/libexec/gnubin", f"{prefix}/opt/grep/libexec/gnubin",
+    f"{prefix}/opt/gnu-tar/libexec/gnubin", f"{prefix}/opt/util-linux/bin", f"{prefix}/opt/rsync/bin")
+    if os.path.isdir(d)] if sys.platform == "darwin" else []
 
 
 class LocalShell:

@@ -10,7 +10,7 @@ import pytest
 
 from hpc_hub.agents.catalog import AGY, CLAUDE, CODEX, CURSOR
 from hpc_hub.latex import assist
-from tests.helpers import on_linux_cluster
+from tests.helpers import GNU_PATH, on_linux_cluster
 
 CHANGES = {"files": [
     {"path": "sections/sketch.tex", "old_path": "sections/sketch.tex", "status": "M", "binary": False,
@@ -184,7 +184,8 @@ def _fake(tmp_path, body: str):
     exe = bin_ / "claude"
     exe.write_text("#!/bin/bash\n" + body)
     exe.chmod(exe.stat().st_mode | stat.S_IEXEC)
-    return {**os.environ, "HOME": str(tmp_path), "PATH": f"{bin_}:/usr/bin:/bin"}  # never a real agent
+    # never a real agent; macOS: and the GNU tools a cluster has
+    return {**os.environ, "HOME": str(tmp_path), "PATH": os.pathsep.join([str(bin_), *GNU_PATH, "/usr/bin", "/bin"])}
 
 
 def _run(env, job_id, prompt, choice=assist.Choice("claude", "haiku", "low")):

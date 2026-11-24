@@ -3,8 +3,8 @@
 - posix: the stand-in cluster is the local bash, coreutils, tmux, fake ssh scripts, Unix sockets or symlinks, so
   Windows skips them.
 - GNU_TOOLS: the stand-in cluster needs GNU tools (find -printf, stat -c, readlink -m, chmod --reference, timeout,
-  setsid, ...), as every Linux cluster has. On macOS they run with Homebrew's GNU tools first in PATH (brew install
-  coreutils findutils gnu-sed grep gnu-tar util-linux), and are skipped without them.
+  setsid, rsync --chown, ...), as every Linux cluster has. On macOS they run with Homebrew's GNU tools first in
+  PATH (brew install coreutils findutils gnu-sed grep gnu-tar util-linux rsync), and are skipped without them.
 """
 
 import os
@@ -12,6 +12,8 @@ import sys
 from pathlib import Path
 
 import pytest
+
+from tests.helpers import GNU_PATH
 
 HERE = Path(__file__).parent
 WINDOWS = sys.platform == "win32"
@@ -108,11 +110,6 @@ GNU_TOOLS = {
         "test_fetch", "test_fetch_follows_links", "test_same_folder_names_kept_apart",
         "test_a_relative_page_not_in_the_session_folder_is_found_below_it")),
 }
-# Homebrew's GNU tools under their own names (macOS)
-GNU_PATH = [d for prefix in ("/opt/homebrew", "/usr/local") for d in (
-    f"{prefix}/opt/coreutils/libexec/gnubin", f"{prefix}/opt/findutils/libexec/gnubin",
-    f"{prefix}/opt/gnu-sed/libexec/gnubin", f"{prefix}/opt/grep/libexec/gnubin",
-    f"{prefix}/opt/gnu-tar/libexec/gnubin", f"{prefix}/opt/util-linux/bin") if os.path.isdir(d)] if MACOS else []
 
 
 def _name(path: Path) -> str:
@@ -152,7 +149,7 @@ def pytest_collection_modifyitems(config, items):
             item.add_marker(pytest.mark.gnu)
             if not GNU_PATH:
                 item.add_marker(pytest.mark.skip(reason="gnu: the stand-in cluster needs GNU tools (brew install "
-                                                        "coreutils findutils gnu-sed grep gnu-tar util-linux)"))
+                                                        "coreutils findutils gnu-sed grep gnu-tar util-linux rsync)"))
 
 
 @pytest.fixture

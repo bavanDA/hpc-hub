@@ -108,8 +108,9 @@ fn forwards_a_port_through_the_tunnel_by_name() {
 
     stop.store(true, Ordering::SeqCst);
     far.join().unwrap();
-    // the tunnel goes (openconnect's end closes): the stack stops
-    ours.shutdown(std::net::Shutdown::Both).unwrap();
+    // the tunnel goes (openconnect's end closes): the stack stops. far_side's end is closed already, so macOS
+    // says ENOTCONN here (Linux says nothing)
+    let _ = ours.shutdown(std::net::Shutdown::Both);
     assert!(stack.join().unwrap().is_ok());
 }
 

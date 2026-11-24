@@ -2,6 +2,7 @@
 real agent runs) and the node's ssh run right here."""
 
 import json
+import os
 import stat
 import threading
 from types import SimpleNamespace
@@ -17,6 +18,7 @@ from hpc_hub.core.config import AgentSettings
 from hpc_hub.latex import notes
 from tests.api.test_latex_api import FakeHub
 from tests.api.test_latex_history_api import git, wait
+from tests.helpers import GNU_PATH
 
 ANSWER = {"subject": "Say how Section 14 avoids the cost", "body": "Answers the reading session.",
           "commits": [{"files": ["refs.bib"], "subject": "Add Koutis and Williams", "body": ""},
@@ -47,7 +49,8 @@ def h(monkeypatch, tmp_path):
                    "  *) echo 'Because of [[main.tex:3]].' ;;\nesac\n")
     exe.chmod(exe.stat().st_mode | stat.S_IEXEC)
     monkeypatch.setenv("HOME", str(tmp_path))
-    monkeypatch.setenv("PATH", f"{bin_}:/usr/bin:/bin")  # only the stand-in: never a real agent
+    # only the stand-in: never a real agent (macOS: and the GNU tools a cluster has)
+    monkeypatch.setenv("PATH", os.pathsep.join([str(bin_), *GNU_PATH, "/usr/bin", "/bin"]))
     return fake
 
 
