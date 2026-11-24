@@ -4,20 +4,18 @@
 # finish moves to another mirror (packages a try finished stay in apt's cache, so the next one doesn't fetch them
 # again).  Usage: .github/apt-install.sh <package>...
 #
-# APT_SAVE: a folder actions/cache keeps between runs. The packages of the last install that worked are installed
-# from it first, without the network; when they no longer fit the runner's image (an update there), apt downloads
-# as above and the folder gets this run's packages. On 2026-11-24 all three mirrors were too slow twice in a row.
+# APT_SAVE: a folder actions/cache keeps between runs. The .deb files of the last install that worked go back into
+# apt's own cache first, so apt fetches only what they don't have: nothing, when the runner's package lists name the
+# same versions; after `apt-get update` (the lists of the image are older), whatever changed since. The folder then
+# gets this run's packages. On 2026-11-24 all three mirrors were too slow twice in a row.
 set -u
 save=${APT_SAVE:-}
 save=${save/#\~/$HOME}  # "~/apt-save" from a workflow's env
 if [ -n "$save" ] && compgen -G "$save/*.deb" >/dev/null; then
-  echo "apt: installing the $(ls "$save"/*.deb | wc -l) packages an earlier run saved"
-  # (not --no-download: apt then refuses local files, "Pathname to install is not absolute")
-  if timeout 240 sudo apt-get -o Acquire::http::Timeout=10 install -y -q --no-install-recommends "$save"/*.deb &&
-    dpkg -s "$@" >/dev/null 2>&1; then
-    exit 0
-  fi
-  echo "apt: the saved packages don't fit this runner; downloading"
+  echo "apt: $(ls "$save"/*.deb | wc -l) packages an earlier run saved"
+  sudo cp "$save"/*.deb /var/cache/apt/archives/
+  timeout 240 sudo apt-get install -y -q --no-install-recommends --no-download "$@" && exit 0
+  echo "apt: the image's package lists want other versions; updating them"
 fi
 # another network too (Fastly), in case all of Canonical's are slow from this runner
 mirrors=("" "http://mirrors.edge.kernel.org/ubuntu" "http://azure.archive.ubuntu.com/ubuntu" "http://archive.ubuntu.com/ubuntu")
