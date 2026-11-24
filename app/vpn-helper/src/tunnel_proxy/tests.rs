@@ -84,7 +84,8 @@ fn forwards_a_port_through_the_tunnel_by_name() {
     let s = Settings { address: Ipv4Addr::new(10, 9, 0, 10), mtu: 1300, dns: vec![Ipv4Addr::new(10, 9, 0, 53)],
                        domains: vec!["example.edu".into()], keepalive: Some(30) };
     let link: Arc<dyn link::Link> = Arc::new(link::Datagram::new(ours.try_clone().unwrap()));
-    let stack = std::thread::spawn(move || stack::run(link, s, vec![forward], vec![listener]));
+    let (stopped, stack) = std::sync::mpsc::channel();
+    std::thread::spawn(move || stopped.send(stack::run(link, s, vec![forward], vec![listener])));
 
     for round in 0..2 {
         let c = std::net::TcpStream::connect(("127.0.0.1", port)).unwrap();
@@ -108,10 +109,12 @@ fn forwards_a_port_through_the_tunnel_by_name() {
 
     stop.store(true, Ordering::SeqCst);
     far.join().unwrap();
-    // the tunnel goes (openconnect's end closes): the stack stops. far_side's end is closed already, so macOS
-    // says ENOTCONN here (Linux says nothing)
-    let _ = ours.shutdown(std::net::Shutdown::Both);
-    assert!(stack.join().unwrap().is_ok());
+    // the tunnel goes: far_side's end is closed. On macOS that alone stops the stack (a waiting recv isn't woken
+    // there, the next one says ECONNRESET); Linux's recv waits on until our end is shut too
+    if !cfg!(target_os = "macos") {
+        ours.shutdown(std::net::Shutdown::Both).unwrap();
+    }
+    assert!(stack.recv_timeout(Duration::from_secs(10)).expect("the stack went on without the tunnel").is_ok());
 }
 
 /// macOS gives a datagram socket 4 KB, about three packets: the tunnel asks for more, or a fast transfer through it

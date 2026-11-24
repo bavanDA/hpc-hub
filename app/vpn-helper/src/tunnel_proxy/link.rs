@@ -27,6 +27,9 @@ mod unix {
     const ROOM: libc::c_int = 1 << 20;
     /// How long a packet waits for openconnect to make room before it is dropped.
     const FULL_WAIT: Duration = Duration::from_millis(20);
+    /// The longest a recv waits. macOS doesn't wake a waiting recv when openconnect's end closes (the next one
+    /// says ECONNRESET), so without it the tunnel stayed after the VPN was gone, holding its port.
+    const RECV_WAIT: Duration = Duration::from_secs(1);
 
     impl Datagram {
         pub fn new(socket: UnixDatagram) -> Datagram {
@@ -39,6 +42,7 @@ mod unix {
                                      size_of::<libc::c_int>() as libc::socklen_t);
                 }
             }
+            let _ = socket.set_read_timeout(Some(RECV_WAIT));
             Datagram(socket)
         }
 
@@ -61,8 +65,15 @@ mod unix {
     impl super::Link for Datagram {
         fn recv(&self, buf: &mut [u8]) -> io::Result<usize> {
             loop {
+                let start = Instant::now();
                 match self.0.recv(buf) {
                     Err(e) if e.kind() == io::ErrorKind::Interrupted => continue,
+                    // RECV_WAIT passed: wait again (at once back: a non-blocking fd, so not in a tight loop)
+                    Err(e) if matches!(e.kind(), io::ErrorKind::WouldBlock | io::ErrorKind::TimedOut) => {
+                        if start.elapsed() < RECV_WAIT / 2 {
+                            std::thread::sleep(Duration::from_millis(10));
+                        }
+                    }
                     other => return other,
                 }
             }
