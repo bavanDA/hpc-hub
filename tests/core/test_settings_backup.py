@@ -25,7 +25,8 @@ def home(tmp_path, monkeypatch):
     vault: dict[tuple[str, str], credentials.Login] = {
         ("wulver", "ssh"): credentials.Login("jdoe", "pw-ssh"),
         ("wulver", "vpn"): credentials.Login("jdoe", "pw-vpn"),
-        ("globus", "tokens"): credentials.Login("globus", '{"access": "tok"}'),
+        # a "-" can't come up by chance in the file's base64, as "tok" did once in a while
+        ("globus", "tokens"): credentials.Login("globus", '{"access": "tok-globus-1"}'),
     }
     monkeypatch.setattr(credentials, "load", lambda c, k: vault.get((c, k)))
     monkeypatch.setattr(credentials, "save", lambda c, k, login: vault.__setitem__((c, k), login))
@@ -40,7 +41,7 @@ def test_export_then_import_brings_settings_and_logins_back(home):
     if sys.platform != "win32":
         assert oct(path.stat().st_mode & 0o777) == "0o600"  # only you may read it
     raw = path.read_text()
-    for secret in ("pw-ssh", "pw-vpn", "jdoe", "Wulver", "tok"):
+    for secret in ("pw-ssh", "pw-vpn", "jdoe", "Wulver", "tok-globus-1"):
         assert secret not in raw  # nothing readable without the password
 
     s = backup.summary(backup.read(str(path), PASSWORD))
