@@ -1,0 +1,40 @@
+
+[38;5;174m ▐[48;5;16m▛███▛█[39m[49m   [1mClaude Code[0m [38;5;246mv2.1.331[39m
+[38;5;174m▝▜[48;5;16m█████[49m█▀[39m  [38;5;246mOpus 5.5 with high effort[39m
+[38;5;174m ▝▝   ▝▝ [39m  [38;5;246m~/projects/plots[39m
+
+
+[38;5;246m[48;5;237m❯ [38;5;231mRun this shell command and wait for it: sleep 45; echo done[39m
+
+[49m  [38;5;246mRan [1m1[0m[38;5;246m shell command [39m
+
+[38;5;231m●[39m The command is running in the background, because this environment blocks a plain [38;5;153msleep[39m in the foreground. It takes
+  about 45 seconds. When it finishes I'll be notified, and I'll check that it printed [38;5;153mdone[39m.
+
+[38;5;246m✻[39m [38;5;246mCooked for 5s · done 11:34 PM[39m
+
+[38;5;246m[48;5;237m❯ [38;5;231mRun this in the foreground, not in the background: for i in $(seq 40); do echo $i; sleep 1; done[39m
+
+[38;5;246m[49m●[39m Counting from 1 to 40, one number per second[38;5;246m · 6s[39m
+[38;5;246m  ⎿  $ for i in $(seq 40); do echo $i; sleep 1; done (6s · 7 lines)[39m
+     [38;5;246m(ctrl+b ctrl+b (twice) to run in background)[39m
+
+
+
+
+
+
+
+
+
+
+
+
+
+[38;5;174m✽[39m [38;5;180mZesting…[38;5;174m [38;5;246m(9s · ↓[39m [38;5;246m192 tokens)[39m
+[38;5;246m  ⎿  Tip: Use /color and /rename to tell your sessions apart[39m
+
+[38;5;244m────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+[38;5;246m❯ [39m
+[38;5;244m────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+[39m  [38;5;220m⏵⏵ auto mode on[38;5;246m · [38;5;44m1 shell[38;5;246m · esc to interrupt · ← 1 agent · ↓ to manage[39m

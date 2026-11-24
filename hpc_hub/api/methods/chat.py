@@ -68,6 +68,18 @@ def stop(cluster: str, session: str, node: str = "") -> dict:
     return {"stopped": False}
 
 
+@method("chat.background")
+def background(cluster: str, session: str, node: str = "") -> dict:
+    """The shell command Claude runs now goes on in the background (Ctrl+B), so Claude can go on. Only while Claude
+    offers it: at other times Ctrl+B means something else to Claude."""
+    ssh = hub().connected(cluster).ssh
+    now = chat_view.screen(ssh, session, node)
+    if now.get("background"):
+        tmux.run(ssh, chat_view.key_command(session, "background", node))
+        return {"moved": True}
+    return {"moved": False}
+
+
 @method("chat.key")
 def key(cluster: str, session: str, key: str, node: str = "") -> None:
     """Press an answer's number, escape, enter, or mode (Shift+Tab) in the session."""

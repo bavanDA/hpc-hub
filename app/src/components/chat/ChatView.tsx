@@ -171,7 +171,7 @@ function Menu<T extends string>({ label, value, choices, onPick, note }: { label
 export function ChatView({ tab, shown, title, toggle, onTerminal }: { tab: Tab; shown: boolean
   title: ReactNode; toggle: ReactNode; onTerminal: () => void }) {
   const toast = useToast()
-  const { state, send, key, stop, mode } = useChat(tab, shown)
+  const { state, send, key, stop, background, mode } = useChat(tab, shown)
   const [switching, setSwitching] = useState<Mode | null>(null)  // a mode switch on its way (a few presses)
   const [draft, setDraft] = useState(() => loadDraft(tab))  // what you typed comes back with the view
   const [slash, setSlash] = useState(false)
@@ -212,6 +212,19 @@ export function ChatView({ tab, shown, title, toggle, onTerminal }: { tab: Tab; 
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [shown])
+  // Ctrl+B, as in Claude: the shell command it runs now goes on in the background (only while Claude offers it)
+  const canBackground = !!screen?.background
+  useEffect(() => {
+    if (!shown || !canBackground) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey && e.key.toLowerCase() === 'b') {
+        e.preventDefault()
+        background().catch(fail)
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [shown, canBackground])  // eslint-disable-line react-hooks/exhaustive-deps
   // the marks the chat drew: count them, mark the current one, bring it into view
   useEffect(() => {
     const marks = [...(list.current?.querySelectorAll<HTMLElement>('mark.chat-hit') ?? [])]
@@ -334,6 +347,10 @@ export function ChatView({ tab, shown, title, toggle, onTerminal }: { tab: Tab; 
             <div className="flex items-center gap-2 text-sm text-dim">
               <span className="size-2 animate-pulse rounded-full bg-[var(--color-orange)]" />Claude is working
               <button onClick={() => stop().catch(fail)} className="ml-2 rounded-md border border-line-strong px-2 py-0.5 text-xs hover:bg-hover">Stop</button>
+              {screen.background && (
+                <button onClick={() => background().catch(fail)} title="Ctrl+B: the command goes on in the background and Claude carries on"
+                  className="rounded-md border border-line-strong px-2 py-0.5 text-xs hover:bg-hover">Run in background</button>
+              )}
             </div>
           )}
           {state.error && <div className="text-sm text-bad">{state.error}</div>}

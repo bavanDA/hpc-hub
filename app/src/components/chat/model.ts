@@ -12,6 +12,7 @@ export type ReadAnswer = { waiting?: boolean; unknown?: boolean; file?: string; 
 
 export type Ask = { question: string; detail: string; options: { key: string; label: string }[]; permission: boolean }
 export type Screen = { busy: boolean; mode: Mode; ask: Ask | null; gone?: boolean
+  background?: boolean  // a shell command runs now that Ctrl+B sends to the background
   ready?: boolean  // false while Claude is starting: no input box yet
   box?: boolean  // Claude's input box shows (no question or menu in its place)
   draft?: string }  // what is in that box, not sent: a message Claude gave back when stopped, or one gone back to

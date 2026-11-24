@@ -452,7 +452,9 @@ def parse_screen(text: str) -> dict:
     up = where is not None
     ready = up or "shift+tab" in tail or "for shortcuts" in tail
     box = up and not ask
-    return {"busy": busy and not ask, "mode": mode, "ask": ask, "ready": ready, "box": box,
+    # a shell command Claude runs now can go on in the background (Ctrl+B), as Claude says under it
+    background = busy and not ask and "to run in background" in "\n".join(lines[-40:]).lower()
+    return {"busy": busy and not ask, "background": background, "mode": mode, "ask": ask, "ready": ready, "box": box,
             "draft": _draft(lines, raw) if box else ""}
 
 
@@ -464,7 +466,8 @@ def screen_command(session: str, node: str = "") -> str:
 def screen(ssh: SshMaster, session: str, node: str = "") -> dict:
     res = ssh.on_login(screen_command(session, node), timeout=20)
     if res.returncode != 0 and not res.stdout:
-        return {"gone": True, "busy": False, "mode": "ask", "ask": None, "ready": False, "box": False, "draft": ""}
+        return {"gone": True, "busy": False, "background": False, "mode": "ask", "ask": None, "ready": False,
+                "box": False, "draft": ""}
     got = parse_screen(res.stdout)
     if not got["ready"]:
         got["shape"] = shape(res.stdout)
@@ -472,7 +475,10 @@ def screen(ssh: SshMaster, session: str, node: str = "") -> dict:
 
 
 # keys the view may press: an answer's number, Escape (stop Claude, or say no), Enter, Shift+Tab (next mode)
+# background: Ctrl+B, a running shell command goes on in the background (Claude asks twice in tmux, for tmux eats
+# the first; sent straight to the pane, once is enough)
 KEYS = {**{str(n): str(n) for n in range(1, 10)}, "escape": "Escape", "enter": "Enter", "mode": "BTab",
+        "background": "C-b",
         **{f"mode:{n}": " ".join(["BTab"] * n) for n in range(1, 4)}}  # several presses at once
 
 

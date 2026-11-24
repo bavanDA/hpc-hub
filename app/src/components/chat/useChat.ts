@@ -58,9 +58,10 @@ export function useChat(tab: Tab, shown: boolean) {
   const key = (k: string) => call('chat.key', { ...where, key: k })
   /** Esc only while Claude works: a second Esc on an idle Claude opens its rewind menu. */
   const stop = () => call('chat.stop', where)
+  const background = () => call('chat.background', where)
   const mode = async (m: Mode) => {
     const screen = await call<Screen>('chat.mode', { ...where, mode: m })
     put({ ...chatState(tab.key), screen })
   }
-  return { state, send, key, stop, mode }
+  return { state, send, key, stop, background, mode }
 }
