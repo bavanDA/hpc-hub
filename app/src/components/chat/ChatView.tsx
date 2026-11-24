@@ -1,6 +1,6 @@
 // The Chat view of a Claude tab: the conversation, the tool cards, what Claude asks, and a box to write to it. The
 // terminal stays underneath, untouched; this only reads Claude's file and types into its session.
-import { Check, ChevronDown, Copy, FileText, ListTodo, Pencil, Search, SquareTerminal, Wrench } from 'lucide-react'
+import { ArrowDown, Check, ChevronDown, Copy, FileText, ListTodo, Pencil, Search, SquareTerminal, Wrench } from 'lucide-react'
 import { createContext, useContext, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 
 import { copyText } from '../app/clipboard'
@@ -9,11 +9,16 @@ import { splitHits } from '../reader/hits'
 import { TextFind } from '../reader/TextFind'
 import { useToast } from '../useToast'
 import type { Tab } from '../terminals/tabs'
+import { arrive, rises, type Arrivals } from './arrivals'
 import { isEcho, loadDraft, saveDraft, type Sent } from './draft'
 import { blocks, COMMANDS, EFFORTS, inline, items, MODELS, MODES, needsTerminal, starting, toolHolds, type Item, type Mode } from './model'
+import { pend, pendingNote, pends, settle, type Pending } from './pending'
 import { useChat } from './useChat'
 
 type Tool = Extract<Item, { kind: 'tool' }>
+
+/** Less motion asked for: scrollTo's own smooth ignores the CSS that turns smooth scrolling off. */
+const calm = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches
 
 // Ctrl+F: what you look for, marked wherever the chat draws text (never by changing the page afterwards)
 const Find = createContext('')
@@ -49,9 +54,9 @@ function CopyButton({ text, label = 'Copy' }: { text: string; label?: string }) 
   )
 }
 
-function Prose({ text }: { text: string }) {
+function Prose({ text, rise }: { text: string; rise: string }) {
   return (
-    <div className="group relative flex flex-col gap-2 pr-16 leading-[1.6]">
+    <div className={`group relative flex flex-col gap-2 pr-16 leading-[1.6]${rise}`}>
       <CopyButton text={text} label="Copy Claude's reply" />
       {blocks(text).map((b, i) => b.code
         ? <div key={i} className="group/code relative">
@@ -80,13 +85,13 @@ function Prose({ text }: { text: string }) {
 const ICON: Record<string, typeof FileText> = { Read: FileText, Edit: Pencil, MultiEdit: Pencil, Write: Pencil,
   Bash: SquareTerminal, Grep: Search, Glob: Search, TodoWrite: ListTodo }
 
-function ToolCard({ t }: { t: Tool }) {
+function ToolCard({ t, rise }: { t: Tool; rise: string }) {
   const [open, setOpen] = useState(false)
   const q = useContext(Find)
   const Icon = ICON[t.name] ?? Wrench
   if (t.todos) {
     return (
-      <div className="rounded-xl border border-line bg-card px-4 py-3 text-sm">
+      <div className={`rounded-xl border border-line bg-card px-4 py-3 text-sm${rise}`}>
         <div className="mb-1 text-xs font-semibold text-dim">To do</div>
         {t.todos.map((todo, i) => (
           <div key={i} className={`flex items-center gap-2 py-0.5 ${todo.status === 'completed' ? 'text-dim line-through' : ''}`}>
@@ -101,7 +106,7 @@ function ToolCard({ t }: { t: Tool }) {
   const body = t.diff || t.result !== null || t.detail
   const shown = open || (!!q && toolHolds(t, q))
   return (
-    <div className={`overflow-hidden rounded-xl border bg-card ${t.error ? 'border-bad/50' : 'border-line'}`}>
+    <div className={`overflow-hidden rounded-xl border bg-card ${t.error ? 'border-bad/50' : 'border-line'}${rise}`}>
       <button onClick={() => setOpen(!shown)} aria-expanded={shown} disabled={!body}
         className="flex w-full items-center gap-2.5 px-3 py-2.5 text-left text-sm hover:bg-hover disabled:hover:bg-transparent">
         <Icon size={15} className="shrink-0 text-dim" />
@@ -178,7 +183,11 @@ export function ChatView({ tab, shown, title, toggle, onTerminal }: { tab: Tab; 
   const [model, setModel] = useState('')
   const [effort, setEffort] = useState('')
   const list = useRef<HTMLDivElement>(null)
-  const atEnd = useRef(true)
+  const content = useRef<HTMLDivElement>(null)
+  const atEnd = useRef(true)  // following the end: what comes in scrolls into view
+  const gliding = useRef(false)  // a smooth scroll of ours to the end, on its way: it never ends following
+  const lastTop = useRef(0)
+  const [below, setBelow] = useState(false)  // something new came below while you read further up
   const [finding, setFinding] = useState(false)
   const [query, setQuery] = useState('')
   const [hit, setHit] = useState({ n: 0, total: 0 })
@@ -212,6 +221,29 @@ export function ChatView({ tab, shown, title, toggle, onTerminal }: { tab: Tab; 
   const wait = starting(screen)  // Claude is still starting: say so, and nothing to switch yet
   const ask = screen?.ask ?? null
 
+  // your message at once, dimmed until Claude's file has it (2026-11-24 report: sending looked like nothing happened)
+  const [pending, setPending] = useState<Pending[]>([])
+  const [now, setNow] = useState(() => Date.now())
+  const sends = useRef(0)
+  useEffect(() => {
+    if (!pending.length) return
+    const t = setInterval(() => setNow(Date.now()), 1000)
+    return () => clearInterval(t)
+  }, [pending.length])
+  const { left, took: inFile } = settle(pending, shownItems, given, now)
+  useEffect(() => { if (left.length < pending.length) setPending(left) }, [left.length, pending.length])  // eslint-disable-line react-hooks/exhaustive-deps
+  const swapped = useRef(new Set<string>())  // yours, in Claude's file in a dimmed copy's place: no second rise
+  for (const id of inFile) swapped.current.add(id)
+
+  // what arrives while you watch comes in with a short rise; never the history, on opening or coming back
+  const seen = useRef<Arrivals | undefined>(undefined)
+  const askId = ask ? `ask:${ask.question}` : ''
+  seen.current = arrive(seen.current, [...shownItems.map((it) => it.id), ...(askId ? [askId] : [])], shown,
+    state.waiting ? null : state.events)
+  const live = useRef(false)
+  live.current = !seen.current.quiet
+  const rise = (id: string) => rises(seen.current!, id) && !swapped.current.has(id) ? ' chat-in' : ''
+
   // Ctrl+F (⌘F on a Mac) while the chat shows: find in the conversation
   useEffect(() => {
     if (!shown) return
@@ -242,21 +274,49 @@ export function ChatView({ tab, shown, title, toggle, onTerminal }: { tab: Tab; 
   useEffect(() => {
     const marks = [...(list.current?.querySelectorAll<HTMLElement>('mark.chat-hit') ?? [])]
     marks.forEach((m, k) => { if (k === hit.n) m.dataset.on = '1'; else delete m.dataset.on })
-    if (q && marks[hit.n]) { atEnd.current = false; marks[hit.n].scrollIntoView({ block: 'center' }) }
+    if (q && marks[hit.n]) { atEnd.current = false; gliding.current = false; marks[hit.n].scrollIntoView({ block: 'center' }) }
   }, [hit, q])
 
-  useLayoutEffect(() => {  // follow the end while you are at it
+  /** To the end: smoothly for what arrives while you watch, at once for the history. */
+  const toEnd = (smooth: boolean) => {
     const el = list.current
-    if (el && atEnd.current) el.scrollTop = el.scrollHeight
-  }, [shownItems.length, ask])
+    if (!el) return
+    const top = el.scrollHeight - el.clientHeight
+    if (top - el.scrollTop < 1) return
+    gliding.current = smooth && !calm()
+    el.scrollTo({ top, behavior: gliding.current ? 'smooth' : 'auto' })
+  }
+  // follow the end while you are at it, whatever grows: a new item, a result, the working row, a question, a box
+  // that takes room below. It followed only when the number of items changed, so you scrolled yourself
+  // (2026-11-24 report: "I don't see any animation, or scrolling, I should scroll myself")
+  useLayoutEffect(() => {
+    const el = list.current, body = content.current
+    if (!el || !body || typeof ResizeObserver === 'undefined') return
+    const grew = new ResizeObserver(() => { if (atEnd.current) toEnd(live.current) })
+    grew.observe(body)
+    grew.observe(el)
+    return () => grew.disconnect()
+  }, [])  // eslint-disable-line react-hooks/exhaustive-deps
+  useLayoutEffect(() => { if (shown && atEnd.current) toEnd(false) }, [shown])  // eslint-disable-line react-hooks/exhaustive-deps
+  // something new at the end while you read further up: a button takes you there
+  const tip = `${shownItems.at(-1)?.id ?? ''} ${askId}`
+  const lastTip = useRef(tip)
+  useEffect(() => {
+    if (tip !== lastTip.current && lastTip.current.trim() && !atEnd.current) setBelow(true)
+    lastTip.current = tip
+  }, [tip])
+  const follow = () => { atEnd.current = true; setBelow(false); toEnd(true) }
 
   const fail = (e: Error) => toast(e.message, { kind: 'error' })
+  const drop = (p: Pending) => setPending((ps) => ps.filter((x) => x.id !== p.id))
   const submit = (text = draft) => {
     const t = text.trim()
     if (!t) return
     const mine = text === draft  // a command from the / menu leaves what you typed in the box
-    // not sent (a question or a menu is open): your text comes back to the box, never lost
-    const keep = (e: Error) => { setDraft((d) => d.trim() ? d : t); fail(e) }
+    const p = pends(t) ? pend(t, shownItems, pending, Date.now(), `pending-${++sends.current}`) : null
+    if (p) { setPending((ps) => [...ps, p]); setNow(p.at) }
+    // not sent (a question or a menu is open): your text comes back to the box, never lost, and its copy goes
+    const keep = (e: Error) => { setDraft((d) => d.trim() ? d : t); if (p) drop(p); fail(e) }
     if (needsTerminal(t)) {
       void send(t).then(onTerminal).catch(keep)
       toast('That command opens a menu: answer it in the terminal')
@@ -265,7 +325,7 @@ export function ChatView({ tab, shown, title, toggle, onTerminal }: { tab: Tab; 
     }
     if (mine) setDraft('')
     sent.current = { text: t, at: Date.now(), seen: false }
-    atEnd.current = true
+    follow()  // what you send always takes you to the end
   }
   const command = (c: string) => {
     setSlash(false)
@@ -304,8 +364,21 @@ export function ChatView({ tab, shown, title, toggle, onTerminal }: { tab: Tab; 
       <div className="relative min-h-0 flex-1">
       {finding && <TextFind input={findBox} query={query} hit={hit} onQuery={setQuery} onStep={step} onClose={closeFind} />}
       <div ref={list} className="h-full overflow-y-auto select-text"
-        onScroll={(e) => { const el = e.currentTarget; atEnd.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80 }}>
-        <div className="mx-auto flex w-full max-w-[820px] flex-col gap-3.5 px-6 pt-5 pb-3">
+        onScroll={(e) => {
+          const el = e.currentTarget
+          const gap = el.scrollHeight - el.scrollTop - el.clientHeight
+          const up = el.scrollTop < lastTop.current - 1  // ours only goes down: up is you (or the end moving up)
+          lastTop.current = el.scrollTop
+          if (gliding.current && !up) { if (gap < 2) gliding.current = false; return }
+          gliding.current = false
+          atEnd.current = gap < 80
+          if (atEnd.current) setBelow(false)
+        }}
+        /* you scrolling (the wheel, a touch, a drag on the bar, keys) ends a glide of ours: from there you decide */
+        onWheel={(e) => { if (e.deltaY < 0) gliding.current = false }}
+        onPointerDown={() => { gliding.current = false }}
+        onKeyDown={() => { gliding.current = false }}>
+        <div ref={content} className="mx-auto flex w-full max-w-[820px] flex-col gap-3.5 px-6 pt-5 pb-3">
           {state.unknown && (
             <div className="rounded-xl border border-line bg-card p-4 text-sm">
               This chat started before HPC Hub could follow it, so it shows only in the terminal. Chats you start or
@@ -321,26 +394,32 @@ export function ChatView({ tab, shown, title, toggle, onTerminal }: { tab: Tab; 
           )}
           {state.trimmed && <div className="text-center text-xs text-dim">Earlier messages are in the terminal</div>}
           {shownItems.map((it) => {
-            if (it.kind === 'tool') return <ToolCard key={it.id} t={it} />
+            if (it.kind === 'tool') return <ToolCard key={it.id} t={it} rise={rise(it.id)} />
             if (it.kind === 'user' && it.again) {  // stopped before an answer, sent again below: kept, quietly
               return (
-                <div key={it.id} className="flex max-w-[78%] flex-col items-end gap-1 self-end">
+                <div key={it.id} className={`flex max-w-[78%] flex-col items-end gap-1 self-end${rise(it.id)}`}>
                   <div className="rounded-2xl border border-dashed border-line-strong px-4 py-2.5 whitespace-pre-wrap text-dim"><Hl text={it.text} /></div>
                   <span className="text-xs text-dim">Stopped before Claude answered · sent again below</span>
                 </div>
               )
             }
             if (it.kind === 'user') {
-              return <div key={it.id} className="max-w-[78%] self-end rounded-2xl bg-control px-4 py-2.5 whitespace-pre-wrap"><Hl text={it.text} /></div>
+              return <div key={it.id} className={`max-w-[78%] self-end rounded-2xl bg-control px-4 py-2.5 whitespace-pre-wrap${rise(it.id)}`}><Hl text={it.text} /></div>
             }
             if (it.kind === 'command') {
-              return <div key={it.id} className="self-end font-mono text-sm text-dim"><Hl text={it.text} /></div>
+              return <div key={it.id} className={`self-end font-mono text-sm text-dim${rise(it.id)}`}><Hl text={it.text} /></div>
             }
-            if (it.kind === 'note') return <div key={it.id} className="text-center text-xs whitespace-pre-wrap text-dim"><Hl text={it.text} /></div>
-            return <Prose key={it.id} text={it.text} />
+            if (it.kind === 'note') return <div key={it.id} className={`text-center text-xs whitespace-pre-wrap text-dim${rise(it.id)}`}><Hl text={it.text} /></div>
+            return <Prose key={it.id} text={it.text} rise={rise(it.id)} />
           })}
+          {left.map((p) => (  // yours, on its way: dimmed until Claude's file has it, then that one stands here
+            <div key={p.id} className="chat-in flex max-w-[78%] flex-col items-end gap-1 self-end">
+              <div className="rounded-2xl bg-control px-4 py-2.5 whitespace-pre-wrap opacity-60"><Hl text={p.text} /></div>
+              <span className="text-xs text-dim">{pendingNote(p, !!screen?.busy, now)}</span>
+            </div>
+          ))}
           {ask && (
-            <div className={`flex flex-col gap-2.5 rounded-xl border p-3.5 ${ask.permission ? 'border-warn/50 bg-warn-bg' : 'border-accent/40 bg-accent-soft'}`}>
+            <div key={askId} className={`flex flex-col gap-2.5 rounded-xl border p-3.5 ${ask.permission ? 'border-warn/50 bg-warn-bg' : 'border-accent/40 bg-accent-soft'}${rise(askId)}`}>
               <div className="font-semibold">{ask.question}</div>
               {ask.detail && <pre className="m-0 max-h-40 overflow-auto rounded-lg bg-inset px-3 py-2 font-mono text-[12.5px]">{ask.detail}</pre>}
               <div className="flex flex-col gap-1.5">
@@ -354,8 +433,8 @@ export function ChatView({ tab, shown, title, toggle, onTerminal }: { tab: Tab; 
             </div>
           )}
           {screen?.busy && (
-            <div className="flex items-center gap-2 text-sm text-dim">
-              <span className="size-2 animate-pulse rounded-full bg-[var(--color-orange)]" />Claude is working
+            <div className="chat-fade flex items-center gap-2 text-sm text-dim">
+              <span className="typing" aria-hidden="true"><span /><span /><span /></span>Claude is working
               <button onClick={() => { sent.current = null; stop().catch(fail) }} className="ml-2 rounded-md border border-line-strong px-2 py-0.5 text-xs hover:bg-hover">Stop</button>
               {screen.background && (
                 <button onClick={() => background().catch(fail)} title="Ctrl+B: the command goes on in the background and Claude carries on"
@@ -366,6 +445,14 @@ export function ChatView({ tab, shown, title, toggle, onTerminal }: { tab: Tab; 
           {state.error && <div className="text-sm text-bad">{state.error}</div>}
         </div>
       </div>
+      {below && (
+        <div className="pointer-events-none absolute inset-x-0 bottom-3 z-10 flex justify-center">
+          <button onClick={follow}
+            className="chat-in pointer-events-auto flex h-7 items-center gap-1.5 rounded-full border border-line-strong bg-window px-3
+              text-xs shadow-[var(--shadow-menu)] hover:bg-hover">
+            <ArrowDown size={12} />New messages</button>
+        </div>
+      )}
       </div>
 
       <div className="shrink-0 px-6 pb-4">

@@ -26,6 +26,18 @@ const EVENTS: ChatEvent[] = [
 
 let answered = ''
 let mode: Screen['mode'] = 'ask'
+// what you send in the demo: in the chat a moment later, as from Claude's file, and a short answer after it
+const said: ChatEvent[] = []
+let busyUntil = 0
+
+function say(text: string) {
+  if (text.trim().startsWith('/')) return
+  const n = said.length
+  setTimeout(() => said.push({ kind: 'user', id: `d${n}`, text: text.trim() }), 1200)
+  busyUntil = Date.now() + 3500
+  setTimeout(() => said.push({ kind: 'text', id: `d${n}-a`,
+    text: 'This is the demo, so nothing ran. On a cluster Claude would answer here.' }), 3500)
+}
 
 const ASK = { question: 'Do you want to proceed?', detail: 'Bash command\n\n  sbatch job.sh\n  Submit the resized job',
   permission: true, options: [{ key: '1', label: 'Yes' },
@@ -36,16 +48,17 @@ function read({ offset }: { offset: number }): ReadAnswer {
   const after: ChatEvent[] = answered === '3' ? [{ kind: 'result', id: 'r5', tool: 't5', error: true, text: 'You said no.' }]
     : answered ? [{ kind: 'result', id: 'r5', tool: 't5', error: false, text: 'Submitted batch job 1606417' },
       { kind: 'text', id: 'a3', text: 'Submitted. Where things stand:\n\n| | k | memory | state |\n|---|---|---|---|\n| **1591** | 60 | 18.7 of 32 GB | done |\n| **1606** | 80 | over 32 GB | out of memory |\n| **1606417** | 80 | asks `--mem=50G` | waiting |\n\nI\'ll check on it once it starts.' }] : []
-  if (offset >= 0 && !after.length) return { file: FILE, offset, size: offset, trimmed: false, cwd: CWD, events: [] }
-  return { file: FILE, offset: 9000 + after.length, size: 9000, trimmed: false, cwd: CWD, events: [...EVENTS, ...after] }
+  if (offset >= 0 && !after.length && !said.length) return { file: FILE, offset, size: offset, trimmed: false, cwd: CWD, events: [] }
+  return { file: FILE, offset: 9000 + after.length + said.length, size: 9000, trimmed: false, cwd: CWD,
+    events: [...EVENTS, ...after, ...said] }
 }
 
 export const answers: Record<string, unknown> = {
   'chat.read': read,
   'chat.where': () => ({ chat_id: '3f2a9c1e-1111-4222-8333-444455556666', folder: '/home/jdoe/thesis' }),
-  'chat.screen': (): Screen => ({ busy: false, mode, ask: answered ? null : ASK }),
+  'chat.screen': (): Screen => ({ busy: Date.now() < busyUntil, mode, ask: answered ? null : ASK }),
   'chat.key': ({ key }: { key: string }) => { if (/^[1-3]$/.test(key)) answered = key; return null },
-  'chat.send': () => ({ replaced: false }),
+  'chat.send': ({ text }: { text: string }) => { say(text); return { replaced: false } },
   'chat.stop': () => ({ stopped: false }),
   'chat.mode': ({ mode: m }: { mode: Screen['mode'] }): Screen => { mode = m; return { busy: false, mode, ask: answered ? null : ASK } },
 }

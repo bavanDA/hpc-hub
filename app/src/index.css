@@ -160,6 +160,17 @@ svg.lucide[stroke-width="2"]:is([width="20"], [width="24"], [width="40"]) { stro
 .dialog-scrim { animation: fade-in 220ms var(--ease-enter); }
 .menu-in { animation: dialog-in 220ms var(--ease-enter); }
 
+/* The Claude chat: what arrives while you watch comes in the same way, quicker (2026-11-24 report: "I don't see any
+   animation"), and Claude at work shows three dots, as a chat shows someone typing */
+.chat-in { animation: dialog-in 200ms var(--ease-enter); }
+.chat-fade { animation: fade-in 200ms var(--ease-enter); }
+@keyframes typing { 0%, 60%, 100% { opacity: 0.3; transform: none; } 30% { opacity: 1; transform: translateY(-2px); } }
+.typing { display: inline-flex; gap: 3px; }
+.typing > span { width: 5px; height: 5px; border-radius: 9999px; background: var(--color-orange);
+  animation: typing 1.2s ease-in-out infinite; }
+.typing > span:nth-child(2) { animation-delay: 150ms; }
+.typing > span:nth-child(3) { animation-delay: 300ms; }
+
 @media (prefers-reduced-motion: reduce) {
   *:not(.animate-spin), *::before, *::after {
     animation-duration: 0.01ms !important;

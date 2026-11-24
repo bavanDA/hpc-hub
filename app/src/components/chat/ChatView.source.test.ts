@@ -58,7 +58,53 @@ describe('stopping and editing a message (2026-11-22 report: messages ran togeth
   it('Stop goes through chat.stop (Esc only while Claude works), and a message not sent comes back to the box', () => {
     expect(view).toContain('stop().catch(fail)')
     expect(view).not.toContain("key('escape')")
-    expect(view).toMatch(/const keep = \(e: Error\) => \{ setDraft\(\(d\) => d\.trim\(\) \? d : t\); fail\(e\) \}/)
+    expect(view).toMatch(/const keep = \(e: Error\) => \{ setDraft\(\(d\) => d\.trim\(\) \? d : t\); if \(p\) drop\(p\); fail\(e\) \}/)
     expect(view).toContain('void send(t).catch(keep)')
+  })
+})
+
+// 2026-11-24 report: "when I send msg in claude chat, it doesn't look real, I don't see any animation, or scrolling,
+// I should scroll myself"
+describe('the chat feels live', () => {
+  it('your message shows at once, dimmed, until Claude\'s file has it (not a / command)', () => {
+    expect(view).toContain("const p = pends(t) ? pend(t, shownItems, pending, Date.now(), `pending-${++sends.current}`) : null")
+    expect(view).toContain('settle(pending, shownItems, given, now)')
+    expect(view).toContain('{left.map((p) => (')
+    expect(view).toContain('opacity-60')
+    expect(view).toContain('pendingNote(p, !!screen?.busy, now)')
+  })
+
+  it('follows the end whenever the chat grows, not only on a new item, and sending always goes there', () => {
+    expect(view).toContain('new ResizeObserver(() => { if (atEnd.current) toEnd(live.current) })')
+    expect(view).toContain('grew.observe(body)')
+    expect(view).toMatch(/<div ref=\{content\}/)
+    expect(view).not.toContain('}, [shownItems.length, ask])')  // the old follow, on the count only
+    expect(view).toMatch(/sent\.current = \{ text: t, at: Date\.now\(\), seen: false \}\s+follow\(\)/)
+  })
+
+  it('a smooth scroll of ours never stops the following; you scrolling up does', () => {
+    expect(view).toContain("el.scrollTo({ top, behavior: gliding.current ? 'smooth' : 'auto' })")
+    expect(view).toContain('if (gliding.current && !up) { if (gap < 2) gliding.current = false; return }')
+    expect(view).toContain('atEnd.current = gap < 80')
+    expect(view).toContain('onWheel={(e) => { if (e.deltaY < 0) gliding.current = false }}')
+    expect(view).toContain('onPointerDown={() => { gliding.current = false }}')
+    expect(view).toContain('gliding.current = smooth && !calm()')  // less motion asked for: no glide
+    expect(view).toContain("matchMedia('(prefers-reduced-motion: reduce)')")
+  })
+
+  it('new messages below while you read further up: a button takes you there', () => {
+    expect(view).toMatch(/!atEnd\.current\) setBelow\(true\)/)
+    expect(view).toContain('<ArrowDown size={12} />New messages</button>')
+    expect(view).toContain('<button onClick={follow}')
+  })
+
+  it('what arrives while you watch rises in; the history never does', () => {
+    expect(view).toContain('seen.current = arrive(seen.current,')
+    expect(view).toContain("state.waiting ? null : state.events)")
+    expect(view).toContain("rises(seen.current!, id) && !swapped.current.has(id) ? ' chat-in' : ''")
+    expect(view).toContain('<ToolCard key={it.id} t={it} rise={rise(it.id)} />')
+    expect(view).toContain('<Prose key={it.id} text={it.text} rise={rise(it.id)} />')
+    expect(view).toContain('${rise(askId)}')
+    expect(view).toContain('<span className="typing" aria-hidden="true"><span /><span /><span /></span>Claude is working')
   })
 })
