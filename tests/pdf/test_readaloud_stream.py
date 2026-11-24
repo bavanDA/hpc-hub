@@ -1,3 +1,4 @@
+import socket
 import urllib.error
 import urllib.request
 
@@ -56,3 +57,17 @@ def test_unknown_tokens_and_bad_ranges_fail(served):
     with pytest.raises(urllib.error.HTTPError) as e:
         _get(url.replace("/audio/", "/etc/"))
     assert e.value.code == 404
+
+
+def test_starts_without_asking_dns_for_a_name(tmp_path, monkeypatch):
+    """HTTPServer looks up 127.0.0.1's name (socket.getfqdn): seconds where DNS is slow, and Read aloud waited."""
+    def lookup(*args):
+        raise AssertionError("asked DNS for a name")
+    monkeypatch.setattr(socket, "getfqdn", lookup)
+    mp3 = tmp_path / "audio.mp3"
+    mp3.write_bytes(b"x" * 10)
+    server = stream.Server({"abc123": mp3}.get)
+    try:
+        assert _get(server.url("abc123"))[2] == b"x" * 10
+    finally:
+        server.close()

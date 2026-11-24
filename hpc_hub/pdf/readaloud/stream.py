@@ -1,6 +1,7 @@
 """Serving the MP3 over loopback lets the player start at once and seek with Range requests."""
 
 import re
+import socketserver
 import threading
 from collections.abc import Callable
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -24,6 +25,16 @@ def span(header: str | None, size: int) -> tuple[int, int] | None:
     return (first, last) if first <= last else None
 
 
+class _Loopback(ThreadingHTTPServer):
+    """No name lookup for 127.0.0.1: HTTPServer asks DNS for its name (socket.getfqdn), which takes seconds where
+    DNS is slow or gone (a Mac on CI, a laptop offline), and Read aloud waited for it before it could start."""
+    daemon_threads = True
+
+    def server_bind(self) -> None:
+        socketserver.TCPServer.server_bind(self)
+        self.server_name, self.server_port = self.server_address[:2]
+
+
 class Server:
 
     def __init__(self, find: Callable[[str], Path | None]):
@@ -34,8 +45,7 @@ class Server:
     def url(self, token: str) -> str:
         with self._lock:
             if self._http is None:
-                self._http = ThreadingHTTPServer(("127.0.0.1", 0), _handler(self.find))
-                self._http.daemon_threads = True
+                self._http = _Loopback(("127.0.0.1", 0), _handler(self.find))
                 threading.Thread(target=self._http.serve_forever, daemon=True, name="readaloud-stream").start()
             port = self._http.server_address[1]
         return f"http://127.0.0.1:{port}/audio/{token}.mp3"
