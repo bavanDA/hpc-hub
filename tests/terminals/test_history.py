@@ -90,7 +90,7 @@ def test_create_keeps_tags_and_a_single_pane(real):
                            capture_output=True, text=True).stdout.split()
     assert panes == ["sleep"]
     assert _show("hpchub-term-2", "#{@hpchub_label}") == "Run"
-    assert _show("hpchub-term-2", "#{pane_current_path}") == "/tmp"
+    assert _show("hpchub-term-2", "#{pane_current_path}") == os.path.realpath("/tmp")  # macOS: /private/tmp
 
 
 def test_history_limit_only_on_app_sessions(real):

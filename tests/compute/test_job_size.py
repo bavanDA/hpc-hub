@@ -1,5 +1,10 @@
 """hpchub-size: measuring finished jobs from sacct, and what a job should ask for. Canned sacct output only."""
 
+import os
+import posixpath
+
+import pytest
+
 from hpc_hub.compute import job_size
 from hpc_hub.compute.sizing import hpchub_size
 from hpc_hub.compute.sizing import size_advise as advise
@@ -19,6 +24,15 @@ SACCT = """\
 1006_3|mpi|COMPLETED|00:30:00|04:00:00|16|4000Mc||2||n[0042-0043]|general|/home/jdoe/mpi|sbatch mpi.sh
 1006_3.0|orted|COMPLETED|00:30:00|04:00:00|16||1G|2|16|n[0042-0043]|||
 """
+
+
+@pytest.fixture(autouse=True)
+def _the_cluster_home_is_not_this_computers(monkeypatch):
+    """size_measure resolves a script's path on the cluster. The canned sacct's /home/jdoe is the cluster's: it must
+    not resolve through this computer's links (macOS has /home -> /System/Volumes/Data/home)."""
+    real = os.path.realpath
+    monkeypatch.setattr(os.path, "realpath", lambda p, *a, **k: posixpath.normpath(p)
+                        if str(p).startswith("/home/jdoe") else real(p, *a, **k))
 
 
 def runs():

@@ -2,7 +2,9 @@
 
 - posix: the stand-in cluster is the local bash, coreutils, tmux, fake ssh scripts, Unix sockets or symlinks, so
   Windows skips them.
-- GNU_TOOLS: they need GNU find, stat, du or date, so macOS skips them.
+- GNU_TOOLS: the stand-in cluster needs GNU tools (find -printf, stat -c, readlink -m, chmod --reference, timeout,
+  setsid, ...), as every Linux cluster has. On macOS they run with Homebrew's GNU tools first in PATH (brew install
+  coreutils findutils gnu-sed grep gnu-tar util-linux), and are skipped without them.
 """
 
 import os
@@ -68,7 +70,49 @@ GNU_TOOLS = {
     *(f"api/test_backup.py::{t}" for t in (
         "test_scan_plan_try_and_copy", "test_your_choices_are_kept_for_later_scans",
         "test_reminders_are_a_scheduled_job", "test_cancel_and_not_connected")),
+    "agents/test_chat_copy.py::test_copy_files_the_chat_under_the_real_folder",  # readlink -m
+    "api/test_files.py::test_real_path_follows_links",
+    # saving a file: readlink -f, chmod --reference
+    "api/test_latex_api.py::test_files_read_write_and_manage_inside_the_project_only",
+    "api/test_latex_history_api.py::test_a_save_keeps_a_version",
+    *(f"api/test_latex_assist_api.py::{t}" for t in (
+        "test_write_message_in_the_background", "test_ask_about_a_commit_with_a_one_time_choice",
+        "test_a_one_time_choice_keeps_your_agent", "test_ask_about_lines", "test_cancel",
+        "test_notes_and_check_my_list", "test_notes_write_only_over_what_was_read", "test_bad_places_and_text")),
+    *(f"api/test_projects.py::{t}" for t in (
+        "test_status_reads_git_of_every_project_at_once", "test_projects_are_shared_through_the_cluster",
+        "test_copy_into_another_group_on_the_same_cluster")),
+    "api/test_terminals.py::test_a_pasted_image_lands_in_a_private_folder_and_gives_its_path",
+    "api/test_terminals.py::test_old_pastes_are_cleaned_up",
+    "backup/test_flow.py::test_a_scan_runs_on_the_node_without_a_new_job",  # setsid
+    # the fast shell's results are sized with stat -c%s (asyncssh's shells reuse its protocol)
+    *(f"core/test_fastshell_parallel.py::{t}" for t in (
+        "test_a_command_gives_output_errors_and_code", "test_commands_really_run_at_the_same_time",
+        "test_big_outputs_at_once_stay_whole", "test_a_shell_can_be_given_more_room",
+        "test_a_slow_command_does_not_hold_up_the_others", "test_a_timeout_stops_only_that_command",
+        "test_the_lock_is_free_after_a_timeout")),
+    *(f"core/test_ssh_async.py::{t}" for t in (
+        "test_a_tunnel_port_keeps_the_cluster_name_for_the_host_key", "test_commands_run_at_the_same_time",
+        "test_big_outputs_at_once_stay_whole", "test_a_timeout_stops_only_that_command")),
+    "files/test_transfer.py::test_copy_here_into_another_folder_and_again",
+    "connect/test_vpn_android.py::test_session_on_the_phone_connects_ssh_through_the_tunnel",
+    "globus/test_personal.py::test_personal_start_again_with_new_folders",  # readlink -f, setsid
+    *(f"latex/test_assist.py::{t}" for t in (  # timeout
+        "test_run_script_answers_after_the_mark_and_cleans_up", "test_run_script_falls_back_for_an_older_agent",
+        "test_run_script_failure_and_cancel")),
+    *(f"latex/test_history.py::{t}" for t in (  # head -z, chmod --reference
+        "test_changes_now_include_new_files_but_not_build_files", "test_saved_versions_leave_index_and_files_alone",
+        "test_changes_to_the_same_file_can_still_come_along", "test_safe_push_pulls_first_and_brings_changes_back",
+        "test_a_spot_to_settle_stops_before_the_push", "test_stop_puts_everything_back")),
+    *(f"terminals/test_pages.py::{t}" for t in (  # realpath -e
+        "test_fetch", "test_fetch_follows_links", "test_same_folder_names_kept_apart",
+        "test_a_relative_page_not_in_the_session_folder_is_found_below_it")),
 }
+# Homebrew's GNU tools under their own names (macOS)
+GNU_PATH = [d for prefix in ("/opt/homebrew", "/usr/local") for d in (
+    f"{prefix}/opt/coreutils/libexec/gnubin", f"{prefix}/opt/findutils/libexec/gnubin",
+    f"{prefix}/opt/gnu-sed/libexec/gnubin", f"{prefix}/opt/grep/libexec/gnubin",
+    f"{prefix}/opt/gnu-tar/libexec/gnubin", f"{prefix}/opt/util-linux/bin") if os.path.isdir(d)] if MACOS else []
 
 
 def _name(path: Path) -> str:
@@ -79,6 +123,7 @@ def pytest_configure(config):
     if MACOS and not config.option.basetemp:  # Unix socket paths may not pass 104 characters
         config.option.basetemp = f"/tmp/hpc-hub-tests-{os.getuid()}"
     config.addinivalue_line("markers", "posix: needs a POSIX system (bash, coreutils, Unix sockets)")
+    config.addinivalue_line("markers", "gnu: the stand-in cluster needs GNU tools (macOS: Homebrew's, first in PATH)")
     config.addinivalue_line("markers", "keyring_backends: may call credentials' real backend functions "
                                        "(the test stands in for the vault modules itself)")
 
@@ -89,7 +134,8 @@ def pytest_report_header(config):
         lines.append(f"posix: skipped on Windows: {len(POSIX)} files, {len(POSIX_TESTS)} tests "
                      "(see tests/conftest.py)")
     if MACOS:
-        lines.append(f"gnu: skipped on macOS: {len(GNU_TOOLS)} tests (see tests/conftest.py)")
+        lines.append(f"gnu: {len(GNU_TOOLS)} tests run with " + (", ".join(GNU_PATH) if GNU_PATH else
+                     "no GNU tools found: skipped") + " (see tests/conftest.py)")
     return lines
 
 
@@ -103,8 +149,10 @@ def pytest_collection_modifyitems(config, items):
                 item.add_marker(pytest.mark.skip(reason="posix: the stand-in cluster is the local bash and "
                                                         "Unix tools; runs on Linux"))
         if MACOS and test in GNU_TOOLS:
-            item.add_marker(pytest.mark.skip(reason="gnu: the stand-in cluster needs GNU find, stat, du or date; "
-                                                    "runs on Linux"))
+            item.add_marker(pytest.mark.gnu)
+            if not GNU_PATH:
+                item.add_marker(pytest.mark.skip(reason="gnu: the stand-in cluster needs GNU tools (brew install "
+                                                        "coreutils findutils gnu-sed grep gnu-tar util-linux)"))
 
 
 @pytest.fixture
@@ -124,6 +172,14 @@ def sshd(tmp_path, monkeypatch):
     server.start()
     yield server
     server.stop()
+
+
+@pytest.fixture(autouse=True)
+def _gnu_tools_for_the_stand_in_cluster(request, monkeypatch):
+    """macOS: a test whose stand-in cluster needs GNU tools gets Homebrew's first in PATH, as a cluster has them.
+    The other tests keep macOS's own, so the app's code that runs on the Mac is tested with what a Mac has."""
+    if GNU_PATH and request.node.get_closest_marker("gnu"):
+        monkeypatch.setenv("PATH", os.pathsep.join([*GNU_PATH, os.environ.get("PATH", "")]))
 
 
 @pytest.fixture(autouse=True)

@@ -14,6 +14,11 @@ from hpc_hub.connect.vpn import VpnError
 from hpc_hub.core import tunnels
 from hpc_hub.core.config import ClusterConfig
 
+# is_active knows its openconnect by /proc/<pid>/cmdline, as Android has it; macOS and Windows run the VPN without
+# administrator through connect/vpn_local.py, which asks the system for the program's name instead
+needs_proc = pytest.mark.skipif(not os.path.exists("/proc/self/cmdline"),
+                                reason="the phone's VPN reads /proc (Android, Linux); runs on Linux")
+
 COOKIE = "abc123-not-a-real-cookie"
 FAKE = """\
 #!{python}
@@ -116,6 +121,7 @@ def test_argv_has_the_pin_and_ocproxy_but_never_the_cookie():
     assert argv[argv.index("--cafile") + 1] == "/data/cacerts.pem"
 
 
+@needs_proc
 def test_up_gives_ssh_a_local_port_and_down_takes_it_away(fake_vpn):
     lines: list[str] = []
     vpn = vpn_android.AndroidVpn(cluster(), lines.append)
@@ -142,6 +148,7 @@ def test_up_gives_ssh_a_local_port_and_down_takes_it_away(fake_vpn):
     assert not (fake_vpn / "run" / "hpc-hub" / "vpn-wulver.json").exists()
 
 
+@needs_proc
 def test_two_clusters_at_once_each_on_its_own_port(fake_vpn):
     wulver = vpn_android.AndroidVpn(cluster("wulver", "login.example.edu"), print)
     yale = vpn_android.AndroidVpn(cluster("yale", "cluster.example.org"), print)

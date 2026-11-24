@@ -80,7 +80,9 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
-      - run: brew install tmux
+      # GNU tools for the stand-in cluster, as every Linux cluster has them (tests/conftest.py puts them first in
+      # PATH only for the tests that need them; the others see macOS's own)
+      - run: brew install tmux coreutils findutils gnu-sed grep gnu-tar util-linux
       - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
@@ -91,7 +93,10 @@ jobs:
 
   python-fedora:
     runs-on: ubuntu-24.04
-    container: fedora:latest
+    container:
+      image: fedora:latest
+      # an init that reaps: a stopped background job (a scan on the node) must not stay a zombie, as on a real system
+      options: --init
     timeout-minutes: 20
     steps:
       # the container is a bare Fedora: rsync and hostname are on every cluster and desktop, so the stand-in needs them
