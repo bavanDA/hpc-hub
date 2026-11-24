@@ -97,7 +97,7 @@ class Fake:
     """A session whose screen is set by the test; records the commands sent to it."""
 
     def __init__(self, screen: str):
-        self.screen, self.ran = screen, []
+        self.screen, self.ran, self.logged = screen, [], []
 
     def on_login(self, line, timeout=20):
         return type("R", (), {"returncode": 0, "stdout": self.screen, "stderr": ""})()
@@ -106,7 +106,8 @@ class Fake:
 @pytest.fixture
 def session(monkeypatch):
     fake = Fake(HANDED_BACK)
-    hub = type("H", (), {"connected": lambda self, c: type("S", (), {"ssh": fake})()})()
+    hub = type("H", (), {"connected": lambda self, c: type("S", (), {"ssh": fake})(),
+                         "log": lambda self, s, line: fake.logged.append(line)})()
     monkeypatch.setattr(chat, "hub", lambda: hub)
     monkeypatch.setattr(chat.tmux, "run", lambda ssh, line: fake.ran.append(line))
     return fake

@@ -40,7 +40,8 @@ def send(cluster: str, session: str, text: str, node: str = "") -> dict:
     text replaces it. Refused, never lost, when the box isn't there: a question or a menu is open."""
     if not text.strip():
         raise ValueError("Nothing to send")
-    ssh = hub().connected(cluster).ssh
+    s = hub().connected(cluster)
+    ssh = s.ssh
     now = chat_view.screen(ssh, session, node)
     if now.get("gone"):
         raise RuntimeError("This Claude session has ended")
@@ -48,6 +49,7 @@ def send(cluster: str, session: str, text: str, node: str = "") -> dict:
         if now.get("ask"):
             raise RuntimeError("Claude is asking something: answer it first, then send your message")
         if not now.get("ready"):
+            hub().log(s, f"Chat: no input box on Claude's screen ({now.get('shape', '')})")
             raise RuntimeError("Claude is still starting or has a menu open. Send once its input box shows, or "
                                "finish the menu in the terminal")
     tmux.run(ssh, chat_view.send_command(session, text, now.get("draft", ""), node))

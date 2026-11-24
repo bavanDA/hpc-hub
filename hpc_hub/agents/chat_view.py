@@ -317,17 +317,36 @@ PROMPT = re.compile(r"^\s*[❯>][ \u00a0]")
 BOX_PROMPT = re.compile(r"^\s*│?\s*[❯>](?:[ \u00a0]|$)")  # also inside the rounded box of older Claudes
 
 
+BOX_REACH = 30  # rows under the box at most: Claude may list its background tasks or agents there
+
+
 def _box_rows(lines: list[str]) -> tuple[int, int] | None:
     """Where Claude's input box is (its two edges), or None. Found by the words under it, or else by its shape: two
-    edges near the bottom with the prompt right under the first. Some Claudes leave nothing under the box once text
-    is in it (2026-11-23 report: "Claude is still starting" an hour and a half after it started, twice)."""
+    edges with the prompt right under the first. Some Claudes leave nothing under the box once text is in it, others
+    list background tasks there (2026-11-23 reports: "Claude is still starting" hours after it started)."""
     edges = [i for i, ln in enumerate(lines) if EDGE.match(ln)]
-    if len(edges) < 2 or len(lines) - edges[-1] > 5:
-        return None
-    top, bottom = edges[-2], edges[-1]
-    if _status_line(lines) is not None or (bottom - top >= 2 and BOX_PROMPT.match(lines[top + 1])):
-        return top, bottom
+    if len(edges) >= 2 and _status_line(lines) is not None:
+        return edges[-2], edges[-1]
+    for k in range(len(edges) - 1, 0, -1):  # the lowest pair of edges around the prompt
+        top, bottom = edges[k - 1], edges[k]
+        if len(lines) - bottom > BOX_REACH:
+            break
+        if bottom - top >= 2 and BOX_PROMPT.match(lines[top + 1]):
+            return top, bottom
     return None
+
+
+def shape(text: str) -> str:
+    """The screen's layout in counts, for the log when no input box is found: never what it says."""
+    lines = [TERMINAL_CODES.sub("", ln).rstrip() for ln in text.splitlines()]
+    while lines and not lines[-1].strip():
+        lines.pop()
+    edges = [i - len(lines) for i, ln in enumerate(lines) if EDGE.match(ln)][-4:]
+    prompts = [i - len(lines) for i, ln in enumerate(lines) if BOX_PROMPT.match(ln)][-3:]
+    return (f"{len(lines)} rows, rules at {edges or 'none'}, prompts at {prompts or 'none'}, "
+            f"mode words under the last rule: {'yes' if _status_line(lines) is not None else 'no'}")
+
+
 # what an empty box shows, dim; told apart by its style (screen captures keep it) or, in plain text, by its words
 HINTS = ('Try "', "Press up to edit queued messages")
 STYLED = re.compile(r"\x1b\[[0-9;]*m")
@@ -442,7 +461,10 @@ def screen(ssh: SshMaster, session: str, node: str = "") -> dict:
     res = ssh.on_login(screen_command(session, node), timeout=20)
     if res.returncode != 0 and not res.stdout:
         return {"gone": True, "busy": False, "mode": "ask", "ask": None, "ready": False, "box": False, "draft": ""}
-    return parse_screen(res.stdout)
+    got = parse_screen(res.stdout)
+    if not got["ready"]:
+        got["shape"] = shape(res.stdout)
+    return got
 
 
 # keys the view may press: an answer's number, Escape (stop Claude, or say no), Enter, Shift+Tab (next mode)

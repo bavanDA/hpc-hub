@@ -62,14 +62,46 @@ def test_the_rounded_box_of_older_claudes():
     "\n".join(["╭" + RULE + "╮", "│ ✻ Welcome to Claude Code!" + " " * 73 + "│", "╰" + RULE + "╯"]),
     # two rules around something that isn't the prompt
     "\n".join([RULE, " Bash command", "   ls -la", RULE]),
-    # a menu under the box: typing would go into the menu
-    "\n".join([RULE, "❯ /", RULE, *(f"  /command{i}   does thing {i}" for i in range(7))]),
     # a rule and nothing else
     "\n".join(["Loading…", RULE]),
 ])
 def test_what_is_not_an_input_box(screen):
     got = chat_view.parse_screen(screen)
     assert not got["box"] and not got["ready"]
+
+
+def test_claudes_background_tasks_listed_under_the_box():
+    """Claude lists the tasks and agents it runs in the background under its box: more rows than its footer."""
+    tasks = [f"  ⎿ bash: python bench.py --scale {n}  (running {n}m)" for n in range(1, 9)]
+    screen = "\n".join(["● Still running the benchmarks.", RULE, "❯ ", RULE, "  ⏸ manual mode on", *tasks])
+    got = chat_view.parse_screen(screen)
+    assert got["ready"] and got["box"] and got["draft"] == ""
+    typed = "\n".join(["● Still running.", RULE, "❯ are you still working", RULE, *tasks])
+    assert chat_view.parse_screen(typed)["draft"] == "are you still working"
+
+
+def test_a_box_far_above_the_bottom_is_not_the_box():
+    screen = "\n".join([RULE, "❯ old", RULE, *(f"line {i}" for i in range(chat_view.BOX_REACH + 5))])
+    assert not chat_view.parse_screen(screen)["box"]
+
+
+def test_the_lowest_box_counts():
+    screen = "\n".join([RULE, "❯ quoted in an answer", RULE, "● Done.", RULE, "❯ mine", RULE])
+    assert chat_view.parse_screen(screen)["draft"] == "mine"
+
+
+def test_the_layout_logged_has_counts_never_words():
+    screen = "\n".join(["● Secret results: 42", "Loading your project secrets…", RULE])
+    got = chat_view.shape(screen)
+    assert "Secret" not in got and "secrets" not in got and "3 rows" in got and "rules at [-1]" in got
+
+
+def test_a_refusal_logs_the_layout(session):
+    session.screen = "\n".join(["╭" + RULE + "╮", "│ ✻ Welcome to Claude Code!" + " " * 73 + "│", "╰" + RULE + "╯"])
+    with pytest.raises(RuntimeError, match="still starting"):
+        chat.send("wulver", SESSION, "hi")
+    (line,) = session.logged
+    assert line.startswith("Chat: no input box on Claude's screen (3 rows") and "Welcome" not in line
 
 
 def test_a_question_still_comes_before_the_box():
@@ -81,7 +113,7 @@ def test_a_question_still_comes_before_the_box():
 
 class Fake:
     def __init__(self, screen: str):
-        self.screen, self.ran = screen, []
+        self.screen, self.ran, self.logged = screen, [], []
 
     def on_login(self, line, timeout=20):
         return type("R", (), {"returncode": 0, "stdout": self.screen, "stderr": ""})()
@@ -90,7 +122,8 @@ class Fake:
 @pytest.fixture
 def session(monkeypatch):
     fake = Fake(without_footer(TYPED))
-    hub = type("H", (), {"connected": lambda self, c: type("S", (), {"ssh": fake})()})()
+    hub = type("H", (), {"connected": lambda self, c: type("S", (), {"ssh": fake})(),
+                         "log": lambda self, s, line: fake.logged.append(line)})()
     monkeypatch.setattr(chat, "hub", lambda: hub)
     monkeypatch.setattr(chat.tmux, "run", lambda ssh, line: fake.ran.append(line))
     return fake
