@@ -94,12 +94,18 @@ jobs:
     container: fedora:latest
     timeout-minutes: 20
     steps:
-      - run: dnf install -y -q git python3 python3-pip tmux bash openssh-clients procps-ng which findutils diffutils
+      # the container is a bare Fedora: rsync and hostname are on every cluster and desktop, so the stand-in needs them
+      - run: dnf install -y -q git python3 python3-pip tmux bash openssh-clients procps-ng which findutils diffutils rsync hostname util-linux
       - uses: actions/checkout@v7
+      # as a user, not the container's root: the app never runs as root (the lock's setup refuses root, root writes
+      # read-only files)
       - run: |
-          python3 -m venv /tmp/venv
-          /tmp/venv/bin/pip install -q pytest -r packaging/requirements-backend.txt
-      - run: /tmp/venv/bin/python -m pytest -q -rsx
+          useradd -m tester
+          chown -R tester "$GITHUB_WORKSPACE"
+      - run: |
+          runuser -u tester -- python3 -m venv /tmp/venv
+          runuser -u tester -- /tmp/venv/bin/pip install -q pytest -r packaging/requirements-backend.txt
+      - run: runuser -u tester -- /tmp/venv/bin/python -m pytest -q -rsx -p no:cacheprovider
 
   # the window shell and the VPN helper on the systems they ship on: their Windows and macOS code is only compiled
   # there (the helper ships only on Windows and macOS)
@@ -119,6 +125,10 @@ jobs:
           cache-dependency-path: app/package-lock.json
       - run: npm ci && npm run build  # the shell embeds the built screens
         working-directory: app
+      # tauri.windows.conf.json / tauri.macos.conf.json ship app/src-tauri/vpn/ (Build fills it with openconnect and
+      # the helper); the build script only needs it there
+      - run: mkdir -p app/src-tauri/vpn
+        shell: bash
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
         with:
