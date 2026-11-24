@@ -9,7 +9,7 @@ import { splitHits } from '../reader/hits'
 import { TextFind } from '../reader/TextFind'
 import { useToast } from '../useToast'
 import type { Tab } from '../terminals/tabs'
-import { loadDraft, saveDraft } from './draft'
+import { isEcho, loadDraft, saveDraft, type Sent } from './draft'
 import { blocks, COMMANDS, EFFORTS, inline, items, MODELS, MODES, needsTerminal, starting, toolHolds, type Item, type Mode } from './model'
 import { useChat } from './useChat'
 
@@ -190,15 +190,24 @@ export function ChatView({ tab, shown, title, toggle, onTerminal }: { tab: Tab; 
   const screen = state.screen
   // what sits unsent in Claude's input box: a message it gave back when you stopped it before it answered, or the
   // one you went back to. It comes into the box below to edit; sending replaces it (2026-11-22 report)
-  const given = screen?.draft ?? ''
+  // Not the message you just sent, on its way in (2026-11-24 report: it came back into the box once sent)
+  const sent = useRef<Sent | null>(null)  // your last message, while Claude's box may still show it on its way
+  const inBox = screen?.draft ?? ''
+  const echo = isEcho(inBox, sent.current)
+  const given = echo ? '' : inBox
   const shownItems = items(state.events, state.cwd, given, state.links)
   const took = useRef('')
   useEffect(() => {
-    if (!given) { took.current = ''; return }
+    if (echo) { sent.current!.seen = true; return }
+    if (!given) {
+      took.current = ''
+      if (sent.current?.seen) sent.current = null  // Enter took it: what shows there from now on is Claude's
+      return
+    }
     if (given === took.current) return
     took.current = given
     setDraft((d) => d.trim() ? d : given)
-  }, [given])
+  }, [given, echo])
   useEffect(() => saveDraft(tab, draft), [tab, draft])
   const wait = starting(screen)  // Claude is still starting: say so, and nothing to switch yet
   const ask = screen?.ask ?? null
@@ -255,6 +264,7 @@ export function ChatView({ tab, shown, title, toggle, onTerminal }: { tab: Tab; 
       void send(t).catch(keep)
     }
     if (mine) setDraft('')
+    sent.current = { text: t, at: Date.now(), seen: false }
     atEnd.current = true
   }
   const command = (c: string) => {
@@ -346,7 +356,7 @@ export function ChatView({ tab, shown, title, toggle, onTerminal }: { tab: Tab; 
           {screen?.busy && (
             <div className="flex items-center gap-2 text-sm text-dim">
               <span className="size-2 animate-pulse rounded-full bg-[var(--color-orange)]" />Claude is working
-              <button onClick={() => stop().catch(fail)} className="ml-2 rounded-md border border-line-strong px-2 py-0.5 text-xs hover:bg-hover">Stop</button>
+              <button onClick={() => { sent.current = null; stop().catch(fail) }} className="ml-2 rounded-md border border-line-strong px-2 py-0.5 text-xs hover:bg-hover">Stop</button>
               {screen.background && (
                 <button onClick={() => background().catch(fail)} title="Ctrl+B: the command goes on in the background and Claude carries on"
                   className="rounded-md border border-line-strong px-2 py-0.5 text-xs hover:bg-hover">Run in background</button>

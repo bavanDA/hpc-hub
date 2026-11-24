@@ -18,3 +18,20 @@ export function saveDraft(t: { cluster: string; session: string }, text: string)
     else localStorage.removeItem(keyOf(t))
   } catch { /* storage off: kept while the view shows */ }
 }
+
+// What Claude's own box shows just after you send is your message on its way (the paste before Enter takes it, or
+// Claude's "[Pasted text #1 +12 lines]" for it), not text to bring back into yours. The view took it for a message
+// Claude gave back and put it in the box again, so the box still showed it after it was sent (2026-11-24 report).
+export const ECHO_MS = 30_000  // a send this long ago no longer explains what Claude's box shows
+
+export type Sent = { text: string; at: number; seen: boolean }
+
+const flat = (s: string) => s.replace(/\s+/g, ' ').trim()
+
+/** Is what Claude's box shows (given) the message just sent? */
+export function isEcho(given: string, sent: Sent | null, now = Date.now()): boolean {
+  if (!sent || now - sent.at > ECHO_MS) return false
+  const g = flat(given)
+  if (!g) return false
+  return /\[Pasted text #\d+/.test(g) || flat(sent.text).includes(g)
+}

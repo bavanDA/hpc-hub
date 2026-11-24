@@ -45,7 +45,8 @@ describe('while Claude starts, and while a mode switch is on its way', () => {
 
 describe('stopping and editing a message (2026-11-22 report: messages ran together, some never showed)', () => {
   it("a message Claude gave back comes into the message box to edit, with a note that sending replaces it", () => {
-    expect(view).toContain("const given = screen?.draft ?? ''")
+    expect(view).toContain("const inBox = screen?.draft ?? ''")
+    expect(view).toContain("const given = echo ? '' : inBox")  // not the message just sent, on its way in
     expect(view).toMatch(/setDraft\(\(d\) => d\.trim\(\) \? d : given\)/)  // never over what you are writing
     expect(view).toContain("Claude gave your message back, unsent.")
     expect(view).toContain("onClick={() => setDraft(given)}")
