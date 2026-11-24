@@ -25,6 +25,9 @@ apt=(sudo apt-get -o Acquire::Retries=2 -o Acquire::http::Timeout=20 -o APT::Kee
 for try in 0 1 2 3; do
   if [ -n "${mirrors[$try]}" ]; then
     echo "apt: trying ${mirrors[$try]}"
+    # GitHub's runners name their mirrors in a mirror list (sources say mirror+file:), not in the sources: without
+    # this every try went to the same slow mirror (2026-11-24)
+    [ -f /etc/apt/apt-mirrors.txt ] && echo "${mirrors[$try]}/" | sudo tee /etc/apt/apt-mirrors.txt >/dev/null
     sudo sed -i -E "s#https?://([A-Za-z0-9.-]*archive\.ubuntu\.com|mirrors\.edge\.kernel\.org)/ubuntu/?#${mirrors[$try]}/#g" \
       /etc/apt/sources.list.d/*.sources /etc/apt/sources.list 2>/dev/null
   fi
