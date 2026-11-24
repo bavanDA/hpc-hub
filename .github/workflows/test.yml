@@ -6,12 +6,16 @@ on:
   pull_request:
     paths-ignore: ["docs/**", "**.md"]
   workflow_dispatch:
+  # Build calls it: a beta or a release publishes only when every system passes (2026-11-24, owner: "release should
+  # pass all tests"; quick fixes don't wait for it, to stay quick)
+  workflow_call:
 
 permissions:
   contents: read
 
 concurrency:
-  group: test-${{ github.ref }}
+  # github.workflow is the caller's when Build calls it: a push never cancels the tests a release waits for
+  group: test-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -68,3 +72,78 @@ jobs:
       # the window shell's own tests: quick fixes checked at start, terminals start only the backend's ssh, ...
       - run: cargo test --locked --lib
         working-directory: app/src-tauri
+
+  # 2026-11-24, owner: "I fix a bug in fedora, and then I see I got same error in mac". The same tests on macOS and on
+  # Fedora (newer Python, OpenSSL and glib than Ubuntu's)
+  python-macos:
+    runs-on: macos-15
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - run: brew install tmux
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: packaging/requirements-backend.txt
+      - run: pip install pytest -r packaging/requirements-backend.txt
+      - run: python -m pytest -q -rsx
+
+  python-fedora:
+    runs-on: ubuntu-24.04
+    container: fedora:latest
+    timeout-minutes: 20
+    steps:
+      - run: dnf install -y -q git python3 python3-pip tmux bash openssh-clients procps-ng which findutils diffutils
+      - uses: actions/checkout@v7
+      - run: |
+          python3 -m venv /tmp/venv
+          /tmp/venv/bin/pip install -q pytest -r packaging/requirements-backend.txt
+      - run: /tmp/venv/bin/python -m pytest -q -rsx
+
+  # the window shell and the VPN helper on the systems they ship on: their Windows and macOS code is only compiled
+  # there (the helper ships only on Windows and macOS)
+  rust:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-15]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      - run: npm ci && npm run build  # the shell embeds the built screens
+        working-directory: app
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            app/src-tauri
+            app/vpn-helper
+      - run: cargo test --locked --lib
+        working-directory: app/src-tauri
+      - run: cargo test --locked
+        working-directory: app/vpn-helper
+
+  # the phone app shares the desktop's screens (@shared): a change there must not break it unseen
+  mobile:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            app/package-lock.json
+            mobile/package-lock.json
+      - run: npm ci
+        working-directory: app
+      - run: npm ci && npx tsc -b
+        working-directory: mobile

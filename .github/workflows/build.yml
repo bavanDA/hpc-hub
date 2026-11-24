@@ -299,11 +299,18 @@ jobs:
             app/src-tauri/target/release/bundle/macos/*.app.tar.gz
             app/src-tauri/target/release/bundle/*/*.sig
 
+  # every test on every system, alongside the installers: nothing is published unless they all pass
+  tests:
+    if: inputs.publish || inputs.beta
+    uses: ./.github/workflows/test.yml
+    permissions:
+      contents: read
+
   release:
     # A normal release, not a pre-release: the app asks releases/latest for latest.json, which skips pre-releases.
     # A beta replaces the rolling "beta" pre-release, which only apps with Beta updates on read.
     if: inputs.publish || inputs.beta
-    needs: installers
+    needs: [installers, tests]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
