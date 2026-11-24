@@ -19,15 +19,16 @@ if [ -n "$save" ] && compgen -G "$save/*.deb" >/dev/null; then
   fi
   echo "apt: the saved packages don't fit this runner; downloading"
 fi
-mirrors=("" "http://azure.archive.ubuntu.com/ubuntu" "http://archive.ubuntu.com/ubuntu")
+# another network too (Fastly), in case all of Canonical's are slow from this runner
+mirrors=("" "http://mirrors.edge.kernel.org/ubuntu" "http://azure.archive.ubuntu.com/ubuntu" "http://archive.ubuntu.com/ubuntu")
 apt=(sudo apt-get -o Acquire::Retries=2 -o Acquire::http::Timeout=20 -o APT::Keep-Downloaded-Packages=true)
-for try in 0 1 2; do
+for try in 0 1 2 3; do
   if [ -n "${mirrors[$try]}" ]; then
     echo "apt: trying ${mirrors[$try]}"
-    sudo sed -i -E "s#https?://[A-Za-z0-9.-]*archive\.ubuntu\.com/ubuntu/?#${mirrors[$try]}/#g" \
+    sudo sed -i -E "s#https?://([A-Za-z0-9.-]*archive\.ubuntu\.com|mirrors\.edge\.kernel\.org)/ubuntu/?#${mirrors[$try]}/#g" \
       /etc/apt/sources.list.d/*.sources /etc/apt/sources.list 2>/dev/null
   fi
-  if timeout 180 "${apt[@]}" update -q && timeout 480 "${apt[@]}" install -y -q --no-install-recommends "$@"; then
+  if timeout 180 "${apt[@]}" update -q && timeout 360 "${apt[@]}" install -y -q --no-install-recommends "$@"; then
     if [ -n "$save" ] && compgen -G "/var/cache/apt/archives/*.deb" >/dev/null; then
       mkdir -p "$save" && rm -f "$save"/*.deb && cp /var/cache/apt/archives/*.deb "$save"/ &&
         echo "apt: saved $(ls "$save"/*.deb | wc -l) packages for the next run"

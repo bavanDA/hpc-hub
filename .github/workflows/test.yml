@@ -21,7 +21,7 @@ concurrency:
 jobs:
   python:
     runs-on: ubuntu-24.04
-    timeout-minutes: 35  # room for apt-install.sh to try another mirror
+    timeout-minutes: 45  # room for apt-install.sh to try other mirrors
     steps:
       - uses: actions/checkout@v7
       - id: week
@@ -61,7 +61,7 @@ jobs:
 
   app:
     runs-on: ubuntu-24.04
-    timeout-minutes: 45  # room for apt-install.sh to try another mirror
+    timeout-minutes: 55  # room for apt-install.sh to try other mirrors
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
