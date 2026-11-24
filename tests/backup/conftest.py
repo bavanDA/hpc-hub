@@ -2,6 +2,8 @@
 sbatch, squeue and scancel stand-ins on PATH (sbatch runs the job script right away, in its folder)."""
 
 import os
+import shlex
+import shutil
 import subprocess
 import time
 from pathlib import Path
@@ -21,7 +23,7 @@ echo 4242
 RSYNC = r"""#!/bin/bash
 # rsync stand-in: the real one, slow at the start when SLOW_RSYNC is set (to stop a copy halfway)
 for a in "$@"; do case $a in --info=progress2*) [ -n "${SLOW_RSYNC:-}" ] && sleep 30;; esac; done
-exec /usr/bin/rsync "$@"
+exec {rsync} "$@"
 """
 
 
@@ -36,7 +38,9 @@ class Cluster:
         self.bin = root / "bin"
         for d in (self.home, self.scratch, self.project, self.bin):
             d.mkdir(parents=True)
-        for name, text in (("sbatch", SBATCH), ("rsync", RSYNC), ("squeue", "#!/bin/bash\n"),
+        # the rsync on PATH: on macOS that's GNU rsync (tests/conftest.py GNU_TOOLS), not /usr/bin's openrsync
+        rsync = RSYNC.replace("{rsync}", shlex.quote(shutil.which("rsync") or "/usr/bin/rsync"))
+        for name, text in (("sbatch", SBATCH), ("rsync", rsync), ("squeue", "#!/bin/bash\n"),
                            ("scancel", "#!/bin/bash\n")):
             (self.bin / name).write_text(text)
             (self.bin / name).chmod(0o755)
