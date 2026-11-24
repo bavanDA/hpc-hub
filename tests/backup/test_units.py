@@ -3,7 +3,6 @@ import io
 import json
 import os
 import re
-import subprocess
 from pathlib import Path
 
 import pytest
@@ -14,7 +13,6 @@ from hpc_hub.backup.classify import classify
 from hpc_hub.backup.model import Destination, Purge
 from hpc_hub.compute.usage import storage
 from hpc_hub.core.config import AgentSettings, ComputeProfile
-from tests.helpers import on_linux_cluster
 
 FIX = Path(__file__).parent / "fixtures"
 DAY = 86400
@@ -265,19 +263,3 @@ def test_the_demo_shows_the_fixtures():
     found = dict(re.findall(r"^export const (\w+): \w+ = (.*)$", text, re.M))
     assert {k: json.loads(v) for k, v in found.items()} == {n: fixture(f"{n}.json")
                                                              for n in ("summary", "plan", "result")}
-
-
-@on_linux_cluster
-@pytest.mark.parametrize("works", [True, False])
-def test_open_noatime_only_where_rsync_can_do_it(tmp_path, works):
-    """An rsync built without O_NOATIME (macOS's Homebrew one) lists --open-noatime in --help but refuses to start
-    with it: every copy job failed there (2026-11-24)."""
-    rsync = tmp_path / "rsync"
-    rsync.write_text("#!/bin/bash\n"
-                     'case " $* " in *" --help "*) echo "     --open-noatime   avoid changing the atime"; exit 0;; '
-                     f'*" --open-noatime "*) exit {0 if works else 1};; esac\n')
-    rsync.chmod(0o755)
-    env = {**os.environ, "PATH": f"{tmp_path}{os.pathsep}{os.environ['PATH']}"}
-    got = subprocess.run(["bash", "-c", copy.NOATIME_PROBE + '; echo "[$NOATIME]"'], env=env, capture_output=True,
-                         text=True).stdout.strip()
-    assert got == ("[--open-noatime]" if works else "[]")

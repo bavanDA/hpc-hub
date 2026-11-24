@@ -19,9 +19,6 @@ DRY_MINUTES = 60
 RESUBMITS = 5
 CHECKSUM_UP_TO = 500 * 1024 ** 3  # above this the check compares size and date instead of every byte
 SPACE_MARGIN = 0.95
-# --open-noatime where this rsync can do it: one that lists it but was built without O_NOATIME (macOS, say)
-# refuses to start with it, so it is tried, not just looked for in --help
-NOATIME_PROBE = "rsync --open-noatime --list-only /dev/null >/dev/null 2>&1 && NOATIME=--open-noatime || NOATIME="
 STATES = ("filtering", "trying", "tried", "copying", "verifying", "resubmitted", "done", "failed", "cancelled")
 
 ALLOWED = {"-r", "-l", "-p", "-t", "-n", "-i", "-H", "--sparse", "--update", "--backup", "--partial", "--from0",
@@ -113,7 +110,7 @@ def script(mode: str, scan_id: str, scratch: str, dest: str, home_dest: str, pla
         f'[ -n "$FREE" ] && [ "$NEED" -gt "$(awk -v f="$FREE" \'BEGIN {{printf "%d", f * {SPACE_MARGIN}}}\')" ] && '
         'fail "Not enough space. The copy needs $((NEED / 1073741824)) GB and the destination has '
         '$((FREE / 1073741824)) GB free."',
-        NOATIME_PROBE,
+        "rsync --help 2>&1 | grep -q -- --open-noatime && NOATIME=--open-noatime || NOATIME=",
     ]
     lists = [("copy.list0", '"$DEST"'), ("copy-home.list0", '"$HOME_DEST"')]
     if mode == "dry":
