@@ -1,10 +1,8 @@
 import { ArrowUp, FileText, RefreshCw, ShieldCheck } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { type ReactNode, useEffect, useMemo, useState } from 'react'
 
 import type { Pick, Step, SyncState } from '../../../../types/history'
 import { Button } from '../../../ui/Button'
-import type { GhDetails } from '../../git/github'
-import { GhGuide } from '../../git/GhGuide'
 import { Steps } from '../branches/Steps'
 import { plural } from '../format'
 import { pickLabel, spotKey } from './picks'
@@ -16,8 +14,7 @@ type Props = {
   running: boolean
   paused: SyncState | null
   error: string
-  gh?: GhDetails | null  // GitHub turned down the sign-in: how to sign in with gh
-  cluster: string
+  guide?: ReactNode  // under the error: what to do about it (GitHub turned down the sign-in: sign in with gh)
   busy: boolean
   onStop: () => void
   onContinue: (picks: Record<string, Pick[]>) => void
@@ -26,7 +23,7 @@ type Props = {
 }
 
 
-export function PushView({ push, steps, running, paused, error, gh, cluster, busy, onStop, onContinue, onRetry,
+export function PushView({ push, steps, running, paused, error, guide, busy, onStop, onContinue, onRetry,
   onOpen }: Props) {
   const [picks, setPicks] = useState<Record<string, Pick>>({})
   const [at, setAt] = useState(0)
@@ -70,7 +67,7 @@ export function PushView({ push, steps, running, paused, error, gh, cluster, bus
         {running && !steps.length && <p className="text-dim">Starting the {verb}…</p>}
         {error && <p className="mt-3 text-bad">{error}</p>}
       </div>
-      {error && gh && <div className="px-6"><GhGuide cluster={cluster} details={gh} /></div>}
+      {error && guide && <div className="px-6">{guide}</div>}
       {spot && (
         <div className="mt-5 border-t border-line px-6 pt-5 pb-8">
           <div className="flex items-center gap-2 text-sm">

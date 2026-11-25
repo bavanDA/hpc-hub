@@ -6,6 +6,7 @@ import { ReportLink } from '../../report/ReportLink'
 import { Button } from '../../ui/Button'
 import { Spinner } from '../../ui/Spinner'
 import { useToast } from '../../useToast'
+import { GhGuide } from '../git/GhGuide'
 import { remember, remembered } from '../storage'
 import { AgentChip } from './agent/AgentChip'
 import { BranchBar } from './branches/BranchBar'
@@ -173,8 +174,8 @@ export function History({ where, clusterName, main, pdf, active, ask, guard, onB
         <div className={`relative flex min-w-0 flex-1 flex-col ${switching ? 'pointer-events-none opacity-60' : ''}`}>
           {sel.kind === 'sync' ? (
             <PushView push={run?.push ?? paused?.push ?? true} steps={sync.job?.steps ?? []} running={!!run && !paused
-              && !run.error && !sync.job?.done} paused={paused} error={run?.error ?? ''} gh={run?.gh}
-              cluster={where.cluster} busy={sync.settling}
+              && !run.error && !sync.job?.done} paused={paused} error={run?.error ?? ''}
+              guide={run?.gh && <GhGuide cluster={where.cluster} details={run.gh} />} busy={sync.settling}
               onStop={sync.stop} onContinue={sync.settle} onRetry={() => void sync.start(run?.push ?? true)}
               onOpen={(p, l) => onOpen(`${state.root}/${p}`, l)} />
           ) : (
