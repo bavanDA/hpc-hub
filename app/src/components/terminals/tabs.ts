@@ -8,7 +8,7 @@ import type { Command, Link, Listing, NewTerminal, TmuxSession } from '../../typ
 import { inTauri } from '../app/platform'
 import { clusterLabel, isConnected } from '../clusters/store'
 import { banner, dismiss } from './banners'
-import { continueLabel, endedNote } from './continueChat'
+import { chatAgent, continueLabel, endedNote } from './continueChat'
 import { demoShell } from './demoShell'
 import { dropHistory } from './history/view'
 import { makeTab } from './makeTab'
@@ -152,14 +152,15 @@ async function afterExit(tab: Tab, code: number, ranFor: number, tries = 6) {
     tab.cluster)
 }
 
-/** Claude again on the ended tab's chat, in its folder: its new tab takes this one's place. */
+/** Claude or ChatGPT again on the ended tab's chat, in its folder: its new tab takes this one's place. */
 export async function continueChat(tab: Tab) {
-  const { cluster, session } = tab
+  const { cluster, session, title } = tab
+  const agent = chatAgent(session) || 'claude'
   lostNote(tab, 'Continuing the chat. If its job ended, this waits for a compute node first.')
   try {
-    const at = await call<{ chat_id: string; folder: string }>('chat.where', { cluster, session })
-    const c = await call<Started>('tools.agent_start', { cluster, agent: 'claude', folder: at.folder,
-      chat_id: at.chat_id, label: continueLabel(tab.title) })
+    const at = await call<{ chat_id: string; folder: string }>('chat.where', { cluster, session, title })
+    const c = await call<Started>('tools.agent_start', { cluster, agent, folder: at.folder,
+      chat_id: at.chat_id, label: continueLabel(title) })
     close(tab.key)
     openTmux(cluster, c)
   } catch (e) {

@@ -3,7 +3,7 @@ you read from the screen, and answers sent as keys. Messages go in with terminal
 
 import time
 
-from ...agents import chat_view
+from ...agents import chat_view, codex_where
 from ...terminals import tmux
 from ..hub import hub
 from ..server import method
@@ -21,10 +21,13 @@ def read(cluster: str, session: str, file: str = "", offset: int = -1, since: fl
 
 
 @method("chat.where")
-def where(cluster: str, session: str) -> dict:
-    """The chat of a Claude tab, also once its session (or its job) ended: {chat_id, folder}, so Continue starts
-    claude --resume there (tools.agent_start)."""
-    return chat_view.where(hub().connected(cluster).ssh, session)
+def where(cluster: str, session: str, title: str = "") -> dict:
+    """The chat of a Claude or ChatGPT tab, also once its session (or its job) ended: {chat_id, folder}, so
+    Continue resumes it there (tools.agent_start). title: the tab's, which names a ChatGPT tab's folder."""
+    ssh = hub().connected(cluster).ssh
+    if session.startswith("hpchub-codex-"):
+        return codex_where.where(ssh, session, title)
+    return chat_view.where(ssh, session)
 
 
 @method("chat.screen")
