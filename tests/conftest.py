@@ -74,6 +74,10 @@ GNU_TOOLS = {
         "test_reminders_are_a_scheduled_job", "test_cancel_and_not_connected")),
     "agents/test_chat_copy.py::test_copy_files_the_chat_under_the_real_folder",  # readlink -m
     "api/test_files.py::test_real_path_follows_links",
+    # the paper search's stat -c (projects/papers.py PAPERS)
+    *(f"projects/test_papers.py::{t}" for t in (
+        "test_search_finds_papers_in_claude_and_codex_worktrees", "test_search_still_leaves_other_hidden_folders_out",
+        "test_search_without_worktrees_is_as_before")),
     # saving a file: readlink -f, chmod --reference
     "api/test_latex_api.py::test_files_read_write_and_manage_inside_the_project_only",
     "api/test_latex_history_api.py::test_a_save_keeps_a_version",
