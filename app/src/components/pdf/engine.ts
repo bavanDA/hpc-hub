@@ -1,5 +1,7 @@
 import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
 
+import { iterableStreams } from './streams'
+
 type Lib = typeof import('pdfjs-dist')
 type Viewer = typeof import('pdfjs-dist/web/pdf_viewer.mjs')
 
@@ -23,6 +25,7 @@ let loading: Promise<{ lib: Lib; viewer: Viewer }> | null = null
 
 export function engine() {
   loading ??= (async () => {
+    iterableStreams()  // before pdf.js: it reads page text with for await over a stream (Linux's WebKit can't)
     const lib = await import('pdfjs-dist')
     lib.GlobalWorkerOptions.workerSrc = workerUrl
     ;(globalThis as { pdfjsLib?: Lib }).pdfjsLib = lib  // the viewer module reads pdf.js from here
