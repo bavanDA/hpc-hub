@@ -40,12 +40,13 @@ const stop = on('transfer', (d) => {
 })
 import.meta.hot?.dispose(stop)
 
-/** Copy a file or folder to this phone, then save it in Downloads, open it, or share it. */
-export async function download(cluster: string, path: string, then: Then = 'save') {
-  const name = path.replace(/\/+$/, '').split('/').pop() || path
+/** Copy a file or folder to this phone, then save it in Downloads, open it, or share it; as: the name it gets
+ *  (a paper's PDF comes as thesis.pdf). */
+export async function download(cluster: string, path: string, then: Then = 'save', as = '') {
+  const name = as || path.replace(/\/+$/, '').split('/').pop() || path
   try {
     const got = await call<{ id: string; path: string }>('files.download',
-      { cluster, remote_path: path, local_dir: CACHE })
+      { cluster, remote_path: path, local_dir: CACHE, name: as })
     const w = { path: got.path, name, then }
     const t = early.get(got.id)
     if (t) { early.delete(got.id); landed(t, w) } else waiting.set(got.id, w)

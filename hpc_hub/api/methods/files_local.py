@@ -3,6 +3,7 @@ the same transfer list as the copies of files_copy.py."""
 
 import os
 import posixpath
+import re
 import shutil
 import subprocess
 import time
@@ -45,6 +46,19 @@ def free_name(folder: Path, name: str) -> Path:
     while target.exists() or target.is_symlink():
         target, n = folder / f"{stem} ({n}){ext}", n + 1
     return target
+
+
+BAD_IN_NAME = re.compile(r'[<>:"/\\|?*\x00-\x1f]')  # not allowed in a file name on Windows, or a folder step
+WINDOWS_DEVICES = {"CON", "PRN", "AUX", "NUL", *(f"COM{i}" for i in range(1, 10)), *(f"LPT{i}" for i in range(1, 10))}
+
+
+def safe_name(name: str) -> str:
+    """A name asked for, fit to be a file's name on Windows, macOS and Linux: no folder steps, no characters
+    Windows refuses, no dots or spaces at either end (hidden, or cut by Windows); "" when nothing is left."""
+    name = BAD_IN_NAME.sub("_", name).strip(". ")
+    if name.split(".")[0].upper() in WINDOWS_DEVICES:  # Windows reads con.pdf as the console
+        name = "_" + name
+    return "" if name.strip("._ ") == "" else name
 
 
 def _remove(path: Path) -> None:
@@ -94,6 +108,12 @@ def open_here(path: str) -> None:
     downloads.open_here(path)
 
 
+@method("files.show_here")
+def show_here(path: str) -> None:
+    """Show a file saved under Downloads/HPC Hub in this computer's file manager."""
+    downloads.show_here(path)
+
+
 @method("files.clipboard_text")
 def clipboard_text() -> str:
     """The text on this computer's clipboard, for a paste the window could not read itself."""
@@ -137,13 +157,13 @@ def upload(cluster: str, local_paths: list[str], remote_dir: str) -> dict:
 
 
 @method("files.download")
-def download(cluster: str, remote_path: str, local_dir: str) -> dict:
-    """Copy a file or folder into local_dir (made if needed) under a free name; answers the transfer's id and
-    where it lands."""
+def download(cluster: str, remote_path: str, local_dir: str, name: str = "") -> dict:
+    """Copy a file or folder into local_dir (made if needed) under a free name (its own, or name when given: a
+    paper's PDF comes as thesis.pdf); answers the transfer's id and where it lands."""
     s = hub().connected(cluster)
     folder = Path(local_dir).expanduser()
     folder.mkdir(parents=True, exist_ok=True)
-    name = posixpath.basename(remote_path.rstrip("/"))
+    name = safe_name(name) or posixpath.basename(remote_path.rstrip("/"))
     if not name:
         raise ValueError("Pick a file or folder to download")
     target = free_name(folder, name)

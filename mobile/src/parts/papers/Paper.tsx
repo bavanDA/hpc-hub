@@ -21,6 +21,7 @@ import type { CardSpot } from '@shared/components/latex/history/notes/SpotCard'
 import { useAssist } from '@shared/components/latex/history/useAssist'
 import { RunningCard } from '@shared/components/latex/history/write/RunningCard'
 import { buildMessage, counts, issueFile, issuesIn, labels as labelsIn } from '@shared/components/latex/issues'
+import { downloadState, pdfName } from '@shared/components/latex/pdfDownload'
 import { remember, remembered } from '@shared/components/latex/storage'
 import { useBuild } from '@shared/components/latex/useBuild'
 import { useBuiltPdf } from '@shared/components/latex/useBuiltPdf'
@@ -35,6 +36,7 @@ import { useBackLayer } from '../../nav'
 import { Button, Dialog, Row, useToast } from '../../ui'
 import { useAskForNode } from '../AskForNode'
 import { KeyRow } from '../code/KeyRow'
+import { download, setLocalNotify } from '../files/local'
 import { Header } from '../Header'
 import { useEditorKeyboard } from '../keyboard'
 import { useOpenIn } from '../projects/openIn'
@@ -116,6 +118,13 @@ export function Paper({ paper, onClose }: { paper: Opened; onClose: () => void }
     guard: (run) => settings.on_node ? nodeFirst.guard(cluster, 'The PDF build', run) : run() })
   const { build, last } = builder
   const saveNow = async () => { if (await save() && auto) build() }
+  // the built PDF into Downloads/HPC Hub as thesis.pdf; the menu has no greyed items, so it says why not yet
+  useEffect(() => setLocalNotify(toast), [toast])
+  const downloadPdf = () => {
+    const can = downloadState(pdf, builder.running)
+    if (can.ok && pdf.path) void download(cluster, pdf.path, 'save', pdfName(folder, main))
+    else toast(can.why)
+  }
 
   const toPdf = (line: number) => {
     const d = docRef.current
@@ -232,7 +241,7 @@ export function Paper({ paper, onClose }: { paper: Opened; onClose: () => void }
       {!keyboard && <Header title="Papers" />}
       {!keyboard && <ProjectBar name={paper.name} where={`${paper.cluster_name} · ${rel(folder, main)}`} status={status}
         view={view} onView={setView} running={builder.running} onBuild={build} onFiles={() => setOpen('files')}
-        onBuildSettings={() => setOpen('build')} onLogs={() => setOpen('logs')} logCount={errors + warnings}
+        onBuildSettings={() => setOpen('build')} onDownloadPdf={downloadPdf} onLogs={() => setOpen('logs')} logCount={errors + warnings}
         onGit={() => setOpen('git')} onOpen={() => { void save(); setOpen('open') }} onClose={() => void leave()} />}
 
       <div className="flex min-h-0 flex-1 flex-col">

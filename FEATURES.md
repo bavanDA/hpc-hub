@@ -153,7 +153,8 @@ Off until you turn them on in Settings, under Experimental. They may change.
 
 - **Papers:** a LaTeX editor for a project on the cluster, built with latexmk, with git history. Pull and push to
   GitHub sign in with GitHub's own gh when it is signed in; when GitHub turns a sign-in down, the paper says why and
-  signs you in with gh in a terminal (installing gh in your home folder first, no root needed).
+  signs you in with gh in a terminal (installing gh in your home folder first, no root needed). **Download PDF**
+  saves the built PDF on your computer, named after the paper (thesis.pdf), in Downloads/HPC Hub.
 - **Skills:** add instructions to your agents on each cluster.
 - **Scheduled agents:** an agent runs a task at set times, for example every night, as a Slurm job.
 

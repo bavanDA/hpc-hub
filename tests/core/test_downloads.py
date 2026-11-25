@@ -38,3 +38,23 @@ def test_cluster_folder_and_open_guard(tmp_path, monkeypatch):
     assert opened and opened[0][-1] == str(page)
     with pytest.raises(ValueError):
         downloads.open_here(str(tmp_path / "elsewhere.sh"))
+
+
+@pytest.mark.parametrize(("platform", "want"), [
+    ("linux", lambda p: ["xdg-open", str(p.parent)]),
+    ("darwin", lambda p: ["open", "-R", str(p)]),
+    ("win32", lambda p: ["explorer", "/select,", str(p)]),
+])
+def test_show_in_folder(tmp_path, monkeypatch, platform, want):
+    monkeypatch.setattr(downloads, "downloads", lambda **_: tmp_path / "Downloads")
+    monkeypatch.setattr(downloads.sys, "platform", platform)
+    shown = []
+    monkeypatch.setattr(downloads.subprocess, "Popen", lambda argv, **_: shown.append(argv))
+    pdf = downloads.cluster_folder("wulver") / "thesis (1).pdf"
+    pdf.write_bytes(b"%PDF-1.5")
+    downloads.show_here(str(pdf))
+    assert shown == [want(pdf)]
+    with pytest.raises(ValueError):  # only what HPC Hub saved, and only while it is there
+        downloads.show_here(str(tmp_path / "elsewhere.pdf"))
+    with pytest.raises(ValueError):
+        downloads.show_here(str(pdf.parent / "gone.pdf"))

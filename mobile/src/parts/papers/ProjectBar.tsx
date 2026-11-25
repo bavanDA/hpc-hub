@@ -1,7 +1,8 @@
 // The desktop's project bar on the phone: the files, the paper's name, Recompile with its menu, the three dots, and the
-// view switch under them. Both, Git and Open live in the three dots; build settings and the log in Recompile's arrow.
-import { BookOpenText, ChevronDown, Columns2, FileText, FolderOpen, GitBranch, History, MoreVertical, PanelLeft,
-  RefreshCw, ScrollText, Settings2, SquareX } from 'lucide-react'
+// view switch under them. Both, Git and Open live in the three dots; Download PDF, build settings and the log in
+// Recompile's arrow.
+import { BookOpenText, ChevronDown, Columns2, Download, FileText, FolderOpen, GitBranch, History, MoreVertical,
+  PanelLeft, RefreshCw, ScrollText, Settings2, SquareX } from 'lucide-react'
 
 import { Spinner } from '@shared/components/ui/Spinner'
 import { IconBtn, Menu, type MenuItem } from '../../ui'
@@ -20,6 +21,7 @@ type Props = {
   onBuild: () => void
   onFiles: () => void
   onBuildSettings: () => void
+  onDownloadPdf: () => void  // saves it in Downloads/HPC Hub, or says why not yet
   onLogs: () => void
   logCount: number
   onGit: () => void
@@ -27,8 +29,8 @@ type Props = {
   onClose: () => void
 }
 
-export function ProjectBar({ name, where, status, view, onView, running, onBuild, onFiles, onBuildSettings, onLogs,
-  logCount, onGit, onOpen, onClose }: Props) {
+export function ProjectBar({ name, where, status, view, onView, running, onBuild, onFiles, onBuildSettings,
+  onDownloadPdf, onLogs, logCount, onGit, onOpen, onClose }: Props) {
   const more: MenuItem[][] = [
     [{ label: 'Both', icon: Columns2, onClick: () => onView('split') },
       { label: 'Git', icon: GitBranch, onClick: onGit },
@@ -36,6 +38,7 @@ export function ProjectBar({ name, where, status, view, onView, running, onBuild
     [{ label: 'Close project', icon: SquareX, onClick: onClose }],
   ]
   const buildMenu: MenuItem[][] = [[
+    { label: 'Download PDF', icon: Download, onClick: onDownloadPdf },
     { label: 'Build settings', icon: Settings2, onClick: onBuildSettings },
     { label: logCount ? `Logs and issues · ${logCount}` : 'Logs and issues', icon: ScrollText, onClick: onLogs },
   ]]
@@ -52,7 +55,7 @@ export function ProjectBar({ name, where, status, view, onView, running, onBuild
             className="flex h-8 items-center gap-1.5 rounded-l-md bg-accent px-3 text-sm font-semibold text-on-accent
               active:bg-accent-pressed disabled:opacity-60">
             {running ? <Spinner size={14} /> : <RefreshCw size={14} />} {running ? 'Compiling' : 'Recompile'}</button>
-          <Menu label="Build settings and logs" trigger={<ChevronDown size={14} />} groups={buildMenu}
+          <Menu label="Download PDF, build settings and logs" trigger={<ChevronDown size={14} />} groups={buildMenu}
             className="grid h-8 w-7 place-items-center rounded-r-md border-l border-on-accent/25 bg-accent text-on-accent
               active:bg-accent-pressed" />
         </div>

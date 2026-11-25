@@ -57,3 +57,19 @@ def open_here(path: str) -> None:
     opener = "open" if sys.platform == "darwin" else "xdg-open"
     subprocess.Popen([opener, str(p)], stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
                      stderr=subprocess.DEVNULL, start_new_session=True)
+
+
+def show_here(path: str) -> None:
+    """Show a file HPC Hub saved in this computer's file manager: picked out in its folder on Windows and macOS,
+    its folder opened on Linux. Only files under Downloads/HPC Hub, as for open_here."""
+    p = Path(path)
+    if not inside_app_folder(p) or not p.exists():
+        raise ValueError(f"Not a file HPC Hub saved: {path}")
+    if sys.platform == "win32":
+        argv = ["explorer", "/select,", str(p)]  # the path apart from /select,: so a space in it still works
+    elif sys.platform == "darwin":
+        argv = ["open", "-R", str(p)]
+    else:
+        argv = ["xdg-open", str(p.parent)]
+    subprocess.Popen(argv, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                     start_new_session=sys.platform != "win32")

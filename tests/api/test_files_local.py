@@ -81,6 +81,31 @@ def test_download_never_overwrites(h, tmp_path):
     assert (local / "run (1).out").read_text() == "done" and t["done"] == t["total"] == 4
 
 
+def test_download_under_a_name_asked_for(h, tmp_path):
+    """A paper's PDF: /home/jdoe/thesis/main.pdf comes as thesis.pdf, and never over one already there."""
+    src = tmp_path / "home" / "jdoe" / "thesis" / "main.pdf"
+    src.parent.mkdir(parents=True)
+    src.write_bytes(b"%PDF-1.5")
+    local = tmp_path / "Downloads" / "HPC Hub" / "wulver"
+    first = files_local.download("wulver", str(src), str(local), name="thesis.pdf")
+    assert first["path"] == str(local / "thesis.pdf") and _wait(h, first["id"])["error"] == ""
+    second = files_local.download("wulver", str(src), str(local), name="thesis.pdf")
+    assert second["path"] == str(local / "thesis (1).pdf") and _wait(h, second["id"])["error"] == ""
+    assert (local / "thesis (1).pdf").read_bytes() == b"%PDF-1.5"
+    for asked, lands in (("../a:b.pdf", "_a_b.pdf"), ("..", "main.pdf")):  # no folder steps; nothing left: its own
+        got = files_local.download("wulver", str(src), str(local), name=asked)
+        assert got["path"] == str(local / lands) and _wait(h, got["id"])["error"] == ""
+
+
+@pytest.mark.parametrize(("asked", "got"), [
+    ("thesis.pdf", "thesis.pdf"), ("my paper.pdf", "my paper.pdf"), ("a/b.pdf", "a_b.pdf"), ("a\\b.pdf", "a_b.pdf"),
+    ('re: "draft"?.pdf', "re_ _draft__.pdf"), ("notes. ", "notes"), ("con.pdf", "_con.pdf"), ("NUL", "_NUL"),
+    ("console.pdf", "console.pdf"), ("..", ""), ("", ""), ("  ", ""), ("ünï.pdf", "ünï.pdf"),
+])
+def test_safe_name(asked, got):
+    assert files_local.safe_name(asked) == got
+
+
 def test_download_a_folder(h, tmp_path):
     (tmp_path / "remote" / "results").mkdir(parents=True)
     (tmp_path / "remote" / "results" / "x.txt").write_text("x")

@@ -22,6 +22,7 @@ import { useBuild } from './useBuild'
 import { useBuiltPdf } from './useBuiltPdf'
 import { useCites } from './useCites'
 import { useDoc } from './useDoc'
+import { usePdfDownload } from './usePdfDownload'
 import { useProjectKeys } from './useProjectKeys'
 import { ViewSwitch, type View } from './ViewSwitch'
 
@@ -67,6 +68,7 @@ export function Project({ project, onClose }: { project: Opened; onClose: () => 
   const builder = useBuild({ cluster, main, save, onDone: built,
     guard: (run) => settings.on_node ? nodeFirst.guard(cluster, 'The PDF build', run) : run() })
   const { build, last } = builder
+  const download = usePdfDownload(cluster, folder, main, pdf, builder.running)
 
   const saveNow = async () => { if (await save() && auto) build() }
 
@@ -138,7 +140,7 @@ export function Project({ project, onClose }: { project: Opened; onClose: () => 
         tools={<>
           <BuildButton cluster={cluster} clusterName={project.cluster_name} running={builder.running} settings={settings}
             onSettings={setSettings} auto={auto} onAuto={(on) => { setAuto(on); remember('latex.auto', on ? '1' : '0') }}
-            onBuild={build} />
+            onBuild={build} pdf={download} />
           <GitMenu where={where} before={save} safe={history} onPulled={() => { refresh(); reloadDoc() }} />
         </>}
         onClose={async () => { if (await save()) onClose() }} />
@@ -152,7 +154,7 @@ export function Project({ project, onClose }: { project: Opened; onClose: () => 
             onChange={edit} onSave={saveNow} onBuild={build} onToPdf={toPdf} />}
           right={<PdfPane cluster={cluster} main={main} pdf={pdf} progress={progress} build={builder}
             logsOpen={logsOpen} onLogs={setLogsOpen} reader={view === 'reader'} target={target} focused={focused}
-            onFocus={setFocused} onSync={fromPdf} onGo={goIssue} latex={latexSource} />} />
+            onFocus={setFocused} onSync={fromPdf} onGo={goIssue} latex={latexSource} download={download} />} />
       </div>
       {history.pane}
       {dialog}

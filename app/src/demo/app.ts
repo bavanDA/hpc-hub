@@ -34,6 +34,6 @@ export const answers: Record<string, unknown> = {
   'app.status': { blocked: false, message: '' },
   'preferences.set': (p: Partial<Preferences>) => Object.assign(prefs, p) && { ...prefs },
   'files.upload': { id: 'demo-up' },
-  'files.download': (p: { remote_path: string; local_dir: string }) =>
-    ({ id: 'demo-down', path: `${p.local_dir}/${p.remote_path.split('/').pop()}` }),
+  'files.download': (p: { remote_path: string; local_dir: string; name?: string }) =>
+    ({ id: 'demo-down', path: `${p.local_dir}/${p.name || p.remote_path.split('/').pop()}` }),
 }
