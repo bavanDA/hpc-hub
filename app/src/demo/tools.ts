@@ -122,6 +122,7 @@ export const answers: Record<string, unknown> = {
   },
   'tools.agent_install': ({ agent }: { agent: string }) =>
     started(`hpchub-install-${agent}-${now}`, `Install ${AGENTS.find((x) => x.id === agent)!.name}`, '#4285f4'),
+  'latex.gh_sign_in': () => started(`hpchub-gh-${now}`, 'Sign in to GitHub', ''),
   'tools.ask_start': ({ prompt, out }: { prompt: string; out: string }) =>
     started(`hpchub-ask-123456-${now}`, `Ask all · ${prompt.split('\n')[0].slice(0, 40)}`, '#9141ac', out),
 }

@@ -7,6 +7,7 @@ import threading
 import time
 
 from ..core.ssh import SshMaster
+from . import github
 from .git import BUILD_FILES, ENV, GitError
 from .git_shell import g, rev, run
 
@@ -68,7 +69,8 @@ def save(ssh: SshMaster, folder: str, kind: str = "Saved", force: bool = False) 
               'c=$(git commit-tree "$tree" ${last:+-p "$last"} ${head:+-p "$head"} -m ' + shlex.quote(kind) +
               ' -m "files: $files") && git update-ref -m ' + shlex.quote(kind) + ' "$ref" "$c" && echo "saved $c" && '
               'if [ "$setting" = backup ] && git remote | grep -qx origin; then '
-              '(timeout 60 git push -q -f origin "$ref:refs/heads/saved/$(id -un)/${b:-detached}" >/dev/null 2>&1 &); '
+              f'{github.SETUP}(timeout 60 git "$@" push -q -f origin '
+              '"$ref:refs/heads/saved/$(id -un)/${b:-detached}" >/dev/null 2>&1 &); '
               'fi')
     out = run(ssh, script).split()
     if out and out[0] == "saved":

@@ -78,6 +78,8 @@ class Server:
                 data = {"ref": ref}
                 if isinstance(getattr(e, "kind", None), str):  # what kind of failure, for the UI to act on
                     data["kind"] = e.kind
+                if isinstance(getattr(e, "details", None), dict):  # more about it, for the UI (JSON values only)
+                    data["details"] = e.details
                 reply = {"error": {"code": -32000, "message": message, "data": data}}
         if rid is not None:  # no id: a notification, no answer wanted
             self.send({"jsonrpc": "2.0", "id": rid, **reply})

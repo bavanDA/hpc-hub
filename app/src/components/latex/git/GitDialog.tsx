@@ -1,7 +1,8 @@
 import { ArrowDown, ArrowUp, ChevronRight, Copy } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 
-import { call } from '../../../rpc'
+import { useGo } from '../../../nav'
+import { call, type CallError } from '../../../rpc'
 import type { GitInfo } from '../../../types/latex'
 import { ReportLink } from '../../report/ReportLink'
 import { Button } from '../../ui/Button'
@@ -9,6 +10,8 @@ import { Dialog } from '../../ui/Dialog'
 import { Spinner } from '../../ui/Spinner'
 import { useToast } from '../../useToast'
 import { CommitDialog } from './CommitDialog'
+import { ghDetails, ghGuide } from './github'
+import { signInWithGh } from './signIn'
 import { Prop } from './Prop'
 import { lastLine, type Where } from './where'
 
@@ -17,6 +20,7 @@ const DONE = { commit: 'Committed', pull: 'Pulled', push: 'Pushed' }
 export function GitDialog({ where, before, onClose, onPulled }:
   { where: Where; before: () => Promise<boolean>; onClose: () => void; onPulled: () => void }) {
   const toast = useToast()
+  const go = useGo()
   const [info, setInfo] = useState<GitInfo | null>(null)
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
@@ -38,7 +42,12 @@ export function GitDialog({ where, before, onClose, onPulled }:
       if (what === 'pull') onPulled()
       load()
     } catch (e) {
-      toast(`Git: ${lastLine((e as Error).message)}`)
+      const err = e as CallError
+      const gh = ghDetails(err.kind, err.details)
+      // GitHub turned down the sign-in: sign in with gh in a terminal, then Pull or Push again
+      toast(`Git: ${lastLine(err.message)}`, gh ? { stay: true, report: false, action: { label: ghGuide(gh).button,
+        run: () => void signInWithGh(where.cluster, go).catch((x: Error) => toast(x.message, { kind: 'error' })) } }
+        : undefined)
     } finally { setBusy('') }
   }
   const copy = (url: string) => navigator.clipboard.writeText(url).then(() => toast('Copied'))

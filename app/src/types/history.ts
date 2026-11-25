@@ -83,7 +83,8 @@ export type SwitchCheck = { from: string; target: string; remote_only: boolean; 
 
 export type Step = { label: string; seconds: number; done: boolean }
 export type GitJob = { id: string; cluster: string; folder: string; kind: 'switch' | 'push' | 'pull'
-  steps: Step[]; done: boolean; ok?: boolean; error?: string; result?: unknown }
+  steps: Step[]; done: boolean; ok?: boolean; error?: string; result?: unknown
+  error_kind?: string; details?: Record<string, unknown> | null }  // github-auth: sign in with gh
 
 export type SwitchDone = { branch: string; from: string; brought: number; kept: number; back: '' | 'back' | 'kept' }
 export type SyncDone = { done: true; push: boolean; branch: string; pulled: number; pulled_by: string

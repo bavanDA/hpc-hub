@@ -8,7 +8,8 @@ import { demoCall } from './demo/index'
 
 
 type Waiting = { resolve: (v: unknown) => void; reject: (e: Error) => void; method: string }
-type Message = { id?: number | null; result?: unknown; error?: { message: string; data?: { ref?: number; kind?: string } };
+type Message = { id?: number | null; result?: unknown; error?: { message: string
+  data?: { ref?: number; kind?: string; details?: Record<string, unknown> } };
   method?: string; params?: { name: string; data: unknown } }
 
 let next = 1
@@ -24,17 +25,18 @@ const ready = inTauri ? listen<string>('rpc', (e) => {
     waiting.delete(m.id)
     if (m.error) {
       noteFailure(w.method, m.error.message, m.error.data?.ref)  // a bug report about it sends its traceback
-      w.reject(failure(m.error.message, m.error.data?.kind))
+      w.reject(failure(m.error.message, m.error.data?.kind, m.error.data?.details))
     } else w.resolve(m.result)
   }
 }) : Promise.resolve()
 if (!inTauri) onDemoEvent((name, data) => listeners.get(name)?.forEach((fn) => fn(data)))
 
-/** An error from the backend; kind says what kind of failure it is, for the UI to act on ("not-installed"). */
-export type CallError = Error & { kind?: string }
+/** An error from the backend; kind says what kind of failure it is, for the UI to act on ("not-installed"), and
+ * details more about it ("github-auth": what gh is like on the cluster). */
+export type CallError = Error & { kind?: string; details?: Record<string, unknown> }
 
-export function failure(message: string, kind?: string): CallError {
-  return Object.assign(new Error(message), kind ? { kind } : {})
+export function failure(message: string, kind?: string, details?: Record<string, unknown>): CallError {
+  return Object.assign(new Error(message), kind ? { kind } : {}, details ? { details } : {})
 }
 
 export async function call<T>(method: string, params: Record<string, unknown> = {}): Promise<T> {

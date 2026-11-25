@@ -6,7 +6,7 @@ from collections.abc import Callable
 
 from ...core.ssh import SshMaster
 from ...files import remote_fs
-from .. import saved
+from .. import github, saved
 from ..git import ENV, GitError
 from ..git_shell import SEP, g, parts, run
 from .record import ASIDE, ORIG, clear, load, save, where
@@ -67,11 +67,12 @@ def _marked(ssh: SshMaster, root: str, files: list[str]) -> list[str]:
 def _pull(ssh: SshMaster, st: dict, step: Step) -> dict:
     G, up = g(st["root"]), shlex.quote(st["upstream"])
     step("Get the latest from origin")
-    res = ssh.run(f"{G} fetch -q {shlex.quote(st['remote'])}", timeout=300)
+    res = ssh.run(github.net(st["root"], f"fetch -q {shlex.quote(st['remote'])}"), timeout=300)
     if res.returncode != 0:
         stop(ssh, st["root"])
         why = res.stderr.strip().splitlines()[-1] if res.stderr.strip() else "no answer"
-        raise GitError(f"Could not reach {st['remote']}: {why}")
+        raise (github.explain(ssh, st["root"], st["remote"], res.stderr, f"Could not reach {st['remote']}: ")
+               or GitError(f"Could not reach {st['remote']}: {why}"))
     if ssh.run(f"{G} rev-parse -q --verify {up}", timeout=30).returncode != 0:  # a new branch: nothing to pull
         return _push(ssh, st, step)
     p = parts(run(ssh, f"{G} rev-list --count HEAD..{up}; echo {SEP}; {G} rev-list --count {up}..HEAD; echo {SEP}; "
@@ -104,13 +105,14 @@ def _push(ssh: SshMaster, st: dict, step: Step) -> dict:
         if ahead:
             step(f"Push your {ahead} {'commit' if ahead == 1 else 'commits'}")
             track = "" if st["tracking"] else "-u"
-            res = ssh.run(f"{G} push -q {track} {shlex.quote(st['remote'])} "
-                          f"HEAD:refs/heads/{shlex.quote(st['branch'])}", timeout=300)
+            res = ssh.run(github.net(st["root"], f"push -q {track} {shlex.quote(st['remote'])} "
+                                                 f"HEAD:refs/heads/{shlex.quote(st['branch'])}"), timeout=300)
             if res.returncode != 0:
                 end = _back(ssh, st, step)
                 why = res.stderr.strip().splitlines()[-1] if res.stderr.strip() else "the push failed"
                 back = " Your changes are back." if st["aside"] and end.get("done") else ""
-                raise GitError(f"Nothing was pushed: {why}.{back}")
+                raise (github.explain(ssh, st["root"], st["remote"], res.stderr, "Nothing was pushed: ", back)
+                       or GitError(f"Nothing was pushed: {why}.{back}"))
             st["pushed"] = ahead
     return _back(ssh, st, step)
 

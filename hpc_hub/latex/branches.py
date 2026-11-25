@@ -5,7 +5,7 @@ import shlex
 from collections.abc import Callable
 
 from ..core.ssh import SshMaster
-from . import saved
+from . import github, saved
 from .git import ENV, GitError
 from .git_shell import SEP, g, parts, rev, run
 
@@ -83,8 +83,8 @@ def switch(ssh: SshMaster, folder: str, target: str, mode: str, step: Callable[[
     remotes = run(ssh, f"{G} remote").split()
     if remotes:
         step("Got the latest from origin")
-        ssh.run(f"{G} fetch -q {shlex.quote(t['remote'] or ('origin' if 'origin' in remotes else remotes[0]))}",
-                timeout=300)
+        remote = t["remote"] or ("origin" if "origin" in remotes else remotes[0])
+        ssh.run(github.net(folder, f"fetch -q {shlex.quote(remote)}"), timeout=300)
     step(f"Updating {c['files']} {'file' if c['files'] == 1 else 'files'}")
     if mode == "keep" and tracked:
         aside = saved.snapshot(ssh, folder, f"Kept on {here}", new_files=False)["commit"]

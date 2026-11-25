@@ -110,6 +110,10 @@ GNU_TOOLS = {
         "test_changes_now_include_new_files_but_not_build_files", "test_saved_versions_leave_index_and_files_alone",
         "test_changes_to_the_same_file_can_still_come_along", "test_safe_push_pulls_first_and_brings_changes_back",
         "test_a_spot_to_settle_stops_before_the_push", "test_stop_puts_everything_back")),
+    # a safe pull saves its state with chmod --reference; gh's release is checked with sha256sum
+    "latex/test_github.py::test_get_the_latest_turned_down_by_github_says_what_to_do",
+    *(f"api/test_latex_github.py::{t}" for t in (
+        "test_the_sign_in_installs_gh_from_its_release_then_signs_in", "test_a_release_that_does_not_match_its_sum")),
     *(f"terminals/test_pages.py::{t}" for t in (  # realpath -e
         "test_fetch", "test_fetch_follows_links", "test_same_folder_names_kept_apart",
         "test_a_relative_page_not_in_the_session_folder_is_found_below_it")),

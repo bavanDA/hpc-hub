@@ -42,7 +42,10 @@ def run(kind: str, cluster: str, folder: str, work: Callable[[Callable[[str], No
             finish_step()
             emit(done=True, ok=True, result=result)
         except Exception as e:  # noqa: BLE001 (it goes to the app as the job's end)
-            emit(done=True, ok=False, error=str(e) or type(e).__name__)
+            # error_kind and details: what kind of failure, for the app to act on (github-auth: sign in with gh)
+            kind, details = getattr(e, "kind", ""), getattr(e, "details", None)
+            emit(done=True, ok=False, error=str(e) or type(e).__name__, error_kind=kind if isinstance(kind, str)
+                 else "", details=details if isinstance(details, dict) else None)
         finally:
             with _lock:
                 _busy.pop(key, None)

@@ -86,12 +86,21 @@ def commit_paths(ssh: SshMaster, folder: str, message: str, paths: list[str]) ->
                              f"-m {shlex.quote(message)} -- {specs}")
 
 
+def _net(ssh: SshMaster, folder: str, args: str) -> str:
+    from . import github  # it builds on this module
+    res = ssh.run(github.net(folder, args), timeout=300)
+    if res.returncode != 0:
+        err = res.stderr.strip() or res.stdout.strip()
+        raise github.explain(ssh, folder, "", err) or GitError(err or f"git {args.split()[0]} failed")
+    return res.stdout
+
+
 def pull(ssh: SshMaster, folder: str) -> str:
-    return _git(ssh, folder, "pull --ff-only", timeout=300)
+    return _net(ssh, folder, "pull --ff-only")
 
 
 def push(ssh: SshMaster, folder: str) -> str:
-    return _git(ssh, folder, "push", timeout=300)
+    return _net(ssh, folder, "push")
 
 
 def show(ssh: SshMaster, folder: str, commit: str) -> str:
