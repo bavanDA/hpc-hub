@@ -10,13 +10,21 @@ from pathlib import Path
 
 from ..core.ssh import SshMaster
 
-# .tex files that start a document, in home, project and scratch; newest first
+# .tex files that start a document, in home, project and scratch; newest first. Hidden folders are left out, but
+# not the worktrees Claude and Codex make in a project (.claude/worktrees/<name>, .codex/worktrees/<name>): a paper
+# an agent writes on a branch lives there, deeper than the search went (2026-11-24 report: "why the papers can't
+# find this"). Only those folders: all hidden ones (.git, .cache, ...) would make the search slow.
 PAPERS = r"""R="$HOME"
 for d in /mmfs1/project/*/"$USER" /mmfs1/scratch/*/"$USER" "$SCRATCH" "$PROJECT"; do
   [ -d "$d" ] && R="$R $d"
 done
-timeout 60 find $R -maxdepth 6 \( -name '.*' -o -name node_modules -o -name '*conda*' -o -name '*venv*' \
-  -o -name __pycache__ \) -prune -o -name '*.tex' -type f -print 2>/dev/null | head -5000 |
+SKIP="-name node_modules -o -name *conda* -o -name *venv* -o -name __pycache__"
+set -f  # $SKIP's patterns go to find as they are
+W=$(timeout 30 find $R -maxdepth 4 \( \( -name '.*' ! -name .claude ! -name .codex \) -o $SKIP \) -prune \
+  -o -type d \( -name .claude -o -name .codex \) -print -prune 2>/dev/null |
+  while IFS= read -r d; do [ -d "$d/worktrees" ] && printf '%s ' "$d/worktrees"; done)
+timeout 60 find $R $W -maxdepth 6 \( -name '.*' -o $SKIP \) -prune -o -name '*.tex' -type f -print 2>/dev/null |
+  head -5000 |
 while IFS= read -r f; do
   grep -qs '^[^%]*\\documentclass' "$f" && printf '%s|%s\n' "$(stat -c %Y "$f")" "$f"
 done"""
