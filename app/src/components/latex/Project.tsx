@@ -4,7 +4,6 @@ import { call } from '../../rpc'
 import type { BuildDone, Issue, Opened, Settings, SourceSpot, Spot } from '../../types/latex'
 import { useAskForNode } from '../clusters/AskForNode'
 import type { PdfTarget } from '../pdf'
-import { OpenDialog } from '../tools/OpenDialog'
 import { useToast } from '../useToast'
 import { basename, inFolder, moved, rel, under } from './bits'
 import { BuildButton } from './BuildButton'
@@ -40,7 +39,6 @@ export function Project({ project, onClose }: { project: Opened; onClose: () => 
   const [auto, setAuto] = useState(() => remembered<string>('latex.auto', '0') === '1')
   const [target, setTarget] = useState<PdfTarget | null>(null)
   const [dialog, setDialog] = useState<ReactNode>(null)
-  const [openIn, setOpenIn] = useState(false)
   const [focused, setFocused] = useState(false)  // Just the PDF: this header, the files and the editor hide
   const editor = useRef<EditorHandle | null>(null)
   const { doc, setDoc, docRef, error: docError, dirty, saving, load, save, edit } = useDoc(cluster, project.main)
@@ -143,7 +141,7 @@ export function Project({ project, onClose }: { project: Opened; onClose: () => 
             onBuild={build} />
           <GitMenu where={where} before={save} safe={history} onPulled={() => { refresh(); reloadDoc() }} />
         </>}
-        onOpenIn={() => setOpenIn(true)} onClose={async () => { if (await save()) onClose() }} />
+        onClose={async () => { if (await save()) onClose() }} />
       <div className={`flex min-h-0 flex-1 ${inHistory ? 'hidden' : ''}`}>
         {showTree && !focused && <div className="w-[236px] shrink-0 border-r border-line">
           <FileTree id={`${cluster}:${folder}`} entries={tree} current={docRel} main={rel(folder, main)}
@@ -160,8 +158,6 @@ export function Project({ project, onClose }: { project: Opened; onClose: () => 
       {dialog}
       {nodeFirst.dialog}
       {history.overlay}
-      {openIn && <OpenDialog name={project.name} cluster={cluster} clusterName={project.cluster_name} folder={folder}
-        onClose={() => setOpenIn(false)} />}
     </div>
   )
 }

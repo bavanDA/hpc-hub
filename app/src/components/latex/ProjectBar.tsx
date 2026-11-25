@@ -1,4 +1,4 @@
-import { FolderOpen, PanelLeft, X } from 'lucide-react'
+import { PanelLeft, X } from 'lucide-react'
 import type { ReactNode } from 'react'
 
 type Props = {
@@ -9,12 +9,11 @@ type Props = {
   showTree: boolean
   onTree: () => void
   views: ReactNode
-  tools: ReactNode  // build and git, before Open
-  onOpenIn: () => void
+  tools: ReactNode  // build and git
   onClose: () => void
 }
 
-export function ProjectBar({ name, where, status, hidden, showTree, onTree, views, tools, onOpenIn, onClose }: Props) {
+export function ProjectBar({ name, where, status, hidden, showTree, onTree, views, tools, onClose }: Props) {
   return (
     <div className={`flex h-12 shrink-0 items-center gap-2 border-b border-line bg-window px-2 ${hidden ? 'hidden' : ''}`}>
       <button onClick={onTree} aria-label="Show or hide the files" title="Show or hide the files"
@@ -28,9 +27,6 @@ export function ProjectBar({ name, where, status, hidden, showTree, onTree, view
       {views}
       <div className="flex flex-1 items-center justify-end gap-1.5">
         {tools}
-        <button onClick={onOpenIn} title="Open the folder in Code, VS Code, an agent and more"
-          className="flex h-8 items-center gap-1.5 rounded-md px-2.5 text-sm font-semibold hover:bg-hover">
-          <FolderOpen size={16} /> Open</button>
         <button onClick={onClose} aria-label="Close project"
           title="Close project" className="grid size-8 place-items-center rounded-md hover:bg-hover"><X size={16} /></button>
       </div>
